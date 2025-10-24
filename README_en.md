@@ -1,4 +1,4 @@
-# KakeiBonByRust
+# KakeiBon built with Rust
 Household Budget App "KakeiBon" Built with Rust Language.
 
 ## Overview
