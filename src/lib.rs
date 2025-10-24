@@ -507,6 +507,90 @@ async fn get_i18n_resources_by_category(
         .map_err(|e| format!("Failed to get resources: {}", e))
 }
 
+#[tauri::command]
+async fn get_translations(
+    language: String,
+    state: tauri::State<'_, AppState>
+) -> Result<std::collections::HashMap<String, String>, String> {
+    let i18n = state.i18n.lock().await;
+    
+    i18n.get_all(&language)
+        .await
+        .map_err(|e| format!("Failed to get translations: {}", e))
+}
+
+#[tauri::command]
+async fn get_user_settings(
+    state: tauri::State<'_, AppState>
+) -> Result<serde_json::Value, String> {
+    let settings = state.settings.lock().await;
+    
+    let mut result = serde_json::Map::new();
+    let language = settings.get_string("language")
+        .unwrap_or_else(|_| LANG_DEFAULT.to_string());
+    result.insert("language".to_string(), serde_json::Value::String(language));
+    
+    Ok(serde_json::Value::Object(result))
+}
+
+#[tauri::command]
+async fn update_user_settings(
+    settings: serde_json::Value,
+    state: tauri::State<'_, AppState>
+) -> Result<(), String> {
+    let mut settings_mgr = state.settings.lock().await;
+    
+    if let Some(obj) = settings.as_object() {
+        for (key, value) in obj {
+            if let Some(s) = value.as_str() {
+                settings_mgr.set(key, s)
+                    .map_err(|e| format!("Failed to set {}: {}", key, e))?;
+            }
+        }
+    }
+    
+    Ok(())
+}
+
+#[tauri::command]
+async fn get_available_languages(
+    state: tauri::State<'_, AppState>
+) -> Result<Vec<String>, String> {
+    let i18n = state.i18n.lock().await;
+    
+    i18n.get_available_languages()
+        .await
+        .map_err(|e| format!("Failed to get available languages: {}", e))
+}
+
+#[tauri::command]
+async fn get_language_names(
+    state: tauri::State<'_, AppState>
+) -> Result<Vec<(String, String)>, String> {
+    let i18n = state.i18n.lock().await;
+    let settings = state.settings.lock().await;
+    
+    let current_lang = settings.get_string("language")
+        .unwrap_or_else(|_| LANG_DEFAULT.to_string());
+    
+    let lang_codes = i18n.get_available_languages()
+        .await
+        .map_err(|e| format!("Failed to get available languages: {}", e))?;
+    
+    let mut language_names = Vec::new();
+    for lang_code in lang_codes {
+        let key = format!("lang.name.{}", lang_code);
+        if let Ok(name) = i18n.get(&key, &current_lang).await {
+            language_names.push((lang_code, name));
+        }
+    }
+    
+    // Sort by language code to maintain consistent order
+    language_names.sort_by(|a, b| a.0.cmp(&b.0));
+    
+    Ok(language_names)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -541,7 +625,12 @@ pub fn run() {
             set_language,
             get_language,
             get_i18n_resource,
-            get_i18n_resources_by_category
+            get_i18n_resources_by_category,
+            get_translations,
+            get_user_settings,
+            update_user_settings,
+            get_available_languages,
+            get_language_names
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {

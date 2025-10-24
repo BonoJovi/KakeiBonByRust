@@ -99,6 +99,17 @@ impl I18nService {
         
         Ok(rows.into_iter().collect())
     }
+    
+    /// Get list of available languages
+    pub async fn get_available_languages(&self) -> Result<Vec<String>, I18nError> {
+        let rows = sqlx::query_scalar::<_, String>(
+            "SELECT DISTINCT LANG_CODE FROM I18N_RESOURCES ORDER BY LANG_CODE"
+        )
+        .fetch_all(&self.pool)
+        .await?;
+        
+        Ok(rows)
+    }
 }
 
 #[cfg(test)]

@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import i18n from './i18n.js';
 
 let currentFontSize = 16;
 let isLoggedIn = false;
@@ -15,8 +16,23 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     console.log('DOM loaded');
+    
+    // Initialize i18n
+    await i18n.init();
+    
+    // Update UI with translations
+    i18n.updateUI();
+    
+    // Setup language menu event handlers first (once)
+    setupLanguageMenuHandlers();
+    
+    // Then load and populate language menu items
+    await setupLanguageMenu();
+    
+    // Setup accessibility indicators for form inputs
+    setupAccessibilityIndicators();
     
     // Check if initial setup is needed
     checkSetupNeeded();
@@ -45,8 +61,10 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         document.addEventListener('click', function() {
-            console.log('Document clicked, closing dropdown');
-            fileDropdown.classList.remove('show');
+            console.log('Document clicked, closing all dropdowns');
+            document.querySelectorAll('.dropdown').forEach(dropdown => {
+                dropdown.classList.remove('show');
+            });
         });
         
         // Add event listeners to dropdown items
@@ -123,6 +141,93 @@ async function checkSetupNeeded() {
     }
 }
 
+function setupLanguageMenuHandlers() {
+    const languageMenu = document.getElementById('language-menu');
+    const languageDropdown = document.getElementById('language-dropdown');
+    
+    if (!languageMenu || !languageDropdown) {
+        console.error('Language menu elements not found');
+        return;
+    }
+    
+    // Setup dropdown toggle - only once
+    languageMenu.addEventListener('click', function(e) {
+        console.log('Language menu clicked');
+        e.stopPropagation();
+        
+        // Close other dropdowns
+        document.querySelectorAll('.dropdown').forEach(dropdown => {
+            if (dropdown !== languageDropdown) {
+                dropdown.classList.remove('show');
+            }
+        });
+        
+        languageDropdown.classList.toggle('show');
+        console.log('Language dropdown toggled, show class:', languageDropdown.classList.contains('show'));
+    });
+}
+
+async function setupLanguageMenu() {
+    try {
+        // Get language names (localized in current language) as array of [code, name]
+        const languageNames = await invoke('get_language_names');
+        console.log('Available languages:', languageNames);
+        
+        // Get current language
+        const currentLang = i18n.getCurrentLanguage();
+        
+        // Get dropdown container
+        const languageDropdown = document.getElementById('language-dropdown');
+        
+        if (!languageDropdown) {
+            console.error('Language dropdown not found');
+            return;
+        }
+        
+        // Clear existing items only (not event listeners on parent)
+        languageDropdown.innerHTML = '';
+        
+        // Add language items - languageNames is already sorted
+        for (const [langCode, langName] of languageNames) {
+            const item = document.createElement('div');
+            item.className = 'dropdown-item';
+            item.textContent = langName;
+            item.dataset.langCode = langCode;
+            
+            // Mark current language with active class (shows filled circle)
+            if (langCode === currentLang) {
+                item.classList.add('active');
+            }
+            
+            item.addEventListener('click', async function(e) {
+                e.stopPropagation();
+                await handleLanguageChange(langCode);
+                languageDropdown.classList.remove('show');
+            });
+            
+            languageDropdown.appendChild(item);
+        }
+        
+    } catch (error) {
+        console.error('Failed to setup language menu:', error);
+    }
+}
+
+async function handleLanguageChange(langCode) {
+    try {
+        console.log('Changing language to:', langCode);
+        await i18n.setLanguage(langCode);
+        
+        // Reload language menu items to update display names and selection
+        await setupLanguageMenu();
+        
+        console.log('Language changed successfully');
+    } catch (error) {
+        console.error('Failed to change language:', error);
+        alert('Failed to change language: ' + error);
+    }
+}
+
 async function handleAdminSetup(e) {
     e.preventDefault();
     console.log('Admin setup form submitted');
@@ -133,19 +238,19 @@ async function handleAdminSetup(e) {
     const messageDiv = document.getElementById('setup-message');
     
     if (!password || password.trim() === '') {
-        messageDiv.textContent = 'Password cannot be empty!';
+        messageDiv.textContent = i18n.t('error.password_empty');
         messageDiv.className = 'message error';
         return;
     }
     
     if (password.length < 16) {
-        messageDiv.textContent = 'Password must be at least 16 characters long!';
+        messageDiv.textContent = i18n.t('error.password_too_short');
         messageDiv.className = 'message error';
         return;
     }
     
     if (password !== passwordConfirm) {
-        messageDiv.textContent = 'Passwords do not match!';
+        messageDiv.textContent = i18n.t('error.password_mismatch');
         messageDiv.className = 'message error';
         return;
     }
@@ -157,7 +262,7 @@ async function handleAdminSetup(e) {
         });
         
         console.log('Admin registration result:', result);
-        messageDiv.textContent = 'Administrator registered successfully! Please login.';
+        messageDiv.textContent = i18n.t('admin.registration_success');
         messageDiv.className = 'message success';
         
         setTimeout(() => {
@@ -167,7 +272,7 @@ async function handleAdminSetup(e) {
         
     } catch (error) {
         console.error('Admin registration error:', error);
-        messageDiv.textContent = 'Registration failed: ' + error;
+        messageDiv.textContent = i18n.t('error.registration_failed') + ': ' + error;
         messageDiv.className = 'message error';
     }
 }
@@ -182,19 +287,19 @@ async function handleUserSetup(e) {
     const messageDiv = document.getElementById('user-setup-message');
     
     if (!password || password.trim() === '') {
-        messageDiv.textContent = 'Password cannot be empty!';
+        messageDiv.textContent = i18n.t('error.password_empty');
         messageDiv.className = 'message error';
         return;
     }
     
     if (password.length < 16) {
-        messageDiv.textContent = 'Password must be at least 16 characters long!';
+        messageDiv.textContent = i18n.t('error.password_too_short');
         messageDiv.className = 'message error';
         return;
     }
     
     if (password !== passwordConfirm) {
-        messageDiv.textContent = 'Passwords do not match!';
+        messageDiv.textContent = i18n.t('error.password_mismatch');
         messageDiv.className = 'message error';
         return;
     }
@@ -206,7 +311,7 @@ async function handleUserSetup(e) {
         });
         
         console.log('User registration result:', result);
-        messageDiv.textContent = 'User registered successfully!';
+        messageDiv.textContent = i18n.t('user.registration_success');
         messageDiv.className = 'message success';
         
         setTimeout(() => {
@@ -216,7 +321,7 @@ async function handleUserSetup(e) {
         
     } catch (error) {
         console.error('User registration error:', error);
-        messageDiv.textContent = 'Registration failed: ' + error;
+        messageDiv.textContent = i18n.t('error.registration_failed') + ': ' + error;
         messageDiv.className = 'message error';
     }
 }
@@ -247,7 +352,7 @@ async function handleLoginSubmit(e) {
         });
         
         console.log('Login result:', result);
-        messageDiv.textContent = 'Login successful!';
+        messageDiv.textContent = i18n.t('login.success');
         messageDiv.className = 'message success';
         
         isLoggedIn = true;
@@ -272,7 +377,7 @@ async function handleLoginSubmit(e) {
         
     } catch (error) {
         console.error('Login error:', error);
-        messageDiv.textContent = 'Login failed: ' + error;
+        messageDiv.textContent = i18n.t('error.login_failed') + ': ' + error;
         messageDiv.className = 'message error';
     }
 }
@@ -310,4 +415,39 @@ function decreaseFontSize() {
 
 function applyFontSize() {
     document.documentElement.style.fontSize = currentFontSize + 'px';
+}
+
+function setupAccessibilityIndicators() {
+    // Wrap all input fields in input-wrapper for flexbox alignment
+    document.querySelectorAll('.form-group input').forEach(input => {
+        // Check if already wrapped
+        if (!input.parentElement.classList.contains('input-wrapper')) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'input-wrapper';
+            input.parentNode.insertBefore(wrapper, input);
+            wrapper.appendChild(input);
+        }
+    });
+    
+    // Setup focus indicators for all input fields
+    document.querySelectorAll('input, textarea, select').forEach(input => {
+        input.addEventListener('focus', function() {
+            const formGroup = this.closest('.form-group');
+            if (formGroup) {
+                formGroup.classList.add('active');
+            }
+        });
+        
+        input.addEventListener('blur', function() {
+            const formGroup = this.closest('.form-group');
+            if (formGroup) {
+                formGroup.classList.remove('active');
+            }
+        });
+    });
+    
+    // Setup focus indicators for all buttons
+    document.querySelectorAll('button, .btn-primary').forEach(button => {
+        button.classList.add('focus-indicator');
+    });
 }
