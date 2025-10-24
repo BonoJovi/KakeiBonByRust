@@ -17,7 +17,7 @@ All notable changes to this project will be documented in this file.
 #### Document Improvements:
 - Clearly separated test section into "Implemented" and "Future Implementation"
 - Corrected description of non-selected state (gray border #666)
-- Unified notation to "people with low vision"
+- Standardized terminology to use "people with low vision"
 - Modified to softer expressions
 
 #### File Rename:
@@ -25,7 +25,7 @@ All notable changes to this project will be documented in this file.
 
 #### Document Policy:
 In the future, documents for new languages will be placed in the corresponding language directory
-Example: Chinese → docs/zh/
+- Example: Chinese → docs/zh/
 
 ---
 
