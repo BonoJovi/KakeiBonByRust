@@ -1,0 +1,25 @@
+{
+  "name": "kakeibon-tests",
+  "version": "1.0.0",
+  "description": "Tests for KakeiBon application",
+  "main": "admin-setup.test.js",
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@jest/globals": "29.7.0",
+    "jest": "29.7.0",
+    "jest-environment-jsdom": "29.7.0"
+  },
+  "jest": {
+    "testEnvironment": "jsdom",
+    "testMatch": [
+      "**/*.test.js"
+    ]
+  }
+}

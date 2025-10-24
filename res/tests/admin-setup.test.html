@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Setup Validation Tests</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            background-color: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-result {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+        }
+        .test-pass {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .test-fail {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        h1 {
+            color: #333;
+        }
+        h2 {
+            color: #666;
+            margin-top: 0;
+        }
+        .summary {
+            font-weight: bold;
+            font-size: 1.2em;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Admin Setup Validation Tests</h1>
+    <div id="test-results"></div>
+    <div id="test-summary" class="summary"></div>
+
+    <script>
+        // Mock the Tauri invoke function
+        window.__TAURI__ = {
+            core: {
+                invoke: async (command, args) => {
+                    console.log('Mock invoke:', command, args);
+                    // Simulate successful registration
+                    if (command === 'register_admin') {
+                        return 'Admin user registered successfully';
+                    }
+                    return null;
+                }
+            }
+        };
+
+        // Test helper functions
+        const testResults = [];
+        
+        function assert(condition, testName, expected, actual) {
+            const passed = condition;
+            testResults.push({
+                name: testName,
+                passed: passed,
+                expected: expected,
+                actual: actual
+            });
+            return passed;
+        }
+
+        function displayResults() {
+            const container = document.getElementById('test-results');
+            const summary = document.getElementById('test-summary');
+            
+            let html = '';
+            let passCount = 0;
+            let failCount = 0;
+
+            testResults.forEach(result => {
+                if (result.passed) {
+                    passCount++;
+                    html += `<div class="test-result test-pass">✓ ${result.name}</div>`;
+                } else {
+                    failCount++;
+                    html += `<div class="test-result test-fail">
+                        ✗ ${result.name}<br>
+                        Expected: ${result.expected}<br>
+                        Actual: ${result.actual}
+                    </div>`;
+                }
+            });
+
+            container.innerHTML = html;
+            
+            const total = passCount + failCount;
+            const summaryColor = failCount === 0 ? '#155724' : '#721c24';
+            summary.innerHTML = `
+                <div style="color: ${summaryColor}">
+                    Tests: ${total} | Passed: ${passCount} | Failed: ${failCount}
+                </div>
+            `;
+        }
+
+        // Validation function (copied from menu.js)
+        function validatePassword(password, passwordConfirm) {
+            if (!password || password.trim() === '') {
+                return {
+                    valid: false,
+                    message: 'Password cannot be empty!'
+                };
+            }
+            
+            if (password.length < 16) {
+                return {
+                    valid: false,
+                    message: 'Password must be at least 16 characters long!'
+                };
+            }
+            
+            if (password !== passwordConfirm) {
+                return {
+                    valid: false,
+                    message: 'Passwords do not match!'
+                };
+            }
+            
+            return {
+                valid: true,
+                message: ''
+            };
+        }
+
+        // Run tests
+        function runTests() {
+            console.log('Running validation tests...');
+
+            // Test 1: Empty password
+            const test1 = validatePassword('', 'test123');
+            assert(
+                !test1.valid && test1.message === 'Password cannot be empty!',
+                'Test 1: Empty password should be rejected',
+                'Password cannot be empty!',
+                test1.message
+            );
+
+            // Test 2: Password with only spaces
+            const test2 = validatePassword('   ', 'test123');
+            assert(
+                !test2.valid && test2.message === 'Password cannot be empty!',
+                'Test 2: Password with only spaces should be rejected',
+                'Password cannot be empty!',
+                test2.message
+            );
+
+            // Test 3: Null password
+            const test3 = validatePassword(null, 'test123');
+            assert(
+                !test3.valid && test3.message === 'Password cannot be empty!',
+                'Test 3: Null password should be rejected',
+                'Password cannot be empty!',
+                test3.message
+            );
+
+            // Test 4: Undefined password
+            const test4 = validatePassword(undefined, 'test123');
+            assert(
+                !test4.valid && test4.message === 'Password cannot be empty!',
+                'Test 4: Undefined password should be rejected',
+                'Password cannot be empty!',
+                test4.message
+            );
+
+            // Test 5: Password too short (less than 16 characters)
+            const test5 = validatePassword('short', 'short');
+            assert(
+                !test5.valid && test5.message === 'Password must be at least 16 characters long!',
+                'Test 5: Password shorter than 16 characters should be rejected',
+                'Password must be at least 16 characters long!',
+                test5.message
+            );
+
+            // Test 6: Password exactly 15 characters
+            const test6 = validatePassword('123456789012345', '123456789012345');
+            assert(
+                !test6.valid && test6.message === 'Password must be at least 16 characters long!',
+                'Test 6: Password with exactly 15 characters should be rejected',
+                'Password must be at least 16 characters long!',
+                test6.message
+            );
+
+            // Test 7: Passwords do not match (both long enough)
+            const test7 = validatePassword('password12345678', 'password87654321');
+            assert(
+                !test7.valid && test7.message === 'Passwords do not match!',
+                'Test 7: Non-matching passwords should be rejected',
+                'Passwords do not match!',
+                test7.message
+            );
+
+            // Test 8: Valid matching passwords (exactly 16 characters)
+            const test8 = validatePassword('1234567890123456', '1234567890123456');
+            assert(
+                test8.valid && test8.message === '',
+                'Test 8: Valid password with exactly 16 characters should pass',
+                'valid: true, message: ""',
+                `valid: ${test8.valid}, message: "${test8.message}"`
+            );
+
+            // Test 9: Valid matching passwords (more than 16 characters)
+            const test9 = validatePassword('thisIsAVerySecurePassword123', 'thisIsAVerySecurePassword123');
+            assert(
+                test9.valid && test9.message === '',
+                'Test 9: Valid password with more than 16 characters should pass',
+                'valid: true, message: ""',
+                `valid: ${test9.valid}, message: "${test9.message}"`
+            );
+
+            // Test 10: Valid password with spaces
+            const test10 = validatePassword('my secure password 16', 'my secure password 16');
+            assert(
+                test10.valid && test10.message === '',
+                'Test 10: Valid password with spaces should pass',
+                'valid: true, message: ""',
+                `valid: ${test10.valid}, message: "${test10.message}"`
+            );
+
+            // Test 11: Password with special characters (16+ chars)
+            const test11 = validatePassword('p@ssw0rd!#$12345', 'p@ssw0rd!#$12345');
+            assert(
+                test11.valid && test11.message === '',
+                'Test 11: Valid password with special characters should pass',
+                'valid: true, message: ""',
+                `valid: ${test11.valid}, message: "${test11.message}"`
+            );
+
+            // Test 12: Single character password
+            const test12 = validatePassword('a', 'a');
+            assert(
+                !test12.valid && test12.message === 'Password must be at least 16 characters long!',
+                'Test 12: Single character password should be rejected',
+                'Password must be at least 16 characters long!',
+                test12.message
+            );
+
+            displayResults();
+        }
+
+        // Run tests on page load
+        window.addEventListener('DOMContentLoaded', runTests);
+    </script>
+</body>
+</html>
