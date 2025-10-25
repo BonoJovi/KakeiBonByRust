@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import i18n from './i18n.js';
+import { setupIndicators } from './indicators.js';
 
 let currentFontSize = 16;
 let isLoggedIn = false;
@@ -32,7 +33,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     await setupLanguageMenu();
     
     // Setup accessibility indicators for form inputs
-    setupAccessibilityIndicators();
+    setupIndicators();
     
     // Check if initial setup is needed
     checkSetupNeeded();
@@ -95,6 +96,31 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     } else {
         console.error('Elements not found!');
+    }
+    
+    // Setup admin menu
+    const adminMenu = document.getElementById('admin-menu');
+    const adminDropdown = document.getElementById('admin-dropdown');
+    
+    if (adminMenu && adminDropdown) {
+        adminMenu.addEventListener('click', function(e) {
+            console.log('Admin menu clicked');
+            e.stopPropagation();
+            adminDropdown.classList.toggle('show');
+        });
+        
+        adminDropdown.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+        
+        const userMgmtItem = adminDropdown.querySelector('.dropdown-item:nth-child(1)');
+        if (userMgmtItem) {
+            userMgmtItem.addEventListener('click', function(e) {
+                console.log('User Management item clicked');
+                window.location.href = 'user-management.html';
+                adminDropdown.classList.remove('show');
+            });
+        }
     }
     
     // Setup login form
@@ -415,39 +441,4 @@ function decreaseFontSize() {
 
 function applyFontSize() {
     document.documentElement.style.fontSize = currentFontSize + 'px';
-}
-
-function setupAccessibilityIndicators() {
-    // Wrap all input fields in input-wrapper for flexbox alignment
-    document.querySelectorAll('.form-group input').forEach(input => {
-        // Check if already wrapped
-        if (!input.parentElement.classList.contains('input-wrapper')) {
-            const wrapper = document.createElement('div');
-            wrapper.className = 'input-wrapper';
-            input.parentNode.insertBefore(wrapper, input);
-            wrapper.appendChild(input);
-        }
-    });
-    
-    // Setup focus indicators for all input fields
-    document.querySelectorAll('input, textarea, select').forEach(input => {
-        input.addEventListener('focus', function() {
-            const formGroup = this.closest('.form-group');
-            if (formGroup) {
-                formGroup.classList.add('active');
-            }
-        });
-        
-        input.addEventListener('blur', function() {
-            const formGroup = this.closest('.form-group');
-            if (formGroup) {
-                formGroup.classList.remove('active');
-            }
-        });
-    });
-    
-    // Setup focus indicators for all buttons
-    document.querySelectorAll('button, .btn-primary').forEach(button => {
-        button.classList.add('focus-indicator');
-    });
 }

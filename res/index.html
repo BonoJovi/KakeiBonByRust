@@ -5,6 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>KakeiBon by Rust</title>
         <link rel="stylesheet" href="css/menu.css" />
+        <link rel="stylesheet" href="css/indicators.css" />
         <script type="importmap">
         {
             "imports": {
@@ -22,6 +23,12 @@
                     <div class="dropdown-item" data-i18n="menu.logout">Logout</div>
                     <div class="dropdown-separator"></div>
                     <div class="dropdown-item" data-i18n="menu.quit">Quit</div>
+                </div>
+            </div>
+            <div id="admin-menu" class="menu-item">
+                <span data-i18n="menu.admin">Admin</span>
+                <div id="admin-dropdown" class="dropdown">
+                    <div class="dropdown-item" data-i18n="menu.user_management">User Management</div>
                 </div>
             </div>
             <div id="language-menu" class="menu-item">

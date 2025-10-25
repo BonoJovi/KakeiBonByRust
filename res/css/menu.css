@@ -54,46 +54,6 @@ body {
     background-color: #e0e0e0;
 }
 
-/* Active indicator (filled circle) */
-.dropdown-item::before {
-    content: '';
-    display: inline-block;
-    width: 0.75em;   /* Scaled relative to font size */
-    height: 0.75em;  /* Scaled relative to font size */
-    border-radius: 50%;
-    border: 2px solid #666;
-    background-color: transparent;
-    flex-shrink: 0;
-}
-
-.dropdown-item.active::before {
-    background-color: #4CAF50;
-    border-color: #000;  /* Black border for better contrast and visibility for color-blind users */
-    border-width: 2px;
-}
-
-/* Focus indicator for buttons */
-.btn-primary:focus {
-    outline: 3px solid #4CAF50;
-    outline-offset: 2px;
-}
-
-/* Alternative: underline indicator for focused buttons */
-.btn-primary.focus-indicator {
-    position: relative;
-}
-
-.btn-primary.focus-indicator:focus::after {
-    content: '';
-    position: absolute;
-    bottom: -4px;
-    left: 10%;
-    right: 10%;
-    height: 3px;
-    background-color: #2e7d32;
-    border-radius: 2px;
-}
-
 .dropdown-separator {
     height: 1px;
     background-color: #ccc;
@@ -139,15 +99,6 @@ body {
     font-size: 1em;  /* Explicitly set to 1em for consistency */
 }
 
-/* Input wrapper for flexbox alignment */
-.form-group .input-wrapper {
-    display: flex;
-    align-items: center;  /* Vertical center alignment */
-    gap: 0.5rem;
-    margin: 0;  /* Remove any default margins */
-    padding: 0;  /* Remove any default padding */
-}
-
 .form-group input {
     flex: 1;  /* Take remaining space */
     padding: 0.5rem;
@@ -162,25 +113,6 @@ body {
     outline: none;
     border-color: #4CAF50;
     box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
-}
-
-/* Active field indicator (filled circle) - using flexbox for perfect centering */
-.form-group.active .input-wrapper::before {
-    content: '●';
-    color: #4CAF50;
-    font-size: 2em;  /* Significantly larger for visibility */
-    line-height: 1;
-    flex-shrink: 0;  /* Don't shrink */
-    /* Black outline for better visibility for color-blind users */
-    text-shadow: 
-        -2px -2px 0 #000,
-         2px -2px 0 #000,
-        -2px  2px 0 #000,
-         2px  2px 0 #000,
-        -2px  0   0 #000,
-         2px  0   0 #000,
-         0   -2px 0 #000,
-         0    2px 0 #000;
 }
 
 .btn-primary {
