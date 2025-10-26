@@ -23,31 +23,44 @@
 
 ```
 res/tests/
-├── validation-helpers.js          # 共通バリデーション関数
-├── password-validation-tests.js   # パスワードテストスイート
-├── username-validation-tests.js   # ユーザ名テストスイート
-├── admin-setup.test.js            # 管理者登録テスト
-├── user-addition.test.js          # ユーザ追加テスト
-└── login.test.js                  # ログインテスト
+├── validation-helpers.js             # 共通バリデーション関数
+├── password-validation-tests.js      # パスワードテストスイート（26件）
+├── username-validation-tests.js      # ユーザ名テストスイート（13件）
+├── user-edit-validation-tests.js     # ユーザ編集テストスイート（23件）
+├── admin-setup.test.js               # 管理者登録テスト（29件）
+├── user-addition.test.js             # ユーザ追加テスト（49件）
+├── admin-edit.test.js                # 管理者ユーザ編集テスト（63件）
+└── login.test.js                     # ログインテスト（58件）
 ```
+
+**JavaScript総テスト数**: 199件
 
 ### レイヤー構造
 
 ```
 ┌─────────────────────────────────────┐
 │   画面固有テスト (*.test.js)        │
-│  - 画面固有のエッジケース            │
-│  - 画面固有のワークフロー            │
+│  - admin-setup.test.js (29)         │
+│  - user-addition.test.js (49)       │
+│  - admin-edit.test.js (63)          │
+│  - login.test.js (58)               │
 └────────────┬────────────────────────┘
              │ インポート
 ┌────────────▼────────────────────────┐
 │   共通テストスイート                 │
-│  - password-validation-tests.js     │
-│  - username-validation-tests.js     │
+│  - password-validation-tests.js (26)│
+│  - username-validation-tests.js (13)│
+│  - user-edit-validation-tests.js(23)│
 └────────────┬────────────────────────┘
              │ インポート
 ┌────────────▼────────────────────────┐
 │   共通バリデーション関数             │
+│  - validation-helpers.js            │
+│    * validatePassword()             │
+│    * validateUserAddition()         │
+│    * validateUserEdit()             │
+└─────────────────────────────────────┘
+```
 │  - validation-helpers.js            │
 │  - validatePassword()               │
 │  - validateUserAddition()           │
@@ -145,6 +158,34 @@ res/tests/
 - バリデーション優先順位（4件）
 - 有効な組み合わせ（3件）
 
+### user-edit-validation-tests.js
+
+ユーザ編集バリデーションの共通テストスイート。
+
+#### runAllUserEditTests(validationFn, contextName)
+すべてのユーザ編集テストを実行。
+
+**パラメータ:**
+- `validationFn`: テスト対象のバリデーション関数（`(username, password, passwordConfirm, isEditMode) => result`）
+- `contextName`: テストコンテキスト名（デフォルト: "User Edit"）
+
+**テストカテゴリ:**
+1. ユーザ名のみ編集（6件）
+2. パスワードのみ編集（8件）
+3. ユーザ名＋パスワード編集（4件）
+4. 編集モード vs 追加モード（5件）
+
+#### 個別テストスイート関数
+- `testUsernameOnlyEdit(validationFn)` - ユーザ名のみ編集テスト
+- `testPasswordOnlyEdit(validationFn)` - パスワードのみ編集テスト
+- `testCombinedEdit(validationFn)` - ユーザ名＋パスワード編集テスト
+- `testEditModeVsAddMode(validationFn)` - 編集/追加モード比較テスト
+
+**編集モードの特徴:**
+- `isEditMode = true`: パスワード空白時は「変更なし」として扱う
+- `isEditMode = false`: パスワード必須（追加モード）
+- パスワードを提供する場合は、編集モードでも検証が必要
+
 ## 使用方法
 
 ### 新しい画面のテストを追加
@@ -184,6 +225,37 @@ import { testUsernameValidation, testCombinedValidation } from './username-valid
 const passwordValidation = (password, passwordConfirm) => {
     return validateUserAddition('validuser', password, passwordConfirm);
 };
+
+// すべてのテストを実行
+runAllPasswordTests(passwordValidation, 'User Form Password');
+testUsernameValidation(validateUserAddition);
+testCombinedValidation(validateUserAddition);
+```
+
+### ユーザ編集画面のテスト
+
+```javascript
+// user-edit.test.js
+import { validateUserEdit } from './validation-helpers.js';
+import { runAllPasswordTests } from './password-validation-tests.js';
+import { testUsernameValidation } from './username-validation-tests.js';
+import { runAllUserEditTests } from './user-edit-validation-tests.js';
+
+// パスワードテストのラッパー（編集モード）
+const passwordValidation = (password, passwordConfirm) => {
+    return validateUserEdit('existinguser', password, passwordConfirm, true);
+};
+
+// ユーザ名テストのラッパー（編集モード）
+const usernameValidation = (username) => {
+    return validateUserEdit(username, '', '', true);
+};
+
+// すべてのテストを実行
+runAllPasswordTests(passwordValidation, 'User Edit Password');
+testUsernameValidation(usernameValidation);
+runAllUserEditTests(validateUserEdit, 'User Edit');
+```
 
 describe('User Form Validation', () => {
     // ユーザ名テスト

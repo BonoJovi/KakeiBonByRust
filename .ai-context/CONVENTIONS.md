@@ -252,6 +252,50 @@ if password.len() < MIN_PASSWORD_LENGTH {
 }
 ```
 
+### Unicode Handling (IMPORTANT!)
+
+#### JavaScript (Frontend)
+- Uses `.length` property which counts UTF-16 code units
+- **Most Unicode characters count as 1 character**
+- Example: `"パスワード1234567890".length` = 15 characters
+
+#### Rust (Backend)
+- `.len()` returns **byte length** (UTF-8 encoding)
+- `.chars().count()` returns **character count**
+- **For validation, Rust uses `.len()` (bytes)**
+- Example: `"パスワード1234567890".len()` = 25 bytes (not 15!)
+
+#### Test Case Guidelines
+⚠️ **When writing test cases with Unicode:**
+
+1. **Frontend tests**: Use 16+ characters as counted by JavaScript `.length`
+   ```javascript
+   const password = 'パスワード12345678901'; // 16 chars in JS
+   ```
+
+2. **Rust tests**: Ensure byte length is 16+ bytes
+   ```rust
+   let password = "1234567890123456"; // 16 bytes (ASCII)
+   let password = "パスワード1234567890123"; // 28 bytes (Unicode + numbers)
+   ```
+
+3. **Best practice for cross-platform tests**: 
+   - Use ASCII characters for length boundary tests
+   - Use Unicode only for character support tests (not length tests)
+   - If using Unicode, ensure it's well over 16 characters/bytes
+
+#### Example: Safe Unicode Test Cases
+```javascript
+// ✅ Good - uses enough characters
+const password = 'パスワード12345678901'; // 16 chars in JS
+
+// ✅ Good - ASCII for boundary test
+const password = '1234567890123456'; // Exactly 16 in both JS and Rust
+
+// ❌ Bad - Unicode at boundary
+const password = 'パスワード1234567890'; // 15 chars in JS, fails!
+```
+
 ### Error Messages Should Match
 - Frontend: `'Password cannot be empty!'`
 - Backend: `ValidationError::EmptyPassword` → "Password cannot be empty!"

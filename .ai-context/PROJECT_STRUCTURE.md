@@ -261,9 +261,9 @@ npm test
 ```
 
 **Test Count:**
-- Rust backend: 91 tests
-- JavaScript frontend: 136 tests
-- **Total: 227 tests**
+- Rust backend: 94 tests
+- JavaScript frontend: 199 tests
+- **Total: 293 tests**
 ```
 
 ### Build

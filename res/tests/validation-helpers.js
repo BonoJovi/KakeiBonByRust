@@ -52,3 +52,48 @@ export function validateUserAddition(username, password, passwordConfirm) {
     // Reuse password validation
     return validatePassword(password, passwordConfirm);
 }
+
+/**
+ * Validate user edit (username + optional password)
+ * Used in both admin and general user edit forms
+ * 
+ * @param {string} username - The username to validate
+ * @param {string} password - The password (optional in edit mode)
+ * @param {string} passwordConfirm - The password confirmation
+ * @param {boolean} isEditMode - True if editing existing user, false if adding new user
+ */
+export function validateUserEdit(username, password, passwordConfirm, isEditMode = false) {
+    // Username validation (always required)
+    if (!username || username.trim() === '') {
+        return {
+            valid: false,
+            message: 'Username cannot be empty!'
+        };
+    }
+    
+    // Password validation
+    // In edit mode, password is optional (empty means no change)
+    // But if provided, it must be valid
+    if (isEditMode) {
+        // If both password fields are empty, it's valid (no password change)
+        if ((!password || password.trim() === '') && (!passwordConfirm || passwordConfirm.trim() === '')) {
+            return {
+                valid: true,
+                message: ''
+            };
+        }
+        
+        // If password is provided, validate it
+        if (password || passwordConfirm) {
+            return validatePassword(password, passwordConfirm);
+        }
+    } else {
+        // In add mode, password is required
+        return validatePassword(password, passwordConfirm);
+    }
+    
+    return {
+        valid: true,
+        message: ''
+    };
+}

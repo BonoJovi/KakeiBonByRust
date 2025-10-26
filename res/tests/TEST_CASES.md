@@ -2,13 +2,44 @@
 
 このドキュメントでは、各画面・機能のテストケース詳細を記載しています。
 
+## ⚠️ 重要: Unicodeテストケースに関する注意
+
+### JavaScript vs Rust の文字列長の違い
+
+- **JavaScript**: `.length` は UTF-16 コードユニット数（ほとんどの文字で1カウント）
+- **Rust**: `.len()` はバイト長（UTF-8）、日本語などは1文字=3バイト
+
+### テストケース作成時の注意点
+
+1. **パスワード長のテスト**: 
+   - 境界値テスト（16文字）には **ASCII文字のみ** を使用
+   - Unicodeは文字サポートテストのみに使用
+   
+2. **Unicodeパスワードの例**:
+   ```javascript
+   // ❌ 悪い例（JavaScriptでは15文字でエラー）
+   'パスワード1234567890'  // 15文字
+   
+   // ✅ 良い例（JavaScriptで16文字）
+   'パスワード12345678901'  // 16文字
+   
+   // ✅ 最良の例（境界値テストはASCII）
+   '1234567890123456'  // 両言語で確実に16
+   ```
+
+3. **推奨パターン**:
+   - 長さ検証: ASCII文字を使用
+   - 文字種検証: Unicode文字を使用（十分な長さで）
+
 ## 目次
 
 - [管理者登録画面](#管理者登録画面)
 - [ユーザ追加画面](#ユーザ追加画面)
+- [管理者ユーザ編集画面](#管理者ユーザ編集画面)
 - [ログイン画面](#ログイン画面)
 - [共通パスワードバリデーション](#共通パスワードバリデーション)
 - [共通ユーザ名バリデーション](#共通ユーザ名バリデーション)
+- [共通ユーザ編集バリデーション](#共通ユーザ編集バリデーション)
 
 ---
 
@@ -60,6 +91,33 @@
 | 5 | 完全に有効 | 有効なユーザ名と有効なパスワード | valid: true |
 | 6 | 複雑なユーザ名 | `user_test@example.com` + 有効パスワード | valid: true |
 | 7 | 複雑なパスワード | 有効ユーザ名 + `C0mpl3x!P@ssw0rd#2024$%^&*()` | valid: true |
+
+---
+
+## 管理者ユーザ編集画面
+
+**ファイル**: `admin-edit.test.js`  
+**テスト数**: 63件
+
+### テスト構成
+
+#### パスワードバリデーション（26件）
+`runAllPasswordTests()`を使用して実行。
+詳細は[共通パスワードバリデーション](#共通パスワードバリデーション)を参照。
+
+#### ユーザ名バリデーション（13件）
+`testUsernameValidation()`を使用して実行。
+詳細は[共通ユーザ名バリデーション](#共通ユーザ名バリデーション)を参照。
+
+#### ユーザ編集固有テスト（24件）
+`runAllUserEditTests()`を使用して実行。
+詳細は[共通ユーザ編集バリデーション](#共通ユーザ編集バリデーション)を参照。
+
+### 編集パターン
+管理者ユーザ編集では、以下の3つの編集パターンをサポート：
+1. **ユーザ名のみ編集** - パスワードは空（変更なし）
+2. **パスワードのみ編集** - ユーザ名は変更なし
+3. **ユーザ名＋パスワード編集** - 両方を同時に変更
 
 ---
 
@@ -148,6 +206,57 @@
 | 11 | メール形式 | `'user@example.com'` | valid: true |
 | 12 | 前スペース（trim） | `'  testuser'` | valid: true（trimされる） |
 | 13 | 後スペース（trim） | `'testuser  '` | valid: true（trimされる） |
+
+---
+
+## 共通ユーザ編集バリデーション
+
+**モジュール**: `user-edit-validation-tests.js`  
+**テスト数**: 23件  
+**用途**: 管理者ユーザ編集・一般ユーザ編集画面で共通使用
+
+### 1. ユーザ名のみ編集（6件）
+
+| # | テスト名 | 入力 | 期待結果 |
+|---|---------|------|---------|
+| 1 | 有効なユーザ名変更 | username: `'newusername'`, password: `''` (edit mode) | valid: true |
+| 2 | 空ユーザ名拒否 | username: `''`, password: `''` (edit mode) | エラー: "Username cannot be empty!" |
+| 3 | スペースのみ拒否 | username: `'   '`, password: `''` (edit mode) | エラー: "Username cannot be empty!" |
+| 4 | 特殊文字許可 | username: `'user@#$%'`, password: `''` (edit mode) | valid: true |
+| 5 | Unicode許可 | username: `'ユーザー名'`, password: `''` (edit mode) | valid: true |
+| 6 | 長いユーザ名 | username: 128文字, password: `''` (edit mode) | valid: true |
+
+### 2. パスワードのみ編集（8件）
+
+| # | テスト名 | 入力 | 期待結果 |
+|---|---------|------|---------|
+| 1 | 有効なパスワード変更 | username: `'existinguser'`, password: `'1234567890123456'` (edit mode) | valid: true |
+| 2 | 短いパスワード拒否 | username: `'existinguser'`, password: `'short'` (edit mode) | エラー: "Password must be at least 16 characters long!" |
+| 3 | パスワード不一致拒否 | password: `'1234567890123456'`, confirm: `'6543210987654321'` | エラー: "Passwords do not match!" |
+| 4 | 確認なし拒否 | password: `'1234567890123456'`, confirm: `''` | エラー: "Passwords do not match!" |
+| 5 | 空+確認拒否 | password: `''`, confirm: `'1234567890123456'` | エラー: "Password cannot be empty!" |
+| 6 | スペース含む許可 | password: `'my secure password 16'` | valid: true |
+| 7 | 特殊文字許可 | password: `'p@ssw0rd!#$12345'` | valid: true |
+| 8 | Unicode許可 | password: `'パスワード12345678901'` | valid: true |
+
+### 3. ユーザ名＋パスワード編集（4件）
+
+| # | テスト名 | 入力 | 期待結果 |
+|---|---------|------|---------|
+| 1 | 両方変更許可 | username: `'newusername'`, password: `'1234567890123456'` (edit mode) | valid: true |
+| 2 | 空ユーザ名拒否 | username: `''`, password: `'1234567890123456'` (edit mode) | エラー: "Username cannot be empty!" |
+| 3 | 短いパスワード拒否 | username: `'newusername'`, password: `'short'` (edit mode) | エラー: "Password must be at least 16 characters long!" |
+| 4 | パスワード不一致拒否 | username: `'newusername'`, passwords不一致 (edit mode) | エラー: "Passwords do not match!" |
+
+### 4. 編集モード vs 追加モード（5件）
+
+| # | テスト名 | 入力 | 期待結果 |
+|---|---------|------|---------|
+| 1 | 編集モードで空パスワード許可 | username: `'username'`, password: `''` (edit mode: true) | valid: true |
+| 2 | 追加モードで空パスワード拒否 | username: `'username'`, password: `''` (edit mode: false) | エラー: "Password cannot be empty!" |
+| 3 | 編集モードでパスワード提供時検証 | username: `'username'`, password: `'short'` (edit mode: true) | エラー: "Password must be at least 16 characters long!" |
+| 4 | 追加モードで有効パスワード必須 | username: `'username'`, password: `'1234567890123456'` (edit mode: false) | valid: true |
+| 5 | 編集モードでパスワード提供時確認必須 | password: `'1234567890123456'`, confirm: `''` (edit mode: true) | エラー: "Passwords do not match!" |
 
 ---
 
