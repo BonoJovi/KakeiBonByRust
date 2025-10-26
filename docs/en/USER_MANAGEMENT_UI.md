@@ -66,13 +66,28 @@ Modal dialog for user information input:
 
 ### User Delete Confirmation Modal
 Confirmation dialog before deletion:
-- Explicitly shows username to be deleted
+- Explicitly shows username with emphasis (1.5x size, wrapped in double quotes)
 - Delete/Cancel buttons
 - Result message display
 
 ## Accessibility Features
 
+### Focus Trap (Implemented 2025-10-26)
+
+Proper keyboard focus control within modal dialogs:
+
+**Features**
+- Navigate forward with TAB, backward with SHIFT+TAB
+- Loop between first and last elements in modal
+- Prevents focus from escaping outside the modal
+
+**Implementation Details**
+- Addresses issue where SHIFT+TAB is reported as `"Unidentified"` in Tauri applications
+- Intercepts events in capture phase
+- Implemented in `setupFocusTrap()` function in `res/js/modal-utils.js`
+
 ### Focus Indicators
+
 Visual indication of focused elements:
 
 **Input Fields**
@@ -80,10 +95,11 @@ Visual indication of focused elements:
 - Black outline for color-blind users
 - Controlled by `.form-group.active` class
 
-**Buttons**
-- Green outline when focused
-- Green underline at bottom
-- Supports both `.btn-primary` and `.btn-secondary`
+**Buttons (Unified 2025-10-26)**
+- Inactive state: 2px black border
+- Focus state: 2px white + 4px black double box-shadow
+- Unified design across all buttons
+- High contrast ratio for accessibility
 
 **Dropdown Items**
 - Filled ○ mark for active items
@@ -92,7 +108,8 @@ Visual indication of focused elements:
 ### Keyboard Support
 - Tab key for focus navigation
 - Enter key for form submission
-- Esc key to close modal (planned)
+- Esc key to close modal
+- Focus trap within modals (implemented)
 
 ## Core Features
 
@@ -289,14 +306,16 @@ function escapeHtml(text) {
 
 ## Future Improvements
 
-### Unimplemented Features
-1. ✓ User add feature (implemented)
-2. ⚠ User edit feature (implemented, untested)
-3. ⚠ User delete feature (implemented, untested)
-4. ⚠ Admin edit feature (implemented, untested)
+### Implemented Features (Updated 2025-10-26)
+1. ✅ User add feature
+2. ✅ User edit feature
+3. ✅ User delete feature
+4. ✅ Admin edit feature
+5. ✅ Focus trap (within modals)
+6. ✅ Unified button focus styles
+7. ✅ Delete confirmation modal improvements
 
 ### UI/UX Improvements
-- Close modal with Esc key
 - Pagination (for many users)
 - Sort functionality (click column headers)
 - Search/filter functionality
@@ -306,7 +325,6 @@ function escapeHtml(text) {
 - Add ARIA labels
 - Screen reader support messages
 - Add keyboard shortcuts
-- Focus trap (within modal)
 
 ### Error Handling
 - More detailed error messages

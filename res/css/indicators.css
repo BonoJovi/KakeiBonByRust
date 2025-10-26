@@ -47,21 +47,29 @@
          0    2px 0 #000;
 }
 
-/* Focus indicator for buttons */
+/* Focus indicator for all buttons - unified double border style (white + black) */
+button:focus,
 .btn-primary:focus,
-.btn-secondary:focus {
-    outline: 3px solid #4CAF50;
-    outline-offset: 2px;
+.btn-secondary:focus,
+.btn-danger:focus,
+.btn-small:focus,
+.btn-edit:focus,
+.btn-delete:focus,
+.close-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px white, 0 0 0 4px #000;
 }
 
 /* Alternative: underline indicator for focused buttons */
 .btn-primary.focus-indicator,
-.btn-secondary.focus-indicator {
+.btn-secondary.focus-indicator,
+.btn-danger.focus-indicator {
     position: relative;
 }
 
 .btn-primary.focus-indicator:focus::after,
-.btn-secondary.focus-indicator:focus::after {
+.btn-secondary.focus-indicator:focus::after,
+.btn-danger.focus-indicator:focus::after {
     content: '';
     position: absolute;
     bottom: -4px;

@@ -2,6 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 import i18n from './i18n.js';
 import { ROLE_ADMIN, ROLE_USER } from './consts.js';
 import { setupIndicators } from './indicators.js';
+import { setupModalHandlers } from './modal-utils.js';
 
 let currentUsers = [];
 let editingUserId = null;
@@ -17,7 +18,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     await setupLanguageMenu();
     setupLanguageMenuHandlers();
     setupMenuHandlers();
-    setupModalHandlers();
+    setupModalEventHandlers();
     setupIndicators();
     
     await loadUsers();
@@ -122,7 +123,7 @@ async function handleLanguageChange(langCode) {
     }
 }
 
-function setupModalHandlers() {
+function setupModalEventHandlers() {
     const addUserBtn = document.getElementById('add-user-btn');
     const closeModalBtn = document.getElementById('close-modal');
     const cancelBtn = document.getElementById('cancel-btn');
@@ -140,16 +141,9 @@ function setupModalHandlers() {
     cancelDeleteBtn?.addEventListener('click', closeDeleteModal);
     confirmDeleteBtn?.addEventListener('click', handleDeleteConfirm);
     
-    document.getElementById('user-modal')?.addEventListener('click', function(e) {
-        if (e.target === this) {
-            closeUserModal();
-        }
-    });
-    
-    document.getElementById('delete-modal')?.addEventListener('click', function(e) {
-        if (e.target === this) {
-            closeDeleteModal();
-        }
+    setupModalHandlers({
+        'user-modal': closeUserModal,
+        'delete-modal': closeDeleteModal
     });
 }
 
@@ -352,7 +346,7 @@ function openDeleteModal(user) {
     const modal = document.getElementById('delete-modal');
     const usernameDisplay = document.getElementById('delete-username');
     
-    usernameDisplay.textContent = user.name;
+    usernameDisplay.textContent = `"${user.name}"`;
     modal.dataset.userId = user.user_id;
     
     showMessage('delete-result-message', '', '');

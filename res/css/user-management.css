@@ -76,7 +76,7 @@ body {
     border: 2px solid #999;
     border-radius: 4px;
     min-height: 0;
-    max-height: 16em;
+    max-height: 18em;
 }
 
 #user-table {
@@ -91,9 +91,10 @@ body {
 
 #user-table th,
 #user-table td {
-    padding: 12px 8px;
+    padding: 10px 8px;
     text-align: left;
     border-bottom: 2px solid #999;
+    vertical-align: middle;
 }
 
 #user-table th {
@@ -105,22 +106,35 @@ body {
     z-index: 10;
 }
 
+#user-table th:nth-child(3),
+#user-table td:nth-child(3) {
+    min-width: 6.5em;
+}
+
 #user-table th:nth-child(6),
 #user-table td:nth-child(6) {
-    min-width: 160px;
+    min-width: 10em;
 }
 
 #user-table tbody tr:hover {
     background-color: #f9f9f9;
 }
 
+#user-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
 .role-badge {
     display: inline-block;
-    padding: 4px 12px;
+    padding: 3px 10px;
     border-radius: 12px;
-    font-size: 0.95em;
+    font-size: 0.9em;
     font-weight: 500;
     border: 2px solid #000;
+    white-space: nowrap;
+    min-width: 5em;
+    text-align: center;
+    line-height: 1.4;
 }
 
 .role-admin {
@@ -233,7 +247,7 @@ body {
 
 .form-actions {
     display: flex;
-    gap: 10px;
+    gap: 16px;
     justify-content: flex-end;
     margin-top: 20px;
 }
@@ -241,6 +255,8 @@ body {
 .form-actions button {
     flex: 1;
     max-width: 120px;
+    white-space: nowrap;
+    min-width: fit-content;
 }
 
 #user-modal .form-group input {
@@ -258,10 +274,10 @@ body {
 }
 
 .btn-secondary {
-    background-color: #95a5a6;
+    background-color: #7f8c8d;
     color: white;
     padding: 10px 20px;
-    border: none;
+    border: 2px solid #000;
     border-radius: 4px;
     cursor: pointer;
     transition: background-color 0.3s;
@@ -269,14 +285,14 @@ body {
 }
 
 .btn-secondary:hover {
-    background-color: #7f8c8d;
+    background-color: #6c7a7b;
 }
 
 .btn-danger {
     background-color: #e74c3c;
     color: white;
     padding: 10px 20px;
-    border: none;
+    border: 2px solid #000;
     border-radius: 4px;
     cursor: pointer;
     transition: background-color 0.3s;
@@ -292,6 +308,7 @@ body {
     color: #e74c3c;
     margin: 15px 0;
     text-align: center;
+    font-size: 1.5em;
 }
 
 #user-list-message,

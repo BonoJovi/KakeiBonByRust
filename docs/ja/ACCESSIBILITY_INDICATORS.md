@@ -207,6 +207,71 @@ CSSは諸刃の剣であり、使い方を誤るとレスポンシブデザイ�
 - [x] 色覚異常の方でも黒い縁取りにより形状で認識可能
 - [x] Flexboxによる自動中央配置が機能する
 
+### 実装済み機能（2025-10-26追加）
+
+#### フォーカストラップ
+
+モーダルダイアログ内でのキーボードフォーカス制御を実装しました：
+
+**機能概要**
+- TABキーとSHIFT+TABキーでモーダル内の要素間をループ
+- 最後の要素から最初の要素へ、最初の要素から最後の要素へフォーカスが移動
+- モーダル外にフォーカスが逃げることを防止
+
+**技術的な課題と解決**
+- **課題**: TauriアプリケーションではSHIFT+TABが`e.key === "Unidentified"`として報告される
+- **解決**: `e.key === 'Tab'`に加えて`e.shiftKey && (e.key === 'Unidentified' || e.code === 'Tab')`もTabキーとして認識
+- **実装**: `res/js/modal-utils.js`の`setupFocusTrap()`関数
+- **イベントフェーズ**: キャプチャフェーズ（`true`）を使用してイベントを早期にインターセプト
+
+**コード例**
+```javascript
+const isTab = e.key === 'Tab' || (e.shiftKey && (e.key === 'Unidentified' || e.code === 'Tab'));
+```
+
+#### 統一されたボタンフォーカススタイル
+
+全てのボタンに一貫したフォーカスインジケータを実装しました：
+
+**デザイン仕様**
+- **非アクティブ時**: 2pxの黒枠
+- **フォーカス時**: 内側に2pxの白い線、外側に4pxの黒い線（二重ボックスシャドウ）
+- **適用対象**: `.btn-primary`, `.btn-secondary`, `.btn-danger`, `.btn-small`, `.btn-edit`, `.btn-delete`, `.close-btn`、および全ての`button`要素
+
+**スタイル定義**
+```css
+button:focus,
+.btn-primary:focus,
+.btn-secondary:focus,
+.btn-danger:focus,
+.btn-small:focus,
+.btn-edit:focus,
+.btn-delete:focus,
+.close-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px white, 0 0 0 4px #000;
+}
+```
+
+**アクセシビリティの配慮**
+- 高いコントラスト比（白と黒）で視認性を確保
+- 色覚特性に関わらず明確に認識可能
+- すべてのボタンで統一されたデザインによりユーザー体験を向上
+
+#### 削除確認モーダルの改善
+
+削除対象のユーザ名をより強調表示：
+
+**表示仕様**
+- フォントサイズ: 1.5em（通常の1.5倍）
+- ダブルクォートで囲む: `"username"`
+- 色: 赤色 (#e74c3c)
+- フォントウェイト: 600（太字）
+
+**実装場所**
+- CSS: `res/css/user-management.css`の`.delete-target`
+- JavaScript: `res/js/user-management.js`の`openDeleteModal()`関数
+
 ### 今後の実装予定
 
 以下の機能は未実装で、今後の実装予定です：
@@ -221,10 +286,6 @@ CSSは諸刃の剣であり、使い方を誤るとレスポンシブデザイ�
   - すべての機能をキーボードのみで操作可能に
   - ショートカットキーの追加
   - Tabキーの順序最適化
-
-- [ ] フォーカスインジケータの更なる強化
-  - ボタンのフォーカス時の下線表示（現在は定義済みだが要検証）
-  - 他のインタラクティブ要素へのインジケータ追加
 
 #### 将来的な拡張
 

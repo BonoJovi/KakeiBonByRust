@@ -207,6 +207,71 @@ The following features are implemented and verified:
 - [x] Recognizable by shape for users with color vision deficiency due to black border
 - [x] Automatic centering with Flexbox works correctly
 
+### Implemented Features (Added 2025-10-26)
+
+#### Focus Trap
+
+Implemented keyboard focus control within modal dialogs:
+
+**Features**
+- Loop through modal elements with TAB and SHIFT+TAB keys
+- Focus moves from last element to first element and vice versa
+- Prevents focus from escaping outside the modal
+
+**Technical Challenges and Solutions**
+- **Challenge**: SHIFT+TAB is reported as `e.key === "Unidentified"` in Tauri applications
+- **Solution**: Recognize both `e.key === 'Tab'` and `e.shiftKey && (e.key === 'Unidentified' || e.code === 'Tab')` as Tab keys
+- **Implementation**: `setupFocusTrap()` function in `res/js/modal-utils.js`
+- **Event Phase**: Uses capture phase (`true`) to intercept events early
+
+**Code Example**
+```javascript
+const isTab = e.key === 'Tab' || (e.shiftKey && (e.key === 'Unidentified' || e.code === 'Tab'));
+```
+
+#### Unified Button Focus Styles
+
+Implemented consistent focus indicators for all buttons:
+
+**Design Specifications**
+- **Inactive state**: 2px black border
+- **Focus state**: 2px white line inside, 4px black line outside (double box-shadow)
+- **Target elements**: `.btn-primary`, `.btn-secondary`, `.btn-danger`, `.btn-small`, `.btn-edit`, `.btn-delete`, `.close-btn`, and all `button` elements
+
+**Style Definition**
+```css
+button:focus,
+.btn-primary:focus,
+.btn-secondary:focus,
+.btn-danger:focus,
+.btn-small:focus,
+.btn-edit:focus,
+.btn-delete:focus,
+.close-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px white, 0 0 0 4px #000;
+}
+```
+
+**Accessibility Considerations**
+- High contrast ratio (white and black) ensures visibility
+- Clearly recognizable regardless of color vision characteristics
+- Unified design across all buttons improves user experience
+
+#### Delete Confirmation Modal Improvements
+
+Enhanced display of target username for deletion:
+
+**Display Specifications**
+- Font size: 1.5em (1.5 times larger than normal)
+- Wrapped in double quotes: `"username"`
+- Color: Red (#e74c3c)
+- Font weight: 600 (bold)
+
+**Implementation**
+- CSS: `.delete-target` in `res/css/user-management.css`
+- JavaScript: `openDeleteModal()` function in `res/js/user-management.js`
+
 ### Future Implementation Plans
 
 The following features are not yet implemented and are planned for future development:
@@ -221,10 +286,6 @@ The following features are not yet implemented and are planned for future develo
   - All features operable with keyboard only
   - Add shortcut keys
   - Optimize Tab key order
-
-- [ ] Further enhancement of focus indicators
-  - Button focus underline display (currently defined but needs verification)
-  - Add indicators to other interactive elements
 
 #### Future Enhancements
 

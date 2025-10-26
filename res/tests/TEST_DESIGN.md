@@ -30,10 +30,11 @@ res/tests/
 ├── admin-setup.test.js               # 管理者登録テスト（29件）
 ├── user-addition.test.js             # ユーザ追加テスト（49件）
 ├── admin-edit.test.js                # 管理者ユーザ編集テスト（63件）
+├── general-user-edit.test.js         # 一般ユーザ編集テスト（63件）
 └── login.test.js                     # ログインテスト（58件）
 ```
 
-**JavaScript総テスト数**: 199件
+**JavaScript総テスト数**: 262件
 
 ### レイヤー構造
 
@@ -43,6 +44,7 @@ res/tests/
 │  - admin-setup.test.js (29)         │
 │  - user-addition.test.js (49)       │
 │  - admin-edit.test.js (63)          │
+│  - general-user-edit.test.js (63)   │
 │  - login.test.js (58)               │
 └────────────┬────────────────────────┘
              │ インポート

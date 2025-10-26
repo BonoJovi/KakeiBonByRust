@@ -401,6 +401,87 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_update_general_user_username_only() {
+        let pool = setup_test_db().await;
+        create_test_admin(&pool, "admin", "admin_password123456").await;
+        
+        let service = UserManagementService::new(pool.clone());
+        let user_id = service.register_general_user("testuser", "password_123456789")
+            .await
+            .unwrap();
+        
+        // Update username only, password remains unchanged
+        service.update_general_user(user_id, Some("updateduser"), None)
+            .await
+            .unwrap();
+        
+        let user = service.get_user(user_id).await.unwrap();
+        assert_eq!(user.name, "updateduser");
+        assert_eq!(user.role, ROLE_USER);
+        assert!(user.update_dt.is_some());
+    }
+
+    #[tokio::test]
+    async fn test_update_general_user_password_only() {
+        let pool = setup_test_db().await;
+        create_test_admin(&pool, "admin", "admin_password123456").await;
+        
+        let service = UserManagementService::new(pool.clone());
+        let user_id = service.register_general_user("testuser", "password_123456789")
+            .await
+            .unwrap();
+        
+        // Update password only, username remains unchanged
+        service.update_general_user(user_id, None, Some("new_password_123456"))
+            .await
+            .unwrap();
+        
+        let user = service.get_user(user_id).await.unwrap();
+        assert_eq!(user.name, "testuser");
+        assert_eq!(user.role, ROLE_USER);
+        assert!(user.update_dt.is_some());
+        
+        // Verify new password works
+        let row = sqlx::query("SELECT PAW FROM USERS WHERE USER_ID = ?")
+            .bind(user_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        let password_hash: String = row.get(0);
+        assert!(verify_password("new_password_123456", &password_hash).unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_update_general_user_username_and_password() {
+        let pool = setup_test_db().await;
+        create_test_admin(&pool, "admin", "admin_password123456").await;
+        
+        let service = UserManagementService::new(pool.clone());
+        let user_id = service.register_general_user("testuser", "password_123456789")
+            .await
+            .unwrap();
+        
+        // Update both username and password
+        service.update_general_user(user_id, Some("superuser"), Some("super_password_123456"))
+            .await
+            .unwrap();
+        
+        let user = service.get_user(user_id).await.unwrap();
+        assert_eq!(user.name, "superuser");
+        assert_eq!(user.role, ROLE_USER);
+        assert!(user.update_dt.is_some());
+        
+        // Verify new password works
+        let row = sqlx::query("SELECT PAW FROM USERS WHERE USER_ID = ?")
+            .bind(user_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        let password_hash: String = row.get(0);
+        assert!(verify_password("super_password_123456", &password_hash).unwrap());
+    }
+
+    #[tokio::test]
     async fn test_update_admin_user() {
         let pool = setup_test_db().await;
         let admin_id = create_test_admin(&pool, "admin", "admin_password123456").await;
