@@ -12,6 +12,12 @@ mod services {
     pub mod i18n;
 }
 
+#[cfg(test)]
+mod test_helpers;
+
+#[cfg(test)]
+mod validation_tests;
+
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tauri::Manager;

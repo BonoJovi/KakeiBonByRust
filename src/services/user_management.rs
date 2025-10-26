@@ -356,51 +356,12 @@ impl UserManagementService {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    async fn setup_test_db() -> SqlitePool {
-        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
-        
-        sqlx::query(
-            r#"
-            CREATE TABLE IF NOT EXISTS USERS (
-                USER_ID INTEGER NOT NULL,
-                NAME VARCHAR(128) NOT NULL UNIQUE,
-                PAW VARCHAR(128) NOT NULL,
-                ROLE INTEGER NOT NULL,
-                ENTRY_DT DATETIME NOT NULL,
-                UPDATE_DT DATETIME,
-                PRIMARY KEY(USER_ID)
-            )
-            "#
-        )
-        .execute(&pool)
-        .await
-        .unwrap();
-        
-        pool
-    }
-
-    async fn create_admin_user(pool: &SqlitePool) {
-        let now = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
-        let password_hash = hash_password("admin123").unwrap();
-        
-        sqlx::query(
-            "INSERT INTO USERS (USER_ID, NAME, PAW, ROLE, ENTRY_DT) VALUES (?, ?, ?, ?, ?)"
-        )
-        .bind(1)
-        .bind("admin")
-        .bind(password_hash)
-        .bind(ROLE_ADMIN)
-        .bind(now)
-        .execute(pool)
-        .await
-        .unwrap();
-    }
+    use crate::test_helpers::database::{setup_test_db, create_test_admin};
 
     #[tokio::test]
     async fn test_register_general_user() {
         let pool = setup_test_db().await;
-        create_admin_user(&pool).await;
+        create_test_admin(&pool, "admin", "admin_password123456").await;
         
         let service = UserManagementService::new(pool.clone());
         let user_id = service.register_general_user("testuser", "password123")
@@ -417,7 +378,7 @@ mod tests {
     #[tokio::test]
     async fn test_update_general_user() {
         let pool = setup_test_db().await;
-        create_admin_user(&pool).await;
+        create_test_admin(&pool, "admin", "admin_password123456").await;
         
         let service = UserManagementService::new(pool.clone());
         let user_id = service.register_general_user("testuser", "password123")
@@ -442,15 +403,15 @@ mod tests {
     #[tokio::test]
     async fn test_update_admin_user() {
         let pool = setup_test_db().await;
-        create_admin_user(&pool).await;
+        let admin_id = create_test_admin(&pool, "admin", "admin_password123456").await;
         
         let service = UserManagementService::new(pool.clone());
         
-        service.update_admin_user(1, Some("superadmin"), None)
+        service.update_admin_user(admin_id, Some("superadmin"), None)
             .await
             .unwrap();
         
-        let user = service.get_user(1).await.unwrap();
+        let user = service.get_user(admin_id).await.unwrap();
         assert_eq!(user.name, "superadmin");
         assert_eq!(user.role, ROLE_ADMIN);
     }
@@ -458,7 +419,7 @@ mod tests {
     #[tokio::test]
     async fn test_delete_general_user() {
         let pool = setup_test_db().await;
-        create_admin_user(&pool).await;
+        create_test_admin(&pool, "admin", "admin_password123456").await;
         
         let service = UserManagementService::new(pool.clone());
         let user_id = service.register_general_user("testuser", "password123")
@@ -474,18 +435,18 @@ mod tests {
     #[tokio::test]
     async fn test_cannot_delete_admin_user() {
         let pool = setup_test_db().await;
-        create_admin_user(&pool).await;
+        let admin_id = create_test_admin(&pool, "admin", "admin_password123456").await;
         
         let service = UserManagementService::new(pool.clone());
         
-        let result = service.delete_general_user(1).await;
+        let result = service.delete_general_user(admin_id).await;
         assert!(matches!(result, Err(UserManagementError::AdminUserCannotBeDeleted)));
     }
 
     #[tokio::test]
     async fn test_duplicate_username() {
         let pool = setup_test_db().await;
-        create_admin_user(&pool).await;
+        create_test_admin(&pool, "admin", "admin_password123456").await;
         
         let service = UserManagementService::new(pool.clone());
         service.register_general_user("testuser", "password123")
@@ -499,7 +460,7 @@ mod tests {
     #[tokio::test]
     async fn test_list_users() {
         let pool = setup_test_db().await;
-        create_admin_user(&pool).await;
+        create_test_admin(&pool, "admin", "admin_password123456").await;
         
         let service = UserManagementService::new(pool.clone());
         service.register_general_user("user1", "password1").await.unwrap();

@@ -59,44 +59,28 @@ pub fn validate_password_with_confirmation(password: &str, password_confirm: &st
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::validation_tests::password_tests;
 
+    // Use the common password test suite
+    #[test]
+    fn test_all_password_validations() {
+        password_tests::run_all_tests();
+    }
+
+    // Keep individual tests for backwards compatibility and granular failure reporting
     #[test]
     fn test_empty_password() {
-        assert!(validate_password("").is_err());
-        assert_eq!(
-            validate_password("").unwrap_err(),
-            "Password cannot be empty!"
-        );
+        password_tests::test_empty_passwords();
     }
 
     #[test]
     fn test_whitespace_only_password() {
-        assert!(validate_password("   ").is_err());
-        assert_eq!(
-            validate_password("   ").unwrap_err(),
-            "Password cannot be empty!"
-        );
-        
-        assert!(validate_password("\t\t").is_err());
-        assert_eq!(
-            validate_password("\t\t").unwrap_err(),
-            "Password cannot be empty!"
-        );
-        
-        assert!(validate_password(" \t \n ").is_err());
-        assert_eq!(
-            validate_password(" \t \n ").unwrap_err(),
-            "Password cannot be empty!"
-        );
+        password_tests::test_whitespace_only_passwords();
     }
 
     #[test]
     fn test_password_too_short() {
-        assert!(validate_password("short").is_err());
-        assert_eq!(
-            validate_password("short").unwrap_err(),
-            "Password must be at least 16 characters long!"
-        );
+        password_tests::test_short_passwords();
     }
 
     #[test]
@@ -162,8 +146,7 @@ mod tests {
 
     #[test]
     fn test_password_confirmation_matching() {
-        let password = "1234567890123456";
-        assert!(validate_password_confirmation(password, password).is_ok());
+        password_tests::test_password_confirmation_logic();
     }
 
     #[test]
@@ -219,33 +202,12 @@ mod tests {
 
     #[test]
     fn test_full_validation_error_priority() {
-        // Empty password should be caught first
-        let result = validate_password_with_confirmation("", "different");
-        assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), "Password cannot be empty!");
-        
-        // Short password should be caught before mismatch
-        let result = validate_password_with_confirmation("short", "different");
-        assert!(result.is_err());
-        assert_eq!(
-            result.unwrap_err(),
-            "Password must be at least 16 characters long!"
-        );
+        password_tests::test_validation_error_priority();
     }
 
     #[test]
     fn test_password_with_leading_trailing_spaces() {
-        // Password with leading/trailing spaces but content in middle
-        let password = " passwordpassword ";
-        assert!(password.len() >= 16);
-        assert!(validate_password(password).is_ok());
-        
-        // Matching passwords with same spaces
-        assert!(validate_password_confirmation(password, password).is_ok());
-        
-        // Non-matching due to different spacing
-        let password2 = "passwordpassword";
-        assert!(validate_password_confirmation(password, password2).is_err());
+        password_tests::test_passwords_with_spaces();
     }
 
     #[test]
@@ -256,13 +218,6 @@ mod tests {
 
     #[test]
     fn test_password_boundary_cases() {
-        // Test at boundary - 1
-        assert!(validate_password(&"a".repeat(15)).is_err());
-        
-        // Test at boundary
-        assert!(validate_password(&"a".repeat(16)).is_ok());
-        
-        // Test at boundary + 1
-        assert!(validate_password(&"a".repeat(17)).is_ok());
+        password_tests::test_boundary_cases();
     }
 }

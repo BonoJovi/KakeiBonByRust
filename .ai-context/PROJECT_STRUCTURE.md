@@ -35,6 +35,8 @@ KakeiBonByRust/
 │   ├── crypto.rs             # Encryption/decryption
 │   ├── settings.rs           # Application settings
 │   ├── consts.rs             # Constants (ROLE_ADMIN=0, ROLE_USER=1)
+│   ├── test_helpers.rs       # Common test utilities (test only)
+│   ├── validation_tests.rs   # Reusable validation test suites (test only)
 │   └── services/             # Business logic modules
 │       ├── auth.rs           # Authentication
 │       ├── user_management.rs # User CRUD
@@ -91,6 +93,8 @@ KakeiBonByRust/
 | User Mgmt | `src/services/user_management.rs` | User CRUD operations |
 | Encryption | `src/services/encryption.rs` | Encryption service layer |
 | i18n | `src/services/i18n.rs` | Backend i18n support |
+| **Test Helpers** | `src/test_helpers.rs` | **Common test utilities and database setup** |
+| **Validation Tests** | `src/validation_tests.rs` | **Reusable password validation test suites** |
 
 ### Frontend (JavaScript)
 
@@ -193,11 +197,17 @@ CREATE TABLE USERS (
 ### Common Module Pattern
 Tests use a DRY (Don't Repeat Yourself) pattern:
 
+**Frontend (JavaScript):**
 1. **Common validation functions** in `validation-helpers.js`
 2. **Common test suites** in `*-validation-tests.js`
 3. **Screen-specific tests** import and reuse common modules
 
-**Example**:
+**Backend (Rust):**
+1. **Common test helpers** in `src/test_helpers.rs`
+2. **Common validation test suites** in `src/validation_tests.rs`
+3. **Module-specific tests** use common helpers and test suites
+
+**Example (JavaScript)**:
 ```javascript
 // user-addition.test.js
 import { validateUserAddition } from './validation-helpers.js';
@@ -209,10 +219,24 @@ runAllPasswordTests(wrapperFn, 'User Addition Password Tests');
 testUsernameValidation(validateUserAddition);
 ```
 
+**Example (Rust)**:
+```rust
+// src/services/user_management.rs
+use crate::test_helpers::database::{setup_test_db, create_test_admin};
+
+#[tokio::test]
+async fn test_register_general_user() {
+    let pool = setup_test_db().await;
+    create_test_admin(&pool, "admin", "password").await;
+    // ... test implementation
+}
+```
+
 **Benefits**:
 - Validation rule change → modify 1 file → all screens updated
 - New screen → 5 lines of code → full test coverage
 - Consistent behavior across all screens
+- Backend and frontend tests follow same pattern
 
 ---
 
@@ -234,6 +258,12 @@ npm test
 
 # All tests
 ./res/tests/run-all-tests.sh
+```
+
+**Test Count:**
+- Rust backend: 91 tests
+- JavaScript frontend: 136 tests
+- **Total: 227 tests**
 ```
 
 ### Build

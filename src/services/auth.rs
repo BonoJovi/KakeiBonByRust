@@ -212,29 +212,7 @@ impl AuthService {
 mod tests {
     use super::*;
     use crate::consts::{ROLE_ADMIN, ROLE_USER, ROLE_VISIT};
-
-    async fn setup_test_db() -> SqlitePool {
-        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
-        
-        sqlx::query(
-            r#"
-            CREATE TABLE IF NOT EXISTS USERS (
-                USER_ID INTEGER NOT NULL,
-                NAME VARCHAR(128) NOT NULL UNIQUE,
-                PAW VARCHAR(128) NOT NULL,
-                ROLE INTEGER NOT NULL,
-                ENTRY_DT DATETIME NOT NULL,
-                UPDATE_DT DATETIME,
-                PRIMARY KEY(USER_ID)
-            )
-            "#
-        )
-        .execute(&pool)
-        .await
-        .unwrap();
-        
-        pool
-    }
+    use crate::test_helpers::database::setup_test_db;
 
     #[tokio::test]
     async fn test_register_admin_user() {
