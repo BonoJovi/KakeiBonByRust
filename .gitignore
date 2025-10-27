@@ -24,3 +24,6 @@ test_*.db
 # Tarpaulin coverage report
 tarpaulin-report.html
 cobertura.xml
+
+# Work directory (temporary files, not for commit)
+/work/
