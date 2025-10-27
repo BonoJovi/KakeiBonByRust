@@ -674,20 +674,14 @@ async fn adjust_window_size(
     let current_size = window.inner_size()
         .map_err(|e| format!("Failed to get window size: {}", e))?;
     
-    log::info!("Current window size: {}x{}", current_size.width, current_size.height);
-    log::info!("Requested content size: {}x{}", width, height);
-    
     // Convert to logical size
     let logical_current = current_size.to_logical::<f64>(window.scale_factor()
         .map_err(|e| format!("Failed to get scale factor: {}", e))?);
     
     // Resize to match content size (both expand and shrink)
     if (width - logical_current.width).abs() > 1.0 || (height - logical_current.height).abs() > 1.0 {
-        log::info!("Resizing window to: {}x{}", width, height);
         window.set_size(LogicalSize::new(width, height))
             .map_err(|e| format!("Failed to resize window: {}", e))?;
-    } else {
-        log::info!("No resize needed (difference < 1px)");
     }
     
     Ok(())
