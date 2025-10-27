@@ -163,6 +163,15 @@ document.addEventListener('DOMContentLoaded', async function() {
                 adminDropdown.classList.remove('show');
             });
         }
+        
+        const categoryMgmtItem = adminDropdown.querySelector('.dropdown-item:nth-child(2)');
+        if (categoryMgmtItem) {
+            categoryMgmtItem.addEventListener('click', function(e) {
+                console.log('Category Management item clicked');
+                window.location.href = 'category-management.html';
+                adminDropdown.classList.remove('show');
+            });
+        }
     }
     
     // Setup login form

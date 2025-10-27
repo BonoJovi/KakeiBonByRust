@@ -245,8 +245,10 @@ VALUES
 (14, 'menu.admin', 'ja', '管理', 'menu', '管理メニュー', datetime('now')),
 (15, 'menu.user_management', 'en', 'User Management', 'menu', 'User management menu item', datetime('now')),
 (16, 'menu.user_management', 'ja', 'ユーザー管理', 'menu', 'ユーザー管理メニュー項目', datetime('now')),
-(17, 'menu.back_to_main', 'en', 'Back to Main', 'menu', 'Back to main menu item', datetime('now')),
-(18, 'menu.back_to_main', 'ja', 'メインに戻る', 'menu', 'メインに戻るメニュー項目', datetime('now')),
+(17, 'menu.category_management', 'en', 'Category Management', 'menu', 'Category management menu item', datetime('now')),
+(18, 'menu.category_management', 'ja', '費目管理', 'menu', '費目管理メニュー項目', datetime('now')),
+(19, 'menu.back_to_main', 'en', 'Back to Main', 'menu', 'Back to main menu item', datetime('now')),
+(20, 'menu.back_to_main', 'ja', 'メインに戻る', 'menu', 'メインに戻るメニュー項目', datetime('now')),
 
 -- User Management
 (601, 'user_mgmt.title', 'en', 'User Management', 'user_mgmt', 'User management page title', datetime('now')),
