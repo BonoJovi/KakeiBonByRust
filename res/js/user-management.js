@@ -3,7 +3,7 @@ import i18n from './i18n.js';
 import { ROLE_ADMIN, ROLE_USER } from './consts.js';
 import { setupIndicators } from './indicators.js';
 import { setupModalHandlers } from './modal-utils.js';
-import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize } from './menu.js';
+import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers } from './font-size.js';
 
 let currentUsers = [];
 let editingUserId = null;
@@ -28,6 +28,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     console.log('[DOMContentLoaded] Setting up font size menu');
     setupFontSizeMenuHandlers();
     await setupFontSizeMenu();
+    setupFontSizeModalHandlers();
     await applyFontSize();
     
     console.log('[DOMContentLoaded] Setting up modal and indicators');

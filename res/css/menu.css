@@ -27,6 +27,7 @@ body {
     user-select: none;
     font-weight: bold;
     color: #333;
+    white-space: nowrap;
 }
 
 .menu-item:hover {
@@ -57,6 +58,7 @@ body {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    white-space: nowrap;
 }
 
 .dropdown-item:hover {
@@ -71,7 +73,8 @@ body {
 
 #main-content {
     padding: 2rem;
-    max-width: 1200px;
+    min-width: 25em;
+    max-width: 75em;
     margin: 0 auto;
     min-height: 100vh;
     box-sizing: border-box;

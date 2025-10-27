@@ -1,0 +1,378 @@
+import { invoke } from '@tauri-apps/api/core';
+import i18n from './i18n.js';
+import { FONT_SIZE_OPTIONS, FONT_SIZE_SMALL, FONT_SIZE_MEDIUM, FONT_SIZE_LARGE, FONT_SIZE_CUSTOM } from './consts.js';
+
+let resizeInProgress = false;
+
+// Setup font size menu handlers
+export function setupFontSizeMenuHandlers() {
+    console.log('[setupFontSizeMenuHandlers] Starting setup');
+    const fontSizeMenu = document.getElementById('font-size-menu');
+    const fontSizeDropdown = document.getElementById('font-size-dropdown');
+    
+    if (!fontSizeMenu || !fontSizeDropdown) {
+        console.warn('Font size menu elements not found');
+        return;
+    }
+    
+    // Check if already initialized
+    if (fontSizeMenu.dataset.initialized === 'true') {
+        console.log('[setupFontSizeMenuHandlers] Already initialized');
+        return;
+    }
+    
+    fontSizeMenu.addEventListener('click', function(e) {
+        e.stopPropagation();
+        
+        const isShown = fontSizeDropdown.classList.contains('show');
+        
+        // Close all other dropdowns
+        document.querySelectorAll('.dropdown').forEach(d => {
+            if (d !== fontSizeDropdown) {
+                d.classList.remove('show');
+            }
+        });
+        
+        // Toggle this dropdown
+        if (!isShown) {
+            fontSizeDropdown.classList.add('show');
+        }
+    });
+    
+    // Prevent dropdown from closing when clicking inside it
+    fontSizeDropdown.addEventListener('click', function(e) {
+        e.stopPropagation();
+    });
+    
+    // Mark as initialized
+    fontSizeMenu.dataset.initialized = 'true';
+    console.log('[setupFontSizeMenuHandlers] Marked as initialized');
+}
+
+// Setup font size menu items
+export async function setupFontSizeMenu() {
+    try {
+        // Get current font size
+        const currentSize = await invoke('get_font_size');
+        
+        // Get dropdown container
+        const fontSizeDropdown = document.getElementById('font-size-dropdown');
+        
+        if (!fontSizeDropdown) {
+            console.error('Font size dropdown not found');
+            return;
+        }
+        
+        // Clear existing items
+        fontSizeDropdown.innerHTML = '';
+        
+        // Add font size items from constants
+        for (const size of FONT_SIZE_OPTIONS) {
+            const item = document.createElement('div');
+            item.className = 'dropdown-item';
+            item.textContent = i18n.t(size.key);
+            item.dataset.sizeCode = size.code;
+            
+            // Mark current size with active class
+            if (size.code === currentSize) {
+                item.classList.add('active');
+            }
+            
+            item.addEventListener('click', async function(e) {
+                e.stopPropagation();
+                if (size.action === 'modal') {
+                    // Open modal for custom settings
+                    openFontSizeModal();
+                } else {
+                    await handleFontSizeChange(size.code);
+                }
+                fontSizeDropdown.classList.remove('show');
+            });
+            
+            fontSizeDropdown.appendChild(item);
+        }
+        
+    } catch (error) {
+        console.error('Failed to setup font size menu:', error);
+    }
+}
+
+// Handle font size change
+async function handleFontSizeChange(sizeCode) {
+    try {
+        console.log('Changing font size to:', sizeCode);
+        await invoke('set_font_size', { fontSize: sizeCode });
+        
+        // Apply the new font size
+        await applyFontSize();
+        
+        // Reload font size menu to update selection
+        await setupFontSizeMenu();
+        
+        console.log('Font size changed successfully');
+    } catch (error) {
+        console.error('Failed to change font size:', error);
+        alert('Failed to change font size: ' + error);
+    }
+}
+
+// Apply saved font size
+export async function applyFontSize() {
+    try {
+        const fontSize = await invoke('get_font_size');
+        
+        // Map size code to CSS variable
+        const sizeMap = {
+            [FONT_SIZE_SMALL]: 'var(--font-size-small)',
+            [FONT_SIZE_MEDIUM]: 'var(--font-size-medium)',
+            [FONT_SIZE_LARGE]: 'var(--font-size-large)'
+        };
+        
+        let cssValue;
+        
+        if (sizeMap[fontSize]) {
+            // It's a preset size
+            cssValue = sizeMap[fontSize];
+        } else {
+            // It's a custom percentage value
+            const percent = parseInt(fontSize);
+            if (!isNaN(percent)) {
+                cssValue = percent + '%';
+            } else {
+                cssValue = sizeMap[FONT_SIZE_MEDIUM]; // fallback
+            }
+        }
+        
+        document.documentElement.style.setProperty('--base-font-size', cssValue);
+        
+        console.log('Applied font size:', fontSize, '→', cssValue);
+        
+        // Prevent multiple simultaneous resize attempts
+        if (resizeInProgress) {
+            return;
+        }
+        
+        resizeInProgress = true;
+        
+        try {
+            // Wait for layout to update using requestAnimationFrame
+            await new Promise(resolve => {
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        requestAnimationFrame(resolve);
+                    });
+                });
+            });
+            
+            // Adjust window size based on content (only once)
+            await adjustWindowSize();
+        } finally {
+            resizeInProgress = false;
+        }
+    } catch (error) {
+        console.error('Failed to apply font size:', error);
+        resizeInProgress = false;
+    }
+}
+
+// Adjust window size to fit content
+async function adjustWindowSize() {
+    try {
+        // First, shrink window to minimum size to get natural content size
+        const minWidth = 400;
+        const minHeight = 300;
+        
+        await invoke('adjust_window_size', { 
+            width: minWidth, 
+            height: minHeight 
+        });
+        
+        // Wait for layout to update after resize
+        await new Promise(resolve => {
+            requestAnimationFrame(() => {
+                requestAnimationFrame(resolve);
+            });
+        });
+        
+        // Now measure the natural content size
+        const mainContent = document.getElementById('main-content');
+        const menuBar = document.getElementById('menu-bar');
+        
+        // Calculate total content height by getting bounding rectangles
+        let maxWidth = 0;
+        let maxHeight = 0;
+        
+        // Check all visible elements
+        const elements = [menuBar, mainContent];
+        for (const el of elements) {
+            if (el && !el.classList.contains('hidden')) {
+                const rect = el.getBoundingClientRect();
+                maxWidth = Math.max(maxWidth, rect.right);
+                maxHeight = Math.max(maxHeight, rect.bottom);
+            }
+        }
+        
+        // Add padding
+        const padding = 40;
+        const targetWidth = Math.max(minWidth, Math.ceil(maxWidth + padding));
+        const targetHeight = Math.max(minHeight, Math.ceil(maxHeight + padding));
+        
+        console.log('Target window size:', targetWidth, 'x', targetHeight);
+        
+        // Resize to fit content
+        await invoke('adjust_window_size', { 
+            width: targetWidth, 
+            height: targetHeight 
+        });
+        
+    } catch (error) {
+        console.error('Failed to adjust window size:', error);
+    }
+}
+
+// Open font size modal
+function openFontSizeModal() {
+    const modal = document.getElementById('font-size-modal');
+    if (!modal) {
+        console.error('Font size modal not found');
+        return;
+    }
+    
+    // Load current settings
+    loadFontSizeModalSettings();
+    
+    // Show modal
+    modal.classList.remove('hidden');
+}
+
+// Load font size modal settings
+async function loadFontSizeModalSettings() {
+    try {
+        const fontSize = await invoke('get_font_size');
+        
+        const presetSelect = document.getElementById('font-size-preset');
+        const percentInput = document.getElementById('font-size-percent');
+        
+        if (!presetSelect || !percentInput) {
+            return;
+        }
+        
+        // Check if it's a preset or custom value
+        if ([FONT_SIZE_SMALL, FONT_SIZE_MEDIUM, FONT_SIZE_LARGE].includes(fontSize)) {
+            presetSelect.value = fontSize;
+            
+            // Set corresponding percentage
+            const presetMap = {
+                [FONT_SIZE_SMALL]: 85,
+                [FONT_SIZE_MEDIUM]: 100,
+                [FONT_SIZE_LARGE]: 115
+            };
+            percentInput.value = presetMap[fontSize];
+            percentInput.disabled = true;
+        } else {
+            presetSelect.value = FONT_SIZE_CUSTOM;
+            const percent = parseInt(fontSize);
+            percentInput.value = isNaN(percent) ? 100 : percent;
+            percentInput.disabled = false;
+        }
+        
+    } catch (error) {
+        console.error('Failed to load font size modal settings:', error);
+    }
+}
+
+// Setup modal event handlers
+export function setupFontSizeModalHandlers() {
+    const modal = document.getElementById('font-size-modal');
+    if (!modal) {
+        return;
+    }
+    
+    const closeBtn = document.getElementById('font-size-modal-close');
+    const cancelBtn = document.getElementById('font-size-cancel');
+    const applyBtn = document.getElementById('font-size-apply');
+    const presetSelect = document.getElementById('font-size-preset');
+    const percentInput = document.getElementById('font-size-percent');
+    const spinnerUp = modal.querySelector('.spinner-up');
+    const spinnerDown = modal.querySelector('.spinner-down');
+    
+    // Close modal handlers
+    const closeModal = () => {
+        modal.classList.add('hidden');
+    };
+    
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeModal);
+    }
+    
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', closeModal);
+    }
+    
+    // Apply button handler
+    if (applyBtn) {
+        applyBtn.addEventListener('click', async () => {
+            try {
+                const preset = presetSelect.value;
+                let sizeValue;
+                
+                if (preset === FONT_SIZE_CUSTOM) {
+                    sizeValue = percentInput.value;
+                } else {
+                    sizeValue = preset;
+                }
+                
+                await invoke('set_font_size', { fontSize: sizeValue });
+                await applyFontSize();
+                await setupFontSizeMenu();
+                
+                closeModal();
+            } catch (error) {
+                console.error('Failed to apply font size:', error);
+                alert('Failed to apply font size: ' + error);
+            }
+        });
+    }
+    
+    // Preset select handler
+    if (presetSelect) {
+        presetSelect.addEventListener('change', () => {
+            if (presetSelect.value === FONT_SIZE_CUSTOM) {
+                percentInput.disabled = false;
+            } else {
+                percentInput.disabled = true;
+                
+                // Update percentage to match preset
+                const presetMap = {
+                    [FONT_SIZE_SMALL]: 85,
+                    [FONT_SIZE_MEDIUM]: 100,
+                    [FONT_SIZE_LARGE]: 115
+                };
+                percentInput.value = presetMap[presetSelect.value];
+            }
+        });
+    }
+    
+    // Spinner button handlers
+    if (spinnerUp && percentInput) {
+        spinnerUp.addEventListener('click', () => {
+            const current = parseInt(percentInput.value) || 100;
+            const step = parseInt(percentInput.step) || 5;
+            const max = parseInt(percentInput.max) || 200;
+            percentInput.value = Math.min(current + step, max);
+            presetSelect.value = FONT_SIZE_CUSTOM;
+            percentInput.disabled = false;
+        });
+    }
+    
+    if (spinnerDown && percentInput) {
+        spinnerDown.addEventListener('click', () => {
+            const current = parseInt(percentInput.value) || 100;
+            const step = parseInt(percentInput.step) || 5;
+            const min = parseInt(percentInput.min) || 50;
+            percentInput.value = Math.max(current - step, min);
+            presetSelect.value = FONT_SIZE_CUSTOM;
+            percentInput.disabled = false;
+        });
+    }
+}
