@@ -12,3 +12,9 @@ pub const SQL_INIT_FILE_PATH: &str = "res/sql/dbaccess.sql";
 pub const LANG_ENGLISH: &str = "en";
 pub const LANG_JAPANESE: &str = "ja";
 pub const LANG_DEFAULT: &str = LANG_JAPANESE;
+
+// Font size constants
+pub const FONT_SIZE_SMALL: &str = "small";
+pub const FONT_SIZE_MEDIUM: &str = "medium";
+pub const FONT_SIZE_LARGE: &str = "large";
+pub const FONT_SIZE_DEFAULT: &str = FONT_SIZE_MEDIUM;

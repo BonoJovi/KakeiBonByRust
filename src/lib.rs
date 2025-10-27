@@ -28,7 +28,7 @@ use services::encryption::EncryptionService;
 use services::i18n::I18nService;
 use settings::SettingsManager;
 use validation::{validate_password, validate_password_confirmation};
-use crate::consts::{LANG_ENGLISH, LANG_JAPANESE, LANG_DEFAULT};
+use crate::consts::{LANG_ENGLISH, LANG_JAPANESE, LANG_DEFAULT, FONT_SIZE_SMALL, FONT_SIZE_MEDIUM, FONT_SIZE_LARGE, FONT_SIZE_DEFAULT};
 
 pub struct AppState {
     pub db: Arc<Mutex<Database>>,
@@ -536,6 +536,10 @@ async fn get_user_settings(
         .unwrap_or_else(|_| LANG_DEFAULT.to_string());
     result.insert("language".to_string(), serde_json::Value::String(language));
     
+    let font_size = settings.get_string("font_size")
+        .unwrap_or_else(|_| FONT_SIZE_DEFAULT.to_string());
+    result.insert("font_size".to_string(), serde_json::Value::String(font_size));
+    
     Ok(serde_json::Value::Object(result))
 }
 
@@ -597,6 +601,95 @@ async fn get_language_names(
     Ok(language_names)
 }
 
+#[tauri::command]
+async fn set_font_size(
+    font_size: String,
+    state: tauri::State<'_, AppState>
+) -> Result<String, String> {
+    let mut settings = state.settings.lock().await;
+    let i18n = state.i18n.lock().await;
+    
+    // Validate font size
+    let size = match font_size.as_str() {
+        FONT_SIZE_SMALL => FONT_SIZE_SMALL.to_string(),
+        FONT_SIZE_MEDIUM => FONT_SIZE_MEDIUM.to_string(),
+        FONT_SIZE_LARGE => FONT_SIZE_LARGE.to_string(),
+        _ => {
+            // Try to parse as custom percentage (50-200)
+            match font_size.parse::<u32>() {
+                Ok(percent) if percent >= 50 && percent <= 200 => font_size.clone(),
+                _ => return Err("Invalid font size: must be 'small', 'medium', 'large', or a percentage between 50 and 200".to_string()),
+            }
+        }
+    };
+    
+    // Save font size setting
+    settings.set("font_size", &size)
+        .map_err(|e| format!("Failed to set font size: {}", e))?;
+    settings.save()
+        .map_err(|e| format!("Failed to save settings: {}", e))?;
+    
+    // Get current language for response message
+    let lang_code = settings.get_string("language")
+        .unwrap_or_else(|_| LANG_DEFAULT.to_string());
+    
+    // Get localized font size name
+    let size_key = format!("font_size.{}", size);
+    let size_name = i18n.get(&size_key, &lang_code)
+        .await
+        .unwrap_or_else(|_| size.to_string());
+    
+    // Get confirmation message with parameter substitution
+    let message = i18n.get_with_params("msg.font_size_changed", &lang_code, &[&size_name])
+        .await
+        .unwrap_or_else(|_| format!("Font size changed to {}.", size_name));
+    
+    Ok(message)
+}
+
+#[tauri::command]
+async fn get_font_size(
+    state: tauri::State<'_, AppState>
+) -> Result<String, String> {
+    let settings = state.settings.lock().await;
+    
+    match settings.get_string("font_size") {
+        Ok(size) => Ok(size),
+        Err(_) => Ok(FONT_SIZE_DEFAULT.to_string()),
+    }
+}
+
+#[tauri::command]
+async fn adjust_window_size(
+    width: f64,
+    height: f64,
+    window: tauri::Window
+) -> Result<(), String> {
+    use tauri::LogicalSize;
+    
+    // Get current window size
+    let current_size = window.inner_size()
+        .map_err(|e| format!("Failed to get window size: {}", e))?;
+    
+    log::info!("Current window size: {}x{}", current_size.width, current_size.height);
+    log::info!("Requested content size: {}x{}", width, height);
+    
+    // Convert to logical size
+    let logical_current = current_size.to_logical::<f64>(window.scale_factor()
+        .map_err(|e| format!("Failed to get scale factor: {}", e))?);
+    
+    // Resize to match content size (both expand and shrink)
+    if (width - logical_current.width).abs() > 1.0 || (height - logical_current.height).abs() > 1.0 {
+        log::info!("Resizing window to: {}x{}", width, height);
+        window.set_size(LogicalSize::new(width, height))
+            .map_err(|e| format!("Failed to resize window: {}", e))?;
+    } else {
+        log::info!("No resize needed (difference < 1px)");
+    }
+    
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -636,7 +729,10 @@ pub fn run() {
             get_user_settings,
             update_user_settings,
             get_available_languages,
-            get_language_names
+            get_language_names,
+            set_font_size,
+            get_font_size,
+            adjust_window_size
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {

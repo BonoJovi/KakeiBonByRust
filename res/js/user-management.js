@@ -3,6 +3,7 @@ import i18n from './i18n.js';
 import { ROLE_ADMIN, ROLE_USER } from './consts.js';
 import { setupIndicators } from './indicators.js';
 import { setupModalHandlers } from './modal-utils.js';
+import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize } from './menu.js';
 
 let currentUsers = [];
 let editingUserId = null;
@@ -10,69 +11,172 @@ let editingUserId = null;
 console.log('user-management.js loaded');
 
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('DOM loaded');
+    console.log('[DOMContentLoaded] DOM loaded');
     
     await i18n.init();
     i18n.updateUI();
     
+    // Setup menu handlers first (includes global click handler)
+    console.log('[DOMContentLoaded] Setting up menu handlers');
+    setupMenuHandlers();
+    
+    // Then setup language and font size menus
+    console.log('[DOMContentLoaded] Setting up language menu');
     await setupLanguageMenu();
     setupLanguageMenuHandlers();
-    setupMenuHandlers();
+    
+    console.log('[DOMContentLoaded] Setting up font size menu');
+    setupFontSizeMenuHandlers();
+    await setupFontSizeMenu();
+    await applyFontSize();
+    
+    console.log('[DOMContentLoaded] Setting up modal and indicators');
     setupModalEventHandlers();
     setupIndicators();
     
+    console.log('[DOMContentLoaded] Loading users');
     await loadUsers();
+    
+    console.log('[DOMContentLoaded] Initialization complete');
 });
 
 function setupMenuHandlers() {
+    console.log('[setupMenuHandlers] Starting setup');
     const fileMenu = document.getElementById('file-menu');
     const fileDropdown = document.getElementById('file-dropdown');
     
+    console.log('[setupMenuHandlers] fileMenu:', fileMenu);
+    console.log('[setupMenuHandlers] fileDropdown:', fileDropdown);
+    
     if (fileMenu && fileDropdown) {
+        // Check if already initialized
+        if (fileMenu.dataset.initialized === 'true') {
+            console.log('[setupMenuHandlers] File menu already initialized, skipping');
+            return;
+        }
+        
+        console.log('[setupMenuHandlers] Adding click listener to fileMenu');
         fileMenu.addEventListener('click', function(e) {
+            console.log('[fileMenu clicked]');
             e.stopPropagation();
-            fileDropdown.classList.toggle('show');
-        });
-        
-        fileDropdown.addEventListener('click', function(e) {
-            e.stopPropagation();
-        });
-        
-        document.addEventListener('click', function() {
-            document.querySelectorAll('.dropdown').forEach(dropdown => {
-                dropdown.classList.remove('show');
+            
+            const isShown = fileDropdown.classList.contains('show');
+            
+            // Close all other dropdowns
+            document.querySelectorAll('.dropdown').forEach(d => {
+                if (d !== fileDropdown) {
+                    d.classList.remove('show');
+                }
             });
+            
+            // Toggle this dropdown
+            if (!isShown) {
+                fileDropdown.classList.add('show');
+            }
+            
+            console.log('[fileMenu] Toggled show class, current classes:', fileDropdown.className);
+        });
+        
+        // Prevent dropdown from closing when clicking inside it
+        fileDropdown.addEventListener('click', function(e) {
+            console.log('[fileDropdown clicked]');
+            e.stopPropagation();
         });
         
         const dropdownItems = fileDropdown.querySelectorAll('.dropdown-item');
         dropdownItems[0]?.addEventListener('click', () => {
+            console.log('[fileDropdown] Back to main clicked');
             window.location.href = 'index.html';
+            fileDropdown.classList.remove('show');
         });
-        dropdownItems[1]?.addEventListener('click', handleLogout);
-        dropdownItems[2]?.addEventListener('click', handleQuit);
+        dropdownItems[1]?.addEventListener('click', () => {
+            console.log('[fileDropdown] Logout clicked');
+            handleLogout();
+            fileDropdown.classList.remove('show');
+        });
+        dropdownItems[2]?.addEventListener('click', () => {
+            console.log('[fileDropdown] Quit clicked');
+            handleQuit();
+            fileDropdown.classList.remove('show');
+        });
+        
+        // Mark as initialized
+        fileMenu.dataset.initialized = 'true';
+        console.log('[setupMenuHandlers] File menu marked as initialized');
+    }
+    
+    // Global click handler to close all dropdowns (only register once)
+    if (!document.body.dataset.globalClickHandlerInitialized) {
+        console.log('[setupMenuHandlers] Adding global click handler');
+        document.addEventListener('click', function(e) {
+            console.log('[document clicked] Target:', e.target);
+            // Don't close if clicking on a menu item or dropdown
+            if (e.target.closest('.menu-item') || e.target.closest('.dropdown')) {
+                console.log('[document clicked] Click was on menu or dropdown, ignoring');
+                return;
+            }
+            console.log('[document clicked] Closing all dropdowns');
+            document.querySelectorAll('.dropdown').forEach(dropdown => {
+                dropdown.classList.remove('show');
+            });
+        });
+        document.body.dataset.globalClickHandlerInitialized = 'true';
+        console.log('[setupMenuHandlers] Global click handler registered');
+    } else {
+        console.log('[setupMenuHandlers] Global click handler already registered, skipping');
     }
 }
 
 function setupLanguageMenuHandlers() {
+    console.log('[setupLanguageMenuHandlers] Starting setup');
     const languageMenu = document.getElementById('language-menu');
     const languageDropdown = document.getElementById('language-dropdown');
+    
+    console.log('[setupLanguageMenuHandlers] languageMenu:', languageMenu);
+    console.log('[setupLanguageMenuHandlers] languageDropdown:', languageDropdown);
     
     if (!languageMenu || !languageDropdown) {
         console.error('Language menu elements not found');
         return;
     }
     
+    // Check if already initialized
+    if (languageMenu.dataset.initialized === 'true') {
+        console.log('[setupLanguageMenuHandlers] Already initialized, skipping');
+        return;
+    }
+    
+    console.log('[setupLanguageMenuHandlers] Adding click listener to languageMenu');
     languageMenu.addEventListener('click', function(e) {
+        console.log('[languageMenu clicked]');
         e.stopPropagation();
         
-        document.querySelectorAll('.dropdown').forEach(dropdown => {
-            if (dropdown !== languageDropdown) {
-                dropdown.classList.remove('show');
+        const isShown = languageDropdown.classList.contains('show');
+        
+        // Close all other dropdowns
+        document.querySelectorAll('.dropdown').forEach(d => {
+            if (d !== languageDropdown) {
+                d.classList.remove('show');
             }
         });
         
-        languageDropdown.classList.toggle('show');
+        // Toggle this dropdown
+        if (!isShown) {
+            languageDropdown.classList.add('show');
+        }
+        
+        console.log('[languageMenu] Toggled show class, current classes:', languageDropdown.className);
     });
+    
+    // Prevent dropdown from closing when clicking inside it
+    languageDropdown.addEventListener('click', function(e) {
+        console.log('[languageDropdown clicked]');
+        e.stopPropagation();
+    });
+    
+    // Mark as initialized
+    languageMenu.dataset.initialized = 'true';
+    console.log('[setupLanguageMenuHandlers] Marked as initialized');
 }
 
 async function setupLanguageMenu() {
