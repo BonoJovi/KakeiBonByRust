@@ -7,6 +7,7 @@ pub struct Category1 {
     pub category1_code: String,
     pub display_order: i32,
     pub category1_name: String,
+    pub category1_name_i18n: Option<String>,  // Multilingual name
     pub is_disabled: bool,
     pub entry_dt: String,
     pub update_dt: Option<String>,
@@ -20,6 +21,7 @@ pub struct Category2 {
     pub category2_code: String,
     pub display_order: i32,
     pub category2_name: String,
+    pub category2_name_i18n: Option<String>,  // Multilingual name
     pub is_disabled: bool,
     pub entry_dt: String,
     pub update_dt: Option<String>,
@@ -34,6 +36,7 @@ pub struct Category3 {
     pub category3_code: String,
     pub display_order: i32,
     pub category3_name: String,
+    pub category3_name_i18n: Option<String>,  // Multilingual name
     pub is_disabled: bool,
     pub entry_dt: String,
     pub update_dt: Option<String>,

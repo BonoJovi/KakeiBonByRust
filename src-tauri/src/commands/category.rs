@@ -8,6 +8,13 @@ pub fn get_category_tree(user_id: i64) -> Result<Vec<CategoryTree>, String> {
         .map_err(|e| format!("Failed to get category tree: {}", e))
 }
 
+/// Get category tree for a user with language support
+#[tauri::command]
+pub fn get_category_tree_with_lang(user_id: i64, lang_code: Option<String>) -> Result<Vec<CategoryTree>, String> {
+    category::get_category_tree_with_lang(user_id, lang_code)
+        .map_err(|e| format!("Failed to get category tree: {}", e))
+}
+
 /// Add new Category1
 #[tauri::command]
 pub fn add_category1(user_id: i64, code: String, name: String) -> Result<(), String> {

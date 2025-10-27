@@ -17,6 +17,7 @@ pub fn run() {
     })
     .invoke_handler(tauri::generate_handler![
       commands::category::get_category_tree,
+      commands::category::get_category_tree_with_lang,
       commands::category::add_category1,
       commands::category::update_category1,
       commands::category::move_category1_order,
