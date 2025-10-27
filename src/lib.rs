@@ -18,6 +18,9 @@ mod test_helpers;
 #[cfg(test)]
 mod validation_tests;
 
+#[cfg(test)]
+mod font_size_tests;
+
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tauri::Manager;
