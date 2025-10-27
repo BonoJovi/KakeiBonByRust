@@ -2,7 +2,69 @@
 
 ## Overview
 
-This feature dynamically changes the font size across the entire application and automatically adjusts the window size accordingly.
+This feature dynamically changes the font size across the entire application and automatically adjusts the window size accordingly. It is modularized and reusable across multiple pages.
+
+## Architecture
+
+### Module Structure
+
+```
+res/js/
+├── font-size.js         # Core font size functionality module
+├── consts.js           # Constant definitions (font sizes, i18n keys)
+├── menu.js             # Main menu (uses font-size.js)
+└── user-management.js  # User management page (uses font-size.js)
+
+src/
+├── lib.rs              # Tauri command definitions
+├── consts.rs           # Rust constant definitions
+├── settings.rs         # Settings persistence
+└── font_size_tests.rs  # Test suite (13 test cases)
+```
+
+### Key Functions
+
+**JavaScript (font-size.js)**:
+- `setupFontSizeMenuHandlers()` - Set up menu event handlers
+- `setupFontSizeMenu()` - Generate and initialize menu items
+- `applyFontSize()` - Apply font size and resize window
+- `setupFontSizeModalHandlers()` - Set up custom settings modal handlers
+
+**Rust (lib.rs)**:
+- `set_font_size()` - Validate and save font size
+- `get_font_size()` - Retrieve saved font size
+- `adjust_window_size()` - Adjust window size
+
+### Constant Definitions
+
+**JavaScript (consts.js)**:
+```javascript
+export const FONT_SIZE_SMALL = 'small';
+export const FONT_SIZE_MEDIUM = 'medium';
+export const FONT_SIZE_LARGE = 'large';
+export const FONT_SIZE_CUSTOM = 'custom';
+export const FONT_SIZE_DEFAULT = FONT_SIZE_MEDIUM;
+
+export const I18N_FONT_SIZE_SMALL = 'font_size.small';
+export const I18N_FONT_SIZE_MEDIUM = 'font_size.medium';
+export const I18N_FONT_SIZE_LARGE = 'font_size.large';
+export const I18N_FONT_SIZE_CUSTOM = 'font_size.custom';
+
+export const FONT_SIZE_OPTIONS = [
+    { code: FONT_SIZE_SMALL, key: I18N_FONT_SIZE_SMALL },
+    { code: FONT_SIZE_MEDIUM, key: I18N_FONT_SIZE_MEDIUM },
+    { code: FONT_SIZE_LARGE, key: I18N_FONT_SIZE_LARGE },
+    { code: FONT_SIZE_CUSTOM, key: I18N_FONT_SIZE_CUSTOM, action: 'modal' }
+];
+```
+
+**Rust (consts.rs)**:
+```rust
+pub const FONT_SIZE_SMALL: &str = "small";
+pub const FONT_SIZE_MEDIUM: &str = "medium";
+pub const FONT_SIZE_LARGE: &str = "large";
+pub const FONT_SIZE_DEFAULT: &str = FONT_SIZE_MEDIUM;
+```
 
 ## Technical Challenges and Solutions
 
@@ -246,3 +308,228 @@ Key considerations for implementing the font size change feature:
 5. **Prevent multiple executions** (flag-based control)
 
 With these measures, we can achieve a flexible and robust font size change feature.
+
+## Applying to New Pages
+
+Modularization makes it easy to apply the font size feature to new pages.
+
+### 1. HTML Preparation
+
+Add menu bar and font size settings modal:
+
+```html
+<!-- Add font size menu to menu bar -->
+<div id="font-size-menu" class="menu-item">
+    <span data-i18n="menu.font_size">Font Size</span>
+    <div id="font-size-dropdown" class="dropdown">
+        <!-- Generated dynamically by JavaScript -->
+    </div>
+</div>
+
+<!-- Font size settings modal -->
+<div id="font-size-modal" class="modal hidden">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 data-i18n="font_size.modal_title">Font Size Settings</h2>
+            <button class="close-btn" id="font-size-modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label for="font-size-preset" data-i18n="font_size.preset">Preset:</label>
+                <select id="font-size-preset">
+                    <option value="small" data-i18n="font_size.small">Small</option>
+                    <option value="medium" data-i18n="font_size.medium" selected>Medium</option>
+                    <option value="large" data-i18n="font_size.large">Large</option>
+                    <option value="custom" data-i18n="font_size.custom">Custom</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="font-size-percent" data-i18n="font_size.percentage">Percentage:</label>
+                <input type="number" id="font-size-percent" min="50" max="200" step="5" value="100" />
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-secondary" id="font-size-cancel" data-i18n="common.cancel">Cancel</button>
+            <button type="button" class="btn-primary" id="font-size-apply" data-i18n="common.apply">Apply</button>
+        </div>
+    </div>
+</div>
+```
+
+### 2. JavaScript Implementation
+
+Import and initialize the module:
+
+```javascript
+import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers } from './font-size.js';
+
+document.addEventListener('DOMContentLoaded', async function() {
+    // Initialize font size feature
+    setupFontSizeMenuHandlers();      // Set up menu event handlers
+    await setupFontSizeMenu();         // Generate menu items
+    setupFontSizeModalHandlers();      // Set up modal event handlers
+    await applyFontSize();             // Apply saved font size
+    
+    // Other initialization...
+});
+```
+
+### 3. CSS Verification
+
+Ensure CSS uses em/rem units:
+
+```css
+:root {
+    --font-size-small: 85%;
+    --font-size-medium: 100%;
+    --font-size-large: 115%;
+    --base-font-size: var(--font-size-medium);
+}
+
+body {
+    font-size: var(--base-font-size);
+}
+
+.container {
+    max-width: 75em;  /* Use em instead of px */
+    min-width: 25em;
+}
+```
+
+## Test Suite
+
+A comprehensive test suite is available for the font size feature.
+
+### Test Structure
+
+**File**: `src/font_size_tests.rs`
+
+**Test Count**: 13
+
+### Test Coverage
+
+1. **Default Value Tests**
+   - `test_font_size_default()` - Verify default font size
+
+2. **Preset Size Tests**
+   - `test_set_font_size_small()` - Set and retrieve small size
+   - `test_set_font_size_medium()` - Set and retrieve medium size
+   - `test_set_font_size_large()` - Set and retrieve large size
+   - `test_validate_font_size_preset()` - Validate preset values
+
+3. **Custom Percentage Tests**
+   - `test_validate_font_size_custom_percentage()` - Valid percentages (50-200)
+   - `test_invalid_font_size_custom_percentage()` - Invalid percentages
+   - `test_font_size_custom_percentage_persistence()` - Custom value persistence
+
+4. **Validation Tests**
+   - `test_invalid_font_size_string()` - Reject invalid string values
+   - `test_font_size_boundary_values()` - Handle boundary values (50, 200)
+
+5. **Persistence Tests**
+   - `test_font_size_persistence()` - Multiple set and retrieve operations
+   - `test_font_size_overwrite()` - Value overwriting
+
+6. **Constant Tests**
+   - `test_font_size_constants()` - Verify constant values
+
+### Running Tests
+
+```bash
+# Run font size tests only
+cargo test font_size_tests --lib
+
+# Run all tests
+cargo test
+
+# Run with detailed output
+cargo test font_size_tests --lib -- --nocapture
+```
+
+### Test Implementation Example
+
+```rust
+#[test]
+fn test_set_font_size_small() {
+    let (mut settings, temp_dir) = create_test_settings();
+    
+    // Set font size to small
+    settings.set("font_size", FONT_SIZE_SMALL).unwrap();
+    settings.save().unwrap();
+    
+    // Verify it was set correctly
+    let size = settings.get_string("font_size").unwrap();
+    assert_eq!(size, FONT_SIZE_SMALL);
+    
+    cleanup_test_dir(temp_dir);
+}
+
+#[test]
+fn test_validate_font_size_custom_percentage() {
+    // Test valid custom percentages
+    let valid_percentages = vec!["50", "75", "100", "125", "150", "175", "200"];
+    
+    for percentage in valid_percentages {
+        let percent: u32 = percentage.parse().unwrap();
+        assert!(
+            percent >= 50 && percent <= 200,
+            "Percentage {} should be in range 50-200",
+            percent
+        );
+    }
+}
+```
+
+## Troubleshooting
+
+### Font Size Not Applied
+
+**Cause**: Fixed sizes (px) used in CSS
+
+**Solution**: Change to em/rem units
+
+```css
+/* ❌ Bad example */
+.container {
+    max-width: 450px;
+}
+
+/* ✅ Good example */
+.container {
+    max-width: 28em;
+}
+```
+
+### Window Size Not Adjusted Correctly
+
+**Cause**: Measuring size before layout update completes
+
+**Solution**: Wait using `requestAnimationFrame()`
+
+```javascript
+await new Promise(resolve => {
+    requestAnimationFrame(() => {
+        requestAnimationFrame(resolve);
+    });
+});
+```
+
+### Menu Text Wrapping
+
+**Cause**: `white-space: nowrap` not set
+
+**Solution**: Add to CSS
+
+```css
+.menu-item,
+.dropdown-item {
+    white-space: nowrap;
+}
+```
+
+## References
+
+- [CSS Units: em vs rem](https://developer.mozilla.org/en-US/docs/Learn/CSS/Building_blocks/Values_and_units)
+- [requestAnimationFrame API](https://developer.mozilla.org/en-US/docs/Web/API/window/requestAnimationFrame)
+- [Tauri Window API](https://tauri.app/v1/api/js/window/)
+- [getBoundingClientRect](https://developer.mozilla.org/en-US/docs/Web/API/Element/getBoundingClientRect)
