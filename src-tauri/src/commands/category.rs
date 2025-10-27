@@ -28,3 +28,10 @@ pub fn move_category1_order(user_id: i64, code: String, direction: i32) -> Resul
     category::move_category1_order(user_id, code, direction)
         .map_err(|e| format!("Failed to move category1 order: {}", e))
 }
+
+/// Initialize categories for a new user
+#[tauri::command]
+pub fn initialize_categories_for_new_user(user_id: i64) -> Result<(), String> {
+    category::initialize_categories_for_new_user(user_id)
+        .map_err(|e| format!("Failed to initialize categories: {}", e))
+}

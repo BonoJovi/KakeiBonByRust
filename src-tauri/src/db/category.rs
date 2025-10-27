@@ -191,3 +191,43 @@ pub fn move_category1_order(user_id: i64, code: String, direction: i32) -> Resul
     
     Ok(())
 }
+
+/// Initialize categories for a new user by copying from template user (USER_ID=1)
+pub fn initialize_categories_for_new_user(new_user_id: i64) -> Result<()> {
+    let conn = get_connection()?;
+    
+    // Start transaction
+    conn.execute("BEGIN TRANSACTION", [])?;
+    
+    // Copy CATEGORY1
+    conn.execute(
+        "INSERT INTO CATEGORY1 (user_id, category1_code, display_order, category1_name, is_disabled, entry_dt)
+         SELECT ?1, category1_code, display_order, category1_name, is_disabled, datetime('now')
+         FROM CATEGORY1
+         WHERE user_id = 1",
+        [new_user_id],
+    )?;
+    
+    // Copy CATEGORY2
+    conn.execute(
+        "INSERT INTO CATEGORY2 (user_id, category1_code, category2_code, display_order, category2_name, is_disabled, entry_dt)
+         SELECT ?1, category1_code, category2_code, display_order, category2_name, is_disabled, datetime('now')
+         FROM CATEGORY2
+         WHERE user_id = 1",
+        [new_user_id],
+    )?;
+    
+    // Copy CATEGORY3
+    conn.execute(
+        "INSERT INTO CATEGORY3 (user_id, category1_code, category2_code, category3_code, display_order, category3_name, is_disabled, entry_dt)
+         SELECT ?1, category1_code, category2_code, category3_code, display_order, category3_name, is_disabled, datetime('now')
+         FROM CATEGORY3
+         WHERE user_id = 1",
+        [new_user_id],
+    )?;
+    
+    // Commit transaction
+    conn.execute("COMMIT", [])?;
+    
+    Ok(())
+}
