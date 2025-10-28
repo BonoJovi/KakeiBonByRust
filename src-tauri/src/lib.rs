@@ -1,6 +1,7 @@
 mod models;
 mod db;
 mod commands;
+mod consts;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -31,6 +32,10 @@ pub fn run() {
       commands::category::move_category3_order,
       commands::category::delete_category3,
       commands::category::initialize_categories_for_new_user,
+      commands::i18n::get_translations,
+      commands::i18n::get_translations_debug,
+      commands::settings::get_user_settings,
+      commands::settings::update_user_settings,
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

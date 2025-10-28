@@ -47,7 +47,7 @@ impl CategoryService {
         }
         
         // Start transaction
-        let mut tx = self.pool.begin().await?;
+        let tx = self.pool.begin().await?;
         
         // NOTE: Default category data will be inserted here
         // This will be populated from existing SQL data later

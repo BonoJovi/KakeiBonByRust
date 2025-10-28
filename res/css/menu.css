@@ -72,7 +72,7 @@ body {
 }
 
 #main-content {
-    padding: 2rem;
+    padding: 1.5rem;
     min-width: 25em;
     max-width: 75em;
     margin: 0 auto;
@@ -83,7 +83,7 @@ body {
 .login-container {
     max-width: 28em;
     width: 90%;
-    margin: 2rem auto;
+    margin: 1.5rem auto;
     padding: 2rem;
     background-color: white;
     border: 1px solid #ccc;

@@ -1,9 +1,16 @@
 use rusqlite::{Connection, Result};
 use crate::models::category::{Category1, Category2, Category3, CategoryTree, Category2WithChildren};
+use std::path::PathBuf;
+use crate::consts::{DB_DIR_NAME, DB_FILE_NAME};
+
+fn get_db_path() -> PathBuf {
+    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+    PathBuf::from(home).join(DB_DIR_NAME).join(DB_FILE_NAME)
+}
 
 /// Get database connection
 pub fn get_connection() -> Result<Connection> {
-    Connection::open("src-tauri/kakeibo.db")
+    Connection::open(get_db_path())
 }
 
 #[cfg(test)]
