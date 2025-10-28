@@ -36,6 +36,69 @@ pub fn move_category1_order(user_id: i64, code: String, direction: i32) -> Resul
         .map_err(|e| format!("Failed to move category1 order: {}", e))
 }
 
+/// Delete Category1
+#[tauri::command]
+pub fn delete_category1(user_id: i64, code: String) -> Result<(), String> {
+    category::delete_category1(user_id, code)
+        .map_err(|e| format!("Failed to delete category1: {}", e))
+}
+
+/// Add new Category2
+#[tauri::command]
+pub fn add_category2(user_id: i64, category1_code: String, category2_code: String, name: String) -> Result<(), String> {
+    category::add_category2(user_id, category1_code, category2_code, name)
+        .map_err(|e| format!("Failed to add category2: {}", e))
+}
+
+/// Update Category2
+#[tauri::command]
+pub fn update_category2(user_id: i64, category1_code: String, category2_code: String, name: String) -> Result<(), String> {
+    category::update_category2(user_id, category1_code, category2_code, name)
+        .map_err(|e| format!("Failed to update category2: {}", e))
+}
+
+/// Move Category2 order
+#[tauri::command]
+pub fn move_category2_order(user_id: i64, category1_code: String, category2_code: String, direction: i32) -> Result<(), String> {
+    category::move_category2_order(user_id, category1_code, category2_code, direction)
+        .map_err(|e| format!("Failed to move category2 order: {}", e))
+}
+
+/// Delete Category2
+#[tauri::command]
+pub fn delete_category2(user_id: i64, category1_code: String, category2_code: String) -> Result<(), String> {
+    category::delete_category2(user_id, category1_code, category2_code)
+        .map_err(|e| format!("Failed to delete category2: {}", e))
+}
+
+/// Add new Category3
+#[tauri::command]
+pub fn add_category3(user_id: i64, category1_code: String, category2_code: String, category3_code: String, name: String) -> Result<(), String> {
+    category::add_category3(user_id, category1_code, category2_code, category3_code, name)
+        .map_err(|e| format!("Failed to add category3: {}", e))
+}
+
+/// Update Category3
+#[tauri::command]
+pub fn update_category3(user_id: i64, category1_code: String, category2_code: String, category3_code: String, name: String) -> Result<(), String> {
+    category::update_category3(user_id, category1_code, category2_code, category3_code, name)
+        .map_err(|e| format!("Failed to update category3: {}", e))
+}
+
+/// Move Category3 order
+#[tauri::command]
+pub fn move_category3_order(user_id: i64, category1_code: String, category2_code: String, category3_code: String, direction: i32) -> Result<(), String> {
+    category::move_category3_order(user_id, category1_code, category2_code, category3_code, direction)
+        .map_err(|e| format!("Failed to move category3 order: {}", e))
+}
+
+/// Delete Category3
+#[tauri::command]
+pub fn delete_category3(user_id: i64, category1_code: String, category2_code: String, category3_code: String) -> Result<(), String> {
+    category::delete_category3(user_id, category1_code, category2_code, category3_code)
+        .map_err(|e| format!("Failed to delete category3: {}", e))
+}
+
 /// Initialize categories for a new user
 #[tauri::command]
 pub fn initialize_categories_for_new_user(user_id: i64) -> Result<(), String> {

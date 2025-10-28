@@ -281,6 +281,178 @@ pub fn move_category1_order(user_id: i64, code: String, direction: i32) -> Resul
     Ok(())
 }
 
+/// Delete Category1 and all its children (CASCADE)
+pub fn delete_category1(user_id: i64, code: String) -> Result<()> {
+    let conn = get_connection()?;
+    
+    conn.execute(
+        "DELETE FROM CATEGORY1 WHERE user_id = ?1 AND category1_code = ?2",
+        [user_id.to_string(), code],
+    )?;
+    
+    Ok(())
+}
+
+/// Add new Category2
+pub fn add_category2(user_id: i64, category1_code: String, category2_code: String, name: String) -> Result<()> {
+    let conn = get_connection()?;
+    
+    // Get max display_order for this parent
+    let max_order: i32 = conn.query_row(
+        "SELECT COALESCE(MAX(display_order), 0) FROM CATEGORY2 
+         WHERE user_id = ?1 AND category1_code = ?2",
+        [user_id.to_string(), category1_code.clone()],
+        |row| row.get(0)
+    )?;
+    
+    conn.execute(
+        "INSERT INTO CATEGORY2 (user_id, category1_code, category2_code, display_order, category2_name, is_disabled, entry_dt) 
+         VALUES (?1, ?2, ?3, ?4, ?5, 0, datetime('now'))",
+        [user_id.to_string(), category1_code, category2_code, (max_order + 1).to_string(), name],
+    )?;
+    
+    Ok(())
+}
+
+/// Update Category2
+pub fn update_category2(user_id: i64, category1_code: String, category2_code: String, name: String) -> Result<()> {
+    let conn = get_connection()?;
+    
+    conn.execute(
+        "UPDATE CATEGORY2 SET category2_name = ?1, update_dt = datetime('now') 
+         WHERE user_id = ?2 AND category1_code = ?3 AND category2_code = ?4",
+        [name, user_id.to_string(), category1_code, category2_code],
+    )?;
+    
+    Ok(())
+}
+
+/// Move Category2 order (up or down)
+pub fn move_category2_order(user_id: i64, category1_code: String, category2_code: String, direction: i32) -> Result<()> {
+    let conn = get_connection()?;
+    
+    // Get current order
+    let current_order: i32 = conn.query_row(
+        "SELECT display_order FROM CATEGORY2 
+         WHERE user_id = ?1 AND category1_code = ?2 AND category2_code = ?3",
+        [user_id.to_string(), category1_code.clone(), category2_code.clone()],
+        |row| row.get(0)
+    )?;
+    
+    let new_order = current_order + direction;
+    
+    if new_order < 1 {
+        return Ok(()); // Cannot move up from first position
+    }
+    
+    // Swap with adjacent item
+    conn.execute(
+        "UPDATE CATEGORY2 SET display_order = ?1 
+         WHERE user_id = ?2 AND category1_code = ?3 AND display_order = ?4",
+        [current_order.to_string(), user_id.to_string(), category1_code.clone(), new_order.to_string()],
+    )?;
+    
+    conn.execute(
+        "UPDATE CATEGORY2 SET display_order = ?1 
+         WHERE user_id = ?2 AND category1_code = ?3 AND category2_code = ?4",
+        [new_order.to_string(), user_id.to_string(), category1_code, category2_code],
+    )?;
+    
+    Ok(())
+}
+
+/// Delete Category2 and all its children (CASCADE)
+pub fn delete_category2(user_id: i64, category1_code: String, category2_code: String) -> Result<()> {
+    let conn = get_connection()?;
+    
+    conn.execute(
+        "DELETE FROM CATEGORY2 WHERE user_id = ?1 AND category1_code = ?2 AND category2_code = ?3",
+        [user_id.to_string(), category1_code, category2_code],
+    )?;
+    
+    Ok(())
+}
+
+/// Add new Category3
+pub fn add_category3(user_id: i64, category1_code: String, category2_code: String, category3_code: String, name: String) -> Result<()> {
+    let conn = get_connection()?;
+    
+    // Get max display_order for this parent
+    let max_order: i32 = conn.query_row(
+        "SELECT COALESCE(MAX(display_order), 0) FROM CATEGORY3 
+         WHERE user_id = ?1 AND category1_code = ?2 AND category2_code = ?3",
+        [user_id.to_string(), category1_code.clone(), category2_code.clone()],
+        |row| row.get(0)
+    )?;
+    
+    conn.execute(
+        "INSERT INTO CATEGORY3 (user_id, category1_code, category2_code, category3_code, display_order, category3_name, is_disabled, entry_dt) 
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, 0, datetime('now'))",
+        [user_id.to_string(), category1_code, category2_code, category3_code, (max_order + 1).to_string(), name],
+    )?;
+    
+    Ok(())
+}
+
+/// Update Category3
+pub fn update_category3(user_id: i64, category1_code: String, category2_code: String, category3_code: String, name: String) -> Result<()> {
+    let conn = get_connection()?;
+    
+    conn.execute(
+        "UPDATE CATEGORY3 SET category3_name = ?1, update_dt = datetime('now') 
+         WHERE user_id = ?2 AND category1_code = ?3 AND category2_code = ?4 AND category3_code = ?5",
+        [name, user_id.to_string(), category1_code, category2_code, category3_code],
+    )?;
+    
+    Ok(())
+}
+
+/// Move Category3 order (up or down)
+pub fn move_category3_order(user_id: i64, category1_code: String, category2_code: String, category3_code: String, direction: i32) -> Result<()> {
+    let conn = get_connection()?;
+    
+    // Get current order
+    let current_order: i32 = conn.query_row(
+        "SELECT display_order FROM CATEGORY3 
+         WHERE user_id = ?1 AND category1_code = ?2 AND category2_code = ?3 AND category3_code = ?4",
+        [user_id.to_string(), category1_code.clone(), category2_code.clone(), category3_code.clone()],
+        |row| row.get(0)
+    )?;
+    
+    let new_order = current_order + direction;
+    
+    if new_order < 1 {
+        return Ok(()); // Cannot move up from first position
+    }
+    
+    // Swap with adjacent item
+    conn.execute(
+        "UPDATE CATEGORY3 SET display_order = ?1 
+         WHERE user_id = ?2 AND category1_code = ?3 AND category2_code = ?4 AND display_order = ?5",
+        [current_order.to_string(), user_id.to_string(), category1_code.clone(), category2_code.clone(), new_order.to_string()],
+    )?;
+    
+    conn.execute(
+        "UPDATE CATEGORY3 SET display_order = ?1 
+         WHERE user_id = ?2 AND category1_code = ?3 AND category2_code = ?4 AND category3_code = ?5",
+        [new_order.to_string(), user_id.to_string(), category1_code, category2_code, category3_code],
+    )?;
+    
+    Ok(())
+}
+
+/// Delete Category3
+pub fn delete_category3(user_id: i64, category1_code: String, category2_code: String, category3_code: String) -> Result<()> {
+    let conn = get_connection()?;
+    
+    conn.execute(
+        "DELETE FROM CATEGORY3 WHERE user_id = ?1 AND category1_code = ?2 AND category2_code = ?3 AND category3_code = ?4",
+        [user_id.to_string(), category1_code, category2_code, category3_code],
+    )?;
+    
+    Ok(())
+}
+
 /// Initialize categories for a new user by copying from template user (USER_ID=1)
 pub fn initialize_categories_for_new_user(new_user_id: i64) -> Result<()> {
     let conn = get_connection()?;

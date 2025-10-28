@@ -21,6 +21,15 @@ pub fn run() {
       commands::category::add_category1,
       commands::category::update_category1,
       commands::category::move_category1_order,
+      commands::category::delete_category1,
+      commands::category::add_category2,
+      commands::category::update_category2,
+      commands::category::move_category2_order,
+      commands::category::delete_category2,
+      commands::category::add_category3,
+      commands::category::update_category3,
+      commands::category::move_category3_order,
+      commands::category::delete_category3,
       commands::category::initialize_categories_for_new_user,
     ])
     .run(tauri::generate_context!())
