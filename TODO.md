@@ -38,27 +38,29 @@
   - [x] `common.cancel` - キャンセル
   - [x] `common.loading` - 読み込み中
 
-### Phase 2: データベーススキーマの確認と調整
-- [ ] CATEGORY1テーブルの確認
-  - [ ] USER_ID（ユーザーごとの費目管理）
-  - [ ] CATEGORY1_ID（大分類ID）
-  - [ ] CATEGORY1_NAME_JA（日本語名）
-  - [ ] CATEGORY1_NAME_EN（英語名）
-  - [ ] DISPLAY_ORDER（表示順）
-- [ ] CATEGORY2テーブルの確認
-  - [ ] USER_ID
-  - [ ] CATEGORY2_ID（中分類ID）
-  - [ ] CATEGORY1_ID（親ID）
-  - [ ] CATEGORY2_NAME_JA
-  - [ ] CATEGORY2_NAME_EN
-  - [ ] DISPLAY_ORDER
-- [ ] CATEGORY3テーブルの確認
-  - [ ] USER_ID
-  - [ ] CATEGORY3_ID（小分類ID）
-  - [ ] CATEGORY2_ID（親ID）
-  - [ ] CATEGORY3_NAME_JA
-  - [ ] CATEGORY3_NAME_EN
-  - [ ] DISPLAY_ORDER
+### Phase 2: データベーススキーマの確認と調整 ✅
+- [x] CATEGORY1テーブルの確認
+  - [x] USER_ID（ユーザーごとの費目管理）
+  - [x] CATEGORY1_CODE（大分類コード - IDとして機能）
+  - [x] CATEGORY1_NAME（デフォルト名）
+  - [x] CATEGORY1_I18N（多言語名 - 別テーブルで管理）
+  - [x] DISPLAY_ORDER（表示順）
+- [x] CATEGORY2テーブルの確認
+  - [x] USER_ID
+  - [x] CATEGORY2_CODE（中分類コード）
+  - [x] CATEGORY1_CODE（親ID）
+  - [x] CATEGORY2_NAME（デフォルト名）
+  - [x] CATEGORY2_I18N（多言語名）
+  - [x] DISPLAY_ORDER
+- [x] CATEGORY3テーブルの確認
+  - [x] USER_ID
+  - [x] CATEGORY3_CODE（小分類コード）
+  - [x] CATEGORY2_CODE（親ID）
+  - [x] CATEGORY3_NAME（デフォルト名）
+  - [x] CATEGORY3_I18N（多言語名）
+  - [x] DISPLAY_ORDER
+
+**注記**: 多言語対応は各カラムに直接JA/ENを持つのではなく、I18Nテーブルで管理する設計を採用（よりスケーラブル）
 
 ### Phase 3: バックエンドAPI実装（Rust）
 
