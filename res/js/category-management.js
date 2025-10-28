@@ -5,6 +5,7 @@ import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontS
 
 let categories = [];
 let expandedCategories = new Set();
+const currentUserId = 1; // TODO: Get from session/auth
 
 console.log('category-management.js loaded');
 
@@ -255,55 +256,25 @@ async function loadCategories() {
         treeContainer.innerHTML = '<div class="loading" data-i18n="common.loading">Loading...</div>';
         i18n.updateUI();
         
-        // TODO: Fetch categories from backend
-        // For now, use mock data
-        categories = getMockCategories();
+        // Get current language
+        const currentLang = i18n.getCurrentLanguage();
+        
+        // Fetch categories from backend
+        categories = await invoke('get_category_tree_with_lang', {
+            user_id: currentUserId,
+            lang_code: currentLang
+        });
+        
+        console.log('Loaded categories:', categories);
         
         renderCategoryTree();
     } catch (error) {
         console.error('Failed to load categories:', error);
         const treeContainer = document.getElementById('category-tree');
-        treeContainer.innerHTML = '<div class="error">Failed to load categories</div>';
+        treeContainer.innerHTML = '<div class="error">Failed to load categories: ' + error + '</div>';
     }
 }
 
-function getMockCategories() {
-    // TODO: Remove this when backend is ready
-    return [
-        {
-            id: 1,
-            name_ja: '食費',
-            name_en: 'Food',
-            display_order: 1,
-            children: [
-                {
-                    id: 11,
-                    name_ja: '食料品',
-                    name_en: 'Groceries',
-                    display_order: 1,
-                    children: [
-                        { id: 111, name_ja: '野菜', name_en: 'Vegetables', display_order: 1 },
-                        { id: 112, name_ja: '肉類', name_en: 'Meat', display_order: 2 }
-                    ]
-                },
-                {
-                    id: 12,
-                    name_ja: '外食',
-                    name_en: 'Dining Out',
-                    display_order: 2,
-                    children: []
-                }
-            ]
-        },
-        {
-            id: 2,
-            name_ja: '交通費',
-            name_en: 'Transportation',
-            display_order: 2,
-            children: []
-        }
-    ];
-}
 
 function renderCategoryTree() {
     const treeContainer = document.getElementById('category-tree');
@@ -321,35 +292,27 @@ function renderCategoryTree() {
     });
 }
 
-function renderCategory1(category, index, total) {
-    const isExpanded = expandedCategories.has(`cat1-${category.id}`);
-    const hasChildren = category.children && category.children.length > 0;
+function renderCategory1(categoryTree, index, total) {
+    const category = categoryTree.category1;
+    const isExpanded = expandedCategories.has(`cat1-${category.category1_code}`);
+    const hasChildren = categoryTree.children && categoryTree.children.length > 0;
     
     const div = document.createElement('div');
     div.className = 'category-item category-level-1';
-    div.dataset.categoryId = category.id;
+    div.dataset.categoryCode = category.category1_code;
     div.dataset.level = '1';
     
-    const currentLang = i18n.currentLanguage;
-    const categoryName = currentLang === 'ja' ? category.name_ja : category.name_en;
+    // Use i18n name if available, fallback to base name
+    const categoryName = category.category1_name_i18n || category.category1_name;
     
     div.innerHTML = `
         <div class="category-header">
-            <span class="expand-icon ${hasChildren ? (isExpanded ? 'expanded' : 'collapsed') : 'empty'}" data-category-id="${category.id}"></span>
+            <span class="expand-icon ${hasChildren ? (isExpanded ? 'expanded' : 'collapsed') : 'empty'}" data-category-code="${category.category1_code}"></span>
             <span class="category-name">${categoryName}</span>
             <span class="category-order">${i18n.t('category_mgmt.order')}: ${category.display_order}</span>
             <div class="category-actions">
-                <button class="btn-icon btn-add" data-action="add-child" data-category-id="${category.id}" data-level="1">
+                <button class="btn-icon btn-add" data-action="add-child" data-category-code="${category.category1_code}" data-level="1">
                     ${i18n.t('category_mgmt.add_sub')}
-                </button>
-                <button class="btn-icon btn-edit" data-action="edit" data-category-id="${category.id}" data-level="1">
-                    ${i18n.t('common.edit')}
-                </button>
-                <button class="btn-icon btn-up" data-action="move-up" data-category-id="${category.id}" data-level="1" ${index === 0 ? 'disabled' : ''}>
-                    ↑
-                </button>
-                <button class="btn-icon btn-down" data-action="move-down" data-category-id="${category.id}" data-level="1" ${index === total - 1 ? 'disabled' : ''}>
-                    ↓
                 </button>
             </div>
         </div>
@@ -358,7 +321,7 @@ function renderCategory1(category, index, total) {
     // Add event listeners
     const expandIcon = div.querySelector('.expand-icon');
     if (expandIcon && hasChildren) {
-        expandIcon.addEventListener('click', () => toggleCategory(`cat1-${category.id}`));
+        expandIcon.addEventListener('click', () => toggleCategory(`cat1-${category.category1_code}`));
     }
     
     // Add action button event listeners
@@ -368,10 +331,10 @@ function renderCategory1(category, index, total) {
     if (hasChildren) {
         const childrenDiv = document.createElement('div');
         childrenDiv.className = `category-children ${isExpanded ? '' : 'collapsed'}`;
-        childrenDiv.id = `cat1-${category.id}-children`;
+        childrenDiv.id = `cat1-${category.category1_code}-children`;
         
-        category.children.forEach((cat2, idx) => {
-            const childElement = renderCategory2(cat2, category.id, idx, category.children.length);
+        categoryTree.children.forEach((cat2Tree, idx) => {
+            const childElement = renderCategory2(cat2Tree, category.category1_code, idx, categoryTree.children.length);
             childrenDiv.appendChild(childElement);
         });
         
@@ -381,35 +344,35 @@ function renderCategory1(category, index, total) {
     return div;
 }
 
-function renderCategory2(category, parentId, index, total) {
-    const isExpanded = expandedCategories.has(`cat2-${category.id}`);
-    const hasChildren = category.children && category.children.length > 0;
+function renderCategory2(cat2Tree, parent1Code, index, total) {
+    const category = cat2Tree.category2;
+    const isExpanded = expandedCategories.has(`cat2-${category.category2_code}`);
+    const hasChildren = cat2Tree.children && cat2Tree.children.length > 0;
     
     const div = document.createElement('div');
     div.className = 'category-item category-level-2';
-    div.dataset.categoryId = category.id;
+    div.dataset.categoryCode = category.category2_code;
+    div.dataset.category1Code = category.category1_code;
     div.dataset.level = '2';
-    div.dataset.parentId = parentId;
     
-    const currentLang = i18n.currentLanguage;
-    const categoryName = currentLang === 'ja' ? category.name_ja : category.name_en;
+    const categoryName = category.category2_name_i18n || category.category2_name;
     
     div.innerHTML = `
         <div class="category-header">
-            <span class="expand-icon ${hasChildren ? (isExpanded ? 'expanded' : 'collapsed') : 'empty'}" data-category-id="${category.id}"></span>
+            <span class="expand-icon ${hasChildren ? (isExpanded ? 'expanded' : 'collapsed') : 'empty'}" data-category-code="${category.category2_code}"></span>
             <span class="category-name">${categoryName}</span>
             <span class="category-order">${i18n.t('category_mgmt.order')}: ${category.display_order}</span>
             <div class="category-actions">
-                <button class="btn-icon btn-add" data-action="add-child" data-category-id="${category.id}" data-level="2">
+                <button class="btn-icon btn-add" data-action="add-child" data-category-code="${category.category2_code}" data-category1-code="${category.category1_code}" data-level="2">
                     ${i18n.t('category_mgmt.add_sub')}
                 </button>
-                <button class="btn-icon btn-edit" data-action="edit" data-category-id="${category.id}" data-level="2">
+                <button class="btn-icon btn-edit" data-action="edit" data-category-code="${category.category2_code}" data-category1-code="${category.category1_code}" data-level="2">
                     ${i18n.t('common.edit')}
                 </button>
-                <button class="btn-icon btn-up" data-action="move-up" data-category-id="${category.id}" data-level="2" ${index === 0 ? 'disabled' : ''}>
+                <button class="btn-icon btn-up" data-action="move-up" data-category-code="${category.category2_code}" data-category1-code="${category.category1_code}" data-level="2" ${index === 0 ? 'disabled' : ''}>
                     ↑
                 </button>
-                <button class="btn-icon btn-down" data-action="move-down" data-category-id="${category.id}" data-level="2" ${index === total - 1 ? 'disabled' : ''}>
+                <button class="btn-icon btn-down" data-action="move-down" data-category-code="${category.category2_code}" data-category1-code="${category.category1_code}" data-level="2" ${index === total - 1 ? 'disabled' : ''}>
                     ↓
                 </button>
             </div>
@@ -419,7 +382,7 @@ function renderCategory2(category, parentId, index, total) {
     // Add event listeners
     const expandIcon = div.querySelector('.expand-icon');
     if (expandIcon && hasChildren) {
-        expandIcon.addEventListener('click', () => toggleCategory(`cat2-${category.id}`));
+        expandIcon.addEventListener('click', () => toggleCategory(`cat2-${category.category2_code}`));
     }
     
     addActionListeners(div);
@@ -428,10 +391,10 @@ function renderCategory2(category, parentId, index, total) {
     if (hasChildren) {
         const childrenDiv = document.createElement('div');
         childrenDiv.className = `category-children ${isExpanded ? '' : 'collapsed'}`;
-        childrenDiv.id = `cat2-${category.id}-children`;
+        childrenDiv.id = `cat2-${category.category2_code}-children`;
         
-        category.children.forEach((cat3, idx) => {
-            const childElement = renderCategory3(cat3, category.id, idx, category.children.length);
+        cat2Tree.children.forEach((cat3, idx) => {
+            const childElement = renderCategory3(cat3, category.category1_code, category.category2_code, idx, cat2Tree.children.length);
             childrenDiv.appendChild(childElement);
         });
         
@@ -441,15 +404,15 @@ function renderCategory2(category, parentId, index, total) {
     return div;
 }
 
-function renderCategory3(category, parentId, index, total) {
+function renderCategory3(category, parent1Code, parent2Code, index, total) {
     const div = document.createElement('div');
     div.className = 'category-item category-level-3';
-    div.dataset.categoryId = category.id;
+    div.dataset.categoryCode = category.category3_code;
+    div.dataset.category1Code = category.category1_code;
+    div.dataset.category2Code = category.category2_code;
     div.dataset.level = '3';
-    div.dataset.parentId = parentId;
     
-    const currentLang = i18n.currentLanguage;
-    const categoryName = currentLang === 'ja' ? category.name_ja : category.name_en;
+    const categoryName = category.category3_name_i18n || category.category3_name;
     
     div.innerHTML = `
         <div class="category-header">
@@ -457,13 +420,13 @@ function renderCategory3(category, parentId, index, total) {
             <span class="category-name">${categoryName}</span>
             <span class="category-order">${i18n.t('category_mgmt.order')}: ${category.display_order}</span>
             <div class="category-actions">
-                <button class="btn-icon btn-edit" data-action="edit" data-category-id="${category.id}" data-level="3">
+                <button class="btn-icon btn-edit" data-action="edit" data-category-code="${category.category3_code}" data-category1-code="${category.category1_code}" data-category2-code="${category.category2_code}" data-level="3">
                     ${i18n.t('common.edit')}
                 </button>
-                <button class="btn-icon btn-up" data-action="move-up" data-category-id="${category.id}" data-level="3" ${index === 0 ? 'disabled' : ''}>
+                <button class="btn-icon btn-up" data-action="move-up" data-category-code="${category.category3_code}" data-category1-code="${category.category1_code}" data-category2-code="${category.category2_code}" data-level="3" ${index === 0 ? 'disabled' : ''}>
                     ↑
                 </button>
-                <button class="btn-icon btn-down" data-action="move-down" data-category-id="${category.id}" data-level="3" ${index === total - 1 ? 'disabled' : ''}>
+                <button class="btn-icon btn-down" data-action="move-down" data-category-code="${category.category3_code}" data-category1-code="${category.category1_code}" data-category2-code="${category.category2_code}" data-level="3" ${index === total - 1 ? 'disabled' : ''}>
                     ↓
                 </button>
             </div>
