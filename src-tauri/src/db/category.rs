@@ -34,7 +34,7 @@ pub fn get_category_tree_with_lang(user_id: i64, lang_code: Option<String>) -> R
     
     let mut stmt1 = conn.prepare(sql)?;
     
-    let cat1_iter = if let Some(ref lang) = lang_code {
+    let cat1_list: Vec<Category1> = if let Some(ref lang) = lang_code {
         stmt1.query_map([user_id.to_string(), lang.clone()], |row| {
             Ok(Category1 {
                 user_id: row.get(0)?,
@@ -46,7 +46,7 @@ pub fn get_category_tree_with_lang(user_id: i64, lang_code: Option<String>) -> R
                 update_dt: row.get(6)?,
                 category1_name_i18n: row.get(7)?,
             })
-        })?
+        })?.collect::<Result<Vec<_>>>()?
     } else {
         stmt1.query_map([user_id], |row| {
             Ok(Category1 {
@@ -59,13 +59,12 @@ pub fn get_category_tree_with_lang(user_id: i64, lang_code: Option<String>) -> R
                 update_dt: row.get(6)?,
                 category1_name_i18n: None,
             })
-        })?
+        })?.collect::<Result<Vec<_>>>()?
     };
     
     let mut result = Vec::new();
     
-    for cat1 in cat1_iter {
-        let cat1 = cat1?;
+    for cat1 in cat1_list {
         let cat1_code = cat1.category1_code.clone();
         
         // Get Category2 for this Category1 with optional I18N
@@ -88,7 +87,7 @@ pub fn get_category_tree_with_lang(user_id: i64, lang_code: Option<String>) -> R
         
         let mut stmt2 = conn.prepare(sql2)?;
         
-        let cat2_iter = if let Some(ref lang) = lang_code {
+        let cat2_list: Vec<Category2> = if let Some(ref lang) = lang_code {
             stmt2.query_map([user_id.to_string(), cat1_code.clone(), lang.clone()], |row| {
                 Ok(Category2 {
                     user_id: row.get(0)?,
@@ -101,7 +100,7 @@ pub fn get_category_tree_with_lang(user_id: i64, lang_code: Option<String>) -> R
                     update_dt: row.get(7)?,
                     category2_name_i18n: row.get(8)?,
                 })
-            })?
+            })?.collect::<Result<Vec<_>>>()?
         } else {
             stmt2.query_map([user_id, cat1_code.parse().unwrap()], |row| {
                 Ok(Category2 {
@@ -115,13 +114,12 @@ pub fn get_category_tree_with_lang(user_id: i64, lang_code: Option<String>) -> R
                     update_dt: row.get(7)?,
                     category2_name_i18n: None,
                 })
-            })?
+            })?.collect::<Result<Vec<_>>>()?
         };
         
         let mut cat2_with_children = Vec::new();
         
-        for cat2 in cat2_iter {
-            let cat2 = cat2?;
+        for cat2 in cat2_list {
             let cat2_code = cat2.category2_code.clone();
             
             // Get Category3 for this Category2 with optional I18N
@@ -145,7 +143,7 @@ pub fn get_category_tree_with_lang(user_id: i64, lang_code: Option<String>) -> R
             
             let mut stmt3 = conn.prepare(sql3)?;
             
-            let cat3_iter = if let Some(ref lang) = lang_code {
+            let cat3_list: Vec<Category3> = if let Some(ref lang) = lang_code {
                 stmt3.query_map([user_id.to_string(), cat1_code.clone(), cat2_code.clone(), lang.clone()], |row| {
                     Ok(Category3 {
                         user_id: row.get(0)?,
@@ -159,7 +157,7 @@ pub fn get_category_tree_with_lang(user_id: i64, lang_code: Option<String>) -> R
                         update_dt: row.get(8)?,
                         category3_name_i18n: row.get(9)?,
                     })
-                })?
+                })?.collect::<Result<Vec<_>>>()?
             } else {
                 stmt3.query_map([user_id.to_string(), cat1_code.clone(), cat2_code], |row| {
                     Ok(Category3 {
@@ -174,14 +172,12 @@ pub fn get_category_tree_with_lang(user_id: i64, lang_code: Option<String>) -> R
                         update_dt: row.get(8)?,
                         category3_name_i18n: None,
                     })
-                })?
+                })?.collect::<Result<Vec<_>>>()?
             };
-            
-            let cat3_list: Result<Vec<_>> = cat3_iter.collect();
             
             cat2_with_children.push(Category2WithChildren {
                 category2: cat2,
-                children: cat3_list?,
+                children: cat3_list,
             });
         }
         
@@ -214,6 +210,7 @@ pub fn get_category1_list(user_id: i64) -> Result<Vec<Category1>> {
             is_disabled: row.get(4)?,
             entry_dt: row.get(5)?,
             update_dt: row.get(6)?,
+            category1_name_i18n: None,
         })
     })?;
     
