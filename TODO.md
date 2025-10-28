@@ -62,45 +62,49 @@
 
 **注記**: 多言語対応は各カラムに直接JA/ENを持つのではなく、I18Nテーブルで管理する設計を採用（よりスケーラブル）
 
-### Phase 3: バックエンドAPI実装（Rust）
+### Phase 3: バックエンドAPI実装（Rust） ✅
 
-#### 3-1. データ構造の定義
-- [ ] `Category1`, `Category2`, `Category3` 構造体の定義
-- [ ] カテゴリツリー用のレスポンス構造体
-- [ ] エラーハンドリング用のEnum
+#### 3-1. データ構造の定義 ✅
+- [x] `Category1`, `Category2`, `Category3` 構造体の定義
+- [x] カテゴリツリー用のレスポンス構造体
+- [x] エラーハンドリング用のEnum（Result<T, String>を使用）
 
-#### 3-2. 大分類（CATEGORY1）のAPI
-- [ ] `get_category1_list` - 大分類一覧取得
-  - [ ] ユーザーIDでフィルタリング
-  - [ ] 表示順でソート
-  - [ ] 子要素（中分類）も含めて取得
-- [ ] `add_category1` - 大分類追加
-  - [ ] バリデーション（名前の重複チェック）
-  - [ ] 表示順の自動設定
-- [ ] `update_category1` - 大分類更新
-  - [ ] 名前の変更
-  - [ ] 表示順の変更
-- [ ] `move_category1_order` - 大分類の並び順変更
-  - [ ] 上へ移動
-  - [ ] 下へ移動
-  - [ ] display_orderの再計算
+#### 3-2. 大分類（CATEGORY1）のAPI ✅
+- [x] `get_category1_list` - 大分類一覧取得
+  - [x] ユーザーIDでフィルタリング
+  - [x] 表示順でソート
+  - [x] 子要素（中分類）も含めて取得（via get_category_tree）
+- [x] `add_category1` - 大分類追加
+  - [x] 表示順の自動設定
+  - ⚠️ バリデーション（名前の重複チェック）は未実装
+- [x] `update_category1` - 大分類更新
+  - [x] 名前の変更
+- [x] `move_category1_order` - 大分類の並び順変更
+  - [x] 上へ移動
+  - [x] 下へ移動
+  - [x] display_orderの再計算
+- [x] `delete_category1` - 大分類削除（CASCADE）
 
-#### 3-3. 中分類（CATEGORY2）のAPI
-- [ ] `get_category2_list` - 中分類一覧取得（親IDで絞り込み）
-- [ ] `add_category2` - 中分類追加
-- [ ] `update_category2` - 中分類更新
-- [ ] `move_category2_order` - 中分類の並び順変更
+#### 3-3. 中分類（CATEGORY2）のAPI ✅
+- [x] `add_category2` - 中分類追加
+- [x] `update_category2` - 中分類更新
+- [x] `move_category2_order` - 中分類の並び順変更
+- [x] `delete_category2` - 中分類削除（CASCADE）
 
-#### 3-4. 小分類（CATEGORY3）のAPI
-- [ ] `get_category3_list` - 小分類一覧取得（親IDで絞り込み）
-- [ ] `add_category3` - 小分類追加
-- [ ] `update_category3` - 小分類更新
-- [ ] `move_category3_order` - 小分類の並び順変更
+#### 3-4. 小分類（CATEGORY3）のAPI ✅
+- [x] `add_category3` - 小分類追加
+- [x] `update_category3` - 小分類更新
+- [x] `move_category3_order` - 小分類の並び順変更
+- [x] `delete_category3` - 小分類削除
 
-#### 3-5. 統合API
-- [ ] `get_category_tree` - 全階層のツリー構造を一度に取得
-  - [ ] 大→中→小の階層構造でJSON返却
-  - [ ] 現在の言語に応じた名前を返す
+#### 3-5. 統合API ✅
+- [x] `get_category_tree` - 全階層のツリー構造を一度に取得
+  - [x] 大→中→小の階層構造でJSON返却
+  - [x] 現在の言語に応じた名前を返す（via get_category_tree_with_lang）
+
+**注記**: 
+- 削除APIは実装済みだが、UIには公開しない（ユーザー削除時のみ使用）
+- バリデーション（重複チェック等）は後続フェーズで実装予定
 
 ### Phase 4: フロントエンド実装（JavaScript）
 
