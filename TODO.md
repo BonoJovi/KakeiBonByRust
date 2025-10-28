@@ -16,27 +16,27 @@
 
 ## 🚧 費目管理機能 (Category Management)
 
-### Phase 1: i18nリソースの追加
-- [ ] SQLに費目管理用の翻訳リソースを追加
-  - [ ] `category_mgmt.title` - 費目管理
-  - [ ] `category_mgmt.category_tree` - 費目ツリー
-  - [ ] `category_mgmt.add_category1` - 大分類を追加
-  - [ ] `category_mgmt.add_category2` - 中分類を追加
-  - [ ] `category_mgmt.add_category3` - 小分類を追加
-  - [ ] `category_mgmt.edit_category1` - 大分類を編集
-  - [ ] `category_mgmt.edit_category2` - 中分類を編集
-  - [ ] `category_mgmt.edit_category3` - 小分類を編集
-  - [ ] `category_mgmt.name_ja` - 名前（日本語）
-  - [ ] `category_mgmt.name_en` - 名前（英語）
-  - [ ] `category_mgmt.display_order` - 表示順
-  - [ ] `category_mgmt.parent_category` - 親カテゴリ
-  - [ ] `category_mgmt.add_sub` - サブカテゴリ追加
-  - [ ] `category_mgmt.order` - 順序
-  - [ ] `category_mgmt.no_categories` - カテゴリがありません
-  - [ ] `common.edit` - 編集
-  - [ ] `common.save` - 保存
-  - [ ] `common.cancel` - キャンセル
-  - [ ] `common.loading` - 読み込み中
+### Phase 1: i18nリソースの追加 ✅
+- [x] SQLに費目管理用の翻訳リソースを追加
+  - [x] `category_mgmt.title` - 費目管理
+  - [x] `category_mgmt.category_tree` - 費目ツリー
+  - [x] `category_mgmt.add_category1` - 大分類を追加
+  - [x] `category_mgmt.add_category2` - 中分類を追加
+  - [x] `category_mgmt.add_category3` - 小分類を追加
+  - [x] `category_mgmt.edit_category1` - 大分類を編集
+  - [x] `category_mgmt.edit_category2` - 中分類を編集
+  - [x] `category_mgmt.edit_category3` - 小分類を編集
+  - [x] `category_mgmt.name_ja` - 名前（日本語）
+  - [x] `category_mgmt.name_en` - 名前（英語）
+  - [x] `category_mgmt.display_order` - 表示順
+  - [x] `category_mgmt.parent_category` - 親カテゴリ
+  - [x] `category_mgmt.add_sub` - サブカテゴリ追加
+  - [x] `category_mgmt.order` - 順序
+  - [x] `category_mgmt.no_categories` - カテゴリがありません
+  - [x] `common.edit` - 編集
+  - [x] `common.save` - 保存
+  - [x] `common.cancel` - キャンセル
+  - [x] `common.loading` - 読み込み中
 
 ### Phase 2: データベーススキーマの確認と調整
 - [ ] CATEGORY1テーブルの確認
