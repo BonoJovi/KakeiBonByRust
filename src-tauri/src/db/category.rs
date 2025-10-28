@@ -6,6 +6,60 @@ pub fn get_connection() -> Result<Connection> {
     Connection::open("src-tauri/kakeibo.db")
 }
 
+#[cfg(test)]
+fn get_test_connection() -> Result<Connection> {
+    let conn = Connection::open_in_memory()?;
+    // Create tables for testing
+    conn.execute(
+        "CREATE TABLE CATEGORY1 (
+            USER_ID INTEGER NOT NULL,
+            CATEGORY1_CODE VARCHAR(64) NOT NULL,
+            DISPLAY_ORDER INTEGER NOT NULL,
+            CATEGORY1_NAME VARCHAR(128) NOT NULL,
+            IS_DISABLED INTEGER NOT NULL DEFAULT 0,
+            ENTRY_DT DATETIME NOT NULL,
+            UPDATE_DT DATETIME,
+            PRIMARY KEY(USER_ID, CATEGORY1_CODE)
+        )",
+        [],
+    )?;
+    
+    conn.execute(
+        "CREATE TABLE CATEGORY2 (
+            USER_ID INTEGER NOT NULL,
+            CATEGORY1_CODE VARCHAR(64) NOT NULL,
+            CATEGORY2_CODE VARCHAR(64) NOT NULL,
+            DISPLAY_ORDER INTEGER NOT NULL,
+            CATEGORY2_NAME VARCHAR(128) NOT NULL,
+            IS_DISABLED INTEGER NOT NULL DEFAULT 0,
+            ENTRY_DT DATETIME NOT NULL,
+            UPDATE_DT DATETIME,
+            PRIMARY KEY(USER_ID, CATEGORY1_CODE, CATEGORY2_CODE),
+            FOREIGN KEY(USER_ID, CATEGORY1_CODE) REFERENCES CATEGORY1(USER_ID, CATEGORY1_CODE) ON DELETE CASCADE
+        )",
+        [],
+    )?;
+    
+    conn.execute(
+        "CREATE TABLE CATEGORY3 (
+            USER_ID INTEGER NOT NULL,
+            CATEGORY1_CODE VARCHAR(64) NOT NULL,
+            CATEGORY2_CODE VARCHAR(64) NOT NULL,
+            CATEGORY3_CODE VARCHAR(64) NOT NULL,
+            DISPLAY_ORDER INTEGER NOT NULL,
+            CATEGORY3_NAME VARCHAR(128) NOT NULL,
+            IS_DISABLED INTEGER NOT NULL DEFAULT 0,
+            ENTRY_DT DATETIME NOT NULL,
+            UPDATE_DT DATETIME,
+            PRIMARY KEY(USER_ID, CATEGORY1_CODE, CATEGORY2_CODE, CATEGORY3_CODE),
+            FOREIGN KEY(USER_ID, CATEGORY1_CODE, CATEGORY2_CODE) REFERENCES CATEGORY2(USER_ID, CATEGORY1_CODE, CATEGORY2_CODE) ON DELETE CASCADE
+        )",
+        [],
+    )?;
+    
+    Ok(conn)
+}
+
 /// Get all categories for a user as a tree structure with optional language support
 pub fn get_category_tree(user_id: i64) -> Result<Vec<CategoryTree>> {
     get_category_tree_with_lang(user_id, None)
@@ -518,4 +572,359 @@ pub fn initialize_categories_for_new_user(new_user_id: i64) -> Result<()> {
     conn.execute("COMMIT", [])?;
     
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    // Helper function to set up test database with sample data
+    fn setup_test_data(conn: &Connection, user_id: i64) -> Result<()> {
+        // Insert Category1
+        conn.execute(
+            "INSERT INTO CATEGORY1 (user_id, category1_code, display_order, category1_name, is_disabled, entry_dt) 
+             VALUES (?1, 'C1_01', 1, 'Income', 0, datetime('now'))",
+            [user_id],
+        )?;
+        
+        conn.execute(
+            "INSERT INTO CATEGORY1 (user_id, category1_code, display_order, category1_name, is_disabled, entry_dt) 
+             VALUES (?1, 'C1_02', 2, 'Expense', 0, datetime('now'))",
+            [user_id],
+        )?;
+        
+        // Insert Category2
+        conn.execute(
+            "INSERT INTO CATEGORY2 (user_id, category1_code, category2_code, display_order, category2_name, is_disabled, entry_dt) 
+             VALUES (?1, 'C1_01', 'C2_01', 1, 'Salary', 0, datetime('now'))",
+            [user_id],
+        )?;
+        
+        conn.execute(
+            "INSERT INTO CATEGORY2 (user_id, category1_code, category2_code, display_order, category2_name, is_disabled, entry_dt) 
+             VALUES (?1, 'C1_02', 'C2_02', 1, 'Food', 0, datetime('now'))",
+            [user_id],
+        )?;
+        
+        // Insert Category3
+        conn.execute(
+            "INSERT INTO CATEGORY3 (user_id, category1_code, category2_code, category3_code, display_order, category3_name, is_disabled, entry_dt) 
+             VALUES (?1, 'C1_02', 'C2_02', 'C3_01', 1, 'Groceries', 0, datetime('now'))",
+            [user_id],
+        )?;
+        
+        Ok(())
+    }
+    
+    #[test]
+    fn test_add_category1() {
+        let conn = get_test_connection().unwrap();
+        let user_id = 1i64;
+        
+        // Add category1
+        conn.execute(
+            "INSERT INTO CATEGORY1 (user_id, category1_code, display_order, category1_name, is_disabled, entry_dt) 
+             VALUES (?1, 'TEST01', 1, 'Test Category', 0, datetime('now'))",
+            [user_id],
+        ).unwrap();
+        
+        // Verify
+        let count: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM CATEGORY1 WHERE user_id = ?1 AND category1_code = 'TEST01'",
+            [user_id],
+            |row| row.get(0),
+        ).unwrap();
+        
+        assert_eq!(count, 1);
+    }
+    
+    #[test]
+    fn test_update_category1() {
+        let conn = get_test_connection().unwrap();
+        let user_id = 1i64;
+        
+        setup_test_data(&conn, user_id).unwrap();
+        
+        // Update
+        conn.execute(
+            "UPDATE CATEGORY1 SET category1_name = 'Updated Income' WHERE user_id = ?1 AND category1_code = 'C1_01'",
+            [user_id],
+        ).unwrap();
+        
+        // Verify
+        let name: String = conn.query_row(
+            "SELECT category1_name FROM CATEGORY1 WHERE user_id = ?1 AND category1_code = 'C1_01'",
+            [user_id],
+            |row| row.get(0),
+        ).unwrap();
+        
+        assert_eq!(name, "Updated Income");
+    }
+    
+    #[test]
+    fn test_delete_category1_cascade() {
+        let conn = get_test_connection().unwrap();
+        let user_id = 1i64;
+        
+        conn.execute("PRAGMA foreign_keys = ON", []).unwrap();
+        setup_test_data(&conn, user_id).unwrap();
+        
+        // Delete Category1
+        conn.execute(
+            "DELETE FROM CATEGORY1 WHERE user_id = ?1 AND category1_code = 'C1_02'",
+            [user_id],
+        ).unwrap();
+        
+        // Verify Category1 is deleted
+        let cat1_count: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM CATEGORY1 WHERE user_id = ?1 AND category1_code = 'C1_02'",
+            [user_id],
+            |row| row.get(0),
+        ).unwrap();
+        assert_eq!(cat1_count, 0);
+        
+        // Verify Category2 is also deleted (CASCADE)
+        let cat2_count: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM CATEGORY2 WHERE user_id = ?1 AND category1_code = 'C1_02'",
+            [user_id],
+            |row| row.get(0),
+        ).unwrap();
+        assert_eq!(cat2_count, 0);
+        
+        // Verify Category3 is also deleted (CASCADE)
+        let cat3_count: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM CATEGORY3 WHERE user_id = ?1 AND category1_code = 'C1_02'",
+            [user_id],
+            |row| row.get(0),
+        ).unwrap();
+        assert_eq!(cat3_count, 0);
+    }
+    
+    #[test]
+    fn test_add_category2() {
+        let conn = get_test_connection().unwrap();
+        let user_id = 1i64;
+        
+        setup_test_data(&conn, user_id).unwrap();
+        
+        // Add Category2
+        conn.execute(
+            "INSERT INTO CATEGORY2 (user_id, category1_code, category2_code, display_order, category2_name, is_disabled, entry_dt) 
+             VALUES (?1, 'C1_01', 'C2_TEST', 2, 'Bonus', 0, datetime('now'))",
+            [user_id],
+        ).unwrap();
+        
+        // Verify
+        let count: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM CATEGORY2 WHERE user_id = ?1 AND category2_code = 'C2_TEST'",
+            [user_id],
+            |row| row.get(0),
+        ).unwrap();
+        
+        assert_eq!(count, 1);
+    }
+    
+    #[test]
+    fn test_update_category2() {
+        let conn = get_test_connection().unwrap();
+        let user_id = 1i64;
+        
+        setup_test_data(&conn, user_id).unwrap();
+        
+        // Update
+        conn.execute(
+            "UPDATE CATEGORY2 SET category2_name = 'Monthly Salary' 
+             WHERE user_id = ?1 AND category1_code = 'C1_01' AND category2_code = 'C2_01'",
+            [user_id],
+        ).unwrap();
+        
+        // Verify
+        let name: String = conn.query_row(
+            "SELECT category2_name FROM CATEGORY2 WHERE user_id = ?1 AND category2_code = 'C2_01'",
+            [user_id],
+            |row| row.get(0),
+        ).unwrap();
+        
+        assert_eq!(name, "Monthly Salary");
+    }
+    
+    #[test]
+    fn test_delete_category2_cascade() {
+        let conn = get_test_connection().unwrap();
+        let user_id = 1i64;
+        
+        conn.execute("PRAGMA foreign_keys = ON", []).unwrap();
+        setup_test_data(&conn, user_id).unwrap();
+        
+        // Delete Category2
+        conn.execute(
+            "DELETE FROM CATEGORY2 WHERE user_id = ?1 AND category1_code = 'C1_02' AND category2_code = 'C2_02'",
+            [user_id],
+        ).unwrap();
+        
+        // Verify Category2 is deleted
+        let cat2_count: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM CATEGORY2 WHERE user_id = ?1 AND category2_code = 'C2_02'",
+            [user_id],
+            |row| row.get(0),
+        ).unwrap();
+        assert_eq!(cat2_count, 0);
+        
+        // Verify Category3 is also deleted (CASCADE)
+        let cat3_count: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM CATEGORY3 WHERE user_id = ?1 AND category2_code = 'C2_02'",
+            [user_id],
+            |row| row.get(0),
+        ).unwrap();
+        assert_eq!(cat3_count, 0);
+    }
+    
+    #[test]
+    fn test_add_category3() {
+        let conn = get_test_connection().unwrap();
+        let user_id = 1i64;
+        
+        setup_test_data(&conn, user_id).unwrap();
+        
+        // Add Category3
+        conn.execute(
+            "INSERT INTO CATEGORY3 (user_id, category1_code, category2_code, category3_code, display_order, category3_name, is_disabled, entry_dt) 
+             VALUES (?1, 'C1_02', 'C2_02', 'C3_TEST', 2, 'Vegetables', 0, datetime('now'))",
+            [user_id],
+        ).unwrap();
+        
+        // Verify
+        let count: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM CATEGORY3 WHERE user_id = ?1 AND category3_code = 'C3_TEST'",
+            [user_id],
+            |row| row.get(0),
+        ).unwrap();
+        
+        assert_eq!(count, 1);
+    }
+    
+    #[test]
+    fn test_update_category3() {
+        let conn = get_test_connection().unwrap();
+        let user_id = 1i64;
+        
+        setup_test_data(&conn, user_id).unwrap();
+        
+        // Update
+        conn.execute(
+            "UPDATE CATEGORY3 SET category3_name = 'Supermarket' 
+             WHERE user_id = ?1 AND category3_code = 'C3_01'",
+            [user_id],
+        ).unwrap();
+        
+        // Verify
+        let name: String = conn.query_row(
+            "SELECT category3_name FROM CATEGORY3 WHERE user_id = ?1 AND category3_code = 'C3_01'",
+            [user_id],
+            |row| row.get(0),
+        ).unwrap();
+        
+        assert_eq!(name, "Supermarket");
+    }
+    
+    #[test]
+    fn test_delete_category3() {
+        let conn = get_test_connection().unwrap();
+        let user_id = 1i64;
+        
+        setup_test_data(&conn, user_id).unwrap();
+        
+        // Delete Category3
+        conn.execute(
+            "DELETE FROM CATEGORY3 WHERE user_id = ?1 AND category3_code = 'C3_01'",
+            [user_id],
+        ).unwrap();
+        
+        // Verify
+        let count: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM CATEGORY3 WHERE user_id = ?1 AND category3_code = 'C3_01'",
+            [user_id],
+            |row| row.get(0),
+        ).unwrap();
+        
+        assert_eq!(count, 0);
+    }
+    
+    #[test]
+    fn test_display_order_management() {
+        let conn = get_test_connection().unwrap();
+        let user_id = 1i64;
+        
+        // Add multiple categories
+        conn.execute(
+            "INSERT INTO CATEGORY1 (user_id, category1_code, display_order, category1_name, is_disabled, entry_dt) 
+             VALUES (?1, 'C1_01', 1, 'First', 0, datetime('now'))",
+            [user_id],
+        ).unwrap();
+        
+        conn.execute(
+            "INSERT INTO CATEGORY1 (user_id, category1_code, display_order, category1_name, is_disabled, entry_dt) 
+             VALUES (?1, 'C1_02', 2, 'Second', 0, datetime('now'))",
+            [user_id],
+        ).unwrap();
+        
+        conn.execute(
+            "INSERT INTO CATEGORY1 (user_id, category1_code, display_order, category1_name, is_disabled, entry_dt) 
+             VALUES (?1, 'C1_03', 3, 'Third', 0, datetime('now'))",
+            [user_id],
+        ).unwrap();
+        
+        // Verify order
+        let mut stmt = conn.prepare(
+            "SELECT category1_code FROM CATEGORY1 WHERE user_id = ?1 ORDER BY display_order"
+        ).unwrap();
+        
+        let codes: Vec<String> = stmt.query_map([user_id], |row| row.get(0))
+            .unwrap()
+            .collect::<Result<Vec<String>, _>>()
+            .unwrap();
+        
+        assert_eq!(codes, vec!["C1_01", "C1_02", "C1_03"]);
+    }
+    
+    #[test]
+    fn test_user_isolation() {
+        let conn = get_test_connection().unwrap();
+        
+        // Add data for user 1
+        setup_test_data(&conn, 1).unwrap();
+        
+        // Add data for user 2
+        setup_test_data(&conn, 2).unwrap();
+        
+        // Verify user 1's data
+        let user1_count: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM CATEGORY1 WHERE user_id = 1",
+            [],
+            |row| row.get(0),
+        ).unwrap();
+        assert_eq!(user1_count, 2);
+        
+        // Verify user 2's data
+        let user2_count: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM CATEGORY1 WHERE user_id = 2",
+            [],
+            |row| row.get(0),
+        ).unwrap();
+        assert_eq!(user2_count, 2);
+        
+        // Delete user 1's category should not affect user 2
+        conn.execute("PRAGMA foreign_keys = ON", []).unwrap();
+        conn.execute(
+            "DELETE FROM CATEGORY1 WHERE user_id = 1 AND category1_code = 'C1_01'",
+            [],
+        ).unwrap();
+        
+        let user2_count_after: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM CATEGORY1 WHERE user_id = 2",
+            [],
+            |row| row.get(0),
+        ).unwrap();
+        assert_eq!(user2_count_after, 2);
+    }
 }
