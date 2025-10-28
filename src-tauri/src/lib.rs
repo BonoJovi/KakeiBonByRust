@@ -33,7 +33,6 @@ pub fn run() {
       commands::category::delete_category3,
       commands::category::initialize_categories_for_new_user,
       commands::i18n::get_translations,
-      commands::i18n::get_translations_debug,
       commands::settings::get_user_settings,
       commands::settings::update_user_settings,
     ])
