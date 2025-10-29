@@ -593,10 +593,19 @@ function generateCategory2Code(category1_code) {
 
 ## バージョン履歴
 
-- **v1.0** (2025-10-28): 初版APIドキュメント
+- **v0.3** (2025-10-30): 編集機能と初期化機能の追加
+  - 中分類・小分類の編集API追加
+  - 新規ユーザーへの費目データ自動投入
+  - 重複チェック機能（編集対象除外）
+  - テストケース追加（6/6テスト成功）
+- **v0.2** (2025-10-29): 追加API
+  - add_category2/3の追加
+- **v0.1** (2025-10-28): 初版APIドキュメント
   - Category1/2/3の完全なCRUD操作
   - 多言語対応のツリー取得
   - 並び順変更機能
+
+**注記**: v1.0は全機能実装後にリリース予定
 
 ---
 
@@ -606,3 +615,173 @@ function generateCategory2Code(category1_code) {
 - [テスト戦略](../TESTING.md)
 - [TODO.md](../../TODO.md)
 - [English Version](../API_CATEGORY.md)
+
+---
+
+### 中分類の編集
+
+#### `get_category2_for_edit`
+中分類の編集用データを取得します。
+
+**パラメータ:**
+- `user_id` (i64): ユーザーID
+- `category1_code` (String): 大分類コード
+- `category2_code` (String): 中分類コード
+
+**戻り値:**
+- `CategoryForEdit`: 編集用データ（code, name_ja, name_en）
+
+**使用例:**
+```javascript
+const categoryData = await invoke('get_category2_for_edit', {
+    userId: 1,
+    category1Code: 'EXPENSE',
+    category2Code: 'C2_E_1'
+});
+// { code: 'C2_E_1', name_ja: '食費', name_en: 'Food' }
+```
+
+---
+
+#### `update_category2`
+中分類の名前（日本語・英語）を更新します。
+
+**パラメータ:**
+- `user_id` (i64): ユーザーID
+- `category1_code` (String): 大分類コード
+- `category2_code` (String): 中分類コード
+- `name_ja` (String): 日本語名
+- `name_en` (String): 英語名
+
+**戻り値:**
+- `Result<(), String>`: 成功時は空、失敗時はエラーメッセージ
+
+**重複チェック:**
+- 同じ大分類内で名前が重複していないかチェック
+- 日本語名と英語名の両方向でチェック
+- 編集対象自身は除外してチェック
+
+**使用例:**
+```javascript
+await invoke('update_category2', {
+    userId: 1,
+    category1Code: 'EXPENSE',
+    category2Code: 'C2_E_1',
+    nameJa: '食料品費',
+    nameEn: 'Food Expenses'
+});
+```
+
+---
+
+### 小分類の編集
+
+#### `get_category3_for_edit`
+小分類の編集用データを取得します。
+
+**パラメータ:**
+- `user_id` (i64): ユーザーID
+- `category1_code` (String): 大分類コード
+- `category2_code` (String): 中分類コード
+- `category3_code` (String): 小分類コード
+
+**戻り値:**
+- `CategoryForEdit`: 編集用データ（code, name_ja, name_en）
+
+**使用例:**
+```javascript
+const categoryData = await invoke('get_category3_for_edit', {
+    userId: 1,
+    category1Code: 'EXPENSE',
+    category2Code: 'C2_E_1',
+    category3Code: 'C3_E_1_1'
+});
+```
+
+---
+
+#### `update_category3`
+小分類の名前（日本語・英語）を更新します。
+
+**パラメータ:**
+- `user_id` (i64): ユーザーID
+- `category1_code` (String): 大分類コード
+- `category2_code` (String): 中分類コード
+- `category3_code` (String): 小分類コード
+- `name_ja` (String): 日本語名
+- `name_en` (String): 英語名
+
+**戻り値:**
+- `Result<(), String>`: 成功時は空、失敗時はエラーメッセージ
+
+**重複チェック:**
+- 同じ中分類内で名前が重複していないかチェック
+- 日本語名と英語名の両方向でチェック
+- 編集対象自身は除外してチェック
+
+**使用例:**
+```javascript
+await invoke('update_category3', {
+    userId: 1,
+    category1Code: 'EXPENSE',
+    category2Code: 'C2_E_1',
+    category3Code: 'C3_E_1_1',
+    nameJa: 'スーパー',
+    nameEn: 'Supermarket'
+});
+```
+
+---
+
+## 費目データの初期化
+
+### 概要
+新規ユーザー作成時、デフォルトの費目データが自動的に投入されます。
+
+### 自動投入されるデータ
+- **中分類（CATEGORY2）**: 20件
+  - 支出（EXPENSE）: 14件（食費、日用雑貨、交通費など）
+  - 収入（INCOME）: 6件（給与、賞与、年金など）
+- **小分類（CATEGORY3）**: 126件
+  - 各中分類に紐づく詳細分類
+- **多言語名（I18N）**: 日本語・英語の両方
+
+### データソース
+- SQLファイル: `res/sql/init_user_categories.sql`
+- 元データ: `work/migrate_categories.sql` を新コード体系に変換
+- 生成スクリプト: `work/generate_init_categories.py`
+
+### 実装詳細
+
+#### `initialize_user_categories`
+新規ユーザーの費目データを初期化します（内部関数）。
+
+**処理フロー:**
+1. CATEGORY2の存在チェック（既に初期化済みかチェック）
+2. SQLファイル読み込み（`res/sql/init_user_categories.sql`）
+3. `:pUserID`プレースホルダーを実際のuser_idに置換
+4. トランザクション開始
+5. SQL文を順次実行
+6. コミット
+
+**呼び出し箇所:**
+- `create_general_user` Tauriコマンド内で自動呼び出し
+
+**エラーハンドリング:**
+- ファイル読み込みエラー → CategoryError::DatabaseError
+- SQL実行エラー → トランザクションロールバック
+- 初期化失敗時もユーザー作成は成功（警告ログのみ）
+
+---
+
+## 追加情報（v0.3）
+
+### 編集機能の制約
+- 編集は名前のみ（コードは変更不可）
+- 同じ親カテゴリ内で重複する名前は不可
+- 日本語名と英語名の両方向で重複チェック
+
+### モーダル編集
+- 中分類・小分類はモーダルダイアログで編集
+- 日本語名と英語名を同時に編集可能
+- 保存時に自動的にI18Nテーブルも更新

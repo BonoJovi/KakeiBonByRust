@@ -593,10 +593,19 @@ function generateCategory2Code(category1_code) {
 
 ## Version History
 
-- **v1.0** (2025-10-28): Initial API documentation
+- **v0.3** (2025-10-30): Edit and initialization features
+  - Added category2/3 edit APIs
+  - Auto-insertion of category data for new users
+  - Duplicate check (excluding current target)
+  - Added test cases (6/6 tests passing)
+- **v0.2** (2025-10-29): Additional APIs
+  - Added add_category2/3
+- **v0.1** (2025-10-28): Initial API documentation
   - Complete CRUD operations for Category1/2/3
   - Tree retrieval with i18n support
   - Reordering functionality
+
+**Note**: v1.0 will be released after all features are implemented
 
 ---
 
@@ -605,3 +614,173 @@ function generateCategory2Code(category1_code) {
 - [Frontend Design (Phase 4)](./FRONTEND_DESIGN_PHASE4.md)
 - [Testing Strategy](./TESTING.md)
 - [TODO.md](../TODO.md)
+
+---
+
+### Category2 Edit Operations
+
+#### `get_category2_for_edit`
+Retrieves category2 data for editing.
+
+**Parameters:**
+- `user_id` (i64): User ID
+- `category1_code` (String): Category1 code
+- `category2_code` (String): Category2 code
+
+**Returns:**
+- `CategoryForEdit`: Edit data (code, name_ja, name_en)
+
+**Example:**
+```javascript
+const categoryData = await invoke('get_category2_for_edit', {
+    userId: 1,
+    category1Code: 'EXPENSE',
+    category2Code: 'C2_E_1'
+});
+// { code: 'C2_E_1', name_ja: '食費', name_en: 'Food' }
+```
+
+---
+
+#### `update_category2`
+Updates category2 names (Japanese and English).
+
+**Parameters:**
+- `user_id` (i64): User ID
+- `category1_code` (String): Category1 code
+- `category2_code` (String): Category2 code
+- `name_ja` (String): Japanese name
+- `name_en` (String): English name
+
+**Returns:**
+- `Result<(), String>`: Success (empty) or error message
+
+**Duplicate Check:**
+- Checks for duplicate names within the same category1
+- Bidirectional check (Japanese ↔ English)
+- Excludes the current editing target
+
+**Example:**
+```javascript
+await invoke('update_category2', {
+    userId: 1,
+    category1Code: 'EXPENSE',
+    category2Code: 'C2_E_1',
+    nameJa: '食料品費',
+    nameEn: 'Food Expenses'
+});
+```
+
+---
+
+### Category3 Edit Operations
+
+#### `get_category3_for_edit`
+Retrieves category3 data for editing.
+
+**Parameters:**
+- `user_id` (i64): User ID
+- `category1_code` (String): Category1 code
+- `category2_code` (String): Category2 code
+- `category3_code` (String): Category3 code
+
+**Returns:**
+- `CategoryForEdit`: Edit data (code, name_ja, name_en)
+
+**Example:**
+```javascript
+const categoryData = await invoke('get_category3_for_edit', {
+    userId: 1,
+    category1Code: 'EXPENSE',
+    category2Code: 'C2_E_1',
+    category3Code: 'C3_E_1_1'
+});
+```
+
+---
+
+#### `update_category3`
+Updates category3 names (Japanese and English).
+
+**Parameters:**
+- `user_id` (i64): User ID
+- `category1_code` (String): Category1 code
+- `category2_code` (String): Category2 code
+- `category3_code` (String): Category3 code
+- `name_ja` (String): Japanese name
+- `name_en` (String): English name
+
+**Returns:**
+- `Result<(), String>`: Success (empty) or error message
+
+**Duplicate Check:**
+- Checks for duplicate names within the same category2
+- Bidirectional check (Japanese ↔ English)
+- Excludes the current editing target
+
+**Example:**
+```javascript
+await invoke('update_category3', {
+    userId: 1,
+    category1Code: 'EXPENSE',
+    category2Code: 'C2_E_1',
+    category3Code: 'C3_E_1_1',
+    nameJa: 'スーパー',
+    nameEn: 'Supermarket'
+});
+```
+
+---
+
+## Category Data Initialization
+
+### Overview
+Default category data is automatically inserted when creating new users.
+
+### Auto-Inserted Data
+- **Category2 (Middle categories)**: 20 records
+  - Expense (EXPENSE): 14 records (Food, Daily necessities, Transportation, etc.)
+  - Income (INCOME): 6 records (Salary, Bonus, Pension, etc.)
+- **Category3 (Small categories)**: 126 records
+  - Detailed classifications linked to each category2
+- **I18N (Multilingual names)**: Japanese and English
+
+### Data Source
+- SQL file: `res/sql/init_user_categories.sql`
+- Original data: Converted from `work/migrate_categories.sql` to new code system
+- Generation script: `work/generate_init_categories.py`
+
+### Implementation Details
+
+#### `initialize_user_categories`
+Initializes category data for new users (internal function).
+
+**Processing Flow:**
+1. Check CATEGORY2 existence (verify if already initialized)
+2. Load SQL file (`res/sql/init_user_categories.sql`)
+3. Replace `:pUserID` placeholder with actual user_id
+4. Begin transaction
+5. Execute SQL statements sequentially
+6. Commit
+
+**Called From:**
+- Automatically called within `create_general_user` Tauri command
+
+**Error Handling:**
+- File read error → CategoryError::DatabaseError
+- SQL execution error → Transaction rollback
+- User creation succeeds even if initialization fails (warning log only)
+
+---
+
+## Additional Information (v0.3)
+
+### Edit Function Constraints
+- Only names can be edited (codes are immutable)
+- Duplicate names within the same parent category are not allowed
+- Bidirectional duplicate check for Japanese and English names
+
+### Modal Editing
+- Category2 and Category3 are edited via modal dialogs
+- Japanese and English names can be edited simultaneously
+- I18N table is automatically updated on save
