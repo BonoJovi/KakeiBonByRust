@@ -7,6 +7,10 @@ let categories = [];
 let expandedCategories = new Set();
 const currentUserId = 1; // TODO: Get from session/auth
 
+// Modal instances
+let category2Modal;
+let category3Modal;
+
 console.log('category-management.js loaded');
 
 document.addEventListener('DOMContentLoaded', async function() {
@@ -32,6 +36,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     // Setup modal handlers
     console.log('[DOMContentLoaded] Setting up modal handlers');
+    initModals();
     setupModalHandlers();
     
     // Setup form indicators
@@ -43,6 +48,65 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     console.log('[DOMContentLoaded] Initialization complete');
 });
+
+function initModals() {
+    // Initialize Category2 Modal
+    category2Modal = new Modal('category2-modal', {
+        formId: 'category2-form',
+        closeButtonId: 'category2-modal-close',
+        cancelButtonId: 'category2-cancel',
+        saveButtonId: 'category2-save',
+        onOpen: (mode, data) => {
+            const title = document.getElementById('category2-modal-title');
+            const parentNameField = document.getElementById('category2-parent-name');
+            
+            // Set title
+            title.textContent = mode === 'add' ? 
+                i18n.t('category_mgmt.add_category2') : 
+                i18n.t('category_mgmt.edit_category2');
+            
+            // Find parent category name
+            const parentCategory = categories.find(cat => cat.category1.category1_code === data.category1Code);
+            const parentName = parentCategory ? parentCategory.category1.category1_name_i18n : data.category1Code;
+            parentNameField.value = parentName;
+        },
+        onSave: async (formData) => {
+            await handleCategory2Save(formData);
+        }
+    });
+    
+    // Initialize Category3 Modal
+    category3Modal = new Modal('category3-modal', {
+        formId: 'category3-form',
+        closeButtonId: 'category3-modal-close',
+        cancelButtonId: 'category3-cancel',
+        saveButtonId: 'category3-save',
+        onOpen: (mode, data) => {
+            const title = document.getElementById('category3-modal-title');
+            const parentNameField = document.getElementById('category3-parent-name');
+            
+            // Set title
+            title.textContent = mode === 'add' ? 
+                i18n.t('category_mgmt.add_category3') : 
+                i18n.t('category_mgmt.edit_category3');
+            
+            // Find parent category name
+            let parentName = data.category2Code;
+            const parentCategory1 = categories.find(cat => cat.category1.category1_code === data.category1Code);
+            if (parentCategory1) {
+                const parentCategory2 = parentCategory1.children.find(cat => cat.category2.category2_code === data.category2Code);
+                if (parentCategory2) {
+                    parentName = parentCategory2.category2.category2_name_i18n;
+                }
+            }
+            parentNameField.value = parentName;
+        },
+        onSave: async (formData) => {
+            await handleCategory3Save(formData);
+        }
+    });
+}
+
 
 function setupMenuHandlers() {
     const fileMenu = document.getElementById('file-menu');
@@ -189,16 +253,13 @@ async function handleLanguageChange(langCode) {
 }
 
 function setupModalHandlers() {
-    // Category1 modal handlers
+    // Category1 modal handlers (not yet migrated to Modal class)
     setupCategory1ModalHandlers();
     
-    // Category2 modal handlers
-    setupCategory2ModalHandlers();
+    // Note: Category2 and Category3 modals now use Modal class instances
+    // initialized in initModals()
     
-    // Category3 modal handlers
-    setupCategory3ModalHandlers();
-    
-    // Add category1 button
+    // Add category1 button (if exists)
     const addCategory1Btn = document.getElementById('add-category1-btn');
     if (addCategory1Btn) {
         addCategory1Btn.addEventListener('click', () => openCategory1Modal());
@@ -218,36 +279,6 @@ function setupCategory1ModalHandlers() {
     if (closeBtn) closeBtn.addEventListener('click', closeModal);
     if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
     if (saveBtn) saveBtn.addEventListener('click', handleCategory1Save);
-}
-
-function setupCategory2ModalHandlers() {
-    const modal = document.getElementById('category2-modal');
-    const closeBtn = document.getElementById('category2-modal-close');
-    const cancelBtn = document.getElementById('category2-cancel');
-    const saveBtn = document.getElementById('category2-save');
-    
-    const closeModal = () => {
-        modal.classList.add('hidden');
-    };
-    
-    if (closeBtn) closeBtn.addEventListener('click', closeModal);
-    if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
-    if (saveBtn) saveBtn.addEventListener('click', handleCategory2Save);
-}
-
-function setupCategory3ModalHandlers() {
-    const modal = document.getElementById('category3-modal');
-    const closeBtn = document.getElementById('category3-modal-close');
-    const cancelBtn = document.getElementById('category3-cancel');
-    const saveBtn = document.getElementById('category3-save');
-    
-    const closeModal = () => {
-        modal.classList.add('hidden');
-    };
-    
-    if (closeBtn) closeBtn.addEventListener('click', closeModal);
-    if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
-    if (saveBtn) saveBtn.addEventListener('click', handleCategory3Save);
 }
 
 async function loadCategories() {
@@ -510,60 +541,11 @@ function openAddChildModal(parentCategoryCode, category1Code, category2Code, par
 }
 
 function openCategory2Modal(mode, category1Code) {
-    const modal = document.getElementById('category2-modal');
-    const title = document.getElementById('category2-modal-title');
-    const form = document.getElementById('category2-form');
-    const parentNameField = document.getElementById('category2-parent-name');
-    
-    // Set title
-    title.textContent = mode === 'add' ? 
-        i18n.t('category_mgmt.add_category2') : 
-        i18n.t('category_mgmt.edit_category2');
-    
-    // Find parent category name
-    const parentCategory = categories.find(cat => cat.category1.category1_code === category1Code);
-    const parentName = parentCategory ? parentCategory.category1.category1_name_i18n : category1Code;
-    
-    // Clear form
-    form.reset();
-    form.dataset.mode = mode;
-    form.dataset.category1Code = category1Code;
-    parentNameField.value = parentName;
-    
-    // Show modal
-    modal.classList.remove('hidden');
+    category2Modal.open(mode, { category1Code });
 }
 
 function openCategory3Modal(mode, category1Code, category2Code) {
-    const modal = document.getElementById('category3-modal');
-    const title = document.getElementById('category3-modal-title');
-    const form = document.getElementById('category3-form');
-    const parentNameField = document.getElementById('category3-parent-name');
-    
-    // Set title
-    title.textContent = mode === 'add' ? 
-        i18n.t('category_mgmt.add_category3') : 
-        i18n.t('category_mgmt.edit_category3');
-    
-    // Find parent category name
-    let parentName = category2Code;
-    const parentCategory1 = categories.find(cat => cat.category1.category1_code === category1Code);
-    if (parentCategory1) {
-        const parentCategory2 = parentCategory1.children.find(cat => cat.category2.category2_code === category2Code);
-        if (parentCategory2) {
-            parentName = parentCategory2.category2.category2_name_i18n;
-        }
-    }
-    
-    // Clear form
-    form.reset();
-    form.dataset.mode = mode;
-    form.dataset.category1Code = category1Code;
-    form.dataset.category2Code = category2Code;
-    parentNameField.value = parentName;
-    
-    // Show modal
-    modal.classList.remove('hidden');
+    category3Modal.open(mode, { category1Code, category2Code });
 }
 
 function openEditModal(categoryCode, category1Code, category2Code, level) {
@@ -576,11 +558,9 @@ async function handleCategory1Save() {
     console.log('Save category1');
 }
 
-async function handleCategory2Save() {
-    const form = document.getElementById('category2-form');
-    const modal = document.getElementById('category2-modal');
-    const mode = form.dataset.mode;
-    const category1Code = form.dataset.category1Code;
+async function handleCategory2Save(formData) {
+    const mode = formData.mode;
+    const category1Code = formData.category1Code;
     
     let nameJa = document.getElementById('category2-name-ja').value.trim();
     let nameEn = document.getElementById('category2-name-en').value.trim();
@@ -588,7 +568,7 @@ async function handleCategory2Save() {
     // If one is empty, copy from the other
     if (!nameJa && !nameEn) {
         alert('Please enter at least one name (Japanese or English)');
-        return;
+        throw new Error('Name is required');
     }
     if (!nameJa) nameJa = nameEn;
     if (!nameEn) nameEn = nameJa;
@@ -603,8 +583,7 @@ async function handleCategory2Save() {
             });
         }
         
-        // Close modal and reload
-        modal.classList.add('hidden');
+        // Reload categories
         await loadCategories();
     } catch (error) {
         console.error('Failed to save category2:', error);
@@ -618,15 +597,14 @@ async function handleCategory2Save() {
         } else {
             alert('Failed to save: ' + error);
         }
+        throw error; // Re-throw to prevent modal from closing
     }
 }
 
-async function handleCategory3Save() {
-    const form = document.getElementById('category3-form');
-    const modal = document.getElementById('category3-modal');
-    const mode = form.dataset.mode;
-    const category1Code = form.dataset.category1Code;
-    const category2Code = form.dataset.category2Code;
+async function handleCategory3Save(formData) {
+    const mode = formData.mode;
+    const category1Code = formData.category1Code;
+    const category2Code = formData.category2Code;
     
     let nameJa = document.getElementById('category3-name-ja').value.trim();
     let nameEn = document.getElementById('category3-name-en').value.trim();
@@ -634,7 +612,7 @@ async function handleCategory3Save() {
     // If one is empty, copy from the other
     if (!nameJa && !nameEn) {
         alert('Please enter at least one name (Japanese or English)');
-        return;
+        throw new Error('Name is required');
     }
     if (!nameJa) nameJa = nameEn;
     if (!nameEn) nameEn = nameJa;
@@ -650,8 +628,7 @@ async function handleCategory3Save() {
             });
         }
         
-        // Close modal and reload
-        modal.classList.add('hidden');
+        // Reload categories
         await loadCategories();
     } catch (error) {
         console.error('Failed to save category3:', error);
@@ -665,6 +642,7 @@ async function handleCategory3Save() {
         } else {
             alert('Failed to save: ' + error);
         }
+        throw error; // Re-throw to prevent modal from closing
     }
 }
 
