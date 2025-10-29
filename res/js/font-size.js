@@ -1,8 +1,10 @@
 import { invoke } from '@tauri-apps/api/core';
 import i18n from './i18n.js';
 import { FONT_SIZE_OPTIONS, FONT_SIZE_SMALL, FONT_SIZE_MEDIUM, FONT_SIZE_LARGE, FONT_SIZE_CUSTOM } from './consts.js';
+import { Modal } from './modal.js';
 
 let resizeInProgress = false;
+let fontSizeModal;
 
 // Setup font size menu handlers
 export function setupFontSizeMenuHandlers() {
@@ -270,18 +272,14 @@ export async function adjustWindowSize() {
 }
 
 // Open font size modal
-function openFontSizeModal() {
-    const modal = document.getElementById('font-size-modal');
-    if (!modal) {
-        console.error('Font size modal not found');
-        return;
+async function openFontSizeModal() {
+    if (fontSizeModal) {
+        await loadFontSizeModalSettings();
+        fontSizeModal.open();
+        await adjustWindowSize();
+    } else {
+        console.error('Font size modal not initialized');
     }
-    
-    // Load current settings
-    loadFontSizeModalSettings();
-    
-    // Show modal
-    modal.classList.remove('hidden');
 }
 
 // Load font size modal settings
@@ -327,7 +325,12 @@ export function setupFontSizeModalHandlers() {
         return;
     }
     
-    const closeBtn = document.getElementById('font-size-modal-close');
+    fontSizeModal = new Modal('font-size-modal', {
+        onOpen: () => {
+            loadFontSizeModalSettings();
+        }
+    });
+    
     const cancelBtn = document.getElementById('font-size-cancel');
     const applyBtn = document.getElementById('font-size-apply');
     const presetSelect = document.getElementById('font-size-preset');
@@ -335,17 +338,11 @@ export function setupFontSizeModalHandlers() {
     const spinnerUp = modal.querySelector('.spinner-up');
     const spinnerDown = modal.querySelector('.spinner-down');
     
-    // Close modal handlers
-    const closeModal = () => {
-        modal.classList.add('hidden');
-    };
-    
-    if (closeBtn) {
-        closeBtn.addEventListener('click', closeModal);
-    }
-    
+    // Cancel button handler
     if (cancelBtn) {
-        cancelBtn.addEventListener('click', closeModal);
+        cancelBtn.addEventListener('click', () => {
+            fontSizeModal.close();
+        });
     }
     
     // Apply button handler
@@ -365,7 +362,7 @@ export function setupFontSizeModalHandlers() {
                 await applyFontSize();
                 await setupFontSizeMenu();
                 
-                closeModal();
+                fontSizeModal.close();
             } catch (error) {
                 console.error('Failed to apply font size:', error);
                 alert('Failed to apply font size: ' + error);
