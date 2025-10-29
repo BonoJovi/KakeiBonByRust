@@ -62,6 +62,8 @@ function initModals() {
         onOpen: (mode, data) => {
             const title = document.getElementById('category2-modal-title');
             const parentNameField = document.getElementById('category2-parent-name');
+            const nameJaField = document.getElementById('category2-name-ja');
+            const nameEnField = document.getElementById('category2-name-en');
             
             // Set title
             title.textContent = mode === 'add' ? 
@@ -72,6 +74,12 @@ function initModals() {
             const parentCategory = categories.find(cat => cat.category1.category1_code === data.category1Code);
             const parentName = parentCategory ? parentCategory.category1.category1_name_i18n : data.category1Code;
             parentNameField.value = parentName;
+            
+            // Set values for edit mode
+            if (mode === 'edit') {
+                nameJaField.value = data.nameJa || '';
+                nameEnField.value = data.nameEn || '';
+            }
         },
         onSave: async (formData) => {
             await handleCategory2Save(formData);
@@ -87,6 +95,8 @@ function initModals() {
         onOpen: (mode, data) => {
             const title = document.getElementById('category3-modal-title');
             const parentNameField = document.getElementById('category3-parent-name');
+            const nameJaField = document.getElementById('category3-name-ja');
+            const nameEnField = document.getElementById('category3-name-en');
             
             // Set title
             title.textContent = mode === 'add' ? 
@@ -103,6 +113,12 @@ function initModals() {
                 }
             }
             parentNameField.value = parentName;
+            
+            // Set values for edit mode
+            if (mode === 'edit') {
+                nameJaField.value = data.nameJa || '';
+                nameEnField.value = data.nameEn || '';
+            }
         },
         onSave: async (formData) => {
             await handleCategory3Save(formData);
@@ -551,9 +567,56 @@ function openCategory3Modal(mode, category1Code, category2Code) {
     category3Modal.open(mode, { category1Code, category2Code });
 }
 
-function openEditModal(categoryCode, category1Code, category2Code, level) {
-    // TODO: Implement based on level
+async function openEditModal(categoryCode, category1Code, category2Code, level) {
     console.log('Open edit modal for category:', categoryCode, 'level:', level);
+    
+    try {
+        if (level === 2) {
+            // Fetch category2 data from backend
+            const categoryData = await invoke('get_category2_for_edit', {
+                userId: currentUserId,
+                category1Code: category1Code,
+                category2Code: categoryCode
+            });
+            
+            console.log('Category2 data from backend:', categoryData);
+            
+            // Open modal with data
+            category2Modal.open('edit', {
+                category1Code: category1Code,
+                category2Code: categoryCode,
+                nameJa: categoryData.name_ja || '',
+                nameEn: categoryData.name_en || ''
+            });
+        } else if (level === 3) {
+            // Fetch category3 data from backend
+            const categoryData = await invoke('get_category3_for_edit', {
+                userId: currentUserId,
+                category1Code: category1Code,
+                category2Code: category2Code,
+                category3Code: categoryCode
+            });
+            
+            console.log('Category3 data from backend:', categoryData);
+            
+            // Open modal with data
+            category3Modal.open('edit', {
+                category1Code: category1Code,
+                category2Code: category2Code,
+                category3Code: categoryCode,
+                nameJa: categoryData.name_ja || '',
+                nameEn: categoryData.name_en || ''
+            });
+        }
+    } catch (error) {
+        console.error('Failed to load category data for edit:', error);
+        const errorMsg = i18n.t('category_mgmt.error_load_category');
+        const errorElement = document.getElementById('error-message');
+        if (errorElement) {
+            errorElement.textContent = errorMsg + ': ' + error;
+            errorElement.style.display = 'block';
+        }
+    }
 }
 
 async function handleCategory1Save() {
@@ -564,6 +627,7 @@ async function handleCategory1Save() {
 async function handleCategory2Save(formData) {
     const mode = formData.mode;
     const category1Code = formData.category1Code;
+    const category2Code = formData.category2Code;
     
     let nameJa = document.getElementById('category2-name-ja').value.trim();
     let nameEn = document.getElementById('category2-name-en').value.trim();
@@ -581,6 +645,14 @@ async function handleCategory2Save(formData) {
             await invoke('add_category2', {
                 userId: currentUserId,
                 category1Code: category1Code,
+                nameJa: nameJa,
+                nameEn: nameEn
+            });
+        } else if (mode === 'edit') {
+            await invoke('update_category2', {
+                userId: currentUserId,
+                category1Code: category1Code,
+                category2Code: category2Code,
                 nameJa: nameJa,
                 nameEn: nameEn
             });
@@ -608,6 +680,7 @@ async function handleCategory3Save(formData) {
     const mode = formData.mode;
     const category1Code = formData.category1Code;
     const category2Code = formData.category2Code;
+    const category3Code = formData.category3Code;
     
     let nameJa = document.getElementById('category3-name-ja').value.trim();
     let nameEn = document.getElementById('category3-name-en').value.trim();
@@ -626,6 +699,15 @@ async function handleCategory3Save(formData) {
                 userId: currentUserId,
                 category1Code: category1Code,
                 category2Code: category2Code,
+                nameJa: nameJa,
+                nameEn: nameEn
+            });
+        } else if (mode === 'edit') {
+            await invoke('update_category3', {
+                userId: currentUserId,
+                category1Code: category1Code,
+                category2Code: category2Code,
+                category3Code: category3Code,
                 nameJa: nameJa,
                 nameEn: nameEn
             });

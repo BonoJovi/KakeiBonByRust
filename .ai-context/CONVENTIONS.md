@@ -47,6 +47,36 @@ git push origin main  # Requires hardware key authentication
 
 ---
 
+## SQL Management
+
+### SQL Queries Centralization
+- **All SQL queries**: Must be defined as constants in `src/sql_queries.rs`
+- **No hardcoded SQL**: SQL strings must not be embedded directly in service/command code
+- **Naming convention**: 
+  - Production queries: `{SCOPE}_{ACTION}` (e.g., `CATEGORY2_UPDATE`, `USER_INSERT`)
+  - Test queries: Prefix with `TEST_` (e.g., `TEST_CATEGORY_GET_CATEGORY2_NAME`)
+- **Benefits**: 
+  - Single source of truth for all SQL
+  - Easier maintenance and testing
+  - Prevents SQL injection via consistent parameterization
+  - Better SQL review and optimization
+
+### Example
+```rust
+// In src/sql_queries.rs
+pub const CATEGORY2_UPDATE: &str = r#"
+UPDATE CATEGORY2 
+SET CATEGORY2_NAME = ?, UPDATE_DT = datetime('now') 
+WHERE USER_ID = ? AND CATEGORY1_CODE = ? AND CATEGORY2_CODE = ?
+"#;
+
+// In service code
+use crate::sql_queries::CATEGORY2_UPDATE;
+conn.execute(CATEGORY2_UPDATE, params![name, user_id, cat1, cat2])?;
+```
+
+---
+
 ## Rust Conventions
 
 ### Naming

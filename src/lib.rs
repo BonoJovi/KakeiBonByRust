@@ -734,6 +734,33 @@ async fn add_category3(
         .map_err(|e| format!("Failed to add category3: {}", e))
 }
 
+#[tauri::command]
+async fn get_category2_for_edit(
+    user_id: i64,
+    category1_code: String,
+    category2_code: String,
+    state: tauri::State<'_, AppState>
+) -> Result<services::category::CategoryForEdit, String> {
+    let category = state.category.lock().await;
+    category.get_category2_for_edit(user_id, &category1_code, &category2_code)
+        .await
+        .map_err(|e| format!("Failed to get category2: {}", e))
+}
+
+#[tauri::command]
+async fn get_category3_for_edit(
+    user_id: i64,
+    category1_code: String,
+    category2_code: String,
+    category3_code: String,
+    state: tauri::State<'_, AppState>
+) -> Result<services::category::CategoryForEdit, String> {
+    let category = state.category.lock().await;
+    category.get_category3_for_edit(user_id, &category1_code, &category2_code, &category3_code)
+        .await
+        .map_err(|e| format!("Failed to get category3: {}", e))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -779,7 +806,9 @@ pub fn run() {
             adjust_window_size,
             get_category_tree_with_lang,
             add_category2,
-            add_category3
+            add_category3,
+            get_category2_for_edit,
+            get_category3_for_edit
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {

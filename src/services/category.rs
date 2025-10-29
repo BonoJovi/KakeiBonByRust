@@ -392,6 +392,50 @@ impl CategoryService {
         
         Ok(category3_code)
     }
+    
+    /// Get category2 data for editing
+    pub async fn get_category2_for_edit(
+        &self,
+        user_id: i64,
+        category1_code: &str,
+        category2_code: &str,
+    ) -> Result<CategoryForEdit, CategoryError> {
+        let row = sqlx::query(sql_queries::CATEGORY2_GET_FOR_EDIT)
+            .bind(user_id)
+            .bind(category1_code)
+            .bind(category2_code)
+            .fetch_one(&self.pool)
+            .await?;
+        
+        Ok(CategoryForEdit {
+            code: row.get("CATEGORY2_CODE"),
+            name_ja: row.get("name_ja"),
+            name_en: row.get("name_en"),
+        })
+    }
+    
+    /// Get category3 data for editing
+    pub async fn get_category3_for_edit(
+        &self,
+        user_id: i64,
+        category1_code: &str,
+        category2_code: &str,
+        category3_code: &str,
+    ) -> Result<CategoryForEdit, CategoryError> {
+        let row = sqlx::query(sql_queries::CATEGORY3_GET_FOR_EDIT)
+            .bind(user_id)
+            .bind(category1_code)
+            .bind(category2_code)
+            .bind(category3_code)
+            .fetch_one(&self.pool)
+            .await?;
+        
+        Ok(CategoryForEdit {
+            code: row.get("CATEGORY3_CODE"),
+            name_ja: row.get("name_ja"),
+            name_en: row.get("name_en"),
+        })
+    }
 }
 
 #[derive(Debug, sqlx::FromRow)]
@@ -406,6 +450,13 @@ pub struct Category1 {
     pub category1_name: String,
     #[sqlx(rename = "IS_DISABLED")]
     pub is_disabled: i64,
+}
+
+#[derive(Debug, serde::Serialize)]
+pub struct CategoryForEdit {
+    pub code: String,
+    pub name_ja: String,
+    pub name_en: String,
 }
 
 #[cfg(test)]

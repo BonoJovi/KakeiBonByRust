@@ -45,15 +45,15 @@ pub fn delete_category1(user_id: i64, code: String) -> Result<(), String> {
 
 /// Add new Category2
 #[tauri::command]
-pub fn add_category2(user_id: i64, category1_code: String, category2_code: String, name: String) -> Result<(), String> {
-    category::add_category2(user_id, category1_code, category2_code, name)
+pub fn add_category2(user_id: i64, category1_code: String, name_ja: String, name_en: String) -> Result<(), String> {
+    category::add_category2_i18n(user_id, category1_code, name_ja, name_en)
         .map_err(|e| format!("Failed to add category2: {}", e))
 }
 
 /// Update Category2
 #[tauri::command]
-pub fn update_category2(user_id: i64, category1_code: String, category2_code: String, name: String) -> Result<(), String> {
-    category::update_category2(user_id, category1_code, category2_code, name)
+pub fn update_category2(user_id: i64, category1_code: String, category2_code: String, name_ja: String, name_en: String) -> Result<(), String> {
+    category::update_category2_i18n(user_id, category1_code, category2_code, name_ja, name_en)
         .map_err(|e| format!("Failed to update category2: {}", e))
 }
 
@@ -73,15 +73,15 @@ pub fn delete_category2(user_id: i64, category1_code: String, category2_code: St
 
 /// Add new Category3
 #[tauri::command]
-pub fn add_category3(user_id: i64, category1_code: String, category2_code: String, category3_code: String, name: String) -> Result<(), String> {
-    category::add_category3(user_id, category1_code, category2_code, category3_code, name)
+pub fn add_category3(user_id: i64, category1_code: String, category2_code: String, name_ja: String, name_en: String) -> Result<(), String> {
+    category::add_category3_i18n(user_id, category1_code, category2_code, name_ja, name_en)
         .map_err(|e| format!("Failed to add category3: {}", e))
 }
 
 /// Update Category3
 #[tauri::command]
-pub fn update_category3(user_id: i64, category1_code: String, category2_code: String, category3_code: String, name: String) -> Result<(), String> {
-    category::update_category3(user_id, category1_code, category2_code, category3_code, name)
+pub fn update_category3(user_id: i64, category1_code: String, category2_code: String, category3_code: String, name_ja: String, name_en: String) -> Result<(), String> {
+    category::update_category3_i18n(user_id, category1_code, category2_code, category3_code, name_ja, name_en)
         .map_err(|e| format!("Failed to update category3: {}", e))
 }
 
@@ -99,9 +99,37 @@ pub fn delete_category3(user_id: i64, category1_code: String, category2_code: St
         .map_err(|e| format!("Failed to delete category3: {}", e))
 }
 
+/// Get Category2 data for editing
+#[tauri::command]
+pub fn get_category2_for_edit(user_id: i64, category1_code: String, category2_code: String) -> Result<serde_json::Value, String> {
+    category::get_category2_for_edit(user_id, category1_code, category2_code)
+        .map_err(|e| format!("Failed to get category2 for edit: {}", e))
+}
+
+/// Get Category3 data for editing
+#[tauri::command]
+pub fn get_category3_for_edit(user_id: i64, category1_code: String, category2_code: String, category3_code: String) -> Result<serde_json::Value, String> {
+    category::get_category3_for_edit(user_id, category1_code, category2_code, category3_code)
+        .map_err(|e| format!("Failed to get category3 for edit: {}", e))
+}
+
 /// Initialize categories for a new user
 #[tauri::command]
 pub fn initialize_categories_for_new_user(user_id: i64) -> Result<(), String> {
     category::initialize_categories_for_new_user(user_id)
         .map_err(|e| format!("Failed to initialize categories: {}", e))
+}
+
+/// Get category2 data for editing
+#[tauri::command]
+pub fn get_category2_for_edit(user_id: i64, category1_code: String, category2_code: String) -> Result<serde_json::Value, String> {
+    category::get_category2_for_edit(user_id, category1_code, category2_code)
+        .map_err(|e| format!("Failed to get category2: {}", e))
+}
+
+/// Get category3 data for editing
+#[tauri::command]
+pub fn get_category3_for_edit(user_id: i64, category1_code: String, category2_code: String, category3_code: String) -> Result<serde_json::Value, String> {
+    category::get_category3_for_edit(user_id, category1_code, category2_code, category3_code)
+        .map_err(|e| format!("Failed to get category3: {}", e))
 }

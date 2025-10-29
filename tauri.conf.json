@@ -5,8 +5,8 @@
     "identifier": "org.zundou.kakeibon",
     "build": {
         "frontendDist": "./res",
-        "beforeDevCommand": "",
-        "beforeBuildCommand": ""
+        "beforeDevCommand": "cp src/sql_queries.rs src-tauri/src/sql_queries.rs",
+        "beforeBuildCommand": "cp src/sql_queries.rs src-tauri/src/sql_queries.rs"
     },
     "app": {
         "windows": [
