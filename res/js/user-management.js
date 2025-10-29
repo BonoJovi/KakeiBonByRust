@@ -2,11 +2,14 @@ import { invoke } from '@tauri-apps/api/core';
 import i18n from './i18n.js';
 import { ROLE_ADMIN, ROLE_USER } from './consts.js';
 import { setupIndicators } from './indicators.js';
-import { setupModalHandlers } from './modal-utils.js';
-import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers } from './font-size.js';
+import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers, adjustWindowSize } from './font-size.js';
 
 let currentUsers = [];
 let editingUserId = null;
+
+// Modal instances
+let userModal;
+let deleteModal;
 
 console.log('user-management.js loaded');
 
@@ -32,14 +35,70 @@ document.addEventListener('DOMContentLoaded', async function() {
     await applyFontSize();
     
     console.log('[DOMContentLoaded] Setting up modal and indicators');
+    initModals();
     setupModalEventHandlers();
     setupIndicators();
     
     console.log('[DOMContentLoaded] Loading users');
     await loadUsers();
     
+    console.log('[DOMContentLoaded] Adjusting window size for modals');
+    await adjustWindowSize();
+    
     console.log('[DOMContentLoaded] Initialization complete');
 });
+
+function initModals() {
+    // Initialize User Modal
+    userModal = new Modal('user-modal', {
+        formId: 'user-form',
+        closeButtonId: 'close-modal',
+        cancelButtonId: 'cancel-btn',
+        onOpen: (mode, data) => {
+            const title = document.getElementById('modal-title');
+            const passwordGroup = document.getElementById('password-group');
+            const passwordConfirmGroup = document.getElementById('password-confirm-group');
+            const passwordInput = document.getElementById('password');
+            const passwordConfirmInput = document.getElementById('password-confirm');
+            
+            if (mode === 'add') {
+                title.textContent = i18n.t('user_mgmt.add_user');
+                passwordGroup.style.display = 'block';
+                passwordConfirmGroup.style.display = 'block';
+                passwordInput.required = true;
+                passwordConfirmInput.required = true;
+                editingUserId = null;
+            } else if (mode === 'edit') {
+                title.textContent = i18n.t('user_mgmt.edit_user');
+                passwordGroup.style.display = 'none';
+                passwordConfirmGroup.style.display = 'none';
+                passwordInput.required = false;
+                passwordConfirmInput.required = false;
+                editingUserId = data.userId;
+                
+                // Set form values
+                document.getElementById('username').value = data.username;
+            }
+        },
+        onSave: async (formData) => {
+            await handleUserSave();
+        }
+    });
+    
+    // Initialize Delete Modal
+    deleteModal = new Modal('delete-modal', {
+        closeButtonId: 'close-delete-modal',
+        cancelButtonId: 'cancel-delete',
+        saveButtonId: 'confirm-delete',
+        onOpen: (mode, data) => {
+            document.getElementById('delete-username').textContent = data.username;
+        },
+        onSave: async (formData) => {
+            await handleUserDelete(formData.userId);
+        }
+    });
+}
+
 
 function setupMenuHandlers() {
     console.log('[setupMenuHandlers] Starting setup');
@@ -230,26 +289,9 @@ async function handleLanguageChange(langCode) {
 
 function setupModalEventHandlers() {
     const addUserBtn = document.getElementById('add-user-btn');
-    const closeModalBtn = document.getElementById('close-modal');
-    const cancelBtn = document.getElementById('cancel-btn');
-    const userForm = document.getElementById('user-form');
-    const closeDeleteModalBtn = document.getElementById('close-delete-modal');
-    const cancelDeleteBtn = document.getElementById('cancel-delete');
-    const confirmDeleteBtn = document.getElementById('confirm-delete');
-    
     addUserBtn?.addEventListener('click', openAddUserModal);
-    closeModalBtn?.addEventListener('click', closeUserModal);
-    cancelBtn?.addEventListener('click', closeUserModal);
-    userForm?.addEventListener('submit', handleUserFormSubmit);
     
-    closeDeleteModalBtn?.addEventListener('click', closeDeleteModal);
-    cancelDeleteBtn?.addEventListener('click', closeDeleteModal);
-    confirmDeleteBtn?.addEventListener('click', handleDeleteConfirm);
-    
-    setupModalHandlers({
-        'user-modal': closeUserModal,
-        'delete-modal': closeDeleteModal
-    });
+    // Note: Modal class handles close, cancel, and save button events
 }
 
 async function loadUsers() {
@@ -321,94 +363,46 @@ function createUserRow(user) {
 }
 
 function openAddUserModal() {
-    editingUserId = null;
-    
-    const modal = document.getElementById('user-modal');
-    const modalTitle = document.getElementById('modal-title');
-    const userForm = document.getElementById('user-form');
-    
-    modalTitle.textContent = i18n.t('user_mgmt.add_user');
-    userForm.reset();
-    document.getElementById('user-id').value = '';
-    
-    const passwordInput = document.getElementById('password');
-    const passwordConfirmInput = document.getElementById('password-confirm');
-    passwordInput.required = true;
-    passwordConfirmInput.required = true;
-    
     showMessage('form-message', '', '');
-    modal.classList.remove('hidden');
-    
-    // Focus on username field
-    setTimeout(() => {
-        document.getElementById('username').focus();
-    }, 100);
+    userModal.open('add', {});
 }
 
 function openEditUserModal(user) {
-    editingUserId = user.user_id;
-    
-    const modal = document.getElementById('user-modal');
-    const modalTitle = document.getElementById('modal-title');
-    const userForm = document.getElementById('user-form');
-    
-    modalTitle.textContent = i18n.t('user_mgmt.edit_user');
-    
-    document.getElementById('user-id').value = user.user_id;
-    document.getElementById('username').value = user.name;
-    document.getElementById('password').value = '';
-    document.getElementById('password-confirm').value = '';
-    
-    const passwordInput = document.getElementById('password');
-    const passwordConfirmInput = document.getElementById('password-confirm');
-    passwordInput.required = false;
-    passwordConfirmInput.required = false;
-    
     showMessage('form-message', '', '');
-    modal.classList.remove('hidden');
-    
-    // Focus on username field
-    setTimeout(() => {
-        document.getElementById('username').focus();
-    }, 100);
+    userModal.open('edit', { userId: user.user_id, username: user.name });
 }
 
 function closeUserModal() {
-    const modal = document.getElementById('user-modal');
-    modal.classList.add('hidden');
-    editingUserId = null;
+    userModal.close();
 }
 
-async function handleUserFormSubmit(e) {
-    e.preventDefault();
-    
-    const userId = document.getElementById('user-id').value;
+async function handleUserSave() {
     const username = document.getElementById('username').value.trim();
     const password = document.getElementById('password').value;
     const passwordConfirm = document.getElementById('password-confirm').value;
     
     if (password && password !== passwordConfirm) {
         showMessage('form-message', i18n.t('error.password_mismatch'), 'error');
-        return;
+        throw new Error('Password mismatch');
     }
     
     if (password && password.length < 16) {
         showMessage('form-message', i18n.t('error.password_too_short'), 'error');
-        return;
+        throw new Error('Password too short');
     }
     
     try {
-        if (userId) {
-            await updateUser(parseInt(userId), username, password || null);
+        if (editingUserId) {
+            await updateUser(editingUserId, username, password || null);
         } else {
             await createUser(username, password);
         }
         
-        closeUserModal();
         await loadUsers();
     } catch (error) {
         console.error('Failed to save user:', error);
         showMessage('form-message', i18n.t('error.save_user_failed') + ': ' + error, 'error');
+        throw error;
     }
 }
 
@@ -448,44 +442,27 @@ async function updateUser(userId, username, password) {
 }
 
 function openDeleteModal(user) {
-    const modal = document.getElementById('delete-modal');
-    const usernameDisplay = document.getElementById('delete-username');
-    
-    usernameDisplay.textContent = `"${user.name}"`;
-    modal.dataset.userId = user.user_id;
-    
     showMessage('delete-result-message', '', '');
-    modal.classList.remove('hidden');
+    deleteModal.open('delete', { userId: user.user_id, username: user.name });
 }
 
 function closeDeleteModal() {
-    const modal = document.getElementById('delete-modal');
-    modal.classList.add('hidden');
-    delete modal.dataset.userId;
+    deleteModal.close();
 }
 
-async function handleDeleteConfirm() {
-    const modal = document.getElementById('delete-modal');
-    const userId = parseInt(modal.dataset.userId);
-    
+async function handleUserDelete(userId) {
     if (!userId) return;
     
-    try {
-        showMessage('delete-result-message', i18n.t('user_mgmt.deleting'), 'info');
-        
-        await invoke('delete_general_user_info', { userId: userId });
-        
-        showMessage('delete-result-message', i18n.t('user_mgmt.user_deleted'), 'success');
-        
-        setTimeout(async () => {
-            closeDeleteModal();
-            await loadUsers();
-        }, 1500);
-        
-    } catch (error) {
-        console.error('Failed to delete user:', error);
-        showMessage('delete-result-message', i18n.t('error.delete_user_failed') + ': ' + error, 'error');
-    }
+    showMessage('delete-result-message', i18n.t('user_mgmt.deleting'), 'info');
+    
+    await invoke('delete_general_user_info', { userId: userId });
+    
+    showMessage('delete-result-message', i18n.t('user_mgmt.user_deleted'), 'success');
+    
+    setTimeout(async () => {
+        deleteModal.close();
+        await loadUsers();
+    }, 1500);
 }
 
 function handleLogout() {

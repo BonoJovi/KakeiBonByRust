@@ -176,9 +176,47 @@ export async function applyFontSize() {
 }
 
 // Adjust window size to fit content
-async function adjustWindowSize() {
+export async function adjustWindowSize() {
     try {
-        // First, shrink window to minimum size to get natural content size
+        console.log('[adjustWindowSize] Starting window size adjustment');
+        
+        // Calculate total content height by getting bounding rectangles
+        let maxWidth = 0;
+        let maxHeight = 0;
+        
+        // First, check all modals (even if hidden) BEFORE resizing window
+        const modals = document.querySelectorAll('.modal');
+        console.log('[adjustWindowSize] Found', modals.length, 'modals');
+        
+        for (const modal of modals) {
+            // Temporarily show modal to measure its size
+            const wasHidden = modal.classList.contains('hidden');
+            if (wasHidden) {
+                modal.classList.remove('hidden');
+                modal.style.visibility = 'hidden'; // Make invisible but still measurable
+            }
+            
+            const modalContent = modal.querySelector('.modal-content');
+            if (modalContent) {
+                const rect = modalContent.getBoundingClientRect();
+                console.log('[adjustWindowSize] Modal:', modal.id, 'Content size:', rect.width, 'x', rect.height);
+                // Modal is centered, so we need to account for centering space
+                const modalWidth = rect.width + 80; // Extra space for centering
+                const modalHeight = rect.height + 80; // Extra space for centering
+                maxWidth = Math.max(maxWidth, modalWidth);
+                maxHeight = Math.max(maxHeight, modalHeight);
+            }
+            
+            // Restore hidden state
+            if (wasHidden) {
+                modal.classList.add('hidden');
+                modal.style.visibility = '';
+            }
+        }
+        
+        console.log('[adjustWindowSize] Modal max size:', maxWidth, 'x', maxHeight);
+        
+        // Now shrink window to minimum size to get natural content size
         const minWidth = 400;
         const minHeight = 300;
         
@@ -194,23 +232,22 @@ async function adjustWindowSize() {
             });
         });
         
-        // Now measure the natural content size
+        // Measure the natural content size
         const mainContent = document.getElementById('main-content');
         const menuBar = document.getElementById('menu-bar');
-        
-        // Calculate total content height by getting bounding rectangles
-        let maxWidth = 0;
-        let maxHeight = 0;
         
         // Check all visible elements
         const elements = [menuBar, mainContent];
         for (const el of elements) {
             if (el && !el.classList.contains('hidden')) {
                 const rect = el.getBoundingClientRect();
+                console.log('[adjustWindowSize] Element:', el.id, 'Size:', rect.width, 'x', rect.height);
                 maxWidth = Math.max(maxWidth, rect.right);
                 maxHeight = Math.max(maxHeight, rect.bottom);
             }
         }
+        
+        console.log('[adjustWindowSize] Final max size (content + modals):', maxWidth, 'x', maxHeight);
         
         // Add padding
         const padding = 40;
@@ -224,6 +261,8 @@ async function adjustWindowSize() {
             width: targetWidth, 
             height: targetHeight 
         });
+        
+        console.log('[adjustWindowSize] Window size adjustment complete');
         
     } catch (error) {
         console.error('Failed to adjust window size:', error);

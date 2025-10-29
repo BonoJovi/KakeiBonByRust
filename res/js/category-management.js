@@ -1,7 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import i18n from './i18n.js';
 import { setupIndicators } from './indicators.js';
-import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers } from './font-size.js';
+import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers, adjustWindowSize } from './font-size.js';
 
 let categories = [];
 let expandedCategories = new Set();
@@ -45,6 +45,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Load categories
     console.log('[DOMContentLoaded] Loading categories');
     await loadCategories();
+    
+    console.log('[DOMContentLoaded] Adjusting window size for modals');
+    await adjustWindowSize();
     
     console.log('[DOMContentLoaded] Initialization complete');
 });
