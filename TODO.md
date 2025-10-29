@@ -176,36 +176,41 @@
 - [ ] 大分類は操作ボタンなしで表示（サブカテゴリ追加のみ）
 - [ ] エラーハンドリング
 
-#### 4-2. 中分類の追加・編集（モーダル方式） 🚧
+#### 4-2. 中分類の追加・編集（モーダル方式） ✅
 - [x] 「サブカテゴリ追加」ボタンでモーダル表示
 - [x] 編集ボタンでモーダル表示（既存データ読み込み）
 - [x] `add_category2` API呼び出し（フロントエンド実装済み）
-- [ ] `update_category2_i18n` API実装（**バックエンド未実装**）
-  - **再開ポイント**: src/services/category.rsに`update_category2_i18n`関数を実装
-  - パラメータ: user_id, category1_code, category2_code, name_ja, name_en
-  - CATEGORY2_I18Nテーブルを更新（UPSERT）
+- [x] `update_category2_i18n` API実装（バックエンド実装完了）
+- [x] 動作テスト完了
 
-#### 4-3. 小分類の追加・編集（モーダル方式） 🚧
+#### 4-3. 小分類の追加・編集（モーダル方式） ✅
 - [x] 中分類と同じモーダル方式
 - [x] `add_category3` API呼び出し（フロントエンド実装済み）
-- [ ] `update_category3_i18n` API実装（**バックエンド未実装**）
-  - src/services/category.rsに`update_category3_i18n`関数を実装
-  - パラメータ: user_id, category1_code, category2_code, category3_code, name_ja, name_en
-  - CATEGORY3_I18Nテーブルを更新（UPSERT）
+- [x] `update_category3_i18n` API実装（バックエンド実装完了）
+- [x] データ属性の修正（data-category3-code追加）
+- [x] イベントハンドラの修正（適切なカテゴリコード取得）
+- [x] 親カテゴリコードの受け渡し修正（parent1Code, parent2Code使用）
+- [x] 動作テスト完了
 
-**現在の状況 (2025-10-30 00:00 JST)**:
-- ✅ フロントエンド（編集モーダル、データ取得、保存処理）実装完了
-- ✅ バックエンドAPI（get_category2_for_edit, get_category3_for_edit）実装完了
-- ❌ バックエンド更新関数（update_category2_i18n, update_category3_i18n）未実装
-- ⚠️ 動作テスト結果: "Command update_category2 not found" エラー発生
-- 📝 原因: src-tauri/src/commands/category.rsが呼び出している`category::update_category2_i18n`が存在しない
+**完了内容 (2025-10-30 08:11 JST)**:
+- ✅ SQL定数追加: `CATEGORY2_CHECK_DUPLICATE_NAME_EXCLUDING`, `CATEGORY3_CHECK_DUPLICATE_NAME_EXCLUDING`
+- ✅ バックエンド関数実装: `update_category2_i18n`, `update_category3_i18n`
+- ✅ Tauriコマンド追加: `update_category2`, `update_category3`
+- ✅ フロントエンド修正: レベル定数化（LEVEL_CATEGORY1/2/3）、即値比較を定数比較に変更
+- ✅ 小分類ボタンのdata属性修正: `data-category3-code`追加
+- ✅ 親カテゴリコードの受け渡し修正: `renderCategory2`→`renderCategory3`で`parent1Code`を使用
+- ✅ 重複チェック機能: 編集対象を除外した重複チェック実装
+- ✅ ドキュメント更新: `.ai-context/CONVENTIONS.md`にデータベース名禁止事項を追加
+- ✅ 中分類・小分類の編集・保存機能の動作確認完了
+- ✅ 実データ投入SQL生成: Python スクリプトでmigrate_categories.sqlを新コード体系に変換
+- ✅ `initialize_user_categories`関数実装: SQLファイルから読み込んで実行
+- ✅ ユーザー作成時の自動投入: `create_general_user`コマンドで自動呼び出し
+- ✅ テストケース作成: `test_initialize_user_categories`で20中分類、126小分類、I18Nデータを検証
+- ✅ 全テスト成功（6/6テスト成功）
 
-**次回作業手順**:
-1. src/services/category.rsに`update_category2_i18n`と`update_category3_i18n`を実装
-2. src/lib.rsで公開関数として追加
-3. 動作テスト（中分類・小分類の編集）
-4. テストケース作成
-5. ドキュメント整備
+**次回作業**:
+1. 編集機能のドキュメント整備
+2. 並び順変更機能の実装（Phase 4-4）
 
 #### 4-4. 並び順変更
 - [ ] `moveCategoryUp()` の実装

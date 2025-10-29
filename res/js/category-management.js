@@ -3,6 +3,11 @@ import i18n from './i18n.js';
 import { setupIndicators } from './indicators.js';
 import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers, adjustWindowSize } from './font-size.js';
 
+// Category level constants
+const LEVEL_CATEGORY1 = 1;
+const LEVEL_CATEGORY2 = 2;
+const LEVEL_CATEGORY3 = 3;
+
 let categories = [];
 let expandedCategories = new Set();
 const currentUserId = 1; // TODO: Get from session/auth
@@ -444,7 +449,7 @@ function renderCategory2(cat2Tree, parent1Code, index, total) {
         childrenDiv.id = `cat2-${category.category2_code}-children`;
         
         cat2Tree.children.forEach((cat3, idx) => {
-            const childElement = renderCategory3(cat3, category.category1_code, category.category2_code, idx, cat2Tree.children.length);
+            const childElement = renderCategory3(cat3, parent1Code, category.category2_code, idx, cat2Tree.children.length);
             childrenDiv.appendChild(childElement);
         });
         
@@ -458,8 +463,8 @@ function renderCategory3(category, parent1Code, parent2Code, index, total) {
     const div = document.createElement('div');
     div.className = 'category-item category-level-3';
     div.dataset.categoryCode = category.category3_code;
-    div.dataset.category1Code = category.category1_code;
-    div.dataset.category2Code = category.category2_code;
+    div.dataset.category1Code = parent1Code;
+    div.dataset.category2Code = parent2Code;
     div.dataset.level = '3';
     
     const categoryName = category.category3_name_i18n || category.category3_name;
@@ -470,13 +475,13 @@ function renderCategory3(category, parent1Code, parent2Code, index, total) {
             <span class="category-name">${categoryName}</span>
             <span class="category-order">${i18n.t('category_mgmt.order')}: ${category.display_order}</span>
             <div class="category-actions">
-                <button class="btn-icon btn-edit" data-action="edit" data-category-code="${category.category3_code}" data-category1-code="${category.category1_code}" data-category2-code="${category.category2_code}" data-level="3">
+                <button class="btn-icon btn-edit" data-action="edit" data-category-code="${category.category3_code}" data-category1-code="${parent1Code}" data-category2-code="${parent2Code}" data-category3-code="${category.category3_code}" data-level="3">
                     ${i18n.t('common.edit')}
                 </button>
-                <button class="btn-icon btn-up" data-action="move-up" data-category-code="${category.category3_code}" data-category1-code="${category.category1_code}" data-category2-code="${category.category2_code}" data-level="3" ${index === 0 ? 'disabled' : ''}>
+                <button class="btn-icon btn-up" data-action="move-up" data-category-code="${category.category3_code}" data-category1-code="${parent1Code}" data-category2-code="${parent2Code}" data-category3-code="${category.category3_code}" data-level="3" ${index === 0 ? 'disabled' : ''}>
                     ↑
                 </button>
-                <button class="btn-icon btn-down" data-action="move-down" data-category-code="${category.category3_code}" data-category1-code="${category.category1_code}" data-category2-code="${category.category2_code}" data-level="3" ${index === total - 1 ? 'disabled' : ''}>
+                <button class="btn-icon btn-down" data-action="move-down" data-category-code="${category.category3_code}" data-category1-code="${parent1Code}" data-category2-code="${parent2Code}" data-category3-code="${category.category3_code}" data-level="3" ${index === total - 1 ? 'disabled' : ''}>
                     ↓
                 </button>
             </div>
@@ -494,10 +499,13 @@ function addActionListeners(element) {
         btn.addEventListener('click', async (e) => {
             e.stopPropagation();
             const action = btn.dataset.action;
-            const categoryCode = btn.dataset.categoryCode;
+            const level = parseInt(btn.dataset.level);
             const category1Code = btn.dataset.category1Code;
             const category2Code = btn.dataset.category2Code;
-            const level = parseInt(btn.dataset.level);
+            const category3Code = btn.dataset.category3Code;
+            
+            // Get the appropriate category code based on level
+            const categoryCode = level === LEVEL_CATEGORY3 ? category3Code : (level === LEVEL_CATEGORY2 ? category2Code : btn.dataset.categoryCode);
             
             switch (action) {
                 case 'add-child':
@@ -550,10 +558,10 @@ function openCategory1Modal(category = null) {
 function openAddChildModal(parentCategoryCode, category1Code, category2Code, parentLevel) {
     console.log('Open add child modal', {parentCategoryCode, category1Code, category2Code, parentLevel});
     
-    if (parentLevel === 1) {
+    if (parentLevel === LEVEL_CATEGORY1) {
         // Add category2 under category1
         openCategory2Modal('add', category1Code || parentCategoryCode);
-    } else if (parentLevel === 2) {
+    } else if (parentLevel === LEVEL_CATEGORY2) {
         // Add category3 under category2
         openCategory3Modal('add', category1Code, category2Code || parentCategoryCode);
     }
@@ -571,7 +579,7 @@ async function openEditModal(categoryCode, category1Code, category2Code, level) 
     console.log('Open edit modal for category:', categoryCode, 'level:', level);
     
     try {
-        if (level === 2) {
+        if (level === LEVEL_CATEGORY2) {
             // Fetch category2 data from backend
             const categoryData = await invoke('get_category2_for_edit', {
                 userId: currentUserId,
@@ -588,7 +596,7 @@ async function openEditModal(categoryCode, category1Code, category2Code, level) 
                 nameJa: categoryData.name_ja || '',
                 nameEn: categoryData.name_en || ''
             });
-        } else if (level === 3) {
+        } else if (level === LEVEL_CATEGORY3) {
             // Fetch category3 data from backend
             const categoryData = await invoke('get_category3_for_edit', {
                 userId: currentUserId,

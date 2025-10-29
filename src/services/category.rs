@@ -37,8 +37,8 @@ impl CategoryService {
     /// Initialize default categories for a new user
     /// This will be called when a general user is registered
     pub async fn initialize_user_categories(&self, user_id: i64) -> Result<(), CategoryError> {
-        // Check if categories already exist for this user
-        let count: i64 = sqlx::query_scalar(sql_queries::CATEGORY_COUNT_BY_USER)
+        // Check if categories already exist for this user (check CATEGORY2, not CATEGORY1)
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM CATEGORY2 WHERE USER_ID = ?")
             .bind(user_id)
             .fetch_one(&self.pool)
             .await?;
@@ -48,20 +48,43 @@ impl CategoryService {
             return Ok(());
         }
         
+        // Read SQL file with initial category data
+        let sql_content = std::fs::read_to_string("res/sql/init_user_categories.sql")
+            .map_err(|e| CategoryError::DatabaseError(sqlx::Error::Io(e)))?;
+        
+        // Replace :pUserID placeholder with actual user_id
+        let sql_content = sql_content.replace(":pUserID", &user_id.to_string());
+        
         // Start transaction
-        let tx = self.pool.begin().await?;
+        let mut tx = self.pool.begin().await?;
         
-        // NOTE: Default category data will be inserted here
-        // This will be populated from existing SQL data later
-        // For now, just create the structure
-        
-        // Example structure (to be replaced with actual data):
-        // 1. Insert CATEGORY1 records
-        // 2. Insert CATEGORY1_I18N records (en, ja)
-        // 3. Insert CATEGORY2 records
-        // 4. Insert CATEGORY2_I18N records
-        // 5. Insert CATEGORY3 records
-        // 6. Insert CATEGORY3_I18N records
+        // Execute SQL statements
+        // Split by semicolon and filter out comments and empty lines
+        for statement in sql_content.split(';') {
+            let stmt = statement.trim();
+            
+            // Skip empty statements
+            if stmt.is_empty() {
+                continue;
+            }
+            
+            // Skip comment-only statements
+            let lines: Vec<&str> = stmt.lines()
+                .map(|l| l.trim())
+                .filter(|l| !l.is_empty() && !l.starts_with("--"))
+                .collect();
+            
+            if lines.is_empty() {
+                continue;
+            }
+            
+            // Reconstruct statement without comment-only lines
+            let clean_stmt = lines.join(" ");
+            
+            sqlx::query(&clean_stmt)
+                .execute(&mut *tx)
+                .await?;
+        }
         
         tx.commit().await?;
         
@@ -436,6 +459,189 @@ impl CategoryService {
             name_en: row.get("name_en"),
         })
     }
+    
+    /// Update category2 i18n names
+    pub async fn update_category2_i18n(
+        &self,
+        user_id: i64,
+        category1_code: &str,
+        category2_code: &str,
+        name_ja: &str,
+        name_en: &str,
+    ) -> Result<(), CategoryError> {
+        // Check for duplicate Japanese name (excluding current category)
+        let count_ja: i64 = sqlx::query_scalar(sql_queries::CATEGORY2_CHECK_DUPLICATE_NAME_EXCLUDING)
+            .bind(user_id)
+            .bind(category1_code)
+            .bind(category2_code)
+            .bind("ja")
+            .bind(name_ja)
+            .fetch_one(&self.pool)
+            .await?;
+        
+        if count_ja > 0 {
+            return Err(CategoryError::DuplicateName(name_ja.to_string()));
+        }
+        
+        // Check for duplicate English name (excluding current category)
+        let count_en: i64 = sqlx::query_scalar(sql_queries::CATEGORY2_CHECK_DUPLICATE_NAME_EXCLUDING)
+            .bind(user_id)
+            .bind(category1_code)
+            .bind(category2_code)
+            .bind("en")
+            .bind(name_en)
+            .fetch_one(&self.pool)
+            .await?;
+        
+        if count_en > 0 {
+            return Err(CategoryError::DuplicateName(name_en.to_string()));
+        }
+        
+        // Also check if Japanese name exists in English names
+        let count_ja_in_en: i64 = sqlx::query_scalar(sql_queries::CATEGORY2_CHECK_DUPLICATE_NAME_EXCLUDING)
+            .bind(user_id)
+            .bind(category1_code)
+            .bind(category2_code)
+            .bind("en")
+            .bind(name_ja)
+            .fetch_one(&self.pool)
+            .await?;
+        
+        if count_ja_in_en > 0 {
+            return Err(CategoryError::DuplicateName(name_ja.to_string()));
+        }
+        
+        // Also check if English name exists in Japanese names
+        let count_en_in_ja: i64 = sqlx::query_scalar(sql_queries::CATEGORY2_CHECK_DUPLICATE_NAME_EXCLUDING)
+            .bind(user_id)
+            .bind(category1_code)
+            .bind(category2_code)
+            .bind("ja")
+            .bind(name_en)
+            .fetch_one(&self.pool)
+            .await?;
+        
+        if count_en_in_ja > 0 {
+            return Err(CategoryError::DuplicateName(name_en.to_string()));
+        }
+        
+        // Update Japanese name
+        sqlx::query(sql_queries::CATEGORY2_I18N_UPDATE)
+            .bind(name_ja)
+            .bind(user_id)
+            .bind(category1_code)
+            .bind(category2_code)
+            .bind("ja")
+            .execute(&self.pool)
+            .await?;
+        
+        // Update English name
+        sqlx::query(sql_queries::CATEGORY2_I18N_UPDATE)
+            .bind(name_en)
+            .bind(user_id)
+            .bind(category1_code)
+            .bind(category2_code)
+            .bind("en")
+            .execute(&self.pool)
+            .await?;
+        
+        Ok(())
+    }
+    
+    /// Update category3 i18n names
+    pub async fn update_category3_i18n(
+        &self,
+        user_id: i64,
+        category1_code: &str,
+        category2_code: &str,
+        category3_code: &str,
+        name_ja: &str,
+        name_en: &str,
+    ) -> Result<(), CategoryError> {
+        // Check for duplicate Japanese name (excluding current category)
+        let count_ja: i64 = sqlx::query_scalar(sql_queries::CATEGORY3_CHECK_DUPLICATE_NAME_EXCLUDING)
+            .bind(user_id)
+            .bind(category1_code)
+            .bind(category2_code)
+            .bind(category3_code)
+            .bind("ja")
+            .bind(name_ja)
+            .fetch_one(&self.pool)
+            .await?;
+        
+        if count_ja > 0 {
+            return Err(CategoryError::DuplicateName(name_ja.to_string()));
+        }
+        
+        // Check for duplicate English name (excluding current category)
+        let count_en: i64 = sqlx::query_scalar(sql_queries::CATEGORY3_CHECK_DUPLICATE_NAME_EXCLUDING)
+            .bind(user_id)
+            .bind(category1_code)
+            .bind(category2_code)
+            .bind(category3_code)
+            .bind("en")
+            .bind(name_en)
+            .fetch_one(&self.pool)
+            .await?;
+        
+        if count_en > 0 {
+            return Err(CategoryError::DuplicateName(name_en.to_string()));
+        }
+        
+        // Also check if Japanese name exists in English names
+        let count_ja_in_en: i64 = sqlx::query_scalar(sql_queries::CATEGORY3_CHECK_DUPLICATE_NAME_EXCLUDING)
+            .bind(user_id)
+            .bind(category1_code)
+            .bind(category2_code)
+            .bind(category3_code)
+            .bind("en")
+            .bind(name_ja)
+            .fetch_one(&self.pool)
+            .await?;
+        
+        if count_ja_in_en > 0 {
+            return Err(CategoryError::DuplicateName(name_ja.to_string()));
+        }
+        
+        // Also check if English name exists in Japanese names
+        let count_en_in_ja: i64 = sqlx::query_scalar(sql_queries::CATEGORY3_CHECK_DUPLICATE_NAME_EXCLUDING)
+            .bind(user_id)
+            .bind(category1_code)
+            .bind(category2_code)
+            .bind(category3_code)
+            .bind("ja")
+            .bind(name_en)
+            .fetch_one(&self.pool)
+            .await?;
+        
+        if count_en_in_ja > 0 {
+            return Err(CategoryError::DuplicateName(name_en.to_string()));
+        }
+        
+        // Update Japanese name
+        sqlx::query(sql_queries::CATEGORY3_I18N_UPDATE)
+            .bind(name_ja)
+            .bind(user_id)
+            .bind(category1_code)
+            .bind(category2_code)
+            .bind(category3_code)
+            .bind("ja")
+            .execute(&self.pool)
+            .await?;
+        
+        // Update English name
+        sqlx::query(sql_queries::CATEGORY3_I18N_UPDATE)
+            .bind(name_en)
+            .bind(user_id)
+            .bind(category1_code)
+            .bind(category2_code)
+            .bind(category3_code)
+            .bind("en")
+            .execute(&self.pool)
+            .await?;
+        
+        Ok(())
+    }
 }
 
 #[derive(Debug, sqlx::FromRow)]
@@ -504,10 +710,10 @@ mod tests {
     }
 
     async fn setup_category1(pool: &SqlitePool, user_id: i64) {
-        // Insert CATEGORY1
+        // Insert CATEGORY1 - EXPENSE
         sqlx::query(sql_queries::TEST_CATEGORY_INSERT_CATEGORY1)
             .bind(user_id)
-            .bind("C1_EXPENSE")
+            .bind("EXPENSE")
             .bind(1)
             .bind("Expense")
             .bind(0)
@@ -515,22 +721,84 @@ mod tests {
             .await
             .unwrap();
         
-        // Insert Japanese i18n
+        // Insert Japanese i18n for EXPENSE
         sqlx::query(sql_queries::TEST_CATEGORY_INSERT_CATEGORY1_I18N)
             .bind(user_id)
-            .bind("C1_EXPENSE")
+            .bind("EXPENSE")
             .bind("ja")
             .bind("支出")
             .execute(pool)
             .await
             .unwrap();
         
-        // Insert English i18n
+        // Insert English i18n for EXPENSE
         sqlx::query(sql_queries::TEST_CATEGORY_INSERT_CATEGORY1_I18N)
             .bind(user_id)
-            .bind("C1_EXPENSE")
+            .bind("EXPENSE")
             .bind("en")
             .bind("Expense")
+            .execute(pool)
+            .await
+            .unwrap();
+        
+        // Insert CATEGORY1 - INCOME
+        sqlx::query(sql_queries::TEST_CATEGORY_INSERT_CATEGORY1)
+            .bind(user_id)
+            .bind("INCOME")
+            .bind(2)
+            .bind("Income")
+            .bind(0)
+            .execute(pool)
+            .await
+            .unwrap();
+        
+        // Insert Japanese i18n for INCOME
+        sqlx::query(sql_queries::TEST_CATEGORY_INSERT_CATEGORY1_I18N)
+            .bind(user_id)
+            .bind("INCOME")
+            .bind("ja")
+            .bind("収入")
+            .execute(pool)
+            .await
+            .unwrap();
+        
+        // Insert English i18n for INCOME
+        sqlx::query(sql_queries::TEST_CATEGORY_INSERT_CATEGORY1_I18N)
+            .bind(user_id)
+            .bind("INCOME")
+            .bind("en")
+            .bind("Income")
+            .execute(pool)
+            .await
+            .unwrap();
+        
+        // Insert CATEGORY1 - TRANSFER
+        sqlx::query(sql_queries::TEST_CATEGORY_INSERT_CATEGORY1)
+            .bind(user_id)
+            .bind("TRANSFER")
+            .bind(3)
+            .bind("Transfer")
+            .bind(0)
+            .execute(pool)
+            .await
+            .unwrap();
+        
+        // Insert Japanese i18n for TRANSFER
+        sqlx::query(sql_queries::TEST_CATEGORY_INSERT_CATEGORY1_I18N)
+            .bind(user_id)
+            .bind("TRANSFER")
+            .bind("ja")
+            .bind("振替")
+            .execute(pool)
+            .await
+            .unwrap();
+        
+        // Insert English i18n for TRANSFER
+        sqlx::query(sql_queries::TEST_CATEGORY_INSERT_CATEGORY1_I18N)
+            .bind(user_id)
+            .bind("TRANSFER")
+            .bind("en")
+            .bind("Transfer")
             .execute(pool)
             .await
             .unwrap();
@@ -540,12 +808,58 @@ mod tests {
     async fn test_initialize_user_categories() {
         let pool = setup_test_db().await;
         let service = CategoryService::new(pool.clone());
+        let user_id = 2;  // Use a different user_id
         
-        let user_id = 1;
-        service.initialize_user_categories(user_id).await.unwrap();
+        // Initialize category1 first (大分類は手動で作成済みと想定)
+        setup_category1(&pool, user_id).await;
         
-        // Check that calling twice doesn't cause errors
-        service.initialize_user_categories(user_id).await.unwrap();
+        // Initialize user categories
+        let result = service.initialize_user_categories(user_id).await;
+        assert!(result.is_ok(), "Failed to initialize categories: {:?}", result.err());
+        
+        // Verify CATEGORY2 records were created
+        let cat2_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM CATEGORY2 WHERE USER_ID = ?")
+            .bind(user_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert!(cat2_count > 0, "No CATEGORY2 records created");
+        assert_eq!(cat2_count, 20, "Expected 20 CATEGORY2 records");
+        
+        // Verify CATEGORY3 records were created
+        let cat3_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM CATEGORY3 WHERE USER_ID = ?")
+            .bind(user_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert!(cat3_count > 0, "No CATEGORY3 records created");
+        assert_eq!(cat3_count, 126, "Expected 126 CATEGORY3 records");
+        
+        // Verify I18N records were created
+        let cat2_i18n_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM CATEGORY2_I18N WHERE USER_ID = ?")
+            .bind(user_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert!(cat2_i18n_count > 0, "No CATEGORY2_I18N records created");
+        
+        let cat3_i18n_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM CATEGORY3_I18N WHERE USER_ID = ?")
+            .bind(user_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert!(cat3_i18n_count > 0, "No CATEGORY3_I18N records created");
+        
+        // Verify it doesn't re-initialize if called again
+        let result2 = service.initialize_user_categories(user_id).await;
+        assert!(result2.is_ok());
+        
+        let cat2_count_after: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM CATEGORY2 WHERE USER_ID = ?")
+            .bind(user_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(cat2_count, cat2_count_after, "Categories should not be re-initialized");
     }
     
     #[tokio::test]
@@ -601,7 +915,7 @@ mod tests {
         setup_category1(&pool, user_id).await;
         
         // Add category2
-        let result = service.add_category2(user_id, "C1_EXPENSE", "食費", "Food").await;
+        let result = service.add_category2(user_id, "EXPENSE", "食費", "Food").await;
         assert!(result.is_ok());
         let category2_code = result.unwrap();
         
@@ -637,25 +951,25 @@ mod tests {
         setup_category1(&pool, user_id).await;
         
         // Add first category2
-        service.add_category2(user_id, "C1_EXPENSE", "食費", "Food").await.unwrap();
+        service.add_category2(user_id, "EXPENSE", "食費", "Food").await.unwrap();
         
         // Test 1: Try to add duplicate (same Japanese name)
-        let result = service.add_category2(user_id, "C1_EXPENSE", "食費", "Food2").await;
+        let result = service.add_category2(user_id, "EXPENSE", "食費", "Food2").await;
         assert!(result.is_err());
         assert!(matches!(result.unwrap_err(), CategoryError::DuplicateName(_)));
         
         // Test 2: Try to add duplicate (same English name)
-        let result2 = service.add_category2(user_id, "C1_EXPENSE", "食費2", "Food").await;
+        let result2 = service.add_category2(user_id, "EXPENSE", "食費2", "Food").await;
         assert!(result2.is_err());
         assert!(matches!(result2.unwrap_err(), CategoryError::DuplicateName(_)));
         
         // Test 3: Try to add with Japanese name matching existing English name
-        let result3 = service.add_category2(user_id, "C1_EXPENSE", "Food", "Other").await;
+        let result3 = service.add_category2(user_id, "EXPENSE", "Food", "Other").await;
         assert!(result3.is_err());
         assert!(matches!(result3.unwrap_err(), CategoryError::DuplicateName(_)));
         
         // Test 4: Try to add with English name matching existing Japanese name
-        let result4 = service.add_category2(user_id, "C1_EXPENSE", "Other", "食費").await;
+        let result4 = service.add_category2(user_id, "EXPENSE", "Other", "食費").await;
         assert!(result4.is_err());
         assert!(matches!(result4.unwrap_err(), CategoryError::DuplicateName(_)));
     }
@@ -668,7 +982,7 @@ mod tests {
         
         // Setup
         setup_category1(&pool, user_id).await;
-        service.add_category2(user_id, "C1_EXPENSE", "食費", "Food").await.unwrap();
+        service.add_category2(user_id, "EXPENSE", "食費", "Food").await.unwrap();
         
         // Get the category2_code
         let cat2_row = sqlx::query(sql_queries::TEST_CATEGORY_GET_FIRST_CATEGORY2_CODE)
@@ -679,7 +993,7 @@ mod tests {
         let category2_code: String = cat2_row.get(0);
         
         // Add category3
-        let result = service.add_category3(user_id, "C1_EXPENSE", &category2_code, "食料品", "Groceries").await;
+        let result = service.add_category3(user_id, "EXPENSE", &category2_code, "食料品", "Groceries").await;
         assert!(result.is_ok());
         let category3_code = result.unwrap();
         
@@ -702,7 +1016,7 @@ mod tests {
         
         // Setup
         setup_category1(&pool, user_id).await;
-        service.add_category2(user_id, "C1_EXPENSE", "食費", "Food").await.unwrap();
+        service.add_category2(user_id, "EXPENSE", "食費", "Food").await.unwrap();
         
         let cat2_row = sqlx::query(sql_queries::TEST_CATEGORY_GET_FIRST_CATEGORY2_CODE)
             .bind(user_id)
@@ -712,25 +1026,25 @@ mod tests {
         let category2_code: String = cat2_row.get(0);
         
         // Add first category3
-        service.add_category3(user_id, "C1_EXPENSE", &category2_code, "食料品", "Groceries").await.unwrap();
+        service.add_category3(user_id, "EXPENSE", &category2_code, "食料品", "Groceries").await.unwrap();
         
         // Test 1: Try to add duplicate (same Japanese name)
-        let result = service.add_category3(user_id, "C1_EXPENSE", &category2_code, "食料品", "Groceries2").await;
+        let result = service.add_category3(user_id, "EXPENSE", &category2_code, "食料品", "Groceries2").await;
         assert!(result.is_err());
         assert!(matches!(result.unwrap_err(), CategoryError::DuplicateName(_)));
         
         // Test 2: Try to add duplicate (same English name)
-        let result2 = service.add_category3(user_id, "C1_EXPENSE", &category2_code, "食料品2", "Groceries").await;
+        let result2 = service.add_category3(user_id, "EXPENSE", &category2_code, "食料品2", "Groceries").await;
         assert!(result2.is_err());
         assert!(matches!(result2.unwrap_err(), CategoryError::DuplicateName(_)));
         
         // Test 3: Try to add with Japanese name matching existing English name
-        let result3 = service.add_category3(user_id, "C1_EXPENSE", &category2_code, "Groceries", "Other").await;
+        let result3 = service.add_category3(user_id, "EXPENSE", &category2_code, "Groceries", "Other").await;
         assert!(result3.is_err());
         assert!(matches!(result3.unwrap_err(), CategoryError::DuplicateName(_)));
         
         // Test 4: Try to add with English name matching existing Japanese name
-        let result4 = service.add_category3(user_id, "C1_EXPENSE", &category2_code, "Other", "食料品").await;
+        let result4 = service.add_category3(user_id, "EXPENSE", &category2_code, "Other", "食料品").await;
         assert!(result4.is_err());
         assert!(matches!(result4.unwrap_err(), CategoryError::DuplicateName(_)));
     }

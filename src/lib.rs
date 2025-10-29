@@ -199,9 +199,17 @@ async fn create_general_user(
     validate_password(&password)?;
     
     let user_mgmt = state.user_mgmt.lock().await;
+    let category = state.category.lock().await;
     
     match user_mgmt.register_general_user(&username, &password).await {
-        Ok(user_id) => Ok(user_id),
+        Ok(user_id) => {
+            // Initialize default categories for the new user
+            if let Err(e) = category.initialize_user_categories(user_id).await {
+                eprintln!("Warning: Failed to initialize categories for user {}: {}", user_id, e);
+                // Continue even if category initialization fails
+            }
+            Ok(user_id)
+        },
         Err(e) => Err(format!("Failed to create user: {}", e)),
     }
 }
@@ -761,6 +769,37 @@ async fn get_category3_for_edit(
         .map_err(|e| format!("Failed to get category3: {}", e))
 }
 
+#[tauri::command]
+async fn update_category2(
+    user_id: i64,
+    category1_code: String,
+    category2_code: String,
+    name_ja: String,
+    name_en: String,
+    state: tauri::State<'_, AppState>
+) -> Result<(), String> {
+    let category = state.category.lock().await;
+    category.update_category2_i18n(user_id, &category1_code, &category2_code, &name_ja, &name_en)
+        .await
+        .map_err(|e| format!("Failed to update category2: {}", e))
+}
+
+#[tauri::command]
+async fn update_category3(
+    user_id: i64,
+    category1_code: String,
+    category2_code: String,
+    category3_code: String,
+    name_ja: String,
+    name_en: String,
+    state: tauri::State<'_, AppState>
+) -> Result<(), String> {
+    let category = state.category.lock().await;
+    category.update_category3_i18n(user_id, &category1_code, &category2_code, &category3_code, &name_ja, &name_en)
+        .await
+        .map_err(|e| format!("Failed to update category3: {}", e))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -808,7 +847,9 @@ pub fn run() {
             add_category2,
             add_category3,
             get_category2_for_edit,
-            get_category3_for_edit
+            get_category3_for_edit,
+            update_category2,
+            update_category3
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {

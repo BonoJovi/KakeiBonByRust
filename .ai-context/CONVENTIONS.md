@@ -47,6 +47,27 @@ git push origin main  # Requires hardware key authentication
 
 ---
 
+## Database File Naming
+
+### ❌ FORBIDDEN: Using "kakeibo.db" as Database Filename
+- **Never use**: `kakeibo.db` as the database filename
+- **Correct filename**: `KakeiBonDB.sqlite3` (defined in `src/consts.rs`)
+- **Location**: `~/.kakeibon/KakeiBonDB.sqlite3`
+- **Access script**: Use `./db.sh` to open the database with sqlite3
+- **Reason**: Incorrect database names cause confusion and data inconsistency
+
+### Database Access
+```bash
+# ✓ Correct - Use the db.sh script
+./db.sh "SELECT * FROM USERS;"
+
+# ✗ Wrong - Don't specify filename manually
+sqlite3 work/kakeibo.db "SELECT * FROM USERS;"
+sqlite3 ~/.local/share/kakeibo/kakeibo.db "SELECT * FROM USERS;"
+```
+
+---
+
 ## SQL Management
 
 ### SQL Queries Centralization
