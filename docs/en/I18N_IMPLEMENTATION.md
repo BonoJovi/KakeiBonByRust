@@ -237,6 +237,228 @@ Failed: 0
 Success Rate: 100%
 ```
 
+## Backend API Specification
+
+### `get_translations` Command
+
+A Tauri command to retrieve all translation resources at once.
+
+#### Function Signature
+```rust
+#[tauri::command]
+pub fn get_translations(language: String) -> Result<HashMap<String, String>, String>
+```
+
+#### Parameters
+- **language** (String): Language code
+  - Valid values: `"ja"` (Japanese), `"en"` (English)
+  - Case insensitive
+
+#### Return Value
+- **On success**: `HashMap<String, String>`
+  - Key: Resource key (e.g., `"menu.file"`, `"common.save"`)
+  - Value: Translated text (e.g., `"File"`, `"Save"`)
+- **On error**: `String` - Error message
+
+#### Database Query
+```sql
+SELECT RESOURCE_KEY, RESOURCE_VALUE 
+FROM I18N_RESOURCES 
+WHERE LANG_CODE = ?1
+```
+
+#### Implementation Details
+1. Get database path (`$HOME/.kakeibon/KakeiBonDB.sqlite3`)
+2. Open SQLite connection
+3. Retrieve all resources for specified language
+4. Convert to HashMap and return
+
+#### Error Handling
+
+**Error Cases**:
+1. **Database Connection Error**
+    - File does not exist
+    - Insufficient permissions
+    - File is corrupted
+    ```
+    "Failed to get translations: unable to open database file"
+    ```
+
+2. **Query Execution Error**
+    - Table does not exist
+    - Invalid column definition
+    ```
+    "Failed to get translations: no such table: I18N_RESOURCES"
+    ```
+
+3. **Data Conversion Error**
+    - Data type mismatch
+    ```
+    "Failed to get translations: Invalid column type"
+    ```
+
+**Error Handling Policy**:
+- All errors are returned as string messages
+- Frontend should catch and handle appropriately
+- Recommend empty HashMap or fallback behavior on error
+
+#### Performance Considerations
+
+**Initial Load**:
+- Called once on application startup
+- Retrieves all resources at once (typically 100-500 entries)
+- Load time: Usually 10-50ms
+
+**Caching Strategy**:
+- Cache in memory on frontend (`i18n.translations`)
+- Re-fetch only when language changes
+- Re-fetch required on page reload
+
+**Optimization Tips**:
+- Store frequently used resources in local variables
+- Use `requestAnimationFrame` for bulk DOM updates
+- Perform batch updates when language changes
+
+### Frontend Invocation Examples
+
+#### Basic Usage
+
+```javascript
+import { invoke } from '@tauri-apps/api/core';
+
+// Get Japanese translations
+const translations = await invoke('get_translations', { 
+    language: 'ja' 
+});
+
+console.log(translations);
+// {
+//   "menu.file": "ファイル",
+//   "menu.settings": "設定",
+//   "common.save": "保存",
+//   ...
+// }
+
+// Access specific resource
+const fileMenu = translations['menu.file']; // "ファイル"
+```
+
+#### Integration with I18n Class
+
+```javascript
+class I18n {
+    constructor() {
+        this.currentLanguage = 'ja';
+        this.translations = {};
+    }
+
+    async loadTranslations() {
+        try {
+            const translations = await invoke('get_translations', { 
+                language: this.currentLanguage 
+            });
+            this.translations = translations;
+        } catch (error) {
+            console.error('Failed to load translations:', error);
+            this.translations = {};
+        }
+    }
+
+    t(key, params = {}) {
+        let text = this.translations[key] || key;
+        
+        // Parameter substitution
+        Object.keys(params).forEach(paramKey => {
+            text = text.replace(
+                new RegExp(`{${paramKey}}`, 'g'), 
+                params[paramKey]
+            );
+        });
+        
+        return text;
+    }
+}
+```
+
+#### Error Handling Example
+
+```javascript
+async function switchLanguage(newLang) {
+    try {
+        // Get translations
+        const translations = await invoke('get_translations', { 
+            language: newLang 
+        });
+        
+        // Success: Update UI
+        updateAllUIElements(translations);
+        
+    } catch (error) {
+        // Error: Fallback handling
+        console.error('Translation load failed:', error);
+        
+        // Retry with default language
+        if (newLang !== 'ja') {
+            const fallbackTranslations = await invoke('get_translations', { 
+                language: 'ja' 
+            });
+            updateAllUIElements(fallbackTranslations);
+        }
+        
+        // Notify user
+        showErrorMessage('Failed to load language resources');
+    }
+}
+```
+
+#### Parameter Substitution Example
+
+```javascript
+// Database: "msg.welcome" = "Welcome, {name}!"
+const welcomeMsg = i18n.t('msg.welcome', { name: 'Bono' });
+// Result: "Welcome, Bono!"
+
+// Multiple parameters
+// Database: "msg.date_range" = "From {start} to {end}"
+const dateMsg = i18n.t('msg.date_range', { 
+    start: '2024-10-01', 
+    end: '2024-10-31' 
+});
+// Result: "From 2024-10-01 to 2024-10-31"
+```
+
+#### Automatic DOM Element Updates
+
+```html
+<!-- HTML -->
+<button data-i18n="common.save">Save</button>
+<input data-i18n-placeholder="common.search" placeholder="Search">
+<div data-i18n-title="common.help" title="Help">?</div>
+```
+
+```javascript
+// Automatically update all elements when language changes
+function updateUI() {
+    // Elements with data-i18n attribute
+    document.querySelectorAll('[data-i18n]').forEach(element => {
+        const key = element.getAttribute('data-i18n');
+        element.textContent = i18n.t(key);
+    });
+
+    // Elements with data-i18n-placeholder attribute
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(element => {
+        const key = element.getAttribute('data-i18n-placeholder');
+        element.placeholder = i18n.t(key);
+    });
+
+    // Elements with data-i18n-title attribute
+    document.querySelectorAll('[data-i18n-title]').forEach(element => {
+        const key = element.getAttribute('data-i18n-title');
+        element.title = i18n.t(key);
+    });
+}
+```
+
 ## Usage Examples
 
 ### Frontend (JavaScript)

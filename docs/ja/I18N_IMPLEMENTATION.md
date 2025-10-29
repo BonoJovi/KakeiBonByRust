@@ -282,6 +282,228 @@ let message = i18n.get_with_params(
 // "言語を日本語に変更しました。"
 ```
 
+## バックエンドAPI仕様
+
+### `get_translations` コマンド
+
+全翻訳リソースを一括取得するTauriコマンド。
+
+#### 関数シグネチャ
+```rust
+#[tauri::command]
+pub fn get_translations(language: String) -> Result<HashMap<String, String>, String>
+```
+
+#### パラメータ
+- **language** (String): 言語コード
+  - 有効な値: `"ja"` (日本語), `"en"` (英語)
+  - 大文字小文字を区別しない
+
+#### 戻り値
+- **成功時**: `HashMap<String, String>`
+  - キー: リソースキー（例: `"menu.file"`, `"common.save"`）
+  - 値: 翻訳されたテキスト（例: `"ファイル"`, `"保存"`）
+- **失敗時**: `String` - エラーメッセージ
+
+#### データベースクエリ
+```sql
+SELECT RESOURCE_KEY, RESOURCE_VALUE 
+FROM I18N_RESOURCES 
+WHERE LANG_CODE = ?1
+```
+
+#### 実装詳細
+1. データベースパスを取得（`$HOME/.kakeibon/KakeiBonDB.sqlite3`）
+2. SQLite接続を開く
+3. 指定言語のすべてのリソースを取得
+4. HashMapに変換して返す
+
+#### エラーハンドリング
+
+**エラーケース**:
+1. **データベース接続エラー**
+   - ファイルが存在しない
+   - アクセス権限がない
+   - ファイルが破損している
+   ```
+   "Failed to get translations: unable to open database file"
+   ```
+
+2. **クエリ実行エラー**
+   - テーブルが存在しない
+   - カラム定義が不正
+   ```
+   "Failed to get translations: no such table: I18N_RESOURCES"
+   ```
+
+3. **データ変換エラー**
+   - データ型の不一致
+   ```
+   "Failed to get translations: Invalid column type"
+   ```
+
+**エラーハンドリング方針**:
+- すべてのエラーは文字列メッセージとして返される
+- フロントエンドでキャッチして適切に処理する
+- エラー時は空のHashMapまたはフォールバック動作を推奨
+
+#### パフォーマンス考慮事項
+
+**初回ロード**:
+- アプリケーション起動時に1回だけ呼び出す
+- 全リソースを一括取得（典型的には100～500エントリ）
+- 取得時間: 通常10～50ms
+
+**キャッシング戦略**:
+- フロントエンドでメモリにキャッシュする（`i18n.translations`）
+- 言語変更時のみ再取得
+- ページリロード時は再取得が必要
+
+**最適化のヒント**:
+- 頻繁に使用するリソースはローカル変数に保存
+- 大量のDOM更新時は`requestAnimationFrame`を使用
+- 言語変更時はバッチ更新を行う
+
+### フロントエンドからの呼び出し例
+
+#### 基本的な使用方法
+
+```javascript
+import { invoke } from '@tauri-apps/api/core';
+
+// 日本語の翻訳を取得
+const translations = await invoke('get_translations', { 
+    language: 'ja' 
+});
+
+console.log(translations);
+// {
+//   "menu.file": "ファイル",
+//   "menu.settings": "設定",
+//   "common.save": "保存",
+//   ...
+// }
+
+// 特定のリソースにアクセス
+const fileMenu = translations['menu.file']; // "ファイル"
+```
+
+#### I18nクラスでの統合
+
+```javascript
+class I18n {
+    constructor() {
+        this.currentLanguage = 'ja';
+        this.translations = {};
+    }
+
+    async loadTranslations() {
+        try {
+            const translations = await invoke('get_translations', { 
+                language: this.currentLanguage 
+            });
+            this.translations = translations;
+        } catch (error) {
+            console.error('Failed to load translations:', error);
+            this.translations = {};
+        }
+    }
+
+    t(key, params = {}) {
+        let text = this.translations[key] || key;
+        
+        // パラメータ置換
+        Object.keys(params).forEach(paramKey => {
+            text = text.replace(
+                new RegExp(`{${paramKey}}`, 'g'), 
+                params[paramKey]
+            );
+        });
+        
+        return text;
+    }
+}
+```
+
+#### エラーハンドリングの例
+
+```javascript
+async function switchLanguage(newLang) {
+    try {
+        // 翻訳を取得
+        const translations = await invoke('get_translations', { 
+            language: newLang 
+        });
+        
+        // 成功: UIを更新
+        updateAllUIElements(translations);
+        
+    } catch (error) {
+        // エラー: フォールバック処理
+        console.error('Translation load failed:', error);
+        
+        // デフォルト言語で再試行
+        if (newLang !== 'ja') {
+            const fallbackTranslations = await invoke('get_translations', { 
+                language: 'ja' 
+            });
+            updateAllUIElements(fallbackTranslations);
+        }
+        
+        // ユーザーに通知
+        showErrorMessage('言語の読み込みに失敗しました');
+    }
+}
+```
+
+#### パラメータ置換の例
+
+```javascript
+// データベース: "msg.welcome" = "ようこそ、{name}さん！"
+const welcomeMsg = i18n.t('msg.welcome', { name: 'ボノ' });
+// 結果: "ようこそ、ボノさん！"
+
+// 複数パラメータ
+// データベース: "msg.date_range" = "{start}から{end}まで"
+const dateMsg = i18n.t('msg.date_range', { 
+    start: '2024-10-01', 
+    end: '2024-10-31' 
+});
+// 結果: "2024-10-01から2024-10-31まで"
+```
+
+#### DOM要素の自動更新
+
+```html
+<!-- HTML -->
+<button data-i18n="common.save">保存</button>
+<input data-i18n-placeholder="common.search" placeholder="検索">
+<div data-i18n-title="common.help" title="ヘルプ">?</div>
+```
+
+```javascript
+// 言語変更時にすべての要素を自動更新
+function updateUI() {
+    // data-i18n属性を持つ要素
+    document.querySelectorAll('[data-i18n]').forEach(element => {
+        const key = element.getAttribute('data-i18n');
+        element.textContent = i18n.t(key);
+    });
+
+    // data-i18n-placeholder属性を持つ要素
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(element => {
+        const key = element.getAttribute('data-i18n-placeholder');
+        element.placeholder = i18n.t(key);
+    });
+
+    // data-i18n-title属性を持つ要素
+    document.querySelectorAll('[data-i18n-title]').forEach(element => {
+        const key = element.getAttribute('data-i18n-title');
+        element.title = i18n.t(key);
+    });
+}
+```
+
 ## 次のステップ（未実装）
 
 ### 1. メニュー実装
