@@ -2,6 +2,7 @@ use sqlx::sqlite::SqlitePool;
 use sqlx::Row;
 use crate::security::{hash_password, verify_password, SecurityError};
 use crate::consts::{ROLE_ADMIN, ROLE_USER};
+use crate::sql_queries;
 
 #[derive(Debug)]
 pub struct User {
@@ -62,16 +63,10 @@ impl AuthService {
     /// * `Ok(None)` - Authentication failed (invalid credentials)
     /// * `Err(AuthError)` - Database or security error
     pub async fn authenticate_user(&self, username: &str, password: &str) -> Result<Option<User>, AuthError> {
-        let result = sqlx::query(
-            r#"
-            SELECT USER_ID, NAME, PAW, ROLE
-            FROM USERS
-            WHERE NAME = ?
-            "#
-        )
-        .bind(username)
-        .fetch_optional(&self.pool)
-        .await?;
+        let result = sqlx::query(sql_queries::AUTH_GET_USER_BY_NAME)
+            .bind(username)
+            .fetch_optional(&self.pool)
+            .await?;
         
         if let Some(row) = result {
             let user_id: i64 = row.get(0);

@@ -261,8 +261,8 @@ async function loadCategories() {
         
         // Fetch categories from backend
         categories = await invoke('get_category_tree_with_lang', {
-            user_id: currentUserId,
-            lang_code: currentLang
+            userId: currentUserId,
+            langCode: currentLang
         });
         
         console.log('Loaded categories:', categories);

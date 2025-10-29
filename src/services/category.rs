@@ -1,4 +1,6 @@
 use sqlx::sqlite::SqlitePool;
+use sqlx::Row;
+use crate::sql_queries;
 
 #[derive(Debug)]
 pub enum CategoryError {
@@ -34,12 +36,10 @@ impl CategoryService {
     /// This will be called when a general user is registered
     pub async fn initialize_user_categories(&self, user_id: i64) -> Result<(), CategoryError> {
         // Check if categories already exist for this user
-        let count: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM CATEGORY1 WHERE USER_ID = ?"
-        )
-        .bind(user_id)
-        .fetch_one(&self.pool)
-        .await?;
+        let count: i64 = sqlx::query_scalar(sql_queries::CATEGORY_COUNT_BY_USER)
+            .bind(user_id)
+            .fetch_one(&self.pool)
+            .await?;
         
         if count > 0 {
             // Categories already initialized
@@ -68,29 +68,88 @@ impl CategoryService {
     
     /// Get all category1 for a user
     pub async fn get_category1_list(&self, user_id: i64, lang_code: &str) -> Result<Vec<Category1>, CategoryError> {
-        let rows = sqlx::query_as::<_, Category1>(
-            r#"
-            SELECT 
-                c.USER_ID,
-                c.CATEGORY1_CODE,
-                c.DISPLAY_ORDER,
-                COALESCE(i18n.CATEGORY1_NAME_I18N, c.CATEGORY1_NAME) as CATEGORY1_NAME,
-                c.IS_DISABLED
-            FROM CATEGORY1 c
-            LEFT JOIN CATEGORY1_I18N i18n 
-                ON c.USER_ID = i18n.USER_ID 
-                AND c.CATEGORY1_CODE = i18n.CATEGORY1_CODE 
-                AND i18n.LANG_CODE = ?
-            WHERE c.USER_ID = ? AND c.IS_DISABLED = 0
-            ORDER BY c.DISPLAY_ORDER
-            "#
-        )
-        .bind(lang_code)
-        .bind(user_id)
-        .fetch_all(&self.pool)
-        .await?;
+        let rows = sqlx::query_as::<_, Category1>(sql_queries::CATEGORY1_LIST)
+            .bind(lang_code)
+            .bind(user_id)
+            .fetch_all(&self.pool)
+            .await?;
         
         Ok(rows)
+    }
+    
+    /// Get category tree with internationalization
+    pub async fn get_category_tree(&self, user_id: i64, lang_code: &str) -> Result<serde_json::Value, CategoryError> {
+        use serde_json::json;
+        
+        // Get all category1
+        let cat1_rows = sqlx::query(sql_queries::CATEGORY1_TREE)
+            .bind(lang_code)
+            .bind(user_id)
+            .fetch_all(&self.pool)
+            .await?;
+        
+        let mut categories = Vec::new();
+        
+        for row in cat1_rows {
+            let cat1_code: String = row.get("CATEGORY1_CODE");
+            let cat1_name: String = row.get("name");
+            let cat1_order: i64 = row.get("DISPLAY_ORDER");
+            
+            // Get category2 for this category1
+            let cat2_rows = sqlx::query(sql_queries::CATEGORY2_TREE)
+                .bind(lang_code)
+                .bind(user_id)
+                .bind(&cat1_code)
+                .fetch_all(&self.pool)
+                .await?;
+            
+            let mut cat2_list = Vec::new();
+            
+            for cat2_row in cat2_rows {
+                let cat2_code: String = cat2_row.get("CATEGORY2_CODE");
+                let cat2_name: String = cat2_row.get("name");
+                let cat2_order: i64 = cat2_row.get("DISPLAY_ORDER");
+                
+                // Get category3 for this category2
+                let cat3_rows = sqlx::query(sql_queries::CATEGORY3_TREE)
+                    .bind(lang_code)
+                    .bind(user_id)
+                    .bind(&cat1_code)
+                    .bind(&cat2_code)
+                    .fetch_all(&self.pool)
+                    .await?;
+                
+                let cat3_list: Vec<_> = cat3_rows.iter().map(|row| {
+                    json!({
+                        "category3": {
+                            "category3_code": row.get::<String, _>("CATEGORY3_CODE"),
+                            "category3_name_i18n": row.get::<String, _>("name"),
+                            "display_order": row.get::<i64, _>("DISPLAY_ORDER")
+                        }
+                    })
+                }).collect();
+                
+                cat2_list.push(json!({
+                    "category2": {
+                        "category2_code": cat2_code,
+                        "category2_name_i18n": cat2_name,
+                        "display_order": cat2_order
+                    },
+                    "children": cat3_list
+                }));
+            }
+            
+            categories.push(json!({
+                "category1": {
+                    "category1_code": cat1_code,
+                    "category1_name_i18n": cat1_name,
+                    "display_order": cat1_order
+                },
+                "children": cat2_list
+            }));
+        }
+        
+        Ok(json!(categories))
     }
 }
 

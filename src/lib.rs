@@ -4,6 +4,7 @@ mod consts;
 mod security;
 mod crypto;
 mod settings;
+mod sql_queries;
 mod services {
     pub mod auth;
     pub mod user_management;
@@ -29,6 +30,7 @@ use services::auth::AuthService;
 use services::user_management::UserManagementService;
 use services::encryption::EncryptionService;
 use services::i18n::I18nService;
+use services::category::CategoryService;
 use settings::SettingsManager;
 use validation::{validate_password, validate_password_confirmation};
 use crate::consts::{LANG_ENGLISH, LANG_JAPANESE, LANG_DEFAULT, FONT_SIZE_SMALL, FONT_SIZE_MEDIUM, FONT_SIZE_LARGE, FONT_SIZE_DEFAULT};
@@ -40,6 +42,7 @@ pub struct AppState {
     pub encryption: Arc<Mutex<EncryptionService>>,
     pub settings: Arc<Mutex<SettingsManager>>,
     pub i18n: Arc<Mutex<I18nService>>,
+    pub category: Arc<Mutex<CategoryService>>,
 }
 
 #[tauri::command]
@@ -687,6 +690,19 @@ async fn adjust_window_size(
     Ok(())
 }
 
+#[tauri::command]
+async fn get_category_tree_with_lang(
+    user_id: i64,
+    lang_code: String,
+    state: tauri::State<'_, AppState>
+) -> Result<serde_json::Value, String> {
+    let category = state.category.lock().await;
+    
+    category.get_category_tree(user_id, &lang_code)
+        .await
+        .map_err(|e| format!("Failed to get category tree: {}", e))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -729,7 +745,8 @@ pub fn run() {
             get_language_names,
             set_font_size,
             get_font_size,
-            adjust_window_size
+            adjust_window_size,
+            get_category_tree_with_lang
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {
@@ -742,7 +759,7 @@ pub fn run() {
 
             // Initialize database
             let rt = tokio::runtime::Runtime::new().unwrap();
-            let (db, auth, user_mgmt, encryption, settings, i18n) = rt.block_on(async {
+            let (db, auth, user_mgmt, encryption, settings, i18n, category) = rt.block_on(async {
                 let database = Database::new().await
                     .expect("Failed to connect to database");
                 database.initialize().await
@@ -754,8 +771,9 @@ pub fn run() {
                 let settings_manager = SettingsManager::new()
                     .expect("Failed to initialize settings");
                 let i18n_service = I18nService::new(database.pool().clone());
+                let category_service = CategoryService::new(database.pool().clone());
                 
-                (database, auth_service, user_mgmt_service, encryption_service, settings_manager, i18n_service)
+                (database, auth_service, user_mgmt_service, encryption_service, settings_manager, i18n_service, category_service)
             });
 
             app.manage(AppState {
@@ -765,6 +783,7 @@ pub fn run() {
                 encryption: Arc::new(Mutex::new(encryption)),
                 settings: Arc::new(Mutex::new(settings)),
                 i18n: Arc::new(Mutex::new(i18n)),
+                category: Arc::new(Mutex::new(category)),
             });
 
             Ok(())
