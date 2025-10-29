@@ -121,11 +121,9 @@ impl CategoryService {
                 
                 let cat3_list: Vec<_> = cat3_rows.iter().map(|row| {
                     json!({
-                        "category3": {
-                            "category3_code": row.get::<String, _>("CATEGORY3_CODE"),
-                            "category3_name_i18n": row.get::<String, _>("name"),
-                            "display_order": row.get::<i64, _>("DISPLAY_ORDER")
-                        }
+                        "category3_code": row.get::<String, _>("CATEGORY3_CODE"),
+                        "category3_name_i18n": row.get::<String, _>("name"),
+                        "display_order": row.get::<i64, _>("DISPLAY_ORDER")
                     })
                 }).collect();
                 
