@@ -86,13 +86,86 @@ pub async fn create_general_user(
 ```
 
 ### Database Queries
+
+#### SQL Constants (IMPORTANT!)
+⚠️ **ALL SQL queries must be defined as constants in `src/sql_queries.rs`**
+
+**Rules:**
+1. Never hardcode SQL in business logic files
+2. Define all SQL as constants in `src/sql_queries.rs`
+3. Use descriptive names based on functionality (not numeric IDs)
+4. Separate test SQL with `TEST_` prefix
+
+**Example Structure:**
 ```rust
-// Use prepared statements (sqlx automatically does this)
+// src/sql_queries.rs
+
+// Production SQL queries
+pub const SELECT_USER_BY_NAME: &str = 
+    "SELECT * FROM USERS WHERE NAME = ?";
+
+pub const INSERT_CATEGORY: &str = 
+    "INSERT INTO CATEGORIES (CODE, NAME_JA, NAME_EN) VALUES (?, ?, ?)";
+
+pub const UPDATE_CATEGORY_NAME: &str = 
+    "UPDATE CATEGORIES SET NAME_JA = ?, NAME_EN = ? WHERE CODE = ?";
+
+// Test SQL queries (with TEST_ prefix)
+pub const TEST_INSERT_USER: &str = 
+    "INSERT INTO USERS (NAME, PAW, ROLE) VALUES (?, ?, ?)";
+
+pub const TEST_CREATE_CATEGORIES_TABLE: &str = 
+    "CREATE TABLE IF NOT EXISTS CATEGORIES (...)";
+```
+
+**Usage in Code:**
+```rust
+use crate::sql_queries::SELECT_USER_BY_NAME;
+
+// ✓ Good - uses SQL constant
+let user = sqlx::query(SELECT_USER_BY_NAME)
+    .bind(username)
+    .fetch_optional(&pool)
+    .await?;
+
+// ✗ Bad - hardcoded SQL
 let user = sqlx::query("SELECT * FROM USERS WHERE NAME = ?")
     .bind(username)
     .fetch_optional(&pool)
     .await?;
 ```
+
+**Benefits:**
+- Central management of all SQL queries
+- Easy to review and maintain
+- Consistent naming across the project
+- Clear separation between production and test SQL
+
+#### Database Path Helper (IMPORTANT!)
+⚠️ **Always use the `get_db_path()` helper function from `src/db.rs`**
+
+**Database File Location:**
+- Production DB: `$HOME/.kakeibon/KakeiBonDB.sqlite3`
+- Constants: `DB_DIR_NAME = ".kakeibon"`, `DB_FILE_NAME = "KakeiBonDB.sqlite3"`
+
+**Rules:**
+1. Never hardcode database file paths
+2. Use `get_db_path()` function (defined in `src/db.rs`) to get the correct path
+3. The function handles both Unix (`$HOME`) and Windows (`$USERPROFILE`) environments
+
+**Example Usage:**
+```rust
+// ✓ Good - uses helper function
+use crate::db::get_db_path;
+let db_path = get_db_path();
+let db_url = format!("sqlite://{}?mode=rwc", db_path.display());
+
+// ✗ Bad - hardcoded path
+let db_path = "kakeibo.db";  // Wrong!
+let db_path = "/home/user/.kakeibon/KakeiBonDB.sqlite3";  // Too specific!
+```
+
+**Note:** The `get_db_path()` function is private to `src/db.rs`. For most use cases, use the `Database::new()` method which internally calls `get_db_path()`.
 
 ---
 
