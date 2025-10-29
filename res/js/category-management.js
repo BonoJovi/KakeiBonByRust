@@ -311,7 +311,7 @@ function renderCategory1(categoryTree, index, total) {
             <span class="category-name">${categoryName}</span>
             <span class="category-order">${i18n.t('category_mgmt.order')}: ${category.display_order}</span>
             <div class="category-actions">
-                <button class="btn-icon btn-add" data-action="add-child" data-category-code="${category.category1_code}" data-level="1">
+                <button class="btn-icon btn-add" data-action="add-child" data-category-code="${category.category1_code}" data-category1-code="${category.category1_code}" data-level="1">
                     ${i18n.t('category_mgmt.add_sub')}
                 </button>
             </div>
@@ -363,16 +363,16 @@ function renderCategory2(cat2Tree, parent1Code, index, total) {
             <span class="category-name">${categoryName}</span>
             <span class="category-order">${i18n.t('category_mgmt.order')}: ${category.display_order}</span>
             <div class="category-actions">
-                <button class="btn-icon btn-add" data-action="add-child" data-category-code="${category.category2_code}" data-category1-code="${category.category1_code}" data-level="2">
+                <button class="btn-icon btn-add" data-action="add-child" data-category-code="${category.category2_code}" data-category1-code="${parent1Code}" data-category2-code="${category.category2_code}" data-level="2">
                     ${i18n.t('category_mgmt.add_sub')}
                 </button>
-                <button class="btn-icon btn-edit" data-action="edit" data-category-code="${category.category2_code}" data-category1-code="${category.category1_code}" data-level="2">
+                <button class="btn-icon btn-edit" data-action="edit" data-category-code="${category.category2_code}" data-category1-code="${parent1Code}" data-category2-code="${category.category2_code}" data-level="2">
                     ${i18n.t('common.edit')}
                 </button>
-                <button class="btn-icon btn-up" data-action="move-up" data-category-code="${category.category2_code}" data-category1-code="${category.category1_code}" data-level="2" ${index === 0 ? 'disabled' : ''}>
+                <button class="btn-icon btn-up" data-action="move-up" data-category-code="${category.category2_code}" data-category1-code="${parent1Code}" data-category2-code="${category.category2_code}" data-level="2" ${index === 0 ? 'disabled' : ''}>
                     ↑
                 </button>
-                <button class="btn-icon btn-down" data-action="move-down" data-category-code="${category.category2_code}" data-category1-code="${category.category1_code}" data-level="2" ${index === total - 1 ? 'disabled' : ''}>
+                <button class="btn-icon btn-down" data-action="move-down" data-category-code="${category.category2_code}" data-category1-code="${parent1Code}" data-category2-code="${category.category2_code}" data-level="2" ${index === total - 1 ? 'disabled' : ''}>
                     ↓
                 </button>
             </div>
@@ -444,21 +444,23 @@ function addActionListeners(element) {
         btn.addEventListener('click', async (e) => {
             e.stopPropagation();
             const action = btn.dataset.action;
-            const categoryId = parseInt(btn.dataset.categoryId);
+            const categoryCode = btn.dataset.categoryCode;
+            const category1Code = btn.dataset.category1Code;
+            const category2Code = btn.dataset.category2Code;
             const level = parseInt(btn.dataset.level);
             
             switch (action) {
                 case 'add-child':
-                    openAddChildModal(categoryId, level);
+                    openAddChildModal(categoryCode, category1Code, category2Code, level);
                     break;
                 case 'edit':
-                    openEditModal(categoryId, level);
+                    openEditModal(categoryCode, category1Code, category2Code, level);
                     break;
                 case 'move-up':
-                    await moveCategoryUp(categoryId, level);
+                    await moveCategoryUp(categoryCode, category1Code, category2Code, level);
                     break;
                 case 'move-down':
-                    await moveCategoryDown(categoryId, level);
+                    await moveCategoryDown(categoryCode, category1Code, category2Code, level);
                     break;
             }
         });
@@ -495,14 +497,78 @@ function openCategory1Modal(category = null) {
     modal.classList.remove('hidden');
 }
 
-function openAddChildModal(parentId, parentLevel) {
-    // TODO: Implement based on parent level
-    console.log('Open add child modal for parent:', parentId, 'level:', parentLevel);
+function openAddChildModal(parentCategoryCode, category1Code, category2Code, parentLevel) {
+    console.log('Open add child modal', {parentCategoryCode, category1Code, category2Code, parentLevel});
+    
+    if (parentLevel === 1) {
+        // Add category2 under category1
+        openCategory2Modal('add', category1Code || parentCategoryCode);
+    } else if (parentLevel === 2) {
+        // Add category3 under category2
+        openCategory3Modal('add', category1Code, category2Code || parentCategoryCode);
+    }
 }
 
-function openEditModal(categoryId, level) {
+function openCategory2Modal(mode, category1Code) {
+    const modal = document.getElementById('category2-modal');
+    const title = document.getElementById('category2-modal-title');
+    const form = document.getElementById('category2-form');
+    const parentNameField = document.getElementById('category2-parent-name');
+    
+    // Set title
+    title.textContent = mode === 'add' ? 
+        i18n.t('category_mgmt.add_category2') : 
+        i18n.t('category_mgmt.edit_category2');
+    
+    // Find parent category name
+    const parentCategory = categories.find(cat => cat.category1.category1_code === category1Code);
+    const parentName = parentCategory ? parentCategory.category1.category1_name_i18n : category1Code;
+    
+    // Clear form
+    form.reset();
+    form.dataset.mode = mode;
+    form.dataset.category1Code = category1Code;
+    parentNameField.value = parentName;
+    
+    // Show modal
+    modal.classList.remove('hidden');
+}
+
+function openCategory3Modal(mode, category1Code, category2Code) {
+    const modal = document.getElementById('category3-modal');
+    const title = document.getElementById('category3-modal-title');
+    const form = document.getElementById('category3-form');
+    const parentNameField = document.getElementById('category3-parent-name');
+    
+    // Set title
+    title.textContent = mode === 'add' ? 
+        i18n.t('category_mgmt.add_category3') : 
+        i18n.t('category_mgmt.edit_category3');
+    
+    // Find parent category name
+    let parentName = category2Code;
+    const parentCategory1 = categories.find(cat => cat.category1.category1_code === category1Code);
+    if (parentCategory1) {
+        const parentCategory2 = parentCategory1.children.find(cat => cat.category2.category2_code === category2Code);
+        if (parentCategory2) {
+            parentName = parentCategory2.category2.category2_name_i18n;
+        }
+    }
+    
+    // Clear form
+    form.reset();
+    form.dataset.mode = mode;
+    form.dataset.category1Code = category1Code;
+    form.dataset.category2Code = category2Code;
+    parentNameField.value = parentName;
+    
+    // Show modal
+    modal.classList.remove('hidden');
+}
+
+function openEditModal(categoryCode, category1Code, category2Code, level) {
     // TODO: Implement based on level
-    console.log('Open edit modal for category:', categoryId, 'level:', level);
+    console.log('Open edit modal for category:', categoryCode, 'level:', level);
 }
 
 async function handleCategory1Save() {
@@ -511,13 +577,95 @@ async function handleCategory1Save() {
 }
 
 async function handleCategory2Save() {
-    // TODO: Implement save logic
-    console.log('Save category2');
+    const form = document.getElementById('category2-form');
+    const modal = document.getElementById('category2-modal');
+    const mode = form.dataset.mode;
+    const category1Code = form.dataset.category1Code;
+    
+    let nameJa = document.getElementById('category2-name-ja').value.trim();
+    let nameEn = document.getElementById('category2-name-en').value.trim();
+    
+    // If one is empty, copy from the other
+    if (!nameJa && !nameEn) {
+        alert('Please enter at least one name (Japanese or English)');
+        return;
+    }
+    if (!nameJa) nameJa = nameEn;
+    if (!nameEn) nameEn = nameJa;
+    
+    try {
+        if (mode === 'add') {
+            await invoke('add_category2', {
+                userId: currentUserId,
+                category1Code: category1Code,
+                nameJa: nameJa,
+                nameEn: nameEn
+            });
+        }
+        
+        // Close modal and reload
+        modal.classList.add('hidden');
+        await loadCategories();
+    } catch (error) {
+        console.error('Failed to save category2:', error);
+        
+        // Check if it's a duplicate name error
+        if (error.includes('already exists')) {
+            const match = error.match(/Category name '(.+)' already exists/);
+            const duplicateName = match ? match[1] : '';
+            const errorMsg = i18n.t('error.category_duplicate_name').replace('{0}', duplicateName);
+            alert(errorMsg);
+        } else {
+            alert('Failed to save: ' + error);
+        }
+    }
 }
 
 async function handleCategory3Save() {
-    // TODO: Implement save logic
-    console.log('Save category3');
+    const form = document.getElementById('category3-form');
+    const modal = document.getElementById('category3-modal');
+    const mode = form.dataset.mode;
+    const category1Code = form.dataset.category1Code;
+    const category2Code = form.dataset.category2Code;
+    
+    let nameJa = document.getElementById('category3-name-ja').value.trim();
+    let nameEn = document.getElementById('category3-name-en').value.trim();
+    
+    // If one is empty, copy from the other
+    if (!nameJa && !nameEn) {
+        alert('Please enter at least one name (Japanese or English)');
+        return;
+    }
+    if (!nameJa) nameJa = nameEn;
+    if (!nameEn) nameEn = nameJa;
+    
+    try {
+        if (mode === 'add') {
+            await invoke('add_category3', {
+                userId: currentUserId,
+                category1Code: category1Code,
+                category2Code: category2Code,
+                nameJa: nameJa,
+                nameEn: nameEn
+            });
+        }
+        
+        // Close modal and reload
+        modal.classList.add('hidden');
+        await loadCategories();
+    } catch (error) {
+        console.error('Failed to save category3:', error);
+        
+        // Check if it's a duplicate name error
+        if (error.includes('already exists')) {
+            const match = error.match(/Category name '(.+)' already exists/);
+            const duplicateName = match ? match[1] : '';
+            const errorMsg = i18n.t('error.category_duplicate_name').replace('{0}', duplicateName);
+            alert(errorMsg);
+        } else {
+            alert('Failed to save: ' + error);
+        }
+    }
 }
 
 async function moveCategoryUp(categoryId, level) {

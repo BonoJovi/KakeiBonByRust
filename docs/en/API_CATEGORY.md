@@ -204,24 +204,36 @@ Add a new medium category.
 **Parameters:**
 - `user_id` (i64): User ID
 - `category1_code` (String): Parent category code
-- `category2_code` (String): Category code (e.g., "C2_E_1")
-- `name` (String): Category name
+- `name_ja` (String): Category name (Japanese)
+- `name_en` (String): Category name (English)
 
 **Returns:**
-- `Result<(), String>`: Success or error message
+- `Result<String, String>`: New category code on success, error message on failure
 
 **Notes:**
-- Display order is automatically set to max + 1 within parent
-- Code should be unique within the parent category
+- Display order is automatically set to max + 1 within parent (appended to the end)
+- Category code is auto-generated (e.g., "C2_E_1")
+- **Duplicate check**: The following name duplicates are not allowed:
+  - Japanese name matches existing Japanese name
+  - English name matches existing English name
+  - Japanese name matches existing English name
+  - English name matches existing Japanese name
+- Returns `CategoryError::DuplicateName` error if duplicate is detected
 
 **Example:**
 ```javascript
-await invoke('add_category2', { 
-  user_id: 1, 
-  category1_code: "EXPENSE",
-  category2_code: "C2_E_" + Date.now(),
-  name: "新しい費目" 
-});
+try {
+  const newCode = await invoke('add_category2', { 
+    userId: 1, 
+    category1Code: "EXPENSE",
+    nameJa: "娯楽費",
+    nameEn: "Entertainment"
+  });
+  console.log('Created category:', newCode);
+} catch (error) {
+  // Error message is translated according to current language
+  alert(i18n.t('error.category_duplicate_name').replace('{0}', 'Entertainment'));
+}
 ```
 
 ---
@@ -309,21 +321,32 @@ Add a new minor category.
 - `user_id` (i64): User ID
 - `category1_code` (String): Major category code
 - `category2_code` (String): Parent category code
-- `category3_code` (String): Category code (e.g., "C3_1")
-- `name` (String): Category name
+- `name_ja` (String): Category name (Japanese)
+- `name_en` (String): Category name (English)
 
 **Returns:**
-- `Result<(), String>`: Success or error message
+- `Result<String, String>`: New category code on success, error message on failure
+
+**Notes:**
+- Display order is automatically set to max + 1 within parent (appended to the end)
+- Category code is auto-generated (e.g., "C3_E_1_1")
+- **Duplicate check**: Same as `add_category2`, all language name combinations are checked for duplicates
+- Returns `CategoryError::DuplicateName` error if duplicate is detected
 
 **Example:**
 ```javascript
-await invoke('add_category3', { 
-  user_id: 1, 
-  category1_code: "EXPENSE",
-  category2_code: "C2_E_1",
-  category3_code: "C3_" + Date.now(),
-  name: "新しい小分類" 
-});
+try {
+  const newCode = await invoke('add_category3', { 
+    userId: 1, 
+    category1Code: "EXPENSE",
+    category2Code: "C2_E_8",
+    nameJa: "映画",
+    nameEn: "Movie"
+  });
+  console.log('Created category:', newCode);
+} catch (error) {
+  alert(i18n.t('error.category_duplicate_name').replace('{0}', 'Movie'));
+}
 ```
 
 ---

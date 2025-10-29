@@ -53,6 +53,8 @@
     cursor: pointer;
     user-select: none;
     transition: background-color 0.2s;
+    flex-wrap: wrap;
+    gap: 0.5rem;
 }
 
 .category-header:hover {

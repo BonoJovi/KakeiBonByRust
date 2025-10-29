@@ -204,24 +204,36 @@ await invoke('delete_category1', {
 **パラメータ:**
 - `user_id` (i64): ユーザーID
 - `category1_code` (String): 親カテゴリコード
-- `category2_code` (String): カテゴリコード（例: "C2_E_1"）
-- `name` (String): カテゴリ名
+- `name_ja` (String): カテゴリ名（日本語）
+- `name_en` (String): カテゴリ名（英語）
 
 **戻り値:**
-- `Result<(), String>`: 成功またはエラーメッセージ
+- `Result<String, String>`: 成功時は新しいカテゴリコード、エラー時はエラーメッセージ
 
 **注記:**
-- 表示順は親カテゴリ内で自動的に最大値+1に設定されます
-- コードは親カテゴリ内で一意である必要があります
+- 表示順は親カテゴリ内で自動的に最大値+1に設定されます（末尾に追加）
+- カテゴリコードは自動生成されます（例: "C2_E_1"）
+- **重複チェック**: 以下の名前の重複は許可されません
+  - 日本語名が既存の日本語名と同じ
+  - 英語名が既存の英語名と同じ
+  - 日本語名が既存の英語名と同じ
+  - 英語名が既存の日本語名と同じ
+- 重複が検出された場合、`CategoryError::DuplicateName`エラーが返されます
 
 **使用例:**
 ```javascript
-await invoke('add_category2', { 
-  user_id: 1, 
-  category1_code: "EXPENSE",
-  category2_code: "C2_E_" + Date.now(),
-  name: "新しい費目" 
-});
+try {
+  const newCode = await invoke('add_category2', { 
+    userId: 1, 
+    category1Code: "EXPENSE",
+    nameJa: "娯楽費",
+    nameEn: "Entertainment"
+  });
+  console.log('Created category:', newCode);
+} catch (error) {
+  // エラーメッセージは現在の言語に応じて翻訳されます
+  alert(i18n.t('error.category_duplicate_name').replace('{0}', '娯楽費'));
+}
 ```
 
 ---
@@ -309,21 +321,32 @@ await invoke('delete_category2', {
 - `user_id` (i64): ユーザーID
 - `category1_code` (String): 大分類コード
 - `category2_code` (String): 親カテゴリコード
-- `category3_code` (String): カテゴリコード（例: "C3_1"）
-- `name` (String): カテゴリ名
+- `name_ja` (String): カテゴリ名（日本語）
+- `name_en` (String): カテゴリ名（英語）
 
 **戻り値:**
-- `Result<(), String>`: 成功またはエラーメッセージ
+- `Result<String, String>`: 成功時は新しいカテゴリコード、エラー時はエラーメッセージ
+
+**注記:**
+- 表示順は親カテゴリ内で自動的に最大値+1に設定されます（末尾に追加）
+- カテゴリコードは自動生成されます（例: "C3_E_1_1"）
+- **重複チェック**: `add_category2`と同様に、すべての言語名の組み合わせで重複チェックが行われます
+- 重複が検出された場合、`CategoryError::DuplicateName`エラーが返されます
 
 **使用例:**
 ```javascript
-await invoke('add_category3', { 
-  user_id: 1, 
-  category1_code: "EXPENSE",
-  category2_code: "C2_E_1",
-  category3_code: "C3_" + Date.now(),
-  name: "新しい小分類" 
-});
+try {
+  const newCode = await invoke('add_category3', { 
+    userId: 1, 
+    category1Code: "EXPENSE",
+    category2Code: "C2_E_8",
+    nameJa: "映画",
+    nameEn: "Movie"
+  });
+  console.log('Created category:', newCode);
+} catch (error) {
+  alert(i18n.t('error.category_duplicate_name').replace('{0}', '映画'));
+}
 ```
 
 ---

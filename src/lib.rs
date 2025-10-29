@@ -703,6 +703,37 @@ async fn get_category_tree_with_lang(
         .map_err(|e| format!("Failed to get category tree: {}", e))
 }
 
+#[tauri::command]
+async fn add_category2(
+    user_id: i64,
+    category1_code: String,
+    name_ja: String,
+    name_en: String,
+    state: tauri::State<'_, AppState>
+) -> Result<String, String> {
+    let category = state.category.lock().await;
+    
+    category.add_category2(user_id, &category1_code, &name_ja, &name_en)
+        .await
+        .map_err(|e| format!("Failed to add category2: {}", e))
+}
+
+#[tauri::command]
+async fn add_category3(
+    user_id: i64,
+    category1_code: String,
+    category2_code: String,
+    name_ja: String,
+    name_en: String,
+    state: tauri::State<'_, AppState>
+) -> Result<String, String> {
+    let category = state.category.lock().await;
+    
+    category.add_category3(user_id, &category1_code, &category2_code, &name_ja, &name_en)
+        .await
+        .map_err(|e| format!("Failed to add category3: {}", e))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -746,7 +777,9 @@ pub fn run() {
             set_font_size,
             get_font_size,
             adjust_window_size,
-            get_category_tree_with_lang
+            get_category_tree_with_lang,
+            add_category2,
+            add_category3
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {
