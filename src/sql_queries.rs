@@ -202,3 +202,15 @@ ORDER BY c.DISPLAY_ORDER
 pub const DB_PRAGMA_WAL: &str = "PRAGMA journal_mode = WAL;";
 
 pub const DB_TEST_CONNECTION: &str = "SELECT 1 as test";
+
+// ============================================================================
+// Test-Only Queries (用于测试代码)
+// ============================================================================
+
+pub const TEST_AUTH_GET_USER_NAME_BY_ID: &str = "SELECT NAME FROM USERS WHERE USER_ID = 1";
+
+pub const TEST_AUTH_GET_PASSWORD_BY_ID: &str = "SELECT PAW FROM USERS WHERE USER_ID = 1";
+
+pub const TEST_AUTH_GET_ROLE_BY_ID: &str = "SELECT ROLE FROM USERS WHERE USER_ID = 1";
+
+pub const TEST_USER_GET_PASSWORD_BY_ID: &str = "SELECT PAW FROM USERS WHERE USER_ID = ?";

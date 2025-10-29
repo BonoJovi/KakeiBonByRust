@@ -2,6 +2,7 @@ use sqlx::sqlite::SqlitePool;
 use sqlx::Row;
 use crate::crypto::Crypto;
 use crate::security::{derive_encryption_key, SecurityError};
+use crate::sql_queries;
 
 #[derive(Debug, Clone)]
 pub struct EncryptedField {
@@ -91,26 +92,19 @@ impl EncryptionService {
     ) -> Result<i64, EncryptionError> {
         let now = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
 
-        let result = sqlx::query(
-            "SELECT COALESCE(MAX(FIELD_ID), 0) + 1 as next_id FROM ENCRYPTED_FIELDS"
-        )
-        .fetch_one(&self.pool)
-        .await?;
+        let result = sqlx::query(sql_queries::ENCRYPTION_GET_NEXT_FIELD_ID)
+            .fetch_one(&self.pool)
+            .await?;
         let next_id: i64 = result.get(0);
 
-        sqlx::query(
-            r#"
-            INSERT INTO ENCRYPTED_FIELDS (FIELD_ID, TABLE_NAME, COLUMN_NAME, DESCRIPTION, IS_ACTIVE, ENTRY_DT)
-            VALUES (?, ?, ?, ?, 1, ?)
-            "#
-        )
-        .bind(next_id)
-        .bind(table_name)
-        .bind(column_name)
-        .bind(description)
-        .bind(now)
-        .execute(&self.pool)
-        .await?;
+        sqlx::query(sql_queries::ENCRYPTION_INSERT_FIELD)
+            .bind(next_id)
+            .bind(table_name)
+            .bind(column_name)
+            .bind(description)
+            .bind(now)
+            .execute(&self.pool)
+            .await?;
 
         Ok(next_id)
     }

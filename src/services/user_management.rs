@@ -2,6 +2,7 @@ use sqlx::sqlite::SqlitePool;
 use sqlx::Row;
 use crate::security::{hash_password, verify_password, SecurityError};
 use crate::consts::{ROLE_ADMIN, ROLE_USER};
+use crate::sql_queries;
 use super::encryption::EncryptionService;
 
 #[derive(Debug, Clone)]
@@ -63,15 +64,9 @@ impl UserManagementService {
 
     /// Get all users
     pub async fn list_users(&self) -> Result<Vec<UserInfo>, UserManagementError> {
-        let rows = sqlx::query(
-            r#"
-            SELECT USER_ID, NAME, ROLE, ENTRY_DT, UPDATE_DT
-            FROM USERS
-            ORDER BY USER_ID
-            "#
-        )
-        .fetch_all(&self.pool)
-        .await?;
+        let rows = sqlx::query(sql_queries::USER_LIST_USERS)
+            .fetch_all(&self.pool)
+            .await?;
 
         let users = rows.into_iter().map(|row| {
             UserInfo {
@@ -88,15 +83,9 @@ impl UserManagementService {
 
     /// Get user by ID
     pub async fn get_user(&self, user_id: i64) -> Result<UserInfo, UserManagementError> {
-        let row = sqlx::query(
-            r#"
-            SELECT USER_ID, NAME, ROLE, ENTRY_DT, UPDATE_DT
-            FROM USERS
-            WHERE USER_ID = ?
-            "#
-        )
-        .bind(user_id)
-        .fetch_optional(&self.pool)
+        let row = sqlx::query(sql_queries::USER_GET_BY_ID)
+            .bind(user_id)
+            .fetch_optional(&self.pool)
         .await?;
 
         match row {
@@ -119,7 +108,7 @@ impl UserManagementService {
     ) -> Result<i64, UserManagementError> {
         let now = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
         
-        let exists = sqlx::query("SELECT COUNT(*) as count FROM USERS WHERE NAME = ?")
+        let exists = sqlx::query(sql_queries::USER_CHECK_NAME_EXISTS)
             .bind(username)
             .fetch_one(&self.pool)
             .await?;
@@ -130,24 +119,19 @@ impl UserManagementService {
 
         let password_hash = hash_password(password)?;
         
-        let result = sqlx::query("SELECT COALESCE(MAX(USER_ID), 0) + 1 as next_id FROM USERS")
+        let result = sqlx::query(sql_queries::USER_GET_NEXT_ID)
             .fetch_one(&self.pool)
             .await?;
         let next_id: i64 = result.get(0);
         
-        sqlx::query(
-            r#"
-            INSERT INTO USERS (USER_ID, NAME, PAW, ROLE, ENTRY_DT)
-            VALUES (?, ?, ?, ?, ?)
-            "#
-        )
-        .bind(next_id)
-        .bind(username)
-        .bind(password_hash)
-        .bind(ROLE_USER)
-        .bind(now)
-        .execute(&self.pool)
-        .await?;
+        sqlx::query(sql_queries::USER_INSERT)
+            .bind(next_id)
+            .bind(username)
+            .bind(password_hash)
+            .bind(ROLE_USER)
+            .bind(now)
+            .execute(&self.pool)
+            .await?;
         
         Ok(next_id)
     }
@@ -163,8 +147,6 @@ impl UserManagementService {
     ) -> Result<(), UserManagementError> {
         let _user = self.get_user(user_id).await?;
         
-        let now = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
-        
         if let Some(password) = new_password {
             // Re-encrypt encrypted fields if old password is provided
             if let Some(old_pwd) = old_password {
@@ -173,45 +155,29 @@ impl UserManagementService {
             
             let password_hash = hash_password(password)?;
             
-            sqlx::query(
-                r#"
-                UPDATE USERS
-                SET PAW = ?, UPDATE_DT = ?
-                WHERE USER_ID = ?
-                "#
-            )
-            .bind(password_hash)
-            .bind(&now)
-            .bind(user_id)
-            .execute(&self.pool)
-            .await?;
+            sqlx::query(sql_queries::USER_UPDATE_PASSWORD)
+                .bind(password_hash)
+                .bind(user_id)
+                .execute(&self.pool)
+                .await?;
         }
         
         if let Some(username) = new_username {
-            let exists = sqlx::query(
-                "SELECT COUNT(*) as count FROM USERS WHERE NAME = ? AND USER_ID != ?"
-            )
-            .bind(username)
-            .bind(user_id)
-            .fetch_one(&self.pool)
-            .await?;
+            let exists = sqlx::query(sql_queries::USER_CHECK_NAME_EXISTS_EXCLUDING_ID)
+                .bind(username)
+                .bind(user_id)
+                .fetch_one(&self.pool)
+                .await?;
             let count: i64 = exists.get(0);
             if count > 0 {
                 return Err(UserManagementError::DuplicateUsername);
             }
             
-            sqlx::query(
-                r#"
-                UPDATE USERS
-                SET NAME = ?, UPDATE_DT = ?
-                WHERE USER_ID = ?
-                "#
-            )
-            .bind(username)
-            .bind(&now)
-            .bind(user_id)
-            .execute(&self.pool)
-            .await?;
+            sqlx::query(sql_queries::USER_UPDATE_NAME)
+                .bind(username)
+                .bind(user_id)
+                .execute(&self.pool)
+                .await?;
         }
         
         Ok(())
@@ -257,7 +223,7 @@ impl UserManagementService {
         }
 
         // Verify old password
-        let row = sqlx::query("SELECT PAW FROM USERS WHERE USER_ID = ?")
+        let row = sqlx::query(sql_queries::TEST_USER_GET_PASSWORD_BY_ID)
             .bind(user_id)
             .fetch_one(&self.pool)
             .await?;
@@ -302,7 +268,7 @@ impl UserManagementService {
         }
 
         // Verify old password
-        let row = sqlx::query("SELECT PAW FROM USERS WHERE USER_ID = ?")
+        let row = sqlx::query(sql_queries::TEST_USER_GET_PASSWORD_BY_ID)
             .bind(user_id)
             .fetch_one(&self.pool)
             .await?;
@@ -329,7 +295,7 @@ impl UserManagementService {
             return Err(UserManagementError::InvalidRole);
         }
         
-        sqlx::query("DELETE FROM USERS WHERE USER_ID = ?")
+        sqlx::query(sql_queries::USER_DELETE)
             .bind(user_id)
             .execute(&self.pool)
             .await?;
@@ -442,7 +408,7 @@ mod tests {
         assert!(user.update_dt.is_some());
         
         // Verify new password works
-        let row = sqlx::query("SELECT PAW FROM USERS WHERE USER_ID = ?")
+        let row = sqlx::query(sql_queries::TEST_USER_GET_PASSWORD_BY_ID)
             .bind(user_id)
             .fetch_one(&pool)
             .await
@@ -472,7 +438,7 @@ mod tests {
         assert!(user.update_dt.is_some());
         
         // Verify new password works
-        let row = sqlx::query("SELECT PAW FROM USERS WHERE USER_ID = ?")
+        let row = sqlx::query(sql_queries::TEST_USER_GET_PASSWORD_BY_ID)
             .bind(user_id)
             .fetch_one(&pool)
             .await
@@ -533,7 +499,7 @@ mod tests {
         assert!(user.update_dt.is_some());
         
         // Verify new password works
-        let row = sqlx::query("SELECT PAW FROM USERS WHERE USER_ID = ?")
+        let row = sqlx::query(sql_queries::TEST_USER_GET_PASSWORD_BY_ID)
             .bind(admin_id)
             .fetch_one(&pool)
             .await
@@ -560,7 +526,7 @@ mod tests {
         assert!(user.update_dt.is_some());
         
         // Verify new password works
-        let row = sqlx::query("SELECT PAW FROM USERS WHERE USER_ID = ?")
+        let row = sqlx::query(sql_queries::TEST_USER_GET_PASSWORD_BY_ID)
             .bind(admin_id)
             .fetch_one(&pool)
             .await

@@ -129,7 +129,7 @@ fn handle_quit<R: tauri::Runtime>(handle: tauri::AppHandle<R>) {
 #[tauri::command]
 async fn test_db_connection(state: tauri::State<'_, AppState>) -> Result<String, String> {
     let db = state.db.lock().await;
-    match sqlx::query("SELECT 1 as test")
+    match sqlx::query(sql_queries::DB_TEST_CONNECTION)
         .fetch_one(db.pool())
         .await
     {

@@ -105,18 +105,14 @@ impl AuthService {
         // Hash password using Argon2
         let password_hash = hash_password(password)?;
         
-        sqlx::query(
-            r#"
-            INSERT INTO USERS (USER_ID, NAME, PAW, ROLE, ENTRY_DT)
-            VALUES (1, ?, ?, ?, ?)
-            "#
-        )
-        .bind(username)
-        .bind(password_hash)
-        .bind(ROLE_ADMIN)
-        .bind(now)
-        .execute(&self.pool)
-        .await?;
+        sqlx::query(sql_queries::AUTH_INSERT_USER)
+            .bind(1)  // USER_ID = 1 for admin
+            .bind(username)
+            .bind(password_hash)
+            .bind(ROLE_ADMIN)
+            .bind(now)
+            .execute(&self.pool)
+            .await?;
         
         Ok(())
     }
@@ -137,25 +133,20 @@ impl AuthService {
         let password_hash = hash_password(password)?;
         
         // Get next user ID
-        let result = sqlx::query("SELECT COALESCE(MAX(USER_ID), 0) + 1 as next_id FROM USERS")
+        let result = sqlx::query(sql_queries::AUTH_GET_NEXT_USER_ID)
             .fetch_one(&self.pool)
             .await?;
         
         let next_id: i64 = result.get(0);
         
-        sqlx::query(
-            r#"
-            INSERT INTO USERS (USER_ID, NAME, PAW, ROLE, ENTRY_DT)
-            VALUES (?, ?, ?, ?, ?)
-            "#
-        )
-        .bind(next_id)
-        .bind(username)
-        .bind(password_hash)
-        .bind(ROLE_USER)
-        .bind(now)
-        .execute(&self.pool)
-        .await?;
+        sqlx::query(sql_queries::AUTH_INSERT_USER)
+            .bind(next_id)
+            .bind(username)
+            .bind(password_hash)
+            .bind(ROLE_USER)
+            .bind(now)
+            .execute(&self.pool)
+            .await?;
         
         Ok(())
     }
@@ -168,17 +159,15 @@ impl AuthService {
     /// * `Err(AuthError)` - Database error
     pub async fn has_users(&self) -> Result<bool, AuthError> {
         // Check if USERS table exists first
-        let table_exists = sqlx::query(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name='USERS'"
-        )
-        .fetch_optional(&self.pool)
-        .await?;
+        let table_exists = sqlx::query(sql_queries::AUTH_CHECK_TABLE_EXISTS)
+            .fetch_optional(&self.pool)
+            .await?;
         
         if table_exists.is_none() {
             return Ok(false);
         }
         
-        let result = sqlx::query("SELECT COUNT(*) as count FROM USERS")
+        let result = sqlx::query(sql_queries::AUTH_COUNT_USERS)
             .fetch_one(&self.pool)
             .await?;
         
@@ -193,7 +182,7 @@ impl AuthService {
     /// * `Ok(false)` - No general users exist
     /// * `Err(AuthError)` - Database error
     pub async fn has_general_users(&self) -> Result<bool, AuthError> {
-        let result = sqlx::query("SELECT COUNT(*) as count FROM USERS WHERE ROLE = ?")
+        let result = sqlx::query(sql_queries::AUTH_COUNT_USERS_BY_ROLE)
             .bind(ROLE_USER)
             .fetch_one(&self.pool)
             .await?;
@@ -218,7 +207,7 @@ mod tests {
         assert!(result.is_ok());
         
         // Verify user was created
-        let user = sqlx::query("SELECT NAME FROM USERS WHERE USER_ID = 1")
+        let user = sqlx::query(sql_queries::TEST_AUTH_GET_USER_NAME_BY_ID)
             .fetch_one(&pool)
             .await
             .unwrap();
@@ -306,7 +295,7 @@ mod tests {
         auth_service.register_admin_user("admin", password).await.unwrap();
         
         // Verify password is hashed in database
-        let row = sqlx::query("SELECT PAW FROM USERS WHERE USER_ID = 1")
+        let row = sqlx::query(sql_queries::TEST_AUTH_GET_PASSWORD_BY_ID)
             .fetch_one(&pool)
             .await
             .unwrap();
@@ -326,7 +315,7 @@ mod tests {
         auth_service.register_admin_user("admin", "password").await.unwrap();
         
         // Verify ROLE_ADMIN is assigned
-        let row = sqlx::query("SELECT ROLE FROM USERS WHERE USER_ID = 1")
+        let row = sqlx::query(sql_queries::TEST_AUTH_GET_ROLE_BY_ID)
             .fetch_one(&pool)
             .await
             .unwrap();

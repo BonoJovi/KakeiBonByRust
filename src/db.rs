@@ -1,6 +1,7 @@
 use sqlx::sqlite::SqlitePool;
 use std::path::PathBuf;
 use crate::consts::{DB_DIR_NAME, DB_FILE_NAME, SQL_INIT_FILE_PATH};
+use crate::sql_queries;
 
 pub struct Database {
     pool: SqlitePool,
@@ -21,7 +22,7 @@ impl Database {
         let pool = SqlitePool::connect(&db_url).await?;
         
         // Enable WAL mode
-        sqlx::query("PRAGMA journal_mode = WAL;")
+        sqlx::query(sql_queries::DB_PRAGMA_WAL)
             .execute(&pool)
             .await?;
         
