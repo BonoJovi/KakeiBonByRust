@@ -176,18 +176,36 @@
 - [ ] 大分類は操作ボタンなしで表示（サブカテゴリ追加のみ）
 - [ ] エラーハンドリング
 
-#### 4-2. 中分類の追加・編集（インライン方式）
-- [ ] 「サブカテゴリ追加」ボタンで末尾に新規行追加
-- [ ] デフォルト名「新規費目」を全選択状態で表示
-- [ ] Enter/Blur時に保存、Escでキャンセル
-- [ ] 編集ボタンでインライン編集モードに切り替え
-- [ ] `add_category2` API呼び出し
-- [ ] `update_category2` API呼び出し
+#### 4-2. 中分類の追加・編集（モーダル方式） 🚧
+- [x] 「サブカテゴリ追加」ボタンでモーダル表示
+- [x] 編集ボタンでモーダル表示（既存データ読み込み）
+- [x] `add_category2` API呼び出し（フロントエンド実装済み）
+- [ ] `update_category2_i18n` API実装（**バックエンド未実装**）
+  - **再開ポイント**: src/services/category.rsに`update_category2_i18n`関数を実装
+  - パラメータ: user_id, category1_code, category2_code, name_ja, name_en
+  - CATEGORY2_I18Nテーブルを更新（UPSERT）
 
-#### 4-3. 小分類の追加・編集（インライン方式）
-- [ ] 中分類と同じインライン編集方式
-- [ ] `add_category3` API呼び出し
-- [ ] `update_category3` API呼び出し
+#### 4-3. 小分類の追加・編集（モーダル方式） 🚧
+- [x] 中分類と同じモーダル方式
+- [x] `add_category3` API呼び出し（フロントエンド実装済み）
+- [ ] `update_category3_i18n` API実装（**バックエンド未実装**）
+  - src/services/category.rsに`update_category3_i18n`関数を実装
+  - パラメータ: user_id, category1_code, category2_code, category3_code, name_ja, name_en
+  - CATEGORY3_I18Nテーブルを更新（UPSERT）
+
+**現在の状況 (2025-10-30 00:00 JST)**:
+- ✅ フロントエンド（編集モーダル、データ取得、保存処理）実装完了
+- ✅ バックエンドAPI（get_category2_for_edit, get_category3_for_edit）実装完了
+- ❌ バックエンド更新関数（update_category2_i18n, update_category3_i18n）未実装
+- ⚠️ 動作テスト結果: "Command update_category2 not found" エラー発生
+- 📝 原因: src-tauri/src/commands/category.rsが呼び出している`category::update_category2_i18n`が存在しない
+
+**次回作業手順**:
+1. src/services/category.rsに`update_category2_i18n`と`update_category3_i18n`を実装
+2. src/lib.rsで公開関数として追加
+3. 動作テスト（中分類・小分類の編集）
+4. テストケース作成
+5. ドキュメント整備
 
 #### 4-4. 並び順変更
 - [ ] `moveCategoryUp()` の実装
