@@ -362,8 +362,8 @@ function renderCategory1(categoryTree, index, total) {
     
     div.innerHTML = `
         <div class="category-header">
-            <span class="expand-icon ${hasChildren ? (isExpanded ? 'expanded' : 'collapsed') : 'empty'}" data-category-code="${category.category1_code}"></span>
-            <span class="category-name">${categoryName}</span>
+            <span class="expand-icon ${hasChildren ? (isExpanded ? 'expanded expandable' : 'collapsed expandable') : 'empty'}" data-category-code="${category.category1_code}"></span>
+            <span class="category-name ${hasChildren ? 'expandable' : ''}">${categoryName}</span>
             <span class="category-order">${i18n.t('category_mgmt.order')}: ${category.display_order}</span>
             <div class="category-actions">
                 <button class="btn-icon btn-add" data-action="add-child" data-category-code="${category.category1_code}" data-category1-code="${category.category1_code}" data-level="1">
@@ -375,8 +375,14 @@ function renderCategory1(categoryTree, index, total) {
     
     // Add event listeners
     const expandIcon = div.querySelector('.expand-icon');
+    const categoryNameElem = div.querySelector('.category-name');
+    
     if (expandIcon && hasChildren) {
         expandIcon.addEventListener('click', () => toggleCategory(`cat1-${category.category1_code}`));
+    }
+    
+    if (categoryNameElem && hasChildren) {
+        categoryNameElem.addEventListener('dblclick', () => toggleCategory(`cat1-${category.category1_code}`));
     }
     
     // Add action button event listeners
@@ -414,8 +420,8 @@ function renderCategory2(cat2Tree, parent1Code, index, total) {
     
     div.innerHTML = `
         <div class="category-header">
-            <span class="expand-icon ${hasChildren ? (isExpanded ? 'expanded' : 'collapsed') : 'empty'}" data-category-code="${category.category2_code}"></span>
-            <span class="category-name">${categoryName}</span>
+            <span class="expand-icon ${hasChildren ? (isExpanded ? 'expanded expandable' : 'collapsed expandable') : 'empty'}" data-category-code="${category.category2_code}"></span>
+            <span class="category-name ${hasChildren ? 'expandable' : ''}">${categoryName}</span>
             <span class="category-order">${i18n.t('category_mgmt.order')}: ${category.display_order}</span>
             <div class="category-actions">
                 <button class="btn-icon btn-add" data-action="add-child" data-category-code="${category.category2_code}" data-category1-code="${parent1Code}" data-category2-code="${category.category2_code}" data-level="2">
@@ -436,8 +442,14 @@ function renderCategory2(cat2Tree, parent1Code, index, total) {
     
     // Add event listeners
     const expandIcon = div.querySelector('.expand-icon');
+    const categoryNameElem = div.querySelector('.category-name');
+    
     if (expandIcon && hasChildren) {
         expandIcon.addEventListener('click', () => toggleCategory(`cat2-${category.category2_code}`));
+    }
+    
+    if (categoryNameElem && hasChildren) {
+        categoryNameElem.addEventListener('dblclick', () => toggleCategory(`cat2-${category.category2_code}`));
     }
     
     addActionListeners(div);
