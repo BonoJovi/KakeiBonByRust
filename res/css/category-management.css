@@ -169,8 +169,10 @@
     border-color: #4CAF50;
 }
 
-.btn-icon.btn-add:hover {
+.btn-icon.btn-add:hover,
+.btn-icon.btn-add:focus {
     background-color: #e8f5e9;
+    border-color: #999;
 }
 
 .btn-icon.btn-edit {
@@ -178,8 +180,10 @@
     border-color: #2196F3;
 }
 
-.btn-icon.btn-edit:hover {
+.btn-icon.btn-edit:hover,
+.btn-icon.btn-edit:focus {
     background-color: #e3f2fd;
+    border-color: #999;
 }
 
 .btn-icon.btn-up,
@@ -190,8 +194,11 @@
 }
 
 .btn-icon.btn-up:hover,
-.btn-icon.btn-down:hover {
+.btn-icon.btn-up:focus,
+.btn-icon.btn-down:hover,
+.btn-icon.btn-down:focus {
     background-color: #f0f0f0;
+    border-color: #999;
 }
 
 .btn-icon:disabled {
