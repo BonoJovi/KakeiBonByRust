@@ -19,6 +19,9 @@ let category3Modal;
 
 console.log('category-management.js loaded');
 
+// Track if mouse is being used for interaction
+let isMouseActive = false;
+
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('[DOMContentLoaded] DOM loaded');
     
@@ -54,6 +57,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     console.log('[DOMContentLoaded] Adjusting window size for modals');
     await adjustWindowSize();
+    
+    // Setup hover/focus management
+    setupFocusHoverManagement();
     
     console.log('[DOMContentLoaded] Initialization complete');
 });
@@ -760,4 +766,25 @@ async function moveCategoryUp(categoryId, level) {
 async function moveCategoryDown(categoryId, level) {
     // TODO: Implement move down logic
     console.log('Move down:', categoryId, 'level:', level);
+}
+
+function setupFocusHoverManagement() {
+    const categoryTree = document.getElementById('category-tree');
+    if (!categoryTree) return;
+    
+    // Add class to body when mouse is active
+    categoryTree.addEventListener('mouseenter', () => {
+        document.body.classList.add('mouse-active');
+    }, true);
+    
+    categoryTree.addEventListener('mouseleave', () => {
+        document.body.classList.remove('mouse-active');
+    }, true);
+    
+    // Remove mouse-active class when using keyboard
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Tab') {
+            document.body.classList.remove('mouse-active');
+        }
+    });
 }

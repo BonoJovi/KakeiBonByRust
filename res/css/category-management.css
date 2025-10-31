@@ -116,6 +116,11 @@
     outline-offset: 1px;
 }
 
+/* Hide focus outline when mouse is active */
+body.mouse-active .expand-icon.expandable:focus-visible {
+    outline: none !important;
+}
+
 .expand-icon.expanded::before {
     content: '▼';
 }
@@ -188,6 +193,11 @@
     border-color: #999;
     outline: 2px solid #333 !important;
     outline-offset: 1px;
+}
+
+/* Hide focus outline when mouse is active */
+body.mouse-active .btn-icon:focus-visible {
+    outline: none !important;
 }
 
 .btn-icon.btn-add {
