@@ -96,6 +96,10 @@
     cursor: pointer;
 }
 
+.expand-icon.expandable:focus {
+    outline: none;
+}
+
 .expand-icon.expandable:hover,
 .expand-icon.expandable:focus {
     background-color: #f5f5f5;
@@ -156,6 +160,10 @@
     font-size: 0.875em;
     transition: all 0.2s;
     white-space: nowrap;
+}
+
+.btn-icon:focus {
+    outline: none;
 }
 
 .btn-icon:hover,
