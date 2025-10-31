@@ -97,14 +97,15 @@
 }
 
 .expand-icon.expandable:focus {
-    outline: none;
+    outline: none !important;
+    box-shadow: none !important;
 }
 
 .expand-icon.expandable:hover,
 .expand-icon.expandable:focus {
     background-color: #f5f5f5;
     border-color: #999;
-    outline: 2px solid #333;
+    outline: 2px solid #333 !important;
     outline-offset: 1px;
 }
 
@@ -163,14 +164,15 @@
 }
 
 .btn-icon:focus {
-    outline: none;
+    outline: none !important;
+    box-shadow: none !important;
 }
 
 .btn-icon:hover,
 .btn-icon:focus {
     background-color: #f5f5f5;
     border-color: #999;
-    outline: 2px solid #333;
+    outline: 2px solid #333 !important;
     outline-offset: 1px;
 }
 
