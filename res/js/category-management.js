@@ -773,7 +773,11 @@ function setupFocusHoverManagement() {
     document.addEventListener('mouseover', (e) => {
         const target = e.target.closest('.btn-icon, .expand-icon.expandable');
         if (target) {
-            document.body.classList.add('mouse-active');
+            // Only add mouse-active if hovering over a non-focused element
+            const focusedElement = document.activeElement;
+            if (target !== focusedElement) {
+                document.body.classList.add('mouse-active');
+            }
         }
     }, true);
     
