@@ -202,5 +202,19 @@
         <script type="module" src="js/i18n.js"></script>
         <script type="module" src="js/modal.js"></script>
         <script type="module" src="js/category-management.js"></script>
+        
+        <!-- UI Tests (development only) -->
+        <script>
+            // Auto-run tests after page load in development
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                window.addEventListener('load', () => {
+                    setTimeout(() => {
+                        const script = document.createElement('script');
+                        script.src = 'tests/category-management-ui-tests.js';
+                        document.body.appendChild(script);
+                    }, 2000); // Wait 2 seconds for content to render
+                });
+            }
+        </script>
     </body>
 </html>
