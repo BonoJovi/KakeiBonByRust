@@ -4,7 +4,6 @@ use crate::security::{hash_password, verify_password, SecurityError};
 use crate::consts::{ROLE_ADMIN, ROLE_USER};
 use crate::sql_queries;
 use crate::services::category;
-use crate::services::category;
 
 #[derive(Debug)]
 pub struct User {

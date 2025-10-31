@@ -203,10 +203,10 @@ async fn create_general_user(
     
     match user_mgmt.register_general_user(&username, &password).await {
         Ok(user_id) => {
-            // Initialize default categories for the new user
-            if let Err(e) = category.initialize_user_categories(user_id).await {
-                eprintln!("Warning: Failed to initialize categories for user {}: {}", user_id, e);
-                // Continue even if category initialization fails
+            // Populate default categories for the new user
+            if let Err(e) = category.populate_default_categories(user_id).await {
+                eprintln!("Warning: Failed to populate default categories for user {}: {}", user_id, e);
+                // Continue even if category population fails
             }
             Ok(user_id)
         },
