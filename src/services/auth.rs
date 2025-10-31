@@ -106,14 +106,20 @@ impl AuthService {
         // Hash password using Argon2
         let password_hash = hash_password(password)?;
         
+        // Start transaction
+        let mut tx = self.pool.begin().await?;
+        
         sqlx::query(sql_queries::AUTH_INSERT_USER)
             .bind(1)  // USER_ID = 1 for admin
             .bind(username)
             .bind(password_hash)
             .bind(ROLE_ADMIN)
             .bind(now)
-            .execute(&self.pool)
+            .execute(&mut *tx)
             .await?;
+        
+        // Commit user creation first
+        tx.commit().await?;
         
         // Populate default categories for admin user as template
         let category_service = category::CategoryService::new(self.pool.clone());
@@ -147,14 +153,20 @@ impl AuthService {
         
         let next_id: i64 = result.get(0);
         
+        // Start transaction
+        let mut tx = self.pool.begin().await?;
+        
         sqlx::query(sql_queries::AUTH_INSERT_USER)
             .bind(next_id)
             .bind(username)
             .bind(password_hash)
             .bind(ROLE_USER)
             .bind(now)
-            .execute(&self.pool)
+            .execute(&mut *tx)
             .await?;
+        
+        // Commit user creation first
+        tx.commit().await?;
         
         // Populate default categories for the new user
         let category_service = category::CategoryService::new(self.pool.clone());
