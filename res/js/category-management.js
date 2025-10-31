@@ -769,16 +769,23 @@ async function moveCategoryDown(categoryId, level) {
 }
 
 function setupFocusHoverManagement() {
-    const categoryTree = document.getElementById('category-tree');
-    if (!categoryTree) return;
-    
-    // Add class to body when mouse is active
-    categoryTree.addEventListener('mouseenter', () => {
-        document.body.classList.add('mouse-active');
+    // Add hover listeners to all interactive elements after they're rendered
+    document.addEventListener('mouseover', (e) => {
+        const target = e.target.closest('.btn-icon, .expand-icon.expandable');
+        if (target) {
+            document.body.classList.add('mouse-active');
+        }
     }, true);
     
-    categoryTree.addEventListener('mouseleave', () => {
-        document.body.classList.remove('mouse-active');
+    document.addEventListener('mouseout', (e) => {
+        const target = e.target.closest('.btn-icon, .expand-icon.expandable');
+        if (target) {
+            // Check if we're not moving to another interactive element
+            const relatedTarget = e.relatedTarget?.closest('.btn-icon, .expand-icon.expandable');
+            if (!relatedTarget) {
+                document.body.classList.remove('mouse-active');
+            }
+        }
     }, true);
     
     // Remove mouse-active class when using keyboard
