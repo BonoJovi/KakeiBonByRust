@@ -100,7 +100,6 @@
 .expand-icon.expandable:focus {
     background-color: #f5f5f5;
     border-color: #999;
-    outline: none;
 }
 
 .expand-icon.expanded::before {
@@ -161,7 +160,6 @@
 .btn-icon:focus {
     background-color: #f5f5f5;
     border-color: #999;
-    outline: none;
 }
 
 .btn-icon.btn-add {
