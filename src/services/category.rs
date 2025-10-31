@@ -48,6 +48,51 @@ impl CategoryService {
             return Ok(());
         }
         
+        // Start transaction
+        let mut tx = self.pool.begin().await?;
+        
+        // First, create CATEGORY1 (fixed categories)
+        let now = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
+        
+        // Insert CATEGORY1 records
+        let category1_data = [
+            ("EXPENSE", 1, "支出"),
+            ("INCOME", 2, "収入"),
+            ("TRANSFER", 3, "振替"),
+        ];
+        
+        for (code, order, name) in category1_data.iter() {
+            sqlx::query(sql_queries::CATEGORY_INSERT_CATEGORY1)
+                .bind(user_id)
+                .bind(code)
+                .bind(order)
+                .bind(name)
+                .bind(&now)
+                .execute(&mut *tx)
+                .await?;
+        }
+        
+        // Insert CATEGORY1_I18N records
+        let cat1_i18n = [
+            ("EXPENSE", "en", "Expense"),
+            ("EXPENSE", "ja", "支出"),
+            ("INCOME", "en", "Income"),
+            ("INCOME", "ja", "収入"),
+            ("TRANSFER", "en", "Transfer"),
+            ("TRANSFER", "ja", "振替"),
+        ];
+        
+        for (code, lang, name) in cat1_i18n.iter() {
+            sqlx::query(sql_queries::CATEGORY_INSERT_CATEGORY1_I18N)
+                .bind(user_id)
+                .bind(code)
+                .bind(lang)
+                .bind(name)
+                .bind(&now)
+                .execute(&mut *tx)
+                .await?;
+        }
+        
         // Read SQL file with initial category data
         let sql_content = std::fs::read_to_string("res/sql/default_categories_seed.sql")
             .map_err(|e| CategoryError::DatabaseError(sqlx::Error::Io(e)))?;

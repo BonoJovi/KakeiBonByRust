@@ -364,6 +364,24 @@ pub const TEST_CATEGORY_GET_FIRST_CATEGORY2_CODE: &str = "SELECT CATEGORY2_CODE 
 
 pub const TEST_CATEGORY_GET_CATEGORY3_NAME: &str = "SELECT CATEGORY3_NAME FROM CATEGORY3 WHERE USER_ID = ? AND CATEGORY3_CODE = ?";
 
+// ============================================================================
+// Category Initialization Queries
+// ============================================================================
+
+pub const CATEGORY_INSERT_CATEGORY1: &str = r#"
+INSERT INTO CATEGORY1 (USER_ID, CATEGORY1_CODE, DISPLAY_ORDER, CATEGORY1_NAME, IS_DISABLED, ENTRY_DT) 
+VALUES (?, ?, ?, ?, 0, ?)
+"#;
+
+pub const CATEGORY_INSERT_CATEGORY1_I18N: &str = r#"
+INSERT INTO CATEGORY1_I18N (USER_ID, CATEGORY1_CODE, LANG_CODE, CATEGORY1_NAME_I18N, ENTRY_DT) 
+VALUES (?, ?, ?, ?, ?)
+"#;
+
+// ============================================================================
+// Test-only Data Setup Queries
+// ============================================================================
+
 // Test data setup queries
 pub const TEST_CATEGORY_INSERT_CATEGORY1: &str = "INSERT INTO CATEGORY1 (USER_ID, CATEGORY1_CODE, DISPLAY_ORDER, CATEGORY1_NAME, IS_DISABLED, ENTRY_DT) VALUES (?, ?, ?, ?, ?, datetime('now'))";
 
