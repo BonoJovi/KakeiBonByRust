@@ -351,6 +351,5 @@ class Modal {
     }
 }
 
-// Make Modal available globally and as ES module
+// Make Modal available globally
 window.Modal = Modal;
-export { Modal };
