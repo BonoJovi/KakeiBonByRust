@@ -3,6 +3,8 @@ use sqlx::Row;
 use crate::security::{hash_password, verify_password, SecurityError};
 use crate::consts::{ROLE_ADMIN, ROLE_USER};
 use crate::sql_queries;
+use crate::services::category;
+use crate::services::category;
 
 #[derive(Debug)]
 pub struct User {
@@ -147,6 +149,13 @@ impl AuthService {
             .bind(now)
             .execute(&self.pool)
             .await?;
+        
+        // Populate default categories for the new user
+        let category_service = category::CategoryService::new(self.pool.clone());
+        category_service.populate_default_categories(next_id).await
+            .map_err(|e| AuthError::DatabaseError(sqlx::Error::Configuration(
+                format!("Failed to populate default categories: {}", e).into()
+            )))?;
         
         Ok(())
     }

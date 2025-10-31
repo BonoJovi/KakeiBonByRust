@@ -1,0 +1,24 @@
+{
+  "name": "kakeibonbyrust",
+  "version": "1.0.0",
+  "description": "Household Budget App “KakeiBon” built with Rust Language.<br/> <br/> [English README is here](https://github.com/BonoJovi/KakeiBonByRust/blob/dev/README_en.md)<br/> <br/> 家計簿アプリ「KakeiBon」Rust版<br/> [日本語版READMEはこちら](https://github.com/BonoJovi/KakeiBonByRust/blob/dev/README_ja.md)<br/>",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BonoJovi/KakeiBonByRust.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/BonoJovi/KakeiBonByRust/issues"
+  },
+  "homepage": "https://github.com/BonoJovi/KakeiBonByRust#readme"
+}

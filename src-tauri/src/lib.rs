@@ -31,7 +31,7 @@ pub fn run() {
       commands::category::update_category3,
       commands::category::move_category3_order,
       commands::category::delete_category3,
-      commands::category::initialize_categories_for_new_user,
+      commands::category::populate_default_categories_for_user,
       commands::category::get_category2_for_edit,
       commands::category::get_category3_for_edit,
       commands::i18n::get_translations,

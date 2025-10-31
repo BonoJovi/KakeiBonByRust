@@ -514,8 +514,8 @@ pub fn delete_category3(user_id: i64, category1_code: String, category2_code: St
     Ok(())
 }
 
-/// Initialize categories for a new user by copying from template user (USER_ID=1)
-pub fn initialize_categories_for_new_user(new_user_id: i64) -> Result<()> {
+/// Populate default categories for a new user by copying from template user (USER_ID=1)
+pub fn populate_default_categories(new_user_id: i64) -> Result<()> {
     let conn = get_connection()?;
     
     // Start transaction

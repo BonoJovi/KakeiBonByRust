@@ -115,8 +115,8 @@ pub fn get_category3_for_edit(user_id: i64, category1_code: String, category2_co
 
 /// Initialize categories for a new user
 #[tauri::command]
-pub fn initialize_categories_for_new_user(user_id: i64) -> Result<(), String> {
-    category::initialize_categories_for_new_user(user_id)
+pub fn populate_default_categories_for_user(user_id: i64) -> Result<(), String> {
+    category::populate_default_categories(user_id)
         .map_err(|e| format!("Failed to initialize categories: {}", e))
 }
 

@@ -34,9 +34,9 @@ impl CategoryService {
         Self { pool }
     }
     
-    /// Initialize default categories for a new user
+    /// Populate default categories for a new user
     /// This will be called when a general user is registered
-    pub async fn initialize_user_categories(&self, user_id: i64) -> Result<(), CategoryError> {
+    pub async fn populate_default_categories(&self, user_id: i64) -> Result<(), CategoryError> {
         // Check if categories already exist for this user (check CATEGORY2, not CATEGORY1)
         let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM CATEGORY2 WHERE USER_ID = ?")
             .bind(user_id)
@@ -44,12 +44,12 @@ impl CategoryService {
             .await?;
         
         if count > 0 {
-            // Categories already initialized
+            // Categories already populated
             return Ok(());
         }
         
         // Read SQL file with initial category data
-        let sql_content = std::fs::read_to_string("res/sql/init_user_categories.sql")
+        let sql_content = std::fs::read_to_string("res/sql/default_categories_seed.sql")
             .map_err(|e| CategoryError::DatabaseError(sqlx::Error::Io(e)))?;
         
         // Replace :pUserID placeholder with actual user_id
@@ -805,7 +805,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_initialize_user_categories() {
+    async fn test_populate_default_categories() {
         let pool = setup_test_db().await;
         let service = CategoryService::new(pool.clone());
         let user_id = 2;  // Use a different user_id
@@ -813,9 +813,9 @@ mod tests {
         // Initialize category1 first (大分類は手動で作成済みと想定)
         setup_category1(&pool, user_id).await;
         
-        // Initialize user categories
-        let result = service.initialize_user_categories(user_id).await;
-        assert!(result.is_ok(), "Failed to initialize categories: {:?}", result.err());
+        // Populate default categories
+        let result = service.populate_default_categories(user_id).await;
+        assert!(result.is_ok(), "Failed to populate categories: {:?}", result.err());
         
         // Verify CATEGORY2 records were created
         let cat2_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM CATEGORY2 WHERE USER_ID = ?")
@@ -850,8 +850,8 @@ mod tests {
             .unwrap();
         assert!(cat3_i18n_count > 0, "No CATEGORY3_I18N records created");
         
-        // Verify it doesn't re-initialize if called again
-        let result2 = service.initialize_user_categories(user_id).await;
+        // Verify it doesn't re-populate if called again
+        let result2 = service.populate_default_categories(user_id).await;
         assert!(result2.is_ok());
         
         let cat2_count_after: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM CATEGORY2 WHERE USER_ID = ?")
