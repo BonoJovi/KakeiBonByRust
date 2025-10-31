@@ -101,12 +101,22 @@
     box-shadow: none !important;
 }
 
-.expand-icon.expandable:hover,
+.expand-icon.expandable:hover {
+    background-color: #f5f5f5;
+    border-color: #999;
+    outline: 2px solid #333 !important;
+    outline-offset: 1px;
+}
+
 .expand-icon.expandable:focus {
     background-color: #f5f5f5;
     border-color: #999;
     outline: 2px solid #333 !important;
     outline-offset: 1px;
+}
+
+.expand-icon.expandable:focus:hover {
+    outline: 2px solid #333 !important;
 }
 
 .expand-icon.expanded::before {
@@ -168,12 +178,22 @@
     box-shadow: none !important;
 }
 
-.btn-icon:hover,
+.btn-icon:hover {
+    background-color: #f5f5f5;
+    border-color: #999;
+    outline: 2px solid #333 !important;
+    outline-offset: 1px;
+}
+
 .btn-icon:focus {
     background-color: #f5f5f5;
     border-color: #999;
     outline: 2px solid #333 !important;
     outline-offset: 1px;
+}
+
+.btn-icon:focus:hover {
+    outline: 2px solid #333 !important;
 }
 
 .btn-icon.btn-add {
