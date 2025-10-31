@@ -107,6 +107,9 @@
     flex: 1;
     font-weight: 500;
     color: #333;
+    white-space: normal;
+    word-break: keep-all;
+    overflow-wrap: break-word;
 }
 
 .category-order {
