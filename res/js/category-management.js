@@ -2,6 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 import i18n from './i18n.js';
 import { setupIndicators } from './indicators.js';
 import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers, adjustWindowSize } from './font-size.js';
+import { Modal } from './modal.js';
 
 // Category level constants
 const LEVEL_CATEGORY1 = 1;
