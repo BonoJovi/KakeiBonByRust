@@ -115,6 +115,13 @@ impl AuthService {
             .execute(&self.pool)
             .await?;
         
+        // Populate default categories for admin user as template
+        let category_service = category::CategoryService::new(self.pool.clone());
+        category_service.populate_default_categories(1).await
+            .map_err(|e| AuthError::DatabaseError(sqlx::Error::Configuration(
+                format!("Failed to populate default categories for admin: {}", e).into()
+            )))?;
+        
         Ok(())
     }
 
