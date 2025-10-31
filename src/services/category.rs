@@ -48,6 +48,13 @@ impl CategoryService {
             return Ok(());
         }
         
+        // Read SQL file BEFORE starting transaction to avoid long-running transaction
+        let sql_content = std::fs::read_to_string("res/sql/default_categories_seed.sql")
+            .map_err(|e| CategoryError::DatabaseError(sqlx::Error::Io(e)))?;
+        
+        // Replace :pUserID placeholder with actual user_id
+        let sql_content = sql_content.replace(":pUserID", &user_id.to_string());
+        
         // Start transaction
         let mut tx = self.pool.begin().await?;
         
@@ -92,16 +99,6 @@ impl CategoryService {
                 .execute(&mut *tx)
                 .await?;
         }
-        
-        // Read SQL file with initial category data
-        let sql_content = std::fs::read_to_string("res/sql/default_categories_seed.sql")
-            .map_err(|e| CategoryError::DatabaseError(sqlx::Error::Io(e)))?;
-        
-        // Replace :pUserID placeholder with actual user_id
-        let sql_content = sql_content.replace(":pUserID", &user_id.to_string());
-        
-        // Start transaction
-        let mut tx = self.pool.begin().await?;
         
         // Execute SQL statements
         // Split by semicolon and filter out comments and empty lines
