@@ -104,17 +104,16 @@
 .expand-icon.expandable:hover {
     background-color: #f5f5f5;
     border-color: #999;
-}
-
-.expand-icon.expandable:focus {
-    background-color: #f5f5f5;
-    border-color: #999;
     outline: 2px solid #333 !important;
     outline-offset: 1px;
 }
 
-.expand-icon.expandable:focus:hover {
+/* Only show focus outline when navigating with keyboard */
+.expand-icon.expandable:focus-visible {
+    background-color: #f5f5f5;
+    border-color: #999;
     outline: 2px solid #333 !important;
+    outline-offset: 1px;
 }
 
 .expand-icon.expanded::before {
@@ -179,17 +178,16 @@
 .btn-icon:hover {
     background-color: #f5f5f5;
     border-color: #999;
-}
-
-.btn-icon:focus {
-    background-color: #f5f5f5;
-    border-color: #999;
     outline: 2px solid #333 !important;
     outline-offset: 1px;
 }
 
-.btn-icon:focus:hover {
+/* Only show focus outline when navigating with keyboard */
+.btn-icon:focus-visible {
+    background-color: #f5f5f5;
+    border-color: #999;
     outline: 2px solid #333 !important;
+    outline-offset: 1px;
 }
 
 .btn-icon.btn-add {
