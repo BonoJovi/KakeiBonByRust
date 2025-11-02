@@ -123,10 +123,12 @@ body.mouse-active .expand-icon.expandable:focus-visible {
 
 .expand-icon.expanded::before {
     content: '▼';
+    font-size: 1.5em;
 }
 
 .expand-icon.collapsed::before {
     content: '▶';
+    font-size: 1.25em;
 }
 
 .expand-icon.empty::before {
