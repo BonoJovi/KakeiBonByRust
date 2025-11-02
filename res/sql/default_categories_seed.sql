@@ -83,9 +83,9 @@ VALUES (:pUserID, 'INCOME', 'C2_I_4', 4, '支給金', 0, datetime('now'), NULL);
 INSERT INTO CATEGORY2(USER_ID, CATEGORY1_CODE, CATEGORY2_CODE, DISPLAY_ORDER, CATEGORY2_NAME, IS_DISABLED, ENTRY_DT, UPDATE_DT)
 VALUES (:pUserID, 'INCOME', 'C2_I_5', 5, '保険金', 0, datetime('now'), NULL);
 
--- 臨時収入
+-- その他
 INSERT INTO CATEGORY2(USER_ID, CATEGORY1_CODE, CATEGORY2_CODE, DISPLAY_ORDER, CATEGORY2_NAME, IS_DISABLED, ENTRY_DT, UPDATE_DT)
-VALUES (:pUserID, 'INCOME', 'C2_I_6', 6, '臨時収入', 0, datetime('now'), NULL);
+VALUES (:pUserID, 'INCOME', 'C2_I_6', 6, 'その他', 0, datetime('now'), NULL);
 
 
 -- ============================================================================
@@ -168,9 +168,9 @@ VALUES (:pUserID, 'INCOME', 'C2_I_4', 'en', 'Subsidy', datetime('now'), NULL);
 INSERT INTO CATEGORY2_I18N(USER_ID, CATEGORY1_CODE, CATEGORY2_CODE, LANG_CODE, CATEGORY2_NAME_I18N, ENTRY_DT, UPDATE_DT)
 VALUES (:pUserID, 'INCOME', 'C2_I_5', 'en', 'Insurance', datetime('now'), NULL);
 
--- Temporary Income (en)
+-- Other (en)
 INSERT INTO CATEGORY2_I18N(USER_ID, CATEGORY1_CODE, CATEGORY2_CODE, LANG_CODE, CATEGORY2_NAME_I18N, ENTRY_DT, UPDATE_DT)
-VALUES (:pUserID, 'INCOME', 'C2_I_6', 'en', 'Temporary Income', datetime('now'), NULL);
+VALUES (:pUserID, 'INCOME', 'C2_I_6', 'en', 'Other', datetime('now'), NULL);
 
 
 -- ============================================================================
