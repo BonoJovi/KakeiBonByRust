@@ -852,8 +852,8 @@ mod tests {
         let service = CategoryService::new(pool.clone());
         let user_id = 2;  // Use a different user_id
         
-        // Initialize category1 first (大分類は手動で作成済みと想定)
-        setup_category1(&pool, user_id).await;
+        // populate_default_categories creates CATEGORY1 automatically
+        // No need to call setup_category1
         
         // Populate default categories
         let result = service.populate_default_categories(user_id).await;
@@ -877,13 +877,14 @@ mod tests {
         assert!(cat3_count > 0, "No CATEGORY3 records created");
         assert_eq!(cat3_count, 126, "Expected 126 CATEGORY3 records");
         
-        // Verify I18N records were created
+        // Verify I18N records were created (English only, Japanese is in main table)
         let cat2_i18n_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM CATEGORY2_I18N WHERE USER_ID = ?")
             .bind(user_id)
             .fetch_one(&pool)
             .await
             .unwrap();
         assert!(cat2_i18n_count > 0, "No CATEGORY2_I18N records created");
+        assert_eq!(cat2_i18n_count, 20, "Expected 20 CATEGORY2_I18N records (English only)");
         
         let cat3_i18n_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM CATEGORY3_I18N WHERE USER_ID = ?")
             .bind(user_id)
@@ -891,6 +892,15 @@ mod tests {
             .await
             .unwrap();
         assert!(cat3_i18n_count > 0, "No CATEGORY3_I18N records created");
+        assert_eq!(cat3_i18n_count, 126, "Expected 126 CATEGORY3_I18N records (English only)");
+        
+        // Verify all English I18N records are present
+        let cat3_i18n_en: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM CATEGORY3_I18N WHERE USER_ID = ? AND LANG_CODE = 'en'")
+            .bind(user_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(cat3_i18n_en, 126, "Expected 126 English CATEGORY3_I18N records");
         
         // Verify it doesn't re-populate if called again
         let result2 = service.populate_default_categories(user_id).await;
