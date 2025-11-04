@@ -677,6 +677,12 @@ async function handleCategory2Save(formData) {
     if (!nameJa) nameJa = nameEn;
     if (!nameEn) nameEn = nameJa;
     
+    // Disable save button and show loading state
+    const saveButton = document.querySelector('#category2-modal .btn-primary');
+    const originalButtonText = saveButton.textContent;
+    saveButton.disabled = true;
+    saveButton.textContent = await i18n.t('common.saving');
+    
     try {
         if (mode === 'add') {
             await invoke('add_category2', {
@@ -699,6 +705,10 @@ async function handleCategory2Save(formData) {
         await loadCategories();
     } catch (error) {
         console.error('Failed to save category2:', error);
+        
+        // Restore button state on error
+        saveButton.disabled = false;
+        saveButton.textContent = originalButtonText;
         
         // Check if it's a duplicate name error
         if (error.includes('already exists')) {
@@ -730,6 +740,12 @@ async function handleCategory3Save(formData) {
     if (!nameJa) nameJa = nameEn;
     if (!nameEn) nameEn = nameJa;
     
+    // Disable save button and show loading state
+    const saveButton = document.querySelector('#category3-modal .btn-primary');
+    const originalButtonText = saveButton.textContent;
+    saveButton.disabled = true;
+    saveButton.textContent = await i18n.t('common.saving');
+    
     try {
         if (mode === 'add') {
             await invoke('add_category3', {
@@ -755,6 +771,10 @@ async function handleCategory3Save(formData) {
     } catch (error) {
         console.error('Failed to save category3:', error);
         
+        // Restore button state on error
+        saveButton.disabled = false;
+        saveButton.textContent = originalButtonText;
+        
         // Check if it's a duplicate name error
         if (error.includes('already exists')) {
             const match = error.match(/Category name '(.+)' already exists/);
@@ -769,6 +789,12 @@ async function handleCategory3Save(formData) {
 }
 
 async function moveCategoryUp(categoryCode, category1Code, category2Code, level) {
+    // Disable the button to prevent double-click
+    const button = event ? event.target.closest('.btn-up') : null;
+    if (button) {
+        button.disabled = true;
+    }
+    
     try {
         if (level === LEVEL_CATEGORY2) {
             await invoke('move_category2_up', {
@@ -793,10 +819,21 @@ async function moveCategoryUp(categoryCode, category1Code, category2Code, level)
     } catch (error) {
         console.error('Failed to move category up:', error);
         alert(i18n.t('error.category_move_failed') + ': ' + error);
+        
+        // Re-enable button on error
+        if (button) {
+            button.disabled = false;
+        }
     }
 }
 
 async function moveCategoryDown(categoryCode, category1Code, category2Code, level) {
+    // Disable the button to prevent double-click
+    const button = event ? event.target.closest('.btn-down') : null;
+    if (button) {
+        button.disabled = true;
+    }
+    
     try {
         if (level === LEVEL_CATEGORY2) {
             await invoke('move_category2_down', {
@@ -821,6 +858,11 @@ async function moveCategoryDown(categoryCode, category1Code, category2Code, leve
     } catch (error) {
         console.error('Failed to move category down:', error);
         alert(i18n.t('error.category_move_failed') + ': ' + error);
+        
+        // Re-enable button on error
+        if (button) {
+            button.disabled = false;
+        }
     }
 }
 

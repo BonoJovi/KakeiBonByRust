@@ -394,6 +394,12 @@ VALUES
 
 -- HTML5 validation messages
 (715, 'validation.required', 'en', 'Please fill out this field', 'validation', 'Required field validation message', datetime('now')),
-(716, 'validation.required', 'ja', 'このフィールドを入力してください', 'validation', '必須フィールドのバリデーションメッセージ', datetime('now'));
+(716, 'validation.required', 'ja', 'このフィールドを入力してください', 'validation', '必須フィールドのバリデーションメッセージ', datetime('now')),
+(717, 'common.saving', 'en', 'Saving...', 'common', 'Saving in progress', datetime('now')),
+(718, 'common.saving', 'ja', '保存中...', 'common', '保存処理中', datetime('now')),
+(719, 'error.category_duplicate_name', 'en', 'Category name "{0}" already exists', 'error', 'Duplicate category name error', datetime('now')),
+(720, 'error.category_duplicate_name', 'ja', '費目名「{0}」は既に存在します', 'error', '重複費目名エラー', datetime('now')),
+(721, 'category_mgmt.error_load_category', 'en', 'Failed to load category data', 'category_mgmt', 'Category data load error', datetime('now')),
+(722, 'category_mgmt.error_load_category', 'ja', '費目データの読み込みに失敗しました', 'category_mgmt', '費目データ読み込みエラー', datetime('now'));
 
 -- NOTE: Category data will be migrated from existing SQL later
