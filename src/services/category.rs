@@ -1497,4 +1497,154 @@ mod tests {
         assert_eq!(final_order1, order1);
         assert_eq!(final_order2, order2);
     }
+    
+    #[tokio::test]
+    async fn test_update_category2() {
+        let pool = setup_test_db().await;
+        let service = CategoryService::new(pool.clone());
+        let user_id: i64 = 1;
+        
+        // Setup
+        setup_category1(&pool, user_id).await;
+        let cat2_code = service.add_category2(user_id, "EXPENSE", "食費", "Food").await.unwrap();
+        
+        // Update both names
+        service.update_category2_i18n(user_id, "EXPENSE", &cat2_code, "食費更新", "Food Updated")
+            .await
+            .unwrap();
+        
+        // Verify update
+        let updated = service.get_category2_for_edit(user_id, "EXPENSE", &cat2_code)
+            .await
+            .unwrap();
+        
+        assert_eq!(updated.name_ja, "食費更新");
+        assert_eq!(updated.name_en, "Food Updated");
+    }
+    
+    #[tokio::test]
+    async fn test_update_category3() {
+        let pool = setup_test_db().await;
+        let service = CategoryService::new(pool.clone());
+        let user_id: i64 = 1;
+        
+        // Setup
+        setup_category1(&pool, user_id).await;
+        let cat2_code = service.add_category2(user_id, "EXPENSE", "食費", "Food").await.unwrap();
+        let cat3_code = service.add_category3(user_id, "EXPENSE", &cat2_code, "米", "Rice").await.unwrap();
+        
+        // Update both names
+        service.update_category3_i18n(user_id, "EXPENSE", &cat2_code, &cat3_code, "米更新", "Rice Updated")
+            .await
+            .unwrap();
+        
+        // Verify update
+        let updated = service.get_category3_for_edit(user_id, "EXPENSE", &cat2_code, &cat3_code)
+            .await
+            .unwrap();
+        
+        assert_eq!(updated.name_ja, "米更新");
+        assert_eq!(updated.name_en, "Rice Updated");
+    }
+    
+    #[tokio::test]
+    async fn test_update_category2_duplicate_name() {
+        let pool = setup_test_db().await;
+        let service = CategoryService::new(pool.clone());
+        let user_id: i64 = 1;
+        
+        // Setup
+        setup_category1(&pool, user_id).await;
+        let _cat2_code1 = service.add_category2(user_id, "EXPENSE", "食費", "Food").await.unwrap();
+        let cat2_code2 = service.add_category2(user_id, "EXPENSE", "交通費", "Transportation").await.unwrap();
+        
+        // Try to update cat2_code2 with cat2_code1's name (should fail)
+        let result = service.update_category2_i18n(user_id, "EXPENSE", &cat2_code2, "食費", "Food Updated").await;
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        println!("Error message: {}", err_msg);
+        assert!(err_msg.contains("Duplicate") || err_msg.contains("duplicate") || err_msg.contains("already exists"));
+    }
+    
+    #[tokio::test]
+    async fn test_move_category2_boundary() {
+        let pool = setup_test_db().await;
+        let service = CategoryService::new(pool.clone());
+        let user_id: i64 = 1;
+        
+        // Setup
+        setup_category1(&pool, user_id).await;
+        let cat2_code1 = service.add_category2(user_id, "EXPENSE", "食費", "Food").await.unwrap();
+        let cat2_code2 = service.add_category2(user_id, "EXPENSE", "交通費", "Transportation").await.unwrap();
+        
+        let order1_before: i64 = sqlx::query_scalar(sql_queries::TEST_CATEGORY2_GET_DISPLAY_ORDER)
+            .bind(user_id)
+            .bind(&cat2_code1)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        
+        // Try to move first item up (should be no-op)
+        service.move_category2_up(user_id, "EXPENSE", &cat2_code1).await.unwrap();
+        
+        let order1_after: i64 = sqlx::query_scalar(sql_queries::TEST_CATEGORY2_GET_DISPLAY_ORDER)
+            .bind(user_id)
+            .bind(&cat2_code1)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        
+        // Order should remain unchanged
+        assert_eq!(order1_before, order1_after);
+        
+        let order2_before: i64 = sqlx::query_scalar(sql_queries::TEST_CATEGORY2_GET_DISPLAY_ORDER)
+            .bind(user_id)
+            .bind(&cat2_code2)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        
+        // Try to move last item down (should be no-op)
+        service.move_category2_down(user_id, "EXPENSE", &cat2_code2).await.unwrap();
+        
+        let order2_after: i64 = sqlx::query_scalar(sql_queries::TEST_CATEGORY2_GET_DISPLAY_ORDER)
+            .bind(user_id)
+            .bind(&cat2_code2)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        
+        // Order should remain unchanged
+        assert_eq!(order2_before, order2_after);
+    }
+    
+    #[tokio::test]
+    async fn test_get_category_for_edit() {
+        let pool = setup_test_db().await;
+        let service = CategoryService::new(pool.clone());
+        let user_id: i64 = 1;
+        
+        // Setup
+        setup_category1(&pool, user_id).await;
+        let cat2_code = service.add_category2(user_id, "EXPENSE", "食費", "Food").await.unwrap();
+        let cat3_code = service.add_category3(user_id, "EXPENSE", &cat2_code, "米", "Rice").await.unwrap();
+        
+        // Get category2 for edit
+        let cat2_edit = service.get_category2_for_edit(user_id, "EXPENSE", &cat2_code)
+            .await
+            .unwrap();
+        
+        assert_eq!(cat2_edit.code, cat2_code);
+        assert_eq!(cat2_edit.name_ja, "食費");
+        assert_eq!(cat2_edit.name_en, "Food");
+        
+        // Get category3 for edit
+        let cat3_edit = service.get_category3_for_edit(user_id, "EXPENSE", &cat2_code, &cat3_code)
+            .await
+            .unwrap();
+        
+        assert_eq!(cat3_edit.code, cat3_code);
+        assert_eq!(cat3_edit.name_ja, "米");
+        assert_eq!(cat3_edit.name_en, "Rice");
+    }
 }
