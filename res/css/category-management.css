@@ -1,17 +1,40 @@
 /* Category Management Specific Styles */
 
+/* Override main-content flex behavior for category management */
+body:has(.category-management-container) #main-content {
+    overflow-y: hidden;
+    overflow-x: hidden;
+    padding: 0;
+    justify-content: center;
+    position: relative;
+}
+
 .category-management-container {
     max-width: 75em;
     margin: 0 auto;
-    padding: 2rem;
+    padding: 1rem 2rem !important;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+}
+
+.category-management-container > h1 {
+    margin: 0 0 1rem 0;
+    flex-shrink: 0;
 }
 
 .section {
-    margin-bottom: 2rem;
     background-color: white;
     border: 1px solid #ddd;
     border-radius: 8px;
     padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+    flex: 1;
 }
 
 .section-header {
@@ -29,7 +52,10 @@
 
 /* Category Tree Styles */
 .category-tree {
-    min-height: 20em;
+    overflow-y: auto;
+    overflow-x: hidden;
+    flex: 1;
+    min-height: 0;
 }
 
 .loading {

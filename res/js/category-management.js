@@ -51,9 +51,19 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Setup form indicators
     setupIndicators();
     
+    // Setup custom validation messages
+    setupCustomValidationMessages();
+    
     // Load categories
     console.log('[DOMContentLoaded] Loading categories');
     await loadCategories();
+    
+    // Wait for rendering to complete before adjusting window size
+    await new Promise(resolve => {
+        requestAnimationFrame(() => {
+            requestAnimationFrame(resolve);
+        });
+    });
     
     console.log('[DOMContentLoaded] Adjusting window size for modals');
     await adjustWindowSize();
@@ -661,7 +671,7 @@ async function handleCategory2Save(formData) {
     
     // If one is empty, copy from the other
     if (!nameJa && !nameEn) {
-        alert('Please enter at least one name (Japanese or English)');
+        alert(i18n.t('error.category_name_required'));
         throw new Error('Name is required');
     }
     if (!nameJa) nameJa = nameEn;
@@ -697,7 +707,7 @@ async function handleCategory2Save(formData) {
             const errorMsg = i18n.t('error.category_duplicate_name').replace('{0}', duplicateName);
             alert(errorMsg);
         } else {
-            alert('Failed to save: ' + error);
+            alert(i18n.t('error.category_save_failed') + ': ' + error);
         }
         throw error; // Re-throw to prevent modal from closing
     }
@@ -714,7 +724,7 @@ async function handleCategory3Save(formData) {
     
     // If one is empty, copy from the other
     if (!nameJa && !nameEn) {
-        alert('Please enter at least one name (Japanese or English)');
+        alert(i18n.t('error.category_name_required'));
         throw new Error('Name is required');
     }
     if (!nameJa) nameJa = nameEn;
@@ -752,20 +762,66 @@ async function handleCategory3Save(formData) {
             const errorMsg = i18n.t('error.category_duplicate_name').replace('{0}', duplicateName);
             alert(errorMsg);
         } else {
-            alert('Failed to save: ' + error);
+            alert(i18n.t('error.category_save_failed') + ': ' + error);
         }
         throw error; // Re-throw to prevent modal from closing
     }
 }
 
-async function moveCategoryUp(categoryId, level) {
-    // TODO: Implement move up logic
-    console.log('Move up:', categoryId, 'level:', level);
+async function moveCategoryUp(categoryCode, category1Code, category2Code, level) {
+    try {
+        if (level === LEVEL_CATEGORY2) {
+            await invoke('move_category2_up', {
+                userId: currentUserId,
+                category1Code: category1Code,
+                category2Code: categoryCode
+            });
+        } else if (level === LEVEL_CATEGORY3) {
+            await invoke('move_category3_up', {
+                userId: currentUserId,
+                category1Code: category1Code,
+                category2Code: category2Code,
+                category3Code: categoryCode
+            });
+        }
+        
+        // Reload categories to reflect changes
+        await loadCategories();
+        
+        // Scroll to the moved item
+        scrollToCategory(categoryCode, level);
+    } catch (error) {
+        console.error('Failed to move category up:', error);
+        alert(i18n.t('error.category_move_failed') + ': ' + error);
+    }
 }
 
-async function moveCategoryDown(categoryId, level) {
-    // TODO: Implement move down logic
-    console.log('Move down:', categoryId, 'level:', level);
+async function moveCategoryDown(categoryCode, category1Code, category2Code, level) {
+    try {
+        if (level === LEVEL_CATEGORY2) {
+            await invoke('move_category2_down', {
+                userId: currentUserId,
+                category1Code: category1Code,
+                category2Code: categoryCode
+            });
+        } else if (level === LEVEL_CATEGORY3) {
+            await invoke('move_category3_down', {
+                userId: currentUserId,
+                category1Code: category1Code,
+                category2Code: category2Code,
+                category3Code: categoryCode
+            });
+        }
+        
+        // Reload categories to reflect changes
+        await loadCategories();
+        
+        // Scroll to the moved item
+        scrollToCategory(categoryCode, level);
+    } catch (error) {
+        console.error('Failed to move category down:', error);
+        alert(i18n.t('error.category_move_failed') + ': ' + error);
+    }
 }
 
 function setupFocusHoverManagement() {
@@ -798,4 +854,60 @@ function setupFocusHoverManagement() {
             document.body.classList.remove('mouse-active');
         }
     });
+}
+
+function setupCustomValidationMessages() {
+    // Set custom validation messages for required fields
+    const requiredInputs = document.querySelectorAll('input[required], select[required], textarea[required]');
+    
+    requiredInputs.forEach(input => {
+        input.addEventListener('invalid', function(e) {
+            if (this.validity.valueMissing) {
+                this.setCustomValidity(i18n.t('validation.required'));
+            }
+        });
+        
+        // Clear custom validity on input
+        input.addEventListener('input', function() {
+            this.setCustomValidity('');
+        });
+    });
+}
+
+function scrollToCategory(categoryCode, level) {
+    // Find the category element based on level
+    let selector;
+    if (level === LEVEL_CATEGORY2) {
+        selector = `.category-item.category-level-2[data-category-code="${categoryCode}"]`;
+    } else if (level === LEVEL_CATEGORY3) {
+        selector = `.category-item.category-level-3[data-category-code="${categoryCode}"]`;
+    } else {
+        return; // Level 1 doesn't need scrolling
+    }
+    
+    // Wait for rendering to complete
+    setTimeout(() => {
+        const element = document.querySelector(selector);
+        if (element) {
+            // Scroll to element with smooth animation
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Highlight the element with a gentle fade
+            element.style.transition = 'background-color 0.5s ease-in-out';
+            element.style.backgroundColor = '#ffffcc';
+            
+            // Remove highlight after 3 seconds with fade out
+            setTimeout(() => {
+                element.style.transition = 'background-color 1s ease-in-out';
+                element.style.backgroundColor = '';
+                
+                // Clear transition after fade out completes to prevent re-triggering
+                setTimeout(() => {
+                    element.style.transition = '';
+                }, 1000);
+            }, 3000);
+        } else {
+            console.warn('Could not find element with selector:', selector);
+        }
+    }, 200);
 }

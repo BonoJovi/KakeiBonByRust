@@ -256,10 +256,17 @@
 
 **注記**: フロントエンドテストはJest等のテストフレームワーク導入後に実装予定（現在は手動テストのみ）
 
-### Phase 6: ドキュメント整備
-- [ ] 費目管理機能の実装ドキュメント作成（日本語）
-- [ ] 費目管理機能の実装ドキュメント作成（英語）
-- [ ] APIリファレンス
+### Phase 6: ドキュメント整備 ✅
+- [x] 費目管理機能の実装ドキュメント作成（日本語）
+- [x] 費目管理機能の実装ドキュメント作成（英語）
+- [x] APIリファレンス
+
+**完了日**: 2025-11-04  
+**ドキュメント**:
+- `docs/ja/CATEGORY_MANAGEMENT_UI.md` - 費目管理画面実装ドキュメント（日本語）
+- `docs/en/CATEGORY_MANAGEMENT_UI.md` - Category Management Screen Implementation（英語）
+- `docs/ja/API_CATEGORY_ja.md` - 費目管理APIドキュメント（日本語）
+- `docs/en/API_CATEGORY.md` - Category Management API Documentation（英語）
 
 ---
 
@@ -334,4 +341,4 @@
 
 ---
 
-最終更新: 2025-10-27
+最終更新: 2025-11-04

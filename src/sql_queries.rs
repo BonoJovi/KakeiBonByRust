@@ -283,18 +283,6 @@ SET CATEGORY3_NAME_I18N = ?, UPDATE_DT = datetime('now')
 WHERE USER_ID = ? AND CATEGORY1_CODE = ? AND CATEGORY2_CODE = ? AND CATEGORY3_CODE = ? AND LANG_CODE = ?
 "#;
 
-pub const CATEGORY2_UPDATE_ORDER: &str = r#"
-UPDATE CATEGORY2 
-SET DISPLAY_ORDER = ?, UPDATE_DT = datetime('now') 
-WHERE USER_ID = ? AND CATEGORY1_CODE = ? AND CATEGORY2_CODE = ?
-"#;
-
-pub const CATEGORY3_UPDATE_ORDER: &str = r#"
-UPDATE CATEGORY3 
-SET DISPLAY_ORDER = ?, UPDATE_DT = datetime('now') 
-WHERE USER_ID = ? AND CATEGORY1_CODE = ? AND CATEGORY2_CODE = ? AND CATEGORY3_CODE = ?
-"#;
-
 pub const CATEGORY2_GET_FOR_EDIT: &str = r#"
 SELECT 
     c.CATEGORY2_CODE,
@@ -338,6 +326,40 @@ WHERE c.USER_ID = ? AND c.CATEGORY1_CODE = ? AND c.CATEGORY2_CODE = ? AND c.CATE
 "#;
 
 // ============================================================================
+// Category Order Management Queries
+// ============================================================================
+
+pub const CATEGORY2_GET_ORDER: &str = r#"
+SELECT DISPLAY_ORDER FROM CATEGORY2 
+WHERE USER_ID = ? AND CATEGORY1_CODE = ? AND CATEGORY2_CODE = ?
+"#;
+
+pub const CATEGORY2_UPDATE_ORDER: &str = r#"
+UPDATE CATEGORY2 SET DISPLAY_ORDER = ?, UPDATE_DT = datetime('now')
+WHERE USER_ID = ? AND CATEGORY1_CODE = ? AND CATEGORY2_CODE = ?
+"#;
+
+pub const CATEGORY2_GET_SIBLING_BY_ORDER: &str = r#"
+SELECT CATEGORY2_CODE FROM CATEGORY2
+WHERE USER_ID = ? AND CATEGORY1_CODE = ? AND DISPLAY_ORDER = ?
+"#;
+
+pub const CATEGORY3_GET_ORDER: &str = r#"
+SELECT DISPLAY_ORDER FROM CATEGORY3 
+WHERE USER_ID = ? AND CATEGORY1_CODE = ? AND CATEGORY2_CODE = ? AND CATEGORY3_CODE = ?
+"#;
+
+pub const CATEGORY3_UPDATE_ORDER: &str = r#"
+UPDATE CATEGORY3 SET DISPLAY_ORDER = ?, UPDATE_DT = datetime('now')
+WHERE USER_ID = ? AND CATEGORY1_CODE = ? AND CATEGORY2_CODE = ? AND CATEGORY3_CODE = ?
+"#;
+
+pub const CATEGORY3_GET_SIBLING_BY_ORDER: &str = r#"
+SELECT CATEGORY3_CODE FROM CATEGORY3
+WHERE USER_ID = ? AND CATEGORY1_CODE = ? AND CATEGORY2_CODE = ? AND DISPLAY_ORDER = ?
+"#;
+
+// ============================================================================
 // Database Service Queries
 // ============================================================================
 
@@ -363,6 +385,14 @@ pub const TEST_CATEGORY_GET_CATEGORY2_I18N_NAME: &str = "SELECT CATEGORY2_NAME_I
 pub const TEST_CATEGORY_GET_FIRST_CATEGORY2_CODE: &str = "SELECT CATEGORY2_CODE FROM CATEGORY2 WHERE USER_ID = ? LIMIT 1";
 
 pub const TEST_CATEGORY_GET_CATEGORY3_NAME: &str = "SELECT CATEGORY3_NAME FROM CATEGORY3 WHERE USER_ID = ? AND CATEGORY3_CODE = ?";
+
+pub const TEST_CATEGORY2_GET_DISPLAY_ORDER: &str = "SELECT DISPLAY_ORDER FROM CATEGORY2 WHERE USER_ID = ? AND CATEGORY2_CODE = ?";
+
+pub const TEST_CATEGORY3_GET_DISPLAY_ORDER: &str = "SELECT DISPLAY_ORDER FROM CATEGORY3 WHERE USER_ID = ? AND CATEGORY3_CODE = ?";
+
+pub const TEST_CATEGORY2_COUNT: &str = "SELECT COUNT(*) FROM CATEGORY2 WHERE USER_ID = ?";
+
+pub const TEST_CATEGORY3_COUNT: &str = "SELECT COUNT(*) FROM CATEGORY3 WHERE USER_ID = ?";
 
 // ============================================================================
 // Category Initialization Queries

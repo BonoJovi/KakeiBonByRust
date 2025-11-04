@@ -114,7 +114,7 @@ async function handleFontSizeChange(sizeCode) {
         console.log('Font size changed successfully');
     } catch (error) {
         console.error('Failed to change font size:', error);
-        alert('Failed to change font size: ' + error);
+        alert(i18n.t('error.font_size_change_failed') + ': ' + error);
     }
 }
 
@@ -365,7 +365,7 @@ export function setupFontSizeModalHandlers() {
                 fontSizeModal.close();
             } catch (error) {
                 console.error('Failed to apply font size:', error);
-                alert('Failed to apply font size: ' + error);
+                alert(i18n.t('error.font_size_apply_failed') + ': ' + error);
             }
         });
     }

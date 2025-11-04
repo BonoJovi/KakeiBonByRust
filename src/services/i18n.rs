@@ -178,6 +178,40 @@ mod tests {
         .await
         .unwrap();
         
+        // Insert error message test data
+        let error_messages = vec![
+            (701, "error.category_name_required", "en", "Please enter at least one name (Japanese or English)", "error"),
+            (702, "error.category_name_required", "ja", "名前を少なくとも1つ入力してください（日本語または英語）", "error"),
+            (703, "error.category_save_failed", "en", "Failed to save", "error"),
+            (704, "error.category_save_failed", "ja", "保存に失敗しました", "error"),
+            (705, "error.category_move_failed", "en", "Failed to move category", "error"),
+            (706, "error.category_move_failed", "ja", "費目の移動に失敗しました", "error"),
+            (707, "error.category_load_failed", "en", "Failed to load categories", "error"),
+            (708, "error.category_load_failed", "ja", "費目の読み込みに失敗しました", "error"),
+            (709, "error.language_change_failed", "en", "Failed to change language", "error"),
+            (710, "error.language_change_failed", "ja", "言語の変更に失敗しました", "error"),
+            (711, "error.font_size_change_failed", "en", "Failed to change font size", "error"),
+            (712, "error.font_size_change_failed", "ja", "フォントサイズの変更に失敗しました", "error"),
+            (713, "error.font_size_apply_failed", "en", "Failed to apply font size", "error"),
+            (714, "error.font_size_apply_failed", "ja", "フォントサイズの適用に失敗しました", "error"),
+            (715, "validation.required", "en", "Please fill out this field", "validation"),
+            (716, "validation.required", "ja", "このフィールドを入力してください", "validation"),
+        ];
+        
+        for (id, key, lang, value, category) in error_messages {
+            sqlx::query(
+                "INSERT INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, ENTRY_DT) VALUES (?, ?, ?, ?, ?, datetime('now'))"
+            )
+            .bind(id)
+            .bind(key)
+            .bind(lang)
+            .bind(value)
+            .bind(category)
+            .execute(&pool)
+            .await
+            .unwrap();
+        }
+        
         pool
     }
     
@@ -220,5 +254,85 @@ mod tests {
         let menu_resources = service.get_by_category("ja", "menu").await.unwrap();
         assert!(menu_resources.contains_key("menu.file"));
         assert_eq!(menu_resources.get("menu.file").unwrap(), "ファイル");
+    }
+    
+    #[tokio::test]
+    async fn test_error_messages_exist() {
+        let pool = setup_test_db().await;
+        let service = I18nService::new(pool);
+        
+        // Test category management error messages
+        let error_keys = vec![
+            "error.category_name_required",
+            "error.category_save_failed",
+            "error.category_move_failed",
+            "error.category_load_failed",
+        ];
+        
+        for key in error_keys {
+            // Test English
+            let en_result = service.get(key, "en").await;
+            assert!(en_result.is_ok(), "Missing English error message: {}", key);
+            
+            // Test Japanese
+            let ja_result = service.get(key, "ja").await;
+            assert!(ja_result.is_ok(), "Missing Japanese error message: {}", key);
+        }
+    }
+    
+    #[tokio::test]
+    async fn test_language_and_font_error_messages_exist() {
+        let pool = setup_test_db().await;
+        let service = I18nService::new(pool);
+        
+        let error_keys = vec![
+            "error.language_change_failed",
+            "error.font_size_change_failed",
+            "error.font_size_apply_failed",
+        ];
+        
+        for key in error_keys {
+            // Test English
+            let en_result = service.get(key, "en").await;
+            assert!(en_result.is_ok(), "Missing English error message: {}", key);
+            
+            // Test Japanese
+            let ja_result = service.get(key, "ja").await;
+            assert!(ja_result.is_ok(), "Missing Japanese error message: {}", key);
+        }
+    }
+    
+    #[tokio::test]
+    async fn test_validation_messages_exist() {
+        let pool = setup_test_db().await;
+        let service = I18nService::new(pool);
+        
+        // Test validation.required
+        let en_result = service.get("validation.required", "en").await;
+        assert!(en_result.is_ok(), "Missing English validation message: validation.required");
+        assert_eq!(en_result.unwrap(), "Please fill out this field");
+        
+        let ja_result = service.get("validation.required", "ja").await;
+        assert!(ja_result.is_ok(), "Missing Japanese validation message: validation.required");
+        assert_eq!(ja_result.unwrap(), "このフィールドを入力してください");
+    }
+    
+    #[tokio::test]
+    async fn test_all_error_messages_have_both_languages() {
+        let pool = setup_test_db().await;
+        let service = I18nService::new(pool);
+        
+        // Get all error message keys
+        let error_resources = service.get_by_category("en", "error").await.unwrap();
+        
+        for (key, _) in error_resources.iter() {
+            // Check that Japanese translation exists
+            let ja_result = service.get(key, "ja").await;
+            assert!(
+                ja_result.is_ok(),
+                "Error message '{}' is missing Japanese translation",
+                key
+            );
+        }
     }
 }

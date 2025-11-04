@@ -372,6 +372,28 @@ VALUES
 (697, 'common.cancel', 'en', 'Cancel', 'common', 'Cancel button', datetime('now')),
 (698, 'common.cancel', 'ja', 'キャンセル', 'common', 'キャンセルボタン', datetime('now')),
 (699, 'common.loading', 'en', 'Loading...', 'common', 'Loading message', datetime('now')),
-(700, 'common.loading', 'ja', '読み込み中...', 'common', '読み込み中メッセージ', datetime('now'));
+(700, 'common.loading', 'ja', '読み込み中...', 'common', '読み込み中メッセージ', datetime('now')),
+
+-- Category management error messages
+(701, 'error.category_name_required', 'en', 'Please enter at least one name (Japanese or English)', 'error', 'Category name required error', datetime('now')),
+(702, 'error.category_name_required', 'ja', '名前を少なくとも1つ入力してください（日本語または英語）', 'error', '費目名必須エラー', datetime('now')),
+(703, 'error.category_save_failed', 'en', 'Failed to save', 'error', 'Category save error', datetime('now')),
+(704, 'error.category_save_failed', 'ja', '保存に失敗しました', 'error', '費目保存エラー', datetime('now')),
+(705, 'error.category_move_failed', 'en', 'Failed to move category', 'error', 'Category move error', datetime('now')),
+(706, 'error.category_move_failed', 'ja', '費目の移動に失敗しました', 'error', '費目移動エラー', datetime('now')),
+(707, 'error.category_load_failed', 'en', 'Failed to load categories', 'error', 'Category load error', datetime('now')),
+(708, 'error.category_load_failed', 'ja', '費目の読み込みに失敗しました', 'error', '費目読み込みエラー', datetime('now')),
+
+-- Language and font size error messages
+(709, 'error.language_change_failed', 'en', 'Failed to change language', 'error', 'Language change error', datetime('now')),
+(710, 'error.language_change_failed', 'ja', '言語の変更に失敗しました', 'error', '言語変更エラー', datetime('now')),
+(711, 'error.font_size_change_failed', 'en', 'Failed to change font size', 'error', 'Font size change error', datetime('now')),
+(712, 'error.font_size_change_failed', 'ja', 'フォントサイズの変更に失敗しました', 'error', 'フォントサイズ変更エラー', datetime('now')),
+(713, 'error.font_size_apply_failed', 'en', 'Failed to apply font size', 'error', 'Font size apply error', datetime('now')),
+(714, 'error.font_size_apply_failed', 'ja', 'フォントサイズの適用に失敗しました', 'error', 'フォントサイズ適用エラー', datetime('now')),
+
+-- HTML5 validation messages
+(715, 'validation.required', 'en', 'Please fill out this field', 'validation', 'Required field validation message', datetime('now')),
+(716, 'validation.required', 'ja', 'このフィールドを入力してください', 'validation', '必須フィールドのバリデーションメッセージ', datetime('now'));
 
 -- NOTE: Category data will be migrated from existing SQL later

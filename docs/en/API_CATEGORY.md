@@ -784,3 +784,8 @@ Initializes category data for new users (internal function).
 - Category2 and Category3 are edited via modal dialogs
 - Japanese and English names can be edited simultaneously
 - I18N table is automatically updated on save
+
+---
+
+**Last Updated**: 2025-11-04 20:04 JST  
+**Version**: v0.3 (Phase 4-3 completed)

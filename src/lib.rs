@@ -800,6 +800,60 @@ async fn update_category3(
         .map_err(|e| format!("Failed to update category3: {}", e))
 }
 
+#[tauri::command]
+async fn move_category2_up(
+    user_id: i64,
+    category1_code: String,
+    category2_code: String,
+    state: tauri::State<'_, AppState>
+) -> Result<(), String> {
+    let category = state.category.lock().await;
+    category.move_category2_up(user_id, &category1_code, &category2_code)
+        .await
+        .map_err(|e| format!("Failed to move category2 up: {}", e))
+}
+
+#[tauri::command]
+async fn move_category2_down(
+    user_id: i64,
+    category1_code: String,
+    category2_code: String,
+    state: tauri::State<'_, AppState>
+) -> Result<(), String> {
+    let category = state.category.lock().await;
+    category.move_category2_down(user_id, &category1_code, &category2_code)
+        .await
+        .map_err(|e| format!("Failed to move category2 down: {}", e))
+}
+
+#[tauri::command]
+async fn move_category3_up(
+    user_id: i64,
+    category1_code: String,
+    category2_code: String,
+    category3_code: String,
+    state: tauri::State<'_, AppState>
+) -> Result<(), String> {
+    let category = state.category.lock().await;
+    category.move_category3_up(user_id, &category1_code, &category2_code, &category3_code)
+        .await
+        .map_err(|e| format!("Failed to move category3 up: {}", e))
+}
+
+#[tauri::command]
+async fn move_category3_down(
+    user_id: i64,
+    category1_code: String,
+    category2_code: String,
+    category3_code: String,
+    state: tauri::State<'_, AppState>
+) -> Result<(), String> {
+    let category = state.category.lock().await;
+    category.move_category3_down(user_id, &category1_code, &category2_code, &category3_code)
+        .await
+        .map_err(|e| format!("Failed to move category3 down: {}", e))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -849,7 +903,11 @@ pub fn run() {
             get_category2_for_edit,
             get_category3_for_edit,
             update_category2,
-            update_category3
+            update_category3,
+            move_category2_up,
+            move_category2_down,
+            move_category3_up,
+            move_category3_down
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {

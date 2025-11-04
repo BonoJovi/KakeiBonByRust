@@ -684,6 +684,242 @@ impl CategoryService {
         
         Ok(())
     }
+    
+    /// Move a CATEGORY2 up in the display order
+    pub async fn move_category2_up(
+        &self,
+        user_id: i64,
+        category1_code: &str,
+        category2_code: &str,
+    ) -> Result<(), CategoryError> {
+        // Get current order
+        let current_order: i64 = sqlx::query_scalar(sql_queries::CATEGORY2_GET_ORDER)
+            .bind(user_id)
+            .bind(category1_code)
+            .bind(category2_code)
+            .fetch_one(&self.pool)
+            .await?;
+        
+        // Cannot move up if already at the top
+        if current_order <= 1 {
+            return Ok(());
+        }
+        
+        let target_order = current_order - 1;
+        
+        // Get the sibling category at the target position
+        let sibling_result: Result<String, sqlx::Error> = 
+            sqlx::query_scalar(sql_queries::CATEGORY2_GET_SIBLING_BY_ORDER)
+            .bind(user_id)
+            .bind(category1_code)
+            .bind(target_order)
+            .fetch_one(&self.pool)
+            .await;
+        
+        if let Ok(sibling_code) = sibling_result {
+            // Swap orders using a transaction
+            let mut tx = self.pool.begin().await?;
+            
+            // Move current to target
+            sqlx::query(sql_queries::CATEGORY2_UPDATE_ORDER)
+                .bind(target_order)
+                .bind(user_id)
+                .bind(category1_code)
+                .bind(category2_code)
+                .execute(&mut *tx)
+                .await?;
+            
+            // Move sibling to current position
+            sqlx::query(sql_queries::CATEGORY2_UPDATE_ORDER)
+                .bind(current_order)
+                .bind(user_id)
+                .bind(category1_code)
+                .bind(&sibling_code)
+                .execute(&mut *tx)
+                .await?;
+            
+            tx.commit().await?;
+        }
+        
+        Ok(())
+    }
+    
+    /// Move a CATEGORY2 down in the display order
+    pub async fn move_category2_down(
+        &self,
+        user_id: i64,
+        category1_code: &str,
+        category2_code: &str,
+    ) -> Result<(), CategoryError> {
+        // Get current order
+        let current_order: i64 = sqlx::query_scalar(sql_queries::CATEGORY2_GET_ORDER)
+            .bind(user_id)
+            .bind(category1_code)
+            .bind(category2_code)
+            .fetch_one(&self.pool)
+            .await?;
+        
+        let target_order = current_order + 1;
+        
+        // Get the sibling category at the target position
+        let sibling_result: Result<String, sqlx::Error> = 
+            sqlx::query_scalar(sql_queries::CATEGORY2_GET_SIBLING_BY_ORDER)
+            .bind(user_id)
+            .bind(category1_code)
+            .bind(target_order)
+            .fetch_one(&self.pool)
+            .await;
+        
+        if let Ok(sibling_code) = sibling_result {
+            // Swap orders using a transaction
+            let mut tx = self.pool.begin().await?;
+            
+            // Move current to target
+            sqlx::query(sql_queries::CATEGORY2_UPDATE_ORDER)
+                .bind(target_order)
+                .bind(user_id)
+                .bind(category1_code)
+                .bind(category2_code)
+                .execute(&mut *tx)
+                .await?;
+            
+            // Move sibling to current position
+            sqlx::query(sql_queries::CATEGORY2_UPDATE_ORDER)
+                .bind(current_order)
+                .bind(user_id)
+                .bind(category1_code)
+                .bind(&sibling_code)
+                .execute(&mut *tx)
+                .await?;
+            
+            tx.commit().await?;
+        }
+        
+        Ok(())
+    }
+    
+    /// Move a CATEGORY3 up in the display order
+    pub async fn move_category3_up(
+        &self,
+        user_id: i64,
+        category1_code: &str,
+        category2_code: &str,
+        category3_code: &str,
+    ) -> Result<(), CategoryError> {
+        // Get current order
+        let current_order: i64 = sqlx::query_scalar(sql_queries::CATEGORY3_GET_ORDER)
+            .bind(user_id)
+            .bind(category1_code)
+            .bind(category2_code)
+            .bind(category3_code)
+            .fetch_one(&self.pool)
+            .await?;
+        
+        // Cannot move up if already at the top
+        if current_order <= 1 {
+            return Ok(());
+        }
+        
+        let target_order = current_order - 1;
+        
+        // Get the sibling category at the target position
+        let sibling_result: Result<String, sqlx::Error> = 
+            sqlx::query_scalar(sql_queries::CATEGORY3_GET_SIBLING_BY_ORDER)
+            .bind(user_id)
+            .bind(category1_code)
+            .bind(category2_code)
+            .bind(target_order)
+            .fetch_one(&self.pool)
+            .await;
+        
+        if let Ok(sibling_code) = sibling_result {
+            // Swap orders using a transaction
+            let mut tx = self.pool.begin().await?;
+            
+            // Move current to target
+            sqlx::query(sql_queries::CATEGORY3_UPDATE_ORDER)
+                .bind(target_order)
+                .bind(user_id)
+                .bind(category1_code)
+                .bind(category2_code)
+                .bind(category3_code)
+                .execute(&mut *tx)
+                .await?;
+            
+            // Move sibling to current position
+            sqlx::query(sql_queries::CATEGORY3_UPDATE_ORDER)
+                .bind(current_order)
+                .bind(user_id)
+                .bind(category1_code)
+                .bind(category2_code)
+                .bind(&sibling_code)
+                .execute(&mut *tx)
+                .await?;
+            
+            tx.commit().await?;
+        }
+        
+        Ok(())
+    }
+    
+    /// Move a CATEGORY3 down in the display order
+    pub async fn move_category3_down(
+        &self,
+        user_id: i64,
+        category1_code: &str,
+        category2_code: &str,
+        category3_code: &str,
+    ) -> Result<(), CategoryError> {
+        // Get current order
+        let current_order: i64 = sqlx::query_scalar(sql_queries::CATEGORY3_GET_ORDER)
+            .bind(user_id)
+            .bind(category1_code)
+            .bind(category2_code)
+            .bind(category3_code)
+            .fetch_one(&self.pool)
+            .await?;
+        
+        let target_order = current_order + 1;
+        
+        // Get the sibling category at the target position
+        let sibling_result: Result<String, sqlx::Error> = 
+            sqlx::query_scalar(sql_queries::CATEGORY3_GET_SIBLING_BY_ORDER)
+            .bind(user_id)
+            .bind(category1_code)
+            .bind(category2_code)
+            .bind(target_order)
+            .fetch_one(&self.pool)
+            .await;
+        
+        if let Ok(sibling_code) = sibling_result {
+            // Swap orders using a transaction
+            let mut tx = self.pool.begin().await?;
+            
+            // Move current to target
+            sqlx::query(sql_queries::CATEGORY3_UPDATE_ORDER)
+                .bind(target_order)
+                .bind(user_id)
+                .bind(category1_code)
+                .bind(category2_code)
+                .bind(category3_code)
+                .execute(&mut *tx)
+                .await?;
+            
+            // Move sibling to current position
+            sqlx::query(sql_queries::CATEGORY3_UPDATE_ORDER)
+                .bind(current_order)
+                .bind(user_id)
+                .bind(category1_code)
+                .bind(category2_code)
+                .bind(&sibling_code)
+                .execute(&mut *tx)
+                .await?;
+            
+            tx.commit().await?;
+        }
+        
+        Ok(())
+    }
 }
 
 #[derive(Debug, sqlx::FromRow)]
@@ -860,7 +1096,7 @@ mod tests {
         assert!(result.is_ok(), "Failed to populate categories: {:?}", result.err());
         
         // Verify CATEGORY2 records were created
-        let cat2_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM CATEGORY2 WHERE USER_ID = ?")
+        let cat2_count: i64 = sqlx::query_scalar(sql_queries::TEST_CATEGORY2_COUNT)
             .bind(user_id)
             .fetch_one(&pool)
             .await
@@ -869,7 +1105,7 @@ mod tests {
         assert_eq!(cat2_count, 20, "Expected 20 CATEGORY2 records");
         
         // Verify CATEGORY3 records were created
-        let cat3_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM CATEGORY3 WHERE USER_ID = ?")
+        let cat3_count: i64 = sqlx::query_scalar(sql_queries::TEST_CATEGORY3_COUNT)
             .bind(user_id)
             .fetch_one(&pool)
             .await
@@ -906,7 +1142,7 @@ mod tests {
         let result2 = service.populate_default_categories(user_id).await;
         assert!(result2.is_ok());
         
-        let cat2_count_after: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM CATEGORY2 WHERE USER_ID = ?")
+        let cat2_count_after: i64 = sqlx::query_scalar(sql_queries::TEST_CATEGORY2_COUNT)
             .bind(user_id)
             .fetch_one(&pool)
             .await
@@ -1099,5 +1335,166 @@ mod tests {
         let result4 = service.add_category3(user_id, "EXPENSE", &category2_code, "Other", "食料品").await;
         assert!(result4.is_err());
         assert!(matches!(result4.unwrap_err(), CategoryError::DuplicateName(_)));
+    }
+    
+    #[tokio::test]
+    async fn test_move_category2_order() {
+        let pool = setup_test_db().await;
+        let service = CategoryService::new(pool.clone());
+        let user_id: i64 = 1;
+        
+        // Setup CATEGORY1
+        setup_category1(&pool, user_id).await;
+        
+        // Add three CATEGORY2 entries
+        let cat2_code1 = service.add_category2(user_id, "EXPENSE", "食費", "Food").await.unwrap();
+        let cat2_code2 = service.add_category2(user_id, "EXPENSE", "交通費", "Transportation").await.unwrap();
+        let cat2_code3 = service.add_category2(user_id, "EXPENSE", "娯楽費", "Entertainment").await.unwrap();
+        
+        // Get initial orders
+        let order1: i64 = sqlx::query_scalar(sql_queries::TEST_CATEGORY2_GET_DISPLAY_ORDER)
+            .bind(user_id)
+            .bind(&cat2_code1)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        
+        let order2: i64 = sqlx::query_scalar(sql_queries::TEST_CATEGORY2_GET_DISPLAY_ORDER)
+            .bind(user_id)
+            .bind(&cat2_code2)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        
+        let order3: i64 = sqlx::query_scalar(sql_queries::TEST_CATEGORY2_GET_DISPLAY_ORDER)
+            .bind(user_id)
+            .bind(&cat2_code3)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        
+        // Verify initial order: cat1 < cat2 < cat3
+        assert!(order1 < order2);
+        assert!(order2 < order3);
+        
+        // Move cat2 up (swap with cat1)
+        service.move_category2_up(user_id, "EXPENSE", &cat2_code2).await.unwrap();
+        
+        // Check new orders
+        let new_order1: i64 = sqlx::query_scalar(sql_queries::TEST_CATEGORY2_GET_DISPLAY_ORDER)
+            .bind(user_id)
+            .bind(&cat2_code1)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        
+        let new_order2: i64 = sqlx::query_scalar(sql_queries::TEST_CATEGORY2_GET_DISPLAY_ORDER)
+            .bind(user_id)
+            .bind(&cat2_code2)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        
+        // cat2 should now be before cat1
+        assert_eq!(new_order2, order1);
+        assert_eq!(new_order1, order2);
+        
+        // Move cat2 down (swap back with cat1)
+        service.move_category2_down(user_id, "EXPENSE", &cat2_code2).await.unwrap();
+        
+        // Check orders are back to original
+        let final_order1: i64 = sqlx::query_scalar(sql_queries::TEST_CATEGORY2_GET_DISPLAY_ORDER)
+            .bind(user_id)
+            .bind(&cat2_code1)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        
+        let final_order2: i64 = sqlx::query_scalar(sql_queries::TEST_CATEGORY2_GET_DISPLAY_ORDER)
+            .bind(user_id)
+            .bind(&cat2_code2)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        
+        assert_eq!(final_order1, order1);
+        assert_eq!(final_order2, order2);
+    }
+    
+    #[tokio::test]
+    async fn test_move_category3_order() {
+        let pool = setup_test_db().await;
+        let service = CategoryService::new(pool.clone());
+        let user_id: i64 = 1;
+        
+        // Setup CATEGORY1 and CATEGORY2
+        setup_category1(&pool, user_id).await;
+        let cat2_code = service.add_category2(user_id, "EXPENSE", "食費", "Food").await.unwrap();
+        
+        // Add three CATEGORY3 entries
+        let cat3_code1 = service.add_category3(user_id, "EXPENSE", &cat2_code, "米", "Rice").await.unwrap();
+        let cat3_code2 = service.add_category3(user_id, "EXPENSE", &cat2_code, "野菜", "Vegetables").await.unwrap();
+        let cat3_code3 = service.add_category3(user_id, "EXPENSE", &cat2_code, "肉", "Meat").await.unwrap();
+        
+        // Get initial orders
+        let order1: i64 = sqlx::query_scalar(sql_queries::TEST_CATEGORY3_GET_DISPLAY_ORDER)
+            .bind(user_id)
+            .bind(&cat3_code1)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        
+        let order2: i64 = sqlx::query_scalar(sql_queries::TEST_CATEGORY3_GET_DISPLAY_ORDER)
+            .bind(user_id)
+            .bind(&cat3_code2)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        
+        // Verify initial order
+        assert!(order1 < order2);
+        
+        // Move cat3_code2 up
+        service.move_category3_up(user_id, "EXPENSE", &cat2_code, &cat3_code2).await.unwrap();
+        
+        // Check new orders
+        let new_order1: i64 = sqlx::query_scalar(sql_queries::TEST_CATEGORY3_GET_DISPLAY_ORDER)
+            .bind(user_id)
+            .bind(&cat3_code1)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        
+        let new_order2: i64 = sqlx::query_scalar(sql_queries::TEST_CATEGORY3_GET_DISPLAY_ORDER)
+            .bind(user_id)
+            .bind(&cat3_code2)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        
+        // cat3_code2 should now be before cat3_code1
+        assert_eq!(new_order2, order1);
+        assert_eq!(new_order1, order2);
+        
+        // Move cat3_code2 down
+        service.move_category3_down(user_id, "EXPENSE", &cat2_code, &cat3_code2).await.unwrap();
+        
+        // Check orders are back
+        let final_order1: i64 = sqlx::query_scalar(sql_queries::TEST_CATEGORY3_GET_DISPLAY_ORDER)
+            .bind(user_id)
+            .bind(&cat3_code1)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        
+        let final_order2: i64 = sqlx::query_scalar(sql_queries::TEST_CATEGORY3_GET_DISPLAY_ORDER)
+            .bind(user_id)
+            .bind(&cat3_code2)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        
+        assert_eq!(final_order1, order1);
+        assert_eq!(final_order2, order2);
     }
 }

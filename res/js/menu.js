@@ -43,6 +43,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Setup accessibility indicators for form inputs
     setupIndicators();
     
+    // Setup custom validation messages
+    setupCustomValidationMessages();
+    
     // Check if initial setup is needed
     checkSetupNeeded();
     
@@ -316,7 +319,7 @@ async function handleLanguageChange(langCode) {
         console.log('Language changed successfully');
     } catch (error) {
         console.error('Failed to change language:', error);
-        alert('Failed to change language: ' + error);
+        alert(i18n.t('error.language_change_failed') + ': ' + error);
     }
 }
 
@@ -491,4 +494,22 @@ function handleLogout() {
 function handleQuit() {
     console.log('Quit clicked');
     invoke('handle_quit');
+}
+
+function setupCustomValidationMessages() {
+    // Set custom validation messages for required fields
+    const requiredInputs = document.querySelectorAll('input[required], select[required], textarea[required]');
+    
+    requiredInputs.forEach(input => {
+        input.addEventListener('invalid', function(e) {
+            if (this.validity.valueMissing) {
+                this.setCustomValidity(i18n.t('validation.required'));
+            }
+        });
+        
+        // Clear custom validity on input
+        input.addEventListener('input', function() {
+            this.setCustomValidity('');
+        });
+    });
 }

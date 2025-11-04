@@ -98,26 +98,43 @@ pub mod database {
     use crate::security::hash_password;
     use crate::consts::{ROLE_ADMIN, ROLE_USER};
 
-    /// Setup an in-memory test database with USERS table
+    /// Setup an in-memory test database with all tables from dbaccess.sql
     pub async fn setup_test_db() -> SqlitePool {
         let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
         
-        sqlx::query(
-            r#"
-            CREATE TABLE IF NOT EXISTS USERS (
-                USER_ID INTEGER NOT NULL,
-                NAME VARCHAR(128) NOT NULL UNIQUE,
-                PAW VARCHAR(128) NOT NULL,
-                ROLE INTEGER NOT NULL,
-                ENTRY_DT DATETIME NOT NULL,
-                UPDATE_DT DATETIME,
-                PRIMARY KEY(USER_ID)
-            )
-            "#
-        )
-        .execute(&pool)
-        .await
-        .unwrap();
+        // Read and execute DDL from dbaccess.sql
+        let sql_content = std::fs::read_to_string("res/sql/dbaccess.sql")
+            .expect("Failed to read dbaccess.sql");
+        
+        // Remove comments and split by semicolon
+        let mut current_statement = String::new();
+        for line in sql_content.lines() {
+            let trimmed = line.trim();
+            // Skip comment-only lines
+            if trimmed.starts_with("--") || trimmed.is_empty() {
+                continue;
+            }
+            // Remove inline comments
+            let line_without_comment = if let Some(pos) = line.find("--") {
+                &line[..pos]
+            } else {
+                line
+            };
+            current_statement.push_str(line_without_comment);
+            current_statement.push(' ');
+            
+            // If line ends with semicolon, execute the statement
+            if line_without_comment.trim().ends_with(';') {
+                let stmt = current_statement.trim().trim_end_matches(';').trim();
+                if !stmt.is_empty() {
+                    sqlx::query(stmt)
+                        .execute(&pool)
+                        .await
+                        .unwrap_or_else(|e| panic!("Failed to execute SQL: {}\nError: {}", stmt, e));
+                }
+                current_statement.clear();
+            }
+        }
         
         pool
     }

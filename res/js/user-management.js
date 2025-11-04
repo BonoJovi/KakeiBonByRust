@@ -39,6 +39,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     setupModalEventHandlers();
     setupIndicators();
     
+    console.log('[DOMContentLoaded] Setting up custom validation messages');
+    setupCustomValidationMessages();
+    
     console.log('[DOMContentLoaded] Loading users');
     await loadUsers();
     
@@ -283,7 +286,7 @@ async function handleLanguageChange(langCode) {
         await loadUsers();
     } catch (error) {
         console.error('Failed to change language:', error);
-        showMessage('user-list-message', 'Failed to change language: ' + error, 'error');
+        showMessage('user-list-message', i18n.t('error.language_change_failed') + ': ' + error, 'error');
     }
 }
 
@@ -473,6 +476,24 @@ function handleLogout() {
 function handleQuit() {
     console.log('Quit clicked');
     invoke('handle_quit');
+}
+
+function setupCustomValidationMessages() {
+    // Set custom validation messages for required fields
+    const requiredInputs = document.querySelectorAll('input[required], select[required], textarea[required]');
+    
+    requiredInputs.forEach(input => {
+        input.addEventListener('invalid', function(e) {
+            if (this.validity.valueMissing) {
+                this.setCustomValidity(i18n.t('validation.required'));
+            }
+        });
+        
+        // Clear custom validity on input
+        input.addEventListener('input', function() {
+            this.setCustomValidity('');
+        });
+    });
 }
 
 function showMessage(elementId, message, type) {

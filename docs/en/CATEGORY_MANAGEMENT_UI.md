@@ -5,7 +5,7 @@
 This document records the implementation details of KakeiBon's category management screen (Phase 4-1 to 4-3).
 
 **Implementation Period**: 2025-10-28 ~ 2025-10-31  
-**Last Updated**: 2025-11-02 21:44 JST
+**Last Updated**: 2025-11-04 20:04 JST
 
 ---
 
@@ -120,11 +120,11 @@ toggleCategory(level, code)
    - Users cannot add, edit, or delete major categories
    - Only subcategory addition is allowed
 
-2. **Initial Data**: Automatically populated when user is created (`populate_default_categories`)
+2. **Initial Data**: Automatically populated when user is created (`initialize_user_categories`)
    - 20 middle categories (CATEGORY2)
    - 126 minor categories (CATEGORY3)
-   - All Japanese names populated
-   - English I18N data partially populated (20 middle, 10 minor)
+   - All Japanese names populated (20 middle, 126 minor)
+   - All English I18N data populated (20 middle, 126 minor) ✅
 
 ---
 
@@ -347,10 +347,10 @@ this.modal.close();
 
 ## Known Issues
 
-### English I18N Data Shortage
+### ~~English I18N Data Shortage~~ ✅ Resolved
 - ✅ Japanese names: All populated (20 middle, 126 minor)
-- ⚠️ English I18N: Partially populated (20 middle, 10 minor)
-- **Solution**: Remaining English names to be supplemented by data seeding script in the future
+- ✅ English I18N: All populated (20 middle, 126 minor)
+- **Resolution Date**: 2025-11-03 (Commit: fcf7696)
 
 ### Expand Icon Font Differences
 - `▶` and `▼` Unicode characters have different visual sizes depending on font
