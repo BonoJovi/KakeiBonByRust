@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Transaction Management - KakeiBon</title>
+        <link rel="stylesheet" href="css/menu.css" />
+        <link rel="stylesheet" href="css/indicators.css" />
+        <link rel="stylesheet" href="css/transaction-management.css" />
+        <script type="importmap">
+        {
+            "imports": {
+                "@tauri-apps/api/core": "https://esm.sh/@tauri-apps/api@2/core"
+            }
+        }
+        </script>
+    </head>
+    <body>
+        <div id="menu-bar">
+            <div id="file-menu" class="menu-item">
+                <span data-i18n="menu.file">File</span>
+                <div id="file-dropdown" class="dropdown">
+                    <div class="dropdown-item" data-i18n="menu.back_to_main">Back to Main</div>
+                    <div class="dropdown-separator"></div>
+                    <div class="dropdown-item" data-i18n="menu.logout">Logout</div>
+                    <div class="dropdown-item" data-i18n="menu.quit">Quit</div>
+                </div>
+            </div>
+            <div id="language-menu" class="menu-item">
+                <span data-i18n="menu.language">Language</span>
+                <div id="language-dropdown" class="dropdown">
+                    <!-- Language options will be populated dynamically -->
+                </div>
+            </div>
+            <div id="font-size-menu" class="menu-item">
+                <span data-i18n="menu.font_size">Font Size</span>
+                <div id="font-size-dropdown" class="dropdown">
+                    <!-- Font size options will be populated dynamically -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Font Size Settings Modal -->
+        <div id="font-size-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 data-i18n="font_size.modal_title">Font Size Settings</h2>
+                    <button class="close-btn" id="font-size-modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p data-i18n="font_size.description">Customize your preferred font size (10-30px)</p>
+                    
+                    <label for="custom-font-size" data-i18n="font_size.label">Font Size:</label>
+                    <input type="number" id="custom-font-size" min="10" max="30" value="16" />
+                    <span id="font-size-value">16px</span>
+                    
+                    <div class="modal-actions">
+                        <button class="btn btn-secondary" id="font-size-cancel" data-i18n="common.cancel">Cancel</button>
+                        <button class="btn btn-primary" id="font-size-save" data-i18n="common.save">Save</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="main-content">
+            <div class="transaction-management-container">
+                <h1 data-i18n="transaction_mgmt.title">Transaction Management</h1>
+                
+                <!-- Action Bar -->
+                <div class="action-bar">
+                    <button class="btn btn-primary" id="add-transaction-btn">
+                        <span data-i18n="transaction_mgmt.add_new">+ Add New Transaction</span>
+                    </button>
+                    <button class="btn btn-secondary" id="toggle-filter-btn">
+                        <span data-i18n="transaction_mgmt.filter">🔍 Filter</span>
+                    </button>
+                </div>
+
+                <!-- Filter Panel (Initially Hidden) -->
+                <div id="filter-panel" class="filter-panel hidden">
+                    <h3 data-i18n="transaction_mgmt.filter_options">Filter Options</h3>
+                    
+                    <div class="filter-row">
+                        <div class="filter-group">
+                            <label data-i18n="transaction_mgmt.date_range">Date Range:</label>
+                            <input type="date" id="filter-start-date" />
+                            <span>～</span>
+                            <input type="date" id="filter-end-date" />
+                        </div>
+                    </div>
+
+                    <div class="filter-row">
+                        <div class="filter-group">
+                            <label data-i18n="transaction_mgmt.category">Category:</label>
+                            <select id="filter-category1">
+                                <option value="" data-i18n="common.all">All</option>
+                            </select>
+                            <select id="filter-category2">
+                                <option value="" data-i18n="common.all">All</option>
+                            </select>
+                            <select id="filter-category3">
+                                <option value="" data-i18n="common.all">All</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="filter-row">
+                        <div class="filter-group">
+                            <label data-i18n="transaction_mgmt.amount_range">Amount Range:</label>
+                            <input type="number" id="filter-min-amount" placeholder="Min" min="0" />
+                            <span>～</span>
+                            <input type="number" id="filter-max-amount" placeholder="Max" min="0" />
+                        </div>
+                    </div>
+
+                    <div class="filter-row">
+                        <div class="filter-group">
+                            <label data-i18n="transaction_mgmt.keyword">Keyword:</label>
+                            <input type="text" id="filter-keyword" placeholder="Search in description or memo" />
+                        </div>
+                    </div>
+
+                    <div class="filter-actions">
+                        <button class="btn btn-secondary" id="clear-filter-btn" data-i18n="transaction_mgmt.clear_filter">Clear</button>
+                        <button class="btn btn-primary" id="apply-filter-btn" data-i18n="transaction_mgmt.apply_filter">Apply</button>
+                    </div>
+                </div>
+
+                <!-- Transaction List -->
+                <div class="section">
+                    <div class="transaction-list-container">
+                        <div id="transaction-list" class="transaction-list">
+                            <!-- Transaction items will be populated here -->
+                            <div class="loading" data-i18n="common.loading">Loading...</div>
+                        </div>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div class="pagination">
+                        <div class="pagination-info">
+                            <span data-i18n="transaction_mgmt.total">Total:</span>
+                            <span id="total-count">0</span>
+                            <span data-i18n="transaction_mgmt.items">items</span>
+                        </div>
+                        <div class="pagination-controls">
+                            <button id="prev-page-btn" class="btn btn-secondary" disabled>&lt;</button>
+                            <span id="page-info">
+                                <span data-i18n="transaction_mgmt.page">Page</span>
+                                <span id="current-page">1</span>
+                                /
+                                <span id="total-pages">1</span>
+                            </span>
+                            <button id="next-page-btn" class="btn btn-secondary" disabled>&gt;</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script type="module" src="js/transaction-management.js"></script>
+    </body>
+</html>
