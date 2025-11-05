@@ -27,6 +27,12 @@ pub struct Transaction {
     pub entry_dt: String,
     #[sqlx(rename = "UPDATE_DT")]
     pub update_dt: Option<String>,
+    #[sqlx(rename = "CATEGORY1_NAME")]
+    pub category1_name: Option<String>,
+    #[sqlx(rename = "CATEGORY2_NAME")]
+    pub category2_name: Option<String>,
+    #[sqlx(rename = "CATEGORY3_NAME")]
+    pub category3_name: Option<String>,
 }
 
 /// Transaction list response with pagination
@@ -171,47 +177,47 @@ impl TransactionService {
         page: i64,
         per_page: i64,
     ) -> Result<TransactionListResponse, TransactionError> {
-        // Build WHERE clauses
-        let mut where_clauses = vec!["USER_ID = ?".to_string()];
+        // Build WHERE clauses (with table alias 't.')
+        let mut where_clauses = vec!["t.USER_ID = ?".to_string()];
         let mut params: Vec<String> = vec![user_id.to_string()];
 
         if let Some(start) = start_date {
-            where_clauses.push("TRANSACTION_DATE >= ?".to_string());
+            where_clauses.push("t.TRANSACTION_DATE >= ?".to_string());
             params.push(start.to_string());
         }
 
         if let Some(end) = end_date {
-            where_clauses.push("TRANSACTION_DATE <= ?".to_string());
+            where_clauses.push("t.TRANSACTION_DATE <= ?".to_string());
             params.push(end.to_string());
         }
 
         if let Some(cat1) = category1_code {
-            where_clauses.push("CATEGORY1_CODE = ?".to_string());
+            where_clauses.push("t.CATEGORY1_CODE = ?".to_string());
             params.push(cat1.to_string());
         }
 
         if let Some(cat2) = category2_code {
-            where_clauses.push("CATEGORY2_CODE = ?".to_string());
+            where_clauses.push("t.CATEGORY2_CODE = ?".to_string());
             params.push(cat2.to_string());
         }
 
         if let Some(cat3) = category3_code {
-            where_clauses.push("CATEGORY3_CODE = ?".to_string());
+            where_clauses.push("t.CATEGORY3_CODE = ?".to_string());
             params.push(cat3.to_string());
         }
 
         if let Some(min) = min_amount {
-            where_clauses.push("AMOUNT >= ?".to_string());
+            where_clauses.push("t.AMOUNT >= ?".to_string());
             params.push(min.to_string());
         }
 
         if let Some(max) = max_amount {
-            where_clauses.push("AMOUNT <= ?".to_string());
+            where_clauses.push("t.AMOUNT <= ?".to_string());
             params.push(max.to_string());
         }
 
         if let Some(kw) = keyword {
-            where_clauses.push("(DESCRIPTION LIKE ? OR MEMO LIKE ?)".to_string());
+            where_clauses.push("(t.DESCRIPTION LIKE ? OR t.MEMO LIKE ?)".to_string());
             let search_term = format!("%{}%", kw);
             params.push(search_term.clone());
             params.push(search_term);

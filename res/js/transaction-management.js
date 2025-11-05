@@ -1,10 +1,12 @@
 import { invoke } from '@tauri-apps/api/core';
-import { I18n } from './i18n.js';
-import { setupMenuHandlers, setupLanguageMenu, setupFontSizeMenu } from './menu.js';
+import i18n from './i18n.js';
+import { setupIndicators } from './indicators.js';
+import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers } from './font-size.js';
+import { setupLanguageMenuHandlers, setupLanguageMenu, handleLogout, handleQuit } from './menu.js';
 
-// Initialize i18n
-const i18n = new I18n();
-let currentUserId = null;
+const currentUserId = 1; // TODO: Get from session/auth
+
+console.log('transaction-management.js loaded');
 
 // Pagination state
 let currentPage = 1;
@@ -22,33 +24,84 @@ let currentFilters = {
     keyword: null
 };
 
-async function initialize() {
+document.addEventListener('DOMContentLoaded', async function() {
+    console.log('[DOMContentLoaded] DOM loaded');
+    
     try {
-        // Get current user
-        const storedUserId = localStorage.getItem('currentUserId');
-        if (!storedUserId) {
-            window.location.href = 'index.html';
-            return;
-        }
-        currentUserId = parseInt(storedUserId);
-
         // Initialize i18n
-        await i18n.initialize();
+        console.log('[DOMContentLoaded] Initializing i18n');
+        await i18n.init();
+        i18n.updateUI();
         
         // Setup menu handlers
+        console.log('[DOMContentLoaded] Setting up menu handlers');
         setupMenuHandlers();
-        await setupLanguageMenu(i18n);
-        await setupFontSizeMenu(i18n);
+        
+        // Setup language and font size menus
+        console.log('[DOMContentLoaded] Setting up language menu');
+        await setupLanguageMenu();
+        setupLanguageMenuHandlers();
+        
+        console.log('[DOMContentLoaded] Setting up font size menu');
+        setupFontSizeMenuHandlers();
+        await setupFontSizeMenu();
+        setupFontSizeModalHandlers();
+        await applyFontSize();
+        
+        // Setup accessibility indicators
+        setupIndicators();
         
         // Setup event listeners
+        console.log('[DOMContentLoaded] Setting up event listeners');
         setupEventListeners();
         
         // Load transactions
+        console.log('[DOMContentLoaded] Loading transactions');
         await loadTransactions();
         
     } catch (error) {
         console.error('Failed to initialize:', error);
     }
+});
+
+function setupMenuHandlers() {
+    // File menu handlers
+    const fileMenu = document.getElementById('file-menu');
+    const fileDropdown = document.getElementById('file-dropdown');
+    
+    if (fileMenu && fileDropdown) {
+        fileMenu.addEventListener('click', (e) => {
+            e.stopPropagation();
+            fileDropdown.classList.toggle('show');
+        });
+        
+        // Back to main
+        const backToMainItem = fileDropdown.querySelector('[data-i18n="menu.back_to_main"]');
+        if (backToMainItem) {
+            backToMainItem.addEventListener('click', () => {
+                window.location.href = 'index.html';
+            });
+        }
+        
+        // Logout
+        const logoutItem = fileDropdown.querySelector('[data-i18n="menu.logout"]');
+        if (logoutItem) {
+            logoutItem.addEventListener('click', handleLogout);
+        }
+        
+        // Quit
+        const quitItem = fileDropdown.querySelector('[data-i18n="menu.quit"]');
+        if (quitItem) {
+            quitItem.addEventListener('click', handleQuit);
+        }
+    }
+    
+    // Close dropdowns when clicking outside
+    document.addEventListener('click', () => {
+        document.querySelectorAll('.dropdown').forEach(dropdown => {
+            dropdown.classList.remove('show');
+        });
+    });
 }
 
 function setupEventListeners() {
@@ -155,12 +208,14 @@ function createTransactionItem(transaction) {
     
     const majorSpan = document.createElement('span');
     majorSpan.className = 'major';
-    majorSpan.textContent = getCategoryLabel(transaction.category1_code);
+    majorSpan.textContent = transaction.category1_name || transaction.category1_code;
     categoryDiv.appendChild(majorSpan);
     
     const detailSpan = document.createElement('span');
     detailSpan.className = 'detail';
-    detailSpan.textContent = `${transaction.category2_code} > ${transaction.category3_code}`;
+    const category2Name = transaction.category2_name || transaction.category2_code;
+    const category3Name = transaction.category3_name || transaction.category3_code;
+    detailSpan.textContent = `${category2Name} > ${category3Name}`;
     categoryDiv.appendChild(detailSpan);
     
     item.appendChild(categoryDiv);
@@ -296,6 +351,3 @@ async function deleteTransaction(transactionId) {
         alert('Failed to delete transaction: ' + error);
     }
 }
-
-// Initialize on page load
-document.addEventListener('DOMContentLoaded', initialize);

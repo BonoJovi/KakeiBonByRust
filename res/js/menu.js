@@ -175,6 +175,15 @@ document.addEventListener('DOMContentLoaded', async function() {
                 adminDropdown.classList.remove('show');
             });
         }
+        
+        const transactionMgmtItem = adminDropdown.querySelector('.dropdown-item:nth-child(3)');
+        if (transactionMgmtItem) {
+            transactionMgmtItem.addEventListener('click', function(e) {
+                console.log('Transaction Management item clicked');
+                window.location.href = 'transaction-management.html';
+                adminDropdown.classList.remove('show');
+            });
+        }
     }
     
     // Setup login form
@@ -513,3 +522,13 @@ function setupCustomValidationMessages() {
         });
     });
 }
+
+// Export functions for use in other modules
+export {
+    setupLanguageMenuHandlers,
+    setupLanguageMenu,
+    handleLanguageChange,
+    handleLogout,
+    handleQuit,
+    setupCustomValidationMessages
+};

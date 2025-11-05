@@ -60,9 +60,9 @@ INSERT INTO TRANSACTIONS (USER_ID, TRANSACTION_DATE, CATEGORY1_CODE, CATEGORY2_C
 
 -- Insert sample transactions (TRANSFER)
 INSERT INTO TRANSACTIONS (USER_ID, TRANSACTION_DATE, CATEGORY1_CODE, CATEGORY2_CODE, CATEGORY3_CODE, AMOUNT, DESCRIPTION, MEMO, ENTRY_DT) VALUES
--- Transfers
+-- Transfers (using generic C3_T_1_1 category)
 (1, '2025-11-01', 'TRANSFER', 'C2_T_1', 'C3_T_1_1', 100000, '貯金', '定期預金へ', datetime('now')),
-(1, '2025-11-05', 'TRANSFER', 'C2_T_1', 'C3_T_1_2', 50000, '投資口座へ', '積立投資', datetime('now'));
+(1, '2025-11-05', 'TRANSFER', 'C2_T_1', 'C3_T_1_1', 50000, '投資口座へ', '積立投資', datetime('now'));
 
 -- Add some transactions for previous month (October) for testing date filters
 INSERT INTO TRANSACTIONS (USER_ID, TRANSACTION_DATE, CATEGORY1_CODE, CATEGORY2_CODE, CATEGORY3_CODE, AMOUNT, DESCRIPTION, MEMO, ENTRY_DT) VALUES
