@@ -6,8 +6,6 @@ import { setupLanguageMenuHandlers, setupLanguageMenu, handleLogout, handleQuit 
 
 const currentUserId = 1; // TODO: Get from session/auth
 
-console.log('transaction-management.js loaded');
-
 // Pagination state
 let currentPage = 1;
 const perPage = 50;
@@ -25,24 +23,18 @@ let currentFilters = {
 };
 
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('[DOMContentLoaded] DOM loaded');
-    
     try {
         // Initialize i18n
-        console.log('[DOMContentLoaded] Initializing i18n');
         await i18n.init();
         i18n.updateUI();
         
         // Setup menu handlers
-        console.log('[DOMContentLoaded] Setting up menu handlers');
         setupMenuHandlers();
         
         // Setup language and font size menus
-        console.log('[DOMContentLoaded] Setting up language menu');
         await setupLanguageMenu();
         setupLanguageMenuHandlers();
         
-        console.log('[DOMContentLoaded] Setting up font size menu');
         setupFontSizeMenuHandlers();
         await setupFontSizeMenu();
         setupFontSizeModalHandlers();
@@ -52,11 +44,12 @@ document.addEventListener('DOMContentLoaded', async function() {
         setupIndicators();
         
         // Setup event listeners
-        console.log('[DOMContentLoaded] Setting up event listeners');
         setupEventListeners();
         
+        // Load category data for filters
+        await loadCategoriesForFilter();
+        
         // Load transactions
-        console.log('[DOMContentLoaded] Loading transactions');
         await loadTransactions();
         
     } catch (error) {
@@ -108,6 +101,7 @@ function setupEventListeners() {
     // Toggle filter panel
     const toggleFilterBtn = document.getElementById('toggle-filter-btn');
     const filterPanel = document.getElementById('filter-panel');
+    
     toggleFilterBtn.addEventListener('click', () => {
         filterPanel.classList.toggle('hidden');
     });
@@ -141,6 +135,87 @@ function setupEventListeners() {
     addTransactionBtn.addEventListener('click', () => {
         alert('Add transaction functionality coming soon!');
     });
+}
+
+async function loadCategoriesForFilter() {
+    try {
+        // Get category tree
+        const categoryTree = await invoke('get_category_tree_with_lang', {
+            userId: currentUserId,
+            langCode: i18n.currentLanguage
+        });
+        
+        // Populate Category1 dropdown
+        const category1Select = document.getElementById('filter-category1');
+        if (!category1Select) {
+            console.error('Category1 select element not found');
+            return;
+        }
+        
+        category1Select.innerHTML = '<option value="">' + i18n.t('common.all') + '</option>';
+        
+        categoryTree.forEach((cat1) => {
+            const option = document.createElement('option');
+            option.value = cat1.category1.category1_code;
+            option.textContent = cat1.category1.category1_name_i18n;
+            category1Select.appendChild(option);
+        });
+        
+        // Handle Category1 change to populate Category2
+        category1Select.addEventListener('change', () => {
+            const selectedCat1 = category1Select.value;
+            const category2Select = document.getElementById('filter-category2');
+            const category3Select = document.getElementById('filter-category3');
+            
+            // Reset Category2 and Category3
+            category2Select.innerHTML = '<option value="">' + i18n.t('common.all') + '</option>';
+            category3Select.innerHTML = '<option value="">' + i18n.t('common.all') + '</option>';
+            
+            if (selectedCat1) {
+                const cat1Data = categoryTree.find(c => c.category1.category1_code === selectedCat1);
+                if (cat1Data && cat1Data.children) {
+                    cat1Data.children.forEach(cat2 => {
+                        const option = document.createElement('option');
+                        option.value = cat2.category2.category2_code;
+                        option.textContent = cat2.category2.category2_name_i18n;
+                        category2Select.appendChild(option);
+                    });
+                }
+            }
+        });
+        
+        // Handle Category2 change to populate Category3
+        const category2Select = document.getElementById('filter-category2');
+        category2Select.addEventListener('change', () => {
+            const selectedCat1 = category1Select.value;
+            const selectedCat2 = category2Select.value;
+            const category3Select = document.getElementById('filter-category3');
+            
+            // Reset Category3
+            category3Select.innerHTML = '<option value="">' + i18n.t('common.all') + '</option>';
+            
+            if (selectedCat1 && selectedCat2) {
+                const cat1Data = categoryTree.find(c => c.category1.category1_code === selectedCat1);
+                if (cat1Data && cat1Data.children) {
+                    const cat2Data = cat1Data.children.find(c => c.category2.category2_code === selectedCat2);
+                    if (cat2Data && cat2Data.children) {
+                        cat2Data.children.forEach(cat3 => {
+                            const option = document.createElement('option');
+                            option.value = cat3.category3_code;
+                            option.textContent = cat3.category3_name_i18n;
+                            category3Select.appendChild(option);
+                        });
+                    }
+                }
+            }
+        });
+        
+        console.log('[loadCategoriesForFilter] Event listeners attached successfully');
+        console.log('[loadCategoriesForFilter] END - SUCCESS');
+        
+    } catch (error) {
+        console.error('Failed to load categories:', error);
+    }
 }
 
 async function loadTransactions() {
