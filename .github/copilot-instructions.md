@@ -35,6 +35,12 @@ This file provides context for GitHub Copilot CLI to understand the project stru
 - **AI context documentation**: Can use UTC or JST
 - **Example**: `Last Updated: 2024-10-26 13:21 JST`
 
+### Documentation Policy
+- **Reference**: See [docs/DOCUMENTATION_POLICY.md](../docs/DOCUMENTATION_POLICY.md)
+- **Current Phase**: Development Phase (write freely, don't worry about granularity)
+- **Future Phase**: Release Preparation (consolidate, audience-based restructuring)
+- **Bilingual**: All user-facing docs must be in Japanese and English
+
 ---
 
 ## Directory Structure
