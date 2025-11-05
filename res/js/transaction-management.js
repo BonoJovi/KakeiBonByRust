@@ -284,7 +284,7 @@ function updatePagination(response) {
     nextBtn.disabled = response.page >= response.total_pages;
 }
 
-function applyFilters() {
+async function applyFilters() {
     currentFilters.startDate = document.getElementById('filter-start-date').value || null;
     currentFilters.endDate = document.getElementById('filter-end-date').value || null;
     currentFilters.category1Code = document.getElementById('filter-category1').value || null;
@@ -299,10 +299,15 @@ function applyFilters() {
     currentFilters.keyword = document.getElementById('filter-keyword').value || null;
     
     currentPage = 1; // Reset to first page
-    loadTransactions();
+    
+    // Close filter panel
+    const filterPanel = document.getElementById('filter-panel');
+    filterPanel.classList.add('hidden');
+    
+    await loadTransactions();
 }
 
-function clearFilters() {
+async function clearFilters() {
     document.getElementById('filter-start-date').value = '';
     document.getElementById('filter-end-date').value = '';
     document.getElementById('filter-category1').value = '';
@@ -324,7 +329,7 @@ function clearFilters() {
     };
     
     currentPage = 1;
-    loadTransactions();
+    await loadTransactions();
 }
 
 async function editTransaction(transactionId) {
