@@ -11,6 +11,7 @@ mod services {
     pub mod encryption;
     pub mod category;
     pub mod i18n;
+    pub mod transaction;
 }
 
 #[cfg(test)]
@@ -31,6 +32,7 @@ use services::user_management::UserManagementService;
 use services::encryption::EncryptionService;
 use services::i18n::I18nService;
 use services::category::CategoryService;
+use services::transaction::TransactionService;
 use settings::SettingsManager;
 use validation::{validate_password, validate_password_confirmation};
 use crate::consts::{LANG_ENGLISH, LANG_JAPANESE, LANG_DEFAULT, FONT_SIZE_SMALL, FONT_SIZE_MEDIUM, FONT_SIZE_LARGE, FONT_SIZE_DEFAULT};
@@ -43,6 +45,7 @@ pub struct AppState {
     pub settings: Arc<Mutex<SettingsManager>>,
     pub i18n: Arc<Mutex<I18nService>>,
     pub category: Arc<Mutex<CategoryService>>,
+    pub transaction: Arc<Mutex<TransactionService>>,
 }
 
 #[tauri::command]
@@ -854,6 +857,123 @@ async fn move_category3_down(
         .map_err(|e| format!("Failed to move category3 down: {}", e))
 }
 
+// ============================================================================
+// Transaction Management Commands
+// ============================================================================
+
+#[tauri::command]
+async fn add_transaction(
+    user_id: i64,
+    transaction_date: String,
+    category1_code: String,
+    category2_code: String,
+    category3_code: String,
+    amount: i64,
+    description: Option<String>,
+    memo: Option<String>,
+    state: tauri::State<'_, AppState>
+) -> Result<i64, String> {
+    let transaction = state.transaction.lock().await;
+    transaction.add_transaction(
+        user_id,
+        &transaction_date,
+        &category1_code,
+        &category2_code,
+        &category3_code,
+        amount,
+        description.as_deref(),
+        memo.as_deref(),
+    )
+    .await
+    .map_err(|e| format!("Failed to add transaction: {}", e))
+}
+
+#[tauri::command]
+async fn get_transaction(
+    user_id: i64,
+    transaction_id: i64,
+    state: tauri::State<'_, AppState>
+) -> Result<services::transaction::Transaction, String> {
+    let transaction = state.transaction.lock().await;
+    transaction.get_transaction(user_id, transaction_id)
+        .await
+        .map_err(|e| format!("Failed to get transaction: {}", e))
+}
+
+#[tauri::command]
+async fn get_transactions(
+    user_id: i64,
+    start_date: Option<String>,
+    end_date: Option<String>,
+    category1_code: Option<String>,
+    category2_code: Option<String>,
+    category3_code: Option<String>,
+    min_amount: Option<i64>,
+    max_amount: Option<i64>,
+    keyword: Option<String>,
+    page: i64,
+    per_page: i64,
+    state: tauri::State<'_, AppState>
+) -> Result<services::transaction::TransactionListResponse, String> {
+    let transaction = state.transaction.lock().await;
+    transaction.get_transactions(
+        user_id,
+        start_date.as_deref(),
+        end_date.as_deref(),
+        category1_code.as_deref(),
+        category2_code.as_deref(),
+        category3_code.as_deref(),
+        min_amount,
+        max_amount,
+        keyword.as_deref(),
+        page,
+        per_page,
+    )
+    .await
+    .map_err(|e| format!("Failed to get transactions: {}", e))
+}
+
+#[tauri::command]
+async fn update_transaction(
+    user_id: i64,
+    transaction_id: i64,
+    transaction_date: String,
+    category1_code: String,
+    category2_code: String,
+    category3_code: String,
+    amount: i64,
+    description: Option<String>,
+    memo: Option<String>,
+    state: tauri::State<'_, AppState>
+) -> Result<(), String> {
+    let transaction = state.transaction.lock().await;
+    transaction.update_transaction(
+        user_id,
+        transaction_id,
+        &transaction_date,
+        &category1_code,
+        &category2_code,
+        &category3_code,
+        amount,
+        description.as_deref(),
+        memo.as_deref(),
+    )
+    .await
+    .map_err(|e| format!("Failed to update transaction: {}", e))
+}
+
+#[tauri::command]
+async fn delete_transaction(
+    user_id: i64,
+    transaction_id: i64,
+    state: tauri::State<'_, AppState>
+) -> Result<(), String> {
+    let transaction = state.transaction.lock().await;
+    transaction.delete_transaction(user_id, transaction_id)
+        .await
+        .map_err(|e| format!("Failed to delete transaction: {}", e))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -907,7 +1027,12 @@ pub fn run() {
             move_category2_up,
             move_category2_down,
             move_category3_up,
-            move_category3_down
+            move_category3_down,
+            add_transaction,
+            get_transaction,
+            get_transactions,
+            update_transaction,
+            delete_transaction
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {
@@ -920,7 +1045,7 @@ pub fn run() {
 
             // Initialize database
             let rt = tokio::runtime::Runtime::new().unwrap();
-            let (db, auth, user_mgmt, encryption, settings, i18n, category) = rt.block_on(async {
+            let (db, auth, user_mgmt, encryption, settings, i18n, category, transaction) = rt.block_on(async {
                 let database = Database::new().await
                     .expect("Failed to connect to database");
                 database.initialize().await
@@ -933,8 +1058,9 @@ pub fn run() {
                     .expect("Failed to initialize settings");
                 let i18n_service = I18nService::new(database.pool().clone());
                 let category_service = CategoryService::new(database.pool().clone());
+                let transaction_service = TransactionService::new(database.pool().clone());
                 
-                (database, auth_service, user_mgmt_service, encryption_service, settings_manager, i18n_service, category_service)
+                (database, auth_service, user_mgmt_service, encryption_service, settings_manager, i18n_service, category_service, transaction_service)
             });
 
             app.manage(AppState {
@@ -945,6 +1071,7 @@ pub fn run() {
                 settings: Arc::new(Mutex::new(settings)),
                 i18n: Arc::new(Mutex::new(i18n)),
                 category: Arc::new(Mutex::new(category)),
+                transaction: Arc::new(Mutex::new(transaction)),
             });
 
             Ok(())
