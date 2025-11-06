@@ -130,10 +130,10 @@ function setupEventListeners() {
         loadTransactions();
     });
 
-    // Add transaction button (placeholder for now)
+    // Add transaction button (stub for now)
     const addTransactionBtn = document.getElementById('add-transaction-btn');
     addTransactionBtn.addEventListener('click', () => {
-        alert('Add transaction functionality coming soon!');
+        alert(i18n.t('transaction_mgmt.coming_soon'));
     });
 }
 
