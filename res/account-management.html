@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Account Management - KakeiBon</title>
+        <link rel="stylesheet" href="css/menu.css" />
+        <link rel="stylesheet" href="css/indicators.css" />
+        <link rel="stylesheet" href="css/account-management.css" />
+        <script type="importmap">
+        {
+            "imports": {
+                "@tauri-apps/api/core": "https://esm.sh/@tauri-apps/api@2/core"
+            }
+        }
+        </script>
+    </head>
+    <body>
+        <div class="container">
+            <header>
+                <nav>
+                    <button id="back-btn" class="back-button" data-i18n="menu.back_to_main">← Back to Main</button>
+                    <h1 data-i18n="account_mgmt.title">Account Management</h1>
+                </nav>
+            </header>
+
+            <main>
+                <div class="toolbar">
+                    <button id="add-account-btn" class="btn btn-primary" data-i18n="account_mgmt.add_new">+ Add New Account</button>
+                </div>
+
+                <div id="loading" class="loading" data-i18n="common.loading">Loading...</div>
+                
+                <table id="accounts-table" class="data-table">
+                    <thead>
+                        <tr>
+                            <th data-i18n="account_mgmt.account_code">Account Code</th>
+                            <th data-i18n="account_mgmt.account_name">Account Name</th>
+                            <th data-i18n="account_mgmt.template">Template</th>
+                            <th data-i18n="account_mgmt.initial_balance">Initial Balance</th>
+                            <th data-i18n="common.actions">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="accounts-tbody">
+                        <!-- Account rows will be inserted here -->
+                    </tbody>
+                </table>
+            </main>
+        </div>
+
+        <!-- Account Modal -->
+        <div id="account-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="modal-title" data-i18n="account_mgmt.modal_title_add">Add Account</h2>
+                    <button class="close-btn" id="close-modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="account-form">
+                        <div class="form-group">
+                            <label for="account-code" data-i18n="account_mgmt.account_code">Account Code</label>
+                            <input type="text" id="account-code" required>
+                            <span class="error-message" id="account-code-error"></span>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="account-name" data-i18n="account_mgmt.account_name">Account Name</label>
+                            <input type="text" id="account-name" required>
+                            <span class="error-message" id="account-name-error"></span>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="template-code" data-i18n="account_mgmt.template">Template</label>
+                            <select id="template-code" required>
+                                <option value="">-- Select Template --</option>
+                            </select>
+                            <span class="error-message" id="template-code-error"></span>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="initial-balance" data-i18n="account_mgmt.initial_balance">Initial Balance</label>
+                            <input type="number" id="initial-balance" value="0" required>
+                            <span class="error-message" id="initial-balance-error"></span>
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" id="cancel-btn" data-i18n="common.cancel">Cancel</button>
+                            <button type="submit" class="btn btn-primary" id="save-btn" data-i18n="common.save">Save</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <script type="module" src="js/account-management.js"></script>
+    </body>
+</html>

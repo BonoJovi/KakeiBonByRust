@@ -17,6 +17,8 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
+import { HTML_FILES } from './html-files.js';
+
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('DOM loaded');
     
@@ -162,7 +164,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (userMgmtItem) {
             userMgmtItem.addEventListener('click', function(e) {
                 console.log('User Management item clicked');
-                window.location.href = 'user-management.html';
+                window.location.href = HTML_FILES.USER_MANAGEMENT;
                 adminDropdown.classList.remove('show');
             });
         }
@@ -171,16 +173,25 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (categoryMgmtItem) {
             categoryMgmtItem.addEventListener('click', function(e) {
                 console.log('Category Management item clicked');
-                window.location.href = 'category-management.html';
+                window.location.href = HTML_FILES.CATEGORY_MANAGEMENT;
                 adminDropdown.classList.remove('show');
             });
         }
         
-        const transactionMgmtItem = adminDropdown.querySelector('.dropdown-item:nth-child(3)');
+        const accountMgmtItem = adminDropdown.querySelector('.dropdown-item:nth-child(3)');
+        if (accountMgmtItem) {
+            accountMgmtItem.addEventListener('click', function(e) {
+                console.log('Account Management item clicked');
+                window.location.href = HTML_FILES.ACCOUNT_MANAGEMENT;
+                adminDropdown.classList.remove('show');
+            });
+        }
+        
+        const transactionMgmtItem = adminDropdown.querySelector('.dropdown-item:nth-child(4)');
         if (transactionMgmtItem) {
             transactionMgmtItem.addEventListener('click', function(e) {
                 console.log('Transaction Management item clicked');
-                window.location.href = 'transaction-management.html';
+                window.location.href = HTML_FILES.TRANSACTION_MANAGEMENT;
                 adminDropdown.classList.remove('show');
             });
         }

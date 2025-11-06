@@ -239,9 +239,10 @@ impl EncryptionService {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_helpers::database::init_db;
 
     async fn setup_test_db() -> SqlitePool {
-        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        let pool = init_db("sqlite::memory:").await.unwrap();
         
         // Create ENCRYPTED_FIELDS table
         sqlx::query(

@@ -3,6 +3,7 @@ import i18n from './i18n.js';
 import { setupIndicators } from './indicators.js';
 import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers, adjustWindowSize } from './font-size.js';
 import { Modal } from './modal.js';
+import { HTML_FILES } from './html-files.js';
 
 // Category level constants
 const LEVEL_CATEGORY1 = 1;
@@ -177,7 +178,7 @@ function setupMenuHandlers() {
         const backToMainItem = fileDropdown.querySelector('.dropdown-item:nth-child(1)');
         if (backToMainItem) {
             backToMainItem.addEventListener('click', function() {
-                window.location.href = 'index.html';
+                window.location.href = HTML_FILES.INDEX;
             });
         }
         
@@ -186,7 +187,7 @@ function setupMenuHandlers() {
         if (logoutItem) {
             logoutItem.addEventListener('click', function() {
                 // TODO: Implement logout
-                window.location.href = 'index.html';
+                window.location.href = HTML_FILES.INDEX;
             });
         }
         

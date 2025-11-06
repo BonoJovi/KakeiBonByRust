@@ -12,6 +12,7 @@ mod services {
     pub mod category;
     pub mod i18n;
     pub mod transaction;
+    pub mod account;
 }
 
 #[cfg(test)]
@@ -974,6 +975,86 @@ async fn delete_transaction(
         .map_err(|e| format!("Failed to delete transaction: {}", e))
 }
 
+// ============================================================================
+// Account Management Commands
+// ============================================================================
+
+#[tauri::command]
+async fn get_account_templates(
+    state: tauri::State<'_, AppState>
+) -> Result<Vec<services::account::AccountTemplate>, String> {
+    let db = state.db.lock().await;
+    services::account::get_account_templates(db.pool()).await
+}
+
+#[tauri::command]
+async fn get_accounts(
+    state: tauri::State<'_, AppState>
+) -> Result<Vec<services::account::Account>, String> {
+    let db = state.db.lock().await;
+    // TODO: Get user_id from session/auth
+    let user_id = 1;
+    services::account::get_accounts(db.pool(), user_id).await
+}
+
+#[tauri::command]
+async fn add_account(
+    account_code: String,
+    account_name: String,
+    template_code: String,
+    initial_balance: i64,
+    state: tauri::State<'_, AppState>
+) -> Result<String, String> {
+    let db = state.db.lock().await;
+    // TODO: Get user_id from session/auth
+    let user_id = 1;
+    
+    let request = services::account::AddAccountRequest {
+        account_code,
+        account_name,
+        template_code,
+        initial_balance,
+    };
+    
+    services::account::add_account(db.pool(), user_id, request).await
+}
+
+#[tauri::command]
+async fn update_account(
+    account_code: String,
+    account_name: String,
+    template_code: String,
+    initial_balance: i64,
+    display_order: i64,
+    state: tauri::State<'_, AppState>
+) -> Result<String, String> {
+    let db = state.db.lock().await;
+    // TODO: Get user_id from session/auth
+    let user_id = 1;
+    
+    let request = services::account::UpdateAccountRequest {
+        account_code,
+        account_name,
+        template_code,
+        initial_balance,
+        display_order,
+    };
+    
+    services::account::update_account(db.pool(), user_id, request).await
+}
+
+#[tauri::command]
+async fn delete_account(
+    account_code: String,
+    state: tauri::State<'_, AppState>
+) -> Result<String, String> {
+    let db = state.db.lock().await;
+    // TODO: Get user_id from session/auth
+    let user_id = 1;
+    
+    services::account::delete_account(db.pool(), user_id, &account_code).await
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -1032,7 +1113,12 @@ pub fn run() {
             get_transaction,
             get_transactions,
             update_transaction,
-            delete_transaction
+            delete_transaction,
+            get_account_templates,
+            get_accounts,
+            add_account,
+            update_account,
+            delete_account
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {

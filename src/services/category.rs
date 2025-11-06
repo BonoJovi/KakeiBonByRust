@@ -946,9 +946,10 @@ pub struct CategoryForEdit {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_helpers::database::init_db;
     
     async fn setup_test_db() -> SqlitePool {
-        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        let pool = init_db("sqlite::memory:").await.unwrap();
         
         // Read and execute DDL from dbaccess.sql
         let sql_content = std::fs::read_to_string("res/sql/dbaccess.sql")

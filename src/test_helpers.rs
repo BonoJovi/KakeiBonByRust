@@ -97,10 +97,16 @@ pub mod database {
     use sqlx::sqlite::SqlitePool;
     use crate::security::hash_password;
     use crate::consts::{ROLE_ADMIN, ROLE_USER};
+    use crate::db::connect_db;
+
+    /// Initialize an in-memory SQLite database for testing
+    pub async fn init_db(db_url: &str) -> Result<SqlitePool, sqlx::Error> {
+        connect_db(db_url).await
+    }
 
     /// Setup an in-memory test database with all tables from dbaccess.sql
     pub async fn setup_test_db() -> SqlitePool {
-        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        let pool = connect_db("sqlite::memory:").await.unwrap();
         
         // Read and execute DDL from dbaccess.sql
         let sql_content = std::fs::read_to_string("res/sql/dbaccess.sql")

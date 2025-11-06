@@ -3,6 +3,7 @@ import i18n from './i18n.js';
 import { ROLE_ADMIN, ROLE_USER } from './consts.js';
 import { setupIndicators } from './indicators.js';
 import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers, adjustWindowSize } from './font-size.js';
+import { HTML_FILES } from './html-files.js';
 
 let currentUsers = [];
 let editingUserId = null;
@@ -149,7 +150,7 @@ function setupMenuHandlers() {
         const dropdownItems = fileDropdown.querySelectorAll('.dropdown-item');
         dropdownItems[0]?.addEventListener('click', () => {
             console.log('[fileDropdown] Back to main clicked');
-            window.location.href = 'index.html';
+            window.location.href = HTML_FILES.INDEX;
             fileDropdown.classList.remove('show');
         });
         dropdownItems[1]?.addEventListener('click', () => {
@@ -470,7 +471,7 @@ async function handleUserDelete(userId) {
 
 function handleLogout() {
     console.log('Logout clicked');
-    window.location.href = 'index.html';
+    window.location.href = HTML_FILES.INDEX;
 }
 
 function handleQuit() {

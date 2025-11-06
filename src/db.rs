@@ -3,6 +3,11 @@ use std::path::PathBuf;
 use crate::consts::{DB_DIR_NAME, DB_FILE_NAME, SQL_INIT_FILE_PATH};
 use crate::sql_queries;
 
+/// Connect to a SQLite database with the given URL
+pub async fn connect_db(db_url: &str) -> Result<SqlitePool, sqlx::Error> {
+    SqlitePool::connect(db_url).await
+}
+
 pub struct Database {
     pool: SqlitePool,
 }
@@ -19,7 +24,7 @@ impl Database {
         
         // Ensure the database file can be created
         let db_url = format!("sqlite://{}?mode=rwc", db_path.display());
-        let pool = SqlitePool::connect(&db_url).await?;
+        let pool = connect_db(&db_url).await?;
         
         // Enable WAL mode
         sqlx::query(sql_queries::DB_PRAGMA_WAL)

@@ -3,6 +3,7 @@ import i18n from './i18n.js';
 import { setupIndicators } from './indicators.js';
 import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers } from './font-size.js';
 import { setupLanguageMenuHandlers, setupLanguageMenu, handleLogout, handleQuit } from './menu.js';
+import { HTML_FILES } from './html-files.js';
 
 const currentUserId = 1; // TODO: Get from session/auth
 
@@ -72,7 +73,7 @@ function setupMenuHandlers() {
         const backToMainItem = fileDropdown.querySelector('[data-i18n="menu.back_to_main"]');
         if (backToMainItem) {
             backToMainItem.addEventListener('click', () => {
-                window.location.href = 'index.html';
+                window.location.href = HTML_FILES.INDEX;
             });
         }
         
