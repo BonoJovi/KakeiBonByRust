@@ -2,6 +2,11 @@ use serde::{Deserialize, Serialize};
 use sqlx::{SqlitePool, FromRow};
 use crate::sql_queries;
 
+/// Normalize account code to uppercase
+fn normalize_account_code(code: &str) -> String {
+    code.trim().to_uppercase()
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
 pub struct AccountTemplate {
     pub template_id: i64,
@@ -138,10 +143,13 @@ async fn get_next_display_order(pool: &SqlitePool, user_id: i64) -> Result<i64, 
 pub async fn add_account(
     pool: &SqlitePool,
     user_id: i64,
-    request: AddAccountRequest,
+    mut request: AddAccountRequest,
 ) -> Result<String, String> {
+    // Normalize account code to uppercase
+    request.account_code = normalize_account_code(&request.account_code);
+    
     // Validate account code
-    if request.account_code.trim().is_empty() {
+    if request.account_code.is_empty() {
         return Err("Account code cannot be empty".to_string());
     }
 
@@ -172,8 +180,11 @@ pub async fn add_account(
 pub async fn update_account(
     pool: &SqlitePool,
     user_id: i64,
-    request: UpdateAccountRequest,
+    mut request: UpdateAccountRequest,
 ) -> Result<String, String> {
+    // Normalize account code to uppercase
+    request.account_code = normalize_account_code(&request.account_code);
+    
     // Check if account exists
     get_account_by_code(pool, user_id, &request.account_code)
         .await?
@@ -200,15 +211,18 @@ pub async fn delete_account(
     user_id: i64,
     account_code: &str,
 ) -> Result<String, String> {
+    // Normalize account code to uppercase
+    let account_code = normalize_account_code(account_code);
+    
     // Check if account exists
-    get_account_by_code(pool, user_id, account_code)
+    get_account_by_code(pool, user_id, &account_code)
         .await?
         .ok_or("Account not found")?;
 
     // Logical delete
     sqlx::query(sql_queries::ACCOUNT_DELETE_LOGICAL)
         .bind(user_id)
-        .bind(account_code)
+        .bind(&account_code)
         .execute(pool)
         .await
         .map_err(|e| format!("Failed to delete account: {}", e))?;

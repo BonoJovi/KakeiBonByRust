@@ -41,6 +41,11 @@ function setupEventListeners() {
         openModal('add');
     });
 
+    // Account code auto-uppercase
+    document.getElementById('account-code').addEventListener('input', (e) => {
+        e.target.value = e.target.value.toUpperCase();
+    });
+
     // Modal close buttons
     document.getElementById('close-modal').addEventListener('click', closeModal);
     document.getElementById('cancel-btn').addEventListener('click', closeModal);
