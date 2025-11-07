@@ -639,30 +639,40 @@ function handleCategory1Change(event) {
 async function handleTransactionSubmit(event) {
     event.preventDefault();
     
-    const formData = {
-        transactionDate: document.getElementById('transaction-date').value,
-        category1Code: document.getElementById('category1').value,
-        fromAccountCode: document.getElementById('from-account').value,
-        toAccountCode: document.getElementById('to-account').value,
-        totalAmount: parseInt(document.getElementById('total-amount').value),
-        taxRate: parseFloat(document.getElementById('tax-rate').value),
-        taxRoundingMethod: parseInt(document.getElementById('tax-rounding').value),
-        memo: document.getElementById('transaction-memo').value
-    };
+    const transactionDate = document.getElementById('transaction-date').value;
+    const category1Code = document.getElementById('category1').value;
+    const fromAccountCode = document.getElementById('from-account').value;
+    const toAccountCode = document.getElementById('to-account').value;
+    const totalAmount = parseInt(document.getElementById('total-amount').value);
+    const taxRate = parseInt(document.getElementById('tax-rate').value);
+    const taxRounding = document.getElementById('tax-rounding').value;
+    const memoText = document.getElementById('transaction-memo').value.trim() || null;
     
     try {
         if (editingTransactionId) {
             // Update existing transaction
             await invoke('update_transaction_header', {
-                userId: currentUserId,
                 transactionId: editingTransactionId,
-                ...formData
+                transactionDate,
+                category1Code,
+                fromAccountCode,
+                toAccountCode,
+                totalAmount,
+                taxRate,
+                taxRounding,
+                memoText
             });
         } else {
             // Create new transaction
             await invoke('add_transaction_header', {
-                userId: currentUserId,
-                ...formData
+                transactionDate,
+                category1Code,
+                fromAccountCode,
+                toAccountCode,
+                totalAmount,
+                taxRate,
+                taxRounding,
+                memoText
             });
         }
         
@@ -679,7 +689,6 @@ async function handleTransactionSubmit(event) {
 async function loadTransactionData(transactionId) {
     try {
         const transaction = await invoke('get_transaction_header', {
-            userId: currentUserId,
             transactionId: transactionId
         });
         
@@ -690,7 +699,7 @@ async function loadTransactionData(transactionId) {
         document.getElementById('to-account').value = transaction.to_account_code || 'NONE';
         document.getElementById('total-amount').value = transaction.total_amount;
         document.getElementById('tax-rate').value = transaction.tax_rate;
-        document.getElementById('tax-rounding').value = transaction.tax_rounding_method;
+        document.getElementById('tax-rounding').value = transaction.tax_rounding;
         document.getElementById('transaction-memo').value = transaction.memo || '';
         
         // Trigger category1 change to update account visibility

@@ -2,7 +2,76 @@ use sqlx::{SqlitePool, Row};
 use serde::{Serialize, Deserialize};
 use crate::sql_queries;
 
-/// Transaction data structure
+/// Transaction header data structure
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
+pub struct TransactionHeader {
+    #[sqlx(rename = "TRANSACTION_ID")]
+    pub transaction_id: i64,
+    #[sqlx(rename = "USER_ID")]
+    pub user_id: i64,
+    #[sqlx(rename = "TRANSACTION_DATE")]
+    pub transaction_date: String,
+    #[sqlx(rename = "CATEGORY1_CODE")]
+    pub category1_code: String,
+    #[sqlx(rename = "FROM_ACCOUNT_CODE")]
+    pub from_account_code: String,
+    #[sqlx(rename = "TO_ACCOUNT_CODE")]
+    pub to_account_code: String,
+    #[sqlx(rename = "TOTAL_AMOUNT")]
+    pub total_amount: i64,
+    #[sqlx(rename = "TAX_RATE")]
+    pub tax_rate: i32,
+    #[sqlx(rename = "TAX_ROUNDING")]
+    pub tax_rounding: String,
+    #[sqlx(rename = "MEMO_ID")]
+    pub memo_id: Option<i64>,
+    #[sqlx(rename = "ENTRY_DT")]
+    pub entry_dt: String,
+    #[sqlx(rename = "UPDATE_DT")]
+    pub update_dt: Option<String>,
+}
+
+/// Transaction detail data structure
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
+pub struct TransactionDetail {
+    #[sqlx(rename = "DETAIL_ID")]
+    pub detail_id: i64,
+    #[sqlx(rename = "TRANSACTION_ID")]
+    pub transaction_id: i64,
+    #[sqlx(rename = "CATEGORY2_CODE")]
+    pub category2_code: String,
+    #[sqlx(rename = "CATEGORY3_CODE")]
+    pub category3_code: String,
+    #[sqlx(rename = "ITEM_NAME")]
+    pub item_name: String,
+    #[sqlx(rename = "AMOUNT")]
+    pub amount: i64,
+    #[sqlx(rename = "TAX_AMOUNT")]
+    pub tax_amount: i64,
+    #[sqlx(rename = "TAX_RATE")]
+    pub tax_rate: i32,
+    #[sqlx(rename = "MEMO_ID")]
+    pub memo_id: Option<i64>,
+    #[sqlx(rename = "ENTRY_DT")]
+    pub entry_dt: String,
+    #[sqlx(rename = "UPDATE_DT")]
+    pub update_dt: Option<String>,
+}
+
+/// Memo data structure
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
+pub struct Memo {
+    #[sqlx(rename = "MEMO_ID")]
+    pub memo_id: i64,
+    #[sqlx(rename = "MEMO_TEXT")]
+    pub memo_text: String,
+    #[sqlx(rename = "ENTRY_DT")]
+    pub entry_dt: String,
+    #[sqlx(rename = "UPDATE_DT")]
+    pub update_dt: Option<String>,
+}
+
+/// Legacy transaction data structure (for backward compatibility)
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Transaction {
     #[sqlx(rename = "TRANSACTION_ID")]
@@ -78,7 +147,100 @@ impl TransactionService {
         Self { pool }
     }
 
-    /// Add a new transaction
+    /// Add a new transaction header
+    pub async fn add_transaction_header(
+        &self,
+        user_id: i64,
+        transaction_date: &str,
+        category1_code: &str,
+        from_account_code: &str,
+        to_account_code: &str,
+        total_amount: i64,
+        tax_rate: i32,
+        tax_rounding: &str,
+        memo_text: Option<&str>,
+    ) -> Result<i64, TransactionError> {
+        // Validate date format
+        if transaction_date.len() != 10 {
+            return Err(TransactionError::ValidationError(
+                "Invalid date format. Use YYYY-MM-DD".to_string(),
+            ));
+        }
+
+        // Validate amount (0 is allowed)
+        if total_amount < 0 || total_amount > 999_999_999 {
+            return Err(TransactionError::ValidationError(
+                "Amount must be between 0 and 999,999,999".to_string(),
+            ));
+        }
+
+        // Validate tax rate (typically 8% or 10% in Japan)
+        if tax_rate < 0 || tax_rate > 100 {
+            return Err(TransactionError::ValidationError(
+                "Tax rate must be between 0 and 100".to_string(),
+            ));
+        }
+
+        // Validate tax rounding method
+        if !["ROUND_UP", "ROUND_DOWN", "ROUND_HALF"].contains(&tax_rounding) {
+            return Err(TransactionError::ValidationError(
+                "Invalid tax rounding method".to_string(),
+            ));
+        }
+
+        // Save memo if provided
+        let memo_id = if let Some(text) = memo_text {
+            if !text.trim().is_empty() {
+                if text.len() > 1000 {
+                    return Err(TransactionError::ValidationError(
+                        "Memo must be 1000 characters or less".to_string(),
+                    ));
+                }
+                let result = sqlx::query(sql_queries::MEMO_INSERT)
+                    .bind(text)
+                    .execute(&self.pool)
+                    .await?;
+                Some(result.last_insert_rowid())
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        // Insert transaction header
+        let result = sqlx::query(sql_queries::TRANSACTION_HEADER_INSERT)
+            .bind(user_id)
+            .bind(transaction_date)
+            .bind(category1_code)
+            .bind(from_account_code)
+            .bind(to_account_code)
+            .bind(total_amount)
+            .bind(tax_rate)
+            .bind(tax_rounding)
+            .bind(memo_id)
+            .execute(&self.pool)
+            .await?;
+
+        Ok(result.last_insert_rowid())
+    }
+
+    /// Get transaction header by ID
+    pub async fn get_transaction_header(
+        &self,
+        user_id: i64,
+        transaction_id: i64,
+    ) -> Result<TransactionHeader, TransactionError> {
+        let header = sqlx::query_as::<_, TransactionHeader>(sql_queries::TRANSACTION_HEADER_GET_BY_ID)
+            .bind(transaction_id)
+            .bind(user_id)
+            .fetch_optional(&self.pool)
+            .await?;
+
+        header.ok_or(TransactionError::NotFound)
+    }
+
+    /// Add a new transaction (legacy method for backward compatibility)
     pub async fn add_transaction(
         &self,
         user_id: i64,

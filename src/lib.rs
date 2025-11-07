@@ -1055,6 +1055,49 @@ async fn delete_account(
     services::account::delete_account(db.pool(), user_id, &account_code).await
 }
 
+#[tauri::command]
+async fn add_transaction_header(
+    transaction_date: String,
+    category1_code: String,
+    from_account_code: String,
+    to_account_code: String,
+    total_amount: i64,
+    tax_rate: i32,
+    tax_rounding: String,
+    memo_text: Option<String>,
+    state: tauri::State<'_, AppState>
+) -> Result<i64, String> {
+    let transaction = state.transaction.lock().await;
+    // TODO: Get user_id from session/auth
+    let user_id = 1;
+    
+    transaction.add_transaction_header(
+        user_id,
+        &transaction_date,
+        &category1_code,
+        &from_account_code,
+        &to_account_code,
+        total_amount,
+        tax_rate,
+        &tax_rounding,
+        memo_text.as_deref(),
+    ).await
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn get_transaction_header(
+    transaction_id: i64,
+    state: tauri::State<'_, AppState>
+) -> Result<services::transaction::TransactionHeader, String> {
+    let transaction = state.transaction.lock().await;
+    // TODO: Get user_id from session/auth
+    let user_id = 1;
+    
+    transaction.get_transaction_header(user_id, transaction_id).await
+        .map_err(|e| e.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -1118,7 +1161,9 @@ pub fn run() {
             get_accounts,
             add_account,
             update_account,
-            delete_account
+            delete_account,
+            add_transaction_header,
+            get_transaction_header
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {

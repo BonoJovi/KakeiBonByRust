@@ -22,7 +22,11 @@ Update existing category codes:
 
 Execute with sqlite3:
 ```bash
-sqlite3 src-tauri/kakeibo.db < sql/phase4/phase4-0_init_categories.sql
+# Use the db.sh script (recommended)
+../db.sh < sql/phase4/phase4-0_init_categories.sql
+
+# Or specify the full path
+sqlite3 $HOME/.kakeibon/KakeiBonDB.sqlite3 < sql/phase4/phase4-0_init_categories.sql
 ```
 
 **Note:** These scripts are for reference and initial setup. After Phase 4-0, 
