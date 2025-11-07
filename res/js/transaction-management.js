@@ -473,6 +473,11 @@ function setupTransactionModalHandlers() {
 }
 
 async function openTransactionModal(transactionId = null) {
+    // Handle event object case (when called from button click)
+    if (transactionId && typeof transactionId === 'object') {
+        transactionId = null;
+    }
+    
     const modal = document.getElementById('transaction-modal');
     const modalTitle = document.getElementById('transaction-modal-title');
     const form = document.getElementById('transaction-form');
@@ -496,7 +501,7 @@ async function openTransactionModal(transactionId = null) {
     document.getElementById('transaction-date').valueAsDate = new Date(); // Today
     
     // If editing, load transaction data
-    if (transactionId) {
+    if (transactionId && typeof transactionId === 'number') {
         await loadTransactionData(transactionId);
     }
     
@@ -623,17 +628,19 @@ function handleCategory1Change(event) {
         toAccountGroup.style.display = 'block';
     }
     
-    // Populate category2 dropdown
+    // Populate category2 dropdown (if exists in modal)
     const category2Select = document.getElementById('category2');
-    category2Select.innerHTML = '<option value="">Select category</option>';
-    
-    if (category1.children && category1.children.length > 0) {
-        category1.children.forEach(cat2 => {
-            const option = document.createElement('option');
-            option.value = cat2.category2.category2_code;
-            option.textContent = cat2.category2.category2_name_i18n;
-            category2Select.appendChild(option);
-        });
+    if (category2Select) {
+        category2Select.innerHTML = '<option value="">Select category</option>';
+        
+        if (category1.children && category1.children.length > 0) {
+            category1.children.forEach(cat2 => {
+                const option = document.createElement('option');
+                option.value = cat2.category2.category2_code;
+                option.textContent = cat2.category2.category2_name_i18n;
+                category2Select.appendChild(option);
+            });
+        }
     }
 }
 
@@ -667,12 +674,12 @@ async function handleTransactionSubmit(event) {
         } else {
             // Create new transaction
             await invoke('save_transaction_header', {
-                category1Code,
-                fromAccountCode,
-                toAccountCode,
-                transactionDate,
-                totalAmount,
-                taxRoundingType,
+                category1_code: category1Code,
+                from_account_code: fromAccountCode,
+                to_account_code: toAccountCode,
+                transaction_date: transactionDate,
+                total_amount: totalAmount,
+                tax_rounding_type: taxRoundingType,
                 memo: memoText
             });
         }
