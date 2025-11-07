@@ -28,3 +28,8 @@ export const FONT_SIZE_OPTIONS = [
     { code: FONT_SIZE_LARGE, key: I18N_FONT_SIZE_LARGE },
     { code: FONT_SIZE_CUSTOM, key: I18N_FONT_SIZE_CUSTOM, action: 'modal' }
 ];
+
+// Tax rounding mode constants
+export const TAX_ROUND_DOWN = 0;
+export const TAX_ROUND_HALF_UP = 1;
+export const TAX_ROUND_UP = 2;

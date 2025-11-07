@@ -18,3 +18,8 @@ pub const FONT_SIZE_SMALL: &str = "small";
 pub const FONT_SIZE_MEDIUM: &str = "medium";
 pub const FONT_SIZE_LARGE: &str = "large";
 pub const FONT_SIZE_DEFAULT: &str = FONT_SIZE_MEDIUM;
+
+// Tax rounding mode constants
+pub const TAX_ROUND_DOWN: i64 = 0;
+pub const TAX_ROUND_HALF_UP: i64 = 1;
+pub const TAX_ROUND_UP: i64 = 2;

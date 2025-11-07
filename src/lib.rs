@@ -1086,6 +1086,35 @@ async fn add_transaction_header(
 }
 
 #[tauri::command]
+async fn save_transaction_header(
+    category1_code: String,
+    from_account_code: String,
+    to_account_code: String,
+    transaction_date: String,
+    total_amount: i64,
+    tax_rounding_type: i64,
+    memo: Option<String>,
+    state: tauri::State<'_, AppState>
+) -> Result<i64, String> {
+    let transaction = state.transaction.lock().await;
+    // TODO: Get user_id from session/auth
+    let user_id = 1;
+    
+    let request = services::transaction::SaveTransactionRequest {
+        category1_code,
+        from_account_code,
+        to_account_code,
+        transaction_date,
+        total_amount,
+        tax_rounding_type,
+        memo,
+    };
+    
+    transaction.save_transaction_header(user_id, request).await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 async fn get_transaction_header(
     transaction_id: i64,
     state: tauri::State<'_, AppState>
@@ -1163,6 +1192,7 @@ pub fn run() {
             update_account,
             delete_account,
             add_transaction_header,
+            save_transaction_header,
             get_transaction_header
         ])
         .setup(|app| {

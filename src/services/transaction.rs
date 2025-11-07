@@ -1,6 +1,6 @@
 use sqlx::{SqlitePool, Row};
 use serde::{Serialize, Deserialize};
-use crate::sql_queries;
+use crate::{sql_queries, consts};
 
 /// Transaction header data structure
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
@@ -19,16 +19,28 @@ pub struct TransactionHeader {
     pub to_account_code: String,
     #[sqlx(rename = "TOTAL_AMOUNT")]
     pub total_amount: i64,
-    #[sqlx(rename = "TAX_RATE")]
-    pub tax_rate: i32,
-    #[sqlx(rename = "TAX_ROUNDING")]
-    pub tax_rounding: String,
+    #[sqlx(rename = "TAX_ROUNDING_TYPE")]
+    pub tax_rounding_type: i64,
     #[sqlx(rename = "MEMO_ID")]
     pub memo_id: Option<i64>,
+    #[sqlx(rename = "IS_DISABLED")]
+    pub is_disabled: i64,
     #[sqlx(rename = "ENTRY_DT")]
     pub entry_dt: String,
     #[sqlx(rename = "UPDATE_DT")]
     pub update_dt: Option<String>,
+}
+
+/// Request structure for saving transaction header
+#[derive(Debug, Deserialize, Clone)]
+pub struct SaveTransactionRequest {
+    pub category1_code: String,
+    pub from_account_code: String,
+    pub to_account_code: String,
+    pub transaction_date: String,
+    pub total_amount: i64,
+    pub tax_rounding_type: i64,
+    pub memo: Option<String>,
 }
 
 /// Transaction detail data structure
@@ -145,6 +157,72 @@ impl From<sqlx::Error> for TransactionError {
 impl TransactionService {
     pub fn new(pool: SqlitePool) -> Self {
         Self { pool }
+    }
+
+    /// Add a new transaction header with save request
+    pub async fn save_transaction_header(
+        &self,
+        user_id: i64,
+        request: SaveTransactionRequest,
+    ) -> Result<i64, TransactionError> {
+        // Validate date format
+        if request.transaction_date.len() != 10 {
+            return Err(TransactionError::ValidationError(
+                "Invalid date format. Use YYYY-MM-DD".to_string(),
+            ));
+        }
+
+        // Validate amount (0 is allowed)
+        if request.total_amount < 0 || request.total_amount > 999_999_999 {
+            return Err(TransactionError::ValidationError(
+                "Amount must be between 0 and 999,999,999".to_string(),
+            ));
+        }
+
+        // Validate tax rounding type using constants
+        if request.tax_rounding_type != consts::TAX_ROUND_DOWN
+            && request.tax_rounding_type != consts::TAX_ROUND_HALF_UP
+            && request.tax_rounding_type != consts::TAX_ROUND_UP
+        {
+            return Err(TransactionError::ValidationError(
+                "Invalid tax rounding type".to_string(),
+            ));
+        }
+
+        // Save memo if provided
+        let memo_id = if let Some(text) = &request.memo {
+            if !text.trim().is_empty() {
+                if text.len() > 1000 {
+                    return Err(TransactionError::ValidationError(
+                        "Memo must be 1000 characters or less".to_string(),
+                    ));
+                }
+                let result = sqlx::query(sql_queries::MEMO_INSERT)
+                    .bind(text)
+                    .execute(&self.pool)
+                    .await?;
+                Some(result.last_insert_rowid())
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        // Insert transaction header
+        let result = sqlx::query(sql_queries::TRANSACTION_HEADER_INSERT)
+            .bind(user_id)
+            .bind(&request.transaction_date)
+            .bind(&request.category1_code)
+            .bind(&request.from_account_code)
+            .bind(&request.to_account_code)
+            .bind(request.total_amount)
+            .bind(request.tax_rounding_type)
+            .bind(memo_id)
+            .execute(&self.pool)
+            .await?;
+
+        Ok(result.last_insert_rowid())
     }
 
     /// Add a new transaction header

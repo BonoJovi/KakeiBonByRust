@@ -4,6 +4,7 @@ import { setupIndicators } from './indicators.js';
 import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers, adjustWindowSize } from './font-size.js';
 import { setupLanguageMenuHandlers, setupLanguageMenu, handleLogout, handleQuit } from './menu.js';
 import { HTML_FILES } from './html-files.js';
+import { TAX_ROUND_DOWN, TAX_ROUND_HALF_UP, TAX_ROUND_UP } from './consts.js';
 
 const currentUserId = 1; // TODO: Get from session/auth
 
@@ -644,35 +645,35 @@ async function handleTransactionSubmit(event) {
     const fromAccountCode = document.getElementById('from-account').value;
     const toAccountCode = document.getElementById('to-account').value;
     const totalAmount = parseInt(document.getElementById('total-amount').value);
-    const taxRate = parseInt(document.getElementById('tax-rate').value);
-    const taxRounding = document.getElementById('tax-rounding').value;
+    const taxRoundingValue = document.getElementById('tax-rounding').value;
     const memoText = document.getElementById('transaction-memo').value.trim() || null;
+    
+    // Convert tax rounding to integer constant
+    let taxRoundingType;
+    if (taxRoundingValue === 'ROUND_DOWN') {
+        taxRoundingType = TAX_ROUND_DOWN;  // 0: 切り捨て
+    } else if (taxRoundingValue === 'ROUND_HALF') {
+        taxRoundingType = TAX_ROUND_HALF_UP;  // 1: 四捨五入
+    } else if (taxRoundingValue === 'ROUND_UP') {
+        taxRoundingType = TAX_ROUND_UP;  // 2: 切り上げ
+    } else {
+        taxRoundingType = TAX_ROUND_DOWN;  // Default
+    }
     
     try {
         if (editingTransactionId) {
-            // Update existing transaction
-            await invoke('update_transaction_header', {
-                transactionId: editingTransactionId,
-                transactionDate,
-                category1Code,
-                fromAccountCode,
-                toAccountCode,
-                totalAmount,
-                taxRate,
-                taxRounding,
-                memoText
-            });
+            // Update existing transaction - TODO: implement update command
+            alert('Update functionality not yet implemented');
         } else {
             // Create new transaction
-            await invoke('add_transaction_header', {
-                transactionDate,
+            await invoke('save_transaction_header', {
                 category1Code,
                 fromAccountCode,
                 toAccountCode,
+                transactionDate,
                 totalAmount,
-                taxRate,
-                taxRounding,
-                memoText
+                taxRoundingType,
+                memo: memoText
             });
         }
         
