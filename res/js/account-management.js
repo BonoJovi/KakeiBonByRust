@@ -2,6 +2,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { HTML_FILES } from './html-files.js';
 import i18n from './i18n.js';
+import { adjustWindowSize } from './font-size.js';
 
 console.log('=== ACCOUNT-MANAGEMENT.JS LOADED - ALL imports enabled ===');
 console.log('invoke:', typeof invoke);
@@ -24,6 +25,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         setupEventListeners();
         await loadTemplates();
         await loadAccounts();
+        
+        // Adjust window size after content is loaded
+        await adjustWindowSize();
     } catch (error) {
         console.error('Initialization error:', error);
         alert('Failed to initialize: ' + error);

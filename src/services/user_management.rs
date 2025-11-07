@@ -133,6 +133,9 @@ impl UserManagementService {
             .execute(&self.pool)
             .await?;
         
+        // Insert "Unspecified" master data for the new user
+        self.insert_unspecified_data(next_id).await?;
+        
         Ok(next_id)
     }
 
@@ -316,6 +319,29 @@ impl UserManagementService {
             .map_err(|e| UserManagementError::SecurityError(
                 SecurityError::InvalidPassword(format!("Re-encryption failed: {}", e))
             ))
+    }
+    
+    /// Insert "Unspecified" master data for a new user
+    async fn insert_unspecified_data(&self, user_id: i64) -> Result<(), UserManagementError> {
+        // Insert "Unspecified" account
+        sqlx::query(sql_queries::INSERT_UNSPECIFIED_ACCOUNT)
+            .bind(user_id)
+            .execute(&self.pool)
+            .await?;
+        
+        // Insert "Unspecified" CATEGORY2 for each CATEGORY1
+        sqlx::query(sql_queries::INSERT_UNSPECIFIED_CATEGORY2)
+            .bind(user_id)
+            .execute(&self.pool)
+            .await?;
+        
+        // Insert "Unspecified" CATEGORY3 for each CATEGORY2
+        sqlx::query(sql_queries::INSERT_UNSPECIFIED_CATEGORY3)
+            .bind(user_id)
+            .execute(&self.pool)
+            .await?;
+        
+        Ok(())
     }
 }
 

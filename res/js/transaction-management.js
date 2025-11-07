@@ -1,7 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import i18n from './i18n.js';
 import { setupIndicators } from './indicators.js';
-import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers } from './font-size.js';
+import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers, adjustWindowSize } from './font-size.js';
 import { setupLanguageMenuHandlers, setupLanguageMenu, handleLogout, handleQuit } from './menu.js';
 import { HTML_FILES } from './html-files.js';
 
@@ -52,6 +52,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Load transactions
         await loadTransactions();
+        
+        // Adjust window size after content is loaded
+        await adjustWindowSize();
         
     } catch (error) {
         console.error('Failed to initialize:', error);

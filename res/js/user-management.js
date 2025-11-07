@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     console.log('[DOMContentLoaded] Loading users');
     await loadUsers();
     
-    console.log('[DOMContentLoaded] Adjusting window size for modals');
+    console.log('[DOMContentLoaded] Adjusting window size after loading content');
     await adjustWindowSize();
     
     console.log('[DOMContentLoaded] Initialization complete');
