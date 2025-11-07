@@ -134,11 +134,12 @@ function setupEventListeners() {
         loadTransactions();
     });
 
-    // Add transaction button (stub for now)
+    // Add transaction button
     const addTransactionBtn = document.getElementById('add-transaction-btn');
-    addTransactionBtn.addEventListener('click', () => {
-        alert(i18n.t('transaction_mgmt.coming_soon'));
-    });
+    addTransactionBtn.addEventListener('click', openTransactionModal);
+    
+    // Transaction modal handlers
+    setupTransactionModalHandlers();
 }
 
 async function loadCategoriesForFilter() {
@@ -433,5 +434,270 @@ async function deleteTransaction(transactionId) {
     } catch (error) {
         console.error('Failed to delete transaction:', error);
         alert('Failed to delete transaction: ' + error);
+    }
+}
+
+// ============================================================================
+// Transaction Modal Functions
+// ============================================================================
+
+let transactionModal;
+let editingTransactionId = null;
+let categories = [];
+let accounts = [];
+
+function setupTransactionModalHandlers() {
+    const modal = document.getElementById('transaction-modal');
+    const closeBtn = document.getElementById('close-transaction-modal');
+    const cancelBtn = document.getElementById('cancel-transaction-btn');
+    const form = document.getElementById('transaction-form');
+    const category1Select = document.getElementById('category1');
+    
+    // Close modal handlers
+    closeBtn.addEventListener('click', closeTransactionModal);
+    cancelBtn.addEventListener('click', closeTransactionModal);
+    
+    // Modal backdrop click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeTransactionModal();
+        }
+    });
+    
+    // Category1 change handler - control account field visibility
+    category1Select.addEventListener('change', handleCategory1Change);
+    
+    // Form submit
+    form.addEventListener('submit', handleTransactionSubmit);
+}
+
+async function openTransactionModal(transactionId = null) {
+    const modal = document.getElementById('transaction-modal');
+    const modalTitle = document.getElementById('transaction-modal-title');
+    const form = document.getElementById('transaction-form');
+    
+    editingTransactionId = transactionId;
+    
+    // Set modal title
+    if (transactionId) {
+        modalTitle.textContent = i18n.t('transaction_mgmt.edit_transaction');
+    } else {
+        modalTitle.textContent = i18n.t('transaction_mgmt.add_transaction');
+    }
+    
+    // Load master data
+    await loadCategoriesForModal();
+    await loadAccountsForModal();
+    
+    // Reset form
+    form.reset();
+    document.getElementById('tax-rate').value = 8; // Default tax rate
+    document.getElementById('transaction-date').valueAsDate = new Date(); // Today
+    
+    // If editing, load transaction data
+    if (transactionId) {
+        await loadTransactionData(transactionId);
+    }
+    
+    // Show modal
+    modal.classList.remove('hidden');
+}
+
+function closeTransactionModal() {
+    const modal = document.getElementById('transaction-modal');
+    modal.classList.add('hidden');
+    editingTransactionId = null;
+}
+
+async function loadCategoriesForModal() {
+    try {
+        const categoryTree = await invoke('get_category_tree_with_lang', {
+            userId: currentUserId,
+            langCode: i18n.currentLanguage
+        });
+        
+        console.log('Category tree received:', categoryTree);
+        
+        categories = categoryTree;
+        
+        // Populate category1 dropdown
+        const category1Select = document.getElementById('category1');
+        category1Select.innerHTML = '<option value="">Select category</option>';
+        
+        categoryTree.forEach(cat1 => {
+            console.log('Category1:', cat1);
+            const option = document.createElement('option');
+            option.value = cat1.category1.category1_code;
+            option.textContent = cat1.category1.category1_name_i18n;
+            category1Select.appendChild(option);
+        });
+        
+    } catch (error) {
+        console.error('Failed to load categories:', error);
+    }
+}
+
+async function loadAccountsForModal() {
+    try {
+        accounts = await invoke('get_accounts', { userId: currentUserId });
+        
+        // Populate account dropdowns
+        const fromAccountSelect = document.getElementById('from-account');
+        const toAccountSelect = document.getElementById('to-account');
+        
+        // Clear ALL existing options first
+        fromAccountSelect.innerHTML = '';
+        toAccountSelect.innerHTML = '';
+        
+        // Add "NONE" option first
+        const unspecifiedText = i18n.t('common.unspecified');
+        
+        const fromNoneOption = document.createElement('option');
+        fromNoneOption.value = 'NONE';
+        fromNoneOption.textContent = unspecifiedText;
+        fromAccountSelect.appendChild(fromNoneOption);
+        
+        const toNoneOption = document.createElement('option');
+        toNoneOption.value = 'NONE';
+        toNoneOption.textContent = unspecifiedText;
+        toAccountSelect.appendChild(toNoneOption);
+        
+        // Add actual accounts
+        accounts.forEach(account => {
+            if (account.account_code !== 'NONE') {
+                const fromOption = document.createElement('option');
+                fromOption.value = account.account_code;
+                fromOption.textContent = account.account_name;
+                fromAccountSelect.appendChild(fromOption);
+                
+                const toOption = document.createElement('option');
+                toOption.value = account.account_code;
+                toOption.textContent = account.account_name;
+                toAccountSelect.appendChild(toOption);
+            }
+        });
+        
+    } catch (error) {
+        console.error('Failed to load accounts:', error);
+    }
+}
+
+function handleCategory1Change(event) {
+    const category1Code = event.target.value;
+    const fromAccountGroup = document.getElementById('from-account-group');
+    const toAccountGroup = document.getElementById('to-account-group');
+    
+    if (!category1Code) {
+        // No category selected - hide both
+        fromAccountGroup.style.display = 'none';
+        toAccountGroup.style.display = 'none';
+        return;
+    }
+    
+    // Control visibility based on category1_code
+    // Assuming: EXPENSE = show FROM, INCOME = show TO, TRANSFER = show both
+    const category1 = categories.find(c => c.category1.category1_code === category1Code);
+    
+    if (!category1) {
+        fromAccountGroup.style.display = 'none';
+        toAccountGroup.style.display = 'none';
+        return;
+    }
+    
+    // Simple logic for now - adjust based on actual category codes
+    const categoryName = category1.category1.category1_name_i18n.toLowerCase();
+    
+    if (categoryName.includes('支出') || categoryName.includes('expense')) {
+        fromAccountGroup.style.display = 'block';
+        toAccountGroup.style.display = 'none';
+    } else if (categoryName.includes('収入') || categoryName.includes('income')) {
+        fromAccountGroup.style.display = 'none';
+        toAccountGroup.style.display = 'block';
+    } else if (categoryName.includes('振替') || categoryName.includes('transfer')) {
+        fromAccountGroup.style.display = 'block';
+        toAccountGroup.style.display = 'block';
+    } else {
+        // Default: show both
+        fromAccountGroup.style.display = 'block';
+        toAccountGroup.style.display = 'block';
+    }
+    
+    // Populate category2 dropdown
+    const category2Select = document.getElementById('category2');
+    category2Select.innerHTML = '<option value="">Select category</option>';
+    
+    if (category1.children && category1.children.length > 0) {
+        category1.children.forEach(cat2 => {
+            const option = document.createElement('option');
+            option.value = cat2.category2.category2_code;
+            option.textContent = cat2.category2.category2_name_i18n;
+            category2Select.appendChild(option);
+        });
+    }
+}
+
+async function handleTransactionSubmit(event) {
+    event.preventDefault();
+    
+    const formData = {
+        transactionDate: document.getElementById('transaction-date').value,
+        category1Code: document.getElementById('category1').value,
+        fromAccountCode: document.getElementById('from-account').value,
+        toAccountCode: document.getElementById('to-account').value,
+        totalAmount: parseInt(document.getElementById('total-amount').value),
+        taxRate: parseFloat(document.getElementById('tax-rate').value),
+        taxRoundingMethod: parseInt(document.getElementById('tax-rounding').value),
+        memo: document.getElementById('transaction-memo').value
+    };
+    
+    try {
+        if (editingTransactionId) {
+            // Update existing transaction
+            await invoke('update_transaction_header', {
+                userId: currentUserId,
+                transactionId: editingTransactionId,
+                ...formData
+            });
+        } else {
+            // Create new transaction
+            await invoke('add_transaction_header', {
+                userId: currentUserId,
+                ...formData
+            });
+        }
+        
+        // Close modal and reload list
+        closeTransactionModal();
+        await loadTransactions();
+        
+    } catch (error) {
+        console.error('Failed to save transaction:', error);
+        alert('Failed to save transaction: ' + error);
+    }
+}
+
+async function loadTransactionData(transactionId) {
+    try {
+        const transaction = await invoke('get_transaction_header', {
+            userId: currentUserId,
+            transactionId: transactionId
+        });
+        
+        // Populate form fields
+        document.getElementById('transaction-date').value = transaction.transaction_date;
+        document.getElementById('category1').value = transaction.category1_code;
+        document.getElementById('from-account').value = transaction.from_account_code || 'NONE';
+        document.getElementById('to-account').value = transaction.to_account_code || 'NONE';
+        document.getElementById('total-amount').value = transaction.total_amount;
+        document.getElementById('tax-rate').value = transaction.tax_rate;
+        document.getElementById('tax-rounding').value = transaction.tax_rounding_method;
+        document.getElementById('transaction-memo').value = transaction.memo || '';
+        
+        // Trigger category1 change to update account visibility
+        handleCategory1Change({ target: document.getElementById('category1') });
+        
+    } catch (error) {
+        console.error('Failed to load transaction:', error);
+        alert('Failed to load transaction: ' + error);
     }
 }

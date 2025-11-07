@@ -157,6 +157,79 @@
             </div>
         </div>
 
+        <!-- Transaction Header Modal -->
+        <div id="transaction-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="transaction-modal-title" data-i18n="transaction_mgmt.add_transaction">Add Transaction</h2>
+                    <button class="close-btn" id="close-transaction-modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="transaction-form">
+                        <div class="form-group">
+                            <label for="transaction-date" data-i18n="transaction_mgmt.transaction_date">Transaction Date:</label>
+                            <input type="date" id="transaction-date" required />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="category1" data-i18n="transaction_mgmt.category1">Category (Major):</label>
+                            <select id="category1" required>
+                                <option value="">Select category</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group" id="from-account-group">
+                            <label for="from-account" data-i18n="transaction_mgmt.from_account">From Account:</label>
+                            <select id="from-account">
+                                <option value="NONE">Unspecified</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group" id="to-account-group">
+                            <label for="to-account" data-i18n="transaction_mgmt.to_account">To Account:</label>
+                            <select id="to-account">
+                                <option value="NONE">Unspecified</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="total-amount" data-i18n="transaction_mgmt.total_amount">Total Amount:</label>
+                            <input type="number" id="total-amount" min="0" step="1" required />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="tax-rate" data-i18n="transaction_mgmt.tax_rate">Tax Rate (%):</label>
+                            <input type="number" id="tax-rate" min="0" max="100" step="0.01" value="8" required />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="tax-rounding" data-i18n="transaction_mgmt.tax_rounding">Tax Rounding:</label>
+                            <select id="tax-rounding" required>
+                                <option value="0" data-i18n="transaction_mgmt.round_down">Round Down</option>
+                                <option value="1" data-i18n="transaction_mgmt.round_up">Round Up</option>
+                                <option value="2" data-i18n="transaction_mgmt.round_half">Round Half</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="transaction-memo" data-i18n="transaction_mgmt.memo">Memo:</label>
+                            <textarea id="transaction-memo" rows="3"></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <button type="button" class="btn btn-secondary" id="manage-details-btn" data-i18n="transaction_mgmt.manage_details">Manage Details</button>
+                            <span id="detail-count-info">0 items</span>
+                        </div>
+
+                        <div class="modal-actions">
+                            <button type="button" class="btn btn-secondary" id="cancel-transaction-btn" data-i18n="common.cancel">Cancel</button>
+                            <button type="submit" class="btn btn-primary" data-i18n="common.save">Save</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
         <script type="module" src="js/transaction-management.js"></script>
     </body>
 </html>

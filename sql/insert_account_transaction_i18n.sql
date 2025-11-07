@@ -55,3 +55,38 @@ INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESO
 INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES
 (771, 'transaction_mgmt.no_transactions', 'en', 'No transactions found', 'transaction_mgmt', 'No transactions message', datetime('now')),
 (772, 'transaction_mgmt.no_transactions', 'ja', '入出金データがありません', 'transaction_mgmt', '入出金データなしメッセージ', datetime('now'));
+
+-- Transaction Header Modal (773-804)
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES
+(773, 'transaction_mgmt.add_transaction', 'en', 'Add Transaction', 'transaction_mgmt', 'Add transaction modal title', datetime('now')),
+(774, 'transaction_mgmt.add_transaction', 'ja', '入出金登録', 'transaction_mgmt', '入出金登録モーダルタイトル', datetime('now')),
+(775, 'transaction_mgmt.edit_transaction', 'en', 'Edit Transaction', 'transaction_mgmt', 'Edit transaction modal title', datetime('now')),
+(776, 'transaction_mgmt.edit_transaction', 'ja', '入出金編集', 'transaction_mgmt', '入出金編集モーダルタイトル', datetime('now')),
+(777, 'transaction_mgmt.transaction_date', 'en', 'Transaction Date', 'transaction_mgmt', 'Transaction date label', datetime('now')),
+(778, 'transaction_mgmt.transaction_date', 'ja', '取引日', 'transaction_mgmt', '取引日ラベル', datetime('now')),
+(779, 'transaction_mgmt.category1', 'en', 'Category (Major)', 'transaction_mgmt', 'Category1 label', datetime('now')),
+(780, 'transaction_mgmt.category1', 'ja', '大分類', 'transaction_mgmt', '大分類ラベル', datetime('now')),
+(781, 'transaction_mgmt.from_account', 'en', 'From Account', 'transaction_mgmt', 'From account label', datetime('now')),
+(782, 'transaction_mgmt.from_account', 'ja', '支払元口座', 'transaction_mgmt', '支払元口座ラベル', datetime('now')),
+(783, 'transaction_mgmt.to_account', 'en', 'To Account', 'transaction_mgmt', 'To account label', datetime('now')),
+(784, 'transaction_mgmt.to_account', 'ja', '入金先口座', 'transaction_mgmt', '入金先口座ラベル', datetime('now')),
+(785, 'transaction_mgmt.total_amount', 'en', 'Total Amount', 'transaction_mgmt', 'Total amount label', datetime('now')),
+(786, 'transaction_mgmt.total_amount', 'ja', '合計金額', 'transaction_mgmt', '合計金額ラベル', datetime('now')),
+(787, 'transaction_mgmt.tax_rate', 'en', 'Tax Rate (%)', 'transaction_mgmt', 'Tax rate label', datetime('now')),
+(788, 'transaction_mgmt.tax_rate', 'ja', '税率 (%)', 'transaction_mgmt', '税率ラベル', datetime('now')),
+(789, 'transaction_mgmt.tax_rounding', 'en', 'Tax Rounding', 'transaction_mgmt', 'Tax rounding label', datetime('now')),
+(790, 'transaction_mgmt.tax_rounding', 'ja', '税の丸め方法', 'transaction_mgmt', '税の丸め方法ラベル', datetime('now')),
+(791, 'transaction_mgmt.round_down', 'en', 'Round Down', 'transaction_mgmt', 'Round down option', datetime('now')),
+(792, 'transaction_mgmt.round_down', 'ja', '切り捨て', 'transaction_mgmt', '切り捨てオプション', datetime('now')),
+(793, 'transaction_mgmt.round_up', 'en', 'Round Up', 'transaction_mgmt', 'Round up option', datetime('now')),
+(794, 'transaction_mgmt.round_up', 'ja', '切り上げ', 'transaction_mgmt', '切り上げオプション', datetime('now')),
+(795, 'transaction_mgmt.round_half', 'en', 'Round Half', 'transaction_mgmt', 'Round half option', datetime('now')),
+(796, 'transaction_mgmt.round_half', 'ja', '四捨五入', 'transaction_mgmt', '四捨五入オプション', datetime('now')),
+(797, 'transaction_mgmt.memo', 'en', 'Memo', 'transaction_mgmt', 'Memo label', datetime('now')),
+(798, 'transaction_mgmt.memo', 'ja', 'メモ', 'transaction_mgmt', 'メモラベル', datetime('now')),
+(799, 'transaction_mgmt.manage_details', 'en', 'Manage Details', 'transaction_mgmt', 'Manage details button', datetime('now')),
+(800, 'transaction_mgmt.manage_details', 'ja', '明細管理', 'transaction_mgmt', '明細管理ボタン', datetime('now')),
+(801, 'transaction_mgmt.detail_count', 'en', 'items', 'transaction_mgmt', 'Detail count label', datetime('now')),
+(802, 'transaction_mgmt.detail_count', 'ja', '件', 'transaction_mgmt', '明細件数ラベル', datetime('now')),
+(803, 'transaction_mgmt.select_category', 'en', 'Select category', 'transaction_mgmt', 'Select category placeholder', datetime('now')),
+(804, 'transaction_mgmt.select_category', 'ja', '分類を選択', 'transaction_mgmt', '分類選択プレースホルダー', datetime('now'));

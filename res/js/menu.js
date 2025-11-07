@@ -219,25 +219,34 @@ document.addEventListener('DOMContentLoaded', async function() {
 });
 
 async function checkSetupNeeded() {
+    const adminSetup = document.getElementById('admin-setup');
+    const loginForm = document.getElementById('login-form');
+    const appContent = document.getElementById('app-content');
+    
+    // Only run on login page (index.html)
+    if (!adminSetup || !loginForm || !appContent) {
+        return;
+    }
+    
     try {
         const needsSetup = await invoke('check_needs_setup');
         console.log('Needs setup:', needsSetup);
         
         if (needsSetup) {
-            document.getElementById('admin-setup').classList.remove('hidden');
-            document.getElementById('login-form').classList.add('hidden');
-            document.getElementById('app-content').classList.add('hidden');
+            adminSetup.classList.remove('hidden');
+            loginForm.classList.add('hidden');
+            appContent.classList.add('hidden');
         } else {
-            document.getElementById('admin-setup').classList.add('hidden');
-            document.getElementById('login-form').classList.remove('hidden');
-            document.getElementById('app-content').classList.add('hidden');
+            adminSetup.classList.add('hidden');
+            loginForm.classList.remove('hidden');
+            appContent.classList.add('hidden');
         }
     } catch (error) {
         console.error('Failed to check setup status:', error);
         // On error, assume setup is needed
-        document.getElementById('admin-setup').classList.remove('hidden');
-        document.getElementById('login-form').classList.add('hidden');
-        document.getElementById('app-content').classList.add('hidden');
+        adminSetup.classList.remove('hidden');
+        loginForm.classList.add('hidden');
+        appContent.classList.add('hidden');
     }
 }
 
