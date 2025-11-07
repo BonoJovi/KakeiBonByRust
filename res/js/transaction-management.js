@@ -652,20 +652,11 @@ async function handleTransactionSubmit(event) {
     const fromAccountCode = document.getElementById('from-account').value;
     const toAccountCode = document.getElementById('to-account').value;
     const totalAmount = parseInt(document.getElementById('total-amount').value);
-    const taxRoundingValue = document.getElementById('tax-rounding').value;
+    const taxRoundingValue = parseInt(document.getElementById('tax-rounding').value);
     const memoText = document.getElementById('transaction-memo').value.trim() || null;
     
-    // Convert tax rounding to integer constant
-    let taxRoundingType;
-    if (taxRoundingValue === 'ROUND_DOWN') {
-        taxRoundingType = TAX_ROUND_DOWN;  // 0: 切り捨て
-    } else if (taxRoundingValue === 'ROUND_HALF') {
-        taxRoundingType = TAX_ROUND_HALF_UP;  // 1: 四捨五入
-    } else if (taxRoundingValue === 'ROUND_UP') {
-        taxRoundingType = TAX_ROUND_UP;  // 2: 切り上げ
-    } else {
-        taxRoundingType = TAX_ROUND_DOWN;  // Default
-    }
+    // Tax rounding value is already an integer (0, 1, or 2) from the select element
+    const taxRoundingType = taxRoundingValue;
     
     try {
         if (editingTransactionId) {

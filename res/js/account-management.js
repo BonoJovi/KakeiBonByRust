@@ -1,12 +1,16 @@
-// DEBUGGING: Testing i18n import
 import { invoke } from '@tauri-apps/api/core';
 import { HTML_FILES } from './html-files.js';
 import i18n from './i18n.js';
 import { adjustWindowSize } from './font-size.js';
+import { ROLE_ADMIN, ROLE_USER } from './consts.js';
 
 console.log('=== ACCOUNT-MANAGEMENT.JS LOADED - ALL imports enabled ===');
 console.log('invoke:', typeof invoke);
 console.log('i18n:', i18n);
+
+// TODO: Get from session/auth
+const currentUserId = 2;
+const currentUserRole = ROLE_USER; // Change to ROLE_USER for testing
 
 let currentLanguage = 'ja';
 let templates = [];
@@ -112,7 +116,10 @@ async function loadAccounts() {
     tbody.innerHTML = '';
 
     try {
-        accounts = await invoke('get_accounts');
+        accounts = await invoke('get_accounts', {
+            userId: currentUserId,
+            userRole: currentUserRole
+        });
         
         if (accounts.length === 0) {
             tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #999;">No accounts found</td></tr>`;
@@ -139,6 +146,12 @@ function createAccountRow(account) {
         ? (currentLanguage === 'ja' ? template.template_name_ja : template.template_name_en)
         : account.template_code;
 
+    // NONE account cannot be deleted
+    const isNoneAccount = account.account_code === 'NONE';
+    const deleteButtonHtml = isNoneAccount 
+        ? '<button class="btn btn-danger" disabled style="opacity: 0.5; cursor: not-allowed;">Delete</button>'
+        : `<button class="btn btn-danger delete-btn" data-code="${escapeHtml(account.account_code)}">Delete</button>`;
+
     row.innerHTML = `
         <td>${escapeHtml(account.account_code)}</td>
         <td>${escapeHtml(account.account_name)}</td>
@@ -146,7 +159,7 @@ function createAccountRow(account) {
         <td style="text-align: right;">${account.initial_balance.toLocaleString()}</td>
         <td class="actions">
             <button class="btn btn-warning edit-btn" data-code="${escapeHtml(account.account_code)}">Edit</button>
-            <button class="btn btn-danger delete-btn" data-code="${escapeHtml(account.account_code)}">Delete</button>
+            ${deleteButtonHtml}
         </td>
     `;
 
@@ -155,10 +168,12 @@ function createAccountRow(account) {
         openModal('edit', account);
     });
 
-    // Delete button
-    row.querySelector('.delete-btn').addEventListener('click', () => {
-        deleteAccount(account.account_code, account.account_name);
-    });
+    // Delete button (only if not NONE account)
+    if (!isNoneAccount) {
+        row.querySelector('.delete-btn').addEventListener('click', () => {
+            deleteAccount(account.account_code, account.account_name);
+        });
+    }
 
     return row;
 }
@@ -234,6 +249,7 @@ async function saveAccount() {
             // Update existing account
             const displayOrder = accounts.find(a => a.account_code === editingAccountCode).display_order;
             await invoke('update_account', {
+                userId: currentUserId,
                 accountCode: accountCode,
                 accountName: accountName,
                 templateCode: templateCode,
@@ -244,6 +260,7 @@ async function saveAccount() {
         } else {
             // Add new account
             await invoke('add_account', {
+                userId: currentUserId,
                 accountCode: accountCode,
                 accountName: accountName,
                 templateCode: templateCode,
@@ -268,7 +285,10 @@ async function deleteAccount(accountCode, accountName) {
     if (!confirmed) return;
 
     try {
-        await invoke('delete_account', { accountCode: accountCode });
+        await invoke('delete_account', { 
+            userId: currentUserId,
+            accountCode: accountCode 
+        });
         alert(i18n.t('common.success') || 'Account deleted successfully')
         await loadAccounts();
     } catch (error) {

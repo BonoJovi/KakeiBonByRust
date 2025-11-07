@@ -989,16 +989,23 @@ async fn get_account_templates(
 
 #[tauri::command]
 async fn get_accounts(
+    user_id: i64,
+    user_role: i64,
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::account::Account>, String> {
     let db = state.db.lock().await;
-    // TODO: Get user_id from session/auth
-    let user_id = 1;
-    services::account::get_accounts(db.pool(), user_id).await
+    
+    // Admin (role 0) can see all accounts, regular users see only their own
+    if user_role == crate::consts::ROLE_ADMIN {
+        services::account::get_all_accounts(db.pool()).await
+    } else {
+        services::account::get_accounts(db.pool(), user_id).await
+    }
 }
 
 #[tauri::command]
 async fn add_account(
+    user_id: i64,
     account_code: String,
     account_name: String,
     template_code: String,
@@ -1006,8 +1013,6 @@ async fn add_account(
     state: tauri::State<'_, AppState>
 ) -> Result<String, String> {
     let db = state.db.lock().await;
-    // TODO: Get user_id from session/auth
-    let user_id = 1;
     
     let request = services::account::AddAccountRequest {
         account_code,
@@ -1021,6 +1026,7 @@ async fn add_account(
 
 #[tauri::command]
 async fn update_account(
+    user_id: i64,
     account_code: String,
     account_name: String,
     template_code: String,
@@ -1029,8 +1035,6 @@ async fn update_account(
     state: tauri::State<'_, AppState>
 ) -> Result<String, String> {
     let db = state.db.lock().await;
-    // TODO: Get user_id from session/auth
-    let user_id = 1;
     
     let request = services::account::UpdateAccountRequest {
         account_code,
@@ -1045,12 +1049,11 @@ async fn update_account(
 
 #[tauri::command]
 async fn delete_account(
+    user_id: i64,
     account_code: String,
     state: tauri::State<'_, AppState>
 ) -> Result<String, String> {
     let db = state.db.lock().await;
-    // TODO: Get user_id from session/auth
-    let user_id = 1;
     
     services::account::delete_account(db.pool(), user_id, &account_code).await
 }

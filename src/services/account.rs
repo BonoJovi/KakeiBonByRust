@@ -87,6 +87,25 @@ pub async fn get_accounts(pool: &SqlitePool, user_id: i64) -> Result<Vec<Account
     Ok(accounts)
 }
 
+/// Get all accounts (for admin users)
+pub async fn get_all_accounts(pool: &SqlitePool) -> Result<Vec<Account>, String> {
+    let accounts = sqlx::query_as::<_, Account>(
+        r#"
+        SELECT ACCOUNT_ID as account_id, USER_ID as user_id, ACCOUNT_CODE as account_code, 
+               ACCOUNT_NAME as account_name, TEMPLATE_CODE as template_code, 
+               INITIAL_BALANCE as initial_balance, DISPLAY_ORDER as display_order, 
+               IS_DISABLED as is_disabled, ENTRY_DT as entry_dt, UPDATE_DT as update_dt
+        FROM ACCOUNTS
+        ORDER BY USER_ID, DISPLAY_ORDER
+        "#
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|e| format!("Failed to get all accounts: {}", e))?;
+
+    Ok(accounts)
+}
+
 /// Get a single account by code
 pub async fn get_account_by_code(
     pool: &SqlitePool,
@@ -228,6 +247,31 @@ pub async fn delete_account(
         .map_err(|e| format!("Failed to delete account: {}", e))?;
 
     Ok("Account deleted successfully".to_string())
+}
+
+/// Initialize NONE account for a new user
+/// This is required for irregular transactions that don't specify an account
+pub async fn initialize_none_account(pool: &SqlitePool, user_id: i64) -> Result<(), String> {
+    // Get NONE template
+    let none_template = sqlx::query_as::<_, AccountTemplate>(
+        "SELECT * FROM ACCOUNT_TEMPLATES WHERE TEMPLATE_CODE = 'NONE'"
+    )
+    .fetch_one(pool)
+    .await
+    .map_err(|e| format!("Failed to get NONE template: {}", e))?;
+    
+    // Create NONE account
+    let request = AddAccountRequest {
+        account_code: "NONE".to_string(),
+        account_name: none_template.template_name_ja.clone(),
+        template_code: "NONE".to_string(),
+        initial_balance: 0,
+    };
+    
+    // Add account (ignore error if already exists)
+    let _ = add_account(pool, user_id, request).await;
+    
+    Ok(())
 }
 
 #[cfg(test)]

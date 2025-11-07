@@ -175,6 +175,12 @@ impl AuthService {
                 format!("Failed to populate default categories: {}", e).into()
             )))?;
         
+        // Initialize NONE account for the new user
+        crate::services::account::initialize_none_account(&self.pool, next_id).await
+            .map_err(|e| AuthError::DatabaseError(sqlx::Error::Configuration(
+                format!("Failed to initialize NONE account: {}", e).into()
+            )))?;
+        
         Ok(())
     }
 
