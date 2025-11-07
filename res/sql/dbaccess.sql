@@ -274,6 +274,10 @@ VALUES
 (514, 'menu.user_management', 'ja', 'ユーザー管理', 'menu', 'ユーザー管理メニュー項目', datetime('now')),
 (515, 'menu.category_management', 'en', 'Category Management', 'menu', 'Category management menu item', datetime('now')),
 (516, 'menu.category_management', 'ja', '費目管理', 'menu', '費目管理メニュー項目', datetime('now')),
+(723, 'menu.account_management', 'en', 'Account Management', 'menu', 'Account management menu item', datetime('now')),
+(724, 'menu.account_management', 'ja', '口座管理', 'menu', '口座管理メニュー項目', datetime('now')),
+(725, 'menu.transaction_management', 'en', 'Transaction Management', 'menu', 'Transaction management menu item', datetime('now')),
+(726, 'menu.transaction_management', 'ja', '入出金管理', 'menu', '入出金管理メニュー項目', datetime('now')),
 (517, 'menu.back_to_main', 'en', 'Back to Main', 'menu', 'Back to main menu item', datetime('now')),
 (518, 'menu.back_to_main', 'ja', 'メインに戻る', 'menu', 'メインに戻るメニュー項目', datetime('now')),
 
@@ -430,3 +434,117 @@ VALUES
 (722, 'category_mgmt.error_load_category', 'ja', '費目データの読み込みに失敗しました', 'category_mgmt', '費目データ読み込みエラー', datetime('now'));
 
 -- NOTE: Category data will be migrated from existing SQL later
+
+-- ============================================================================
+-- Account Management Tables
+-- ============================================================================
+
+-- SQL_20000001: Create ACCOUNT_TEMPLATES table
+CREATE TABLE IF NOT EXISTS ACCOUNT_TEMPLATES (
+    TEMPLATE_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    TEMPLATE_CODE VARCHAR(50) NOT NULL UNIQUE,
+    TEMPLATE_NAME_JA TEXT NOT NULL,
+    TEMPLATE_NAME_EN TEXT NOT NULL,
+    DISPLAY_ORDER INTEGER,
+    ENTRY_DT DATETIME NOT NULL DEFAULT (datetime('now'))
+);
+
+-- SQL_20000002: Create ACCOUNTS table
+CREATE TABLE IF NOT EXISTS ACCOUNTS (
+    ACCOUNT_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    USER_ID INTEGER NOT NULL,
+    ACCOUNT_CODE VARCHAR(50) NOT NULL,
+    ACCOUNT_NAME TEXT NOT NULL,
+    TEMPLATE_CODE VARCHAR(50) NOT NULL,
+    INITIAL_BALANCE INTEGER DEFAULT 0,
+    DISPLAY_ORDER INTEGER,
+    IS_DISABLED INTEGER DEFAULT 0,
+    ENTRY_DT DATETIME NOT NULL DEFAULT (datetime('now')),
+    UPDATE_DT DATETIME,
+    FOREIGN KEY (USER_ID) REFERENCES USERS(USER_ID) ON DELETE CASCADE,
+    FOREIGN KEY (TEMPLATE_CODE) REFERENCES ACCOUNT_TEMPLATES(TEMPLATE_CODE),
+    UNIQUE(USER_ID, ACCOUNT_CODE)
+);
+
+-- SQL_20000003: Insert account templates
+INSERT OR IGNORE INTO ACCOUNT_TEMPLATES (TEMPLATE_CODE, TEMPLATE_NAME_JA, TEMPLATE_NAME_EN, DISPLAY_ORDER) VALUES
+('CASH', '現金', 'Cash', 1),
+('BANK', '銀行', 'Bank', 2),
+('CREDIT', 'クレジットカード', 'Credit Card', 3),
+('EMONEY', '電子マネー', 'E-Money', 4),
+('OTHER', 'その他', 'Other', 5),
+('NONE', '指定なし', 'Unspecified', 0);
+
+-- ============================================================================
+-- Transaction Management Tables
+-- ============================================================================
+
+-- SQL_30000001: Create MEMOS table
+CREATE TABLE IF NOT EXISTS MEMOS (
+    MEMO_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    USER_ID INTEGER NOT NULL,
+    MEMO_TEXT TEXT NOT NULL,
+    ENTRY_DT DATETIME NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (USER_ID) REFERENCES USERS(USER_ID) ON DELETE CASCADE,
+    CHECK (MEMO_TEXT != '')
+);
+
+-- SQL_30000002: Create TRANSACTIONS_HEADER table
+CREATE TABLE IF NOT EXISTS TRANSACTIONS_HEADER (
+    TRANSACTION_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    USER_ID INTEGER NOT NULL,
+    CATEGORY1_CODE VARCHAR(50) NOT NULL,
+    FROM_ACCOUNT_CODE VARCHAR(50) NOT NULL,
+    TO_ACCOUNT_CODE VARCHAR(50) NOT NULL,
+    TRANSACTION_DATE DATE NOT NULL,
+    TOTAL_AMOUNT INTEGER NOT NULL,
+    TAX_ROUNDING_TYPE INTEGER DEFAULT 0,
+    MEMO_ID INTEGER,
+    IS_DISABLED INTEGER DEFAULT 0,
+    ENTRY_DT DATETIME NOT NULL DEFAULT (datetime('now')),
+    UPDATE_DT DATETIME,
+    FOREIGN KEY (USER_ID) REFERENCES USERS(USER_ID) ON DELETE CASCADE,
+    FOREIGN KEY (CATEGORY1_CODE) REFERENCES CATEGORY1(CATEGORY1_CODE),
+    FOREIGN KEY (FROM_ACCOUNT_CODE) REFERENCES ACCOUNTS(ACCOUNT_CODE),
+    FOREIGN KEY (TO_ACCOUNT_CODE) REFERENCES ACCOUNTS(ACCOUNT_CODE),
+    FOREIGN KEY (MEMO_ID) REFERENCES MEMOS(MEMO_ID)
+);
+
+-- SQL_30000003: Create TRANSACTIONS_DETAIL table
+CREATE TABLE IF NOT EXISTS TRANSACTIONS_DETAIL (
+    DETAIL_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    TRANSACTION_ID INTEGER NOT NULL,
+    CATEGORY2_CODE VARCHAR(50) NOT NULL,
+    CATEGORY3_CODE VARCHAR(50) NOT NULL,
+    ITEM_NAME TEXT NOT NULL,
+    AMOUNT INTEGER NOT NULL,
+    TAX_AMOUNT INTEGER DEFAULT 0,
+    TAX_RATE INTEGER DEFAULT 8,
+    MEMO_ID INTEGER,
+    ENTRY_DT DATETIME NOT NULL DEFAULT (datetime('now')),
+    UPDATE_DT DATETIME,
+    FOREIGN KEY (TRANSACTION_ID) REFERENCES TRANSACTIONS_HEADER(TRANSACTION_ID) ON DELETE CASCADE,
+    FOREIGN KEY (CATEGORY2_CODE) REFERENCES CATEGORY2(CATEGORY2_CODE),
+    FOREIGN KEY (CATEGORY3_CODE) REFERENCES CATEGORY3(CATEGORY3_CODE),
+    FOREIGN KEY (MEMO_ID) REFERENCES MEMOS(MEMO_ID),
+    CHECK (ITEM_NAME != '')
+);
+
+-- Create indexes for accounts
+CREATE INDEX IF NOT EXISTS idx_accounts_user ON ACCOUNTS(USER_ID, ACCOUNT_CODE);
+CREATE INDEX IF NOT EXISTS idx_accounts_user_order ON ACCOUNTS(USER_ID, DISPLAY_ORDER);
+CREATE INDEX IF NOT EXISTS idx_accounts_template ON ACCOUNTS(TEMPLATE_CODE);
+
+-- Create indexes for memos
+CREATE INDEX IF NOT EXISTS idx_memos_user ON MEMOS(USER_ID);
+CREATE INDEX IF NOT EXISTS idx_memos_text ON MEMOS(USER_ID, MEMO_TEXT);
+
+-- Create indexes for transactions_header
+CREATE INDEX IF NOT EXISTS idx_transactions_header_user ON TRANSACTIONS_HEADER(USER_ID, TRANSACTION_DATE);
+CREATE INDEX IF NOT EXISTS idx_transactions_header_accounts ON TRANSACTIONS_HEADER(FROM_ACCOUNT_CODE, TO_ACCOUNT_CODE);
+CREATE INDEX IF NOT EXISTS idx_transactions_header_category ON TRANSACTIONS_HEADER(CATEGORY1_CODE);
+CREATE INDEX IF NOT EXISTS idx_transactions_header_date ON TRANSACTIONS_HEADER(TRANSACTION_DATE);
+
+-- Create indexes for transactions_detail
+CREATE INDEX IF NOT EXISTS idx_transactions_detail_transaction ON TRANSACTIONS_DETAIL(TRANSACTION_ID);
+CREATE INDEX IF NOT EXISTS idx_transactions_detail_categories ON TRANSACTIONS_DETAIL(CATEGORY2_CODE, CATEGORY3_CODE);

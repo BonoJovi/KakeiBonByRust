@@ -70,6 +70,26 @@ impl Database {
         
         Ok(())
     }
+    
+    /// Run migrations for transaction-related tables
+    pub async fn migrate_transactions(&self) -> Result<(), sqlx::Error> {
+        // Create MEMOS table
+        sqlx::query(sql_queries::CREATE_MEMOS_TABLE)
+            .execute(&self.pool)
+            .await?;
+        
+        // Create TRANSACTIONS_HEADER table
+        sqlx::query(sql_queries::CREATE_TRANSACTIONS_HEADER_TABLE)
+            .execute(&self.pool)
+            .await?;
+        
+        // Create TRANSACTIONS_DETAIL table
+        sqlx::query(sql_queries::CREATE_TRANSACTIONS_DETAIL_TABLE)
+            .execute(&self.pool)
+            .await?;
+        
+        Ok(())
+    }
 }
 
 fn get_db_path() -> PathBuf {

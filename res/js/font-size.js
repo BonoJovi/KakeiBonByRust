@@ -186,37 +186,45 @@ export async function adjustWindowSize() {
         let maxWidth = 0;
         let maxHeight = 0;
         
-        // First, check all modals (even if hidden) BEFORE resizing window
-        const modals = document.querySelectorAll('.modal');
-        console.log('[adjustWindowSize] Found', modals.length, 'modals');
+        // Check if we are in the main app (not login/setup screen)
+        const appContent = document.getElementById('app-content');
+        const isMainApp = appContent && !appContent.classList.contains('hidden');
         
-        for (const modal of modals) {
-            // Temporarily show modal to measure its size
-            const wasHidden = modal.classList.contains('hidden');
-            if (wasHidden) {
-                modal.classList.remove('hidden');
-                modal.style.visibility = 'hidden'; // Make invisible but still measurable
+        // Only measure modals if we're in the main app
+        if (isMainApp) {
+            const modals = document.querySelectorAll('.modal');
+            console.log('[adjustWindowSize] Found', modals.length, 'modals');
+            
+            for (const modal of modals) {
+                // Temporarily show modal to measure its size
+                const wasHidden = modal.classList.contains('hidden');
+                if (wasHidden) {
+                    modal.classList.remove('hidden');
+                    modal.style.visibility = 'hidden'; // Make invisible but still measurable
+                }
+                
+                const modalContent = modal.querySelector('.modal-content');
+                if (modalContent) {
+                    const rect = modalContent.getBoundingClientRect();
+                    console.log('[adjustWindowSize] Modal:', modal.id, 'Content size:', rect.width, 'x', rect.height);
+                    // Modal is centered, so we need to account for centering space
+                    const modalWidth = rect.width + 80; // Extra space for centering
+                    const modalHeight = rect.height + 80; // Extra space for centering
+                    maxWidth = Math.max(maxWidth, modalWidth);
+                    maxHeight = Math.max(maxHeight, modalHeight);
+                }
+                
+                // Restore hidden state
+                if (wasHidden) {
+                    modal.classList.add('hidden');
+                    modal.style.visibility = '';
+                }
             }
             
-            const modalContent = modal.querySelector('.modal-content');
-            if (modalContent) {
-                const rect = modalContent.getBoundingClientRect();
-                console.log('[adjustWindowSize] Modal:', modal.id, 'Content size:', rect.width, 'x', rect.height);
-                // Modal is centered, so we need to account for centering space
-                const modalWidth = rect.width + 80; // Extra space for centering
-                const modalHeight = rect.height + 80; // Extra space for centering
-                maxWidth = Math.max(maxWidth, modalWidth);
-                maxHeight = Math.max(maxHeight, modalHeight);
-            }
-            
-            // Restore hidden state
-            if (wasHidden) {
-                modal.classList.add('hidden');
-                modal.style.visibility = '';
-            }
+            console.log('[adjustWindowSize] Modal max size:', maxWidth, 'x', maxHeight);
+        } else {
+            console.log('[adjustWindowSize] Skipping modal measurement (not in main app)');
         }
-        
-        console.log('[adjustWindowSize] Modal max size:', maxWidth, 'x', maxHeight);
         
         // Now shrink window to minimum size to get natural content size
         const minWidth = 400;
@@ -243,9 +251,12 @@ export async function adjustWindowSize() {
         for (const el of elements) {
             if (el && !el.classList.contains('hidden')) {
                 const rect = el.getBoundingClientRect();
-                console.log('[adjustWindowSize] Element:', el.id, 'Size:', rect.width, 'x', rect.height);
+                // Use scrollHeight instead of rect.height to get full content height
+                const actualHeight = Math.max(rect.height, el.scrollHeight);
+                console.log('[adjustWindowSize] Element:', el.id, 'Size:', rect.width, 'x', actualHeight, 'Bottom:', rect.bottom, 'ScrollHeight:', el.scrollHeight);
                 maxWidth = Math.max(maxWidth, rect.right);
-                maxHeight = Math.max(maxHeight, rect.bottom);
+                // Calculate height from top position + actual content height
+                maxHeight = Math.max(maxHeight, rect.top + actualHeight);
             }
         }
         
