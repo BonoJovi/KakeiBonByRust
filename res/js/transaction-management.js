@@ -674,12 +674,12 @@ async function handleTransactionSubmit(event) {
         } else {
             // Create new transaction
             await invoke('save_transaction_header', {
-                category1_code: category1Code,
-                from_account_code: fromAccountCode,
-                to_account_code: toAccountCode,
-                transaction_date: transactionDate,
-                total_amount: totalAmount,
-                tax_rounding_type: taxRoundingType,
+                category1Code: category1Code,
+                fromAccountCode: fromAccountCode,
+                toAccountCode: toAccountCode,
+                transactionDate: transactionDate,
+                totalAmount: totalAmount,
+                taxRoundingType: taxRoundingType,
                 memo: memoText
             });
         }

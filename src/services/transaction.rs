@@ -198,6 +198,7 @@ impl TransactionService {
                     ));
                 }
                 let result = sqlx::query(sql_queries::MEMO_INSERT)
+                    .bind(user_id)
                     .bind(text)
                     .execute(&self.pool)
                     .await?;
@@ -275,6 +276,7 @@ impl TransactionService {
                     ));
                 }
                 let result = sqlx::query(sql_queries::MEMO_INSERT)
+                    .bind(user_id)
                     .bind(text)
                     .execute(&self.pool)
                     .await?;

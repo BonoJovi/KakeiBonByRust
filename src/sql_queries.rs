@@ -744,8 +744,8 @@ WHERE DETAIL_ID = ?
 // ============================================================================
 
 pub const MEMO_INSERT: &str = r#"
-INSERT INTO MEMOS (MEMO_TEXT, ENTRY_DT)
-VALUES (?, datetime('now'))
+INSERT INTO MEMOS (USER_ID, MEMO_TEXT, ENTRY_DT)
+VALUES (?, ?, datetime('now'))
 "#;
 
 pub const MEMO_GET_BY_ID: &str = r#"
