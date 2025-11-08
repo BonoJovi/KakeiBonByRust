@@ -7,7 +7,7 @@
 
 [![Rust](https://img.shields.io/badge/Rust-1.70+-orange.svg)](https://www.rust-lang.org/)
 [![Tauri](https://img.shields.io/badge/Tauri-v2.8.5-blue.svg)](https://tauri.app/)
-[![Tests](https://img.shields.io/badge/tests-125%20passing-brightgreen.svg)](#test-results--テスト結果)
+[![Tests](https://img.shields.io/badge/tests-429%20passing-brightgreen.svg)](#test-results--テスト結果)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 [🇯🇵 日本語詳細](README_ja.md) | [🇬🇧 English Details](README_en.md)
@@ -23,7 +23,7 @@
 Development is progressing smoothly, and we strive to update daily!  
 開発は順調に進んでおり、できるだけ日々更新するようにしています！
 
-**Last Updated / 最終更新**: 2025-11-05
+**Last Updated / 最終更新**: 2025-11-09
 
 ---
 
@@ -93,7 +93,7 @@ Switch between Japanese and English seamlessly
 | 👥 **User Management**<br/>**ユーザー管理** | Multi-user support (Admin/General)<br/>マルチユーザー対応（管理者/一般） | ✅ Complete<br/>完成 |
 | 🌍 **Multilingual**<br/>**多言語対応** | Dynamic language switching (JP/EN)<br/>日本語・英語の動的切り替え | ✅ Complete<br/>完成 |
 | 🔧 **Customization**<br/>**カスタマイズ** | Font size, language preferences<br/>フォントサイズ、言語設定 | ✅ Complete<br/>完成 |
-| 📝 **Transaction Management**<br/>**入出金管理** | Income/expense recording and editing<br/>収支の記録と編集 | 🚧 In Progress<br/>開発中 |
+| 📝 **Transaction Management**<br/>**入出金管理** | Transaction list, filtering, add/delete<br/>一覧表示、フィルター、追加・削除機能 | ✅ Partial<br/>部分完成 |
 | 📊 **Reports**<br/>**集計・レポート** | Monthly/annual summaries<br/>月次・年次レポート | 📅 Planned<br/>予定 |
 
 ---
@@ -105,7 +105,7 @@ Frontend / フロントエンド:  Vanilla JavaScript (ES6 Modules) + HTML5 + CS
 Backend / バックエンド:     Rust + Tauri v2.8.5
 Database / データベース:    SQLite (WAL mode)
 Security / セキュリティ:   Argon2id + AES-256-GCM
-Testing / テスト:          Cargo test (125 tests passing / 125テスト成功)
+Testing / テスト:          429 tests passing (Rust: 121, JS: 308)
 ```
 
 ---
@@ -135,10 +135,10 @@ cargo tauri build
 ## 🧪 Test Results / テスト結果
 
 ```
-Total Tests / 総テスト数: 125
-Passed / 成功:           125
-Failed / 失敗:             0
-Success Rate / 成功率:  100% ✅
+Backend (Rust) / バックエンド:    121 passing
+Frontend (JavaScript) / フロント:  308 passing
+Total Tests / 総テスト数:          429 passing ✅
+Success Rate / 成功率:            100%
 ```
 
 See [TEST_SUMMARY.md](docs/ja/TEST_SUMMARY.md) for details / 詳細は [TEST_SUMMARY.md](docs/ja/TEST_SUMMARY.md) を参照
@@ -160,6 +160,10 @@ See [TEST_SUMMARY.md](docs/ja/TEST_SUMMARY.md) for details / 詳細は [TEST_SUM
   - [Category Management API](docs/en/API_CATEGORY.md) / [費目管理 API](docs/ja/API_CATEGORY_ja.md)
 - 🧪 **Testing Strategy / テスト戦略**
   - [English](docs/en/TESTING.md) / [日本語](docs/ja/TESTING.md)
+
+### Project Information / プロジェクト情報
+- 👥 **Project Participants / プロジェクト参加者**
+  - [English](docs/en/PROJECT_PARTICIPANTS.md) / [日本語](docs/ja/PROJECT_PARTICIPANTS.md)
 
 ---
 
