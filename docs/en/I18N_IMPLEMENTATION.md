@@ -553,3 +553,8 @@ Backend implementation of the multilingual support system is complete:
 ✅ Documentation completed
 
 Frontend implementation (menus and dialogs) is planned for the next phase.
+
+---
+
+**Author**: AI Assistant  
+**Supervisor**: Yoshihiro NAKAHARA (bonojovi@zundou.org)

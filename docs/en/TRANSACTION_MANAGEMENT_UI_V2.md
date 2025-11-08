@@ -317,4 +317,4 @@ default options with `data-i18n` attributes. Changed to preserve default options
 ---
 
 **Author**: AI Assistant  
-**Review**: Pending
+**Supervisor**: Yoshihiro NAKAHARA (bonojovi@zundou.org)

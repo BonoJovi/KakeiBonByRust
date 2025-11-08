@@ -317,4 +317,4 @@ JavaScriptで動的にSELECTボックスを更新する際、`innerHTML`で上�
 ---
 
 **作成者**: AI Assistant  
-**レビュー**: 未実施
+**監修**: Yoshihiro NAKAHARA (bonojovi@zundou.org)

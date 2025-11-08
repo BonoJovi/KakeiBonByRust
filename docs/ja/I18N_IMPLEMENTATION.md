@@ -553,3 +553,8 @@ $HOME/.kakeibon/
 ✅ ドキュメント作成完了
 
 次のフェーズでフロントエンド（メニューとダイアログ）を実装予定です。
+
+---
+
+**作成者**: AI Assistant  
+**監修**: Yoshihiro NAKAHARA (bonojovi@zundou.org)

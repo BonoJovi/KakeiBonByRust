@@ -389,3 +389,6 @@ const currentUserRole = ROLE_USER;
 ---
 
 **最終更新**: 2025-11-08 07:40 JST
+
+**作成者**: AI Assistant  
+**監修**: Yoshihiro NAKAHARA (bonojovi@zundou.org)

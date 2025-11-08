@@ -418,3 +418,6 @@ WHERE USER_ID = ?;
 ---
 
 **作成**: 2025-11-02 21:41 JST
+
+**作成者**: AI Assistant  
+**監修**: Yoshihiro NAKAHARA (bonojovi@zundou.org)
