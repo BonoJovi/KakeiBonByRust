@@ -500,7 +500,9 @@ VALUES
 (807, 'account_mgmt.add_new', 'en', 'Add New Account', 'account_mgmt', 'Add new account button', datetime('now')),
 (808, 'account_mgmt.add_new', 'ja', '新規口座追加', 'account_mgmt', '新規口座追加ボタン', datetime('now')),
 (809, 'common.actions', 'en', 'Actions', 'common', 'Actions column header', datetime('now')),
-(810, 'common.actions', 'ja', '操作', 'common', '操作カラムヘッダー', datetime('now'));
+(810, 'common.actions', 'ja', '操作', 'common', '操作カラムヘッダー', datetime('now')),
+(811, 'account_mgmt.modal_title_add', 'en', 'Add Account', 'account_mgmt', 'Add account modal title', datetime('now')),
+(812, 'account_mgmt.modal_title_add', 'ja', '口座追加', 'account_mgmt', '口座追加モーダルタイトル', datetime('now'));
 
 -- NOTE: Category data will be migrated from existing SQL later
 
