@@ -27,6 +27,35 @@ Development is progressing smoothly, and we strive to update daily!
 
 ---
 
+## 📚 Legacy Version / 前身プロジェクト
+
+**Looking for the stable Lazarus/Free Pascal version? / 安定版（Lazarus/Free Pascal版）をお探しですか？**
+
+👉 **[KakeiBon (Original)](https://github.com/BonoJovi/KakeiBon)** - すぐに使える完成版！
+
+The original KakeiBon is a **fully functional household budget app** ready to use right now!  
+元祖KakeiBonは、**今すぐ使える完成版の家計簿アプリ**です！
+
+**Key Differences / 主な違い:**
+- ✅ **Stable & Production-Ready** / **安定版・本番利用可能**
+- 📦 **Pre-built Binaries Available** / **ビルド済みバイナリあり**（[Releases](https://github.com/BonoJovi/KakeiBon/releases/)）
+- 🇯🇵 **Japanese Interface Only** / **日本語インターフェース専用**
+- 🖥️ **Linux & Windows Support** / **Linux & Windows 対応**
+- 🔤 **Large Fonts & Accessibility** / **大きな文字とアクセシビリティ**
+
+**Why Rust Version? / なぜRust版？**
+
+This Rust rewrite offers:
+- ⚡ **Better Performance** / より高速
+- 🔒 **Enhanced Security** (Argon2 + AES-256-GCM) / 強化されたセキュリティ
+- 🌐 **Full Multilingual Support** / 完全多言語対応
+- 🎨 **Modern Architecture** / モダンなアーキテクチャ
+- 🔮 **Future Expandability** / 将来の拡張性
+
+💡 **Try both and choose what works best for you!** / 両方試して、お好みの方をお使いください！
+
+---
+
 ## ✨ Key Features / 主な特徴
 
 ### 🔤 Large, Easy-to-Read Text / 大きな文字で見やすい

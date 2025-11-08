@@ -1,6 +1,34 @@
 # KakeiBon built with Rust
 Household Budget App "KakeiBon" Built with Rust Language.
 
+## 📚 Legacy Version
+
+**Looking for the stable, production-ready version?**
+
+👉 **[KakeiBon (Original)](https://github.com/BonoJovi/KakeiBon)** - Ready to use now!
+
+The original KakeiBon is a **fully functional household budget app built with Lazarus/Free Pascal**.
+
+**Key Differences:**
+- ✅ **Stable & Production-Ready** - Use it right away
+- 📦 **Pre-built Binaries Available** - Download from [Releases](https://github.com/BonoJovi/KakeiBon/releases/)
+- 🇯🇵 **Japanese Interface Only**
+- 🖥️ **Linux & Windows Support**
+- 🔤 **Large Fonts & Accessibility Features**
+
+**Why the Rust Rewrite?**
+
+This Rust version offers:
+- ⚡ Better performance
+- 🔒 Enhanced security (Argon2 + AES-256-GCM)
+- 🌐 Full multilingual support (Japanese/English)
+- 🎨 Modern architecture
+- 🔮 Future expandability
+
+💡 **Try both and choose what works best for you!**
+
+---
+
 ## Overview
 A modern household budget management application built with Rust and Tauri framework.
 
