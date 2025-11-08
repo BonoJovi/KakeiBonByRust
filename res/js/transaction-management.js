@@ -5,6 +5,7 @@ import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontS
 import { setupLanguageMenuHandlers, setupLanguageMenu, handleLogout, handleQuit } from './menu.js';
 import { HTML_FILES } from './html-files.js';
 import { TAX_ROUND_DOWN, TAX_ROUND_HALF_UP, TAX_ROUND_UP, ROLE_ADMIN, ROLE_USER } from './consts.js';
+import { Modal } from './modal.js';
 
 // TODO: Get from session/auth
 const currentUserId = 2;
@@ -141,8 +142,8 @@ function setupEventListeners() {
     const addTransactionBtn = document.getElementById('add-transaction-btn');
     addTransactionBtn.addEventListener('click', openTransactionModal);
     
-    // Transaction modal handlers
-    setupTransactionModalHandlers();
+    // Initialize transaction modal with common Modal class
+    initializeTransactionModal();
 }
 
 async function loadCategoriesForFilter() {
@@ -420,8 +421,7 @@ async function clearFilters() {
 }
 
 async function editTransaction(transactionId) {
-    // Placeholder for edit functionality
-    alert(`Edit transaction ID: ${transactionId} - Coming soon!`);
+    await openTransactionModal(transactionId);
 }
 
 async function deleteTransaction(transactionId) {
@@ -450,34 +450,65 @@ async function deleteTransaction(transactionId) {
 // Transaction Modal Functions
 // ============================================================================
 
-let transactionModal;
 let editingTransactionId = null;
 let categories = [];
 let accounts = [];
+let transactionModal = null;
 
-function setupTransactionModalHandlers() {
-    const modal = document.getElementById('transaction-modal');
-    const closeBtn = document.getElementById('close-transaction-modal');
-    const cancelBtn = document.getElementById('cancel-transaction-btn');
-    const form = document.getElementById('transaction-form');
+function initializeTransactionModal() {
     const category1Select = document.getElementById('category1');
     
-    // Close modal handlers
-    closeBtn.addEventListener('click', closeTransactionModal);
-    cancelBtn.addEventListener('click', closeTransactionModal);
-    
-    // Modal backdrop click
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            closeTransactionModal();
+    // Initialize Modal instance
+    transactionModal = new Modal('transaction-modal', {
+        formId: 'transaction-form',
+        closeButtonId: 'close-transaction-modal',
+        cancelButtonId: 'cancel-transaction-btn',
+        onOpen: async (mode, data) => {
+            // Set modal title
+            const modalTitle = document.getElementById('transaction-modal-title');
+            if (mode === 'edit' && data.transactionId) {
+                modalTitle.textContent = i18n.t('transaction_mgmt.edit_transaction');
+                editingTransactionId = data.transactionId;
+            } else {
+                modalTitle.textContent = i18n.t('transaction_mgmt.add_transaction');
+                editingTransactionId = null;
+            }
+            
+            // Load master data
+            await loadCategoriesForModal();
+            await loadAccountsForModal();
+            
+            // Reset form
+            const form = document.getElementById('transaction-form');
+            form.reset();
+            
+            // Set current date/time (round to hour, minutes=00, seconds=00)
+            const now = new Date();
+            now.setMinutes(0);
+            now.setSeconds(0);
+            now.setMilliseconds(0);
+            // Format: YYYY-MM-DDTHH:mm (datetime-local format)
+            const dateTimeStr = now.getFullYear() + '-' 
+                + String(now.getMonth() + 1).padStart(2, '0') + '-'
+                + String(now.getDate()).padStart(2, '0') + 'T'
+                + String(now.getHours()).padStart(2, '0') + ':00';
+            document.getElementById('transaction-date').value = dateTimeStr;
+            
+            // If editing, load transaction data
+            if (mode === 'edit' && data.transactionId && typeof data.transactionId === 'number') {
+                await loadTransactionData(data.transactionId);
+            }
+        },
+        onSave: async (formData) => {
+            await handleTransactionSubmit(new Event('submit'));
+        },
+        onClose: () => {
+            editingTransactionId = null;
         }
     });
     
     // Category1 change handler - control account field visibility
     category1Select.addEventListener('change', handleCategory1Change);
-    
-    // Form submit
-    form.addEventListener('submit', handleTransactionSubmit);
 }
 
 async function openTransactionModal(transactionId = null) {
@@ -486,51 +517,11 @@ async function openTransactionModal(transactionId = null) {
         transactionId = null;
     }
     
-    const modal = document.getElementById('transaction-modal');
-    const modalTitle = document.getElementById('transaction-modal-title');
-    const form = document.getElementById('transaction-form');
-    
-    editingTransactionId = transactionId;
-    
-    // Set modal title
     if (transactionId) {
-        modalTitle.textContent = i18n.t('transaction_mgmt.edit_transaction');
+        transactionModal.open('edit', { transactionId });
     } else {
-        modalTitle.textContent = i18n.t('transaction_mgmt.add_transaction');
+        transactionModal.open('add', {});
     }
-    
-    // Load master data
-    await loadCategoriesForModal();
-    await loadAccountsForModal();
-    
-    // Reset form
-    form.reset();
-    
-    // Set current date/time (round to hour, minutes=00, seconds=00)
-    const now = new Date();
-    now.setMinutes(0);
-    now.setSeconds(0);
-    now.setMilliseconds(0);
-    // Format: YYYY-MM-DDTHH:mm (datetime-local format)
-    const dateTimeStr = now.getFullYear() + '-' 
-        + String(now.getMonth() + 1).padStart(2, '0') + '-'
-        + String(now.getDate()).padStart(2, '0') + 'T'
-        + String(now.getHours()).padStart(2, '0') + ':00';
-    document.getElementById('transaction-date').value = dateTimeStr;
-    
-    // If editing, load transaction data
-    if (transactionId && typeof transactionId === 'number') {
-        await loadTransactionData(transactionId);
-    }
-    
-    // Show modal
-    modal.classList.remove('hidden');
-}
-
-function closeTransactionModal() {
-    const modal = document.getElementById('transaction-modal');
-    modal.classList.add('hidden');
-    editingTransactionId = null;
 }
 
 async function loadCategoriesForModal() {
@@ -713,7 +704,7 @@ async function handleTransactionSubmit(event) {
         }
         
         // Close modal and reload list
-        closeTransactionModal();
+        transactionModal.close();
         await loadTransactions();
         
     } catch (error) {
