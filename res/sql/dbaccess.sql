@@ -502,7 +502,11 @@ VALUES
 (809, 'common.actions', 'en', 'Actions', 'common', 'Actions column header', datetime('now')),
 (810, 'common.actions', 'ja', '操作', 'common', '操作カラムヘッダー', datetime('now')),
 (811, 'account_mgmt.modal_title_add', 'en', 'Add Account', 'account_mgmt', 'Add account modal title', datetime('now')),
-(812, 'account_mgmt.modal_title_add', 'ja', '口座追加', 'account_mgmt', '口座追加モーダルタイトル', datetime('now'));
+(812, 'account_mgmt.modal_title_add', 'ja', '口座追加', 'account_mgmt', '口座追加モーダルタイトル', datetime('now')),
+(813, 'account_mgmt.modal_title_edit', 'en', 'Edit Account', 'account_mgmt', 'Edit account modal title', datetime('now')),
+(814, 'account_mgmt.modal_title_edit', 'ja', '口座編集', 'account_mgmt', '口座編集モーダルタイトル', datetime('now')),
+(815, 'account_mgmt.delete_confirm', 'en', 'Are you sure you want to delete this account?', 'account_mgmt', 'Delete account confirmation message', datetime('now')),
+(816, 'account_mgmt.delete_confirm', 'ja', 'この口座を削除してもよろしいですか？', 'account_mgmt', '口座削除確認メッセージ', datetime('now'));
 
 -- NOTE: Category data will be migrated from existing SQL later
 

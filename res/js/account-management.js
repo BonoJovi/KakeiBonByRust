@@ -278,8 +278,10 @@ async function saveAccount() {
 }
 
 async function deleteAccount(accountCode, accountName) {
+    const confirmMessage = i18n.t('account_mgmt.delete_confirm') || 
+        'Are you sure you want to delete this account?';
     const confirmed = confirm(
-        `Are you sure you want to delete account "${accountName}" (${accountCode})?`
+        `${confirmMessage}\n\n${accountName} (${accountCode})`
     );
 
     if (!confirmed) return;
