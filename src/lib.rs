@@ -1060,6 +1060,7 @@ async fn delete_account(
 
 #[tauri::command]
 async fn save_transaction_header(
+    user_id: i64,
     category1_code: String,
     from_account_code: String,
     to_account_code: String,
@@ -1070,8 +1071,6 @@ async fn save_transaction_header(
     state: tauri::State<'_, AppState>
 ) -> Result<i64, String> {
     let transaction = state.transaction.lock().await;
-    // TODO: Get user_id from session/auth
-    let user_id = 1;
     
     let request = services::transaction::SaveTransactionRequest {
         category1_code,

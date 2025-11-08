@@ -83,7 +83,7 @@ pub struct Memo {
     pub update_dt: Option<String>,
 }
 
-/// Legacy transaction data structure (for backward compatibility)
+/// Transaction data structure for list display (header-based)
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Transaction {
     #[sqlx(rename = "TRANSACTION_ID")]
@@ -91,29 +91,21 @@ pub struct Transaction {
     #[sqlx(rename = "USER_ID")]
     pub user_id: i64,
     #[sqlx(rename = "TRANSACTION_DATE")]
-    pub transaction_date: String,  // YYYY-MM-DD format
+    pub transaction_date: String,  // YYYY-MM-DD HH:MM:SS format (datetime)
     #[sqlx(rename = "CATEGORY1_CODE")]
     pub category1_code: String,
-    #[sqlx(rename = "CATEGORY2_CODE")]
-    pub category2_code: String,
-    #[sqlx(rename = "CATEGORY3_CODE")]
-    pub category3_code: String,
-    #[sqlx(rename = "AMOUNT")]
-    pub amount: i64,
-    #[sqlx(rename = "DESCRIPTION")]
-    pub description: Option<String>,
-    #[sqlx(rename = "MEMO")]
-    pub memo: Option<String>,
-    #[sqlx(rename = "ENTRY_DT")]
-    pub entry_dt: String,
-    #[sqlx(rename = "UPDATE_DT")]
-    pub update_dt: Option<String>,
+    #[sqlx(rename = "FROM_ACCOUNT_CODE")]
+    pub from_account_code: String,
+    #[sqlx(rename = "TO_ACCOUNT_CODE")]
+    pub to_account_code: String,
+    #[sqlx(rename = "TOTAL_AMOUNT")]
+    pub total_amount: i64,
+    #[sqlx(rename = "TAX_ROUNDING_TYPE")]
+    pub tax_rounding_type: i64,
+    #[sqlx(rename = "MEMO_ID")]
+    pub memo_id: Option<i64>,
     #[sqlx(rename = "CATEGORY1_NAME")]
     pub category1_name: Option<String>,
-    #[sqlx(rename = "CATEGORY2_NAME")]
-    pub category2_name: Option<String>,
-    #[sqlx(rename = "CATEGORY3_NAME")]
-    pub category3_name: Option<String>,
 }
 
 /// Transaction list response with pagination
@@ -165,10 +157,10 @@ impl TransactionService {
         user_id: i64,
         request: SaveTransactionRequest,
     ) -> Result<i64, TransactionError> {
-        // Validate date format
-        if request.transaction_date.len() != 10 {
+        // Validate datetime format (YYYY-MM-DD HH:MM:SS)
+        if request.transaction_date.len() != 19 {
             return Err(TransactionError::ValidationError(
-                "Invalid date format. Use YYYY-MM-DD".to_string(),
+                "Invalid datetime format. Use YYYY-MM-DD HH:MM:SS".to_string(),
             ));
         }
 
@@ -239,10 +231,10 @@ impl TransactionService {
         tax_rounding: &str,
         memo_text: Option<&str>,
     ) -> Result<i64, TransactionError> {
-        // Validate date format
-        if transaction_date.len() != 10 {
+        // Validate datetime format (YYYY-MM-DD HH:MM:SS)
+        if transaction_date.len() != 19 {
             return Err(TransactionError::ValidationError(
-                "Invalid date format. Use YYYY-MM-DD".to_string(),
+                "Invalid datetime format. Use YYYY-MM-DD HH:MM:SS".to_string(),
             ));
         }
 
@@ -339,10 +331,10 @@ impl TransactionService {
             ));
         }
 
-        // Validate date format (basic check)
-        if transaction_date.len() != 10 {
+        // Validate datetime format (YYYY-MM-DD HH:MM:SS)
+        if transaction_date.len() != 19 {
             return Err(TransactionError::ValidationError(
-                "Invalid date format. Use YYYY-MM-DD".to_string(),
+                "Invalid datetime format. Use YYYY-MM-DD HH:MM:SS".to_string(),
             ));
         }
 
@@ -438,32 +430,24 @@ impl TransactionService {
             params.push(cat1.to_string());
         }
 
-        if let Some(cat2) = category2_code {
-            where_clauses.push("t.CATEGORY2_CODE = ?".to_string());
-            params.push(cat2.to_string());
-        }
-
-        if let Some(cat3) = category3_code {
-            where_clauses.push("t.CATEGORY3_CODE = ?".to_string());
-            params.push(cat3.to_string());
-        }
+        // Note: CATEGORY2_CODE and CATEGORY3_CODE are in TRANSACTIONS_DETAIL, not in HEADER
+        // These filters are not implemented for header-only queries
+        let _ = category2_code; // Suppress unused warning
+        let _ = category3_code; // Suppress unused warning
 
         if let Some(min) = min_amount {
-            where_clauses.push("t.AMOUNT >= ?".to_string());
+            where_clauses.push("t.TOTAL_AMOUNT >= ?".to_string());
             params.push(min.to_string());
         }
 
         if let Some(max) = max_amount {
-            where_clauses.push("t.AMOUNT <= ?".to_string());
+            where_clauses.push("t.TOTAL_AMOUNT <= ?".to_string());
             params.push(max.to_string());
         }
 
-        if let Some(kw) = keyword {
-            where_clauses.push("(t.DESCRIPTION LIKE ? OR t.MEMO LIKE ?)".to_string());
-            let search_term = format!("%{}%", kw);
-            params.push(search_term.clone());
-            params.push(search_term);
-        }
+        // Note: DESCRIPTION and MEMO are not in HEADER
+        // Keyword search is not implemented for header-only queries
+        let _ = keyword; // Suppress unused warning
 
         let where_clause = where_clauses.join(" AND ");
 
@@ -527,10 +511,10 @@ impl TransactionService {
             ));
         }
 
-        // Validate date format
-        if transaction_date.len() != 10 {
+        // Validate datetime format (YYYY-MM-DD HH:MM:SS)
+        if transaction_date.len() != 19 {
             return Err(TransactionError::ValidationError(
-                "Invalid date format. Use YYYY-MM-DD".to_string(),
+                "Invalid datetime format. Use YYYY-MM-DD HH:MM:SS".to_string(),
             ));
         }
 

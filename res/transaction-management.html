@@ -168,7 +168,7 @@
                     <form id="transaction-form">
                         <div class="form-group">
                             <label for="transaction-date" data-i18n="transaction_mgmt.transaction_date">Transaction Date:</label>
-                            <input type="date" id="transaction-date" required />
+                            <input type="datetime-local" id="transaction-date" required />
                         </div>
 
                         <div class="form-group">
@@ -195,11 +195,6 @@
                         <div class="form-group">
                             <label for="total-amount" data-i18n="transaction_mgmt.total_amount">Total Amount:</label>
                             <input type="number" id="total-amount" min="0" step="1" required />
-                        </div>
-
-                        <div class="form-group">
-                            <label for="tax-rate" data-i18n="transaction_mgmt.tax_rate">Tax Rate (%):</label>
-                            <input type="number" id="tax-rate" min="0" max="100" step="0.01" value="8" required />
                         </div>
 
                         <div class="form-group">

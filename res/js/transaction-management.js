@@ -4,9 +4,11 @@ import { setupIndicators } from './indicators.js';
 import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers, adjustWindowSize } from './font-size.js';
 import { setupLanguageMenuHandlers, setupLanguageMenu, handleLogout, handleQuit } from './menu.js';
 import { HTML_FILES } from './html-files.js';
-import { TAX_ROUND_DOWN, TAX_ROUND_HALF_UP, TAX_ROUND_UP } from './consts.js';
+import { TAX_ROUND_DOWN, TAX_ROUND_HALF_UP, TAX_ROUND_UP, ROLE_ADMIN, ROLE_USER } from './consts.js';
 
-const currentUserId = 1; // TODO: Get from session/auth
+// TODO: Get from session/auth
+const currentUserId = 2;
+const currentUserRole = ROLE_USER; // Transaction management is for regular users only
 
 // Pagination state
 let currentPage = 1;
@@ -277,45 +279,30 @@ function createTransactionItem(transaction) {
     const item = document.createElement('div');
     item.className = 'transaction-item';
     
-    // Date
+    // Date (format: YYYY-MM-DD HH:MM:SS -> YYYY-MM-DD HH:MM)
     const dateDiv = document.createElement('div');
     dateDiv.className = 'transaction-date';
-    dateDiv.textContent = transaction.transaction_date;
+    const dateTime = transaction.transaction_date.substring(0, 16).replace(' ', ' '); // YYYY-MM-DD HH:MM
+    dateDiv.textContent = dateTime;
     item.appendChild(dateDiv);
     
-    // Category
+    // Category (only category1)
     const categoryDiv = document.createElement('div');
     categoryDiv.className = 'transaction-category';
-    
-    const majorSpan = document.createElement('span');
-    majorSpan.className = 'major';
-    majorSpan.textContent = transaction.category1_name || transaction.category1_code;
-    categoryDiv.appendChild(majorSpan);
-    
-    const detailSpan = document.createElement('span');
-    detailSpan.className = 'detail';
-    const category2Name = transaction.category2_name || transaction.category2_code;
-    const category3Name = transaction.category3_name || transaction.category3_code;
-    detailSpan.textContent = `${category2Name} > ${category3Name}`;
-    categoryDiv.appendChild(detailSpan);
-    
+    categoryDiv.textContent = transaction.category1_name || transaction.category1_code;
     item.appendChild(categoryDiv);
     
-    // Description
-    const descriptionDiv = document.createElement('div');
-    descriptionDiv.className = 'transaction-description';
-    descriptionDiv.textContent = transaction.description || '-';
-    item.appendChild(descriptionDiv);
+    // Accounts (FROM -> TO)
+    const accountDiv = document.createElement('div');
+    accountDiv.className = 'transaction-account';
+    accountDiv.textContent = `${transaction.from_account_code} → ${transaction.to_account_code}`;
+    item.appendChild(accountDiv);
     
     // Amount
     const amountDiv = document.createElement('div');
     amountDiv.className = `transaction-amount ${transaction.category1_code.toLowerCase()}`;
-    amountDiv.textContent = formatAmount(transaction.amount);
+    amountDiv.textContent = formatAmount(transaction.total_amount);
     item.appendChild(amountDiv);
-    
-    // Empty column for memo (not displayed in list)
-    const emptyDiv = document.createElement('div');
-    item.appendChild(emptyDiv);
     
     // Actions
     const actionsDiv = document.createElement('div');
@@ -497,8 +484,18 @@ async function openTransactionModal(transactionId = null) {
     
     // Reset form
     form.reset();
-    document.getElementById('tax-rate').value = 8; // Default tax rate
-    document.getElementById('transaction-date').valueAsDate = new Date(); // Today
+    
+    // Set current date/time (round to hour, minutes=00, seconds=00)
+    const now = new Date();
+    now.setMinutes(0);
+    now.setSeconds(0);
+    now.setMilliseconds(0);
+    // Format: YYYY-MM-DDTHH:mm (datetime-local format)
+    const dateTimeStr = now.getFullYear() + '-' 
+        + String(now.getMonth() + 1).padStart(2, '0') + '-'
+        + String(now.getDate()).padStart(2, '0') + 'T'
+        + String(now.getHours()).padStart(2, '0') + ':00';
+    document.getElementById('transaction-date').value = dateTimeStr;
     
     // If editing, load transaction data
     if (transactionId && typeof transactionId === 'number') {
@@ -545,7 +542,10 @@ async function loadCategoriesForModal() {
 
 async function loadAccountsForModal() {
     try {
-        accounts = await invoke('get_accounts', { userId: currentUserId });
+        accounts = await invoke('get_accounts', { 
+            userId: currentUserId,
+            userRole: currentUserRole
+        });
         
         // Populate account dropdowns
         const fromAccountSelect = document.getElementById('from-account');
@@ -647,7 +647,7 @@ function handleCategory1Change(event) {
 async function handleTransactionSubmit(event) {
     event.preventDefault();
     
-    const transactionDate = document.getElementById('transaction-date').value;
+    const transactionDateInput = document.getElementById('transaction-date').value;
     const category1Code = document.getElementById('category1').value;
     const fromAccountCode = document.getElementById('from-account').value;
     const toAccountCode = document.getElementById('to-account').value;
@@ -655,8 +655,20 @@ async function handleTransactionSubmit(event) {
     const taxRoundingValue = parseInt(document.getElementById('tax-rounding').value);
     const memoText = document.getElementById('transaction-memo').value.trim() || null;
     
+    // Convert datetime-local format (YYYY-MM-DDTHH:mm) to SQLite DATETIME format (YYYY-MM-DD HH:MM:SS)
+    const transactionDate = transactionDateInput.replace('T', ' ') + ':00';
+    
     // Tax rounding value is already an integer (0, 1, or 2) from the select element
     const taxRoundingType = taxRoundingValue;
+    
+    console.log('=== Transaction Data ===');
+    console.log('category1Code:', category1Code);
+    console.log('fromAccountCode:', fromAccountCode);
+    console.log('toAccountCode:', toAccountCode);
+    console.log('transactionDate:', transactionDate);
+    console.log('totalAmount:', totalAmount);
+    console.log('taxRoundingType:', taxRoundingType);
+    console.log('memo:', memoText);
     
     try {
         if (editingTransactionId) {
@@ -665,6 +677,7 @@ async function handleTransactionSubmit(event) {
         } else {
             // Create new transaction
             await invoke('save_transaction_header', {
+                userId: currentUserId,
                 category1Code: category1Code,
                 fromAccountCode: fromAccountCode,
                 toAccountCode: toAccountCode,
@@ -691,13 +704,18 @@ async function loadTransactionData(transactionId) {
             transactionId: transactionId
         });
         
+        // Convert SQLite DATETIME format (YYYY-MM-DD HH:MM:SS) to datetime-local format (YYYY-MM-DDTHH:mm)
+        const dateTimeParts = transaction.transaction_date.split(' ');
+        const datePart = dateTimeParts[0];  // YYYY-MM-DD
+        const timePart = dateTimeParts[1] ? dateTimeParts[1].substring(0, 5) : '00:00';  // HH:MM
+        const dateTimeLocal = datePart + 'T' + timePart;
+        
         // Populate form fields
-        document.getElementById('transaction-date').value = transaction.transaction_date;
+        document.getElementById('transaction-date').value = dateTimeLocal;
         document.getElementById('category1').value = transaction.category1_code;
         document.getElementById('from-account').value = transaction.from_account_code || 'NONE';
         document.getElementById('to-account').value = transaction.to_account_code || 'NONE';
         document.getElementById('total-amount').value = transaction.total_amount;
-        document.getElementById('tax-rate').value = transaction.tax_rate;
         document.getElementById('tax-rounding').value = transaction.tax_rounding;
         document.getElementById('transaction-memo').value = transaction.memo || '';
         
