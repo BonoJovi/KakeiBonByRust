@@ -292,10 +292,12 @@ function createTransactionItem(transaction) {
     categoryDiv.textContent = transaction.category1_name || transaction.category1_code;
     item.appendChild(categoryDiv);
     
-    // Accounts (FROM -> TO)
+    // Accounts (FROM -> TO) - Display account names, fallback to codes if names not available
     const accountDiv = document.createElement('div');
     accountDiv.className = 'transaction-account';
-    accountDiv.textContent = `${transaction.from_account_code} → ${transaction.to_account_code}`;
+    const fromAccountDisplay = transaction.from_account_name || transaction.from_account_code;
+    const toAccountDisplay = transaction.to_account_name || transaction.to_account_code;
+    accountDiv.textContent = `${fromAccountDisplay} → ${toAccountDisplay}`;
     item.appendChild(accountDiv);
     
     // Amount
