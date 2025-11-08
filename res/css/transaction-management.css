@@ -151,7 +151,7 @@ body:has(.transaction-management-container) #main-content {
     padding: 1rem;
     background-color: #fff;
     display: grid;
-    grid-template-columns: 7em 7em 1fr 10em 12em 8em;
+    grid-template-columns: 7em 7em 1fr 10em 15em 8em;
     gap: 1rem;
     align-items: center;
     transition: background-color 0.2s;
@@ -203,6 +203,15 @@ body:has(.transaction-management-container) #main-content {
 
 .transaction-amount.transfer {
     color: #1976d2;
+}
+
+.transaction-memo {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #666;
+    font-size: 0.95em;
+    cursor: help;
 }
 
 .transaction-actions {
@@ -285,15 +294,20 @@ body:has(.transaction-management-container) #main-content {
 }
 
 /* Responsive */
-@media (max-width: 1200px) {
+@media (max-width: 1400px) {
     .transaction-item {
-        grid-template-columns: 7em 7em 1fr 10em;
+        grid-template-columns: 7em 7em 1fr 10em 12em;
         grid-template-rows: auto auto;
     }
     
-    .transaction-actions {
-        grid-column: 4;
+    .transaction-memo {
+        grid-column: 1 / -2;
         grid-row: 2;
+    }
+    
+    .transaction-actions {
+        grid-column: 5;
+        grid-row: 1 / 3;
     }
 }
 

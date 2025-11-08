@@ -110,6 +110,8 @@ pub struct Transaction {
     pub from_account_name: Option<String>,
     #[sqlx(rename = "TO_ACCOUNT_NAME")]
     pub to_account_name: Option<String>,
+    #[sqlx(rename = "MEMO_TEXT")]
+    pub memo_text: Option<String>,
 }
 
 /// Transaction list response with pagination

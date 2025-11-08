@@ -306,6 +306,23 @@ function createTransactionItem(transaction) {
     amountDiv.textContent = formatAmount(transaction.total_amount);
     item.appendChild(amountDiv);
     
+    // Memo (max 20 characters, show full text on hover)
+    const memoDiv = document.createElement('div');
+    memoDiv.className = 'transaction-memo';
+    if (transaction.memo_text) {
+        const memoText = transaction.memo_text;
+        // Always set title for tooltip (useful when window is narrow)
+        memoDiv.title = memoText;
+        if (memoText.length > 20) {
+            memoDiv.textContent = memoText.substring(0, 20) + '...';
+        } else {
+            memoDiv.textContent = memoText;
+        }
+    } else {
+        memoDiv.textContent = '-';
+    }
+    item.appendChild(memoDiv);
+    
     // Actions
     const actionsDiv = document.createElement('div');
     actionsDiv.className = 'transaction-actions';
