@@ -329,16 +329,16 @@ function createTransactionItem(transaction) {
     actionsDiv.className = 'transaction-actions';
     
     const editBtn = document.createElement('button');
-    editBtn.className = 'btn btn-secondary btn-icon';
-    editBtn.textContent = '✏️';
-    editBtn.title = 'Edit';
+    editBtn.className = 'btn btn-secondary';
+    editBtn.textContent = i18n.t('common.edit');
+    editBtn.setAttribute('data-i18n', 'common.edit');
     editBtn.addEventListener('click', () => editTransaction(transaction.transaction_id));
     actionsDiv.appendChild(editBtn);
     
     const deleteBtn = document.createElement('button');
-    deleteBtn.className = 'btn btn-danger btn-icon';
-    deleteBtn.textContent = '🗑️';
-    deleteBtn.title = 'Delete';
+    deleteBtn.className = 'btn btn-danger';
+    deleteBtn.textContent = i18n.t('common.delete');
+    deleteBtn.setAttribute('data-i18n', 'common.delete');
     deleteBtn.addEventListener('click', () => deleteTransaction(transaction.transaction_id));
     actionsDiv.appendChild(deleteBtn);
     
