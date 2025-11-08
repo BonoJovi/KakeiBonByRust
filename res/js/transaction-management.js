@@ -425,7 +425,9 @@ async function editTransaction(transactionId) {
 }
 
 async function deleteTransaction(transactionId) {
-    if (!confirm('Are you sure you want to delete this transaction?')) {
+    const confirmMessage = i18n.t('transaction_mgmt.delete_confirm') || 
+        'Are you sure you want to delete this transaction?';
+    if (!confirm(confirmMessage)) {
         return;
     }
     
@@ -542,9 +544,12 @@ async function loadCategoriesForModal() {
         
         categories = categoryTree;
         
-        // Populate category1 dropdown
+        // Populate category1 dropdown (keep the default option with data-i18n)
         const category1Select = document.getElementById('category1');
-        category1Select.innerHTML = '<option value="">Select category</option>';
+        // Clear only the dynamically added options (keep first option)
+        while (category1Select.options.length > 1) {
+            category1Select.remove(1);
+        }
         
         categoryTree.forEach(cat1 => {
             console.log('Category1:', cat1);

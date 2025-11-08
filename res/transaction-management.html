@@ -107,16 +107,16 @@
                     <div class="filter-row">
                         <div class="filter-group">
                             <label data-i18n="transaction_mgmt.amount_range">Amount Range:</label>
-                            <input type="number" id="filter-min-amount" placeholder="Min" min="0" />
+                            <input type="number" id="filter-min-amount" data-i18n-placeholder="transaction_mgmt.min_placeholder" placeholder="Min" min="0" />
                             <span>～</span>
-                            <input type="number" id="filter-max-amount" placeholder="Max" min="0" />
+                            <input type="number" id="filter-max-amount" data-i18n-placeholder="transaction_mgmt.max_placeholder" placeholder="Max" min="0" />
                         </div>
                     </div>
 
                     <div class="filter-row">
                         <div class="filter-group">
                             <label data-i18n="transaction_mgmt.keyword">Keyword:</label>
-                            <input type="text" id="filter-keyword" placeholder="Search in description or memo" />
+                            <input type="text" id="filter-keyword" data-i18n-placeholder="transaction_mgmt.search_placeholder" placeholder="Search in memo" />
                         </div>
                     </div>
 
@@ -174,14 +174,14 @@
                         <div class="form-group">
                             <label for="category1" data-i18n="transaction_mgmt.category1">Category (Major):</label>
                             <select id="category1" required>
-                                <option value="">Select category</option>
+                                <option value="" data-i18n="transaction_mgmt.select_category">- Select category -</option>
                             </select>
                         </div>
 
                         <div class="form-group" id="from-account-group">
                             <label for="from-account" data-i18n="transaction_mgmt.from_account">From Account:</label>
                             <select id="from-account">
-                                <option value="NONE">Unspecified</option>
+                                <option value="NONE" data-i18n="common.unspecified">Unspecified</option>
                             </select>
                         </div>
 
@@ -213,7 +213,7 @@
 
                         <div class="form-group">
                             <button type="button" class="btn btn-secondary" id="manage-details-btn" data-i18n="transaction_mgmt.manage_details">Manage Details</button>
-                            <span id="detail-count-info">0 items</span>
+                            <span id="detail-count-info">0 <span data-i18n="transaction_mgmt.detail_items">items</span></span>
                         </div>
 
                         <div class="modal-actions">
