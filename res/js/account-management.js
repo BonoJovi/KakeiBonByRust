@@ -3,6 +3,7 @@ import { HTML_FILES } from './html-files.js';
 import i18n from './i18n.js';
 import { adjustWindowSize } from './font-size.js';
 import { ROLE_ADMIN, ROLE_USER } from './consts.js';
+import { Modal } from './modal.js';
 
 console.log('=== ACCOUNT-MANAGEMENT.JS LOADED - ALL imports enabled ===');
 console.log('invoke:', typeof invoke);
@@ -16,6 +17,7 @@ let currentLanguage = 'ja';
 let templates = [];
 let accounts = [];
 let editingAccountCode = null;
+let accountModal = null;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
@@ -26,6 +28,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         currentLanguage = i18n.getCurrentLanguage();
         i18n.updateUI();
         
+        initAccountModal();
         setupEventListeners();
         await loadTemplates();
         await loadAccounts();
@@ -37,6 +40,48 @@ document.addEventListener('DOMContentLoaded', async () => {
         alert('Failed to initialize: ' + error);
     }
 });
+
+function initAccountModal() {
+    accountModal = new Modal('account-modal', {
+        formId: 'account-form',
+        closeButtonId: 'close-modal',
+        cancelButtonId: 'cancel-btn',
+        onOpen: (mode, data) => {
+            const modalTitle = document.getElementById('modal-title');
+            const form = document.getElementById('account-form');
+            const accountCodeInput = document.getElementById('account-code');
+            
+            // Clear form and errors
+            form.reset();
+            clearErrors();
+            
+            if (mode === 'add') {
+                modalTitle.setAttribute('data-i18n', 'account_mgmt.modal_title_add');
+                modalTitle.textContent = i18n.t('account_mgmt.modal_title_add');
+                accountCodeInput.removeAttribute('readonly');
+                editingAccountCode = null;
+            } else if (mode === 'edit') {
+                modalTitle.setAttribute('data-i18n', 'account_mgmt.modal_title_edit');
+                modalTitle.textContent = i18n.t('account_mgmt.modal_title_edit');
+                
+                // Populate form
+                accountCodeInput.value = data.account_code;
+                accountCodeInput.setAttribute('readonly', 'true');
+                document.getElementById('account-name').value = data.account_name;
+                document.getElementById('template-code').value = data.template_code;
+                document.getElementById('initial-balance').value = data.initial_balance;
+                
+                editingAccountCode = data.account_code;
+            }
+        },
+        onSave: async (formData) => {
+            await saveAccount();
+        },
+        onClose: () => {
+            editingAccountCode = null;
+        }
+    });
+}
 
 function setupEventListeners() {
     // Back button
@@ -52,24 +97,6 @@ function setupEventListeners() {
     // Account code auto-uppercase
     document.getElementById('account-code').addEventListener('input', (e) => {
         e.target.value = e.target.value.toUpperCase();
-    });
-
-    // Modal close buttons
-    document.getElementById('close-modal').addEventListener('click', closeModal);
-    document.getElementById('cancel-btn').addEventListener('click', closeModal);
-
-    // Modal overlay click - use mousedown to prevent accidental close when dragging
-    const modal = document.getElementById('account-modal');
-    modal.addEventListener('mousedown', (e) => {
-        if (e.target.id === 'account-modal') {
-            closeModal();
-        }
-    });
-
-    // Form submit
-    document.getElementById('account-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        await saveAccount();
     });
 }
 
@@ -149,8 +176,8 @@ function createAccountRow(account) {
     // NONE account cannot be deleted
     const isNoneAccount = account.account_code === 'NONE';
     const deleteButtonHtml = isNoneAccount 
-        ? '<button class="btn btn-danger" disabled style="opacity: 0.5; cursor: not-allowed;">Delete</button>'
-        : `<button class="btn btn-danger delete-btn" data-code="${escapeHtml(account.account_code)}">Delete</button>`;
+        ? `<button class="btn btn-danger" disabled style="opacity: 0.5; cursor: not-allowed;" data-i18n="common.delete">${i18n.t('common.delete')}</button>`
+        : `<button class="btn btn-danger delete-btn" data-code="${escapeHtml(account.account_code)}" data-i18n="common.delete">${i18n.t('common.delete')}</button>`;
 
     row.innerHTML = `
         <td>${escapeHtml(account.account_code)}</td>
@@ -158,7 +185,7 @@ function createAccountRow(account) {
         <td>${escapeHtml(templateName)}</td>
         <td style="text-align: right;">${account.initial_balance.toLocaleString()}</td>
         <td class="actions">
-            <button class="btn btn-warning edit-btn" data-code="${escapeHtml(account.account_code)}">Edit</button>
+            <button class="btn btn-warning edit-btn" data-code="${escapeHtml(account.account_code)}" data-i18n="common.edit">${i18n.t('common.edit')}</button>
             ${deleteButtonHtml}
         </td>
     `;
@@ -179,40 +206,11 @@ function createAccountRow(account) {
 }
 
 function openModal(mode, account = null) {
-    const modal = document.getElementById('account-modal');
-    const modalTitle = document.getElementById('modal-title');
-    const form = document.getElementById('account-form');
-    
-    // Clear form
-    form.reset();
-    clearErrors();
-
     if (mode === 'add') {
-        modalTitle.setAttribute('data-i18n', 'account_mgmt.modal_title_add');
-        modalTitle.textContent = i18n.t('account_mgmt.modal_title_add');
-        document.getElementById('account-code').removeAttribute('readonly');
-        editingAccountCode = null;
-    } else {
-        modalTitle.setAttribute('data-i18n', 'account_mgmt.modal_title_edit');
-        modalTitle.textContent = i18n.t('account_mgmt.modal_title_edit');
-        
-        // Populate form
-        document.getElementById('account-code').value = account.account_code;
-        document.getElementById('account-code').setAttribute('readonly', 'true');
-        document.getElementById('account-name').value = account.account_name;
-        document.getElementById('template-code').value = account.template_code;
-        document.getElementById('initial-balance').value = account.initial_balance;
-        
-        editingAccountCode = account.account_code;
+        accountModal.open('add', {});
+    } else if (mode === 'edit') {
+        accountModal.open('edit', account);
     }
-
-    modal.classList.add('show');
-}
-
-function closeModal() {
-    const modal = document.getElementById('account-modal');
-    modal.classList.remove('show');
-    editingAccountCode = null;
 }
 
 async function saveAccount() {
@@ -269,7 +267,7 @@ async function saveAccount() {
             alert(i18n.t('common.success') || 'Account added successfully')
         }
 
-        closeModal();
+        accountModal.close();
         await loadAccounts();
     } catch (error) {
         console.error('Failed to save account:', error);

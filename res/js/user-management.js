@@ -4,6 +4,7 @@ import { ROLE_ADMIN, ROLE_USER } from './consts.js';
 import { setupIndicators } from './indicators.js';
 import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers, adjustWindowSize } from './font-size.js';
 import { HTML_FILES } from './html-files.js';
+import { Modal } from './modal.js';
 
 let currentUsers = [];
 let editingUserId = null;
