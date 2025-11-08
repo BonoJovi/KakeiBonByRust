@@ -98,4 +98,8 @@ VALUES
 (803, 'common.delete', 'en', 'Delete', 'common', 'Delete button', datetime('now')),
 (804, 'common.delete', 'ja', '削除', 'common', '削除ボタン', datetime('now')),
 (805, 'common.success', 'en', 'Success', 'common', 'Success message', datetime('now')),
-(806, 'common.success', 'ja', '成功', 'common', '成功メッセージ', datetime('now'));
+(806, 'common.success', 'ja', '成功', 'common', '成功メッセージ', datetime('now')),
+(807, 'account_mgmt.add_new', 'en', 'Add New Account', 'account_mgmt', 'Add new account button', datetime('now')),
+(808, 'account_mgmt.add_new', 'ja', '新規口座追加', 'account_mgmt', '新規口座追加ボタン', datetime('now')),
+(809, 'common.actions', 'en', 'Actions', 'common', 'Actions column header', datetime('now')),
+(810, 'common.actions', 'ja', '操作', 'common', '操作カラムヘッダー', datetime('now'));
