@@ -4,6 +4,9 @@ on:
   schedule:
     - cron: '0 0 * * *'  # Daily at midnight UTC (JST 9:00 AM)
   workflow_dispatch:  # Manual trigger
+  push:
+    branches:
+      - dev  # Run on dev branch (default branch)
 
 permissions:
   contents: write
@@ -14,6 +17,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: dev  # Use dev branch (default branch)
 
       - name: Set up Python
         uses: actions/setup-python@v5
