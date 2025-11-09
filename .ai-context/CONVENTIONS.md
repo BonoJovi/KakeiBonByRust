@@ -1,7 +1,7 @@
 # AI Context: Coding Conventions
 
 **Purpose**: Coding standards and patterns for AI assistants to follow.
-**Last Updated**: 2024-10-26
+**Last Updated**: 2025-11-09
 
 ---
 
@@ -691,7 +691,128 @@ describe('Screen Specific', () => {
 
 ---
 
+---
+
+## Implementation Patterns (Added 2025-11-09)
+
+### Modal Pattern - Common Modal Class
+
+**Use Case**: All modal dialogs in the application
+
+**Implementation**:
+- Use `res/js/modal.js` Modal class for all modals
+- Built-in features: ESC key, backdrop click, focus trap, keyboard navigation
+- Replace manual event listeners with Modal callbacks
+
+**Example**:
+```javascript
+const modal = new Modal('modal-id', {
+    formId: 'form-id',
+    closeButtonId: 'close-btn',
+    cancelButtonId: 'cancel-btn',
+    onOpen: (mode, data) => { /* setup modal */ },
+    onSave: async (formData) => { /* save data */ }
+});
+```
+
+**Applied to**:
+- transaction-management.js
+- user-management.js
+- category-management.js
+- account-management.js
+
+**Benefits**:
+- Consistent behavior across all screens
+- Built-in accessibility features
+- Reduced code duplication
+
+---
+
+### Transaction Edit Pattern
+
+**Use Case**: Editing transaction data with memo and account management
+
+**Key Implementation Details**:
+
+1. **Memo Management**:
+   - Empty memo → `memo_id = NULL` (display as '-' in UI)
+   - Existing memo → Reuse same `memo_id` if content matches
+   - Shared memo → Create new `memo_id` when content changes
+   - Reason: Prevent unintended changes to other transactions using same memo
+
+2. **Account Code "NONE"**:
+   - **NOT** converted to NULL
+   - Stored as string "NONE" in database
+   - Special code meaning "not specified"
+   - Database has ACCOUNT_CODE='NONE', ACCOUNT_NAME='指定なし'
+
+3. **Category Change Side Effect**:
+   - When category type changes (e.g., TRANSFER → INCOME)
+   - Auto-reset incompatible account fields to "NONE"
+   - Prevents invalid account selections in UI
+
+**Example (memo handling)**:
+```rust
+// Empty memo
+memo: None → memo_id = NULL
+
+// Shared memo editing
+Transaction A, B both use memo_id=10 ("買い物")
+Edit Transaction A memo to "食材購入"
+Result:
+  - Create new memo_id=20 ("食材購入")
+  - Transaction A → memo_id=20
+  - Transaction B → memo_id=10 (unchanged)
+```
+
+**Validation**:
+- Date format: YYYY-MM-DD HH:MM:SS (19 characters, strict)
+- Amount range: 0 ≤ amount ≤ 999,999,999 (zero allowed, negative not allowed)
+- Tax rounding: 0=round down, 1=round half up, 2=round up
+
+---
+
+### Test Patterns and Statistics
+
+**Current Test Count** (as of 2025-11-09):
+- Backend (Rust): 121 tests
+- Frontend (JavaScript): 404 tests
+- **Total: 525 tests** ✅
+- Success rate: 100%
+
+**Test File Naming**:
+- Unit tests: `*.test.js` (Jest framework)
+- Test helpers: `validation-helpers.js`, `*-validation-tests.js`
+- Common test suites: Reusable test logic in separate files
+
+**Test Organization**:
+```
+res/tests/
+├── validation-helpers.js       # Common validation functions
+├── password-validation-tests.js # Reusable password test suite
+├── username-validation-tests.js # Reusable username test suite
+├── login.test.js               # Login functionality (58 tests)
+├── user-addition.test.js       # User creation (49 tests)
+├── user-deletion.test.js       # User deletion (46 tests)
+├── transaction-edit.test.js    # Transaction edit (96 tests)
+└── ...
+```
+
+**Test Principles**:
+- Always maintain 100% pass rate
+- Follow AAA pattern: Arrange, Act, Assert
+- Test naming: "should [expected] when [condition]"
+- Reuse common test suites across similar features
+- Add tests for new features before merging
+
+---
+
 ## Version Notes
+
+- **2025-11-09**: Added implementation patterns
+  - Modal pattern with common Modal class
+  - Transaction edit pattern (memo management, account handling)
+  - Test patterns and current statistics (525 tests)
 
 - **2024-10-26**: Initial conventions established
   - Common module pattern for tests introduced
