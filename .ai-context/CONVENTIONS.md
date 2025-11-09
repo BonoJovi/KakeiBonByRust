@@ -13,6 +13,23 @@
 4. **Error Handling**: Always handle errors explicitly
 5. **Documentation**: Update AI context docs when adding major features
 
+## File Modification Guidelines
+
+### ❌ PROHIBITED: Full File Rewrite
+- **Never rewrite an entire file** when making changes
+- **Exception**: Only when explicitly required by the nature of the change
+- **Reason**: Minimizes risk of unintended changes and merge conflicts
+
+### ✅ RECOMMENDED: Surgical Edits
+- **Always modify only the necessary parts** of files
+- Use targeted edits to change specific lines or blocks
+- Preserve surrounding code and context unchanged
+- **Benefits**: 
+  - Clearer change history in version control
+  - Reduced risk of introducing bugs
+  - Easier code review process
+  - Better merge conflict handling
+
 ## AI/LLM Specific Guidelines
 
 ### Documentation Timestamps
