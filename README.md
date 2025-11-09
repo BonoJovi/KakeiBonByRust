@@ -7,7 +7,7 @@
 
 [![Rust](https://img.shields.io/badge/Rust-1.70+-orange.svg)](https://www.rust-lang.org/)
 [![Tauri](https://img.shields.io/badge/Tauri-v2.8.5-blue.svg)](https://tauri.app/)
-[![Tests](https://img.shields.io/badge/tests-429%20passing-brightgreen.svg)](#test-results--テスト結果)
+[![Tests](https://img.shields.io/badge/tests-525%20passing-brightgreen.svg)](#test-results--テスト結果)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 [🇯🇵 日本語詳細](README_ja.md) | [🇬🇧 English Details](README_en.md)
@@ -93,7 +93,7 @@ Switch between Japanese and English seamlessly
 | 👥 **User Management**<br/>**ユーザー管理** | Multi-user support (Admin/General)<br/>マルチユーザー対応（管理者/一般） | ✅ Complete<br/>完成 |
 | 🌍 **Multilingual**<br/>**多言語対応** | Dynamic language switching (JP/EN)<br/>日本語・英語の動的切り替え | ✅ Complete<br/>完成 |
 | 🔧 **Customization**<br/>**カスタマイズ** | Font size, language preferences<br/>フォントサイズ、言語設定 | ✅ Complete<br/>完成 |
-| 📝 **Transaction Management**<br/>**入出金管理** | Transaction list, filtering, add/delete<br/>一覧表示、フィルター、追加・削除機能 | ✅ Partial<br/>部分完成 |
+| 📝 **Transaction Management**<br/>**入出金管理** | List, filter, add, delete, edit<br/>一覧・フィルター・追加・削除・編集完了 | ✅ Partial<br/>部分完成 |
 | 📊 **Reports**<br/>**集計・レポート** | Monthly/annual summaries<br/>月次・年次レポート | 📅 Planned<br/>予定 |
 
 ---
@@ -105,7 +105,7 @@ Frontend / フロントエンド:  Vanilla JavaScript (ES6 Modules) + HTML5 + CS
 Backend / バックエンド:     Rust + Tauri v2.8.5
 Database / データベース:    SQLite (WAL mode)
 Security / セキュリティ:   Argon2id + AES-256-GCM
-Testing / テスト:          429 tests passing (Rust: 121, JS: 308)
+Testing / テスト:          525 tests passing (Rust: 121, JS: 404)
 ```
 
 ---
@@ -136,8 +136,8 @@ cargo tauri build
 
 ```
 Backend (Rust) / バックエンド:    121 passing
-Frontend (JavaScript) / フロント:  308 passing
-Total Tests / 総テスト数:          429 passing ✅
+Frontend (JavaScript) / フロント:  404 passing
+Total Tests / 総テスト数:          525 passing ✅
 Success Rate / 成功率:            100%
 ```
 
