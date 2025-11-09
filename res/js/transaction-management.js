@@ -612,6 +612,15 @@ function handleCategory1Change(event) {
         // No category selected - hide both
         fromAccountGroup.style.display = 'none';
         toAccountGroup.style.display = 'none';
+        // Reset both to NONE when hidden
+        const fromAccountSelect = document.getElementById('from-account');
+        const toAccountSelect = document.getElementById('to-account');
+        if (fromAccountSelect) {
+            fromAccountSelect.value = 'NONE';
+        }
+        if (toAccountSelect) {
+            toAccountSelect.value = 'NONE';
+        }
         return;
     }
     
@@ -622,21 +631,41 @@ function handleCategory1Change(event) {
     if (!category1) {
         fromAccountGroup.style.display = 'none';
         toAccountGroup.style.display = 'none';
+        // Reset both to NONE when hidden
+        const fromAccountSelect = document.getElementById('from-account');
+        const toAccountSelect = document.getElementById('to-account');
+        if (fromAccountSelect) {
+            fromAccountSelect.value = 'NONE';
+        }
+        if (toAccountSelect) {
+            toAccountSelect.value = 'NONE';
+        }
         return;
     }
     
     // Simple logic for now - adjust based on actual category codes
     const categoryName = category1.category1.category1_name_i18n.toLowerCase();
+    const fromAccountSelect = document.getElementById('from-account');
+    const toAccountSelect = document.getElementById('to-account');
     
     if (categoryName.includes('支出') || categoryName.includes('expense')) {
         fromAccountGroup.style.display = 'block';
         toAccountGroup.style.display = 'none';
+        // Reset TO_ACCOUNT to NONE when hidden
+        if (toAccountSelect) {
+            toAccountSelect.value = 'NONE';
+        }
     } else if (categoryName.includes('収入') || categoryName.includes('income')) {
         fromAccountGroup.style.display = 'none';
         toAccountGroup.style.display = 'block';
+        // Reset FROM_ACCOUNT to NONE when hidden
+        if (fromAccountSelect) {
+            fromAccountSelect.value = 'NONE';
+        }
     } else if (categoryName.includes('振替') || categoryName.includes('transfer')) {
         fromAccountGroup.style.display = 'block';
         toAccountGroup.style.display = 'block';
+        // Both are visible, no reset needed
     } else {
         // Default: show both
         fromAccountGroup.style.display = 'block';
@@ -687,8 +716,17 @@ async function handleTransactionSubmit(event) {
     
     try {
         if (editingTransactionId) {
-            // Update existing transaction - TODO: implement update command
-            alert('Update functionality not yet implemented');
+            // Update existing transaction
+            await invoke('update_transaction_header', {
+                transactionId: editingTransactionId,
+                category1Code: category1Code,
+                fromAccountCode: fromAccountCode,
+                toAccountCode: toAccountCode,
+                transactionDate: transactionDate,
+                totalAmount: totalAmount,
+                taxRoundingType: taxRoundingType,
+                memo: memoText
+            });
         } else {
             // Create new transaction
             await invoke('save_transaction_header', {
@@ -731,7 +769,7 @@ async function loadTransactionData(transactionId) {
         document.getElementById('from-account').value = transaction.from_account_code || 'NONE';
         document.getElementById('to-account').value = transaction.to_account_code || 'NONE';
         document.getElementById('total-amount').value = transaction.total_amount;
-        document.getElementById('tax-rounding').value = transaction.tax_rounding;
+        document.getElementById('tax-rounding').value = transaction.tax_rounding_type || 0;
         document.getElementById('transaction-memo').value = transaction.memo || '';
         
         // Trigger category1 change to update account visibility

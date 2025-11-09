@@ -1090,12 +1090,80 @@ async fn save_transaction_header(
 async fn get_transaction_header(
     transaction_id: i64,
     state: tauri::State<'_, AppState>
-) -> Result<services::transaction::TransactionHeader, String> {
+) -> Result<serde_json::Value, String> {
     let transaction = state.transaction.lock().await;
     // TODO: Get user_id from session/auth
-    let user_id = 1;
+    // For now, use user_id = 2 to match frontend currentUserId
+    let user_id = 2;
     
-    transaction.get_transaction_header(user_id, transaction_id).await
+    let (header, memo_text) = transaction.get_transaction_header_with_memo(user_id, transaction_id).await
+        .map_err(|e| e.to_string())?;
+    
+    Ok(serde_json::json!({
+        "transaction_id": header.transaction_id,
+        "user_id": header.user_id,
+        "transaction_date": header.transaction_date,
+        "category1_code": header.category1_code,
+        "from_account_code": header.from_account_code,
+        "to_account_code": header.to_account_code,
+        "total_amount": header.total_amount,
+        "tax_rounding_type": header.tax_rounding_type,
+        "memo_id": header.memo_id,
+        "is_disabled": header.is_disabled,
+        "entry_dt": header.entry_dt,
+        "update_dt": header.update_dt,
+        "memo": memo_text
+    }))
+}
+
+#[tauri::command]
+async fn select_transaction_headers(
+    transaction_ids: Vec<i64>,
+    state: tauri::State<'_, AppState>
+) -> Result<Vec<services::transaction::TransactionHeader>, String> {
+    let transaction = state.transaction.lock().await;
+    // TODO: Get user_id from session/auth
+    // For now, use user_id = 2 to match frontend currentUserId
+    let user_id = 2;
+    
+    let mut headers = Vec::new();
+    for transaction_id in transaction_ids {
+        match transaction.get_transaction_header(user_id, transaction_id).await {
+            Ok(header) => headers.push(header),
+            Err(_) => continue, // Skip not found transactions
+        }
+    }
+    Ok(headers)
+}
+
+#[tauri::command]
+async fn update_transaction_header(
+    transaction_id: i64,
+    category1_code: String,
+    from_account_code: String,
+    to_account_code: String,
+    transaction_date: String,
+    total_amount: i64,
+    tax_rounding_type: i64,
+    memo: Option<String>,
+    state: tauri::State<'_, AppState>
+) -> Result<(), String> {
+    let transaction = state.transaction.lock().await;
+    // TODO: Get user_id from session/auth
+    // For now, use user_id = 2 to match frontend currentUserId
+    let user_id = 2;
+    
+    let request = services::transaction::SaveTransactionRequest {
+        category1_code,
+        from_account_code,
+        to_account_code,
+        transaction_date,
+        total_amount,
+        tax_rounding_type,
+        memo,
+    };
+    
+    transaction.update_transaction_header(user_id, transaction_id, request).await
         .map_err(|e| e.to_string())
 }
 
@@ -1164,7 +1232,9 @@ pub fn run() {
             update_account,
             delete_account,
             save_transaction_header,
-            get_transaction_header
+            get_transaction_header,
+            select_transaction_headers,
+            update_transaction_header
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {

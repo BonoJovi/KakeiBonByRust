@@ -318,6 +318,40 @@ impl TransactionService {
         header.ok_or(TransactionError::NotFound)
     }
 
+    /// Get transaction header by ID with memo text
+    pub async fn get_transaction_header_with_memo(
+        &self,
+        user_id: i64,
+        transaction_id: i64,
+    ) -> Result<(TransactionHeader, Option<String>), TransactionError> {
+        let row = sqlx::query(sql_queries::TRANSACTION_HEADER_GET_BY_ID_WITH_MEMO)
+            .bind(transaction_id)
+            .bind(user_id)
+            .fetch_optional(&self.pool)
+            .await?;
+
+        if let Some(row) = row {
+            let header = TransactionHeader {
+                transaction_id: row.get(0),
+                user_id: row.get(1),
+                transaction_date: row.get(2),
+                category1_code: row.get(3),
+                from_account_code: row.get(4),
+                to_account_code: row.get(5),
+                total_amount: row.get(6),
+                tax_rounding_type: row.get(7),
+                memo_id: row.get(8),
+                is_disabled: row.get(9),
+                entry_dt: row.get(10),
+                update_dt: row.get(11),
+            };
+            let memo_text: Option<String> = row.get(12);
+            Ok((header, memo_text))
+        } else {
+            Err(TransactionError::NotFound)
+        }
+    }
+
     /// Add a new transaction (legacy method for backward compatibility)
     pub async fn add_transaction(
         &self,
@@ -560,6 +594,184 @@ impl TransactionService {
             return Err(TransactionError::NotFound);
         }
 
+        Ok(())
+    }
+
+    /// Helper function to get or create memo_id for memo text
+    /// Returns memo_id if memo text is provided, None if empty
+    async fn get_or_create_memo_id(
+        &self,
+        user_id: i64,
+        memo_text: Option<&str>,
+    ) -> Result<Option<i64>, TransactionError> {
+        let memo_text = match memo_text {
+            Some(text) => text.trim(),
+            None => return Ok(None),
+        };
+
+        if memo_text.is_empty() {
+            // Empty memo - return None (memo_id will be NULL)
+            return Ok(None);
+        }
+
+        // Validate memo length
+        if memo_text.len() > 1000 {
+            return Err(TransactionError::ValidationError(
+                "Memo must be 1000 characters or less".to_string(),
+            ));
+        }
+
+        // Check if memo with same text already exists
+        let existing_memo = sqlx::query(sql_queries::MEMO_FIND_BY_TEXT)
+            .bind(user_id)
+            .bind(memo_text)
+            .fetch_optional(&self.pool)
+            .await?;
+
+        if let Some(row) = existing_memo {
+            Ok(Some(row.get(0)))
+        } else {
+            // Create new memo
+            let result = sqlx::query(sql_queries::MEMO_INSERT)
+                .bind(user_id)
+                .bind(memo_text)
+                .execute(&self.pool)
+                .await?;
+            Ok(Some(result.last_insert_rowid()))
+        }
+    }
+
+    /// Helper function to get memo_id for update (handles shared memo_id case)
+    async fn get_memo_id_for_update(
+        &self,
+        user_id: i64,
+        memo_text: Option<&str>,
+        current_memo_id: Option<i64>,
+    ) -> Result<Option<i64>, TransactionError> {
+        let memo_text = match memo_text {
+            Some(text) => text.trim(),
+            None => return Ok(None),
+        };
+
+        if memo_text.is_empty() {
+            // Empty memo - return None (memo_id will be NULL)
+            return Ok(None);
+        }
+
+        // Validate memo length
+        if memo_text.len() > 1000 {
+            return Err(TransactionError::ValidationError(
+                "Memo must be 1000 characters or less".to_string(),
+            ));
+        }
+
+        // Check if current memo_id is shared with other transactions
+        let is_shared = if let Some(memo_id) = current_memo_id {
+            let count: i64 = sqlx::query_scalar(sql_queries::MEMO_COUNT_USAGE)
+                .bind(memo_id)
+                .fetch_one(&self.pool)
+                .await?;
+            count > 1
+        } else {
+            false
+        };
+
+        if is_shared {
+            // Current memo_id is shared - create new memo_id
+            // Check if memo with same text already exists
+            let existing_memo = sqlx::query(sql_queries::MEMO_FIND_BY_TEXT)
+                .bind(user_id)
+                .bind(memo_text)
+                .fetch_optional(&self.pool)
+                .await?;
+
+            if let Some(row) = existing_memo {
+                Ok(Some(row.get(0)))
+            } else {
+                // Create new memo
+                let result = sqlx::query(sql_queries::MEMO_INSERT)
+                    .bind(user_id)
+                    .bind(memo_text)
+                    .execute(&self.pool)
+                    .await?;
+                Ok(Some(result.last_insert_rowid()))
+            }
+        } else {
+            // Current memo_id is not shared - can reuse or create new
+            self.get_or_create_memo_id(user_id, Some(memo_text)).await
+        }
+    }
+
+    /// Update a single transaction header
+    pub async fn update_transaction_header(
+        &self,
+        user_id: i64,
+        transaction_id: i64,
+        request: SaveTransactionRequest,
+    ) -> Result<(), TransactionError> {
+        // Validate datetime format (YYYY-MM-DD HH:MM:SS)
+        if request.transaction_date.len() != 19 {
+            return Err(TransactionError::ValidationError(
+                "Invalid datetime format. Use YYYY-MM-DD HH:MM:SS".to_string(),
+            ));
+        }
+
+        // Validate amount (0 is allowed)
+        if request.total_amount < 0 || request.total_amount > 999_999_999 {
+            return Err(TransactionError::ValidationError(
+                "Amount must be between 0 and 999,999,999".to_string(),
+            ));
+        }
+
+        // Validate tax rounding type using constants
+        if request.tax_rounding_type != consts::TAX_ROUND_DOWN
+            && request.tax_rounding_type != consts::TAX_ROUND_HALF_UP
+            && request.tax_rounding_type != consts::TAX_ROUND_UP
+        {
+            return Err(TransactionError::ValidationError(
+                "Invalid tax rounding type".to_string(),
+            ));
+        }
+
+        // Get current transaction header to check current memo_id
+        let current_header = self.get_transaction_header(user_id, transaction_id).await?;
+
+        // Get or create memo_id (handles shared memo_id case)
+        let memo_id = self
+            .get_memo_id_for_update(user_id, request.memo.as_deref(), current_header.memo_id)
+            .await?;
+
+        // Update transaction header
+        let result = sqlx::query(sql_queries::TRANSACTION_HEADER_UPDATE)
+            .bind(&request.transaction_date)
+            .bind(&request.category1_code)
+            .bind(&request.from_account_code)
+            .bind(&request.to_account_code)
+            .bind(request.total_amount)
+            .bind(request.tax_rounding_type)
+            .bind(memo_id)
+            .bind(transaction_id)
+            .bind(user_id)
+            .execute(&self.pool)
+            .await?;
+
+        if result.rows_affected() == 0 {
+            return Err(TransactionError::NotFound);
+        }
+
+        Ok(())
+    }
+
+    /// Update multiple transaction headers
+    pub async fn update_transaction_headers(
+        &self,
+        user_id: i64,
+        transactions: Vec<(i64, SaveTransactionRequest)>,
+    ) -> Result<(), TransactionError> {
+        for (transaction_id, request) in transactions {
+            self.update_transaction_header(user_id, transaction_id, request)
+                .await?;
+        }
         Ok(())
     }
 }
