@@ -25,6 +25,23 @@ Development is progressing smoothly, and we strive to update daily!
 
 **Last Updated / 最終更新**: 2025-11-09
 
+<!-- STATS_START -->
+## 📊 Repository Statistics / リポジトリ統計
+
+<div align="center">
+
+![Traffic Stats](docs/stats_graph.png)
+
+| Metric | Count |
+|--------|-------|
+| 👁️ **Total Views** / 総閲覧数 | **391** |
+| 📦 **Total Clones** / 総クローン数 | **84** |
+
+*Last Updated / 最終更新: 2025-11-10 00:33 UTC*
+
+</div>
+<!-- STATS_END -->
+
 ---
 
 ## 📚 Legacy Version / 前身プロジェクト
