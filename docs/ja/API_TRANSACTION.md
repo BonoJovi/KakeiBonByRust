@@ -32,6 +32,7 @@ APIのフロントエンドへの公開は、以下の各項目の説明に準�
   total_amount: 1000,
   tax_rounding_type: 0,
   memo_id: 5,
+  shop_id: 1,
   is_disabled: 0,
   entry_dt: "2024-01-15 10:00:00",
   update_dt: null,
@@ -91,6 +92,7 @@ const transactions = await invoke('select_transaction_headers', {
 - `total_amount` (i64): 合計金額
 - `tax_rounding_type` (i64): 税額丸め区分（0=切り捨て、1=切り上げ、2=四捨五入）
 - `memo` (Option<String>): メモ（nullまたは空文字列の場合、memo_idはNULL）
+- `shop_id` (Option<i64>): 店舗ID（任意）
 
 **戻り値:**
 - `Result<i64, String>`: 成功時は新しいtransaction_id、失敗時はエラーメッセージ
@@ -105,7 +107,8 @@ const transactionId = await invoke('save_transaction_header', {
   transactionDate: '2024-01-15 10:00:00',
   totalAmount: 1000,
   taxRoundingType: 0,
-  memo: 'スーパーで食材購入'
+  memo: 'スーパーで食材購入',
+  shopId: 1
 });
 console.log('Created transaction ID:', transactionId);
 ```
@@ -137,6 +140,7 @@ console.log('Created transaction ID:', transactionId);
 - `total_amount` (i64): 合計金額
 - `tax_rounding_type` (i64): 税額丸め区分
 - `memo` (Option<String>): メモ
+- `shop_id` (Option<i64>): 店舗ID
 
 **戻り値:**
 - `Result<(), String>`: 成功時は空、失敗時はエラーメッセージ
@@ -151,7 +155,8 @@ await invoke('update_transaction_header', {
   transactionDate: '2024-01-15 11:00:00',
   totalAmount: 2000,
   taxRoundingType: 0,
-  memo: 'スーパーで食材購入（金額訂正）'
+  memo: 'スーパーで食材購入（金額訂正）',
+  shopId: 2
 });
 ```
 
@@ -437,13 +442,19 @@ CREATE TABLE TRANSACTION_HEADERS (
     TOTAL_AMOUNT INTEGER NOT NULL,
     TAX_ROUNDING_TYPE INTEGER NOT NULL,
     MEMO_ID INTEGER,
+    SHOP_ID INTEGER,
     IS_DISABLED INTEGER NOT NULL DEFAULT 0,
     ENTRY_DT DATETIME NOT NULL,
     UPDATE_DT DATETIME,
     FOREIGN KEY(USER_ID) REFERENCES USERS(USER_ID),
     FOREIGN KEY(USER_ID, CATEGORY1_CODE)
         REFERENCES CATEGORY1(USER_ID, CATEGORY1_CODE),
-    FOREIGN KEY(MEMO_ID) REFERENCES MEMOS(MEMO_ID)
+    FOREIGN KEY(USER_ID, FROM_ACCOUNT_CODE)
+        REFERENCES ACCOUNTS(USER_ID, ACCOUNT_CODE),
+    FOREIGN KEY(USER_ID, TO_ACCOUNT_CODE)
+        REFERENCES ACCOUNTS(USER_ID, ACCOUNT_CODE),
+    FOREIGN KEY(MEMO_ID) REFERENCES MEMOS(MEMO_ID),
+    FOREIGN KEY(SHOP_ID) REFERENCES SHOPS(SHOP_ID)
 );
 ```
 
@@ -479,6 +490,12 @@ CREATE TABLE TRANSACTION_DETAILS (
 ```
 
 **注記:**
+- CATEGORY2/3への外部キー制約は現在未設定です
+- 理由: CATEGORY2/3の主キーは `(USER_ID, CATEGORY1_CODE, CATEGORY2_CODE)` および `(USER_ID, CATEGORY1_CODE, CATEGORY2_CODE, CATEGORY3_CODE)` の複合キーですが、TRANSACTION_DETAILSテーブルにはUSER_IDとCATEGORY1_CODEカラムがありません
+- USER_IDとCATEGORY1_CODEはTRANSACTION_HEADERSから取得する設計です
+- 参照整合性は現在アプリケーションレベルで保証されています（将来的にデータベース制約として実装予定）
+
+**注記:**
 - TRANSACTION_DETAILSは将来実装予定（明細機能）
 - 現在はヘッダのみの入出金管理
 
@@ -498,6 +515,7 @@ pub struct TransactionHeader {
     pub total_amount: i64,
     pub tax_rounding_type: i64,
     pub memo_id: Option<i64>,
+    pub shop_id: Option<i64>,
     pub is_disabled: i64,
     pub entry_dt: String,
     pub update_dt: Option<String>,
@@ -514,6 +532,8 @@ pub struct SaveTransactionRequest {
     pub total_amount: i64,
     pub tax_rounding_type: i64,
     pub memo: Option<String>,
+    pub shop_id: Option<i64>,
+}
 }
 ```
 
@@ -617,9 +637,10 @@ npm test -- transaction-edit.test.js
 
 - [テストサマリー](TEST_SUMMARY.md)
 - [費目管理API](API_CATEGORY_ja.md)
+- [店舗管理API](API_SHOP.md)
 - [English Version](../en/API_TRANSACTION.md)
 
 ---
 
-**最終更新**: 2025-11-09 15:55 JST
-**バージョン**: v0.2 (編集機能完了)
+**最終更新**: 2025-11-10 JST
+**バージョン**: v0.3 (店舗ID追加)

@@ -32,6 +32,7 @@ Retrieves a single transaction header including memo text.
   total_amount: 1000,
   tax_rounding_type: 0,
   memo_id: 5,
+  shop_id: 1,
   is_disabled: 0,
   entry_dt: "2024-01-15 10:00:00",
   update_dt: null,
@@ -91,6 +92,7 @@ Registers a new transaction header.
 - `total_amount` (i64): Total amount
 - `tax_rounding_type` (i64): Tax rounding type (0=round down, 1=round up, 2=round half up)
 - `memo` (Option<String>): Memo (memo_id becomes NULL if null or empty string)
+- `shop_id` (Option<i64>): Shop ID (optional)
 
 **Return Value:**
 - `Result<i64, String>`: New transaction_id on success, error message on failure
@@ -105,7 +107,8 @@ const transactionId = await invoke('save_transaction_header', {
   transactionDate: '2024-01-15 10:00:00',
   totalAmount: 1000,
   taxRoundingType: 0,
-  memo: 'Groceries at supermarket'
+  memo: 'Groceries at supermarket',
+  shopId: 1
 });
 console.log('Created transaction ID:', transactionId);
 ```
@@ -137,6 +140,7 @@ Updates an existing transaction header.
 - `total_amount` (i64): Total amount
 - `tax_rounding_type` (i64): Tax rounding type
 - `memo` (Option<String>): Memo
+- `shop_id` (Option<i64>): Shop ID
 
 **Return Value:**
 - `Result<(), String>`: Empty on success, error message on failure
@@ -151,7 +155,8 @@ await invoke('update_transaction_header', {
   transactionDate: '2024-01-15 11:00:00',
   totalAmount: 2000,
   taxRoundingType: 0,
-  memo: 'Groceries at supermarket (amount corrected)'
+  memo: 'Groceries at supermarket (amount corrected)',
+  shopId: 2
 });
 ```
 
@@ -437,13 +442,19 @@ CREATE TABLE TRANSACTION_HEADERS (
     TOTAL_AMOUNT INTEGER NOT NULL,
     TAX_ROUNDING_TYPE INTEGER NOT NULL,
     MEMO_ID INTEGER,
+    SHOP_ID INTEGER,
     IS_DISABLED INTEGER NOT NULL DEFAULT 0,
     ENTRY_DT DATETIME NOT NULL,
     UPDATE_DT DATETIME,
     FOREIGN KEY(USER_ID) REFERENCES USERS(USER_ID),
     FOREIGN KEY(USER_ID, CATEGORY1_CODE)
         REFERENCES CATEGORY1(USER_ID, CATEGORY1_CODE),
-    FOREIGN KEY(MEMO_ID) REFERENCES MEMOS(MEMO_ID)
+    FOREIGN KEY(USER_ID, FROM_ACCOUNT_CODE)
+        REFERENCES ACCOUNTS(USER_ID, ACCOUNT_CODE),
+    FOREIGN KEY(USER_ID, TO_ACCOUNT_CODE)
+        REFERENCES ACCOUNTS(USER_ID, ACCOUNT_CODE),
+    FOREIGN KEY(MEMO_ID) REFERENCES MEMOS(MEMO_ID),
+    FOREIGN KEY(SHOP_ID) REFERENCES SHOPS(SHOP_ID)
 );
 ```
 
@@ -478,6 +489,12 @@ CREATE TABLE TRANSACTION_DETAILS (
 );
 ```
 
+**Notes:**
+- Foreign key constraints to CATEGORY2/3 are currently not set
+- Reason: CATEGORY2/3 primary keys are composite keys `(USER_ID, CATEGORY1_CODE, CATEGORY2_CODE)` and `(USER_ID, CATEGORY1_CODE, CATEGORY2_CODE, CATEGORY3_CODE)`, but TRANSACTION_DETAILS table does not have USER_ID and CATEGORY1_CODE columns
+- USER_ID and CATEGORY1_CODE are designed to be obtained from TRANSACTION_HEADERS
+- Referential integrity is currently enforced at the application level (planned to be implemented as database constraints in the future)
+
 **Note:**
 - TRANSACTION_DETAILS planned for future implementation (detail feature)
 - Currently header-only transaction management
@@ -498,6 +515,7 @@ pub struct TransactionHeader {
     pub total_amount: i64,
     pub tax_rounding_type: i64,
     pub memo_id: Option<i64>,
+    pub shop_id: Option<i64>,
     pub is_disabled: i64,
     pub entry_dt: String,
     pub update_dt: Option<String>,
@@ -514,6 +532,7 @@ pub struct SaveTransactionRequest {
     pub total_amount: i64,
     pub tax_rounding_type: i64,
     pub memo: Option<String>,
+    pub shop_id: Option<i64>,
 }
 ```
 
@@ -617,9 +636,10 @@ npm test -- transaction-edit.test.js
 
 - [Test Summary](../ja/TEST_SUMMARY.md)
 - [Category Management API](API_CATEGORY.md)
+- [Shop Management API](API_SHOP.md)
 - [Japanese Version](../ja/API_TRANSACTION.md)
 
 ---
 
-**Last Updated**: 2025-11-09 15:55 JST
-**Version**: v0.2 (Edit feature completed)
+**Last Updated**: 2025-11-10 JST
+**Version**: v0.3 (Shop ID added)
