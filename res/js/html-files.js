@@ -6,5 +6,6 @@ export const HTML_FILES = {
     USER_MANAGEMENT: 'user-management.html',
     CATEGORY_MANAGEMENT: 'category-management.html',
     ACCOUNT_MANAGEMENT: 'account-management.html',
+    SHOP_MANAGEMENT: 'shop-management.html',
     TRANSACTION_MANAGEMENT: 'transaction-management.html'
 };

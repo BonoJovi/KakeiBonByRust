@@ -1089,6 +1089,168 @@ describe('Transaction Edit - Integration Scenarios', () => {
     });
 });
 
+describe('Transaction Edit - Shop Selection', () => {
+    // Simulate shop selection handling
+    class ShopSelectionHandler {
+        constructor() {
+            this.shops = [];
+            this.selectedShopId = null;
+        }
+
+        loadShops(shopsData) {
+            this.shops = shopsData;
+        }
+
+        setShopId(shopId) {
+            if (shopId === '' || shopId === null || shopId === undefined) {
+                this.selectedShopId = null;
+            } else {
+                this.selectedShopId = parseInt(shopId);
+            }
+        }
+
+        getShopId() {
+            return this.selectedShopId;
+        }
+
+        getShopName(shopId) {
+            if (!shopId) {
+                return 'Unspecified';
+            }
+            const shop = this.shops.find(s => s.shop_id === shopId);
+            return shop ? shop.shop_name : 'Unknown';
+        }
+    }
+
+    test('should initialize with null shop ID', () => {
+        const handler = new ShopSelectionHandler();
+        expect(handler.selectedShopId).toBeNull();
+    });
+
+    test('should load shops data', () => {
+        const handler = new ShopSelectionHandler();
+        const shops = [
+            { shop_id: 1, shop_name: 'Shop A' },
+            { shop_id: 2, shop_name: 'Shop B' }
+        ];
+        handler.loadShops(shops);
+        expect(handler.shops.length).toBe(2);
+        expect(handler.shops[0].shop_name).toBe('Shop A');
+    });
+
+    test('should set shop ID as integer', () => {
+        const handler = new ShopSelectionHandler();
+        handler.setShopId('5');
+        expect(handler.selectedShopId).toBe(5);
+        expect(typeof handler.selectedShopId).toBe('number');
+    });
+
+    test('should handle empty string as null', () => {
+        const handler = new ShopSelectionHandler();
+        handler.setShopId('');
+        expect(handler.selectedShopId).toBeNull();
+    });
+
+    test('should handle null shop ID', () => {
+        const handler = new ShopSelectionHandler();
+        handler.setShopId(null);
+        expect(handler.selectedShopId).toBeNull();
+    });
+
+    test('should handle undefined shop ID', () => {
+        const handler = new ShopSelectionHandler();
+        handler.setShopId(undefined);
+        expect(handler.selectedShopId).toBeNull();
+    });
+
+    test('should get shop name by ID', () => {
+        const handler = new ShopSelectionHandler();
+        handler.loadShops([
+            { shop_id: 1, shop_name: 'Shop A' },
+            { shop_id: 2, shop_name: 'Shop B' }
+        ]);
+        expect(handler.getShopName(1)).toBe('Shop A');
+        expect(handler.getShopName(2)).toBe('Shop B');
+    });
+
+    test('should return "Unspecified" for null shop ID', () => {
+        const handler = new ShopSelectionHandler();
+        expect(handler.getShopName(null)).toBe('Unspecified');
+    });
+
+    test('should return "Unknown" for non-existent shop ID', () => {
+        const handler = new ShopSelectionHandler();
+        handler.loadShops([
+            { shop_id: 1, shop_name: 'Shop A' }
+        ]);
+        expect(handler.getShopName(999)).toBe('Unknown');
+    });
+
+    test('should preserve shop ID when switching between shops', () => {
+        const handler = new ShopSelectionHandler();
+        handler.setShopId('1');
+        expect(handler.selectedShopId).toBe(1);
+
+        handler.setShopId('2');
+        expect(handler.selectedShopId).toBe(2);
+    });
+
+    test('should allow clearing shop selection', () => {
+        const handler = new ShopSelectionHandler();
+        handler.setShopId('1');
+        expect(handler.selectedShopId).toBe(1);
+
+        handler.setShopId('');
+        expect(handler.selectedShopId).toBeNull();
+    });
+});
+
+describe('Transaction Edit - Shop Selection Integration', () => {
+    // Simulate transaction with shop selection
+    function createTransactionWithShop(shopId) {
+        return {
+            transaction_id: 1,
+            transaction_date: '2024-01-15 10:00:00',
+            category1_code: 'EXPENSE',
+            from_account_code: 'CASH',
+            to_account_code: 'NONE',
+            total_amount: 1000,
+            tax_rounding_type: 0,
+            memo: 'Test',
+            shop_id: shopId
+        };
+    }
+
+    test('should include shop_id in transaction data', () => {
+        const transaction = createTransactionWithShop(5);
+        expect(transaction.shop_id).toBe(5);
+    });
+
+    test('should allow null shop_id', () => {
+        const transaction = createTransactionWithShop(null);
+        expect(transaction.shop_id).toBeNull();
+    });
+
+    test('should preserve shop_id through form load', () => {
+        const transaction = createTransactionWithShop(3);
+        const formShopId = transaction.shop_id || '';
+        expect(formShopId).toBe(3);
+    });
+
+    test('should convert empty string to null for save', () => {
+        const formShopId = '';
+        const saveShopId = formShopId ? parseInt(formShopId) : null;
+        expect(saveShopId).toBeNull();
+    });
+
+    test('should convert string shop ID to integer for save', () => {
+        const formShopId = '7';
+        const saveShopId = formShopId ? parseInt(formShopId) : null;
+        expect(saveShopId).toBe(7);
+        expect(typeof saveShopId).toBe('number');
+    });
+});
+
 describe('Transaction Edit - Test Summary', () => {
     test('Test count summary', () => {
         // This test suite includes:
@@ -1101,7 +1263,9 @@ describe('Transaction Edit - Test Summary', () => {
         // - 17 amount formatting tests
         // - 10 error handling tests
         // - 3 integration scenario tests
-        // Total: 98 tests
+        // - 11 shop selection tests
+        // - 5 shop selection integration tests
+        // Total: 114 tests
         expect(true).toBe(true);
     });
 });

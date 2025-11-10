@@ -13,6 +13,7 @@ mod services {
     pub mod i18n;
     pub mod transaction;
     pub mod account;
+    pub mod shop;
 }
 
 #[cfg(test)]
@@ -1058,9 +1059,74 @@ async fn delete_account(
     services::account::delete_account(db.pool(), user_id, &account_code).await
 }
 
+// ============================================================================
+// Shop Management Commands
+// ============================================================================
+
+#[tauri::command]
+async fn get_shops(
+    user_id: i64,
+    state: tauri::State<'_, AppState>
+) -> Result<Vec<services::shop::Shop>, String> {
+    let db = state.db.lock().await;
+    services::shop::get_shops(db.pool(), user_id).await
+}
+
+#[tauri::command]
+async fn add_shop(
+    user_id: i64,
+    shop_name: String,
+    memo: Option<String>,
+    state: tauri::State<'_, AppState>
+) -> Result<String, String> {
+    let db = state.db.lock().await;
+
+    let request = services::shop::AddShopRequest {
+        shop_name,
+        memo,
+    };
+
+    services::shop::add_shop(db.pool(), user_id, request).await
+}
+
+#[tauri::command]
+async fn update_shop(
+    user_id: i64,
+    shop_id: i64,
+    shop_name: String,
+    memo: Option<String>,
+    display_order: i64,
+    state: tauri::State<'_, AppState>
+) -> Result<String, String> {
+    let db = state.db.lock().await;
+
+    let request = services::shop::UpdateShopRequest {
+        shop_name,
+        memo,
+        display_order,
+    };
+
+    services::shop::update_shop(db.pool(), user_id, shop_id, request).await
+}
+
+#[tauri::command]
+async fn delete_shop(
+    user_id: i64,
+    shop_id: i64,
+    state: tauri::State<'_, AppState>
+) -> Result<String, String> {
+    let db = state.db.lock().await;
+    services::shop::delete_shop(db.pool(), user_id, shop_id).await
+}
+
+// ============================================================================
+// Transaction Management Commands
+// ============================================================================
+
 #[tauri::command]
 async fn save_transaction_header(
     user_id: i64,
+    shop_id: Option<i64>,
     category1_code: String,
     from_account_code: String,
     to_account_code: String,
@@ -1071,8 +1137,9 @@ async fn save_transaction_header(
     state: tauri::State<'_, AppState>
 ) -> Result<i64, String> {
     let transaction = state.transaction.lock().await;
-    
+
     let request = services::transaction::SaveTransactionRequest {
+        shop_id,
         category1_code,
         from_account_code,
         to_account_code,
@@ -1081,7 +1148,7 @@ async fn save_transaction_header(
         tax_rounding_type,
         memo,
     };
-    
+
     transaction.save_transaction_header(user_id, request).await
         .map_err(|e| e.to_string())
 }
@@ -1102,6 +1169,7 @@ async fn get_transaction_header(
     Ok(serde_json::json!({
         "transaction_id": header.transaction_id,
         "user_id": header.user_id,
+        "shop_id": header.shop_id,
         "transaction_date": header.transaction_date,
         "category1_code": header.category1_code,
         "from_account_code": header.from_account_code,
@@ -1139,6 +1207,7 @@ async fn select_transaction_headers(
 #[tauri::command]
 async fn update_transaction_header(
     transaction_id: i64,
+    shop_id: Option<i64>,
     category1_code: String,
     from_account_code: String,
     to_account_code: String,
@@ -1152,8 +1221,9 @@ async fn update_transaction_header(
     // TODO: Get user_id from session/auth
     // For now, use user_id = 2 to match frontend currentUserId
     let user_id = 2;
-    
+
     let request = services::transaction::SaveTransactionRequest {
+        shop_id,
         category1_code,
         from_account_code,
         to_account_code,
@@ -1162,7 +1232,7 @@ async fn update_transaction_header(
         tax_rounding_type,
         memo,
     };
-    
+
     transaction.update_transaction_header(user_id, transaction_id, request).await
         .map_err(|e| e.to_string())
 }
@@ -1231,6 +1301,10 @@ pub fn run() {
             add_account,
             update_account,
             delete_account,
+            get_shops,
+            add_shop,
+            update_shop,
+            delete_shop,
             save_transaction_header,
             get_transaction_header,
             select_transaction_headers,

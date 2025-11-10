@@ -946,11 +946,11 @@ pub struct CategoryForEdit {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_helpers::database::init_db;
-    
+    use crate::test_helpers::database::{init_db, TEST_DB_URL};
+
     async fn setup_test_db() -> SqlitePool {
-        let pool = init_db("sqlite::memory:").await.unwrap();
-        
+        let pool = init_db(TEST_DB_URL).await.unwrap();
+
         // Read and execute DDL from dbaccess.sql
         let sql_content = std::fs::read_to_string("res/sql/dbaccess.sql")
             .expect("Failed to read dbaccess.sql");
@@ -1114,14 +1114,14 @@ mod tests {
         assert!(cat3_count > 0, "No CATEGORY3 records created");
         assert_eq!(cat3_count, 126, "Expected 126 CATEGORY3 records");
         
-        // Verify I18N records were created (English only, Japanese is in main table)
+        // Verify I18N records were created (both Japanese and English)
         let cat2_i18n_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM CATEGORY2_I18N WHERE USER_ID = ?")
             .bind(user_id)
             .fetch_one(&pool)
             .await
             .unwrap();
         assert!(cat2_i18n_count > 0, "No CATEGORY2_I18N records created");
-        assert_eq!(cat2_i18n_count, 20, "Expected 20 CATEGORY2_I18N records (English only)");
+        assert_eq!(cat2_i18n_count, 40, "Expected 40 CATEGORY2_I18N records (20 Japanese + 20 English)");
         
         let cat3_i18n_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM CATEGORY3_I18N WHERE USER_ID = ?")
             .bind(user_id)
@@ -1129,7 +1129,7 @@ mod tests {
             .await
             .unwrap();
         assert!(cat3_i18n_count > 0, "No CATEGORY3_I18N records created");
-        assert_eq!(cat3_i18n_count, 126, "Expected 126 CATEGORY3_I18N records (English only)");
+        assert_eq!(cat3_i18n_count, 252, "Expected 252 CATEGORY3_I18N records (126 Japanese + 126 English)");
         
         // Verify all English I18N records are present
         let cat3_i18n_en: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM CATEGORY3_I18N WHERE USER_ID = ? AND LANG_CODE = 'en'")

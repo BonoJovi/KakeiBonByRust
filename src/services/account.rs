@@ -54,9 +54,8 @@ pub struct UpdateAccountRequest {
 pub async fn get_account_templates(pool: &SqlitePool) -> Result<Vec<AccountTemplate>, String> {
     let templates = sqlx::query_as::<_, AccountTemplate>(
         r#"
-        SELECT TEMPLATE_ID as template_id, TEMPLATE_CODE as template_code, 
-               TEMPLATE_NAME_JA as template_name_ja, TEMPLATE_NAME_EN as template_name_en, 
-               DISPLAY_ORDER as display_order, ENTRY_DT as entry_dt
+        SELECT TEMPLATE_ID, TEMPLATE_CODE, TEMPLATE_NAME_JA, TEMPLATE_NAME_EN,
+               DISPLAY_ORDER, ENTRY_DT
         FROM ACCOUNT_TEMPLATES
         ORDER BY DISPLAY_ORDER
         "#
@@ -72,10 +71,8 @@ pub async fn get_account_templates(pool: &SqlitePool) -> Result<Vec<AccountTempl
 pub async fn get_accounts(pool: &SqlitePool, user_id: i64) -> Result<Vec<Account>, String> {
     let accounts = sqlx::query_as::<_, Account>(
         r#"
-        SELECT ACCOUNT_ID as account_id, USER_ID as user_id, ACCOUNT_CODE as account_code, 
-               ACCOUNT_NAME as account_name, TEMPLATE_CODE as template_code, 
-               INITIAL_BALANCE as initial_balance, DISPLAY_ORDER as display_order, 
-               IS_DISABLED as is_disabled, ENTRY_DT as entry_dt, UPDATE_DT as update_dt
+        SELECT ACCOUNT_ID, USER_ID, ACCOUNT_CODE, ACCOUNT_NAME, TEMPLATE_CODE,
+               INITIAL_BALANCE, DISPLAY_ORDER, IS_DISABLED, ENTRY_DT, UPDATE_DT
         FROM ACCOUNTS
         WHERE USER_ID = ? AND IS_DISABLED = 0
         ORDER BY DISPLAY_ORDER, ACCOUNT_CODE
@@ -93,10 +90,8 @@ pub async fn get_accounts(pool: &SqlitePool, user_id: i64) -> Result<Vec<Account
 pub async fn get_all_accounts(pool: &SqlitePool) -> Result<Vec<Account>, String> {
     let accounts = sqlx::query_as::<_, Account>(
         r#"
-        SELECT ACCOUNT_ID as account_id, USER_ID as user_id, ACCOUNT_CODE as account_code, 
-               ACCOUNT_NAME as account_name, TEMPLATE_CODE as template_code, 
-               INITIAL_BALANCE as initial_balance, DISPLAY_ORDER as display_order, 
-               IS_DISABLED as is_disabled, ENTRY_DT as entry_dt, UPDATE_DT as update_dt
+        SELECT ACCOUNT_ID, USER_ID, ACCOUNT_CODE, ACCOUNT_NAME, TEMPLATE_CODE,
+               INITIAL_BALANCE, DISPLAY_ORDER, IS_DISABLED, ENTRY_DT, UPDATE_DT
         FROM ACCOUNTS
         ORDER BY USER_ID, DISPLAY_ORDER
         "#
@@ -116,10 +111,8 @@ pub async fn get_account_by_code(
 ) -> Result<Option<Account>, String> {
     let account = sqlx::query_as::<_, Account>(
         r#"
-        SELECT ACCOUNT_ID as account_id, USER_ID as user_id, ACCOUNT_CODE as account_code, 
-               ACCOUNT_NAME as account_name, TEMPLATE_CODE as template_code, 
-               INITIAL_BALANCE as initial_balance, DISPLAY_ORDER as display_order, 
-               IS_DISABLED as is_disabled, ENTRY_DT as entry_dt, UPDATE_DT as update_dt
+        SELECT ACCOUNT_ID, USER_ID, ACCOUNT_CODE, ACCOUNT_NAME, TEMPLATE_CODE,
+               INITIAL_BALANCE, DISPLAY_ORDER, IS_DISABLED, ENTRY_DT, UPDATE_DT
         FROM ACCOUNTS
         WHERE USER_ID = ? AND ACCOUNT_CODE = ?
         "#
@@ -279,11 +272,11 @@ pub async fn initialize_none_account(pool: &SqlitePool, user_id: i64) -> Result<
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_helpers::database::init_db;
+    use crate::test_helpers::database::{init_db, TEST_DB_URL};
 
     async fn setup_test_db() -> SqlitePool {
-        let pool = init_db(":memory:").await.unwrap();
-        
+        let pool = init_db(TEST_DB_URL).await.unwrap();
+
         // Create USERS table
         sqlx::query(sql_queries::TEST_CREATE_USERS_TABLE)
             .execute(&pool)

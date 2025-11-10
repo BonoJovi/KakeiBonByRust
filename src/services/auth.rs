@@ -120,14 +120,20 @@ impl AuthService {
         
         // Commit user creation first
         tx.commit().await?;
-        
+
         // Populate default categories for admin user as template
         let category_service = category::CategoryService::new(self.pool.clone());
         category_service.populate_default_categories(1).await
             .map_err(|e| AuthError::DatabaseError(sqlx::Error::Configuration(
                 format!("Failed to populate default categories for admin: {}", e).into()
             )))?;
-        
+
+        // Initialize NONE account for the admin user
+        crate::services::account::initialize_none_account(&self.pool, 1).await
+            .map_err(|e| AuthError::DatabaseError(sqlx::Error::Configuration(
+                format!("Failed to initialize NONE account for admin: {}", e).into()
+            )))?;
+
         Ok(())
     }
 

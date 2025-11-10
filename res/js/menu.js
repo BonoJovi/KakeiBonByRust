@@ -186,8 +186,17 @@ document.addEventListener('DOMContentLoaded', async function() {
                 adminDropdown.classList.remove('show');
             });
         }
-        
-        const transactionMgmtItem = adminDropdown.querySelector('.dropdown-item:nth-child(4)');
+
+        const shopMgmtItem = adminDropdown.querySelector('.dropdown-item:nth-child(4)');
+        if (shopMgmtItem) {
+            shopMgmtItem.addEventListener('click', function(e) {
+                console.log('Shop Management item clicked');
+                window.location.href = HTML_FILES.SHOP_MANAGEMENT;
+                adminDropdown.classList.remove('show');
+            });
+        }
+
+        const transactionMgmtItem = adminDropdown.querySelector('.dropdown-item:nth-child(5)');
         if (transactionMgmtItem) {
             transactionMgmtItem.addEventListener('click', function(e) {
                 console.log('Transaction Management item clicked');

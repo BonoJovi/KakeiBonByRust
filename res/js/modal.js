@@ -145,13 +145,13 @@ class Modal {
      */
     open(mode = 'add', data = {}) {
         this.mode = mode;
-        this.data = data;
-        
+        this.data = data || {};
+
         // Store mode and data in form dataset if form exists
         if (this.form) {
             this.form.dataset.mode = mode;
-            Object.keys(data).forEach(key => {
-                this.form.dataset[key] = data[key];
+            Object.keys(this.data).forEach(key => {
+                this.form.dataset[key] = this.data[key];
             });
         }
         
@@ -194,9 +194,11 @@ class Modal {
             this.form.reset();
             // Clear dataset
             delete this.form.dataset.mode;
-            Object.keys(this.data || {}).forEach(key => {
-                delete this.form.dataset[key];
-            });
+            if (this.data) {
+                Object.keys(this.data).forEach(key => {
+                    delete this.form.dataset[key];
+                });
+            }
         }
         
         // Restore focus to previous element
@@ -253,10 +255,12 @@ class Modal {
         // Collect form data
         const formData = new FormData(this.form);
         const data = Object.fromEntries(formData.entries());
-        
+
         // Add mode and stored data
         data.mode = this.mode;
-        Object.assign(data, this.data);
+        if (this.data) {
+            Object.assign(data, this.data);
+        }
         
         try {
             // Call onSave callback
@@ -279,11 +283,13 @@ class Modal {
         if (!this.form) {
             return {};
         }
-        
+
         const formData = new FormData(this.form);
         const data = Object.fromEntries(formData.entries());
         data.mode = this.mode;
-        Object.assign(data, this.data);
+        if (this.data) {
+            Object.assign(data, this.data);
+        }
         return data;
     }
     

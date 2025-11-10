@@ -477,7 +477,8 @@ function initializeTransactionModal() {
             // Load master data
             await loadCategoriesForModal();
             await loadAccountsForModal();
-            
+            await loadShopsForModal();
+
             // Reset form
             const form = document.getElementById('transaction-form');
             form.reset();
@@ -506,9 +507,17 @@ function initializeTransactionModal() {
             editingTransactionId = null;
         }
     });
-    
+
     // Category1 change handler - control account field visibility
     category1Select.addEventListener('change', handleCategory1Change);
+
+    // Manage shops button handler
+    const manageShopsBtn = document.getElementById('manage-shops-btn');
+    if (manageShopsBtn) {
+        manageShopsBtn.addEventListener('click', () => {
+            window.location.href = HTML_FILES.SHOP_MANAGEMENT;
+        });
+    }
 }
 
 async function openTransactionModal(transactionId = null) {
@@ -603,6 +612,38 @@ async function loadAccountsForModal() {
     }
 }
 
+async function loadShopsForModal() {
+    try {
+        const shops = await invoke('get_shops', {
+            userId: currentUserId
+        });
+
+        // Populate shop dropdown
+        const shopSelect = document.getElementById('shop');
+
+        // Clear ALL existing options first
+        shopSelect.innerHTML = '';
+
+        // Add "Unspecified" option first
+        const unspecifiedText = i18n.t('common.unspecified');
+        const noneOption = document.createElement('option');
+        noneOption.value = '';
+        noneOption.textContent = unspecifiedText;
+        shopSelect.appendChild(noneOption);
+
+        // Add actual shops
+        shops.forEach(shop => {
+            const option = document.createElement('option');
+            option.value = shop.shop_id;
+            option.textContent = shop.shop_name;
+            shopSelect.appendChild(option);
+        });
+
+    } catch (error) {
+        console.error('Failed to load shops:', error);
+    }
+}
+
 function handleCategory1Change(event) {
     const category1Code = event.target.value;
     const fromAccountGroup = document.getElementById('from-account-group');
@@ -692,20 +733,23 @@ async function handleTransactionSubmit(event) {
     event.preventDefault();
     
     const transactionDateInput = document.getElementById('transaction-date').value;
+    const shopIdValue = document.getElementById('shop').value;
+    const shopId = shopIdValue ? parseInt(shopIdValue) : null;
     const category1Code = document.getElementById('category1').value;
     const fromAccountCode = document.getElementById('from-account').value;
     const toAccountCode = document.getElementById('to-account').value;
     const totalAmount = parseInt(document.getElementById('total-amount').value);
     const taxRoundingValue = parseInt(document.getElementById('tax-rounding').value);
     const memoText = document.getElementById('transaction-memo').value.trim() || null;
-    
+
     // Convert datetime-local format (YYYY-MM-DDTHH:mm) to SQLite DATETIME format (YYYY-MM-DD HH:MM:SS)
     const transactionDate = transactionDateInput.replace('T', ' ') + ':00';
-    
+
     // Tax rounding value is already an integer (0, 1, or 2) from the select element
     const taxRoundingType = taxRoundingValue;
-    
+
     console.log('=== Transaction Data ===');
+    console.log('shopId:', shopId);
     console.log('category1Code:', category1Code);
     console.log('fromAccountCode:', fromAccountCode);
     console.log('toAccountCode:', toAccountCode);
@@ -719,6 +763,7 @@ async function handleTransactionSubmit(event) {
             // Update existing transaction
             await invoke('update_transaction_header', {
                 transactionId: editingTransactionId,
+                shopId: shopId,
                 category1Code: category1Code,
                 fromAccountCode: fromAccountCode,
                 toAccountCode: toAccountCode,
@@ -731,6 +776,7 @@ async function handleTransactionSubmit(event) {
             // Create new transaction
             await invoke('save_transaction_header', {
                 userId: currentUserId,
+                shopId: shopId,
                 category1Code: category1Code,
                 fromAccountCode: fromAccountCode,
                 toAccountCode: toAccountCode,
@@ -765,13 +811,14 @@ async function loadTransactionData(transactionId) {
         
         // Populate form fields
         document.getElementById('transaction-date').value = dateTimeLocal;
+        document.getElementById('shop').value = transaction.shop_id || '';
         document.getElementById('category1').value = transaction.category1_code;
         document.getElementById('from-account').value = transaction.from_account_code || 'NONE';
         document.getElementById('to-account').value = transaction.to_account_code || 'NONE';
         document.getElementById('total-amount').value = transaction.total_amount;
         document.getElementById('tax-rounding').value = transaction.tax_rounding_type || 0;
         document.getElementById('transaction-memo').value = transaction.memo || '';
-        
+
         // Trigger category1 change to update account visibility
         handleCategory1Change({ target: document.getElementById('category1') });
         

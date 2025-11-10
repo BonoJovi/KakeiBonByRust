@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Shop Management - KakeiBon</title>
+        <link rel="stylesheet" href="css/menu.css" />
+        <link rel="stylesheet" href="css/indicators.css" />
+        <link rel="stylesheet" href="css/shop-management.css" />
+        <script type="importmap">
+        {
+            "imports": {
+                "@tauri-apps/api/core": "https://esm.sh/@tauri-apps/api@2/core"
+            }
+        }
+        </script>
+    </head>
+    <body>
+        <div class="container">
+            <header>
+                <nav>
+                    <button id="back-btn" class="back-button" data-i18n="menu.back_to_main">← Back to Main</button>
+                    <h1 data-i18n="shop_mgmt.title">Shop Management</h1>
+                </nav>
+            </header>
+
+            <main>
+                <div class="toolbar">
+                    <button id="add-shop-btn" class="btn btn-primary" data-i18n="shop_mgmt.add_new">+ Add New Shop</button>
+                </div>
+
+                <div id="loading" class="loading" data-i18n="common.loading">Loading...</div>
+
+                <table id="shops-table" class="data-table">
+                    <thead>
+                        <tr>
+                            <th data-i18n="shop_mgmt.shop_name">Shop Name</th>
+                            <th data-i18n="shop_mgmt.memo">Memo</th>
+                            <th data-i18n="common.actions">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="shops-tbody">
+                        <!-- Shop rows will be inserted here -->
+                    </tbody>
+                </table>
+            </main>
+        </div>
+
+        <!-- Shop Modal -->
+        <div id="shop-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="modal-title" data-i18n="shop_mgmt.modal_title_add">Add Shop</h2>
+                    <button class="close-btn" id="close-modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="shop-form">
+                        <div class="form-group">
+                            <label for="shop-name" data-i18n="shop_mgmt.shop_name">Shop Name</label>
+                            <input type="text" id="shop-name">
+                            <span class="error-message" id="shop-name-error"></span>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="shop-memo" data-i18n="shop_mgmt.memo">Memo</label>
+                            <textarea id="shop-memo" rows="3"></textarea>
+                            <span class="error-message" id="shop-memo-error"></span>
+                        </div>
+
+                        <div class="modal-actions">
+                            <button type="button" class="btn btn-secondary" id="cancel-btn" data-i18n="common.cancel">Cancel</button>
+                            <button type="submit" class="btn btn-primary" data-i18n="common.save">Save</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delete Confirmation Modal -->
+        <div id="delete-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 data-i18n="shop_mgmt.delete_confirmation">Delete Confirmation</h2>
+                    <button class="close-btn" id="close-delete-modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p data-i18n="shop_mgmt.delete_message">Are you sure you want to delete this shop?</p>
+                    <p id="delete-shop-name" class="shop-name-display"></p>
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary" id="cancel-delete-btn" data-i18n="common.cancel">Cancel</button>
+                        <button type="button" class="btn btn-danger" id="confirm-delete-btn" data-i18n="common.delete">Delete</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script type="module" src="js/shop-management.js"></script>
+    </body>
+</html>

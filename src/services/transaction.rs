@@ -9,6 +9,8 @@ pub struct TransactionHeader {
     pub transaction_id: i64,
     #[sqlx(rename = "USER_ID")]
     pub user_id: i64,
+    #[sqlx(rename = "SHOP_ID")]
+    pub shop_id: Option<i64>,
     #[sqlx(rename = "TRANSACTION_DATE")]
     pub transaction_date: String,
     #[sqlx(rename = "CATEGORY1_CODE")]
@@ -34,6 +36,7 @@ pub struct TransactionHeader {
 /// Request structure for saving transaction header
 #[derive(Debug, Deserialize, Clone)]
 pub struct SaveTransactionRequest {
+    pub shop_id: Option<i64>,
     pub category1_code: String,
     pub from_account_code: String,
     pub to_account_code: String,
@@ -211,6 +214,7 @@ impl TransactionService {
         // Insert transaction header
         let result = sqlx::query(sql_queries::TRANSACTION_HEADER_INSERT)
             .bind(user_id)
+            .bind(request.shop_id)
             .bind(&request.transaction_date)
             .bind(&request.category1_code)
             .bind(&request.from_account_code)
@@ -334,18 +338,19 @@ impl TransactionService {
             let header = TransactionHeader {
                 transaction_id: row.get(0),
                 user_id: row.get(1),
-                transaction_date: row.get(2),
-                category1_code: row.get(3),
-                from_account_code: row.get(4),
-                to_account_code: row.get(5),
-                total_amount: row.get(6),
-                tax_rounding_type: row.get(7),
-                memo_id: row.get(8),
-                is_disabled: row.get(9),
-                entry_dt: row.get(10),
-                update_dt: row.get(11),
+                shop_id: row.get(2),
+                transaction_date: row.get(3),
+                category1_code: row.get(4),
+                from_account_code: row.get(5),
+                to_account_code: row.get(6),
+                total_amount: row.get(7),
+                tax_rounding_type: row.get(8),
+                memo_id: row.get(9),
+                is_disabled: row.get(10),
+                entry_dt: row.get(11),
+                update_dt: row.get(12),
             };
-            let memo_text: Option<String> = row.get(12);
+            let memo_text: Option<String> = row.get(13);
             Ok((header, memo_text))
         } else {
             Err(TransactionError::NotFound)
@@ -743,6 +748,7 @@ impl TransactionService {
 
         // Update transaction header
         let result = sqlx::query(sql_queries::TRANSACTION_HEADER_UPDATE)
+            .bind(request.shop_id)
             .bind(&request.transaction_date)
             .bind(&request.category1_code)
             .bind(&request.from_account_code)
