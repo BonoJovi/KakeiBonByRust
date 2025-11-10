@@ -11,8 +11,8 @@ import requests
 from datetime import datetime
 
 REPO = os.environ.get('GITHUB_REPOSITORY', 'BonoJovi/KakeiBonByRust')
-TOKEN = os.environ.get('GITHUB_TOKEN')
-GIST_ID = os.environ.get('GIST_ID', '')  # Will be created if empty
+TOKEN = os.environ.get('GITHUB_TOKEN', '').strip()  # Remove whitespace/newlines
+GIST_ID = os.environ.get('GIST_ID', '').strip()  # Remove whitespace/newlines
 STATS_FILE = 'stats_history.json'
 
 def fetch_github_traffic(endpoint):
