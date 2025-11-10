@@ -8,6 +8,7 @@ fn normalize_account_code(code: &str) -> String {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
+#[sqlx(rename_all = "SCREAMING_SNAKE_CASE")]
 pub struct AccountTemplate {
     pub template_id: i64,
     pub template_code: String,
@@ -18,6 +19,7 @@ pub struct AccountTemplate {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
+#[sqlx(rename_all = "SCREAMING_SNAKE_CASE")]
 pub struct Account {
     pub account_id: i64,
     pub user_id: i64,
