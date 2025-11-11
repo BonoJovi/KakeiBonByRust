@@ -7,7 +7,7 @@
 
 [![Rust](https://img.shields.io/badge/Rust-1.70+-orange.svg)](https://www.rust-lang.org/)
 [![Tauri](https://img.shields.io/badge/Tauri-v2.8.5-blue.svg)](https://tauri.app/)
-[![Tests](https://img.shields.io/badge/tests-416%20passing-brightgreen.svg)](#test-results--テスト結果)
+[![Tests](https://img.shields.io/badge/tests-554%20passing-brightgreen.svg)](#test-results--テスト結果)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 [🇯🇵 日本語詳細](README_ja.md) | [🇬🇧 English Details](README_en.md)
@@ -110,6 +110,8 @@ Switch between Japanese and English seamlessly
 | 👥 **User Management**<br/>**ユーザー管理** | Multi-user support (Admin/General)<br/>マルチユーザー対応（管理者/一般） | ✅ Complete<br/>完成 |
 | 🏦 **Account Management**<br/>**口座管理** | Account master data management<br/>口座マスタ管理 | ✅ Complete<br/>完成 |
 | 🏪 **Shop Management**<br/>**店舗管理** | Shop master data management<br/>店舗マスタ管理 | ✅ Complete<br/>完成 |
+| 🏭 **Manufacturer Management**<br/>**メーカー管理** | Manufacturer master data with IS_DISABLED feature<br/>IS_DISABLED機能付きメーカーマスタ管理 | ✅ Complete<br/>完成 |
+| 📦 **Product Management**<br/>**商品管理** | Product master data with manufacturer linkage<br/>メーカー連携付き商品マスタ管理 | ✅ Complete<br/>完成 |
 | 🌍 **Multilingual**<br/>**多言語対応** | Dynamic language switching (JP/EN) - 298 resources<br/>日本語・英語の動的切り替え - 298リソース | ✅ Complete<br/>完成 |
 | 🔧 **Customization**<br/>**カスタマイズ** | Font size, language preferences<br/>フォントサイズ、言語設定 | ✅ Complete<br/>完成 |
 | 📝 **Transaction Management**<br/>**入出金管理** | Header-level CRUD, filters, pagination<br/>ヘッダレベルCRUD、フィルター、ページネーション | ✅ Partial<br/>部分完成 |
@@ -125,7 +127,7 @@ Frontend / フロントエンド:  Vanilla JavaScript (ES6 Modules) + HTML5 + CS
 Backend / バックエンド:     Rust + Tauri v2.8.5
 Database / データベース:    SQLite (WAL mode)
 Security / セキュリティ:   Argon2id + AES-256-GCM
-Testing / テスト:          416 tests passing (Rust: 133, JS: 283)
+Testing / テスト:          554 tests passing (Rust: 150, JS: 404)
 i18n Resources / 翻訳:     298 resources (149 unique keys, 2 languages)
 ```
 
@@ -156,10 +158,10 @@ cargo tauri build
 ## 🧪 Test Results / テスト結果
 
 ```
-Backend (Rust) / バックエンド:    133 passing (3 skipped - unimplemented features)
-Frontend (JavaScript) / フロント:  283 passing
-Total Tests / 総テスト数:          416 passing ✅
-Success Rate / 成功率:            100% (implemented features)
+Backend (Rust) / バックエンド:    150 passing
+Frontend (JavaScript) / フロント:  404 passing
+Total Tests / 総テスト数:          554 passing ✅
+Success Rate / 成功率:            100%
 ```
 
 See [TEST_SUMMARY.md](docs/ja/TEST_SUMMARY.md) for details / 詳細は [TEST_SUMMARY.md](docs/ja/TEST_SUMMARY.md) を参照
