@@ -30,7 +30,13 @@ Development is progressing smoothly, and we strive to update daily!
 
 <div align="center">
 
-![Traffic Stats](docs/stats_graph.png)
+### 📈 Daily Traffic / 日次トラフィック
+
+![Daily Traffic Stats](docs/stats_graph_daily.png)
+
+### 📊 Cumulative Traffic / 累積トラフィック
+
+![Cumulative Traffic Stats](docs/stats_graph_cumulative.png)
 
 | Metric | Count |
 |--------|-------|
