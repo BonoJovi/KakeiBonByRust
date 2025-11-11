@@ -592,7 +592,13 @@ VALUES
 (893, 'product_mgmt.no_data', 'en', 'No products found', 'product_mgmt', 'No products message', datetime('now')),
 (894, 'product_mgmt.no_data', 'ja', '商品が見つかりません', 'product_mgmt', '商品なしメッセージ', datetime('now')),
 (895, 'product_mgmt.delete_confirm', 'en', 'Are you sure you want to delete this product?', 'product_mgmt', 'Delete confirmation message', datetime('now')),
-(896, 'product_mgmt.delete_confirm', 'ja', 'この商品を削除してもよろしいですか？', 'product_mgmt', '削除確認メッセージ', datetime('now'));
+(896, 'product_mgmt.delete_confirm', 'ja', 'この商品を削除してもよろしいですか？', 'product_mgmt', '削除確認メッセージ', datetime('now')),
+
+-- Error messages
+(903, 'manufacturer_mgmt.duplicate_error', 'en', 'This manufacturer name already exists.', 'manufacturer_mgmt', 'Duplicate manufacturer name error', datetime('now')),
+(904, 'manufacturer_mgmt.duplicate_error', 'ja', 'このメーカー名は既に存在します。', 'manufacturer_mgmt', '重複メーカー名エラー', datetime('now')),
+(905, 'product_mgmt.duplicate_error', 'en', 'This product name already exists.', 'product_mgmt', 'Duplicate product name error', datetime('now')),
+(906, 'product_mgmt.duplicate_error', 'ja', 'この商品名は既に存在します。', 'product_mgmt', '重複商品名エラー', datetime('now'));
 
 -- NOTE: Category data will be migrated from existing SQL later
 
@@ -785,3 +791,9 @@ INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESO
 INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, ENTRY_DT) VALUES (900, 'menu.manufacturer_management', 'ja', 'メーカー管理', 'menu', datetime('now'));
 INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, ENTRY_DT) VALUES (901, 'menu.product_management', 'en', 'Product Management', 'menu', datetime('now'));
 INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, ENTRY_DT) VALUES (902, 'menu.product_management', 'ja', '商品管理', 'menu', datetime('now'));
+
+-- Error messages for Manufacturer and Product management (added 2025-11-11)
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (903, 'manufacturer_mgmt.duplicate_error', 'en', 'This manufacturer name already exists.', 'manufacturer_mgmt', 'Duplicate manufacturer name error', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (904, 'manufacturer_mgmt.duplicate_error', 'ja', 'このメーカー名は既に存在します。', 'manufacturer_mgmt', '重複メーカー名エラー', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (905, 'product_mgmt.duplicate_error', 'en', 'This product name already exists.', 'product_mgmt', 'Duplicate product name error', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (906, 'product_mgmt.duplicate_error', 'ja', 'この商品名は既に存在します。', 'product_mgmt', '重複商品名エラー', datetime('now'));
