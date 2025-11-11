@@ -8,7 +8,7 @@ import { TAX_ROUND_DOWN, TAX_ROUND_HALF_UP, TAX_ROUND_UP, ROLE_ADMIN, ROLE_USER 
 import { Modal } from './modal.js';
 
 // TODO: Get from session/auth
-const currentUserId = 2;
+const currentUserId = 1;
 const currentUserRole = ROLE_USER; // Transaction management is for regular users only
 
 // Pagination state

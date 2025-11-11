@@ -196,7 +196,25 @@ document.addEventListener('DOMContentLoaded', async function() {
             });
         }
 
-        const transactionMgmtItem = adminDropdown.querySelector('.dropdown-item:nth-child(5)');
+        const manufacturerMgmtItem = adminDropdown.querySelector('.dropdown-item:nth-child(5)');
+        if (manufacturerMgmtItem) {
+            manufacturerMgmtItem.addEventListener('click', function(e) {
+                console.log('Manufacturer Management item clicked');
+                window.location.href = HTML_FILES.MANUFACTURER_MANAGEMENT;
+                adminDropdown.classList.remove('show');
+            });
+        }
+
+        const productMgmtItem = adminDropdown.querySelector('.dropdown-item:nth-child(6)');
+        if (productMgmtItem) {
+            productMgmtItem.addEventListener('click', function(e) {
+                console.log('Product Management item clicked');
+                window.location.href = HTML_FILES.PRODUCT_MANAGEMENT;
+                adminDropdown.classList.remove('show');
+            });
+        }
+
+        const transactionMgmtItem = adminDropdown.querySelector('.dropdown-item:nth-child(7)');
         if (transactionMgmtItem) {
             transactionMgmtItem.addEventListener('click', function(e) {
                 console.log('Transaction Management item clicked');

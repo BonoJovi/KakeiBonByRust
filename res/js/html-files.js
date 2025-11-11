@@ -7,5 +7,7 @@ export const HTML_FILES = {
     CATEGORY_MANAGEMENT: 'category-management.html',
     ACCOUNT_MANAGEMENT: 'account-management.html',
     SHOP_MANAGEMENT: 'shop-management.html',
+    MANUFACTURER_MANAGEMENT: 'manufacturer-management.html',
+    PRODUCT_MANAGEMENT: 'product-management.html',
     TRANSACTION_MANAGEMENT: 'transaction-management.html'
 };

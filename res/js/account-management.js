@@ -10,7 +10,7 @@ console.log('invoke:', typeof invoke);
 console.log('i18n:', i18n);
 
 // TODO: Get from session/auth
-const currentUserId = 2;
+const currentUserId = 1;
 const currentUserRole = ROLE_USER; // Change to ROLE_USER for testing
 
 let currentLanguage = 'ja';

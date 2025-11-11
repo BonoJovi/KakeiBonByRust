@@ -7,7 +7,7 @@ import { Modal } from './modal.js';
 console.log('=== SHOP-MANAGEMENT.JS LOADED ===');
 
 // TODO: Get from session/auth
-const currentUserId = 2;
+const currentUserId = 1;
 
 let currentLanguage = 'ja';
 let shops = [];

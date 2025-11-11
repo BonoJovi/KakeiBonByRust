@@ -14,6 +14,8 @@ mod services {
     pub mod transaction;
     pub mod account;
     pub mod shop;
+    pub mod manufacturer;
+    pub mod product;
 }
 
 #[cfg(test)]
@@ -1120,6 +1122,130 @@ async fn delete_shop(
 }
 
 // ============================================================================
+// Manufacturer Management Commands
+// ============================================================================
+
+#[tauri::command]
+async fn get_manufacturers(
+    user_id: i64,
+    state: tauri::State<'_, AppState>
+) -> Result<Vec<services::manufacturer::Manufacturer>, String> {
+    let db = state.db.lock().await;
+    services::manufacturer::get_manufacturers(db.pool(), user_id).await
+}
+
+#[tauri::command]
+async fn add_manufacturer(
+    user_id: i64,
+    manufacturer_name: String,
+    memo: Option<String>,
+    state: tauri::State<'_, AppState>
+) -> Result<String, String> {
+    let db = state.db.lock().await;
+
+    let request = services::manufacturer::AddManufacturerRequest {
+        manufacturer_name,
+        memo,
+    };
+
+    services::manufacturer::add_manufacturer(db.pool(), user_id, request).await
+}
+
+#[tauri::command]
+async fn update_manufacturer(
+    user_id: i64,
+    manufacturer_id: i64,
+    manufacturer_name: String,
+    memo: Option<String>,
+    display_order: i64,
+    state: tauri::State<'_, AppState>
+) -> Result<String, String> {
+    let db = state.db.lock().await;
+
+    let request = services::manufacturer::UpdateManufacturerRequest {
+        manufacturer_name,
+        memo,
+        display_order,
+    };
+
+    services::manufacturer::update_manufacturer(db.pool(), user_id, manufacturer_id, request).await
+}
+
+#[tauri::command]
+async fn delete_manufacturer(
+    user_id: i64,
+    manufacturer_id: i64,
+    state: tauri::State<'_, AppState>
+) -> Result<String, String> {
+    let db = state.db.lock().await;
+    services::manufacturer::delete_manufacturer(db.pool(), user_id, manufacturer_id).await
+}
+
+// ============================================================================
+// Product Management Commands
+// ============================================================================
+
+#[tauri::command]
+async fn get_products(
+    user_id: i64,
+    state: tauri::State<'_, AppState>
+) -> Result<Vec<services::product::Product>, String> {
+    let db = state.db.lock().await;
+    services::product::get_products(db.pool(), user_id).await
+}
+
+#[tauri::command]
+async fn add_product(
+    user_id: i64,
+    product_name: String,
+    manufacturer_id: Option<i64>,
+    memo: Option<String>,
+    state: tauri::State<'_, AppState>
+) -> Result<String, String> {
+    let db = state.db.lock().await;
+
+    let request = services::product::AddProductRequest {
+        product_name,
+        manufacturer_id,
+        memo,
+    };
+
+    services::product::add_product(db.pool(), user_id, request).await
+}
+
+#[tauri::command]
+async fn update_product(
+    user_id: i64,
+    product_id: i64,
+    product_name: String,
+    manufacturer_id: Option<i64>,
+    memo: Option<String>,
+    display_order: i64,
+    state: tauri::State<'_, AppState>
+) -> Result<String, String> {
+    let db = state.db.lock().await;
+
+    let request = services::product::UpdateProductRequest {
+        product_name,
+        manufacturer_id,
+        memo,
+        display_order,
+    };
+
+    services::product::update_product(db.pool(), user_id, product_id, request).await
+}
+
+#[tauri::command]
+async fn delete_product(
+    user_id: i64,
+    product_id: i64,
+    state: tauri::State<'_, AppState>
+) -> Result<String, String> {
+    let db = state.db.lock().await;
+    services::product::delete_product(db.pool(), user_id, product_id).await
+}
+
+// ============================================================================
 // Transaction Management Commands
 // ============================================================================
 
@@ -1305,6 +1431,14 @@ pub fn run() {
             add_shop,
             update_shop,
             delete_shop,
+            get_manufacturers,
+            add_manufacturer,
+            update_manufacturer,
+            delete_manufacturer,
+            get_products,
+            add_product,
+            update_product,
+            delete_product,
             save_transaction_header,
             get_transaction_header,
             select_transaction_headers,

@@ -841,6 +841,116 @@ WHERE USER_ID = ? AND SHOP_NAME = ? AND SHOP_ID != ? AND IS_DISABLED = 0
 "#;
 
 // ============================================================================
+// Manufacturer Service Queries
+// ============================================================================
+
+pub const MANUFACTURER_GET_ALL: &str = r#"
+SELECT MANUFACTURER_ID, USER_ID, MANUFACTURER_NAME, MEMO, DISPLAY_ORDER, IS_DISABLED, ENTRY_DT, UPDATE_DT
+FROM MANUFACTURERS
+WHERE USER_ID = ? AND IS_DISABLED = 0
+ORDER BY DISPLAY_ORDER, MANUFACTURER_NAME
+"#;
+
+pub const MANUFACTURER_GET_BY_ID: &str = r#"
+SELECT MANUFACTURER_ID, USER_ID, MANUFACTURER_NAME, MEMO, DISPLAY_ORDER, IS_DISABLED, ENTRY_DT, UPDATE_DT
+FROM MANUFACTURERS
+WHERE USER_ID = ? AND MANUFACTURER_ID = ?
+"#;
+
+pub const MANUFACTURER_GET_NEXT_DISPLAY_ORDER: &str = r#"
+SELECT COALESCE(MAX(DISPLAY_ORDER), 0) + 1
+FROM MANUFACTURERS
+WHERE USER_ID = ?
+"#;
+
+pub const MANUFACTURER_INSERT: &str = r#"
+INSERT INTO MANUFACTURERS (USER_ID, MANUFACTURER_NAME, MEMO, DISPLAY_ORDER, ENTRY_DT)
+VALUES (?, ?, ?, ?, datetime('now'))
+"#;
+
+pub const MANUFACTURER_UPDATE: &str = r#"
+UPDATE MANUFACTURERS
+SET MANUFACTURER_NAME = ?, MEMO = ?, DISPLAY_ORDER = ?, UPDATE_DT = datetime('now')
+WHERE USER_ID = ? AND MANUFACTURER_ID = ?
+"#;
+
+pub const MANUFACTURER_DELETE_LOGICAL: &str = r#"
+UPDATE MANUFACTURERS
+SET IS_DISABLED = 1, UPDATE_DT = datetime('now')
+WHERE USER_ID = ? AND MANUFACTURER_ID = ?
+"#;
+
+pub const MANUFACTURER_CHECK_DUPLICATE_FOR_ADD: &str = r#"
+SELECT COUNT(*) as count
+FROM MANUFACTURERS
+WHERE USER_ID = ? AND MANUFACTURER_NAME = ? AND IS_DISABLED = 0
+"#;
+
+pub const MANUFACTURER_CHECK_DUPLICATE_FOR_UPDATE: &str = r#"
+SELECT COUNT(*) as count
+FROM MANUFACTURERS
+WHERE USER_ID = ? AND MANUFACTURER_NAME = ? AND MANUFACTURER_ID != ? AND IS_DISABLED = 0
+"#;
+
+// ============================================================================
+// Product Service Queries
+// ============================================================================
+
+pub const PRODUCT_GET_ALL: &str = r#"
+SELECT p.PRODUCT_ID, p.USER_ID, p.PRODUCT_NAME,
+       p.MANUFACTURER_ID, m.MANUFACTURER_NAME,
+       p.MEMO, p.DISPLAY_ORDER, p.IS_DISABLED, p.ENTRY_DT, p.UPDATE_DT
+FROM PRODUCTS p
+LEFT JOIN MANUFACTURERS m ON p.MANUFACTURER_ID = m.MANUFACTURER_ID
+WHERE p.USER_ID = ? AND p.IS_DISABLED = 0
+ORDER BY p.DISPLAY_ORDER, p.PRODUCT_NAME
+"#;
+
+pub const PRODUCT_GET_BY_ID: &str = r#"
+SELECT p.PRODUCT_ID, p.USER_ID, p.PRODUCT_NAME,
+       p.MANUFACTURER_ID, m.MANUFACTURER_NAME,
+       p.MEMO, p.DISPLAY_ORDER, p.IS_DISABLED, p.ENTRY_DT, p.UPDATE_DT
+FROM PRODUCTS p
+LEFT JOIN MANUFACTURERS m ON p.MANUFACTURER_ID = m.MANUFACTURER_ID
+WHERE p.USER_ID = ? AND p.PRODUCT_ID = ?
+"#;
+
+pub const PRODUCT_GET_NEXT_DISPLAY_ORDER: &str = r#"
+SELECT COALESCE(MAX(DISPLAY_ORDER), 0) + 1
+FROM PRODUCTS
+WHERE USER_ID = ?
+"#;
+
+pub const PRODUCT_INSERT: &str = r#"
+INSERT INTO PRODUCTS (USER_ID, PRODUCT_NAME, MANUFACTURER_ID, MEMO, DISPLAY_ORDER, ENTRY_DT)
+VALUES (?, ?, ?, ?, ?, datetime('now'))
+"#;
+
+pub const PRODUCT_UPDATE: &str = r#"
+UPDATE PRODUCTS
+SET PRODUCT_NAME = ?, MANUFACTURER_ID = ?, MEMO = ?, DISPLAY_ORDER = ?, UPDATE_DT = datetime('now')
+WHERE USER_ID = ? AND PRODUCT_ID = ?
+"#;
+
+pub const PRODUCT_DELETE_LOGICAL: &str = r#"
+UPDATE PRODUCTS
+SET IS_DISABLED = 1, UPDATE_DT = datetime('now')
+WHERE USER_ID = ? AND PRODUCT_ID = ?
+"#;
+
+pub const PRODUCT_CHECK_DUPLICATE_FOR_ADD: &str = r#"
+SELECT COUNT(*) as count
+FROM PRODUCTS
+WHERE USER_ID = ? AND PRODUCT_NAME = ? AND IS_DISABLED = 0
+"#;
+
+pub const PRODUCT_CHECK_DUPLICATE_FOR_UPDATE: &str = r#"
+SELECT COUNT(*) as count
+FROM PRODUCTS
+WHERE USER_ID = ? AND PRODUCT_NAME = ? AND PRODUCT_ID != ? AND IS_DISABLED = 0
+"#;
+
+// ============================================================================
 // Test Queries - Shop
 // ============================================================================
 
@@ -855,6 +965,46 @@ CREATE TABLE IF NOT EXISTS SHOPS (
     ENTRY_DT DATETIME NOT NULL DEFAULT (datetime('now')),
     UPDATE_DT DATETIME,
     FOREIGN KEY (USER_ID) REFERENCES USERS(USER_ID)
+)
+"#;
+
+// ============================================================================
+// Test Queries - Manufacturer
+// ============================================================================
+
+pub const TEST_MANUFACTURER_CREATE_TABLE: &str = r#"
+CREATE TABLE IF NOT EXISTS MANUFACTURERS (
+    MANUFACTURER_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    USER_ID INTEGER NOT NULL,
+    MANUFACTURER_NAME TEXT NOT NULL,
+    MEMO TEXT,
+    DISPLAY_ORDER INTEGER NOT NULL DEFAULT 0,
+    IS_DISABLED INTEGER DEFAULT 0,
+    ENTRY_DT DATETIME NOT NULL DEFAULT (datetime('now')),
+    UPDATE_DT DATETIME,
+    FOREIGN KEY (USER_ID) REFERENCES USERS(USER_ID) ON DELETE CASCADE,
+    UNIQUE(USER_ID, MANUFACTURER_NAME)
+)
+"#;
+
+// ============================================================================
+// Test Queries - Product
+// ============================================================================
+
+pub const TEST_PRODUCT_CREATE_TABLE: &str = r#"
+CREATE TABLE IF NOT EXISTS PRODUCTS (
+    PRODUCT_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    USER_ID INTEGER NOT NULL,
+    PRODUCT_NAME TEXT NOT NULL,
+    MANUFACTURER_ID INTEGER,
+    MEMO TEXT,
+    DISPLAY_ORDER INTEGER NOT NULL DEFAULT 0,
+    IS_DISABLED INTEGER DEFAULT 0,
+    ENTRY_DT DATETIME NOT NULL DEFAULT (datetime('now')),
+    UPDATE_DT DATETIME,
+    FOREIGN KEY (USER_ID) REFERENCES USERS(USER_ID) ON DELETE CASCADE,
+    FOREIGN KEY (MANUFACTURER_ID) REFERENCES MANUFACTURERS(MANUFACTURER_ID) ON DELETE SET NULL,
+    UNIQUE(USER_ID, PRODUCT_NAME)
 )
 "#;
 
