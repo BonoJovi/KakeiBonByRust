@@ -63,11 +63,11 @@ git push origin main  # Requires hardware key authentication
 ```
 
 ### Session Limit Notification
-- **Threshold**: 90% of session token budget
-- **Action**: Notify user when token usage exceeds 90%
+- **Threshold**: 90% of session request budget
+- **Action**: Notify user when request count exceeds 90%
 - **Message format**: Clear notification stating current usage percentage
 - **Purpose**: Allow user to save work or prepare for session end
-- **Example**: "⚠️ Session limit notice: Currently at 92% of token budget (184,000/200,000 tokens used)"
+- **Example**: "⚠️ Session limit notice: Currently at 92% of request budget (46/50 requests used)"
 
 ---
 
