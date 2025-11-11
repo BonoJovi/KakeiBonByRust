@@ -19,6 +19,7 @@ pub struct Manufacturer {
 pub struct AddManufacturerRequest {
     pub manufacturer_name: String,
     pub memo: Option<String>,
+    pub is_disabled: Option<i64>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -26,17 +27,22 @@ pub struct UpdateManufacturerRequest {
     pub manufacturer_name: String,
     pub memo: Option<String>,
     pub display_order: i64,
+    pub is_disabled: i64,
 }
 
 /// Get all manufacturers for a user
-pub async fn get_manufacturers(pool: &SqlitePool, user_id: i64) -> Result<Vec<Manufacturer>, String> {
-    let manufacturers = sqlx::query_as::<_, Manufacturer>(
+pub async fn get_manufacturers(pool: &SqlitePool, user_id: i64, include_disabled: bool) -> Result<Vec<Manufacturer>, String> {
+    let query = if include_disabled {
+        sql_queries::MANUFACTURER_GET_ALL_INCLUDING_DISABLED
+    } else {
         sql_queries::MANUFACTURER_GET_ALL
-    )
-    .bind(user_id)
-    .fetch_all(pool)
-    .await
-    .map_err(|e| format!("Failed to get manufacturers: {}", e))?;
+    };
+
+    let manufacturers = sqlx::query_as::<_, Manufacturer>(query)
+        .bind(user_id)
+        .fetch_all(pool)
+        .await
+        .map_err(|e| format!("Failed to get manufacturers: {}", e))?;
 
     Ok(manufacturers)
 }
@@ -123,12 +129,16 @@ pub async fn add_manufacturer(
     // Get next display order
     let display_order = get_next_display_order(pool, user_id).await?;
 
+    // Get is_disabled value (default to 0)
+    let is_disabled = request.is_disabled.unwrap_or(0);
+
     // Insert manufacturer
     sqlx::query(sql_queries::MANUFACTURER_INSERT)
         .bind(user_id)
         .bind(&request.manufacturer_name)
         .bind(&request.memo)
         .bind(display_order)
+        .bind(is_disabled)
         .execute(pool)
         .await
         .map_err(|e| format!("Failed to add manufacturer: {}", e))?;
@@ -163,6 +173,7 @@ pub async fn update_manufacturer(
         .bind(&request.manufacturer_name)
         .bind(&request.memo)
         .bind(request.display_order)
+        .bind(request.is_disabled)
         .bind(user_id)
         .bind(manufacturer_id)
         .execute(pool)
@@ -235,12 +246,13 @@ mod tests {
         let request = AddManufacturerRequest {
             manufacturer_name: "ニッスイ".to_string(),
             memo: Some("テストメモ".to_string()),
+            is_disabled: None,
         };
 
         let result = add_manufacturer(&pool, 2, request).await;
         assert!(result.is_ok());
 
-        let manufacturers = get_manufacturers(&pool, 2).await.unwrap();
+        let manufacturers = get_manufacturers(&pool, 2, false).await.unwrap();
         assert_eq!(manufacturers.len(), 1);
         assert_eq!(manufacturers[0].manufacturer_name, "ニッスイ");
     }
@@ -253,10 +265,11 @@ mod tests {
         let add_request = AddManufacturerRequest {
             manufacturer_name: "ニッスイ".to_string(),
             memo: None,
+            is_disabled: None,
         };
         add_manufacturer(&pool, 2, add_request).await.unwrap();
 
-        let manufacturers = get_manufacturers(&pool, 2).await.unwrap();
+        let manufacturers = get_manufacturers(&pool, 2, false).await.unwrap();
         let manufacturer_id = manufacturers[0].manufacturer_id;
 
         // Update manufacturer
@@ -264,6 +277,7 @@ mod tests {
             manufacturer_name: "日本水産".to_string(),
             memo: Some("更新後メモ".to_string()),
             display_order: 1,
+            is_disabled: 0,
         };
 
         let result = update_manufacturer(&pool, 2, manufacturer_id, update_request).await;
@@ -282,10 +296,11 @@ mod tests {
         let request = AddManufacturerRequest {
             manufacturer_name: "ニッスイ".to_string(),
             memo: None,
+            is_disabled: None,
         };
         add_manufacturer(&pool, 2, request).await.unwrap();
 
-        let manufacturers = get_manufacturers(&pool, 2).await.unwrap();
+        let manufacturers = get_manufacturers(&pool, 2, false).await.unwrap();
         let manufacturer_id = manufacturers[0].manufacturer_id;
 
         // Delete manufacturer
@@ -293,7 +308,7 @@ mod tests {
         assert!(result.is_ok());
 
         // Verify manufacturer is disabled
-        let manufacturers = get_manufacturers(&pool, 2).await.unwrap();
+        let manufacturers = get_manufacturers(&pool, 2, false).await.unwrap();
         assert_eq!(manufacturers.len(), 0);
     }
 
@@ -304,6 +319,7 @@ mod tests {
         let request = AddManufacturerRequest {
             manufacturer_name: "   ".to_string(),
             memo: None,
+            is_disabled: None,
         };
 
         let result = add_manufacturer(&pool, 2, request).await;
@@ -319,6 +335,7 @@ mod tests {
         let request1 = AddManufacturerRequest {
             manufacturer_name: "ニッスイ".to_string(),
             memo: None,
+            is_disabled: None,
         };
         let result1 = add_manufacturer(&pool, 2, request1).await;
         assert!(result1.is_ok());
@@ -327,6 +344,7 @@ mod tests {
         let request2 = AddManufacturerRequest {
             manufacturer_name: "ニッスイ".to_string(),
             memo: Some("異なるメモ".to_string()),
+            is_disabled: None,
         };
         let result2 = add_manufacturer(&pool, 2, request2).await;
         assert!(result2.is_err());
@@ -341,16 +359,18 @@ mod tests {
         let request1 = AddManufacturerRequest {
             manufacturer_name: "ニッスイ".to_string(),
             memo: None,
+            is_disabled: None,
         };
         add_manufacturer(&pool, 2, request1).await.unwrap();
 
         let request2 = AddManufacturerRequest {
             manufacturer_name: "マルハニチロ".to_string(),
             memo: None,
+            is_disabled: None,
         };
         add_manufacturer(&pool, 2, request2).await.unwrap();
 
-        let manufacturers = get_manufacturers(&pool, 2).await.unwrap();
+        let manufacturers = get_manufacturers(&pool, 2, false).await.unwrap();
         let manufacturer_id = manufacturers[1].manufacturer_id; // マルハニチロ
 
         // Try to update to existing name
@@ -358,6 +378,7 @@ mod tests {
             manufacturer_name: "ニッスイ".to_string(),
             memo: None,
             display_order: 1,
+            is_disabled: 0,
         };
         let result = update_manufacturer(&pool, 2, manufacturer_id, update_request).await;
         assert!(result.is_err());
@@ -372,10 +393,11 @@ mod tests {
         let request = AddManufacturerRequest {
             manufacturer_name: "ニッスイ".to_string(),
             memo: Some("元のメモ".to_string()),
+            is_disabled: None,
         };
         add_manufacturer(&pool, 2, request).await.unwrap();
 
-        let manufacturers = get_manufacturers(&pool, 2).await.unwrap();
+        let manufacturers = get_manufacturers(&pool, 2, false).await.unwrap();
         let manufacturer_id = manufacturers[0].manufacturer_id;
 
         // Update with same name (should succeed)
@@ -383,6 +405,7 @@ mod tests {
             manufacturer_name: "ニッスイ".to_string(),
             memo: Some("新しいメモ".to_string()),
             display_order: 1,
+            is_disabled: 0,
         };
         let result = update_manufacturer(&pool, 2, manufacturer_id, update_request).await;
         assert!(result.is_ok());

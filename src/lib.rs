@@ -1128,10 +1128,11 @@ async fn delete_shop(
 #[tauri::command]
 async fn get_manufacturers(
     user_id: i64,
+    include_disabled: bool,
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::manufacturer::Manufacturer>, String> {
     let db = state.db.lock().await;
-    services::manufacturer::get_manufacturers(db.pool(), user_id).await
+    services::manufacturer::get_manufacturers(db.pool(), user_id, include_disabled).await
 }
 
 #[tauri::command]
@@ -1139,6 +1140,7 @@ async fn add_manufacturer(
     user_id: i64,
     manufacturer_name: String,
     memo: Option<String>,
+    is_disabled: Option<i64>,
     state: tauri::State<'_, AppState>
 ) -> Result<String, String> {
     let db = state.db.lock().await;
@@ -1146,6 +1148,7 @@ async fn add_manufacturer(
     let request = services::manufacturer::AddManufacturerRequest {
         manufacturer_name,
         memo,
+        is_disabled,
     };
 
     services::manufacturer::add_manufacturer(db.pool(), user_id, request).await
@@ -1158,6 +1161,7 @@ async fn update_manufacturer(
     manufacturer_name: String,
     memo: Option<String>,
     display_order: i64,
+    is_disabled: i64,
     state: tauri::State<'_, AppState>
 ) -> Result<String, String> {
     let db = state.db.lock().await;
@@ -1166,6 +1170,7 @@ async fn update_manufacturer(
         manufacturer_name,
         memo,
         display_order,
+        is_disabled,
     };
 
     services::manufacturer::update_manufacturer(db.pool(), user_id, manufacturer_id, request).await
@@ -1188,10 +1193,11 @@ async fn delete_manufacturer(
 #[tauri::command]
 async fn get_products(
     user_id: i64,
+    include_disabled: bool,
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::product::Product>, String> {
     let db = state.db.lock().await;
-    services::product::get_products(db.pool(), user_id).await
+    services::product::get_products(db.pool(), user_id, include_disabled).await
 }
 
 #[tauri::command]
@@ -1200,6 +1206,7 @@ async fn add_product(
     product_name: String,
     manufacturer_id: Option<i64>,
     memo: Option<String>,
+    is_disabled: Option<i64>,
     state: tauri::State<'_, AppState>
 ) -> Result<String, String> {
     let db = state.db.lock().await;
@@ -1208,6 +1215,7 @@ async fn add_product(
         product_name,
         manufacturer_id,
         memo,
+        is_disabled,
     };
 
     services::product::add_product(db.pool(), user_id, request).await
@@ -1221,6 +1229,7 @@ async fn update_product(
     manufacturer_id: Option<i64>,
     memo: Option<String>,
     display_order: i64,
+    is_disabled: i64,
     state: tauri::State<'_, AppState>
 ) -> Result<String, String> {
     let db = state.db.lock().await;
@@ -1230,6 +1239,7 @@ async fn update_product(
         manufacturer_id,
         memo,
         display_order,
+        is_disabled,
     };
 
     services::product::update_product(db.pool(), user_id, product_id, request).await

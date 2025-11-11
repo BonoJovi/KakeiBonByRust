@@ -27,6 +27,7 @@
             <main>
                 <div class="toolbar">
                     <button id="add-product-btn" class="btn btn-primary" data-i18n="product_mgmt.add">+ Add Product</button>
+                    <button id="toggle-disabled-btn" class="btn btn-secondary" data-i18n="common.show_disabled">Show Disabled Items</button>
                 </div>
 
                 <div id="loading" class="loading" data-i18n="common.loading">Loading...</div>
@@ -74,6 +75,13 @@
                             <label for="product-memo" data-i18n="product_mgmt.memo">Memo</label>
                             <textarea id="product-memo" rows="3"></textarea>
                             <span class="error-message" id="product-memo-error"></span>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="product-is-disabled">
+                                <span data-i18n="common.is_disabled">Disabled</span>
+                            </label>
                         </div>
 
                         <div class="modal-actions">

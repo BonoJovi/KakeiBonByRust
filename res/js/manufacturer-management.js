@@ -15,6 +15,7 @@ let editingManufacturerId = null;
 let manufacturerModal = null;
 let deleteModal = null;
 let manufacturerToDelete = null;
+let showDisabledItems = false;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
@@ -55,6 +56,7 @@ function initManufacturerModal() {
                 modalTitle.setAttribute('data-i18n', 'manufacturer_mgmt.add');
                 modalTitle.textContent = i18n.t('manufacturer_mgmt.add');
                 editingManufacturerId = null;
+                document.getElementById('manufacturer-is-disabled').checked = false;
             } else if (mode === 'edit') {
                 modalTitle.setAttribute('data-i18n', 'manufacturer_mgmt.edit');
                 modalTitle.textContent = i18n.t('manufacturer_mgmt.edit');
@@ -62,6 +64,7 @@ function initManufacturerModal() {
                 // Populate form
                 document.getElementById('manufacturer-name').value = data.manufacturer_name;
                 document.getElementById('manufacturer-memo').value = data.memo || '';
+                document.getElementById('manufacturer-is-disabled').checked = data.is_disabled === 1;
 
                 editingManufacturerId = data.manufacturer_id;
             }
@@ -108,6 +111,13 @@ function setupEventListeners() {
     document.getElementById('add-manufacturer-btn').addEventListener('click', () => {
         openModal('add');
     });
+
+    // Toggle disabled items button
+    document.getElementById('toggle-disabled-btn').addEventListener('click', () => {
+        showDisabledItems = !showDisabledItems;
+        updateToggleButton();
+        loadManufacturers();
+    });
 }
 
 function openModal(mode, data = null) {
@@ -124,6 +134,17 @@ function clearErrors() {
     });
 }
 
+function updateToggleButton() {
+    const btn = document.getElementById('toggle-disabled-btn');
+    if (showDisabledItems) {
+        btn.setAttribute('data-i18n', 'common.hide_disabled');
+        btn.textContent = i18n.t('common.hide_disabled');
+    } else {
+        btn.setAttribute('data-i18n', 'common.show_disabled');
+        btn.textContent = i18n.t('common.show_disabled');
+    }
+}
+
 async function loadManufacturers() {
     const loading = document.getElementById('loading');
     const table = document.getElementById('manufacturers-table');
@@ -132,9 +153,10 @@ async function loadManufacturers() {
         loading.style.display = 'block';
         table.style.display = 'none';
 
-        console.log('Loading manufacturers for user:', currentUserId);
+        console.log('Loading manufacturers for user:', currentUserId, 'includeDisabled:', showDisabledItems);
         manufacturers = await invoke('get_manufacturers', {
-            userId: currentUserId
+            userId: currentUserId,
+            includeDisabled: showDisabledItems
         });
         console.log('Loaded manufacturers:', manufacturers);
 
@@ -167,14 +189,31 @@ function renderManufacturers() {
     manufacturers.forEach(manufacturer => {
         const row = tbody.insertRow();
 
+        // Apply styling for disabled items
+        const isDisabled = manufacturer.is_disabled === 1;
+        if (isDisabled) {
+            row.style.backgroundColor = '#6c757d';  // Medium gray background
+            // Note: No opacity - keeps buttons clearly visible
+        }
+
         // Manufacturer Name
         const nameCell = row.insertCell();
-        nameCell.textContent = manufacturer.manufacturer_name;
+        if (isDisabled) {
+            // Add [非表示] badge for disabled items
+            const badge = `<span style="color: #ffc107; font-weight: bold; margin-left: 8px;">[${i18n.t('common.disabled_label')}]</span>`;
+            nameCell.innerHTML = `<span style="color: #ffffff;">${manufacturer.manufacturer_name}</span>${badge}`;
+        } else {
+            nameCell.textContent = manufacturer.manufacturer_name;
+        }
 
         // Memo
         const memoCell = row.insertCell();
         memoCell.textContent = manufacturer.memo || '-';
-        memoCell.style.color = manufacturer.memo ? '#212529' : '#999';
+        if (isDisabled) {
+            memoCell.style.color = '#ffffff';  // White text for disabled items
+        } else {
+            memoCell.style.color = manufacturer.memo ? '#212529' : '#999';
+        }
 
         // Actions
         const actionsCell = row.insertCell();
@@ -205,6 +244,7 @@ function renderManufacturers() {
 async function saveManufacturer() {
     const manufacturerName = document.getElementById('manufacturer-name').value.trim();
     const memo = document.getElementById('manufacturer-memo').value.trim();
+    const isDisabled = document.getElementById('manufacturer-is-disabled').checked ? 1 : 0;
 
     // Clear previous errors
     clearErrors();
@@ -224,7 +264,8 @@ async function saveManufacturer() {
                 manufacturerId: editingManufacturerId,
                 manufacturerName: manufacturerName,
                 memo: memo || null,
-                displayOrder: manufacturer.display_order
+                displayOrder: manufacturer.display_order,
+                isDisabled: isDisabled
             });
             console.log('Manufacturer updated successfully');
         } else {
@@ -232,7 +273,8 @@ async function saveManufacturer() {
             await invoke('add_manufacturer', {
                 userId: currentUserId,
                 manufacturerName: manufacturerName,
-                memo: memo || null
+                memo: memo || null,
+                isDisabled: isDisabled === 1 ? isDisabled : null
             });
             console.log('Manufacturer added successfully');
         }

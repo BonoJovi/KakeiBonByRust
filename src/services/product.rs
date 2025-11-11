@@ -22,6 +22,7 @@ pub struct AddProductRequest {
     pub product_name: String,
     pub manufacturer_id: Option<i64>,
     pub memo: Option<String>,
+    pub is_disabled: Option<i64>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -30,14 +31,19 @@ pub struct UpdateProductRequest {
     pub manufacturer_id: Option<i64>,
     pub memo: Option<String>,
     pub display_order: i64,
+    pub is_disabled: i64,
 }
 
 /// Get all products for a user
-pub async fn get_products(pool: &SqlitePool, user_id: i64) -> Result<Vec<Product>, String> {
-    let products = sqlx::query_as::<_, Product>(
+pub async fn get_products(pool: &SqlitePool, user_id: i64, include_disabled: bool) -> Result<Vec<Product>, String> {
+    let query = if include_disabled {
+        sql_queries::PRODUCT_GET_ALL_INCLUDING_DISABLED
+    } else {
         sql_queries::PRODUCT_GET_ALL
-    )
-    .bind(user_id)
+    };
+
+    let products = sqlx::query_as::<_, Product>(query)
+        .bind(user_id)
     .fetch_all(pool)
     .await
     .map_err(|e| format!("Failed to get products: {}", e))?;
@@ -127,6 +133,9 @@ pub async fn add_product(
     // Get next display order
     let display_order = get_next_display_order(pool, user_id).await?;
 
+    // Get is_disabled value (default to 0)
+    let is_disabled = request.is_disabled.unwrap_or(0);
+
     // Insert product
     sqlx::query(sql_queries::PRODUCT_INSERT)
         .bind(user_id)
@@ -134,6 +143,7 @@ pub async fn add_product(
         .bind(&request.manufacturer_id)
         .bind(&request.memo)
         .bind(display_order)
+        .bind(is_disabled)
         .execute(pool)
         .await
         .map_err(|e| format!("Failed to add product: {}", e))?;
@@ -169,6 +179,7 @@ pub async fn update_product(
         .bind(&request.manufacturer_id)
         .bind(&request.memo)
         .bind(request.display_order)
+        .bind(request.is_disabled)
         .bind(user_id)
         .bind(product_id)
         .execute(pool)
@@ -249,12 +260,13 @@ mod tests {
             product_name: "サバ缶".to_string(),
             manufacturer_id: None,
             memo: Some("テストメモ".to_string()),
+            is_disabled: None,
         };
 
         let result = add_product(&pool, 2, request).await;
         assert!(result.is_ok());
 
-        let products = get_products(&pool, 2).await.unwrap();
+        let products = get_products(&pool, 2, false).await.unwrap();
         assert_eq!(products.len(), 1);
         assert_eq!(products[0].product_name, "サバ缶");
         assert_eq!(products[0].manufacturer_id, None);
@@ -268,10 +280,11 @@ mod tests {
         let manufacturer_request = AddManufacturerRequest {
             manufacturer_name: "ニッスイ".to_string(),
             memo: None,
+            is_disabled: None,
         };
         add_manufacturer(&pool, 2, manufacturer_request).await.unwrap();
 
-        let manufacturers = crate::services::manufacturer::get_manufacturers(&pool, 2).await.unwrap();
+        let manufacturers = crate::services::manufacturer::get_manufacturers(&pool, 2, false).await.unwrap();
         let manufacturer_id = manufacturers[0].manufacturer_id;
 
         // Add product
@@ -279,12 +292,13 @@ mod tests {
             product_name: "サバ缶".to_string(),
             manufacturer_id: Some(manufacturer_id),
             memo: Some("テストメモ".to_string()),
+            is_disabled: None,
         };
 
         let result = add_product(&pool, 2, request).await;
         assert!(result.is_ok());
 
-        let products = get_products(&pool, 2).await.unwrap();
+        let products = get_products(&pool, 2, false).await.unwrap();
         assert_eq!(products.len(), 1);
         assert_eq!(products[0].product_name, "サバ缶");
         assert_eq!(products[0].manufacturer_id, Some(manufacturer_id));
@@ -300,10 +314,11 @@ mod tests {
             product_name: "サバ缶".to_string(),
             manufacturer_id: None,
             memo: None,
+            is_disabled: None,
         };
         add_product(&pool, 2, add_request).await.unwrap();
 
-        let products = get_products(&pool, 2).await.unwrap();
+        let products = get_products(&pool, 2, false).await.unwrap();
         let product_id = products[0].product_id;
 
         // Update product
@@ -312,6 +327,7 @@ mod tests {
             manufacturer_id: None,
             memo: Some("更新後メモ".to_string()),
             display_order: 1,
+            is_disabled: 0,
         };
 
         let result = update_product(&pool, 2, product_id, update_request).await;
@@ -331,10 +347,11 @@ mod tests {
             product_name: "サバ缶".to_string(),
             manufacturer_id: None,
             memo: None,
+            is_disabled: None,
         };
         add_product(&pool, 2, request).await.unwrap();
 
-        let products = get_products(&pool, 2).await.unwrap();
+        let products = get_products(&pool, 2, false).await.unwrap();
         let product_id = products[0].product_id;
 
         // Delete product
@@ -342,7 +359,7 @@ mod tests {
         assert!(result.is_ok());
 
         // Verify product is disabled
-        let products = get_products(&pool, 2).await.unwrap();
+        let products = get_products(&pool, 2, false).await.unwrap();
         assert_eq!(products.len(), 0);
     }
 
@@ -354,6 +371,7 @@ mod tests {
             product_name: "   ".to_string(),
             manufacturer_id: None,
             memo: None,
+            is_disabled: None,
         };
 
         let result = add_product(&pool, 2, request).await;
@@ -370,6 +388,7 @@ mod tests {
             product_name: "サバ缶".to_string(),
             manufacturer_id: None,
             memo: None,
+            is_disabled: None,
         };
         let result1 = add_product(&pool, 2, request1).await;
         assert!(result1.is_ok());
@@ -379,6 +398,7 @@ mod tests {
             product_name: "サバ缶".to_string(),
             manufacturer_id: None,
             memo: Some("異なるメモ".to_string()),
+            is_disabled: None,
         };
         let result2 = add_product(&pool, 2, request2).await;
         assert!(result2.is_err());
@@ -393,10 +413,11 @@ mod tests {
         let manufacturer_request = AddManufacturerRequest {
             manufacturer_name: "ニッスイ".to_string(),
             memo: None,
+            is_disabled: None,
         };
         add_manufacturer(&pool, 2, manufacturer_request).await.unwrap();
 
-        let manufacturers = crate::services::manufacturer::get_manufacturers(&pool, 2).await.unwrap();
+        let manufacturers = crate::services::manufacturer::get_manufacturers(&pool, 2, false).await.unwrap();
         let manufacturer_id = manufacturers[0].manufacturer_id;
 
         // Add product with manufacturer
@@ -404,6 +425,7 @@ mod tests {
             product_name: "サバ缶".to_string(),
             manufacturer_id: Some(manufacturer_id),
             memo: None,
+            is_disabled: None,
         };
         add_product(&pool, 2, product_request).await.unwrap();
 
@@ -411,7 +433,7 @@ mod tests {
         crate::services::manufacturer::delete_manufacturer(&pool, 2, manufacturer_id).await.unwrap();
 
         // Verify product still exists but manufacturer info is gone from list view
-        let products = get_products(&pool, 2).await.unwrap();
+        let products = get_products(&pool, 2, false).await.unwrap();
         assert_eq!(products.len(), 1);
         // Due to LEFT JOIN, manufacturer_name should be None when manufacturer is disabled
         // (The actual manufacturer_id in PRODUCTS table remains, but manufacturer is not shown in list)

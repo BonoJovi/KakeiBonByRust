@@ -16,6 +16,7 @@ let editingProductId = null;
 let productModal = null;
 let deleteModal = null;
 let productToDelete = null;
+let showDisabledItems = false;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
@@ -58,6 +59,7 @@ function initProductModal() {
                 modalTitle.setAttribute('data-i18n', 'product_mgmt.add');
                 modalTitle.textContent = i18n.t('product_mgmt.add');
                 editingProductId = null;
+                document.getElementById('product-is-disabled').checked = false;
             } else if (mode === 'edit') {
                 modalTitle.setAttribute('data-i18n', 'product_mgmt.edit');
                 modalTitle.textContent = i18n.t('product_mgmt.edit');
@@ -66,6 +68,7 @@ function initProductModal() {
                 document.getElementById('product-name').value = data.product_name;
                 document.getElementById('product-manufacturer').value = data.manufacturer_id || '';
                 document.getElementById('product-memo').value = data.memo || '';
+                document.getElementById('product-is-disabled').checked = data.is_disabled === 1;
 
                 editingProductId = data.product_id;
             }
@@ -112,6 +115,13 @@ function setupEventListeners() {
     document.getElementById('add-product-btn').addEventListener('click', () => {
         openModal('add');
     });
+
+    // Toggle disabled items button
+    document.getElementById('toggle-disabled-btn').addEventListener('click', () => {
+        showDisabledItems = !showDisabledItems;
+        updateToggleButton();
+        loadProducts();
+    });
 }
 
 function openModal(mode, data = null) {
@@ -128,11 +138,23 @@ function clearErrors() {
     });
 }
 
+function updateToggleButton() {
+    const btn = document.getElementById('toggle-disabled-btn');
+    if (showDisabledItems) {
+        btn.setAttribute('data-i18n', 'common.hide_disabled');
+        btn.textContent = i18n.t('common.hide_disabled');
+    } else {
+        btn.setAttribute('data-i18n', 'common.show_disabled');
+        btn.textContent = i18n.t('common.show_disabled');
+    }
+}
+
 async function loadManufacturers() {
     try {
         console.log('Loading manufacturers for user:', currentUserId);
         manufacturers = await invoke('get_manufacturers', {
-            userId: currentUserId
+            userId: currentUserId,
+            includeDisabled: false
         });
         console.log('Loaded manufacturers:', manufacturers);
     } catch (error) {
@@ -170,9 +192,10 @@ async function loadProducts() {
         loading.style.display = 'block';
         table.style.display = 'none';
 
-        console.log('Loading products for user:', currentUserId);
+        console.log('Loading products for user:', currentUserId, 'includeDisabled:', showDisabledItems);
         products = await invoke('get_products', {
-            userId: currentUserId
+            userId: currentUserId,
+            includeDisabled: showDisabledItems
         });
         console.log('Loaded products:', products);
 
@@ -205,19 +228,40 @@ function renderProducts() {
     products.forEach(product => {
         const row = tbody.insertRow();
 
+        // Apply styling for disabled items
+        const isDisabled = product.is_disabled === 1;
+        if (isDisabled) {
+            row.style.backgroundColor = '#6c757d';  // Medium gray background
+            // Note: No opacity - keeps buttons clearly visible
+        }
+
         // Product Name
         const nameCell = row.insertCell();
-        nameCell.textContent = product.product_name;
+        if (isDisabled) {
+            // Add [非表示] badge for disabled items
+            const badge = `<span style="color: #ffc107; font-weight: bold; margin-left: 8px;">[${i18n.t('common.disabled_label')}]</span>`;
+            nameCell.innerHTML = `<span style="color: #ffffff;">${product.product_name}</span>${badge}`;
+        } else {
+            nameCell.textContent = product.product_name;
+        }
 
         // Manufacturer
         const manufacturerCell = row.insertCell();
         manufacturerCell.textContent = product.manufacturer_name || i18n.t('product_mgmt.manufacturer_none');
-        manufacturerCell.style.color = product.manufacturer_name ? '#212529' : '#999';
+        if (isDisabled) {
+            manufacturerCell.style.color = '#ffffff';  // White text for disabled items
+        } else {
+            manufacturerCell.style.color = product.manufacturer_name ? '#212529' : '#999';
+        }
 
         // Memo
         const memoCell = row.insertCell();
         memoCell.textContent = product.memo || '-';
-        memoCell.style.color = product.memo ? '#212529' : '#999';
+        if (isDisabled) {
+            memoCell.style.color = '#ffffff';  // White text for disabled items
+        } else {
+            memoCell.style.color = product.memo ? '#212529' : '#999';
+        }
 
         // Actions
         const actionsCell = row.insertCell();
@@ -250,6 +294,7 @@ async function saveProduct() {
     const manufacturerIdValue = document.getElementById('product-manufacturer').value;
     const manufacturerId = manufacturerIdValue ? parseInt(manufacturerIdValue) : null;
     const memo = document.getElementById('product-memo').value.trim();
+    const isDisabled = document.getElementById('product-is-disabled').checked ? 1 : 0;
 
     // Clear previous errors
     clearErrors();
@@ -270,7 +315,8 @@ async function saveProduct() {
                 productName: productName,
                 manufacturerId: manufacturerId,
                 memo: memo || null,
-                displayOrder: product.display_order
+                displayOrder: product.display_order,
+                isDisabled: isDisabled
             });
             console.log('Product updated successfully');
         } else {
@@ -279,7 +325,8 @@ async function saveProduct() {
                 userId: currentUserId,
                 productName: productName,
                 manufacturerId: manufacturerId,
-                memo: memo || null
+                memo: memo || null,
+                isDisabled: isDisabled === 1 ? isDisabled : null
             });
             console.log('Product added successfully');
         }
