@@ -16,6 +16,23 @@
 
 ---
 
+## 📑 Table of Contents / 目次
+
+- [🚧 Development Status / 開発状況](#-development-status--開発状況)
+- [📊 Repository Statistics / リポジトリ統計](#-repository-statistics--リポジトリ統計)
+- [📚 Legacy Version / 前身プロジェクト](#-legacy-version--前身プロジェクト)
+- [✨ Key Features / 主な特徴](#-key-features--主な特徴)
+- [🚀 Current Features / 実装済み機能](#-current-features--実装済み機能)
+- [💻 Technology Stack / 技術スタック](#-technology-stack--技術スタック)
+- [📦 Installation / インストール](#-installation--インストール)
+- [🧪 Test Results / テスト結果](#-test-results--テスト結果)
+- [📚 Documentation / ドキュメント](#-documentation--ドキュメント)
+- [🤝 Contributing / コントリビューション](#-contributing--コントリビューション)
+- [📄 License / ライセンス](#-license--ライセンス)
+- [🌟 Development Roadmap / 開発ロードマップ](#-development-roadmap--開発ロードマップ)
+
+---
+
 ## 🚧 Development Status / 開発状況
 
 **🔥 Actively Under Development / 鋭意開発中**
@@ -80,6 +97,14 @@ This Rust rewrite offers:
 ---
 
 ## ✨ Key Features / 主な特徴
+
+### 🎨 NOT Vibe Coding / NOTバイブコーディング
+Built with **proper planning and documentation first**, not vibes  
+雰囲気ではなく、**きちんとした計画とドキュメント作成**を先に行う開発スタイル
+
+### 👤 Clear User-First Policy / 明確なユーザーファーストポリシーによる設計
+Every feature is designed with **explicit user needs and usability** in mind  
+すべての機能は**明確なユーザーニーズと使いやすさ**を念頭に置いて設計されています
 
 ### 🔤 Large, Easy-to-Read Text / 大きな文字で見やすい
 Designed with high visibility in mind - comfortable for long-term use  
@@ -177,18 +202,72 @@ See [TEST_SUMMARY.md](docs/ja/TEST_SUMMARY.md) for details / 詳細は [TEST_SUM
 ## 📚 Documentation / ドキュメント
 
 ### For Users / ユーザー向け
-- 📖 **User Guide / ユーザーガイド**
-  - [English](docs/en/USER_GUIDE.md) / [日本語](docs/ja/USER_GUIDE.md)
 - 🔧 **Troubleshooting / トラブルシューティング**
   - [English](docs/en/TROUBLESHOOTING.md) / [日本語](docs/ja/TROUBLESHOOTING.md)
 
 ### For Developers / 開発者向け
+
+#### Core Guides / コアガイド
 - 🏗️ **Developer Guide / 開発者ガイド**
   - [English](docs/en/DEVELOPER_GUIDE.md) / [日本語](docs/ja/DEVELOPER_GUIDE.md)
-- 📝 **API Documentation / API ドキュメント**
-  - [Category Management API](docs/en/API_CATEGORY.md) / [費目管理 API](docs/ja/API_CATEGORY_ja.md)
 - 🧪 **Testing Strategy / テスト戦略**
   - [English](docs/en/TESTING.md) / [日本語](docs/ja/TESTING.md)
+- 📊 **Test Summary / テストサマリー**
+  - [English](docs/en/TEST_SUMMARY.md) / [日本語](docs/ja/TEST_SUMMARY.md)
+
+#### API Documentation / API ドキュメント
+- 📁 **Category Management API / 費目管理 API**
+  - [English](docs/en/API_CATEGORY.md) / [日本語](docs/ja/API_CATEGORY.md)
+- 🏪 **Shop Management API / 店舗管理 API**
+  - [English](docs/en/API_SHOP.md) / [日本語](docs/ja/API_SHOP.md)
+- 🏭 **Manufacturer Management API / メーカー管理 API**
+  - [English](docs/en/API_MANUFACTURER.md) / [日本語](docs/ja/API_MANUFACTURER.md)
+- 📦 **Product Management API / 商品管理 API**
+  - [English](docs/en/API_PRODUCT.md) / [日本語](docs/ja/API_PRODUCT.md)
+- 💰 **Transaction Management API / 入出金管理 API**
+  - [English](docs/en/API_TRANSACTION.md) / [日本語](docs/ja/API_TRANSACTION.md)
+
+#### UI Documentation / UI ドキュメント
+- 👥 **User Management UI / ユーザー管理 UI**
+  - [English](docs/en/USER_MANAGEMENT_UI.md) / [日本語](docs/ja/USER_MANAGEMENT_UI.md)
+- 🏦 **Account Management UI / 口座管理 UI**
+  - [English](docs/en/ACCOUNT_MANAGEMENT_UI.md) / [日本語](docs/ja/ACCOUNT_MANAGEMENT_UI.md)
+- 📁 **Category Management UI / 費目管理 UI**
+  - [English](docs/en/CATEGORY_MANAGEMENT_UI.md) / [日本語](docs/ja/CATEGORY_MANAGEMENT_UI.md)
+- 🏭 **Manufacturer & Product Management / メーカー・商品管理**
+  - [English](docs/en/MANUFACTURER_PRODUCT_MANAGEMENT.md) / [日本語](docs/ja/MANUFACTURER_PRODUCT_MANAGEMENT.md)
+- 💰 **Transaction Management UI / 入出金管理 UI**
+  - [English](docs/en/TRANSACTION_MANAGEMENT_UI_V2.md) / [日本語](docs/ja/TRANSACTION_MANAGEMENT_UI_V2.md)
+
+#### Feature Implementation / 機能実装
+- 🌐 **I18N Implementation / 国際化実装**
+  - [English](docs/en/I18N_IMPLEMENTATION.md) / [日本語](docs/ja/I18N_IMPLEMENTATION.md)
+- 🌍 **I18N Resources / 国際化リソース**
+  - [English](docs/en/I18N_RESOURCES.md) / [日本語](docs/ja/I18N_RESOURCES.md)
+- 🌐 **Dynamic Language Menu / 動的言語メニュー**
+  - [English](docs/en/DYNAMIC_LANGUAGE_MENU.md) / [日本語](docs/ja/DYNAMIC_LANGUAGE_MENU.md)
+- 🔤 **Font Size Implementation / フォントサイズ実装**
+  - [English](docs/en/font-size-implementation.md) / [日本語](docs/ja/font-size-implementation.md)
+- ♿ **Accessibility Indicators / アクセシビリティインジケーター**
+  - [English](docs/en/ACCESSIBILITY_INDICATORS.md) / [日本語](docs/ja/ACCESSIBILITY_INDICATORS.md)
+- 🚫 **IS_DISABLED Implementation / IS_DISABLED実装**
+  - [English](docs/en/IS_DISABLED_IMPLEMENTATION_GUIDE.md) / [日本語](docs/ja/IS_DISABLED_IMPLEMENTATION_GUIDE.md)
+
+#### Database & Security / データベース・セキュリティ
+- 🗄️ **Database Configuration / データベース設定**
+  - [English](docs/en/DATABASE_CONFIGURATION.md) / [日本語](docs/ja/DATABASE_CONFIGURATION.md)
+- 🔄 **Database Migration / データベースマイグレーション**
+  - [English](docs/en/DATABASE_MIGRATION.md) / [日本語](docs/ja/DATABASE_MIGRATION.md)
+- 🔐 **Encryption Management / 暗号化管理**
+  - [English](docs/en/ENCRYPTION_MANAGEMENT.md) / [日本語](docs/ja/ENCRYPTION_MANAGEMENT.md)
+- 👤 **User Management / ユーザー管理**
+  - [English](docs/en/USER_MANAGEMENT.md) / [日本語](docs/ja/USER_MANAGEMENT.md)
+- ⚙️ **Settings Management / 設定管理**
+  - [English](docs/en/SETTINGS_MANAGEMENT.md) / [日本語](docs/ja/SETTINGS_MANAGEMENT.md)
+
+#### Design Documents / 設計ドキュメント
+- 💰 **Transaction Design V2 / 入出金設計 V2**
+  - [English](docs/en/TRANSACTION_DESIGN_V2.md) / [日本語](docs/ja/TRANSACTION_DESIGN_V2.md)
 
 ### Project Information / プロジェクト情報
 - 👥 **Project Participants / プロジェクト参加者**
