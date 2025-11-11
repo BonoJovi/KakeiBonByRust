@@ -544,7 +544,55 @@ VALUES
 (849, 'transaction_mgmt.max_placeholder', 'en', 'Max', 'transaction_mgmt', 'Maximum amount placeholder', datetime('now')),
 (850, 'transaction_mgmt.max_placeholder', 'ja', '最大', 'transaction_mgmt', '最大金額プレースホルダー', datetime('now')),
 (851, 'transaction_mgmt.search_placeholder', 'en', 'Search in memo', 'transaction_mgmt', 'Keyword search placeholder', datetime('now')),
-(852, 'transaction_mgmt.search_placeholder', 'ja', 'メモを検索', 'transaction_mgmt', 'キーワード検索プレースホルダー', datetime('now'));
+(852, 'transaction_mgmt.search_placeholder', 'ja', 'メモを検索', 'transaction_mgmt', 'キーワード検索プレースホルダー', datetime('now')),
+
+-- Manufacturer Management
+(853, 'manufacturer_mgmt.title', 'en', 'Manufacturer Management', 'manufacturer_mgmt', 'Manufacturer management page title', datetime('now')),
+(854, 'manufacturer_mgmt.title', 'ja', 'メーカー管理', 'manufacturer_mgmt', 'メーカー管理ページタイトル', datetime('now')),
+(855, 'manufacturer_mgmt.list', 'en', 'Manufacturer List', 'manufacturer_mgmt', 'Manufacturer list section title', datetime('now')),
+(856, 'manufacturer_mgmt.list', 'ja', 'メーカー一覧', 'manufacturer_mgmt', 'メーカー一覧セクションタイトル', datetime('now')),
+(857, 'manufacturer_mgmt.add', 'en', 'Add Manufacturer', 'manufacturer_mgmt', 'Add manufacturer button', datetime('now')),
+(858, 'manufacturer_mgmt.add', 'ja', 'メーカー追加', 'manufacturer_mgmt', 'メーカー追加ボタン', datetime('now')),
+(859, 'manufacturer_mgmt.edit', 'en', 'Edit Manufacturer', 'manufacturer_mgmt', 'Edit manufacturer modal title', datetime('now')),
+(860, 'manufacturer_mgmt.edit', 'ja', 'メーカー編集', 'manufacturer_mgmt', 'メーカー編集モーダルタイトル', datetime('now')),
+(861, 'manufacturer_mgmt.code', 'en', 'Manufacturer Code', 'manufacturer_mgmt', 'Manufacturer code label', datetime('now')),
+(862, 'manufacturer_mgmt.code', 'ja', 'メーカーコード', 'manufacturer_mgmt', 'メーカーコードラベル', datetime('now')),
+(863, 'manufacturer_mgmt.name', 'en', 'Manufacturer Name', 'manufacturer_mgmt', 'Manufacturer name label', datetime('now')),
+(864, 'manufacturer_mgmt.name', 'ja', 'メーカー名', 'manufacturer_mgmt', 'メーカー名ラベル', datetime('now')),
+(865, 'manufacturer_mgmt.memo', 'en', 'Memo', 'manufacturer_mgmt', 'Memo label', datetime('now')),
+(866, 'manufacturer_mgmt.memo', 'ja', 'メモ', 'manufacturer_mgmt', 'メモラベル', datetime('now')),
+(867, 'manufacturer_mgmt.display_order', 'en', 'Display Order', 'manufacturer_mgmt', 'Display order label', datetime('now')),
+(868, 'manufacturer_mgmt.display_order', 'ja', '表示順', 'manufacturer_mgmt', '表示順ラベル', datetime('now')),
+(869, 'manufacturer_mgmt.no_data', 'en', 'No manufacturers found', 'manufacturer_mgmt', 'No manufacturers message', datetime('now')),
+(870, 'manufacturer_mgmt.no_data', 'ja', 'メーカーが見つかりません', 'manufacturer_mgmt', 'メーカーなしメッセージ', datetime('now')),
+(871, 'manufacturer_mgmt.delete_confirm', 'en', 'Are you sure you want to delete this manufacturer?', 'manufacturer_mgmt', 'Delete confirmation message', datetime('now')),
+(872, 'manufacturer_mgmt.delete_confirm', 'ja', 'このメーカーを削除してもよろしいですか？', 'manufacturer_mgmt', '削除確認メッセージ', datetime('now')),
+
+-- Product Management
+(873, 'product_mgmt.title', 'en', 'Product Management', 'product_mgmt', 'Product management page title', datetime('now')),
+(874, 'product_mgmt.title', 'ja', '商品管理', 'product_mgmt', '商品管理ページタイトル', datetime('now')),
+(875, 'product_mgmt.list', 'en', 'Product List', 'product_mgmt', 'Product list section title', datetime('now')),
+(876, 'product_mgmt.list', 'ja', '商品一覧', 'product_mgmt', '商品一覧セクションタイトル', datetime('now')),
+(877, 'product_mgmt.add', 'en', 'Add Product', 'product_mgmt', 'Add product button', datetime('now')),
+(878, 'product_mgmt.add', 'ja', '商品追加', 'product_mgmt', '商品追加ボタン', datetime('now')),
+(879, 'product_mgmt.edit', 'en', 'Edit Product', 'product_mgmt', 'Edit product modal title', datetime('now')),
+(880, 'product_mgmt.edit', 'ja', '商品編集', 'product_mgmt', '商品編集モーダルタイトル', datetime('now')),
+(881, 'product_mgmt.code', 'en', 'Product Code', 'product_mgmt', 'Product code label', datetime('now')),
+(882, 'product_mgmt.code', 'ja', '商品コード', 'product_mgmt', '商品コードラベル', datetime('now')),
+(883, 'product_mgmt.name', 'en', 'Product Name', 'product_mgmt', 'Product name label', datetime('now')),
+(884, 'product_mgmt.name', 'ja', '商品名', 'product_mgmt', '商品名ラベル', datetime('now')),
+(885, 'product_mgmt.manufacturer', 'en', 'Manufacturer', 'product_mgmt', 'Manufacturer label', datetime('now')),
+(886, 'product_mgmt.manufacturer', 'ja', 'メーカー', 'product_mgmt', 'メーカーラベル', datetime('now')),
+(887, 'product_mgmt.manufacturer_none', 'en', '(Not specified)', 'product_mgmt', 'No manufacturer label', datetime('now')),
+(888, 'product_mgmt.manufacturer_none', 'ja', '(未指定)', 'product_mgmt', 'メーカー未指定ラベル', datetime('now')),
+(889, 'product_mgmt.memo', 'en', 'Memo', 'product_mgmt', 'Memo label', datetime('now')),
+(890, 'product_mgmt.memo', 'ja', 'メモ', 'product_mgmt', 'メモラベル', datetime('now')),
+(891, 'product_mgmt.display_order', 'en', 'Display Order', 'product_mgmt', 'Display order label', datetime('now')),
+(892, 'product_mgmt.display_order', 'ja', '表示順', 'product_mgmt', '表示順ラベル', datetime('now')),
+(893, 'product_mgmt.no_data', 'en', 'No products found', 'product_mgmt', 'No products message', datetime('now')),
+(894, 'product_mgmt.no_data', 'ja', '商品が見つかりません', 'product_mgmt', '商品なしメッセージ', datetime('now')),
+(895, 'product_mgmt.delete_confirm', 'en', 'Are you sure you want to delete this product?', 'product_mgmt', 'Delete confirmation message', datetime('now')),
+(896, 'product_mgmt.delete_confirm', 'ja', 'この商品を削除してもよろしいですか？', 'product_mgmt', '削除確認メッセージ', datetime('now'));
 
 -- NOTE: Category data will be migrated from existing SQL later
 
@@ -608,6 +656,50 @@ CREATE TABLE IF NOT EXISTS SHOPS (
 -- Create indexes for SHOPS
 CREATE INDEX IF NOT EXISTS idx_shops_user
     ON SHOPS(USER_ID, DISPLAY_ORDER);
+
+-- ============================================================================
+-- Manufacturer and Product Management Tables
+-- ============================================================================
+
+-- SQL_26000001: Create MANUFACTURERS table
+CREATE TABLE IF NOT EXISTS MANUFACTURERS (
+    MANUFACTURER_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    USER_ID INTEGER NOT NULL,
+    MANUFACTURER_NAME TEXT NOT NULL,
+    MEMO TEXT,
+    DISPLAY_ORDER INTEGER NOT NULL DEFAULT 0,
+    IS_DISABLED INTEGER DEFAULT 0,
+    ENTRY_DT DATETIME NOT NULL DEFAULT (datetime('now')),
+    UPDATE_DT DATETIME,
+    FOREIGN KEY (USER_ID) REFERENCES USERS(USER_ID) ON DELETE CASCADE,
+    UNIQUE(USER_ID, MANUFACTURER_NAME)
+);
+
+-- Create indexes for MANUFACTURERS
+CREATE INDEX IF NOT EXISTS idx_manufacturers_user
+    ON MANUFACTURERS(USER_ID, DISPLAY_ORDER);
+
+-- SQL_26000002: Create PRODUCTS table
+CREATE TABLE IF NOT EXISTS PRODUCTS (
+    PRODUCT_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    USER_ID INTEGER NOT NULL,
+    PRODUCT_NAME TEXT NOT NULL,
+    MANUFACTURER_ID INTEGER,
+    MEMO TEXT,
+    DISPLAY_ORDER INTEGER NOT NULL DEFAULT 0,
+    IS_DISABLED INTEGER DEFAULT 0,
+    ENTRY_DT DATETIME NOT NULL DEFAULT (datetime('now')),
+    UPDATE_DT DATETIME,
+    FOREIGN KEY (USER_ID) REFERENCES USERS(USER_ID) ON DELETE CASCADE,
+    FOREIGN KEY (MANUFACTURER_ID) REFERENCES MANUFACTURERS(MANUFACTURER_ID) ON DELETE SET NULL,
+    UNIQUE(USER_ID, PRODUCT_NAME)
+);
+
+-- Create indexes for PRODUCTS
+CREATE INDEX IF NOT EXISTS idx_products_user
+    ON PRODUCTS(USER_ID, DISPLAY_ORDER);
+CREATE INDEX IF NOT EXISTS idx_products_manufacturer
+    ON PRODUCTS(MANUFACTURER_ID);
 
 -- ============================================================================
 -- Transaction Management Tables
@@ -682,3 +774,14 @@ CREATE INDEX IF NOT EXISTS idx_transactions_header_date ON TRANSACTIONS_HEADER(T
 -- Create indexes for transactions_detail
 CREATE INDEX IF NOT EXISTS idx_transactions_detail_transaction ON TRANSACTIONS_DETAIL(TRANSACTION_ID);
 CREATE INDEX IF NOT EXISTS idx_transactions_detail_categories ON TRANSACTIONS_DETAIL(CATEGORY2_CODE, CATEGORY3_CODE);
+
+-- ============================================================================
+-- I18N Resources Initial Data
+
+-- Additional menu items for Shop, Manufacturer, and Product management (added 2025-11-11)
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, ENTRY_DT) VALUES (897, 'menu.shop_management', 'en', 'Shop Management', 'menu', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, ENTRY_DT) VALUES (898, 'menu.shop_management', 'ja', '店舗管理', 'menu', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, ENTRY_DT) VALUES (899, 'menu.manufacturer_management', 'en', 'Manufacturer Management', 'menu', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, ENTRY_DT) VALUES (900, 'menu.manufacturer_management', 'ja', 'メーカー管理', 'menu', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, ENTRY_DT) VALUES (901, 'menu.product_management', 'en', 'Product Management', 'menu', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, ENTRY_DT) VALUES (902, 'menu.product_management', 'ja', '商品管理', 'menu', datetime('now'));
