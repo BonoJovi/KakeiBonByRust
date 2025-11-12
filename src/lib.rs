@@ -1470,7 +1470,11 @@ pub fn run() {
                     .expect("Failed to connect to database");
                 database.initialize().await
                     .expect("Failed to initialize database");
-                
+
+                // Run transaction-related table migrations
+                database.migrate_transactions().await
+                    .expect("Failed to migrate transaction tables");
+
                 let auth_service = AuthService::new(database.pool().clone());
                 let user_mgmt_service = UserManagementService::new(database.pool().clone());
                 let encryption_service = EncryptionService::new(database.pool().clone());
