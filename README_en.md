@@ -32,6 +32,8 @@ This Rust version offers:
 ## Overview
 A modern household budget management application built with Rust and Tauri framework.
 
+**Project Started**: 2025-10-22 (JST)
+
 ## Features
 - 💰 Expense and income tracking
 - 👥 Multi-user support with role-based access control

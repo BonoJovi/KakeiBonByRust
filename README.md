@@ -40,6 +40,7 @@
 Development is progressing smoothly, and we strive to update daily!  
 開発は順調に進んでおり、できるだけ日々更新するようにしています！
 
+**Project Started / プロジェクト開始**: 2025-10-22 (JST)  
 **Last Updated / 最終更新**: 2025-11-11 (JST)
 
 <!-- STATS_START -->
