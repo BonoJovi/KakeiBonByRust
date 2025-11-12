@@ -4,6 +4,7 @@ import i18n from './i18n.js';
 import { adjustWindowSize } from './font-size.js';
 import { ROLE_ADMIN, ROLE_USER } from './consts.js';
 import { Modal } from './modal.js';
+import { setupIndicators } from './indicators.js';
 
 console.log('=== ACCOUNT-MANAGEMENT.JS LOADED - ALL imports enabled ===');
 console.log('invoke:', typeof invoke);
@@ -29,6 +30,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         i18n.updateUI();
         
         initAccountModal();
+        setupIndicators();
         setupEventListeners();
         await loadTemplates();
         await loadAccounts();
@@ -149,7 +151,7 @@ async function loadAccounts() {
         });
         
         if (accounts.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #999;">No accounts found</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #999;">${i18n.t('account_mgmt.no_accounts')}</td></tr>`;
         } else {
             accounts.forEach(account => {
                 const row = createAccountRow(account);

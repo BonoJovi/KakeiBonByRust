@@ -79,3 +79,30 @@ button:focus,
     background-color: #2e7d32;
     border-radius: 2px;
 }
+
+/* Checkbox/Radio label indicator */
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+}
+
+.checkbox-label.active::before {
+    content: '●';
+    color: #4CAF50;
+    font-size: 2em;
+    line-height: 1;
+    flex-shrink: 0;
+    margin-right: 0.5rem;
+    /* Black outline for better visibility for color-blind users */
+    text-shadow: 
+        -2px -2px 0 #000,
+         2px -2px 0 #000,
+        -2px  2px 0 #000,
+         2px  2px 0 #000,
+        -2px  0   0 #000,
+         2px  0   0 #000,
+         0   -2px 0 #000,
+         0    2px 0 #000;
+}

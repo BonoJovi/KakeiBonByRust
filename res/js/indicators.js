@@ -5,10 +5,11 @@
 
 /**
  * Wrap input fields in input-wrapper div for proper layout
- * Only wraps inputs in .form-group that are not already wrapped
+ * Only wraps inputs/textareas/selects in .form-group that are not already wrapped
+ * Excludes checkboxes and radio buttons as they have different styling
  */
 export function wrapInputFields() {
-    document.querySelectorAll('.form-group input').forEach(input => {
+    document.querySelectorAll('.form-group input:not([type="checkbox"]):not([type="radio"]), .form-group textarea, .form-group select').forEach(input => {
         // Check if already wrapped
         if (!input.parentElement.classList.contains('input-wrapper')) {
             const wrapper = document.createElement('div');
@@ -22,20 +23,39 @@ export function wrapInputFields() {
 /**
  * Setup focus indicators for all input fields
  * Adds 'active' class to parent .form-group when input is focused
+ * For checkboxes/radios, adds 'active' class to .checkbox-label
  */
 export function setupInputIndicators() {
     document.querySelectorAll('input, textarea, select').forEach(input => {
         input.addEventListener('focus', function() {
-            const formGroup = this.closest('.form-group');
-            if (formGroup) {
-                formGroup.classList.add('active');
+            // For checkboxes and radio buttons, highlight the label
+            if (this.type === 'checkbox' || this.type === 'radio') {
+                const label = this.closest('.checkbox-label');
+                if (label) {
+                    label.classList.add('active');
+                }
+            } else {
+                // For other inputs, highlight the form-group
+                const formGroup = this.closest('.form-group');
+                if (formGroup) {
+                    formGroup.classList.add('active');
+                }
             }
         });
         
         input.addEventListener('blur', function() {
-            const formGroup = this.closest('.form-group');
-            if (formGroup) {
-                formGroup.classList.remove('active');
+            // For checkboxes and radio buttons, remove highlight from label
+            if (this.type === 'checkbox' || this.type === 'radio') {
+                const label = this.closest('.checkbox-label');
+                if (label) {
+                    label.classList.remove('active');
+                }
+            } else {
+                // For other inputs, remove highlight from form-group
+                const formGroup = this.closest('.form-group');
+                if (formGroup) {
+                    formGroup.classList.remove('active');
+                }
             }
         });
     });

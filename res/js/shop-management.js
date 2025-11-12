@@ -3,6 +3,7 @@ import { HTML_FILES } from './html-files.js';
 import i18n from './i18n.js';
 import { adjustWindowSize } from './font-size.js';
 import { Modal } from './modal.js';
+import { setupIndicators } from './indicators.js';
 
 console.log('=== SHOP-MANAGEMENT.JS LOADED ===');
 
@@ -27,6 +28,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         initShopModal();
         initDeleteModal();
+        setupIndicators();
         setupEventListeners();
         await loadShops();
 
