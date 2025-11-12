@@ -118,26 +118,32 @@ CREATE INDEX idx_headers_to_account ON TRANSACTION_HEADERS(USER_ID, TO_ACCOUNT_C
 | 'ROUND_HALF' | Matches with half-round pattern |
 | 'MANUAL' | Manual adjustment (saved despite mismatch) |
 
-### 3. Detail Table (TRANSACTION_DETAILS)
+### 3. Detail Table (TRANSACTIONS_DETAIL)
 
 ```sql
-CREATE TABLE TRANSACTION_DETAILS (
-    DETAIL_ID INTEGER PRIMARY KEY,
-    HEADER_ID INTEGER NOT NULL,
-    CATEGORY2_CODE VARCHAR(50),             -- Middle category
-    CATEGORY3_CODE VARCHAR(50),             -- Minor category
-    AMOUNT INTEGER NOT NULL,                -- Base price (tax-excluded)
-    TAX_RATE DECIMAL(5,2) DEFAULT 8.00,     -- Tax rate (%) default 8%
-    TAX_AMOUNT INTEGER,                     -- Tax amount (auto-calculated, manually adjustable)
-    ITEM_DESCRIPTION TEXT NOT NULL,         -- Product name
-    ITEM_MEMO TEXT,
-    DISPLAY_ORDER INTEGER,
-    ENTRY_DT DATETIME NOT NULL,
+CREATE TABLE TRANSACTIONS_DETAIL (
+    DETAIL_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    TRANSACTION_ID INTEGER NOT NULL,
+    USER_ID INTEGER NOT NULL,
+    CATEGORY1_CODE VARCHAR(50) NOT NULL,
+    CATEGORY2_CODE VARCHAR(50) NOT NULL,
+    CATEGORY3_CODE VARCHAR(50) NOT NULL,
+    ITEM_NAME TEXT NOT NULL,
+    AMOUNT INTEGER NOT NULL,
+    TAX_AMOUNT INTEGER DEFAULT 0,
+    TAX_RATE INTEGER DEFAULT 8,
+    MEMO_ID INTEGER,
+    ENTRY_DT DATETIME NOT NULL DEFAULT (datetime('now')),
     UPDATE_DT DATETIME,
-    FOREIGN KEY (HEADER_ID) REFERENCES TRANSACTION_HEADERS(HEADER_ID) ON DELETE CASCADE
+    FOREIGN KEY (TRANSACTION_ID) REFERENCES TRANSACTIONS_HEADER(TRANSACTION_ID) ON DELETE CASCADE,
+    FOREIGN KEY (USER_ID, CATEGORY1_CODE, CATEGORY2_CODE) REFERENCES CATEGORY2(USER_ID, CATEGORY1_CODE, CATEGORY2_CODE),
+    FOREIGN KEY (USER_ID, CATEGORY1_CODE, CATEGORY2_CODE, CATEGORY3_CODE) REFERENCES CATEGORY3(USER_ID, CATEGORY1_CODE, CATEGORY2_CODE, CATEGORY3_CODE),
+    FOREIGN KEY (MEMO_ID) REFERENCES MEMOS(MEMO_ID),
+    CHECK (ITEM_NAME != '')
 );
 
-CREATE INDEX idx_details_header ON TRANSACTION_DETAILS(HEADER_ID);
+CREATE INDEX idx_details_transaction ON TRANSACTIONS_DETAIL(TRANSACTION_ID);
+CREATE INDEX idx_details_user_categories ON TRANSACTIONS_DETAIL(USER_ID, CATEGORY1_CODE, CATEGORY2_CODE, CATEGORY3_CODE);
 ```
 
 #### Design Points
@@ -146,6 +152,14 @@ CREATE INDEX idx_details_header ON TRANSACTION_DETAILS(HEADER_ID);
 - **Required Constraint**: Header must have at least 1 detail
 - **Cascade Delete**: Details auto-deleted when header is deleted
 - **Category Hierarchy**: CATEGORY1 from header, CATEGORY2/3 from detail
+
+##### Enhanced Data Integrity (Updated 2025-11-12)
+- **Added USER_ID**: Clarifies user-specific category references
+- **Added CATEGORY1_CODE**: Inherits major category from header, ensures category hierarchy
+- **Composite Foreign Key Constraints**: Ensures referential integrity to CATEGORY2/CATEGORY3
+  - CATEGORY2: (USER_ID, CATEGORY1_CODE, CATEGORY2_CODE)
+  - CATEGORY3: (USER_ID, CATEGORY1_CODE, CATEGORY2_CODE, CATEGORY3_CODE)
+- **Memo Separation**: MEMO_ID reference to external MEMOS table (enables memo reuse)
 
 ##### Tax Handling
 
@@ -410,5 +424,6 @@ JOIN TRANSACTION_HEADERS h ON (appropriate JOIN condition);
 
 ---
 
-**Created**: 2025-11-07 00:36 JST  
-**Last Updated**: 2025-11-07 00:36 JST
+**Created**: 2025-11-07 00:36 JST
+**Last Updated**: 2025-11-12 22:35 JST
+**Update**: TRANSACTIONS_DETAIL table normalization (Added USER_ID, CATEGORY1_CODE, enhanced foreign key constraints)

@@ -4,9 +4,9 @@
 
 This document records the latest implementation of KakeiBon's transaction management functionality.
 
-**Implementation Period**: 2025-11-05 ~ 2025-11-08  
-**Last Updated**: 2025-11-08 14:18 JST  
-**Implementation Status**: Phase 1-3 Complete (New schema support, list display, registration, i18n)
+**Implementation Period**: 2025-11-05 ~ 2025-11-08
+**Last Updated**: 2025-11-12 22:30 JST
+**Implementation Status**: Phase 1-3 Complete (New schema support, list display, registration, i18n), Detail table normalization complete
 
 ---
 
@@ -40,16 +40,24 @@ CREATE TABLE TRANSACTIONS_HEADER (
 #### TRANSACTIONS_DETAIL (Transaction Detail)
 ```sql
 CREATE TABLE TRANSACTIONS_DETAIL (
+    DETAIL_ID INTEGER PRIMARY KEY AUTOINCREMENT,
     TRANSACTION_ID INTEGER NOT NULL,
-    LINE_NO INTEGER NOT NULL,
-    CATEGORY2_CODE VARCHAR(64) NOT NULL,
-    CATEGORY3_CODE VARCHAR(64) NOT NULL,
+    USER_ID INTEGER NOT NULL,
+    CATEGORY1_CODE VARCHAR(50) NOT NULL,
+    CATEGORY2_CODE VARCHAR(50) NOT NULL,
+    CATEGORY3_CODE VARCHAR(50) NOT NULL,
+    ITEM_NAME TEXT NOT NULL,
     AMOUNT INTEGER NOT NULL,
-    TAX_RATE REAL NOT NULL,  -- Moved from header (supports mixed tax rates)
-    ENTRY_DT DATETIME NOT NULL,
+    TAX_AMOUNT INTEGER DEFAULT 0,
+    TAX_RATE INTEGER DEFAULT 8,
+    MEMO_ID INTEGER,
+    ENTRY_DT DATETIME NOT NULL DEFAULT (datetime('now')),
     UPDATE_DT DATETIME,
-    PRIMARY KEY(TRANSACTION_ID, LINE_NO),
-    FOREIGN KEY(TRANSACTION_ID) REFERENCES TRANSACTIONS_HEADER(TRANSACTION_ID)
+    FOREIGN KEY (TRANSACTION_ID) REFERENCES TRANSACTIONS_HEADER(TRANSACTION_ID) ON DELETE CASCADE,
+    FOREIGN KEY (USER_ID, CATEGORY1_CODE, CATEGORY2_CODE) REFERENCES CATEGORY2(USER_ID, CATEGORY1_CODE, CATEGORY2_CODE),
+    FOREIGN KEY (USER_ID, CATEGORY1_CODE, CATEGORY2_CODE, CATEGORY3_CODE) REFERENCES CATEGORY3(USER_ID, CATEGORY1_CODE, CATEGORY2_CODE, CATEGORY3_CODE),
+    FOREIGN KEY (MEMO_ID) REFERENCES MEMOS(MEMO_ID),
+    CHECK (ITEM_NAME != '')
 );
 ```
 
@@ -59,6 +67,10 @@ CREATE TABLE TRANSACTIONS_DETAIL (
 2. **Tax Rate Migration**: HEADER → DETAIL (supports mixed tax rates)
 3. **Account Information**: Added FROM_ACCOUNT_CODE / TO_ACCOUNT_CODE
 4. **Memo Separation**: MEMO_ID reference to external MEMOS table
+5. **Detail Table Normalization** (Added 2025-11-12):
+   - Added USER_ID and CATEGORY1_CODE fields
+   - Set composite foreign key constraints to CATEGORY2/CATEGORY3
+   - Improved data integrity and user-specific category management
 
 ---
 
@@ -284,6 +296,13 @@ default options with `data-i18n` attributes. Changed to preserve default options
 ---
 
 ## Change History
+
+### 2025-11-12
+- TRANSACTIONS_DETAIL table normalization complete
+- Added USER_ID and CATEGORY1_CODE fields
+- Set composite foreign key constraints to CATEGORY2/CATEGORY3
+- Implemented automatic migration (preserving existing data)
+- Added test cases (all 151 tests passed)
 
 ### 2025-11-08
 - Internationalization complete (34 resources added)
