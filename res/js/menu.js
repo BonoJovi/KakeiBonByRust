@@ -2,6 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 import i18n from './i18n.js';
 import { setupIndicators } from './indicators.js';
 import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers } from './font-size.js';
+import * as session from './session.js';
 
 let isLoggedIn = false;
 
@@ -497,13 +498,14 @@ async function handleLoginSubmit(e) {
     const messageDiv = document.getElementById('login-message');
     
     try {
-        const result = await invoke('login_user', {
+        const user = await invoke('login_user', {
             username: username,
             password: password
         });
         
-        console.log('Login result:', result);
-        messageDiv.textContent = i18n.t('login.success');
+        console.log('Login result:', user);
+        
+        messageDiv.textContent = i18n.t('login.success') + ' Welcome, ' + user.name + '!';
         messageDiv.className = 'message success';
         
         isLoggedIn = true;
@@ -533,8 +535,17 @@ async function handleLoginSubmit(e) {
     }
 }
 
-function handleLogout() {
+async function handleLogout() {
     console.log('Logout clicked');
+    
+    try {
+        // Clear session
+        await session.clearSession();
+        console.log('Session cleared');
+    } catch (error) {
+        console.error('Failed to clear session:', error);
+    }
+    
     isLoggedIn = false;
     
     // Clear login form

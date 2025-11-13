@@ -65,6 +65,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 });
 
+
 function setupMenuHandlers() {
     // File menu handlers
     const fileMenu = document.getElementById('file-menu');

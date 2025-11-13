@@ -16,6 +16,7 @@ mod services {
     pub mod shop;
     pub mod manufacturer;
     pub mod product;
+    pub mod session;
 }
 
 #[cfg(test)]
@@ -37,6 +38,7 @@ use services::encryption::EncryptionService;
 use services::i18n::I18nService;
 use services::category::CategoryService;
 use services::transaction::TransactionService;
+use services::session::SessionState;
 use settings::SettingsManager;
 use validation::{validate_password, validate_password_confirmation};
 use crate::consts::{LANG_ENGLISH, LANG_JAPANESE, LANG_DEFAULT, FONT_SIZE_SMALL, FONT_SIZE_MEDIUM, FONT_SIZE_LARGE, FONT_SIZE_DEFAULT};
@@ -50,6 +52,7 @@ pub struct AppState {
     pub i18n: Arc<Mutex<I18nService>>,
     pub category: Arc<Mutex<CategoryService>>,
     pub transaction: Arc<Mutex<TransactionService>>,
+    pub session: Arc<SessionState>,
 }
 
 #[tauri::command]
@@ -57,12 +60,22 @@ async fn login_user(
     username: String,
     password: String,
     state: tauri::State<'_, AppState>
-) -> Result<String, String> {
+) -> Result<services::session::User, String> {
     let auth = state.auth.lock().await;
     
     match auth.authenticate_user(&username, &password).await {
         Ok(Some(user)) => {
-            Ok(format!("Welcome, {}!", user.name))
+            // Create session user
+            let session_user = services::session::User {
+                user_id: user.user_id,
+                name: user.name.clone(),
+                role: user.role,
+            };
+            
+            // Save to session state
+            state.session.set_user(session_user.clone());
+            
+            Ok(session_user)
         }
         Ok(None) => {
             Err("Invalid username or password".to_string())
@@ -131,6 +144,66 @@ async fn check_needs_user_setup(state: tauri::State<'_, AppState>) -> Result<boo
 fn handle_quit<R: tauri::Runtime>(handle: tauri::AppHandle<R>) {
     handle.cleanup_before_exit();
     handle.exit(0);
+}
+
+// ============================================================================
+// Session Management Commands
+// ============================================================================
+
+#[tauri::command]
+fn get_current_session_user(state: tauri::State<'_, AppState>) -> Result<Option<services::session::User>, String> {
+    Ok(state.session.get_user())
+}
+
+#[tauri::command]
+fn is_session_authenticated(state: tauri::State<'_, AppState>) -> Result<bool, String> {
+    Ok(state.session.is_authenticated())
+}
+
+#[tauri::command]
+fn set_session_source_screen(
+    source_screen: String,
+    state: tauri::State<'_, AppState>
+) -> Result<(), String> {
+    state.session.set_source_screen(source_screen);
+    Ok(())
+}
+
+#[tauri::command]
+fn get_session_source_screen(state: tauri::State<'_, AppState>) -> Result<Option<String>, String> {
+    Ok(state.session.get_source_screen())
+}
+
+#[tauri::command]
+fn clear_session_source_screen(state: tauri::State<'_, AppState>) -> Result<(), String> {
+    state.session.clear_source_screen();
+    Ok(())
+}
+
+#[tauri::command]
+fn set_session_category1_code(
+    category1_code: String,
+    state: tauri::State<'_, AppState>
+) -> Result<(), String> {
+    state.session.set_category1_code(category1_code);
+    Ok(())
+}
+
+#[tauri::command]
+fn get_session_category1_code(state: tauri::State<'_, AppState>) -> Result<Option<String>, String> {
+    Ok(state.session.get_category1_code())
+}
+
+#[tauri::command]
+fn clear_session_category1_code(state: tauri::State<'_, AppState>) -> Result<(), String> {
+    state.session.clear_category1_code();
+    Ok(())
+}
+
+#[tauri::command]
+fn clear_session(state: tauri::State<'_, AppState>) -> Result<(), String> {
+    state.session.clear_all();
+    Ok(())
 }
 
 #[tauri::command]
@@ -1383,6 +1456,15 @@ pub fn run() {
             check_needs_setup,
             check_needs_user_setup,
             handle_quit,
+            get_current_session_user,
+            is_session_authenticated,
+            set_session_source_screen,
+            get_session_source_screen,
+            clear_session_source_screen,
+            set_session_category1_code,
+            get_session_category1_code,
+            clear_session_category1_code,
+            clear_session,
             test_db_connection,
             validate_password_frontend,
             validate_passwords_frontend,
@@ -1496,6 +1578,7 @@ pub fn run() {
                 i18n: Arc::new(Mutex::new(i18n)),
                 category: Arc::new(Mutex::new(category)),
                 transaction: Arc::new(Mutex::new(transaction)),
+                session: Arc::new(SessionState::new()),
             });
 
             Ok(())
