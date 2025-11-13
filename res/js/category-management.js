@@ -4,6 +4,7 @@ import { setupIndicators } from './indicators.js';
 import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers, adjustWindowSize } from './font-size.js';
 import { Modal } from './modal.js';
 import { HTML_FILES } from './html-files.js';
+import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
 
 // Category level constants
 const LEVEL_CATEGORY1 = 1;
@@ -12,7 +13,8 @@ const LEVEL_CATEGORY3 = 3;
 
 let categories = [];
 let expandedCategories = new Set();
-const currentUserId = 1; // TODO: Get from session/auth
+let currentUserId = null;
+let currentUserRole = null;
 
 // Modal instances
 let category2Modal;
@@ -25,6 +27,25 @@ let isMouseActive = false;
 
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('[DOMContentLoaded] DOM loaded');
+    
+    // Check session authentication
+    if (!await isSessionAuthenticated()) {
+        console.error('Not authenticated, redirecting to login');
+        window.location.href = HTML_FILES.INDEX;
+        return;
+    }
+    
+    // Get current user info
+    const user = await getCurrentSessionUser();
+    if (!user) {
+        console.error('Failed to get user info, redirecting to login');
+        window.location.href = HTML_FILES.INDEX;
+        return;
+    }
+    
+    currentUserId = user.id;
+    currentUserRole = user.role;
+    console.log(`Logged in as: ${user.username} (ID: ${currentUserId}, Role: ${currentUserRole})`);
     
     await i18n.init();
     i18n.updateUI();

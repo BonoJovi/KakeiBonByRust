@@ -5,14 +5,14 @@ import { adjustWindowSize } from './font-size.js';
 import { ROLE_ADMIN, ROLE_USER } from './consts.js';
 import { Modal } from './modal.js';
 import { setupIndicators } from './indicators.js';
+import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
 
 console.log('=== ACCOUNT-MANAGEMENT.JS LOADED - ALL imports enabled ===');
 console.log('invoke:', typeof invoke);
 console.log('i18n:', i18n);
 
-// TODO: Get from session/auth
-const currentUserId = 1;
-const currentUserRole = ROLE_USER; // Change to ROLE_USER for testing
+let currentUserId = null;
+let currentUserRole = null;
 
 let currentLanguage = 'ja';
 let templates = [];

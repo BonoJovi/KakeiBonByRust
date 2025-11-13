@@ -6,10 +6,10 @@ import { setupLanguageMenuHandlers, setupLanguageMenu, handleLogout, handleQuit 
 import { HTML_FILES } from './html-files.js';
 import { TAX_ROUND_DOWN, TAX_ROUND_HALF_UP, TAX_ROUND_UP, ROLE_ADMIN, ROLE_USER } from './consts.js';
 import { Modal } from './modal.js';
+import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
 
-// TODO: Get from session/auth
-const currentUserId = 1;
-const currentUserRole = ROLE_USER; // Transaction management is for regular users only
+let currentUserId = null;
+let currentUserRole = null;
 
 // Pagination state
 let currentPage = 1;
@@ -29,6 +29,25 @@ let currentFilters = {
 
 document.addEventListener('DOMContentLoaded', async function() {
     try {
+        // Check session authentication
+        if (!await isSessionAuthenticated()) {
+            console.error('Not authenticated, redirecting to login');
+            window.location.href = HTML_FILES.INDEX;
+            return;
+        }
+        
+        // Get current user info
+        const user = await getCurrentSessionUser();
+        if (!user) {
+            console.error('Failed to get user info, redirecting to login');
+            window.location.href = HTML_FILES.INDEX;
+            return;
+        }
+        
+        currentUserId = user.id;
+        currentUserRole = user.role;
+        console.log(`Logged in as: ${user.username} (ID: ${currentUserId}, Role: ${currentUserRole})`);
+        
         // Initialize i18n
         await i18n.init();
         i18n.updateUI();
