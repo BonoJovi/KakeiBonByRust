@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         return;
     }
     
-    console.log(`Logged in as: ${user.username} (ID: ${user.id}, Role: ${user.role})`);
+    console.log(`Logged in as: ${user.name} (ID: ${user.user_id}, Role: ${user.role})`);
     
     await i18n.init();
     i18n.updateUI();

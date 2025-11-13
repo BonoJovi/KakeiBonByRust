@@ -37,9 +37,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
         
-        currentUserId = user.id;
+        currentUserId = user.user_id;
         currentUserRole = user.role;
-        console.log(`Logged in as: ${user.username} (ID: ${currentUserId}, Role: ${currentUserRole})`);
+        console.log(`Logged in as: ${user.name} (ID: ${currentUserId}, Role: ${currentUserRole})`);
         
         await i18n.init();
         console.log('i18n initialized:', i18n.initialized);

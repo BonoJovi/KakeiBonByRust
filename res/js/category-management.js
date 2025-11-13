@@ -43,9 +43,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         return;
     }
     
-    currentUserId = user.id;
+    currentUserId = user.user_id;
     currentUserRole = user.role;
-    console.log(`Logged in as: ${user.username} (ID: ${currentUserId}, Role: ${currentUserRole})`);
+    console.log(`Logged in as: ${user.name} (ID: ${currentUserId}, Role: ${currentUserRole})`);
     
     await i18n.init();
     i18n.updateUI();
@@ -352,6 +352,8 @@ async function loadCategories() {
         
         // Get current language
         const currentLang = i18n.getCurrentLanguage();
+        
+        console.log('Loading categories with params:', { userId: currentUserId, langCode: currentLang });
         
         // Fetch categories from backend
         categories = await invoke('get_category_tree_with_lang', {
