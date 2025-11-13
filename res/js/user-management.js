@@ -5,6 +5,7 @@ import { setupIndicators } from './indicators.js';
 import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers, adjustWindowSize } from './font-size.js';
 import { HTML_FILES } from './html-files.js';
 import { Modal } from './modal.js';
+import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
 
 let currentUsers = [];
 let editingUserId = null;
@@ -17,6 +18,23 @@ console.log('user-management.js loaded');
 
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('[DOMContentLoaded] DOM loaded');
+    
+    // Check session authentication
+    if (!await isSessionAuthenticated()) {
+        console.error('Not authenticated, redirecting to login');
+        window.location.href = HTML_FILES.INDEX;
+        return;
+    }
+    
+    // Get current user info
+    const user = await getCurrentSessionUser();
+    if (!user) {
+        console.error('Failed to get user info, redirecting to login');
+        window.location.href = HTML_FILES.INDEX;
+        return;
+    }
+    
+    console.log(`Logged in as: ${user.username} (ID: ${user.id}, Role: ${user.role})`);
     
     await i18n.init();
     i18n.updateUI();

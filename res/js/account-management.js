@@ -24,6 +24,25 @@ let accountModal = null;
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('DOMContentLoaded fired');
     try {
+        // Check session authentication
+        if (!await isSessionAuthenticated()) {
+            console.error('Not authenticated, redirecting to login');
+            window.location.href = HTML_FILES.INDEX;
+            return;
+        }
+        
+        // Get current user info
+        const user = await getCurrentSessionUser();
+        if (!user) {
+            console.error('Failed to get user info, redirecting to login');
+            window.location.href = HTML_FILES.INDEX;
+            return;
+        }
+        
+        currentUserId = user.id;
+        currentUserRole = user.role;
+        console.log(`Logged in as: ${user.username} (ID: ${currentUserId}, Role: ${currentUserRole})`);
+        
         await i18n.init();
         console.log('i18n initialized:', i18n.initialized);
         currentLanguage = i18n.getCurrentLanguage();
