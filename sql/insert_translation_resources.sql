@@ -204,3 +204,39 @@ VALUES
 (918, 'common.save', 'ja', '保存', 'common', '保存ボタン', datetime('now')),
 (919, 'menu.back_to_main', 'en', '← Back to Main', 'menu', 'Back to main menu button', datetime('now')),
 (920, 'menu.back_to_main', 'ja', '← メインに戻る', 'menu', 'メインメニューに戻るボタン', datetime('now'));
+
+-- ============================================================================
+-- Additional Management Screen Resources (added 2024-11-14)
+-- ============================================================================
+
+-- Shop Management
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT)
+VALUES
+(921, 'shop_mgmt.shop_list', 'en', 'Shop List', 'shop_mgmt', 'Shop list section title', datetime('now')),
+(922, 'shop_mgmt.shop_list', 'ja', '店舗一覧', 'shop_mgmt', '店舗一覧セクションタイトル', datetime('now')),
+(923, 'shop_mgmt.manage_shop', 'en', 'Manage Shop', 'shop_mgmt', 'Manage shop button', datetime('now')),
+(924, 'shop_mgmt.manage_shop', 'ja', '店舗管理', 'shop_mgmt', '店舗管理ボタン', datetime('now')),
+(925, 'shop_mgmt.delete_shop', 'en', 'Delete Shop', 'shop_mgmt', 'Delete shop modal title', datetime('now')),
+(926, 'shop_mgmt.delete_shop', 'ja', '店舗削除', 'shop_mgmt', '店舗削除モーダルタイトル', datetime('now')),
+
+-- Manufacturer Management
+(927, 'manufacturer_mgmt.manufacturer_list', 'en', 'Manufacturer List', 'manufacturer_mgmt', 'Manufacturer list section title', datetime('now')),
+(928, 'manufacturer_mgmt.manufacturer_list', 'ja', 'メーカー一覧', 'manufacturer_mgmt', 'メーカー一覧セクションタイトル', datetime('now')),
+(929, 'manufacturer_mgmt.delete_manufacturer', 'en', 'Delete Manufacturer', 'manufacturer_mgmt', 'Delete manufacturer modal title', datetime('now')),
+(930, 'manufacturer_mgmt.delete_manufacturer', 'ja', 'メーカー削除', 'manufacturer_mgmt', 'メーカー削除モーダルタイトル', datetime('now')),
+
+-- Product Management
+(931, 'product_mgmt.product_list', 'en', 'Product List', 'product_mgmt', 'Product list section title', datetime('now')),
+(932, 'product_mgmt.product_list', 'ja', '商品一覧', 'product_mgmt', '商品一覧セクションタイトル', datetime('now')),
+(933, 'product_mgmt.delete_product', 'en', 'Delete Product', 'product_mgmt', 'Delete product modal title', datetime('now')),
+(934, 'product_mgmt.delete_product', 'ja', '商品削除', 'product_mgmt', '商品削除モーダルタイトル', datetime('now')),
+
+-- Transaction Modal
+(935, 'transaction_modal.shop', 'en', 'Shop', 'transaction_modal', 'Shop label', datetime('now')),
+(936, 'transaction_modal.shop', 'ja', '店舗', 'transaction_modal', '店舗ラベル', datetime('now')),
+(937, 'transaction_modal.manage_shops', 'en', 'Manage Shops', 'transaction_modal', 'Manage shops button', datetime('now')),
+(938, 'transaction_modal.manage_shops', 'ja', '店舗管理', 'transaction_modal', '店舗管理ボタン', datetime('now')),
+
+-- Common (Apply button)
+(939, 'common.apply', 'en', 'Apply', 'common', 'Apply button', datetime('now')),
+(940, 'common.apply', 'ja', '適用', 'common', '適用ボタン', datetime('now'));

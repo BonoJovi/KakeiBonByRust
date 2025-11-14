@@ -17,7 +17,7 @@ body {
     flex-direction: column;
 }
 
-.shop-management-container {
+.manufacturer-management-container {
     max-width: 1200px;
     margin: 0 auto;
     padding: 20px;
@@ -28,7 +28,7 @@ body {
     box-sizing: border-box;
 }
 
-.shop-management-container h1 {
+.manufacturer-management-container h1 {
     text-align: center;
     margin: 0 0 20px 0;
     color: #333;
@@ -70,7 +70,7 @@ body {
     flex-shrink: 0;
 }
 
-#shop-list-container {
+#manufacturer-list-container {
     flex: 0 1 auto;
     overflow-y: auto;
     border: 2px solid #999;
@@ -79,25 +79,25 @@ body {
     max-height: 18em;
 }
 
-#shops-table {
+#manufacturers-table {
     width: 100%;
     border-collapse: collapse;
     margin-top: 0;
 }
 
-#shops-table thead {
+#manufacturers-table thead {
     background-color: #f5f5f5;
 }
 
-#shops-table th,
-#shops-table td {
+#manufacturers-table th,
+#manufacturers-table td {
     padding: 10px 8px;
     text-align: left;
     border-bottom: 2px solid #999;
     vertical-align: middle;
 }
 
-#shops-table th {
+#manufacturers-table th {
     font-weight: 600;
     color: #fff;
     position: sticky;
@@ -106,11 +106,11 @@ body {
     z-index: 10;
 }
 
-#shops-table tbody tr:hover {
+#manufacturers-table tbody tr:hover {
     background-color: #f9f9f9;
 }
 
-#shops-table tbody tr:last-child td {
+#manufacturers-table tbody tr:last-child td {
     border-bottom: none;
 }
 
@@ -273,7 +273,7 @@ body {
     font-size: 1.5em;
 }
 
-#shop-list-message,
+#manufacturer-list-message,
 #form-message,
 #delete-result-message {
     margin-top: 15px;
@@ -281,12 +281,12 @@ body {
     height: auto;
 }
 
-#shop-list-message {
+#manufacturer-list-message {
     margin-top: 15px;
     flex-shrink: 0;
 }
 
-#shop-list-message:empty {
+#manufacturer-list-message:empty {
     padding: 0;
     margin: 0;
     border: none;
@@ -305,17 +305,17 @@ body {
 }
 
 @media (max-width: 768px) {
-    .shop-management-container {
+    .manufacturer-management-container {
         padding: 10px;
     }
 
-    #shops-table {
+    #manufacturers-table {
         font-size: 0.85em;
         table-layout: auto;
     }
 
-    #shops-table th,
-    #shops-table td {
+    #manufacturers-table th,
+    #manufacturers-table td {
         padding: 8px 4px;
     }
 

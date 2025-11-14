@@ -6,7 +6,7 @@
         <title>Manufacturer Management - KakeiBon</title>
         <link rel="stylesheet" href="css/menu.css" />
         <link rel="stylesheet" href="css/indicators.css" />
-        <link rel="stylesheet" href="css/shop-management.css" />
+        <link rel="stylesheet" href="css/manufacturer-management.css" />
         <script type="importmap">
         {
             "imports": {
@@ -16,35 +16,62 @@
         </script>
     </head>
     <body>
-        <div class="container">
-            <header>
-                <nav>
-                    <button id="back-btn" class="back-button" data-i18n="menu.back_to_main">← Back to Main</button>
-                    <h1 data-i18n="manufacturer_mgmt.title">Manufacturer Management</h1>
-                </nav>
-            </header>
-
-            <main>
-                <div class="toolbar">
-                    <button id="add-manufacturer-btn" class="btn btn-primary" data-i18n="manufacturer_mgmt.add">+ Add Manufacturer</button>
-                    <button id="toggle-disabled-btn" class="btn btn-secondary" data-i18n="common.show_disabled">Show Disabled Items</button>
+        <div id="menu-bar">
+            <div id="file-menu" class="menu-item">
+                <span data-i18n="menu.file">File</span>
+                <div id="file-dropdown" class="dropdown">
+                    <div class="dropdown-item" data-i18n="menu.back_to_main">Back to Main</div>
+                    <div class="dropdown-separator"></div>
+                    <div class="dropdown-item" data-i18n="menu.logout">Logout</div>
+                    <div class="dropdown-item" data-i18n="menu.quit">Quit</div>
                 </div>
+            </div>
+            <div id="language-menu" class="menu-item">
+                <span data-i18n="menu.language">Language</span>
+                <div id="language-dropdown" class="dropdown">
+                    <!-- Language options will be populated dynamically -->
+                </div>
+            </div>
+            <div id="font-size-menu" class="menu-item">
+                <span data-i18n="menu.font_size">Font Size</span>
+                <div id="font-size-dropdown" class="dropdown">
+                    <!-- Font size options will be populated dynamically -->
+                </div>
+            </div>
+        </div>
 
-                <div id="loading" class="loading" data-i18n="common.loading">Loading...</div>
-
-                <table id="manufacturers-table" class="data-table">
-                    <thead>
-                        <tr>
-                            <th data-i18n="manufacturer_mgmt.name">Manufacturer Name</th>
-                            <th data-i18n="manufacturer_mgmt.memo">Memo</th>
-                            <th data-i18n="common.actions">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="manufacturers-tbody">
-                        <!-- Manufacturer rows will be inserted here -->
-                    </tbody>
-                </table>
-            </main>
+        <div id="main-content">
+            <div class="manufacturer-management-container">
+                <h1 data-i18n="manufacturer_mgmt.title">Manufacturer Management</h1>
+                
+                <!-- Manufacturer List Section -->
+                <div class="section">
+                    <div class="section-header">
+                        <h2 data-i18n="manufacturer_mgmt.manufacturer_list">Manufacturer List</h2>
+                        <button id="toggle-disabled-btn" class="btn-secondary" data-i18n="common.show_disabled">Show Disabled Items</button>
+                    </div>
+                    <div id="manufacturer-list-container">
+                        <div id="loading" class="loading" style="display: none;" data-i18n="common.loading">Loading...</div>
+                        <table id="manufacturers-table">
+                            <thead>
+                                <tr>
+                                    <th data-i18n="manufacturer_mgmt.name">Manufacturer Name</th>
+                                    <th data-i18n="manufacturer_mgmt.memo">Memo</th>
+                                    <th data-i18n="common.actions">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="manufacturers-tbody">
+                                <!-- Manufacturer rows will be inserted here -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="section-footer">
+                        <button id="add-manufacturer-btn" class="btn-primary" data-i18n="manufacturer_mgmt.add">Add Manufacturer</button>
+                    </div>
+                </div>
+                
+                <div id="manufacturer-list-message" class="message"></div>
+            </div>
         </div>
 
         <!-- Manufacturer Modal -->
@@ -54,33 +81,34 @@
                     <h2 id="modal-title" data-i18n="manufacturer_mgmt.add">Add Manufacturer</h2>
                     <button class="close-btn" id="close-modal">&times;</button>
                 </div>
-                <div class="modal-body">
-                    <form id="manufacturer-form">
-                        <div class="form-group">
-                            <label for="manufacturer-name" data-i18n="manufacturer_mgmt.name">Manufacturer Name</label>
-                            <input type="text" id="manufacturer-name" required>
-                            <span class="error-message" id="manufacturer-name-error"></span>
+                <form id="manufacturer-form">
+                    <div class="form-group">
+                        <label for="manufacturer-name" data-i18n="manufacturer_mgmt.name">Manufacturer Name:</label>
+                        <div class="input-wrapper">
+                            <input type="text" id="manufacturer-name" name="manufacturer-name" required />
                         </div>
+                    </div>
 
-                        <div class="form-group">
-                            <label for="manufacturer-memo" data-i18n="manufacturer_mgmt.memo">Memo</label>
-                            <textarea id="manufacturer-memo" rows="3"></textarea>
-                            <span class="error-message" id="manufacturer-memo-error"></span>
+                    <div class="form-group">
+                        <label for="manufacturer-memo" data-i18n="manufacturer_mgmt.memo">Memo:</label>
+                        <div class="input-wrapper">
+                            <textarea id="manufacturer-memo" name="manufacturer-memo" rows="3"></textarea>
                         </div>
+                    </div>
 
-                        <div class="form-group">
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="manufacturer-is-disabled">
-                                <span data-i18n="common.is_disabled">Disabled</span>
-                            </label>
-                        </div>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="manufacturer-is-disabled">
+                            <span data-i18n="common.is_disabled">Disabled</span>
+                        </label>
+                    </div>
 
-                        <div class="modal-actions">
-                            <button type="button" class="btn btn-secondary" id="cancel-btn" data-i18n="common.cancel">Cancel</button>
-                            <button type="submit" class="btn btn-primary" data-i18n="common.save">Save</button>
-                        </div>
-                    </form>
-                </div>
+                    <div class="form-actions">
+                        <button type="button" id="cancel-btn" class="btn-secondary" data-i18n="common.cancel">Cancel</button>
+                        <button type="submit" class="btn-primary" data-i18n="common.save">Save</button>
+                    </div>
+                </form>
+                <div id="form-message" class="message"></div>
             </div>
         </div>
 
@@ -88,20 +116,58 @@
         <div id="delete-modal" class="modal hidden">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h2 data-i18n="manufacturer_mgmt.delete_confirm">Delete Confirmation</h2>
-                    <button class="close-btn" id="close-delete-modal">&times;</button>
+                    <h2 data-i18n="manufacturer_mgmt.delete_manufacturer">Delete Manufacturer</h2>
+                    <button id="close-delete-modal" class="close-btn">&times;</button>
+                </div>
+                <p id="delete-message" data-i18n="manufacturer_mgmt.delete_confirm">Are you sure you want to delete this manufacturer?</p>
+                <p id="delete-manufacturer-name" class="delete-target"></p>
+                <div class="form-actions">
+                    <button id="cancel-delete-btn" class="btn-secondary" data-i18n="common.cancel">Cancel</button>
+                    <button id="confirm-delete-btn" class="btn-danger" data-i18n="common.delete">Delete</button>
+                </div>
+                <div id="delete-result-message" class="message"></div>
+            </div>
+        </div>
+
+        <!-- Font Size Modal -->
+        <div id="font-size-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 data-i18n="font_size.modal_title">Font Size Settings</h2>
+                    <button class="close-btn" id="font-size-modal-close">&times;</button>
                 </div>
                 <div class="modal-body">
-                    <p data-i18n="manufacturer_mgmt.delete_confirm">Are you sure you want to delete this manufacturer?</p>
-                    <p id="delete-manufacturer-name" class="manufacturer-name-display"></p>
-                    <div class="modal-actions">
-                        <button type="button" class="btn btn-secondary" id="cancel-delete-btn" data-i18n="common.cancel">Cancel</button>
-                        <button type="button" class="btn btn-danger" id="confirm-delete-btn" data-i18n="common.delete">Delete</button>
+                    <div class="form-group">
+                        <label for="font-size-preset" data-i18n="font_size.preset">Preset:</label>
+                        <div class="input-wrapper">
+                            <select id="font-size-preset">
+                                <option value="small" data-i18n="font_size.small">小</option>
+                                <option value="medium" data-i18n="font_size.medium" selected>中</option>
+                                <option value="large" data-i18n="font_size.large">大</option>
+                                <option value="custom" data-i18n="font_size.custom">カスタム</option>
+                            </select>
+                        </div>
                     </div>
+                    <div class="form-group">
+                        <label for="font-size-percent" data-i18n="font_size.percentage">Percentage:</label>
+                        <div class="input-with-spinner">
+                            <input type="number" id="font-size-percent" min="50" max="200" step="5" value="100" />
+                            <div class="spinner-buttons">
+                                <button type="button" class="spinner-btn spinner-down">◀</button>
+                                <button type="button" class="spinner-btn spinner-up">▶</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" id="font-size-cancel" data-i18n="common.cancel">キャンセル</button>
+                    <button type="button" class="btn-primary" id="font-size-apply" data-i18n="common.apply">変更</button>
                 </div>
             </div>
         </div>
 
+        <script type="module" src="js/i18n.js"></script>
+        <script type="module" src="js/modal.js"></script>
         <script type="module" src="js/manufacturer-management.js"></script>
     </body>
 </html>

@@ -1,7 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { HTML_FILES } from './html-files.js';
 import i18n from './i18n.js';
-import { adjustWindowSize } from './font-size.js';
+import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers, adjustWindowSize } from './font-size.js';
 import { ROLE_ADMIN, ROLE_USER } from './consts.js';
 import { Modal } from './modal.js';
 import { setupIndicators } from './indicators.js';
@@ -47,6 +47,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log('i18n initialized:', i18n.initialized);
         currentLanguage = i18n.getCurrentLanguage();
         i18n.updateUI();
+        
+        // Setup menu handlers
+        setupMenuHandlers();
+        
+        // Setup language and font size menus
+        await setupLanguageMenu();
+        setupLanguageMenuHandlers();
+        
+        setupFontSizeMenuHandlers();
+        await setupFontSizeMenu();
+        setupFontSizeModalHandlers();
+        await applyFontSize();
         
         initAccountModal();
         setupIndicators();
@@ -105,11 +117,6 @@ function initAccountModal() {
 }
 
 function setupEventListeners() {
-    // Back button
-    document.getElementById('back-btn').addEventListener('click', () => {
-        window.location.href = HTML_FILES.INDEX;
-    });
-
     // Add account button
     document.getElementById('add-account-btn').addEventListener('click', () => {
         openModal('add');
@@ -335,4 +342,124 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// Menu handlers
+function setupMenuHandlers() {
+    const fileMenu = document.getElementById('file-menu');
+    const fileDropdown = document.getElementById('file-dropdown');
+    
+    if (fileMenu && fileDropdown) {
+        if (fileMenu.dataset.initialized === 'true') {
+            return;
+        }
+        
+        fileMenu.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const isShown = fileDropdown.classList.contains('show');
+            document.querySelectorAll('.dropdown').forEach(d => {
+                if (d !== fileDropdown) d.classList.remove('show');
+            });
+            if (!isShown) fileDropdown.classList.add('show');
+        });
+        
+        fileDropdown.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+        
+        const dropdownItems = fileDropdown.querySelectorAll('.dropdown-item');
+        dropdownItems[0]?.addEventListener('click', () => {
+            window.location.href = HTML_FILES.INDEX;
+            fileDropdown.classList.remove('show');
+        });
+        dropdownItems[1]?.addEventListener('click', async () => {
+            await invoke('logout');
+            window.location.href = HTML_FILES.INDEX;
+            fileDropdown.classList.remove('show');
+        });
+        dropdownItems[2]?.addEventListener('click', async () => {
+            await invoke('quit_app');
+            fileDropdown.classList.remove('show');
+        });
+        
+        fileMenu.dataset.initialized = 'true';
+    }
+    
+    if (!document.body.dataset.globalClickHandlerInitialized) {
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.menu-item') || e.target.closest('.dropdown')) {
+                return;
+            }
+            document.querySelectorAll('.dropdown').forEach(dropdown => {
+                dropdown.classList.remove('show');
+            });
+        });
+        document.body.dataset.globalClickHandlerInitialized = 'true';
+    }
+}
+
+function setupLanguageMenuHandlers() {
+    const languageMenu = document.getElementById('language-menu');
+    const languageDropdown = document.getElementById('language-dropdown');
+    
+    if (!languageMenu || !languageDropdown) return;
+    if (languageMenu.dataset.initialized === 'true') return;
+    
+    languageMenu.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const isShown = languageDropdown.classList.contains('show');
+        document.querySelectorAll('.dropdown').forEach(d => {
+            if (d !== languageDropdown) d.classList.remove('show');
+        });
+        if (!isShown) languageDropdown.classList.add('show');
+    });
+    
+    languageDropdown.addEventListener('click', function(e) {
+        e.stopPropagation();
+    });
+    
+    languageMenu.dataset.initialized = 'true';
+}
+
+async function setupLanguageMenu() {
+    try {
+        const languageNames = await invoke('get_language_names');
+        const currentLang = i18n.getCurrentLanguage();
+        const languageDropdown = document.getElementById('language-dropdown');
+        
+        if (!languageDropdown) return;
+        
+        languageDropdown.innerHTML = '';
+        
+        for (const [langCode, langName] of languageNames) {
+            const item = document.createElement('div');
+            item.className = 'dropdown-item';
+            item.textContent = langName;
+            item.dataset.langCode = langCode;
+            
+            if (langCode === currentLang) {
+                item.classList.add('active');
+            }
+            
+            item.addEventListener('click', async function(e) {
+                e.stopPropagation();
+                await handleLanguageChange(langCode);
+                languageDropdown.classList.remove('show');
+            });
+            
+            languageDropdown.appendChild(item);
+        }
+    } catch (error) {
+        console.error('Failed to setup language menu:', error);
+    }
+}
+
+async function handleLanguageChange(langCode) {
+    try {
+        await i18n.setLanguage(langCode);
+        await setupLanguageMenu();
+        await loadAccounts();
+    } catch (error) {
+        console.error('Failed to change language:', error);
+    }
 }
