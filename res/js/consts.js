@@ -29,7 +29,11 @@ export const FONT_SIZE_OPTIONS = [
     { code: FONT_SIZE_CUSTOM, key: I18N_FONT_SIZE_CUSTOM, action: 'modal' }
 ];
 
-// Tax rounding mode constants
+// Tax rounding mode constants (must match src/consts.rs)
 export const TAX_ROUND_DOWN = 0;
 export const TAX_ROUND_HALF_UP = 1;
 export const TAX_ROUND_UP = 2;
+
+// Tax inclusion type constants (must match src/consts.rs)
+export const TAX_INCLUDED = 0;  // 内税 - tax is included in prices
+export const TAX_EXCLUDED = 1;  // 外税 - tax is calculated separately

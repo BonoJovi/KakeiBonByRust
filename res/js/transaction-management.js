@@ -300,18 +300,22 @@ function createTransactionItem(transaction) {
     const item = document.createElement('div');
     item.className = 'transaction-item';
     
+    // Create content wrapper (for non-button content)
+    const contentWrapper = document.createElement('div');
+    contentWrapper.className = 'transaction-content';
+    
     // Date (format: YYYY-MM-DD HH:MM:SS -> YYYY-MM-DD HH:MM)
     const dateDiv = document.createElement('div');
     dateDiv.className = 'transaction-date';
     const dateTime = transaction.transaction_date.substring(0, 16).replace(' ', ' '); // YYYY-MM-DD HH:MM
     dateDiv.textContent = dateTime;
-    item.appendChild(dateDiv);
+    contentWrapper.appendChild(dateDiv);
     
     // Category (only category1)
     const categoryDiv = document.createElement('div');
     categoryDiv.className = 'transaction-category';
     categoryDiv.textContent = transaction.category1_name || transaction.category1_code;
-    item.appendChild(categoryDiv);
+    contentWrapper.appendChild(categoryDiv);
     
     // Accounts (FROM -> TO) - Display account names, fallback to codes if names not available
     const accountDiv = document.createElement('div');
@@ -319,13 +323,13 @@ function createTransactionItem(transaction) {
     const fromAccountDisplay = transaction.from_account_name || transaction.from_account_code;
     const toAccountDisplay = transaction.to_account_name || transaction.to_account_code;
     accountDiv.textContent = `${fromAccountDisplay} → ${toAccountDisplay}`;
-    item.appendChild(accountDiv);
+    contentWrapper.appendChild(accountDiv);
     
     // Amount
     const amountDiv = document.createElement('div');
     amountDiv.className = `transaction-amount ${transaction.category1_code.toLowerCase()}`;
     amountDiv.textContent = formatAmount(transaction.total_amount);
-    item.appendChild(amountDiv);
+    contentWrapper.appendChild(amountDiv);
     
     // Memo (max 20 characters, show full text on hover)
     const memoDiv = document.createElement('div');
@@ -342,7 +346,9 @@ function createTransactionItem(transaction) {
     } else {
         memoDiv.textContent = '-';
     }
-    item.appendChild(memoDiv);
+    contentWrapper.appendChild(memoDiv);
+    
+    item.appendChild(contentWrapper);
     
     // Actions
     const actionsDiv = document.createElement('div');
@@ -775,6 +781,7 @@ async function handleTransactionSubmit(event) {
     const toAccountCode = document.getElementById('to-account').value;
     const totalAmount = parseInt(document.getElementById('total-amount').value);
     const taxRoundingValue = parseInt(document.getElementById('tax-rounding').value);
+    const taxIncludedTypeValue = parseInt(document.getElementById('tax-included-type').value);
     const memoText = document.getElementById('transaction-memo').value.trim() || null;
 
     // Convert datetime-local format (YYYY-MM-DDTHH:mm) to SQLite DATETIME format (YYYY-MM-DD HH:MM:SS)
@@ -782,6 +789,7 @@ async function handleTransactionSubmit(event) {
 
     // Tax rounding value is already an integer (0, 1, or 2) from the select element
     const taxRoundingType = taxRoundingValue;
+    const taxIncludedType = taxIncludedTypeValue;
 
     console.log('=== Transaction Data ===');
     console.log('shopId:', shopId);
@@ -791,6 +799,7 @@ async function handleTransactionSubmit(event) {
     console.log('transactionDate:', transactionDate);
     console.log('totalAmount:', totalAmount);
     console.log('taxRoundingType:', taxRoundingType);
+    console.log('taxIncludedType:', taxIncludedType);
     console.log('memo:', memoText);
     
     try {
@@ -798,26 +807,28 @@ async function handleTransactionSubmit(event) {
             // Update existing transaction
             await invoke('update_transaction_header', {
                 transactionId: editingTransactionId,
-                shopId: shopId,
-                category1Code: category1Code,
-                fromAccountCode: fromAccountCode,
-                toAccountCode: toAccountCode,
-                transactionDate: transactionDate,
-                totalAmount: totalAmount,
-                taxRoundingType: taxRoundingType,
+                shopId,
+                category1Code,
+                fromAccountCode,
+                toAccountCode,
+                transactionDate,
+                totalAmount,
+                taxRoundingType,
+                taxIncludedType,
                 memo: memoText
             });
         } else {
             // Create new transaction
             await invoke('save_transaction_header', {
                 userId: currentUserId,
-                shopId: shopId,
-                category1Code: category1Code,
-                fromAccountCode: fromAccountCode,
-                toAccountCode: toAccountCode,
-                transactionDate: transactionDate,
-                totalAmount: totalAmount,
-                taxRoundingType: taxRoundingType,
+                shopId,
+                category1Code,
+                fromAccountCode,
+                toAccountCode,
+                transactionDate,
+                totalAmount,
+                taxRoundingType,
+                taxIncludedType,
                 memo: memoText
             });
         }
@@ -852,6 +863,7 @@ async function loadTransactionData(transactionId) {
         document.getElementById('to-account').value = transaction.to_account_code || 'NONE';
         document.getElementById('total-amount').value = transaction.total_amount;
         document.getElementById('tax-rounding').value = transaction.tax_rounding_type || 0;
+        document.getElementById('tax-included-type').value = transaction.tax_included_type !== undefined ? transaction.tax_included_type : 1;
         document.getElementById('transaction-memo').value = transaction.memo || '';
 
         // Trigger category1 change to update account visibility

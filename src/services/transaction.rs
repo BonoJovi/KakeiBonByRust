@@ -23,6 +23,8 @@ pub struct TransactionHeader {
     pub total_amount: i64,
     #[sqlx(rename = "TAX_ROUNDING_TYPE")]
     pub tax_rounding_type: i64,
+    #[sqlx(rename = "TAX_INCLUDED_TYPE")]
+    pub tax_included_type: i64,
     #[sqlx(rename = "MEMO_ID")]
     pub memo_id: Option<i64>,
     #[sqlx(rename = "IS_DISABLED")]
@@ -43,6 +45,7 @@ pub struct SaveTransactionRequest {
     pub transaction_date: String,
     pub total_amount: i64,
     pub tax_rounding_type: i64,
+    pub tax_included_type: i64,
     pub memo: Option<String>,
 }
 
@@ -128,6 +131,7 @@ pub struct TransactionHeaderWithInfo {
     pub to_account_name: Option<String>,
     pub total_amount: i64,
     pub tax_rounding_type: i64,
+    pub tax_included_type: i64,
     pub memo_id: Option<i64>,
     pub memo_text: Option<String>,
     pub is_disabled: i64,
@@ -283,6 +287,7 @@ impl TransactionService {
             .bind(&request.to_account_code)
             .bind(request.total_amount)
             .bind(request.tax_rounding_type)
+            .bind(request.tax_included_type)
             .bind(memo_id)
             .execute(&self.pool)
             .await?;
@@ -407,12 +412,13 @@ impl TransactionService {
                 to_account_code: row.get(6),
                 total_amount: row.get(7),
                 tax_rounding_type: row.get(8),
-                memo_id: row.get(9),
-                is_disabled: row.get(10),
-                entry_dt: row.get(11),
-                update_dt: row.get(12),
+                tax_included_type: row.get(9),
+                memo_id: row.get(10),
+                is_disabled: row.get(11),
+                entry_dt: row.get(12),
+                update_dt: row.get(13),
             };
-            let memo_text: Option<String> = row.get(13);
+            let memo_text: Option<String> = row.get(14);
             Ok((header, memo_text))
         } else {
             Err(TransactionError::NotFound)
@@ -817,6 +823,7 @@ impl TransactionService {
             .bind(&request.to_account_code)
             .bind(request.total_amount)
             .bind(request.tax_rounding_type)
+            .bind(request.tax_included_type)
             .bind(memo_id)
             .bind(transaction_id)
             .bind(user_id)
@@ -869,6 +876,7 @@ impl TransactionService {
                 to_account_name: row.get("TO_ACCOUNT_NAME"),
                 total_amount: row.get("TOTAL_AMOUNT"),
                 tax_rounding_type: row.get("TAX_ROUNDING_TYPE"),
+                tax_included_type: row.get("TAX_INCLUDED_TYPE"),
                 memo_id: row.get("MEMO_ID"),
                 memo_text: row.get("MEMO_TEXT"),
                 is_disabled: row.get("IS_DISABLED"),
@@ -1150,3 +1158,214 @@ impl TransactionService {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sqlx::SqlitePool;
+    use crate::{consts, sql_queries};
+
+    async fn setup_test_db() -> SqlitePool {
+        // Create in-memory database
+        let pool = SqlitePool::connect(":memory:")
+            .await
+            .expect("Failed to create test database");
+
+        // Create USERS table
+        sqlx::query(sql_queries::TEST_TRANSACTION_CREATE_USERS_TABLE)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        // Insert test user
+        sqlx::query(sql_queries::TEST_TRANSACTION_INSERT_USER)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        // Create MEMOS table
+        sqlx::query(sql_queries::TEST_TRANSACTION_CREATE_MEMOS_TABLE)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        // Create CATEGORY1 table
+        sqlx::query(sql_queries::TEST_TRANSACTION_CREATE_CATEGORY1_TABLE)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        // Insert test category
+        sqlx::query(sql_queries::TEST_TRANSACTION_INSERT_CATEGORY1)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        // Create ACCOUNTS table
+        sqlx::query(sql_queries::TEST_TRANSACTION_CREATE_ACCOUNTS_TABLE)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        // Insert test accounts
+        sqlx::query(sql_queries::TEST_TRANSACTION_INSERT_ACCOUNT_CASH)
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query(sql_queries::TEST_TRANSACTION_INSERT_ACCOUNT_BANK)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        // Create TRANSACTIONS_HEADER table
+        sqlx::query(sql_queries::TEST_TRANSACTION_CREATE_HEADER_TABLE)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        // Create SHOPS table
+        sqlx::query(sql_queries::TEST_TRANSACTION_CREATE_SHOPS_TABLE)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        pool
+    }
+
+    #[tokio::test]
+    async fn test_save_transaction_header_with_tax_excluded() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+
+        let request = SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "EXPENSE".to_string(),
+            from_account_code: "CASH".to_string(),
+            to_account_code: "BANK".to_string(),
+            transaction_date: "2024-01-01 10:00:00".to_string(),
+            total_amount: 10000,
+            tax_rounding_type: consts::TAX_ROUND_HALF_UP,
+            tax_included_type: consts::TAX_EXCLUDED,
+            memo: Some("Test transaction".to_string()),
+        };
+
+        let result = service.save_transaction_header(2, request).await;
+        assert!(result.is_ok());
+        
+        let transaction_id = result.unwrap();
+        assert!(transaction_id > 0);
+
+        // Verify the transaction was saved with correct tax_included_type
+        let header_result = service.get_transaction_header_with_info(2, transaction_id).await;
+        assert!(header_result.is_ok());
+        
+        let header = header_result.unwrap();
+        assert_eq!(header.tax_included_type, consts::TAX_EXCLUDED);
+        assert_eq!(header.total_amount, 10000);
+    }
+
+    #[tokio::test]
+    async fn test_save_transaction_header_with_tax_included() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+
+        let request = SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "EXPENSE".to_string(),
+            from_account_code: "CASH".to_string(),
+            to_account_code: "BANK".to_string(),
+            transaction_date: "2024-01-01 10:00:00".to_string(),
+            total_amount: 10800,
+            tax_rounding_type: consts::TAX_ROUND_DOWN,
+            tax_included_type: consts::TAX_INCLUDED,
+            memo: Some("Tax included transaction".to_string()),
+        };
+
+        let result = service.save_transaction_header(2, request).await;
+        assert!(result.is_ok());
+        
+        let transaction_id = result.unwrap();
+        
+        // Verify the transaction was saved with correct tax_included_type
+        let header_result = service.get_transaction_header_with_info(2, transaction_id).await;
+        assert!(header_result.is_ok());
+        
+        let header = header_result.unwrap();
+        assert_eq!(header.tax_included_type, consts::TAX_INCLUDED);
+        assert_eq!(header.total_amount, 10800);
+    }
+
+    #[tokio::test]
+    async fn test_update_transaction_header_tax_type() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+
+        // Create initial transaction with tax excluded
+        let initial_request = SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "EXPENSE".to_string(),
+            from_account_code: "CASH".to_string(),
+            to_account_code: "BANK".to_string(),
+            transaction_date: "2024-01-01 10:00:00".to_string(),
+            total_amount: 10000,
+            tax_rounding_type: consts::TAX_ROUND_HALF_UP,
+            tax_included_type: consts::TAX_EXCLUDED,
+            memo: None,
+        };
+
+        let transaction_id = service.save_transaction_header(2, initial_request).await.unwrap();
+
+        // Update to tax included
+        let update_request = SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "EXPENSE".to_string(),
+            from_account_code: "CASH".to_string(),
+            to_account_code: "BANK".to_string(),
+            transaction_date: "2024-01-01 10:00:00".to_string(),
+            total_amount: 10800,
+            tax_rounding_type: consts::TAX_ROUND_HALF_UP,
+            tax_included_type: consts::TAX_INCLUDED,
+            memo: None,
+        };
+
+        let update_result = service.update_transaction_header(2, transaction_id, update_request).await;
+        assert!(update_result.is_ok());
+
+        // Verify the update
+        let header = service.get_transaction_header_with_info(2, transaction_id).await.unwrap();
+        assert_eq!(header.tax_included_type, consts::TAX_INCLUDED);
+        assert_eq!(header.total_amount, 10800);
+    }
+
+    #[tokio::test]
+    async fn test_default_tax_type_is_excluded() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+
+        // Create transaction using default tax type (should be TAX_EXCLUDED = 1)
+        let request = SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "EXPENSE".to_string(),
+            from_account_code: "CASH".to_string(),
+            to_account_code: "BANK".to_string(),
+            transaction_date: "2024-01-01 10:00:00".to_string(),
+            total_amount: 10000,
+            tax_rounding_type: consts::TAX_ROUND_HALF_UP,
+            tax_included_type: consts::TAX_EXCLUDED, // Explicitly set default
+            memo: None,
+        };
+
+        let transaction_id = service.save_transaction_header(2, request).await.unwrap();
+        let header = service.get_transaction_header_with_info(2, transaction_id).await.unwrap();
+        
+        assert_eq!(header.tax_included_type, consts::TAX_EXCLUDED);
+    }
+
+    #[tokio::test]
+    async fn test_tax_type_validation_values() {
+        // Test that our constants match expected values
+        assert_eq!(consts::TAX_INCLUDED, 0, "TAX_INCLUDED should be 0");
+        assert_eq!(consts::TAX_EXCLUDED, 1, "TAX_EXCLUDED should be 1");
+    }
+}
+

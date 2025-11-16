@@ -217,6 +217,14 @@
                         </div>
 
                         <div class="form-group">
+                            <label for="tax-included-type" data-i18n="transaction_mgmt.tax_type">Tax Type:</label>
+                            <select id="tax-included-type" required>
+                                <option value="0" data-i18n="transaction_mgmt.tax_included">Tax Included (内税)</option>
+                                <option value="1" data-i18n="transaction_mgmt.tax_excluded" selected>Tax Excluded (外税)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
                             <label for="transaction-memo" data-i18n="transaction_mgmt.memo">Memo:</label>
                             <textarea id="transaction-memo" rows="3"></textarea>
                         </div>

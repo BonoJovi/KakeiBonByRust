@@ -1342,6 +1342,7 @@ async fn save_transaction_header(
     transaction_date: String,
     total_amount: i64,
     tax_rounding_type: i64,
+    tax_included_type: i64,
     memo: Option<String>,
     state: tauri::State<'_, AppState>
 ) -> Result<i64, String> {
@@ -1355,6 +1356,7 @@ async fn save_transaction_header(
         transaction_date,
         total_amount,
         tax_rounding_type,
+        tax_included_type,
         memo,
     };
 
@@ -1423,6 +1425,7 @@ async fn update_transaction_header(
     transaction_date: String,
     total_amount: i64,
     tax_rounding_type: i64,
+    tax_included_type: i64,
     memo: Option<String>,
     state: tauri::State<'_, AppState>
 ) -> Result<(), String> {
@@ -1439,6 +1442,7 @@ async fn update_transaction_header(
         transaction_date,
         total_amount,
         tax_rounding_type,
+        tax_included_type,
         memo,
     };
 

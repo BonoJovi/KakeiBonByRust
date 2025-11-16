@@ -23,3 +23,7 @@ pub const FONT_SIZE_DEFAULT: &str = FONT_SIZE_MEDIUM;
 pub const TAX_ROUND_DOWN: i64 = 0;
 pub const TAX_ROUND_HALF_UP: i64 = 1;
 pub const TAX_ROUND_UP: i64 = 2;
+
+// Tax inclusion type constants
+pub const TAX_INCLUDED: i64 = 0;  // 内税 - tax is included in prices
+pub const TAX_EXCLUDED: i64 = 1;  // 外税 - tax is calculated separately
