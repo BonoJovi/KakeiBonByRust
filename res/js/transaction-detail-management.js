@@ -9,6 +9,7 @@ import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
 let currentUserId = null;
 let currentUserRole = null;
 let transactionId = null;
+let category1Code = null; // Store CATEGORY1_CODE from transaction header
 
 document.addEventListener('DOMContentLoaded', async function() {
     try {
@@ -162,16 +163,35 @@ function setupEventListeners() {
 }
 
 async function loadTransactionHeader() {
-    // Placeholder: Load transaction header information
-    // This will be implemented when we have the backend command
-    console.log('Loading transaction header for ID:', transactionId);
-    
-    // TODO: Implement backend call to get transaction header
-    // For now, show placeholder data
-    document.getElementById('header-transaction-date').textContent = '-';
-    document.getElementById('header-account').textContent = '-';
-    document.getElementById('header-shop').textContent = '-';
-    document.getElementById('header-total-amount').textContent = '¥0';
+    try {
+        console.log('Loading transaction header for ID:', transactionId);
+        
+        // Get transaction header from backend
+        const header = await invoke('get_transaction_header', {
+            userId: currentUserId,
+            transactionId: parseInt(transactionId)
+        });
+        
+        if (!header) {
+            throw new Error('Transaction header not found');
+        }
+        
+        // Store CATEGORY1_CODE for detail operations
+        category1Code = header.category1_code;
+        
+        // Display header information
+        document.getElementById('header-transaction-date').textContent = header.transaction_date || '-';
+        document.getElementById('header-account').textContent = header.account_name || '-';
+        document.getElementById('header-shop').textContent = header.shop_name || '-';
+        document.getElementById('header-total-amount').textContent = header.amount 
+            ? `¥${header.amount.toLocaleString()}` 
+            : '¥0';
+        
+        console.log('Transaction header loaded successfully, CATEGORY1_CODE:', category1Code);
+    } catch (error) {
+        console.error('Failed to load transaction header:', error);
+        showMessage('error', `Failed to load transaction header: ${error.message}`);
+    }
 }
 
 async function loadDetails() {
@@ -203,6 +223,9 @@ function openDetailModal(detail = null) {
     detailForm.reset();
     document.getElementById('detail-id').value = '';
     
+    // Set CATEGORY1_CODE from header (always needed for both add and edit)
+    document.getElementById('category1-code').value = category1Code || '';
+    
     if (detail) {
         // Edit mode
         modalTitle.setAttribute('data-i18n', 'detail_mgmt.edit_detail');
@@ -211,7 +234,6 @@ function openDetailModal(detail = null) {
         // Populate form with detail data
         document.getElementById('detail-id').value = detail.detail_id;
         document.getElementById('item-name').value = detail.item_name;
-        document.getElementById('category1-code').value = detail.category1_code;
         document.getElementById('category2-code').value = detail.category2_code;
         document.getElementById('category3-code').value = detail.category3_code;
         document.getElementById('amount').value = detail.amount;
