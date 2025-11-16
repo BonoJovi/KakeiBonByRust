@@ -94,6 +94,11 @@
       "timestamp": "2025-11-14T00:00:00Z",
       "count": 8,
       "uniques": 1
+    },
+    {
+      "timestamp": "2025-11-15T00:00:00Z",
+      "count": 22,
+      "uniques": 1
     }
   ],
   "clones": [
@@ -191,9 +196,14 @@
       "timestamp": "2025-11-14T00:00:00Z",
       "count": 6,
       "uniques": 6
+    },
+    {
+      "timestamp": "2025-11-15T00:00:00Z",
+      "count": 9,
+      "uniques": 7
     }
   ],
-  "total_views": 503,
-  "total_clones": 133,
-  "last_updated": "2025-11-15T00:18:09.123571"
+  "total_views": 525,
+  "total_clones": 142,
+  "last_updated": "2025-11-16T00:08:49.273702"
 }
