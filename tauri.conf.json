@@ -12,8 +12,10 @@
         "windows": [
             {
                 "title": "KakeiBon",
-                "width": 800,
+                "width": 1100,
                 "height": 600,
+                "minWidth": 1100,
+                "minHeight": 600,
                 "resizable": true,
                 "fullscreen": false,
                 "center": true
