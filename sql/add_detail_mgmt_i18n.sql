@@ -56,6 +56,12 @@ INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, C
 ('detail_mgmt.amount', 'ja', '金額', 'detail_mgmt', datetime('now')),
 ('detail_mgmt.amount', 'en', 'Amount', 'detail_mgmt', datetime('now')),
 
+('detail_mgmt.amount_excluding_tax', 'ja', '税抜金額', 'detail_mgmt', datetime('now')),
+('detail_mgmt.amount_excluding_tax', 'en', 'Amount (Excl. Tax)', 'detail_mgmt', datetime('now')),
+
+('detail_mgmt.amount_including_tax', 'ja', '税込金額', 'detail_mgmt', datetime('now')),
+('detail_mgmt.amount_including_tax', 'en', 'Amount (Incl. Tax)', 'detail_mgmt', datetime('now')),
+
 ('detail_mgmt.tax', 'ja', '税額', 'detail_mgmt', datetime('now')),
 ('detail_mgmt.tax', 'en', 'Tax', 'detail_mgmt', datetime('now')),
 

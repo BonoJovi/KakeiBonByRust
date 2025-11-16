@@ -119,6 +119,113 @@ function setupMenuHandlers() {
     });
 }
 
+/**
+ * Setup tax calculation listeners for automatic calculation
+ * between tax-excluded and tax-included amounts
+ */
+function setupTaxCalculationListeners() {
+    const taxRate = document.getElementById('tax-rate');
+    const amountExcludingTax = document.getElementById('amount-excluding-tax');
+    const amountIncludingTax = document.getElementById('amount-including-tax');
+    const taxAmount = document.getElementById('tax-amount');
+    
+    if (!taxRate || !amountExcludingTax || !amountIncludingTax || !taxAmount) {
+        return;
+    }
+    
+    // Calculate tax-included amount when tax-excluded amount is entered
+    amountExcludingTax.addEventListener('input', () => {
+        calculateFromExcludingTax(
+            amountExcludingTax,
+            taxRate,
+            taxAmount,
+            amountIncludingTax
+        );
+    });
+    
+    // Calculate tax-excluded amount when tax-included amount is entered
+    amountIncludingTax.addEventListener('input', () => {
+        calculateFromIncludingTax(
+            amountIncludingTax,
+            taxRate,
+            taxAmount,
+            amountExcludingTax
+        );
+    });
+    
+    // Recalculate when tax rate changes
+    taxRate.addEventListener('change', () => {
+        // If excluding tax has value, recalculate from it
+        if (amountExcludingTax.value) {
+            calculateFromExcludingTax(
+                amountExcludingTax,
+                taxRate,
+                taxAmount,
+                amountIncludingTax
+            );
+        } else if (amountIncludingTax.value) {
+            // Otherwise, recalculate from including tax
+            calculateFromIncludingTax(
+                amountIncludingTax,
+                taxRate,
+                taxAmount,
+                amountExcludingTax
+            );
+        }
+    });
+}
+
+/**
+ * Calculate tax-included amount from tax-excluded amount
+ * @param {HTMLInputElement} excludingTaxInput - Tax-excluded amount input
+ * @param {HTMLSelectElement} taxRateSelect - Tax rate select
+ * @param {HTMLInputElement} taxAmountInput - Tax amount input (readonly)
+ * @param {HTMLInputElement} includingTaxInput - Tax-included amount input
+ */
+function calculateFromExcludingTax(excludingTaxInput, taxRateSelect, taxAmountInput, includingTaxInput) {
+    const excluded = parseFloat(excludingTaxInput.value) || 0;
+    const rate = parseFloat(taxRateSelect.value) || 0;
+    
+    // Calculate tax amount (round down)
+    const tax = Math.floor(excluded * rate / 100);
+    
+    // Calculate including tax amount
+    const included = excluded + tax;
+    
+    // Update fields
+    taxAmountInput.value = tax;
+    includingTaxInput.value = included || '';
+}
+
+/**
+ * Calculate tax-excluded amount from tax-included amount
+ * @param {HTMLInputElement} includingTaxInput - Tax-included amount input
+ * @param {HTMLSelectElement} taxRateSelect - Tax rate select
+ * @param {HTMLInputElement} taxAmountInput - Tax amount input (readonly)
+ * @param {HTMLInputElement} excludingTaxInput - Tax-excluded amount input
+ */
+function calculateFromIncludingTax(includingTaxInput, taxRateSelect, taxAmountInput, excludingTaxInput) {
+    const included = parseFloat(includingTaxInput.value) || 0;
+    const rate = parseFloat(taxRateSelect.value) || 0;
+    
+    if (rate === 0) {
+        // No tax
+        excludingTaxInput.value = included || '';
+        taxAmountInput.value = 0;
+        return;
+    }
+    
+    // Calculate tax-excluded amount (round down)
+    const excluded = Math.floor(included / (1 + rate / 100));
+    
+    // Calculate tax amount
+    const tax = included - excluded;
+    
+    // Update fields
+    taxAmountInput.value = tax;
+    excludingTaxInput.value = excluded || '';
+}
+
 function setupEventListeners() {
     // Add detail button
     const addDetailBtn = document.getElementById('add-detail-btn');
@@ -160,6 +267,9 @@ function setupEventListeners() {
     if (confirmDeleteBtn) {
         confirmDeleteBtn.addEventListener('click', handleDeleteConfirm);
     }
+    
+    // Tax calculation listeners
+    setupTaxCalculationListeners();
 }
 
 async function loadTransactionHeader() {

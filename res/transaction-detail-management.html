@@ -157,13 +157,6 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="amount" data-i18n="detail_mgmt.amount">Amount:</label>
-                        <div class="input-wrapper">
-                            <input type="number" id="amount" name="amount" min="0" required />
-                        </div>
-                    </div>
-
-                    <div class="form-group">
                         <label for="tax-rate" data-i18n="detail_mgmt.tax_rate">Tax Rate (%):</label>
                         <div class="input-wrapper">
                             <select id="tax-rate" name="tax-rate">
@@ -171,6 +164,20 @@
                                 <option value="8">8%</option>
                                 <option value="10" selected>10%</option>
                             </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="amount-excluding-tax" data-i18n="detail_mgmt.amount_excluding_tax">Amount (Excl. Tax):</label>
+                        <div class="input-wrapper">
+                            <input type="number" id="amount-excluding-tax" name="amount-excluding-tax" min="0" />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="amount-including-tax" data-i18n="detail_mgmt.amount_including_tax">Amount (Incl. Tax):</label>
+                        <div class="input-wrapper">
+                            <input type="number" id="amount-including-tax" name="amount-including-tax" min="0" />
                         </div>
                     </div>
 
