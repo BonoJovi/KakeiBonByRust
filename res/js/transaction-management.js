@@ -538,6 +538,21 @@ function initializeTransactionModal() {
             window.location.href = HTML_FILES.SHOP_MANAGEMENT;
         });
     }
+
+    // Manage details button handler
+    const manageDetailsBtn = document.getElementById('manage-details-btn');
+    if (manageDetailsBtn) {
+        manageDetailsBtn.addEventListener('click', () => {
+            // Get transaction_id from the modal (when editing)
+            if (editingTransactionId) {
+                // Navigate to detail management screen with transaction_id
+                window.location.href = `${HTML_FILES.TRANSACTION_DETAIL_MANAGEMENT}?transaction_id=${editingTransactionId}`;
+            } else {
+                // New transaction - need to save first
+                alert(i18n.t('transaction_mgmt.save_before_details') || 'Please save the transaction first before managing details.');
+            }
+        });
+    }
 }
 
 async function openTransactionModal(transactionId = null) {

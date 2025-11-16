@@ -9,5 +9,6 @@ export const HTML_FILES = {
     SHOP_MANAGEMENT: 'shop-management.html',
     MANUFACTURER_MANAGEMENT: 'manufacturer-management.html',
     PRODUCT_MANAGEMENT: 'product-management.html',
-    TRANSACTION_MANAGEMENT: 'transaction-management.html'
+    TRANSACTION_MANAGEMENT: 'transaction-management.html',
+    TRANSACTION_DETAIL_MANAGEMENT: 'transaction-detail-management.html'
 };

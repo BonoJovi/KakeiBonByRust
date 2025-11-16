@@ -81,12 +81,20 @@ class Modal {
             }
         }
         
-        // Backdrop click
+        // Backdrop click - only close if mousedown and mouseup both occur on backdrop
         if (this.options.closeOnBackdropClick) {
-            this.modal.addEventListener('click', (e) => {
-                if (e.target === this.modal) {
+            let mouseDownTarget = null;
+            
+            this.modal.addEventListener('mousedown', (e) => {
+                mouseDownTarget = e.target;
+            });
+            
+            this.modal.addEventListener('mouseup', (e) => {
+                // Only close if both mousedown and mouseup happened on the backdrop (modal itself)
+                if (e.target === this.modal && mouseDownTarget === this.modal) {
                     this.close();
                 }
+                mouseDownTarget = null;
             });
         }
         

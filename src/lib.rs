@@ -1446,6 +1446,115 @@ async fn update_transaction_header(
         .map_err(|e| e.to_string())
 }
 
+// ============================================================================
+// Transaction Detail Management Commands
+// ============================================================================
+
+#[tauri::command]
+async fn get_transaction_header_with_info(
+    transaction_id: i64,
+    state: tauri::State<'_, AppState>
+) -> Result<services::transaction::TransactionHeaderWithInfo, String> {
+    let transaction = state.transaction.lock().await;
+    // TODO: Get user_id from session/auth
+    let user_id = 2;
+
+    transaction.get_transaction_header_with_info(user_id, transaction_id).await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn get_transaction_details(
+    transaction_id: i64,
+    state: tauri::State<'_, AppState>
+) -> Result<Vec<services::transaction::TransactionDetailWithInfo>, String> {
+    let transaction = state.transaction.lock().await;
+    // TODO: Get user_id from session/auth
+    let user_id = 2;
+
+    transaction.get_transaction_details(user_id, transaction_id).await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn add_transaction_detail(
+    transaction_id: i64,
+    category1_code: String,
+    category2_code: String,
+    category3_code: String,
+    item_name: String,
+    amount: i64,
+    tax_rate: i32,
+    tax_amount: i64,
+    memo: Option<String>,
+    state: tauri::State<'_, AppState>
+) -> Result<i64, String> {
+    let transaction = state.transaction.lock().await;
+    // TODO: Get user_id from session/auth
+    let user_id = 2;
+
+    let request = services::transaction::SaveTransactionDetailRequest {
+        detail_id: None,
+        category1_code,
+        category2_code,
+        category3_code,
+        item_name,
+        amount,
+        tax_rate,
+        tax_amount,
+        memo,
+    };
+
+    transaction.add_transaction_detail(user_id, transaction_id, request).await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn update_transaction_detail(
+    detail_id: i64,
+    category1_code: String,
+    category2_code: String,
+    category3_code: String,
+    item_name: String,
+    amount: i64,
+    tax_rate: i32,
+    tax_amount: i64,
+    memo: Option<String>,
+    state: tauri::State<'_, AppState>
+) -> Result<(), String> {
+    let transaction = state.transaction.lock().await;
+    // TODO: Get user_id from session/auth
+    let user_id = 2;
+
+    let request = services::transaction::SaveTransactionDetailRequest {
+        detail_id: Some(detail_id),
+        category1_code,
+        category2_code,
+        category3_code,
+        item_name,
+        amount,
+        tax_rate,
+        tax_amount,
+        memo,
+    };
+
+    transaction.update_transaction_detail(user_id, detail_id, request).await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn delete_transaction_detail(
+    detail_id: i64,
+    state: tauri::State<'_, AppState>
+) -> Result<(), String> {
+    let transaction = state.transaction.lock().await;
+    // TODO: Get user_id from session/auth
+    let user_id = 2;
+
+    transaction.delete_transaction_detail(user_id, detail_id).await
+        .map_err(|e| e.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -1534,7 +1643,12 @@ pub fn run() {
             save_transaction_header,
             get_transaction_header,
             select_transaction_headers,
-            update_transaction_header
+            update_transaction_header,
+            get_transaction_header_with_info,
+            get_transaction_details,
+            add_transaction_detail,
+            update_transaction_detail,
+            delete_transaction_detail
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {
