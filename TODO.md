@@ -571,33 +571,40 @@
 
 ### 高優先度
 - [ ] **入出金明細管理機能**（TRANSACTION_DETAILS）
-  - **Phase 1: データベース設計**
-    - [ ] TRANSACTION_DETAILSテーブル設計
-    - [ ] USER_ID, TRANSACTION_ID, LINE_NO複合主キー
-    - [ ] 外部キー制約（TRANSACTION_HEADERS, CATEGORY2, CATEGORY3, MANUFACTURERS, PRODUCTS）
-    - [ ] インデックス設計
-  - **Phase 2: バックエンドAPI**
+  - **Phase 1: データベース設計** ✅ (2025-11-17)
+    - [x] TRANSACTIONS_DETAILテーブル設計
+    - [x] USER_ID, TRANSACTION_ID, DETAIL_ID主キー
+    - [x] 外部キー制約（TRANSACTION_HEADERS, CATEGORY2, CATEGORY3）
+    - [x] インデックス設計
+    - [x] AMOUNT_INCLUDING_TAX カラム追加（税込金額保存用）
+  - **Phase 2: フロントエンド（入力フォーム）** 🚧 (進行中)
+    - [x] CATEGORY1_CODEをセッション管理に変更
+    - [x] 税抜金額・税込金額の両方入力可能なUI
+    - [x] 相互自動計算ロジック実装
+    - [x] 翻訳リソース追加
+    - [ ] カテゴリドロップダウンの実装
+    - [ ] メモ機能の実装
+    - [ ] バリデーション実装
+  - **Phase 3: バックエンドAPI**
     - [ ] `get_transaction_details` - 明細一覧取得
     - [ ] `add_transaction_detail` - 明細追加
     - [ ] `update_transaction_detail` - 明細更新
     - [ ] `delete_transaction_detail` - 明細削除
     - [ ] `reorder_transaction_details` - 明細並び替え
-    - [ ] 金額自動計算・税額計算ロジック
     - [ ] バリデーション（数量・単価・税率の範囲チェック）
-  - **Phase 3: フロントエンド（明細一覧）**
-    - [ ] 入出金編集画面に明細タブ追加
+  - **Phase 4: フロントエンド（一覧表示）**
     - [ ] 明細一覧表示（テーブル形式）
-    - [ ] 明細の追加・編集・削除UI
-    - [ ] 並び替え機能（ドラッグ&ドロップ or 上下ボタン）
-  - **Phase 4: 金額計算機能**
+    - [ ] 明細の追加・編集・削除UI統合
+    - [ ] 並び替え機能（上下ボタン）
+  - **Phase 5: 金額計算機能**
+    - [x] 税抜⇔税込の相互計算（基本実装）
     - [ ] 明細合計の自動計算
-    - [ ] 税込/税抜の切り替え
     - [ ] ヘッダー金額との整合性チェック
-    - [ ] 端数処理（四捨五入・切り捨て・切り上げ）
-  - **Phase 5: テスト実装**
+    - [ ] 端数処理の自動検出（TAX_ROUNDING_TYPE）
+  - **Phase 6: テスト実装**
     - [ ] バックエンドテスト（CRUD、計算ロジック）
     - [ ] フロントエンドテスト（UI操作、バリデーション）
-  - **Phase 6: ドキュメント**
+  - **Phase 7: ドキュメント**
     - [ ] API仕様書（日英）
     - [ ] 明細管理機能仕様書（日英）
 - [ ] **月次集計・レポート機能**
@@ -627,4 +634,4 @@
 
 ---
 
-最終更新: 2025-11-17 00:02 JST
+最終更新: 2025-11-17 15:45 JST

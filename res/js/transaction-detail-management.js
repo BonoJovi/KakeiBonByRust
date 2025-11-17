@@ -10,6 +10,7 @@ let currentUserId = null;
 let currentUserRole = null;
 let transactionId = null;
 let category1Code = null; // Store CATEGORY1_CODE from transaction header
+let lastTaxInputField = null; // Track which amount field was last edited: 'excluding' or 'including'
 
 document.addEventListener('DOMContentLoaded', async function() {
     try {
@@ -155,8 +156,25 @@ function setupTaxCalculationListeners() {
     
     // Recalculate when tax rate changes
     taxRate.addEventListener('change', () => {
-        // If excluding tax has value, recalculate from it
-        if (amountExcludingTax.value) {
+        // Recalculate based on which field was last edited
+        if (lastTaxInputField === 'including' && amountIncludingTax.value) {
+            // User last edited tax-included amount, so recalculate tax-excluded
+            calculateFromIncludingTax(
+                amountIncludingTax,
+                taxRate,
+                taxAmount,
+                amountExcludingTax
+            );
+        } else if (lastTaxInputField === 'excluding' && amountExcludingTax.value) {
+            // User last edited tax-excluded amount, so recalculate tax-included
+            calculateFromExcludingTax(
+                amountExcludingTax,
+                taxRate,
+                taxAmount,
+                amountIncludingTax
+            );
+        } else if (amountExcludingTax.value) {
+            // Default to tax-excluded if no flag is set
             calculateFromExcludingTax(
                 amountExcludingTax,
                 taxRate,
@@ -164,7 +182,7 @@ function setupTaxCalculationListeners() {
                 amountIncludingTax
             );
         } else if (amountIncludingTax.value) {
-            // Otherwise, recalculate from including tax
+            // Fall back to tax-included
             calculateFromIncludingTax(
                 amountIncludingTax,
                 taxRate,
@@ -185,6 +203,12 @@ function setupTaxCalculationListeners() {
 function calculateFromExcludingTax(excludingTaxInput, taxRateSelect, taxAmountInput, includingTaxInput) {
     const excluded = parseFloat(excludingTaxInput.value) || 0;
     const rate = parseFloat(taxRateSelect.value) || 0;
+    
+    // Clear any previous warning (user is now entering tax-excluded amount)
+    clearRoundingWarning();
+    
+    // Mark that tax-excluded amount was last edited
+    lastTaxInputField = 'excluding';
     
     // Calculate tax amount (round down)
     const tax = Math.floor(excluded * rate / 100);
@@ -208,6 +232,18 @@ function calculateFromIncludingTax(includingTaxInput, taxRateSelect, taxAmountIn
     const included = parseFloat(includingTaxInput.value) || 0;
     const rate = parseFloat(taxRateSelect.value) || 0;
     
+    // Clear any previous warning
+    clearRoundingWarning();
+    
+    // Mark that tax-included amount was last edited
+    lastTaxInputField = 'including';
+    
+    if (!included) {
+        excludingTaxInput.value = '';
+        taxAmountInput.value = 0;
+        return;
+    }
+    
     if (rate === 0) {
         // No tax
         excludingTaxInput.value = included || '';
@@ -221,17 +257,65 @@ function calculateFromIncludingTax(includingTaxInput, taxRateSelect, taxAmountIn
     // Calculate tax amount
     const tax = included - excluded;
     
+    // Verify by reverse calculation
+    const taxReverse = Math.floor(excluded * rate / 100);
+    const includedReverse = excluded + taxReverse;
+    
+    // Check if there's a rounding discrepancy
+    if (includedReverse !== included) {
+        showRoundingWarning(included, includedReverse);
+    }
+    
     // Update fields
     taxAmountInput.value = tax;
     excludingTaxInput.value = excluded || '';
+}
+
+/**
+ * Show warning message for rounding discrepancy
+ */
+function showRoundingWarning(userInput, calculated) {
+    const warningDiv = document.getElementById('rounding-warning');
+    if (!warningDiv) {
+        // Create warning element if it doesn't exist
+        const detailForm = document.getElementById('detail-form');
+        const newWarning = document.createElement('div');
+        newWarning.id = 'rounding-warning';
+        newWarning.className = 'rounding-warning';
+        newWarning.style.cssText = 'background-color: #fff3cd; color: #856404; padding: 10px; margin: 10px 0; border: 1px solid #ffc107; border-radius: 4px;';
+        
+        const amountInputs = detailForm.querySelector('#amount-including-tax').closest('.form-group');
+        amountInputs.parentNode.insertBefore(newWarning, amountInputs.nextSibling);
+    }
+    
+    const warning = document.getElementById('rounding-warning');
+    const diff = Math.abs(userInput - calculated);
+    warning.innerHTML = `
+        <strong>⚠️ ${i18n.t('detail_mgmt.rounding_warning_title')}</strong><br>
+        ${i18n.t('detail_mgmt.rounding_warning_message')
+            .replace('{userInput}', userInput.toLocaleString())
+            .replace('{calculated}', calculated.toLocaleString())
+            .replace('{diff}', diff)}
+    `;
+    warning.style.display = 'block';
+}
+
+/**
+ * Clear rounding warning message
+ */
+function clearRoundingWarning() {
+    const warningDiv = document.getElementById('rounding-warning');
+    if (warningDiv) {
+        warningDiv.style.display = 'none';
+    }
 }
 
 function setupEventListeners() {
     // Add detail button
     const addDetailBtn = document.getElementById('add-detail-btn');
     if (addDetailBtn) {
-        addDetailBtn.addEventListener('click', () => {
-            openDetailModal();
+        addDetailBtn.addEventListener('click', async () => {
+            await openDetailModal();
         });
     }
     
@@ -270,6 +354,118 @@ function setupEventListeners() {
     
     // Tax calculation listeners
     setupTaxCalculationListeners();
+    
+    // Category2 change listener
+    const category2Select = document.getElementById('category2-code');
+    if (category2Select) {
+        category2Select.addEventListener('change', async (e) => {
+            await loadCategory3Options(e.target.value);
+        });
+    }
+}
+
+/**
+ * Load category dropdowns based on CATEGORY1_CODE from header
+ */
+async function loadCategoryDropdowns() {
+    console.log('loadCategoryDropdowns called, category1Code:', category1Code);
+    
+    if (!category1Code) {
+        console.error('category1Code is not set yet');
+        showMessage('error', 'Category code not loaded. Please refresh the page.');
+        return;
+    }
+    
+    try {
+        const categoryTree = await invoke('get_category_tree_with_lang', {
+            userId: currentUserId,
+            langCode: i18n.getCurrentLanguage()
+        });
+        
+        console.log('Category tree loaded:', categoryTree);
+        console.log('Looking for category1Code:', category1Code, 'type:', typeof category1Code);
+        
+        // Find the category1 node matching our category1Code
+        const category1Node = categoryTree.find(cat1 => cat1.category1?.category1_code === category1Code);
+        
+        if (!category1Node) {
+            console.error('Category1 not found:', category1Code);
+            return;
+        }
+        
+        console.log('Category1 node found:', category1Node);
+        
+        // Populate CATEGORY2 dropdown
+        const category2Select = document.getElementById('category2-code');
+        if (category2Select) {
+            category2Select.innerHTML = '<option value="">' + i18n.t('common.select') + '</option>';
+            
+            if (category1Node.children && category1Node.children.length > 0) {
+                category1Node.children.forEach(cat2Item => {
+                    const cat2 = cat2Item.category2;
+                    const option = document.createElement('option');
+                    option.value = cat2.category2_code;
+                    option.textContent = cat2.category2_name_i18n;
+                    category2Select.appendChild(option);
+                });
+            }
+        }
+        
+        // Clear CATEGORY3 dropdown (will be populated when CATEGORY2 is selected)
+        const category3Select = document.getElementById('category3-code');
+        if (category3Select) {
+            category3Select.innerHTML = '<option value="">' + i18n.t('common.select') + '</option>';
+        }
+        
+    } catch (error) {
+        console.error('Failed to load categories:', error);
+        showMessage('error', `Failed to load categories: ${error.message}`);
+    }
+}
+
+/**
+ * Load CATEGORY3 options based on selected CATEGORY2
+ */
+async function loadCategory3Options(category2Code) {
+    if (!category2Code) {
+        const category3Select = document.getElementById('category3-code');
+        if (category3Select) {
+            category3Select.innerHTML = '<option value="">' + i18n.t('common.select') + '</option>';
+        }
+        return;
+    }
+    
+    try {
+        const categoryTree = await invoke('get_category_tree_with_lang', {
+            userId: currentUserId,
+            langCode: i18n.getCurrentLanguage()
+        });
+        
+        // Find the category1 and category2 nodes
+        const category1Node = categoryTree.find(cat1 => cat1.category1?.category1_code === category1Code);
+        if (!category1Node) return;
+        
+        const category2Node = category1Node.children?.find(cat2Item => cat2Item.category2?.category2_code === category2Code);
+        if (!category2Node) return;
+        
+        // Populate CATEGORY3 dropdown
+        const category3Select = document.getElementById('category3-code');
+        if (category3Select) {
+            category3Select.innerHTML = '<option value="">' + i18n.t('common.select') + '</option>';
+            
+            if (category2Node.children && category2Node.children.length > 0) {
+                category2Node.children.forEach(cat3 => {
+                    const option = document.createElement('option');
+                    option.value = cat3.category3_code;
+                    option.textContent = cat3.category3_name_i18n;
+                    category3Select.appendChild(option);
+                });
+            }
+        }
+        
+    } catch (error) {
+        console.error('Failed to load category3 options:', error);
+    }
 }
 
 async function loadTransactionHeader() {
@@ -278,7 +474,6 @@ async function loadTransactionHeader() {
         
         // Get transaction header from backend
         const header = await invoke('get_transaction_header', {
-            userId: currentUserId,
             transactionId: parseInt(transactionId)
         });
         
@@ -322,7 +517,7 @@ async function loadDetails() {
     `;
 }
 
-function openDetailModal(detail = null) {
+async function openDetailModal(detail = null) {
     const modal = document.getElementById('detail-modal');
     const modalTitle = document.getElementById('modal-title');
     const detailForm = document.getElementById('detail-form');
@@ -336,6 +531,9 @@ function openDetailModal(detail = null) {
     // Set CATEGORY1_CODE from header (always needed for both add and edit)
     document.getElementById('category1-code').value = category1Code || '';
     
+    // Load category dropdowns
+    await loadCategoryDropdowns();
+    
     if (detail) {
         // Edit mode
         modalTitle.setAttribute('data-i18n', 'detail_mgmt.edit_detail');
@@ -344,11 +542,16 @@ function openDetailModal(detail = null) {
         // Populate form with detail data
         document.getElementById('detail-id').value = detail.detail_id;
         document.getElementById('item-name').value = detail.item_name;
+        
+        // Set category values after dropdowns are loaded
         document.getElementById('category2-code').value = detail.category2_code;
+        await loadCategory3Options(detail.category2_code);
         document.getElementById('category3-code').value = detail.category3_code;
-        document.getElementById('amount').value = detail.amount;
+        
+        document.getElementById('amount-excluding-tax').value = detail.amount;
         document.getElementById('tax-rate').value = detail.tax_rate;
         document.getElementById('tax-amount').value = detail.tax_amount;
+        document.getElementById('amount-including-tax').value = detail.amount_including_tax;
         if (detail.memo) {
             document.getElementById('memo').value = detail.memo;
         }

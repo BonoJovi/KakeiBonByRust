@@ -102,3 +102,11 @@ INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, C
 
 ('detail_mgmt.delete_error', 'ja', '明細の削除に失敗しました', 'detail_mgmt', datetime('now')),
 ('detail_mgmt.delete_error', 'en', 'Failed to delete detail', 'detail_mgmt', datetime('now'));
+
+-- Rounding warning messages (added 2025-11-17)
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, ENTRY_DT) VALUES 
+('detail_mgmt.rounding_warning_title', 'ja', '端数処理による誤差', 'detail_mgmt', datetime('now')),
+('detail_mgmt.rounding_warning_title', 'en', 'Rounding Discrepancy', 'detail_mgmt', datetime('now')),
+
+('detail_mgmt.rounding_warning_message', 'ja', '税込金額から計算した結果、税抜金額に{diff}円の誤差が発生しました。自動計算した税抜金額から税込金額を再計算すると{calculated}円(入力は{userInput}円)になります。正確な金額が必要な場合は、税抜金額を直接入力してください。', 'detail_mgmt', datetime('now')),
+('detail_mgmt.rounding_warning_message', 'en', 'A rounding discrepancy of ¥{diff} occurred in the tax-excluded amount. Recalculating the tax-included amount from the calculated tax-excluded amount results in ¥{calculated} (input was ¥{userInput}). For accurate amounts, please enter the tax-excluded amount directly.', 'detail_mgmt', datetime('now'));
