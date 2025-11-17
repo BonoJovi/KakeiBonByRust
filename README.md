@@ -7,7 +7,7 @@
 
 [![Rust](https://img.shields.io/badge/Rust-1.70+-orange.svg)](https://www.rust-lang.org/)
 [![Tauri](https://img.shields.io/badge/Tauri-v2.8.5-blue.svg)](https://tauri.app/)
-[![Tests](https://img.shields.io/badge/tests-564%20passing-brightgreen.svg)](#test-results--テスト結果)
+[![Tests](https://img.shields.io/badge/tests-569%20passing-brightgreen.svg)](#test-results--テスト結果)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 [🇯🇵 日本語詳細](README_ja.md) | [🇬🇧 English Details](README_en.md)
@@ -41,7 +41,7 @@ Development is progressing smoothly, and we strive to update daily!
 開発は順調に進んでおり、できるだけ日々更新するようにしています！
 
 **Project Started / プロジェクト開始**: 2025-10-22 (JST)  
-**Last Updated / 最終更新**: 2025-11-14 (JST)
+**Last Updated / 最終更新**: 2025-11-17 (JST)
 
 <!-- STATS_START -->
 ## 📊 Repository Statistics / リポジトリ統計
@@ -145,10 +145,10 @@ Switch between Japanese and English seamlessly
 | 🏪 **Shop Management**<br/>**店舗管理** | Shop master data management<br/>店舗マスタ管理 | ✅ Complete<br/>完成 |
 | 🏭 **Manufacturer Management**<br/>**メーカー管理** | Manufacturer master data with IS_DISABLED feature<br/>IS_DISABLED機能付きメーカーマスタ管理 | ✅ Complete<br/>完成 |
 | 📦 **Product Management**<br/>**商品管理** | Product master data with manufacturer linkage<br/>メーカー連携付き商品マスタ管理 | ✅ Complete<br/>完成 |
-| 🌍 **Multilingual**<br/>**多言語対応** | Dynamic language switching (JP/EN) - 298 resources<br/>日本語・英語の動的切り替え - 298リソース | ✅ Complete<br/>完成 |
+| 🌍 **Multilingual**<br/>**多言語対応** | Dynamic language switching (JP/EN) - 992 resources<br/>日本語・英語の動的切り替え - 992リソース | ✅ Complete<br/>完成 |
 | 🔧 **Customization**<br/>**カスタマイズ** | Font size, language preferences<br/>フォントサイズ、言語設定 | ✅ Complete<br/>完成 |
-| 📝 **Transaction Management**<br/>**入出金管理** | Header-level CRUD, filters, pagination<br/>ヘッダレベルCRUD、フィルター、ページネーション | ✅ Partial<br/>部分完成 |
-| 📋 **Transaction Details**<br/>**入出金明細** | Item-level transaction management<br/>明細レベル管理 | 📅 Planned<br/>予定 |
+| 📝 **Transaction Management**<br/>**入出金管理** | Header-level CRUD, filters, pagination<br/>ヘッダレベルCRUD、フィルター、ページネーション | ✅ Complete<br/>完成 |
+| 🧾 **Transaction Details**<br/>**入出金明細** | Detail-level input with smart tax calculation<br/>スマート税計算付き明細入力 | 🚧 In Progress<br/>開発中 |
 | 📊 **Reports**<br/>**集計・レポート** | Monthly/annual summaries, graphs<br/>月次・年次レポート、グラフ | 📅 Planned<br/>予定 |
 
 ---
@@ -160,8 +160,8 @@ Frontend / フロントエンド:  Vanilla JavaScript (ES6 Modules) + HTML5 + CS
 Backend / バックエンド:     Rust + Tauri v2.8.5
 Database / データベース:    SQLite (WAL mode)
 Security / セキュリティ:   Argon2id + AES-256-GCM
-Testing / テスト:          564 tests passing (Rust: 160, JS: 404)
-i18n Resources / 翻訳:     298 resources (149 unique keys, 2 languages)
+Testing / テスト:          569 tests passing (Rust: 165, JS: 404)
+i18n Resources / 翻訳:     992 resources (496 unique keys, 2 languages)
 ```
 
 ---
