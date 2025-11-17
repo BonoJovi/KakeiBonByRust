@@ -43,6 +43,10 @@ Development is progressing smoothly, and we strive to update daily!
 **Project Started / プロジェクト開始**: 2025-10-22 (JST)  
 **Last Updated / 最終更新**: 2025-11-17 (JST)
 
+> **🤖 AI-Assisted Development / AI支援開発**  
+> This project's source code and documentation are **100% generated** with the assistance of generative AI (GitHub Copilot, Claude), supervised and reviewed by the developer. This demonstrates the potential of AI-assisted development.  
+> 本プロジェクトのソースコードおよびドキュメントは、生成AI（GitHub Copilot、Claude）の支援により**100%生成**され、開発者による監修とレビューを経ています。これは、AI支援開発の可能性を示す事例です。
+
 <!-- STATS_START -->
 ## 📊 Repository Statistics / リポジトリ統計
 
@@ -162,6 +166,7 @@ Database / データベース:    SQLite (WAL mode)
 Security / セキュリティ:   Argon2id + AES-256-GCM
 Testing / テスト:          569 tests passing (Rust: 165, JS: 404)
 i18n Resources / 翻訳:     992 resources (496 unique keys, 2 languages)
+Code Lines / コード行数:    ~26,844 lines (Rust: 11,879, JS: 6,830, HTML: 2,758, CSS: 3,371, SQL: 2,006)
 ```
 
 ---
