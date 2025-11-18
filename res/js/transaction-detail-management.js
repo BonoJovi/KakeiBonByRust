@@ -500,21 +500,93 @@ async function loadTransactionHeader() {
 }
 
 async function loadDetails() {
-    // Placeholder: Load transaction details
-    console.log('Loading details for transaction ID:', transactionId);
-    
-    const detailList = document.getElementById('detail-list');
-    if (!detailList) return;
-    
-    // TODO: Implement backend call to get transaction details
-    // For now, show "no data" message
-    detailList.innerHTML = `
-        <tr>
-            <td colspan="5" style="text-align: center; padding: 40px; color: #757575;">
-                ${i18n.t('common.no_data')}
-            </td>
-        </tr>
-    `;
+    try {
+        console.log('Loading details for transaction ID:', transactionId);
+        
+        const detailList = document.getElementById('detail-list');
+        if (!detailList) return;
+        
+        // Show loading state
+        detailList.innerHTML = `
+            <tr class="loading-row">
+                <td colspan="5" class="loading" style="text-align: center; padding: 20px;">
+                    ${i18n.t('common.loading')}
+                </td>
+            </tr>
+        `;
+        
+        // Get transaction details from backend
+        const details = await invoke('get_transaction_details', {
+            userId: currentUserId,
+            transactionId: parseInt(transactionId)
+        });
+        
+        if (!details || details.length === 0) {
+            // No details found
+            detailList.innerHTML = `
+                <tr>
+                    <td colspan="5" style="text-align: center; padding: 40px; color: #757575;">
+                        ${i18n.t('common.no_data')}
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+        
+        // Display details
+        detailList.innerHTML = details.map((detail, index) => `
+            <tr data-detail-id="${detail.detail_id}">
+                <td>${escapeHtml(detail.item_name)}</td>
+                <td>${escapeHtml(detail.category2_name)} / ${escapeHtml(detail.category3_name)}</td>
+                <td style="text-align: right;">¥${detail.amount_including_tax?.toLocaleString() || detail.amount.toLocaleString()}</td>
+                <td style="text-align: right;">¥${detail.tax_amount.toLocaleString()}</td>
+                <td class="actions">
+                    <button class="btn btn-small btn-secondary edit-detail-btn" data-detail-id="${detail.detail_id}" data-i18n="common.edit">Edit</button>
+                    <button class="btn btn-small btn-danger delete-detail-btn" data-detail-id="${detail.detail_id}" data-i18n="common.delete">Delete</button>
+                </td>
+            </tr>
+        `).join('');
+        
+        // Add event listeners to dynamically created buttons
+        document.querySelectorAll('.edit-detail-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const detailId = parseInt(e.target.dataset.detailId);
+                editDetail(detailId);
+            });
+        });
+        
+        document.querySelectorAll('.delete-detail-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const detailId = parseInt(e.target.dataset.detailId);
+                confirmDeleteDetail(detailId);
+            });
+        });
+        
+        // Update i18n for dynamically added elements
+        i18n.updateUI();
+        
+    } catch (error) {
+        console.error('Failed to load transaction details:', error);
+        const detailList = document.getElementById('detail-list');
+        if (detailList) {
+            detailList.innerHTML = `
+                <tr>
+                    <td colspan="5" style="text-align: center; padding: 40px; color: #d32f2f;">
+                        ${i18n.t('common.error')}: ${error.message}
+                    </td>
+                </tr>
+            `;
+        }
+    }
+}
+
+/**
+ * Escape HTML to prevent XSS
+ */
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 async function openDetailModal(detail = null) {
@@ -552,8 +624,8 @@ async function openDetailModal(detail = null) {
         document.getElementById('tax-rate').value = detail.tax_rate;
         document.getElementById('tax-amount').value = detail.tax_amount;
         document.getElementById('amount-including-tax').value = detail.amount_including_tax;
-        if (detail.memo) {
-            document.getElementById('memo').value = detail.memo;
+        if (detail.memo_text) {
+            document.getElementById('memo').value = detail.memo_text;
         }
     } else {
         // Add mode
@@ -579,9 +651,10 @@ async function handleDetailFormSubmit(event) {
     const category1Code = document.getElementById('category1-code').value;
     const category2Code = document.getElementById('category2-code').value;
     const category3Code = document.getElementById('category3-code').value;
-    const amount = parseInt(document.getElementById('amount').value);
-    const taxRate = parseInt(document.getElementById('tax-rate').value);
-    const taxAmount = parseInt(document.getElementById('tax-amount').value);
+    const amountExcludingTax = parseInt(document.getElementById('amount-excluding-tax').value) || 0;
+    const amountIncludingTax = parseInt(document.getElementById('amount-including-tax').value) || 0;
+    const taxRate = parseInt(document.getElementById('tax-rate').value) || 0;
+    const taxAmount = parseInt(document.getElementById('tax-amount').value) || 0;
     const memo = document.getElementById('memo').value.trim();
     
     // Validation
@@ -595,25 +668,41 @@ async function handleDetailFormSubmit(event) {
         return;
     }
     
-    if (isNaN(amount) || amount < 0) {
+    if (amountExcludingTax < 0 || amountIncludingTax < 0) {
         showMessage('error', i18n.t('detail_mgmt.error_invalid_amount'));
         return;
     }
     
     try {
-        // TODO: Implement backend call to save detail
-        console.log('Saving detail:', {
-            detailId,
-            transactionId,
-            itemName,
-            category1Code,
-            category2Code,
-            category3Code,
-            amount,
-            taxRate,
-            taxAmount,
-            memo
-        });
+        if (detailId) {
+            // Update existing detail
+            await invoke('update_transaction_detail', {
+                detailId: parseInt(detailId),
+                category1Code: category1Code,
+                category2Code: category2Code,
+                category3Code: category3Code,
+                itemName: itemName,
+                amount: amountExcludingTax,
+                amountIncludingTax: amountIncludingTax,
+                taxRate: taxRate,
+                taxAmount: taxAmount,
+                memo: memo || null
+            });
+        } else {
+            // Add new detail
+            await invoke('add_transaction_detail', {
+                transactionId: parseInt(transactionId),
+                category1Code: category1Code,
+                category2Code: category2Code,
+                category3Code: category3Code,
+                itemName: itemName,
+                amount: amountExcludingTax,
+                amountIncludingTax: amountIncludingTax,
+                taxRate: taxRate,
+                taxAmount: taxAmount,
+                memo: memo || null
+            });
+        }
         
         closeDetailModal();
         showMessage('success', i18n.t('detail_mgmt.save_success'));
@@ -623,6 +712,60 @@ async function handleDetailFormSubmit(event) {
     } catch (error) {
         console.error('Failed to save detail:', error);
         showMessage('error', `${i18n.t('detail_mgmt.save_error')}: ${error.message}`);
+    }
+}
+
+/**
+ * Edit an existing detail
+ */
+async function editDetail(detailId) {
+    try {
+        // Get all details
+        const details = await invoke('get_transaction_details', {
+            userId: currentUserId,
+            transactionId: parseInt(transactionId)
+        });
+        
+        // Find the detail to edit
+        const detail = details.find(d => d.detail_id === detailId);
+        if (!detail) {
+            showMessage('error', 'Detail not found');
+            return;
+        }
+        
+        // Open modal with detail data
+        await openDetailModal(detail);
+        
+    } catch (error) {
+        console.error('Failed to load detail for editing:', error);
+        showMessage('error', `Failed to load detail: ${error.message}`);
+    }
+}
+
+/**
+ * Confirm deletion of a detail
+ */
+async function confirmDeleteDetail(detailId) {
+    try {
+        // Get all details
+        const details = await invoke('get_transaction_details', {
+            userId: currentUserId,
+            transactionId: parseInt(transactionId)
+        });
+        
+        // Find the detail to delete
+        const detail = details.find(d => d.detail_id === detailId);
+        if (!detail) {
+            showMessage('error', 'Detail not found');
+            return;
+        }
+        
+        // Open delete confirmation modal
+        openDeleteModal(detail);
+        
+    } catch (error) {
+        console.error('Failed to load detail for deletion:', error);
+        showMessage('error', `Failed to load detail: ${error.message}`);
     }
 }
 
@@ -652,8 +795,10 @@ async function handleDeleteConfirm() {
     if (!detailId) return;
     
     try {
-        // TODO: Implement backend call to delete detail
-        console.log('Deleting detail:', detailId);
+        await invoke('delete_transaction_detail', {
+            userId: currentUserId,
+            detailId: parseInt(detailId)
+        });
         
         closeDeleteModal();
         showMessage('success', i18n.t('detail_mgmt.delete_success'));

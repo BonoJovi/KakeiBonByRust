@@ -1490,6 +1490,7 @@ async fn add_transaction_detail(
     amount: i64,
     tax_rate: i32,
     tax_amount: i64,
+    amount_including_tax: Option<i64>,
     memo: Option<String>,
     state: tauri::State<'_, AppState>
 ) -> Result<i64, String> {
@@ -1506,6 +1507,7 @@ async fn add_transaction_detail(
         amount,
         tax_rate,
         tax_amount,
+        amount_including_tax,
         memo,
     };
 
@@ -1523,6 +1525,7 @@ async fn update_transaction_detail(
     amount: i64,
     tax_rate: i32,
     tax_amount: i64,
+    amount_including_tax: Option<i64>,
     memo: Option<String>,
     state: tauri::State<'_, AppState>
 ) -> Result<(), String> {
@@ -1539,6 +1542,7 @@ async fn update_transaction_detail(
         amount,
         tax_rate,
         tax_amount,
+        amount_including_tax,
         memo,
     };
 

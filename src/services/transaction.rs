@@ -72,6 +72,8 @@ pub struct TransactionDetail {
     pub tax_amount: i64,
     #[sqlx(rename = "TAX_RATE")]
     pub tax_rate: i32,
+    #[sqlx(rename = "AMOUNT_INCLUDING_TAX")]
+    pub amount_including_tax: Option<i64>,
     #[sqlx(rename = "MEMO_ID")]
     pub memo_id: Option<i64>,
     #[sqlx(rename = "ENTRY_DT")]
@@ -91,6 +93,7 @@ pub struct SaveTransactionDetailRequest {
     pub amount: i64,
     pub tax_rate: i32,
     pub tax_amount: i64,
+    pub amount_including_tax: Option<i64>,
     pub memo: Option<String>,
 }
 
@@ -110,6 +113,7 @@ pub struct TransactionDetailWithInfo {
     pub amount: i64,
     pub tax_amount: i64,
     pub tax_rate: i32,
+    pub amount_including_tax: Option<i64>,
     pub memo_id: Option<i64>,
     pub memo_text: Option<String>,
     pub entry_dt: String,
@@ -915,6 +919,7 @@ impl TransactionService {
                 amount: row.get("AMOUNT"),
                 tax_amount: row.get("TAX_AMOUNT"),
                 tax_rate: row.get("TAX_RATE"),
+                amount_including_tax: row.get("AMOUNT_INCLUDING_TAX"),
                 memo_id: row.get("MEMO_ID"),
                 memo_text: row.get("MEMO_TEXT"),
                 entry_dt: row.get("ENTRY_DT"),
@@ -998,6 +1003,7 @@ impl TransactionService {
             .bind(request.amount)
             .bind(request.tax_amount)
             .bind(request.tax_rate)
+            .bind(request.amount_including_tax)
             .bind(memo_id)
             .execute(&self.pool)
             .await?;
@@ -1106,6 +1112,7 @@ impl TransactionService {
             .bind(request.amount)
             .bind(request.tax_amount)
             .bind(request.tax_rate)
+            .bind(request.amount_including_tax)
             .bind(memo_id)
             .bind(detail_id)
             .bind(user_id)
@@ -1136,15 +1143,10 @@ impl TransactionService {
 
         let detail = detail.ok_or(TransactionError::NotFound)?;
 
-        // Delete memo if exists
-        if let Some(memo_id) = detail.memo_id {
-            sqlx::query(sql_queries::MEMO_DELETE)
-                .bind(memo_id)
-                .execute(&self.pool)
-                .await?;
-        }
+        // Save memo_id for later deletion
+        let memo_id = detail.memo_id;
 
-        // Delete detail
+        // Delete detail first (to release foreign key constraint)
         let result = sqlx::query(sql_queries::TRANSACTION_DETAIL_DELETE_BY_ID)
             .bind(detail_id)
             .bind(user_id)
@@ -1153,6 +1155,14 @@ impl TransactionService {
 
         if result.rows_affected() == 0 {
             return Err(TransactionError::NotFound);
+        }
+
+        // Delete memo if exists (after detail is deleted)
+        if let Some(memo_id) = memo_id {
+            sqlx::query(sql_queries::MEMO_DELETE)
+                .bind(memo_id)
+                .execute(&self.pool)
+                .await?;
         }
 
         Ok(())
