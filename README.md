@@ -285,6 +285,8 @@ See [TEST_SUMMARY.md](docs/ja/TEST_SUMMARY.md) for details / 詳細は [TEST_SUM
   - [English](docs/en/TRANSACTION_MANAGEMENT_UI_V2.md) / [日本語](docs/ja/TRANSACTION_MANAGEMENT_UI_V2.md)
 
 #### Feature Implementation / 機能実装
+- 🧮 **Tax Calculation Logic / 税計算ロジック**
+  - [Bilingual / 日英併記](docs/tax-calculation-logic.md)
 - 🌐 **I18N Implementation / 国際化実装**
   - [English](docs/en/I18N_IMPLEMENTATION.md) / [日本語](docs/ja/I18N_IMPLEMENTATION.md)
 - 🌍 **I18N Resources / 国際化リソース**
