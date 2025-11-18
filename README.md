@@ -7,7 +7,7 @@
 
 [![Rust](https://img.shields.io/badge/Rust-1.70+-orange.svg)](https://www.rust-lang.org/)
 [![Tauri](https://img.shields.io/badge/Tauri-v2.8.5-blue.svg)](https://tauri.app/)
-[![Tests](https://img.shields.io/badge/tests-569%20passing-brightgreen.svg)](#test-results--テスト結果)
+[![Tests](https://img.shields.io/badge/tests-602%20passing-brightgreen.svg)](#test-results--テスト結果)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 [🇯🇵 日本語詳細](README_ja.md) | [🇬🇧 English Details](README_en.md)
@@ -202,7 +202,7 @@ Frontend / フロントエンド:  Vanilla JavaScript (ES6 Modules) + HTML5 + CS
 Backend / バックエンド:     Rust + Tauri v2.8.5
 Database / データベース:    SQLite (WAL mode)
 Security / セキュリティ:   Argon2id + AES-256-GCM
-Testing / テスト:          569 tests passing (Rust: 165, JS: 404)
+Testing / テスト:          602 tests passing (Rust: 165, JS: 437)
 i18n Resources / 翻訳:     992 resources (496 unique keys, 2 languages)
 Code Lines / コード行数:    ~27,110 lines (Rust: 11,895, JS: 6,975, HTML: 2,758, CSS: 3,371, SQL: 2,111)
 ```
@@ -234,9 +234,9 @@ cargo tauri build
 ## 🧪 Test Results / テスト結果
 
 ```
-Backend (Rust) / バックエンド:    160 passing
-Frontend (JavaScript) / フロント:  404 passing
-Total Tests / 総テスト数:          564 passing ✅
+Backend (Rust) / バックエンド:    165 passing
+Frontend (JavaScript) / フロント:  437 passing
+Total Tests / 総テスト数:          602 passing ✅
 Success Rate / 成功率:            100%
 ```
 
