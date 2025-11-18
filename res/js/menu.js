@@ -8,6 +8,75 @@ let isLoggedIn = false;
 
 console.log('menu.js loaded');
 
+// Create menu bar dynamically based on page type
+export function createMenuBar(pageType = 'management') {
+    const menuBar = document.getElementById('menu-bar');
+    if (!menuBar) return;
+    
+    let fileMenuItems = '';
+    
+    if (pageType === 'index') {
+        fileMenuItems = `
+            <div class="dropdown-item" data-i18n="menu.login">Login</div>
+            <div class="dropdown-item" data-i18n="menu.logout">Logout</div>
+            <div class="dropdown-separator"></div>
+            <div class="dropdown-item" data-i18n="menu.quit">Quit</div>
+        `;
+    } else if (pageType === 'transaction-detail') {
+        fileMenuItems = `
+            <div class="dropdown-item" data-i18n="menu.back_to_transactions">Back to Transactions</div>
+            <div class="dropdown-separator"></div>
+            <div class="dropdown-item" data-i18n="menu.logout">Logout</div>
+            <div class="dropdown-item" data-i18n="menu.quit">Quit</div>
+        `;
+    } else {
+        // Default for management screens
+        fileMenuItems = `
+            <div class="dropdown-item" data-i18n="menu.back_to_main">Back to Main</div>
+            <div class="dropdown-separator"></div>
+            <div class="dropdown-item" data-i18n="menu.logout">Logout</div>
+            <div class="dropdown-item" data-i18n="menu.quit">Quit</div>
+        `;
+    }
+    
+    const menuHTML = `
+        <div id="file-menu" class="menu-item">
+            <span data-i18n="menu.file">File</span>
+            <div id="file-dropdown" class="dropdown">
+                ${fileMenuItems}
+            </div>
+        </div>
+        ${pageType !== 'index' ? `
+        <div id="admin-menu" class="menu-item">
+            <span data-i18n="menu.admin">Admin</span>
+            <div id="admin-dropdown" class="dropdown">
+                <div class="dropdown-item" data-i18n="menu.user_management">User Management</div>
+                <div class="dropdown-item" data-i18n="menu.category_management">Category Management</div>
+                <div class="dropdown-item" data-i18n="menu.account_management">Account Management</div>
+                <div class="dropdown-item" data-i18n="menu.shop_management">Shop Management</div>
+                <div class="dropdown-item" data-i18n="menu.manufacturer_management">Manufacturer Management</div>
+                <div class="dropdown-item" data-i18n="menu.product_management">Product Management</div>
+                <div class="dropdown-item" data-i18n="menu.transaction_management">Transaction Management</div>
+            </div>
+        </div>
+        ` : ''}
+        <div id="language-menu" class="menu-item">
+            <span data-i18n="menu.language">Language</span>
+            <div id="language-dropdown" class="dropdown">
+                <!-- Language options will be populated dynamically -->
+            </div>
+        </div>
+        <div id="font-size-menu" class="menu-item">
+            <span data-i18n="menu.font_size">Font Size</span>
+            <div id="font-size-dropdown" class="dropdown">
+                <!-- Font size options will be populated dynamically -->
+            </div>
+        </div>
+    `;
+    
+    menuBar.innerHTML = menuHTML;
+}
+
 // Add keyboard shortcut listener
 document.addEventListener('keydown', function(e) {
     // Check for Ctrl+Q (or Cmd+Q on Mac)
@@ -154,7 +223,20 @@ document.addEventListener('DOMContentLoaded', async function() {
         adminMenu.addEventListener('click', function(e) {
             console.log('Admin menu clicked');
             e.stopPropagation();
-            adminDropdown.classList.toggle('show');
+            
+            const isShown = adminDropdown.classList.contains('show');
+            
+            // Close all other dropdowns
+            document.querySelectorAll('.dropdown').forEach(d => {
+                if (d !== adminDropdown) {
+                    d.classList.remove('show');
+                }
+            });
+            
+            // Toggle this dropdown
+            if (!isShown) {
+                adminDropdown.classList.add('show');
+            }
         });
         
         adminDropdown.addEventListener('click', function(e) {

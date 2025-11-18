@@ -6,6 +6,7 @@ import { ROLE_ADMIN, ROLE_USER } from './consts.js';
 import { Modal } from './modal.js';
 import { setupIndicators } from './indicators.js';
 import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
+import { createMenuBar } from './menu.js';
 
 console.log('=== ACCOUNT-MANAGEMENT.JS LOADED - ALL imports enabled ===');
 console.log('invoke:', typeof invoke);
@@ -22,6 +23,9 @@ let accountModal = null;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
+    
+    // Create menu bar
+    createMenuBar('management');
     console.log('DOMContentLoaded fired');
     try {
         // Check session authentication

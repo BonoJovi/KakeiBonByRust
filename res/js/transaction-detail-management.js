@@ -5,6 +5,7 @@ import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontS
 import { setupLanguageMenuHandlers, setupLanguageMenu, handleLogout, handleQuit } from './menu.js';
 import { HTML_FILES } from './html-files.js';
 import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
+import { createMenuBar } from './menu.js';
 
 let currentUserId = null;
 let currentUserRole = null;
@@ -13,6 +14,9 @@ let category1Code = null; // Store CATEGORY1_CODE from transaction header
 let lastTaxInputField = null; // Track which amount field was last edited: 'excluding' or 'including'
 
 document.addEventListener('DOMContentLoaded', async function() {
+    
+    // Create menu bar
+    createMenuBar('transaction-detail');
     try {
         // Check session authentication
         if (!await isSessionAuthenticated()) {

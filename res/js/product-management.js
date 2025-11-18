@@ -5,6 +5,7 @@ import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontS
 import { Modal } from './modal.js';
 import { setupIndicators } from './indicators.js';
 import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
+import { createMenuBar } from './menu.js';
 
 console.log('=== PRODUCT-MANAGEMENT.JS LOADED ===');
 
@@ -22,6 +23,9 @@ let showDisabledItems = false;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
+    
+    // Create menu bar
+    createMenuBar('management');
     console.log('DOMContentLoaded fired');
     try {
         // Check session authentication

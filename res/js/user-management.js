@@ -6,6 +6,7 @@ import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontS
 import { HTML_FILES } from './html-files.js';
 import { Modal } from './modal.js';
 import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
+import { createMenuBar } from './menu.js';
 
 let currentUsers = [];
 let editingUserId = null;
@@ -18,6 +19,9 @@ console.log('user-management.js loaded');
 
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('[DOMContentLoaded] DOM loaded');
+    
+    // Create menu bar
+    createMenuBar('management');
     
     // Check session authentication
     if (!await isSessionAuthenticated()) {

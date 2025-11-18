@@ -5,6 +5,7 @@ import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontS
 import { Modal } from './modal.js';
 import { HTML_FILES } from './html-files.js';
 import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
+import { createMenuBar } from './menu.js';
 
 // Category level constants
 const LEVEL_CATEGORY1 = 1;
@@ -26,6 +27,9 @@ console.log('category-management.js loaded');
 let isMouseActive = false;
 
 document.addEventListener('DOMContentLoaded', async function() {
+    
+    // Create menu bar
+    createMenuBar('management');
     console.log('[DOMContentLoaded] DOM loaded');
     
     // Check session authentication

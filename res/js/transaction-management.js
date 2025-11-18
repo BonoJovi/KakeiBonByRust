@@ -7,6 +7,7 @@ import { HTML_FILES } from './html-files.js';
 import { TAX_ROUND_DOWN, TAX_ROUND_HALF_UP, TAX_ROUND_UP, ROLE_ADMIN, ROLE_USER } from './consts.js';
 import { Modal } from './modal.js';
 import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
+import { createMenuBar } from './menu.js';
 
 let currentUserId = null;
 let currentUserRole = null;
@@ -28,6 +29,9 @@ let currentFilters = {
 };
 
 document.addEventListener('DOMContentLoaded', async function() {
+    
+    // Create menu bar
+    createMenuBar('management');
     try {
         // Check session authentication
         if (!await isSessionAuthenticated()) {
