@@ -72,11 +72,38 @@ body {
 
 #user-list-container {
     flex: 0 1 auto;
-    overflow-y: auto;
+    overflow-y: scroll;
+    overflow-x: scroll;
     border: 2px solid #999;
     border-radius: 4px;
     min-height: 0;
-    max-height: 18em;
+    max-height: 10em;
+}
+
+/* Wide scrollbar for better usability */
+#user-list-container::-webkit-scrollbar {
+    width: 16px;
+    height: 16px;
+}
+
+#user-list-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+#user-list-container::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+#user-list-container::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* Firefox scrollbar styling */
+#user-list-container {
+    scrollbar-width: auto;
+    scrollbar-color: #888 #f1f1f1;
 }
 
 #user-table {
@@ -106,14 +133,42 @@ body {
     z-index: 10;
 }
 
+/* Column width adjustments */
+#user-table th:nth-child(1),
+#user-table td:nth-child(1) {
+    width: 10%;
+    min-width: 5em;
+}
+
+#user-table th:nth-child(2),
+#user-table td:nth-child(2) {
+    width: 20%;
+    min-width: 8em;
+}
+
 #user-table th:nth-child(3),
 #user-table td:nth-child(3) {
+    width: 10%;
     min-width: 6.5em;
+}
+
+#user-table th:nth-child(4),
+#user-table td:nth-child(4) {
+    width: 20%;
+    min-width: 10em;
+}
+
+#user-table th:nth-child(5),
+#user-table td:nth-child(5) {
+    width: 20%;
+    min-width: 10em;
 }
 
 #user-table th:nth-child(6),
 #user-table td:nth-child(6) {
-    min-width: 10em;
+    width: auto;
+    min-width: 6em;
+    white-space: nowrap;
 }
 
 #user-table tbody tr:hover {

@@ -208,8 +208,8 @@ function createAccountRow(account) {
     // NONE account cannot be deleted
     const isNoneAccount = account.account_code === 'NONE';
     const deleteButtonHtml = isNoneAccount 
-        ? `<button class="btn btn-danger" disabled style="opacity: 0.5; cursor: not-allowed;" data-i18n="common.delete">${i18n.t('common.delete')}</button>`
-        : `<button class="btn btn-danger delete-btn" data-code="${escapeHtml(account.account_code)}" data-i18n="common.delete">${i18n.t('common.delete')}</button>`;
+        ? `<button class="btn-small btn-delete" disabled style="opacity: 0.5; cursor: not-allowed;" data-i18n="common.delete">${i18n.t('common.delete')}</button>`
+        : `<button class="btn-small btn-delete" data-code="${escapeHtml(account.account_code)}" data-i18n="common.delete">${i18n.t('common.delete')}</button>`;
 
     row.innerHTML = `
         <td>${escapeHtml(account.account_code)}</td>
@@ -217,19 +217,19 @@ function createAccountRow(account) {
         <td>${escapeHtml(templateName)}</td>
         <td style="text-align: right;">${account.initial_balance.toLocaleString()}</td>
         <td class="actions">
-            <button class="btn btn-warning edit-btn" data-code="${escapeHtml(account.account_code)}" data-i18n="common.edit">${i18n.t('common.edit')}</button>
+            <button class="btn-small btn-edit" data-code="${escapeHtml(account.account_code)}" data-i18n="common.edit">${i18n.t('common.edit')}</button>
             ${deleteButtonHtml}
         </td>
     `;
 
     // Edit button
-    row.querySelector('.edit-btn').addEventListener('click', () => {
+    row.querySelector('.btn-edit').addEventListener('click', () => {
         openModal('edit', account);
     });
 
     // Delete button (only if not NONE account)
     if (!isNoneAccount) {
-        row.querySelector('.delete-btn').addEventListener('click', () => {
+        row.querySelector('.btn-delete').addEventListener('click', () => {
             deleteAccount(account.account_code, account.account_name);
         });
     }

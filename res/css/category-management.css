@@ -64,12 +64,37 @@ body {
 
 .category-tree {
     flex: 1;
-    overflow-y: auto;
+    overflow-y: scroll;
     overflow-x: hidden;
     border: 2px solid #999;
     border-radius: 4px;
     padding: 10px;
     min-height: 0;
+}
+
+/* Wide scrollbar for better usability */
+.category-tree::-webkit-scrollbar {
+    width: 16px;
+}
+
+.category-tree::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.category-tree::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+.category-tree::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* Firefox scrollbar styling */
+.category-tree {
+    scrollbar-width: auto;
+    scrollbar-color: #888 #f1f1f1;
 }
 
 .loading {
@@ -152,6 +177,13 @@ body {
 .btn-add {
     background-color: #27ae60;
     color: white;
+    padding: 6px 12px;
+    font-size: 1em;
+    border: 2px solid #000;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    white-space: nowrap;
 }
 
 .btn-add:hover {
@@ -161,6 +193,13 @@ body {
 .btn-edit {
     background-color: #3498db;
     color: white;
+    padding: 6px 12px;
+    font-size: 1em;
+    border: 2px solid #000;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    white-space: nowrap;
 }
 
 .btn-edit:hover {
@@ -170,6 +209,13 @@ body {
 .btn-delete {
     background-color: #e74c3c;
     color: white;
+    padding: 6px 12px;
+    font-size: 1em;
+    border: 2px solid #000;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    white-space: nowrap;
 }
 
 .btn-delete:hover {
@@ -179,6 +225,13 @@ body {
 .btn-up {
     background-color: #3498db;
     color: white;
+    padding: 6px 12px;
+    font-size: 1em;
+    border: 2px solid #000;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    white-space: nowrap;
 }
 
 .btn-up:hover {
@@ -188,6 +241,13 @@ body {
 .btn-down {
     background-color: #9b59b6;
     color: white;
+    padding: 6px 12px;
+    font-size: 1em;
+    border: 2px solid #000;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    white-space: nowrap;
 }
 
 .btn-down:hover {

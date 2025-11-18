@@ -298,27 +298,30 @@ function renderProducts() {
 
         // Actions
         const actionsCell = row.insertCell();
-        actionsCell.className = 'actions';
+        const actionsDiv = document.createElement('div');
+        actionsDiv.className = 'action-buttons';
 
         // Edit button
         const editBtn = document.createElement('button');
-        editBtn.className = 'btn btn-warning';
+        editBtn.className = 'btn-small btn-edit';
         editBtn.setAttribute('data-i18n', 'common.edit');
         editBtn.textContent = i18n.t('common.edit');
         editBtn.addEventListener('click', () => {
             openModal('edit', product);
         });
-        actionsCell.appendChild(editBtn);
+        actionsDiv.appendChild(editBtn);
 
         // Delete button
         const deleteBtn = document.createElement('button');
-        deleteBtn.className = 'btn btn-danger';
+        deleteBtn.className = 'btn-small btn-delete';
         deleteBtn.setAttribute('data-i18n', 'common.delete');
         deleteBtn.textContent = i18n.t('common.delete');
         deleteBtn.addEventListener('click', () => {
             openDeleteModal(product);
         });
-        actionsCell.appendChild(deleteBtn);
+        actionsDiv.appendChild(deleteBtn);
+        
+        actionsCell.appendChild(actionsDiv);
     });
 }
 

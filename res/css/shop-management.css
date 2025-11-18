@@ -72,11 +72,38 @@ body {
 
 #shop-list-container {
     flex: 0 1 auto;
-    overflow-y: auto;
+    overflow-y: scroll;
+    overflow-x: scroll;
     border: 2px solid #999;
     border-radius: 4px;
     min-height: 0;
     max-height: 18em;
+}
+
+/* Wide scrollbar for better usability */
+#shop-list-container::-webkit-scrollbar {
+    width: 16px;
+    height: 16px;
+}
+
+#shop-list-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+#shop-list-container::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+#shop-list-container::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* Firefox scrollbar styling */
+#shop-list-container {
+    scrollbar-width: auto;
+    scrollbar-color: #888 #f1f1f1;
 }
 
 #shops-table {
@@ -114,11 +141,18 @@ body {
     border-bottom: none;
 }
 
+/* Actions column - auto width */
+#shops-table th:nth-child(3),
+#shops-table td:nth-child(3) {
+    width: 1%;
+    white-space: nowrap;
+}
+
 .action-buttons {
     display: flex;
     gap: 8px;
     flex-wrap: nowrap;
-    justify-content: flex-start;
+    justify-content: center;
 }
 
 .btn-small {
