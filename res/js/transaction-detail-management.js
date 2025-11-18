@@ -12,6 +12,7 @@ let currentUserRole = null;
 let transactionId = null;
 let category1Code = null; // Store CATEGORY1_CODE from transaction header
 let lastTaxInputField = null; // Track which amount field was last edited: 'excluding' or 'including'
+let taxRoundingType = 0; // Store TAX_ROUNDING_TYPE from transaction header (0: floor, 1: half-up, 2: ceil)
 
 document.addEventListener('DOMContentLoaded', async function() {
     
@@ -198,6 +199,25 @@ function setupTaxCalculationListeners() {
 }
 
 /**
+ * Apply rounding based on tax rounding type
+ * @param {number} value - Value to round
+ * @param {number} roundingType - 0: floor, 1: half-up, 2: ceil
+ * @returns {number} Rounded value
+ */
+function applyTaxRounding(value, roundingType = 0) {
+    switch (roundingType) {
+        case 0: // Round down (切り捨て)
+            return Math.floor(value);
+        case 1: // Round half-up (四捨五入)
+            return Math.round(value);
+        case 2: // Round up (切り上げ)
+            return Math.ceil(value);
+        default:
+            return Math.floor(value);
+    }
+}
+
+/**
  * Calculate tax-included amount from tax-excluded amount
  * @param {HTMLInputElement} excludingTaxInput - Tax-excluded amount input
  * @param {HTMLSelectElement} taxRateSelect - Tax rate select
@@ -214,8 +234,8 @@ function calculateFromExcludingTax(excludingTaxInput, taxRateSelect, taxAmountIn
     // Mark that tax-excluded amount was last edited
     lastTaxInputField = 'excluding';
     
-    // Calculate tax amount (round down)
-    const tax = Math.floor(excluded * rate / 100);
+    // Calculate tax amount using the configured rounding type
+    const tax = applyTaxRounding(excluded * rate / 100, taxRoundingType);
     
     // Calculate including tax amount
     const included = excluded + tax;
@@ -255,14 +275,14 @@ function calculateFromIncludingTax(includingTaxInput, taxRateSelect, taxAmountIn
         return;
     }
     
-    // Calculate tax-excluded amount (round down)
-    const excluded = Math.floor(included / (1 + rate / 100));
+    // Calculate tax-excluded amount using the configured rounding type
+    const excluded = applyTaxRounding(included / (1 + rate / 100), taxRoundingType);
     
     // Calculate tax amount
     const tax = included - excluded;
     
     // Verify by reverse calculation
-    const taxReverse = Math.floor(excluded * rate / 100);
+    const taxReverse = applyTaxRounding(excluded * rate / 100, taxRoundingType);
     const includedReverse = excluded + taxReverse;
     
     // Check if there's a rounding discrepancy
@@ -519,8 +539,9 @@ async function loadTransactionHeader() {
             throw new Error('Transaction header not found');
         }
         
-        // Store CATEGORY1_CODE for detail operations
+        // Store CATEGORY1_CODE and TAX_ROUNDING_TYPE for detail operations
         category1Code = header.category1_code;
+        taxRoundingType = header.tax_rounding_type ?? 0; // Default to floor (0) if not set
         
         // Display header information
         document.getElementById('header-transaction-date').textContent = header.transaction_date || '-';
@@ -530,7 +551,7 @@ async function loadTransactionHeader() {
             ? `¥${header.amount.toLocaleString()}` 
             : '¥0';
         
-        console.log('Transaction header loaded successfully, CATEGORY1_CODE:', category1Code);
+        console.log('Transaction header loaded successfully, CATEGORY1_CODE:', category1Code, 'TAX_ROUNDING_TYPE:', taxRoundingType);
     } catch (error) {
         console.error('Failed to load transaction header:', error);
         showMessage('error', `Failed to load transaction header: ${error.message}`);
@@ -860,4 +881,11 @@ function showMessage(type, text) {
     setTimeout(() => {
         messageDiv.style.display = 'none';
     }, 5000);
+}
+
+// Export functions for testing
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        applyTaxRounding
+    };
 }
