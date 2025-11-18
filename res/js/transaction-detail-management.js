@@ -334,6 +334,16 @@ function setupEventListeners() {
         cancelBtn.addEventListener('click', closeDetailModal);
     }
     
+    // Detail modal backdrop click and ESC key
+    const detailModal = document.getElementById('detail-modal');
+    if (detailModal) {
+        detailModal.addEventListener('click', (e) => {
+            if (e.target === detailModal) {
+                closeDetailModal();
+            }
+        });
+    }
+    
     // Detail form submit
     const detailForm = document.getElementById('detail-form');
     if (detailForm) {
@@ -355,6 +365,30 @@ function setupEventListeners() {
     if (confirmDeleteBtn) {
         confirmDeleteBtn.addEventListener('click', handleDeleteConfirm);
     }
+    
+    // Delete modal backdrop click and ESC key
+    const deleteModal = document.getElementById('delete-modal');
+    if (deleteModal) {
+        deleteModal.addEventListener('click', (e) => {
+            if (e.target === deleteModal) {
+                closeDeleteModal();
+            }
+        });
+    }
+    
+    // Global ESC key handler for modals
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            const detailModal = document.getElementById('detail-modal');
+            const deleteModal = document.getElementById('delete-modal');
+            
+            if (detailModal && !detailModal.classList.contains('hidden')) {
+                closeDetailModal();
+            } else if (deleteModal && !deleteModal.classList.contains('hidden')) {
+                closeDeleteModal();
+            }
+        }
+    });
     
     // Tax calculation listeners
     setupTaxCalculationListeners();

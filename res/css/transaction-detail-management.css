@@ -266,6 +266,7 @@ body {
 .modal-content {
     background-color: white;
     border-radius: 8px;
+    padding: 30px;
     max-width: 31em;
     width: 90%;
     max-height: 90vh;
@@ -277,8 +278,7 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1em;
-    border-bottom: 1px solid #e0e0e0;
+    margin-bottom: 20px;
 }
 
 .modal-header h2 {
@@ -289,7 +289,7 @@ body {
 
 .close-btn {
     background: none;
-    border: none;
+    border: 2px solid #999;
     font-size: 2em;
     cursor: pointer;
     color: #999;
@@ -297,22 +297,22 @@ body {
     width: 30px;
     height: 30px;
     line-height: 1;
+    border-radius: 4px;
 }
 
 .close-btn:hover {
     color: #333;
+    border-color: #333;
 }
 
 .modal-body {
-    padding: 1.5em;
+    margin-bottom: 20px;
 }
 
 .modal-footer {
     display: flex;
     justify-content: flex-end;
     gap: 1em;
-    padding: 1em;
-    border-top: 1px solid #e0e0e0;
 }
 
 .modal-footer button {
@@ -358,8 +358,30 @@ body {
     cursor: not-allowed;
 }
 
-.delete-item-name {
+.delete-target {
     font-weight: bold;
     color: #f44336;
     margin-top: 10px;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.form-actions button {
+    min-width: 8em;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.modal-actions button {
+    min-width: 8em;
 }
