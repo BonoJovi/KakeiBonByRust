@@ -41,7 +41,7 @@ Development is progressing smoothly, and we strive to update daily!
 開発は順調に進んでおり、できるだけ日々更新するようにしています！
 
 **Project Started / プロジェクト開始**: 2025-10-22 (JST)  
-**Last Updated / 最終更新**: 2025-11-17 (JST)
+**Last Updated / 最終更新**: 2025-11-18 (JST)
 
 > **🤖 AI-Assisted Development / AI支援開発**  
 > This project's source code and documentation are **100% generated** with the assistance of generative AI (GitHub Copilot, Claude), supervised and reviewed by the developer. This demonstrates the potential of AI-assisted development.  
@@ -152,7 +152,7 @@ Switch between Japanese and English seamlessly
 | 🌍 **Multilingual**<br/>**多言語対応** | Dynamic language switching (JP/EN) - 992 resources<br/>日本語・英語の動的切り替え - 992リソース | ✅ Complete<br/>完成 |
 | 🔧 **Customization**<br/>**カスタマイズ** | Font size, language preferences<br/>フォントサイズ、言語設定 | ✅ Complete<br/>完成 |
 | 📝 **Transaction Management**<br/>**入出金管理** | Header-level CRUD, filters, pagination<br/>ヘッダレベルCRUD、フィルター、ページネーション | ✅ Complete<br/>完成 |
-| 🧾 **Transaction Details**<br/>**入出金明細** | Detail-level input with smart tax calculation<br/>スマート税計算付き明細入力 | 🚧 In Progress<br/>開発中 |
+| 🧾 **Transaction Details**<br/>**入出金明細** | CRUD operations with smart tax calculation (UI refinement in progress)<br/>スマート税計算付きCRUD操作（UI調整中） | 🚧 In Progress<br/>開発中 |
 | 📊 **Reports**<br/>**集計・レポート** | Monthly/annual summaries, graphs<br/>月次・年次レポート、グラフ | 📅 Planned<br/>予定 |
 
 ---
@@ -166,7 +166,7 @@ Database / データベース:    SQLite (WAL mode)
 Security / セキュリティ:   Argon2id + AES-256-GCM
 Testing / テスト:          569 tests passing (Rust: 165, JS: 404)
 i18n Resources / 翻訳:     992 resources (496 unique keys, 2 languages)
-Code Lines / コード行数:    ~26,844 lines (Rust: 11,879, JS: 6,830, HTML: 2,758, CSS: 3,371, SQL: 2,006)
+Code Lines / コード行数:    ~27,110 lines (Rust: 11,895, JS: 6,975, HTML: 2,758, CSS: 3,371, SQL: 2,111)
 ```
 
 ---

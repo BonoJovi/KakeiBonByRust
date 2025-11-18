@@ -48,16 +48,31 @@
                     <button class="close-btn" id="font-size-modal-close">&times;</button>
                 </div>
                 <div class="modal-body">
-                    <p data-i18n="font_size.description">Customize your preferred font size (10-30px)</p>
-                    
-                    <label for="custom-font-size" data-i18n="font_size.label">Font Size:</label>
-                    <input type="number" id="custom-font-size" min="10" max="30" value="16" />
-                    <span id="font-size-value">16px</span>
-                    
-                    <div class="modal-actions">
-                        <button class="btn btn-secondary" id="font-size-cancel" data-i18n="common.cancel">Cancel</button>
-                        <button class="btn btn-primary" id="font-size-save" data-i18n="common.save">Save</button>
+                    <div class="form-group">
+                        <label for="font-size-preset" data-i18n="font_size.preset">Preset:</label>
+                        <div class="input-wrapper">
+                            <select id="font-size-preset">
+                                <option value="small" data-i18n="font_size.small">小</option>
+                                <option value="medium" data-i18n="font_size.medium" selected>中</option>
+                                <option value="large" data-i18n="font_size.large">大</option>
+                                <option value="custom" data-i18n="font_size.custom">カスタム</option>
+                            </select>
+                        </div>
                     </div>
+                    <div class="form-group">
+                        <label for="font-size-percent" data-i18n="font_size.percentage">Percentage:</label>
+                        <div class="input-with-spinner">
+                            <input type="number" id="font-size-percent" min="50" max="200" step="5" value="100" />
+                            <div class="spinner-buttons">
+                                <button type="button" class="spinner-btn spinner-down">◀</button>
+                                <button type="button" class="spinner-btn spinner-up">▶</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" id="font-size-cancel" data-i18n="common.cancel">キャンセル</button>
+                    <button type="button" class="btn-primary" id="font-size-apply" data-i18n="common.apply">変更</button>
                 </div>
             </div>
         </div>

@@ -260,7 +260,7 @@ body {
     background: white;
     border-radius: 8px;
     padding: 30px;
-    max-width: 500px;
+    max-width: 31em;
     width: 90%;
     max-height: 90vh;
     overflow-y: auto;

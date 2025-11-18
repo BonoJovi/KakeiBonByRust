@@ -294,3 +294,9 @@ VALUES
 (990, 'detail_mgmt.rounding_warning_title', 'en', 'Rounding Discrepancy', 'detail_mgmt', 'Rounding warning title', datetime('now')),
 (991, 'detail_mgmt.rounding_warning_message', 'ja', '税込金額から計算した結果、税抜金額に{diff}円の誤差が発生しました。自動計算した税抜金額から税込金額を再計算すると{calculated}円(入力は{userInput}円)になります。正確な金額が必要な場合は、税抜金額を直接入力してください。', 'detail_mgmt', '端数処理警告メッセージ', datetime('now')),
 (992, 'detail_mgmt.rounding_warning_message', 'en', 'A rounding discrepancy of ¥{diff} occurred in the tax-excluded amount. Recalculating the tax-included amount from the calculated tax-excluded amount results in ¥{calculated} (input was ¥{userInput}). For accurate amounts, please enter the tax-excluded amount directly.', 'detail_mgmt', 'Rounding warning message', datetime('now'));
+
+-- Font Size Modal (added 2025-11-18)
+(1049, 'font_size.description', 'ja', '希望のフォントサイズをカスタマイズ（10-30px）', 'font_size', 'フォントサイズ説明', datetime('now')),
+(1050, 'font_size.description', 'en', 'Customize your preferred font size (10-30px)', 'font_size', 'Font size description', datetime('now')),
+(1051, 'font_size.label', 'ja', 'フォントサイズ：', 'font_size', 'フォントサイズラベル', datetime('now')),
+(1052, 'font_size.label', 'en', 'Font Size:', 'font_size', 'Font size label', datetime('now'));
