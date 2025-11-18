@@ -72,11 +72,38 @@ body {
 
 #account-list-container {
     flex: 0 1 auto;
-    overflow-y: auto;
+    overflow-y: scroll;
+    overflow-x: scroll;
     border: 2px solid #999;
     border-radius: 4px;
     min-height: 0;
     max-height: 18em;
+}
+
+/* Wide scrollbar for better usability */
+#account-list-container::-webkit-scrollbar {
+    width: 16px;
+    height: 16px;
+}
+
+#account-list-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+#account-list-container::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+#account-list-container::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* Firefox scrollbar styling */
+#account-list-container {
+    scrollbar-width: auto;
+    scrollbar-color: #888 #f1f1f1;
 }
 
 #accounts-table {

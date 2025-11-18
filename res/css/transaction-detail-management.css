@@ -111,7 +111,37 @@ body {
 }
 
 .detail-list-container {
-    overflow-x: auto;
+    overflow-x: scroll;
+    overflow-y: scroll;
+    max-height: 9em;
+    border: 2px solid #999;
+    border-radius: 4px;
+}
+
+/* Wide scrollbar for better usability */
+.detail-list-container::-webkit-scrollbar {
+    width: 16px;
+    height: 16px;
+}
+
+.detail-list-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.detail-list-container::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+.detail-list-container::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* Firefox scrollbar styling */
+.detail-list-container {
+    scrollbar-width: auto;
+    scrollbar-color: #888 #f1f1f1;
 }
 
 #detail-table {
@@ -125,15 +155,45 @@ body {
 }
 
 #detail-table th {
-    padding: 12px;
+    padding: 0.75em;
     text-align: left;
     border-bottom: 2px solid #ddd;
     font-weight: bold;
     color: #333;
 }
 
+/* Column width adjustments for better layout */
+#detail-table th:nth-child(1),
+#detail-table td:nth-child(1) {
+    width: 30%; /* Item Name - increased */
+}
+
+#detail-table th:nth-child(2),
+#detail-table td:nth-child(2) {
+    width: 30%; /* Category - increased */
+}
+
+#detail-table th:nth-child(3),
+#detail-table td:nth-child(3) {
+    width: 15%; /* Amount */
+    text-align: right;
+}
+
+#detail-table th:nth-child(4),
+#detail-table td:nth-child(4) {
+    width: 15%; /* Tax */
+    text-align: right;
+}
+
+#detail-table th:nth-child(5),
+#detail-table td:nth-child(5) {
+    width: auto; /* Actions - auto width */
+    min-width: 6em; /* Fixed em-based width for font size scaling */
+    white-space: nowrap; /* Prevent button text wrapping */
+}
+
 #detail-table td {
-    padding: 12px;
+    padding: 0.75em;
     border-bottom: 1px solid #e0e0e0;
 }
 

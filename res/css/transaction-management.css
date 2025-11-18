@@ -76,13 +76,39 @@ body {
 
 #transaction-list-container {
     flex: 0 1 auto;
-    overflow-y: auto;
-    overflow-x: auto;
+    overflow-y: scroll;
+    overflow-x: scroll;
     border: 2px solid #999;
     border-radius: 4px;
     min-height: 0;
-    max-height: 18em;
+    max-height: 10em;
     min-width: 0;
+}
+
+/* Wide scrollbar for better usability */
+#transaction-list-container::-webkit-scrollbar {
+    width: 16px;
+    height: 16px;
+}
+
+#transaction-list-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+#transaction-list-container::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+#transaction-list-container::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* Firefox scrollbar styling */
+#transaction-list-container {
+    scrollbar-width: auto;
+    scrollbar-color: #888 #f1f1f1;
 }
 
 /* Transaction list flex layout */
