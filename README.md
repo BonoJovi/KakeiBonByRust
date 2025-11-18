@@ -16,6 +16,44 @@
 
 ---
 
+## 💌 Message from Developer / 開発者からのメッセージ
+
+<div style="border: 3px solid #4a90e2; padding: 20px; margin: 20px 0; background-color: #f8f9fa; font-size: 1.1em;">
+
+### 愛すべきKakeiBonユーザの皆さんへ
+
+いつもKakeiBonに気を留めていただき、誠にありがとうございます。  
+プロジェクト発案者のBonoJovi(Yoshihiro NAKAHARA)です。
+
+本日は、開発の進捗状況についてお知らせがあります。  
+現在急ピッチで開発を進めており、その甲斐あって、本日(日本時:2025-11-19)中に入力系の画面の基本実装がほぼ完了する目処が立ちました。  
+入力系画面の実装が完了すれば、残りの大きな実装は集計機能を残すのみとなります。細々した機能は追々実装する予定でいますので、これで終わりということではなく、機能拡張は随時行っていきますので、ご期待いただければと思います。  
+取り急ぎ、Ver.1.0.0のリリースまで残すところ、あと僅かとなっています。GitHubのissueやeメールでのメッセージも受け付けていますので、応援メッセージやこんな機能が将来的に実装してもらえると嬉しいなど、ちょっとしたことでも良いのでご連絡いただければと思います。
+
+それでは、引き続きKakeiBonをご愛顧頂ますよう、お願い申し上げます。
+
+**2025-11-19 (JST) Written by Yoshihiro NAKAHARA**
+
+---
+
+### To All Beloved KakeiBon Users
+
+Thank you for your continued interest in KakeiBon.  
+I'm BonoJovi (Yoshihiro NAKAHARA), the project initiator.
+
+Today, I have an update on our development progress.  
+We've been developing at a rapid pace, and I'm pleased to announce that the basic implementation of the input screens is expected to be completed today (Japan time: 2025-11-19).  
+Once the input screens are finished, the only major implementation remaining will be the aggregation/reporting feature. We will continue to add various features incrementally, so this is not the end—you can expect continuous enhancements to the application.  
+We are now very close to the Ver.1.0.0 release! We welcome messages via GitHub issues or email, whether it's words of encouragement or suggestions for features you'd like to see in the future—any feedback is appreciated.
+
+Thank you for your continued support of KakeiBon.
+
+**2025-11-19 (JST) Written by Yoshihiro NAKAHARA**
+
+</div>
+
+---
+
 ## 📑 Table of Contents / 目次
 
 - [🚧 Development Status / 開発状況](#-development-status--開発状況)
