@@ -525,6 +525,16 @@ function initializeTransactionModal() {
                 + String(now.getHours()).padStart(2, '0') + ':00';
             document.getElementById('transaction-date').value = dateTimeStr;
             
+            // Reset detail count for new transaction
+            const countElement = document.getElementById('detail-count-info');
+            if (countElement && mode === 'add') {
+                const itemsLabel = countElement.querySelector('[data-i18n="transaction_mgmt.detail_items"]');
+                countElement.textContent = '0 ';
+                if (itemsLabel) {
+                    countElement.appendChild(itemsLabel);
+                }
+            }
+            
             // If editing, load transaction data
             if (mode === 'edit' && data.transactionId && typeof data.transactionId === 'number') {
                 await loadTransactionData(data.transactionId);
@@ -873,8 +883,33 @@ async function loadTransactionData(transactionId) {
         // Trigger category1 change to update account visibility
         handleCategory1Change({ target: document.getElementById('category1') });
         
+        // Update detail count
+        await updateDetailCount(transactionId);
+        
     } catch (error) {
         console.error('Failed to load transaction:', error);
         alert('Failed to load transaction: ' + error);
+    }
+}
+
+// Update detail count display
+async function updateDetailCount(transactionId) {
+    try {
+        const details = await invoke('get_transaction_details', {
+            transactionId: transactionId
+        });
+        
+        const countElement = document.getElementById('detail-count-info');
+        if (countElement) {
+            const count = details.length;
+            const itemsLabel = countElement.querySelector('[data-i18n="transaction_mgmt.detail_items"]');
+            countElement.textContent = count + ' ';
+            if (itemsLabel) {
+                countElement.appendChild(itemsLabel);
+            }
+        }
+    } catch (error) {
+        console.error('Failed to load detail count:', error);
+        // Don't show alert for count update failure, just log it
     }
 }
