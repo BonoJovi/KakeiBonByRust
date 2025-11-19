@@ -708,11 +708,194 @@
   - **Phase 9: ドキュメント**
     - [ ] API仕様書（日英）
     - [ ] 明細管理機能仕様書（日英）
-- [ ] **月次集計・レポート機能**
-  - カテゴリ別集計（大分類・中分類・小分類）
-  - 期間別集計
-  - 口座別集計
-  - グラフ表示（基本的な棒グラフ・円グラフ）
+- [ ] **集計・レポート機能**
+  
+  #### 時間軸別集計
+  - [ ] 日次集計（Daily Summary）
+  - [ ] 週次集計（Weekly Summary）
+  - [ ] 月次集計（Monthly Summary）
+  - [ ] 年次集計（Annual Summary）
+  - [ ] カスタム期間集計（Custom Period）
+  
+  #### カテゴリ別集計
+  - [ ] 大分類別集計（CATEGORY1）
+  - [ ] 中分類別集計（CATEGORY2）
+  - [ ] 小分類別集計（CATEGORY3）
+  - [ ] 階層ドリルダウン機能（大→中→小）
+  
+  #### 口座・店舗別集計
+  - [ ] 口座別集計（Account Summary）
+  - [ ] 店舗別集計（Shop Summary）
+  - [ ] 口座間移動集計（Transfer Summary）
+  
+  #### 商品・メーカー別集計
+  - [ ] メーカー別集計（Manufacturer Summary）
+  - [ ] 商品別集計（Product Summary）
+  - [ ] 商品カテゴリクロス集計
+  
+  #### メモ・キーワード集計
+  - [ ] メモキーワード検索集計
+  - [ ] タグ別集計（将来拡張）
+  
+  #### 金額条件抽出（家計改善機能）
+  - [ ] 一定額以上の取引抽出（高額出費の洗い出し）
+  - [ ] 一定額以下の取引抽出（小額浪費の可視化）
+  - [ ] 金額範囲指定抽出（例: 1000円～5000円の範囲）
+  - [ ] カテゴリ別金額ランキング（支出TOP10等）
+  - [ ] 店舗別累計金額ランキング（よく使う店舗の特定）
+  - [ ] 商品別累計購入額（何に一番お金を使っているか）
+  
+  #### 財務レポート（海外向け）
+  - [ ] バランスシート（Balance Sheet / 貸借対照表）
+    - 資産（Assets）: 各口座残高
+    - 負債（Liabilities）: 未払金など（将来拡張）
+    - 純資産（Net Worth）: 資産 - 負債
+  - [ ] 損益計算書（Income Statement / 損益計算書）
+    - 収入（Income）: CATEGORY1='INCOME'
+    - 支出（Expenses）: CATEGORY1='EXPENSE'
+    - 収支差額（Net Income）: 収入 - 支出
+  - [ ] キャッシュフロー計算書（Cash Flow Statement）
+    - 営業CF（Operating）: 通常の収支
+    - 投資CF（Investing）: 投資関連（将来拡張）
+    - 財務CF（Financing）: 借入・返済（将来拡張）
+  
+  #### グラフ表示
+  - [ ] 棒グラフ（Bar Chart）: 時系列推移、カテゴリ比較
+  - [ ] 円グラフ（Pie Chart）: カテゴリ構成比
+  - [ ] 折れ線グラフ（Line Chart）: 残高推移、トレンド
+  - [ ] 積み上げグラフ（Stacked Chart）: 複数カテゴリの推移
+  
+  #### 実装優先順位
+  **Phase 1**: 基本集計API（高優先度）
+  
+  #### Step 0: 基礎構造の実装（足場固め）- 型安全設計
+  
+  **設計思想**: Enumで条件を規定し、不正なSQL生成をコンパイル時に防ぐ
+  
+  - [ ] **フィルタEnum定義** (`src/services/aggregation.rs`)
+    - [ ] `DateFilter` - 日付フィルタ
+      - `From(NaiveDate)` - 指定日以降
+      - `To(NaiveDate)` - 指定日以前
+      - `Between(NaiveDate, NaiveDate)` - 期間範囲
+      - `Exact(NaiveDate)` - 特定日
+    - [ ] `AmountFilter` - 金額フィルタ
+      - `GreaterThan(i64)` - 指定額以上
+      - `LessThan(i64)` - 指定額以下
+      - `Between(i64, i64)` - 金額範囲
+      - `Exact(i64)` - 特定金額
+      - `None` - フィルタなし
+    - [ ] `CategoryFilter` - カテゴリフィルタ
+      - `Category1(String)` - 大分類のみ
+      - `Category2(String, String)` - 大分類+中分類
+      - `Category3(String, String, String)` - 大分類+中分類+小分類
+      - `None` - フィルタなし
+    - [ ] 各Enumに`to_sql(&self) -> String`実装（SQL句生成）
+  
+  - [ ] **集計軸Enum定義**
+    - [ ] `GroupBy` - 集計軸
+      - `Category1` - 大分類別
+      - `Category2` - 中分類別
+      - `Category3` - 小分類別
+      - `Account` - 口座別
+      - `Shop` - 店舗別
+      - `Product` - 商品別
+      - `Date` - 日付別
+    - [ ] 各バリアントに`to_select_clause()`, `to_group_by_clause()`実装
+  
+  - [ ] **ソートEnum定義**
+    - [ ] `OrderField` - ソート対象
+      - `TransactionDate` - 取引日
+      - `Amount` - 金額
+      - `CategoryName` - カテゴリ名
+      - `ShopName` - 店舗名
+      - `Count` - 件数
+    - [ ] `SortOrder` - ソート順
+      - `Asc` - 昇順
+      - `Desc` - 降順
+    - [ ] `to_order_by_clause()`実装
+  
+  - [ ] **複合構造体定義**
+    - [ ] `AggregationFilter` - フィルタをまとめる構造体
+      ```rust
+      struct AggregationFilter {
+          date: DateFilter,                    // 必須
+          amount: Option<AmountFilter>,        // オプション
+          category: Option<CategoryFilter>,    // オプション
+          shop_id: Option<i64>,                // オプション
+      }
+      ```
+    - [ ] `AggregationRequest` - 集計リクエスト全体
+      ```rust
+      struct AggregationRequest {
+          user_id: i64,
+          filter: AggregationFilter,
+          group_by: GroupBy,
+          order_by: OrderField,
+          sort_order: SortOrder,
+          limit: Option<usize>,
+      }
+      ```
+    - [ ] `AggregationResult` - 集計結果
+      ```rust
+      struct AggregationResult {
+          group_key: String,      // カテゴリ名、店舗名等
+          total_amount: i64,      // 合計金額
+          count: i64,             // 件数
+          avg_amount: i64,        // 平均金額
+      }
+      ```
+  
+  - [ ] **SQL生成関数**
+    - [ ] `build_where_clause(filter: &AggregationFilter) -> String`
+    - [ ] `build_query(request: &AggregationRequest) -> String`
+  
+  - [ ] **テスト**: 各Enum/構造体のto_sql()動作確認
+  
+  **メリット**:
+  - 型安全: 不正な組み合わせをコンパイル時検出
+  - 保守性: SQL生成ロジックが各Enumに集約
+  - テスト容易性: Enumごとに独立してテスト
+  - バグ削減: match式の網羅性チェック
+  
+  **設計方針**:
+  - **2階層アーキテクチャ**: コア関数（1つ）+ ラッパー関数（複数）
+  - **責務分離（SRP）**:
+    - **コア関数（SQLジェネレータ）**: パラメータから動的にSQLを生成・実行
+      - 日付バリデーション済みを前提
+      - パラメータに応じたSELECT/GROUP BY/WHERE/ORDER BY句の動的生成
+      - GROUP BY軸（カテゴリ/口座/店舗/商品）の切り替え
+      - 動的なORDER BY/ソート順対応
+      - 金額フィルタリング（WHERE句への追加）
+      - 純粋なSQL生成・実行ロジックのみ
+    - **ラッパー関数（ビジネスロジック層）**: コア関数に渡す期間の妥当性検証に専念
+      - 日付の論理チェック（未来日付、範囲チェック等）
+      - 期間タイプ固有のビジネスロジック（週の始まり、月末日等）
+      - コア関数（SQLジェネレータ）への適切なパラメータ変換
+      - デフォルトのソート順設定（日次→日付昇順、金額順→降順等）
+  - **保守性**: SQL生成ロジック変更時はコア関数のみ修正（ラッパーは影響なし）
+  - **拡張性**: 新しい期間タイプ追加が容易（ラッパー追加のみ）
+  - **テスト効率**: コア関数（SQL生成）を重点的にテスト、ラッパーは軽量テスト
+  
+  **Phase 2**: 集計画面UI（高優先度）
+  - [ ] 集計結果テーブル表示
+  - [ ] 期間選択UI
+  - [ ] カテゴリフィルター
+  - [ ] CSVエクスポート
+  
+  **Phase 3**: 財務レポート（中優先度）
+  - [ ] バランスシート画面
+  - [ ] 損益計算書画面
+  - [ ] 多言語対応（日英）
+  
+  **Phase 4**: グラフ表示（中優先度）
+  - [ ] Chart.js統合
+  - [ ] 基本グラフ実装
+  - [ ] インタラクティブ機能
+  
+  **Phase 5**: 高度な集計（低優先度）
+  - [ ] キャッシュフロー計算書
+  - [ ] 予算vs実績比較
+  - [ ] トレンド分析
 
 ### 中優先度
 - [ ] **入出金一覧の店舗名表示**
