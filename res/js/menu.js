@@ -60,6 +60,7 @@ export function createMenuBar(pageType = 'management') {
                 <div class="dropdown-item" data-i18n="menu.aggregation_weekly">Weekly Aggregation</div>
                 <div class="dropdown-item" data-i18n="menu.aggregation_daily">Daily Aggregation</div>
                 <div class="dropdown-item" data-i18n="menu.aggregation_yearly">Yearly Aggregation</div>
+                <div class="dropdown-item" data-i18n="menu.aggregation_period">Period Aggregation</div>
             </div>
         </div>
         <div id="language-menu" class="menu-item">
@@ -343,6 +344,15 @@ document.addEventListener('DOMContentLoaded', async function() {
             aggregationYearlyItem.addEventListener('click', function(e) {
                 console.log('Yearly Aggregation item clicked');
                 window.location.href = HTML_FILES.AGGREGATION_YEARLY;
+                adminDropdown.classList.remove('show');
+            });
+        }
+
+        const aggregationPeriodItem = adminDropdown.querySelector('.dropdown-item:nth-child(12)');
+        if (aggregationPeriodItem) {
+            aggregationPeriodItem.addEventListener('click', function(e) {
+                console.log('Period Aggregation item clicked');
+                window.location.href = HTML_FILES.AGGREGATION_PERIOD;
                 adminDropdown.classList.remove('show');
             });
         }

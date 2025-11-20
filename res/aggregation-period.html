@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Period Aggregation - KakeiBon</title>
+        <link rel="stylesheet" href="css/menu.css" />
+        <link rel="stylesheet" href="css/indicators.css" />
+        <link rel="stylesheet" href="css/aggregation-period.css" />
+        <script type="importmap">
+        {
+            "imports": {
+                "@tauri-apps/api/core": "https://esm.sh/@tauri-apps/api@2/core"
+            }
+        }
+        </script>
+    </head>
+    <body>
+        <div id="menu-bar"></div>
+
+        <div id="main-content">
+            <div class="aggregation-container">
+                <h1 data-i18n="aggregation.title_period">Period Aggregation</h1>
+
+                <!-- Filter Section -->
+                <div class="section filter-section">
+                    <div class="section-header collapsible-header" id="filter-header">
+                        <h2 data-i18n="aggregation.filter">Filter</h2>
+                        <button id="toggle-filter-btn" class="toggle-btn" aria-label="Toggle filter">▲</button>
+                    </div>
+                    <div class="filter-form" id="filter-form-content">
+                        <div class="filter-row">
+                            <div class="form-group">
+                                <label for="start-date" data-i18n="aggregation.start_date">Start Date:</label>
+                                <div class="input-wrapper">
+                                    <input type="date" id="start-date" name="start-date" />
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="end-date" data-i18n="aggregation.end_date">End Date:</label>
+                                <div class="input-wrapper">
+                                    <input type="date" id="end-date" name="end-date" />
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="group-by" data-i18n="aggregation.group_by">Group By:</label>
+                                <div class="input-wrapper">
+                                    <select id="group-by" name="group-by">
+                                        <option value="category1" data-i18n="aggregation.category1">Category 1</option>
+                                        <option value="category2" data-i18n="aggregation.category2">Category 2</option>
+                                        <option value="category3" data-i18n="aggregation.category3">Category 3</option>
+                                        <option value="account" data-i18n="aggregation.account">Account</option>
+                                        <option value="shop" data-i18n="aggregation.shop">Shop</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="filter-actions">
+                            <button id="execute-btn" class="btn-primary" data-i18n="aggregation.execute">Execute</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Results Section -->
+                <div class="section results-section">
+                    <div class="section-header">
+                        <h2 data-i18n="aggregation.results">Results</h2>
+                        <span id="result-count" class="result-count"></span>
+                    </div>
+                    <div id="account-note" class="info-note" style="display:none;">
+                        <span data-i18n="aggregation.account_note">※ Account aggregation includes transfers (account-to-account movements)</span>
+                    </div>
+                    <div id="results-container">
+                        <table id="results-table">
+                            <thead>
+                                <tr>
+                                    <th data-i18n="aggregation.group_name">Group</th>
+                                    <th data-i18n="aggregation.total_amount">Total Amount</th>
+                                    <th data-i18n="aggregation.count">Count</th>
+                                    <th data-i18n="aggregation.avg_amount">Average</th>
+                                </tr>
+                            </thead>
+                            <tbody id="results-list">
+                                <!-- Results will be dynamically loaded here -->
+                            </tbody>
+                            <tfoot id="results-footer">
+                                <!-- Total row will be added here -->
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="results-message" class="message"></div>
+            </div>
+        </div>
+
+        <!-- Font Size Modal -->
+        <div id="font-size-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 data-i18n="font_size.modal_title">Font Size Settings</h2>
+                    <button class="close-btn" id="font-size-modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="font-size-preset" data-i18n="font_size.preset">Preset:</label>
+                        <div class="input-wrapper">
+                            <select id="font-size-preset">
+                                <option value="small" data-i18n="font_size.small">小</option>
+                                <option value="medium" data-i18n="font_size.medium" selected>中</option>
+                                <option value="large" data-i18n="font_size.large">大</option>
+                                <option value="custom" data-i18n="font_size.custom">カスタム</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="font-size-percent" data-i18n="font_size.percentage">Percentage:</label>
+                        <div class="input-with-spinner">
+                            <input type="number" id="font-size-percent" min="50" max="200" step="5" value="100" />
+                            <div class="spinner-buttons">
+                                <button type="button" class="spinner-btn spinner-down">◀</button>
+                                <button type="button" class="spinner-btn spinner-up">▶</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" id="font-size-cancel" data-i18n="common.cancel">キャンセル</button>
+                    <button type="button" class="btn-primary" id="font-size-apply" data-i18n="common.apply">変更</button>
+                </div>
+            </div>
+        </div>
+
+        <script type="module" src="js/i18n.js"></script>
+        <script type="module" src="js/aggregation-period.js"></script>
+    </body>
+</html>
