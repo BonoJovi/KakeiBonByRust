@@ -455,9 +455,12 @@ async function editTransaction(transactionId) {
 }
 
 async function deleteTransaction(transactionId) {
+    const confirmTitle = i18n.t('common.confirm') || 'Confirm';
     const confirmMessage = i18n.t('transaction_mgmt.delete_confirm') || 
         'Are you sure you want to delete this transaction?';
-    if (!confirm(confirmMessage)) {
+    
+    const confirmed = await Modal.confirm(confirmTitle, confirmMessage);
+    if (!confirmed) {
         return;
     }
     
@@ -472,7 +475,10 @@ async function deleteTransaction(transactionId) {
         
     } catch (error) {
         console.error('Failed to delete transaction:', error);
-        alert('Failed to delete transaction: ' + error);
+        await Modal.alert(
+            i18n.t('common.error') || 'Error',
+            i18n.t('transaction_mgmt.delete_error') || 'Failed to delete transaction: ' + error
+        );
     }
 }
 
