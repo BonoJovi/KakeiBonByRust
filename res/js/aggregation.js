@@ -153,6 +153,12 @@ async function executeAggregation() {
     const resultsContainer = document.getElementById('results-container');
     resultsContainer.classList.add('loading');
     clearMessage();
+    
+    // Show/hide account note based on grouping
+    const accountNote = document.getElementById('account-note');
+    if (accountNote) {
+        accountNote.style.display = (groupBy === 'account') ? 'block' : 'none';
+    }
 
     try {
         console.log(`Executing aggregation: user_id=${user.user_id}, year=${year}, month=${month}, group_by=${groupBy}`);

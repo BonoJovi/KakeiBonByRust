@@ -95,6 +95,17 @@ body {
     color: #666;
 }
 
+.info-note {
+    display: block;
+    padding: 8px 12px;
+    margin: 10px 0;
+    background-color: #e3f2fd;
+    border-left: 4px solid #2196f3;
+    border-radius: 4px;
+    font-size: 0.9em;
+    color: #1565c0;
+}
+
 /* Filter Form */
 .filter-form {
     display: flex;
