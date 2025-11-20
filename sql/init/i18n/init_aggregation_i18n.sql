@@ -47,12 +47,12 @@ VALUES
 -- Result table headers
 (1081, 'aggregation.group_name', 'en', 'Group', 'aggregation', 'Group name column header', datetime('now')),
 (1082, 'aggregation.group_name', 'ja', '集計項目', 'aggregation', '集計項目カラムヘッダー', datetime('now')),
-(1083, 'aggregation.total_amount', 'en', 'Total Amount', 'aggregation', 'Total amount column header', datetime('now')),
-(1084, 'aggregation.total_amount', 'ja', '合計金額', 'aggregation', '合計金額カラムヘッダー', datetime('now')),
+(1083, 'aggregation.total_amount', 'en', 'Net Amount (Income - Expense)', 'aggregation', 'Net amount column header', datetime('now')),
+(1084, 'aggregation.total_amount', 'ja', '純増減（収入 - 支出）', 'aggregation', '純増減カラムヘッダー', datetime('now')),
 (1085, 'aggregation.count', 'en', 'Count', 'aggregation', 'Count column header', datetime('now')),
 (1086, 'aggregation.count', 'ja', '件数', 'aggregation', '件数カラムヘッダー', datetime('now')),
-(1087, 'aggregation.avg_amount', 'en', 'Average', 'aggregation', 'Average amount column header', datetime('now')),
-(1088, 'aggregation.avg_amount', 'ja', '平均金額', 'aggregation', '平均金額カラムヘッダー', datetime('now')),
+(1087, 'aggregation.avg_amount', 'en', 'Average Net Amount', 'aggregation', 'Average net amount column header', datetime('now')),
+(1088, 'aggregation.avg_amount', 'ja', '平均純増減', 'aggregation', '平均純増減カラムヘッダー', datetime('now')),
 
 -- Other labels
 (1089, 'aggregation.items', 'en', 'items', 'aggregation', 'Items count label', datetime('now')),
