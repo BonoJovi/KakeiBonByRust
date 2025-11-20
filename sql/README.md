@@ -7,6 +7,7 @@ This directory contains SQL scripts for database initialization and migration.
 - `init/` - Initialization scripts for database setup
   - `categories/` - Category master data initialization
   - `i18n/` - Translation resources initialization
+  - `tables/` - Table creation scripts (with latest schema)
 - Root directory - Migration scripts and other utilities
 
 ## Initialization Scripts
@@ -25,6 +26,14 @@ Update existing category codes:
 Initialize translation resources for Monthly Aggregation feature:
 - Add I18N records for aggregation screen (menu, filters, results)
 - Resource IDs: 1053-1098 (46 records)
+
+### init/tables/*.sql
+Table creation scripts with the latest schema:
+- `create_transactions_header_table.sql` - Transaction header table (includes TAX_INCLUDED_TYPE)
+- `create_transactions_detail_table.sql` - Transaction detail table (includes AMOUNT_INCLUDING_TAX)
+- `create_accounts_table.sql` - Accounts table
+- `create_shops_table.sql` - Shops table
+- `create_memos_table.sql` - Memos table
 
 ## Usage
 
