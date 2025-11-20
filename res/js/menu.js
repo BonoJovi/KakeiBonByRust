@@ -46,7 +46,6 @@ export function createMenuBar(pageType = 'management') {
                 ${fileMenuItems}
             </div>
         </div>
-        ${pageType !== 'index' ? `
         <div id="admin-menu" class="menu-item">
             <span data-i18n="menu.admin">Admin</span>
             <div id="admin-dropdown" class="dropdown">
@@ -57,9 +56,9 @@ export function createMenuBar(pageType = 'management') {
                 <div class="dropdown-item" data-i18n="menu.manufacturer_management">Manufacturer Management</div>
                 <div class="dropdown-item" data-i18n="menu.product_management">Product Management</div>
                 <div class="dropdown-item" data-i18n="menu.transaction_management">Transaction Management</div>
+                <div class="dropdown-item" data-i18n="menu.aggregation">Aggregation</div>
             </div>
         </div>
-        ` : ''}
         <div id="language-menu" class="menu-item">
             <span data-i18n="menu.language">Language</span>
             <div id="language-dropdown" class="dropdown">
@@ -91,10 +90,13 @@ import { HTML_FILES } from './html-files.js';
 
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('DOM loaded');
-    
+
+    // Create menu bar dynamically for index page
+    createMenuBar('index');
+
     // Initialize i18n
     await i18n.init();
-    
+
     // Update UI with translations
     i18n.updateUI();
     
@@ -302,6 +304,15 @@ document.addEventListener('DOMContentLoaded', async function() {
             transactionMgmtItem.addEventListener('click', function(e) {
                 console.log('Transaction Management item clicked');
                 window.location.href = HTML_FILES.TRANSACTION_MANAGEMENT;
+                adminDropdown.classList.remove('show');
+            });
+        }
+
+        const aggregationItem = adminDropdown.querySelector('.dropdown-item:nth-child(8)');
+        if (aggregationItem) {
+            aggregationItem.addEventListener('click', function(e) {
+                console.log('Aggregation item clicked');
+                window.location.href = HTML_FILES.AGGREGATION;
                 adminDropdown.classList.remove('show');
             });
         }
@@ -630,14 +641,21 @@ async function handleLogout() {
     
     isLoggedIn = false;
     
-    // Clear login form
-    document.getElementById('username').value = '';
-    document.getElementById('password').value = '';
-    document.getElementById('login-message').textContent = '';
+    // Check if we're on the index page
+    const loginForm = document.getElementById('login-form');
+    const appContent = document.getElementById('app-content');
     
-    // Show login form and hide app content
-    document.getElementById('login-form').classList.remove('hidden');
-    document.getElementById('app-content').classList.add('hidden');
+    if (loginForm && appContent) {
+        // Index page - clear login form and show it
+        document.getElementById('username').value = '';
+        document.getElementById('password').value = '';
+        document.getElementById('login-message').textContent = '';
+        loginForm.classList.remove('hidden');
+        appContent.classList.add('hidden');
+    } else {
+        // Management page - redirect to index
+        window.location.href = HTML_FILES.INDEX;
+    }
 }
 
 function handleQuit() {
