@@ -359,9 +359,11 @@ body {
 }
 
 .delete-target {
-    font-weight: bold;
-    color: #f44336;
-    margin-top: 10px;
+    font-weight: 600;
+    color: #e74c3c;
+    margin: 15px 0;
+    text-align: center;
+    font-size: 1.5em;
 }
 
 .form-actions {
