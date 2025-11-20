@@ -476,6 +476,21 @@ pub async fn execute_weekly_aggregation(
     execute_aggregation(pool, &request, lang).await
 }
 
+/// Execute weekly aggregation by reference date and return results
+pub async fn execute_weekly_aggregation_by_date(
+    pool: &SqlitePool,
+    user_id: i64,
+    reference_date: NaiveDate,
+    week_start: WeekStart,
+    group_by: GroupBy,
+    lang: &str,
+) -> Result<Vec<AggregationResult>, String> {
+    let request = weekly_aggregation_by_date(user_id, reference_date, week_start, group_by)
+        .map_err(|e| e.to_string())?;
+
+    execute_aggregation(pool, &request, lang).await
+}
+
 /// Execute yearly aggregation and return results
 pub async fn execute_yearly_aggregation(
     pool: &SqlitePool,
@@ -978,6 +993,67 @@ fn calculate_week_range(
     let end_date = start_date + chrono::Duration::days(6);
     
     Ok((start_date, end_date))
+}
+
+/// Weekly aggregation by reference date
+///
+/// Creates an aggregation request for the week containing the reference date.
+/// This is more user-friendly than week numbers.
+///
+/// # Arguments
+/// * `user_id` - User ID
+/// * `reference_date` - Any date within the target week
+/// * `week_start` - Week start day (Sunday or Monday)
+/// * `group_by` - Aggregation axis
+///
+/// # Returns
+/// * `Ok(AggregationRequest)` - Valid request
+/// * `Err(AggregationError)` - Validation error
+///
+/// # Example
+/// ```
+/// // Get aggregation for the week containing 2025-11-20, starting on Monday
+/// let date = NaiveDate::from_ymd_opt(2025, 11, 20).unwrap();
+/// let request = weekly_aggregation_by_date(1, date, WeekStart::Monday, GroupBy::Category1)?;
+/// // This will aggregate Mon 2025-11-18 ~ Sun 2025-11-24
+/// ```
+pub fn weekly_aggregation_by_date(
+    user_id: i64,
+    reference_date: NaiveDate,
+    week_start: WeekStart,
+    group_by: GroupBy,
+) -> Result<AggregationRequest, AggregationError> {
+    use chrono::Weekday;
+    
+    let today = chrono::Local::now().date_naive();
+    if reference_date > today {
+        return Err(AggregationError::FutureDate { 
+            year: reference_date.year(), 
+            month: reference_date.month() 
+        });
+    }
+    
+    // Calculate the start of the week containing reference_date
+    let target_weekday = match week_start {
+        WeekStart::Sunday => Weekday::Sun,
+        WeekStart::Monday => Weekday::Mon,
+    };
+    
+    let current_weekday = reference_date.weekday();
+    let days_from_start = (7 + current_weekday.num_days_from_monday() as i32
+        - target_weekday.num_days_from_monday() as i32) % 7;
+    
+    let start_date = reference_date - chrono::Duration::days(days_from_start as i64);
+    let end_date = start_date + chrono::Duration::days(6);
+    
+    // Create filter for week range
+    let filter = AggregationFilter::new(DateFilter::Between(start_date, end_date));
+    
+    // Create request with default sort (amount descending)
+    let request = AggregationRequest::new(user_id, filter, group_by)
+        .with_sort(OrderField::Amount, SortOrder::Desc);
+    
+    Ok(request)
 }
 
 /// Yearly aggregation request builder

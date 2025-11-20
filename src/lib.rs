@@ -1676,6 +1676,43 @@ async fn get_weekly_aggregation(
 }
 
 #[tauri::command]
+async fn get_weekly_aggregation_by_date(
+    user_id: i64,
+    reference_date: String, // Format: "YYYY-MM-DD"
+    week_start: String, // "sunday" or "monday"
+    group_by: String,
+    state: tauri::State<'_, AppState>
+) -> Result<Vec<services::aggregation::AggregationResult>, String> {
+    let db = state.db.lock().await;
+    let settings = state.settings.lock().await;
+    let lang = settings.get_string("language")
+        .unwrap_or_else(|_| LANG_DEFAULT.to_string());
+
+    let group_by_enum = parse_group_by(&group_by)?;
+    
+    // Parse reference date
+    let date = chrono::NaiveDate::parse_from_str(&reference_date, "%Y-%m-%d")
+        .map_err(|e| format!("Invalid date format: {}", e))?;
+    
+    // Parse week_start
+    let week_start_enum = match week_start.as_str() {
+        "sunday" => services::aggregation::WeekStart::Sunday,
+        "monday" => services::aggregation::WeekStart::Monday,
+        _ => return Err(format!("Invalid week_start value: {}", week_start)),
+    };
+
+    services::aggregation::execute_weekly_aggregation_by_date(
+        db.pool(),
+        user_id,
+        date,
+        week_start_enum,
+        group_by_enum,
+        &lang,
+    )
+    .await
+}
+
+#[tauri::command]
 async fn get_yearly_aggregation(
     user_id: i64,
     year: i32,
@@ -1858,6 +1895,7 @@ pub fn run() {
             get_monthly_aggregation,
             get_daily_aggregation,
             get_weekly_aggregation,
+            get_weekly_aggregation_by_date,
             get_yearly_aggregation,
             get_monthly_aggregation_by_category
         ])
