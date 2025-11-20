@@ -460,6 +460,21 @@ pub async fn execute_daily_aggregation(
     execute_aggregation(pool, &request, lang).await
 }
 
+/// Execute period aggregation and return results
+pub async fn execute_period_aggregation(
+    pool: &SqlitePool,
+    user_id: i64,
+    start_date: NaiveDate,
+    end_date: NaiveDate,
+    group_by: GroupBy,
+    lang: &str,
+) -> Result<Vec<AggregationResult>, String> {
+    let request = period_aggregation(user_id, start_date, end_date, group_by)
+        .map_err(|e| e.to_string())?;
+
+    execute_aggregation(pool, &request, lang).await
+}
+
 /// Execute weekly aggregation and return results
 pub async fn execute_weekly_aggregation(
     pool: &SqlitePool,
@@ -909,6 +924,60 @@ pub fn daily_aggregation(
     
     // Create filter for exact date
     let filter = AggregationFilter::new(DateFilter::Exact(date));
+    
+    // Create request with default sort (amount descending)
+    let request = AggregationRequest::new(user_id, filter, group_by)
+        .with_sort(OrderField::Amount, SortOrder::Desc);
+    
+    Ok(request)
+}
+
+/// Period aggregation request builder
+///
+/// Creates an aggregation request for a custom date range.
+/// Most flexible aggregation option - user specifies exact start and end dates.
+///
+/// # Arguments
+/// * `user_id` - User ID
+/// * `start_date` - Period start date (inclusive)
+/// * `end_date` - Period end date (inclusive)
+/// * `group_by` - Aggregation axis
+///
+/// # Returns
+/// * `Ok(AggregationRequest)` - Valid request
+/// * `Err(AggregationError)` - Validation error
+///
+/// # Example
+/// ```
+/// // Get aggregation for Oct 1 - Nov 20, 2025
+/// let start = NaiveDate::from_ymd_opt(2025, 10, 1).unwrap();
+/// let end = NaiveDate::from_ymd_opt(2025, 11, 20).unwrap();
+/// let request = period_aggregation(1, start, end, GroupBy::Category1)?;
+/// ```
+pub fn period_aggregation(
+    user_id: i64,
+    start_date: NaiveDate,
+    end_date: NaiveDate,
+    group_by: GroupBy,
+) -> Result<AggregationRequest, AggregationError> {
+    // Validate date range
+    if start_date > end_date {
+        return Err(AggregationError::InvalidDateRange { 
+            start: start_date, 
+            end: end_date 
+        });
+    }
+    
+    let today = chrono::Local::now().date_naive();
+    if start_date > today {
+        return Err(AggregationError::FutureDate { 
+            year: start_date.year(), 
+            month: start_date.month() 
+        });
+    }
+    
+    // Create filter with date range
+    let filter = AggregationFilter::new(DateFilter::Between(start_date, end_date));
     
     // Create request with default sort (amount descending)
     let request = AggregationRequest::new(user_id, filter, group_by)

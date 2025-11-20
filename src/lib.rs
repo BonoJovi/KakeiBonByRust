@@ -1641,6 +1641,38 @@ async fn get_daily_aggregation(
 }
 
 #[tauri::command]
+async fn get_period_aggregation(
+    user_id: i64,
+    start_date: String, // Format: "YYYY-MM-DD"
+    end_date: String, // Format: "YYYY-MM-DD"
+    group_by: String,
+    state: tauri::State<'_, AppState>
+) -> Result<Vec<services::aggregation::AggregationResult>, String> {
+    let db = state.db.lock().await;
+    let settings = state.settings.lock().await;
+    let lang = settings.get_string("language")
+        .unwrap_or_else(|_| LANG_DEFAULT.to_string());
+
+    let group_by_enum = parse_group_by(&group_by)?;
+    
+    // Parse dates
+    let start = chrono::NaiveDate::parse_from_str(&start_date, "%Y-%m-%d")
+        .map_err(|e| format!("Invalid start date format: {}", e))?;
+    let end = chrono::NaiveDate::parse_from_str(&end_date, "%Y-%m-%d")
+        .map_err(|e| format!("Invalid end date format: {}", e))?;
+
+    services::aggregation::execute_period_aggregation(
+        db.pool(),
+        user_id,
+        start,
+        end,
+        group_by_enum,
+        &lang,
+    )
+    .await
+}
+
+#[tauri::command]
 async fn get_weekly_aggregation(
     user_id: i64,
     year: i32,
@@ -1894,6 +1926,7 @@ pub fn run() {
             delete_transaction_detail,
             get_monthly_aggregation,
             get_daily_aggregation,
+            get_period_aggregation,
             get_weekly_aggregation,
             get_weekly_aggregation_by_date,
             get_yearly_aggregation,
