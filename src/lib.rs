@@ -17,6 +17,7 @@ mod services {
     pub mod manufacturer;
     pub mod product;
     pub mod session;
+    pub mod aggregation;
 }
 
 #[cfg(test)]
@@ -1563,6 +1564,99 @@ async fn delete_transaction_detail(
         .map_err(|e| e.to_string())
 }
 
+// =============================================================================
+// Aggregation Commands
+// =============================================================================
+
+#[tauri::command]
+async fn get_monthly_aggregation(
+    user_id: i64,
+    year: i32,
+    month: u32,
+    group_by: String,
+    state: tauri::State<'_, AppState>
+) -> Result<Vec<services::aggregation::AggregationResult>, String> {
+    let db = state.db.lock().await;
+    let settings = state.settings.lock().await;
+    let lang = settings.get_string("language")
+        .unwrap_or_else(|_| LANG_DEFAULT.to_string());
+
+    // Parse group_by string to GroupBy enum
+    let group_by_enum = match group_by.as_str() {
+        "category1" => services::aggregation::GroupBy::Category1,
+        "category2" => services::aggregation::GroupBy::Category2,
+        "category3" => services::aggregation::GroupBy::Category3,
+        "account" => services::aggregation::GroupBy::Account,
+        "shop" => services::aggregation::GroupBy::Shop,
+        "product" => services::aggregation::GroupBy::Product,
+        "date" => services::aggregation::GroupBy::Date,
+        _ => return Err(format!("Invalid group_by value: {}", group_by)),
+    };
+
+    services::aggregation::execute_monthly_aggregation(
+        db.pool(),
+        user_id,
+        year,
+        month,
+        group_by_enum,
+        &lang,
+    )
+    .await
+}
+
+#[tauri::command]
+async fn get_monthly_aggregation_by_category(
+    user_id: i64,
+    year: i32,
+    month: u32,
+    group_by: String,
+    category1_code: String,
+    category2_code: Option<String>,
+    category3_code: Option<String>,
+    state: tauri::State<'_, AppState>
+) -> Result<Vec<services::aggregation::AggregationResult>, String> {
+    let db = state.db.lock().await;
+    let settings = state.settings.lock().await;
+    let lang = settings.get_string("language")
+        .unwrap_or_else(|_| LANG_DEFAULT.to_string());
+
+    // Parse group_by string to GroupBy enum
+    let group_by_enum = match group_by.as_str() {
+        "category1" => services::aggregation::GroupBy::Category1,
+        "category2" => services::aggregation::GroupBy::Category2,
+        "category3" => services::aggregation::GroupBy::Category3,
+        "account" => services::aggregation::GroupBy::Account,
+        "shop" => services::aggregation::GroupBy::Shop,
+        "product" => services::aggregation::GroupBy::Product,
+        "date" => services::aggregation::GroupBy::Date,
+        _ => return Err(format!("Invalid group_by value: {}", group_by)),
+    };
+
+    // Build category filter based on provided codes
+    let category_filter = match (category2_code, category3_code) {
+        (Some(cat2), Some(cat3)) => {
+            services::aggregation::CategoryFilter::Category3(category1_code, cat2, cat3)
+        }
+        (Some(cat2), None) => {
+            services::aggregation::CategoryFilter::Category2(category1_code, cat2)
+        }
+        (None, _) => {
+            services::aggregation::CategoryFilter::Category1(category1_code)
+        }
+    };
+
+    services::aggregation::execute_monthly_aggregation_by_category(
+        db.pool(),
+        user_id,
+        year,
+        month,
+        group_by_enum,
+        category_filter,
+        &lang,
+    )
+    .await
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -1656,7 +1750,9 @@ pub fn run() {
             get_transaction_details,
             add_transaction_detail,
             update_transaction_detail,
-            delete_transaction_detail
+            delete_transaction_detail,
+            get_monthly_aggregation,
+            get_monthly_aggregation_by_category
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {

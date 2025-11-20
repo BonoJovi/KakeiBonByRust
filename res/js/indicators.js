@@ -28,6 +28,11 @@ export function wrapInputFields() {
 export function setupInputIndicators() {
     document.querySelectorAll('input, textarea, select').forEach(input => {
         input.addEventListener('focus', function() {
+            // Remove active class from all other form-groups and checkbox-labels
+            document.querySelectorAll('.form-group.active, .checkbox-label.active').forEach(el => {
+                el.classList.remove('active');
+            });
+
             // For checkboxes and radio buttons, highlight the label
             if (this.type === 'checkbox' || this.type === 'radio') {
                 const label = this.closest('.checkbox-label');
@@ -42,22 +47,8 @@ export function setupInputIndicators() {
                 }
             }
         });
-        
-        input.addEventListener('blur', function() {
-            // For checkboxes and radio buttons, remove highlight from label
-            if (this.type === 'checkbox' || this.type === 'radio') {
-                const label = this.closest('.checkbox-label');
-                if (label) {
-                    label.classList.remove('active');
-                }
-            } else {
-                // For other inputs, remove highlight from form-group
-                const formGroup = this.closest('.form-group');
-                if (formGroup) {
-                    formGroup.classList.remove('active');
-                }
-            }
-        });
+
+        // No blur handler - indicator stays until another field is focused
     });
 }
 
