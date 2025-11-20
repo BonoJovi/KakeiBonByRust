@@ -10,5 +10,6 @@ export const HTML_FILES = {
     MANUFACTURER_MANAGEMENT: 'manufacturer-management.html',
     PRODUCT_MANAGEMENT: 'product-management.html',
     TRANSACTION_MANAGEMENT: 'transaction-management.html',
-    TRANSACTION_DETAIL_MANAGEMENT: 'transaction-detail-management.html'
+    TRANSACTION_DETAIL_MANAGEMENT: 'transaction-detail-management.html',
+    AGGREGATION: 'aggregation.html'
 };
