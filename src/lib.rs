@@ -1568,6 +1568,24 @@ async fn delete_transaction_detail(
 // Aggregation Commands
 // =============================================================================
 
+// =============================================================================
+// Aggregation Commands
+// =============================================================================
+
+// Helper function to parse group_by string
+fn parse_group_by(group_by: &str) -> Result<services::aggregation::GroupBy, String> {
+    match group_by {
+        "category1" => Ok(services::aggregation::GroupBy::Category1),
+        "category2" => Ok(services::aggregation::GroupBy::Category2),
+        "category3" => Ok(services::aggregation::GroupBy::Category3),
+        "account" => Ok(services::aggregation::GroupBy::Account),
+        "shop" => Ok(services::aggregation::GroupBy::Shop),
+        "product" => Ok(services::aggregation::GroupBy::Product),
+        "date" => Ok(services::aggregation::GroupBy::Date),
+        _ => Err(format!("Invalid group_by value: {}", group_by)),
+    }
+}
+
 #[tauri::command]
 async fn get_monthly_aggregation(
     user_id: i64,
@@ -1581,23 +1599,109 @@ async fn get_monthly_aggregation(
     let lang = settings.get_string("language")
         .unwrap_or_else(|_| LANG_DEFAULT.to_string());
 
-    // Parse group_by string to GroupBy enum
-    let group_by_enum = match group_by.as_str() {
-        "category1" => services::aggregation::GroupBy::Category1,
-        "category2" => services::aggregation::GroupBy::Category2,
-        "category3" => services::aggregation::GroupBy::Category3,
-        "account" => services::aggregation::GroupBy::Account,
-        "shop" => services::aggregation::GroupBy::Shop,
-        "product" => services::aggregation::GroupBy::Product,
-        "date" => services::aggregation::GroupBy::Date,
-        _ => return Err(format!("Invalid group_by value: {}", group_by)),
-    };
+    let group_by_enum = parse_group_by(&group_by)?;
 
     services::aggregation::execute_monthly_aggregation(
         db.pool(),
         user_id,
         year,
         month,
+        group_by_enum,
+        &lang,
+    )
+    .await
+}
+
+#[tauri::command]
+async fn get_daily_aggregation(
+    user_id: i64,
+    date: String, // Format: "YYYY-MM-DD"
+    group_by: String,
+    state: tauri::State<'_, AppState>
+) -> Result<Vec<services::aggregation::AggregationResult>, String> {
+    let db = state.db.lock().await;
+    let settings = state.settings.lock().await;
+    let lang = settings.get_string("language")
+        .unwrap_or_else(|_| LANG_DEFAULT.to_string());
+
+    let group_by_enum = parse_group_by(&group_by)?;
+    
+    // Parse date string
+    let date = chrono::NaiveDate::parse_from_str(&date, "%Y-%m-%d")
+        .map_err(|e| format!("Invalid date format: {}", e))?;
+
+    services::aggregation::execute_daily_aggregation(
+        db.pool(),
+        user_id,
+        date,
+        group_by_enum,
+        &lang,
+    )
+    .await
+}
+
+#[tauri::command]
+async fn get_weekly_aggregation(
+    user_id: i64,
+    year: i32,
+    week: u32,
+    week_start: String, // "sunday" or "monday"
+    group_by: String,
+    state: tauri::State<'_, AppState>
+) -> Result<Vec<services::aggregation::AggregationResult>, String> {
+    let db = state.db.lock().await;
+    let settings = state.settings.lock().await;
+    let lang = settings.get_string("language")
+        .unwrap_or_else(|_| LANG_DEFAULT.to_string());
+
+    let group_by_enum = parse_group_by(&group_by)?;
+    
+    // Parse week_start
+    let week_start_enum = match week_start.as_str() {
+        "sunday" => services::aggregation::WeekStart::Sunday,
+        "monday" => services::aggregation::WeekStart::Monday,
+        _ => return Err(format!("Invalid week_start value: {}", week_start)),
+    };
+
+    services::aggregation::execute_weekly_aggregation(
+        db.pool(),
+        user_id,
+        year,
+        week,
+        week_start_enum,
+        group_by_enum,
+        &lang,
+    )
+    .await
+}
+
+#[tauri::command]
+async fn get_yearly_aggregation(
+    user_id: i64,
+    year: i32,
+    year_start: String, // "january" or "april"
+    group_by: String,
+    state: tauri::State<'_, AppState>
+) -> Result<Vec<services::aggregation::AggregationResult>, String> {
+    let db = state.db.lock().await;
+    let settings = state.settings.lock().await;
+    let lang = settings.get_string("language")
+        .unwrap_or_else(|_| LANG_DEFAULT.to_string());
+
+    let group_by_enum = parse_group_by(&group_by)?;
+    
+    // Parse year_start
+    let year_start_enum = match year_start.as_str() {
+        "january" => services::aggregation::YearStart::January,
+        "april" => services::aggregation::YearStart::April,
+        _ => return Err(format!("Invalid year_start value: {}", year_start)),
+    };
+
+    services::aggregation::execute_yearly_aggregation(
+        db.pool(),
+        user_id,
+        year,
+        year_start_enum,
         group_by_enum,
         &lang,
     )
@@ -1752,6 +1856,9 @@ pub fn run() {
             update_transaction_detail,
             delete_transaction_detail,
             get_monthly_aggregation,
+            get_daily_aggregation,
+            get_weekly_aggregation,
+            get_yearly_aggregation,
             get_monthly_aggregation_by_category
         ])
         .setup(|app| {

@@ -132,6 +132,28 @@ impl CategoryFilter {
 }
 
 // =============================================================================
+// Period Settings Enums
+// =============================================================================
+
+/// Week start day setting
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub enum WeekStart {
+    /// Week starts on Sunday (US style)
+    Sunday,
+    /// Week starts on Monday (ISO 8601, Europe/Japan style)
+    Monday,
+}
+
+/// Year start month setting
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub enum YearStart {
+    /// Year starts in January (calendar year)
+    January,
+    /// Year starts in April (fiscal year, Japanese style)
+    April,
+}
+
+// =============================================================================
 // Aggregation Axis Enums
 // =============================================================================
 
@@ -419,6 +441,51 @@ pub async fn execute_monthly_aggregation(
     lang: &str,
 ) -> Result<Vec<AggregationResult>, String> {
     let request = monthly_aggregation(user_id, year, month, group_by)
+        .map_err(|e| e.to_string())?;
+
+    execute_aggregation(pool, &request, lang).await
+}
+
+/// Execute daily aggregation and return results
+pub async fn execute_daily_aggregation(
+    pool: &SqlitePool,
+    user_id: i64,
+    date: NaiveDate,
+    group_by: GroupBy,
+    lang: &str,
+) -> Result<Vec<AggregationResult>, String> {
+    let request = daily_aggregation(user_id, date, group_by)
+        .map_err(|e| e.to_string())?;
+
+    execute_aggregation(pool, &request, lang).await
+}
+
+/// Execute weekly aggregation and return results
+pub async fn execute_weekly_aggregation(
+    pool: &SqlitePool,
+    user_id: i64,
+    year: i32,
+    week: u32,
+    week_start: WeekStart,
+    group_by: GroupBy,
+    lang: &str,
+) -> Result<Vec<AggregationResult>, String> {
+    let request = weekly_aggregation(user_id, year, week, week_start, group_by)
+        .map_err(|e| e.to_string())?;
+
+    execute_aggregation(pool, &request, lang).await
+}
+
+/// Execute yearly aggregation and return results
+pub async fn execute_yearly_aggregation(
+    pool: &SqlitePool,
+    user_id: i64,
+    year: i32,
+    year_start: YearStart,
+    group_by: GroupBy,
+    lang: &str,
+) -> Result<Vec<AggregationResult>, String> {
+    let request = yearly_aggregation(user_id, year, year_start, group_by)
         .map_err(|e| e.to_string())?;
 
     execute_aggregation(pool, &request, lang).await
@@ -795,6 +862,180 @@ pub fn monthly_aggregation(
     let request = AggregationRequest::new(user_id, filter, group_by)
         .with_sort(OrderField::Amount, SortOrder::Desc);
 
+    Ok(request)
+}
+
+/// Daily aggregation request builder
+///
+/// Creates an aggregation request for a specific day.
+///
+/// # Arguments
+/// * `user_id` - User ID
+/// * `date` - Target date
+/// * `group_by` - Aggregation axis
+///
+/// # Returns
+/// * `Ok(AggregationRequest)` - Valid request
+/// * `Err(AggregationError)` - Validation error
+pub fn daily_aggregation(
+    user_id: i64,
+    date: NaiveDate,
+    group_by: GroupBy,
+) -> Result<AggregationRequest, AggregationError> {
+    let today = chrono::Local::now().date_naive();
+    
+    // Validate not future
+    if date > today {
+        return Err(AggregationError::FutureDate { 
+            year: date.year(), 
+            month: date.month() 
+        });
+    }
+    
+    // Create filter for exact date
+    let filter = AggregationFilter::new(DateFilter::Exact(date));
+    
+    // Create request with default sort (amount descending)
+    let request = AggregationRequest::new(user_id, filter, group_by)
+        .with_sort(OrderField::Amount, SortOrder::Desc);
+    
+    Ok(request)
+}
+
+/// Weekly aggregation request builder
+///
+/// Creates an aggregation request for a specific week.
+///
+/// # Arguments
+/// * `user_id` - User ID
+/// * `year` - Target year
+/// * `week` - Week number (1-53)
+/// * `week_start` - Week start day (Sunday or Monday)
+/// * `group_by` - Aggregation axis
+///
+/// # Returns
+/// * `Ok(AggregationRequest)` - Valid request
+/// * `Err(AggregationError)` - Validation error
+pub fn weekly_aggregation(
+    user_id: i64,
+    year: i32,
+    week: u32,
+    week_start: WeekStart,
+    group_by: GroupBy,
+) -> Result<AggregationRequest, AggregationError> {
+    validate_year(year)?;
+    
+    if week < 1 || week > 53 {
+        return Err(AggregationError::InvalidMonth(week)); // Reuse error type
+    }
+    
+    // Calculate week range
+    let (start_date, end_date) = calculate_week_range(year, week, week_start)?;
+    
+    let today = chrono::Local::now().date_naive();
+    if start_date > today {
+        return Err(AggregationError::FutureDate { 
+            year: start_date.year(), 
+            month: start_date.month() 
+        });
+    }
+    
+    // Create filter for week range
+    let filter = AggregationFilter::new(DateFilter::Between(start_date, end_date));
+    
+    // Create request with default sort (amount descending)
+    let request = AggregationRequest::new(user_id, filter, group_by)
+        .with_sort(OrderField::Amount, SortOrder::Desc);
+    
+    Ok(request)
+}
+
+/// Calculate the start and end date for a given week
+fn calculate_week_range(
+    year: i32,
+    week: u32,
+    week_start: WeekStart,
+) -> Result<(NaiveDate, NaiveDate), AggregationError> {
+    use chrono::Weekday;
+    
+    // Get January 1st of the year
+    let jan_1 = NaiveDate::from_ymd_opt(year, 1, 1)
+        .ok_or(AggregationError::InvalidYear(year))?;
+    
+    // Find the first target weekday
+    let target_weekday = match week_start {
+        WeekStart::Sunday => Weekday::Sun,
+        WeekStart::Monday => Weekday::Mon,
+    };
+    
+    let days_to_first_week_start = (7 + target_weekday.num_days_from_monday() as i32
+        - jan_1.weekday().num_days_from_monday() as i32) % 7;
+    
+    let first_week_start = jan_1 + chrono::Duration::days(days_to_first_week_start as i64);
+    
+    // Calculate the start of the target week
+    let start_date = first_week_start + chrono::Duration::weeks((week - 1) as i64);
+    let end_date = start_date + chrono::Duration::days(6);
+    
+    Ok((start_date, end_date))
+}
+
+/// Yearly aggregation request builder
+///
+/// Creates an aggregation request for a specific year.
+///
+/// # Arguments
+/// * `user_id` - User ID
+/// * `year` - Target year
+/// * `year_start` - Year start month (January or April)
+/// * `group_by` - Aggregation axis
+///
+/// # Returns
+/// * `Ok(AggregationRequest)` - Valid request
+/// * `Err(AggregationError)` - Validation error
+pub fn yearly_aggregation(
+    user_id: i64,
+    year: i32,
+    year_start: YearStart,
+    group_by: GroupBy,
+) -> Result<AggregationRequest, AggregationError> {
+    validate_year(year)?;
+    
+    // Calculate year range based on start month
+    let (start_date, end_date) = match year_start {
+        YearStart::January => {
+            // Calendar year: Jan 1 - Dec 31
+            let start = NaiveDate::from_ymd_opt(year, 1, 1)
+                .ok_or(AggregationError::InvalidYear(year))?;
+            let end = NaiveDate::from_ymd_opt(year, 12, 31)
+                .ok_or(AggregationError::InvalidYear(year))?;
+            (start, end)
+        }
+        YearStart::April => {
+            // Fiscal year: Apr 1 (year) - Mar 31 (year+1)
+            let start = NaiveDate::from_ymd_opt(year, 4, 1)
+                .ok_or(AggregationError::InvalidYear(year))?;
+            let end = NaiveDate::from_ymd_opt(year + 1, 3, 31)
+                .ok_or(AggregationError::InvalidYear(year + 1))?;
+            (start, end)
+        }
+    };
+    
+    let today = chrono::Local::now().date_naive();
+    if start_date > today {
+        return Err(AggregationError::FutureDate { 
+            year: start_date.year(), 
+            month: start_date.month() 
+        });
+    }
+    
+    // Create filter for year range
+    let filter = AggregationFilter::new(DateFilter::Between(start_date, end_date));
+    
+    // Create request with default sort (amount descending)
+    let request = AggregationRequest::new(user_id, filter, group_by)
+        .with_sort(OrderField::Amount, SortOrder::Desc);
+    
     Ok(request)
 }
 
