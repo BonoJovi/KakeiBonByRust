@@ -57,7 +57,9 @@ export function createMenuBar(pageType = 'management') {
                 <div class="dropdown-item" data-i18n="menu.product_management">Product Management</div>
                 <div class="dropdown-item" data-i18n="menu.transaction_management">Transaction Management</div>
                 <div class="dropdown-item" data-i18n="menu.aggregation">Monthly Aggregation</div>
+                <div class="dropdown-item" data-i18n="menu.aggregation_weekly">Weekly Aggregation</div>
                 <div class="dropdown-item" data-i18n="menu.aggregation_daily">Daily Aggregation</div>
+                <div class="dropdown-item" data-i18n="menu.aggregation_yearly">Yearly Aggregation</div>
             </div>
         </div>
         <div id="language-menu" class="menu-item">
@@ -318,11 +320,29 @@ document.addEventListener('DOMContentLoaded', async function() {
             });
         }
 
-        const aggregationDailyItem = adminDropdown.querySelector('.dropdown-item:nth-child(9)');
+        const aggregationWeeklyItem = adminDropdown.querySelector('.dropdown-item:nth-child(9)');
+        if (aggregationWeeklyItem) {
+            aggregationWeeklyItem.addEventListener('click', function(e) {
+                console.log('Weekly Aggregation item clicked');
+                window.location.href = HTML_FILES.AGGREGATION_WEEKLY;
+                adminDropdown.classList.remove('show');
+            });
+        }
+
+        const aggregationDailyItem = adminDropdown.querySelector('.dropdown-item:nth-child(10)');
         if (aggregationDailyItem) {
             aggregationDailyItem.addEventListener('click', function(e) {
                 console.log('Daily Aggregation item clicked');
                 window.location.href = HTML_FILES.AGGREGATION_DAILY;
+                adminDropdown.classList.remove('show');
+            });
+        }
+
+        const aggregationYearlyItem = adminDropdown.querySelector('.dropdown-item:nth-child(11)');
+        if (aggregationYearlyItem) {
+            aggregationYearlyItem.addEventListener('click', function(e) {
+                console.log('Yearly Aggregation item clicked');
+                window.location.href = HTML_FILES.AGGREGATION_YEARLY;
                 adminDropdown.classList.remove('show');
             });
         }
