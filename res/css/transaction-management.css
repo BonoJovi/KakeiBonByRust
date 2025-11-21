@@ -1,0 +1,604 @@
+/* Base Styles */
+body {
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+    overflow: hidden;
+    height: 100vh;
+    min-width: 1100px;
+}
+
+#main-content {
+    padding: 0;
+    max-width: 100%;
+    margin: 0;
+    box-sizing: border-box;
+    height: calc(100vh - 60px);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-width: 1100px;
+}
+
+.transaction-management-container {
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 20px;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    min-width: 1060px;
+}
+
+.transaction-management-container h1 {
+    text-align: center;
+    margin: 0 0 20px 0;
+    color: #333;
+    flex-shrink: 0;
+}
+
+.section {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+    min-height: 0;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    flex-shrink: 0;
+}
+
+.section-header h2 {
+    margin: 0;
+    color: #333;
+}
+
+.section-footer {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 3px solid #999;
+    display: flex;
+    justify-content: flex-end;
+    flex-shrink: 0;
+}
+
+#transaction-list-container {
+    flex: 0 1 auto;
+    overflow-y: scroll;
+    overflow-x: scroll;
+    border: 2px solid #999;
+    border-radius: 4px;
+    min-height: 0;
+    max-height: 10em;
+    min-width: 0;
+}
+
+/* Wide scrollbar for better usability */
+#transaction-list-container::-webkit-scrollbar {
+    width: 16px;
+    height: 16px;
+}
+
+#transaction-list-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+#transaction-list-container::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+#transaction-list-container::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* Firefox scrollbar styling */
+#transaction-list-container {
+    scrollbar-width: auto;
+    scrollbar-color: #888 #f1f1f1;
+}
+
+/* Transaction list flex layout */
+.transaction-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.transaction-item {
+    display: flex;
+    gap: 10px;
+    padding: 10px 15px;
+    border-bottom: 1px solid #ddd;
+    align-items: center;
+    min-width: fit-content;
+}
+
+.transaction-item:hover {
+    background-color: #f5f5f5;
+}
+
+.transaction-item:last-child {
+    border-bottom: none;
+}
+
+/* Content wrapper takes remaining space */
+.transaction-content {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 9em 7em 12em 7em;
+    grid-template-rows: auto auto;
+    gap: 5px 8px;
+    align-items: center;
+    min-width: 35em;
+}
+
+.transaction-date {
+    font-size: 0.95em;
+    color: #555;
+    grid-row: 1;
+    grid-column: 1;
+}
+
+.transaction-category {
+    font-weight: 600;
+    grid-row: 1;
+    grid-column: 2;
+}
+
+.transaction-account {
+    font-size: 0.9em;
+    color: #666;
+    grid-row: 1;
+    grid-column: 3;
+}
+
+.transaction-amount {
+    font-weight: 700;
+    text-align: right;
+    grid-row: 1;
+    grid-column: 4;
+}
+
+.transaction-amount.expense {
+    color: #e74c3c;
+}
+
+.transaction-amount.income {
+    color: #27ae60;
+}
+
+.transaction-amount.transfer {
+    color: #3498db;
+}
+
+.transaction-memo {
+    font-size: 0.9em;
+    color: #666;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    grid-row: 2;
+    grid-column: 1 / -1;
+    padding-left: 5px;
+    font-style: italic;
+}
+
+/* Actions fixed width */
+.transaction-actions {
+    display: flex;
+    gap: 5px;
+    justify-content: flex-end;
+    flex-shrink: 0;
+    width: 7em;
+}
+
+.empty-state,
+.loading {
+    padding: 40px 20px;
+    text-align: center;
+    color: #999;
+    font-size: 1.1em;
+}
+
+#transactions-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 0;
+}
+
+#transactions-table thead {
+    background-color: #f5f5f5;
+}
+
+#transactions-table th,
+#transactions-table td {
+    padding: 10px 8px;
+    text-align: left;
+    border-bottom: 2px solid #999;
+    vertical-align: middle;
+}
+
+#transactions-table th {
+    font-weight: 600;
+    color: #fff;
+    position: sticky;
+    top: 0;
+    background-color: #34495e;
+    z-index: 10;
+}
+
+#transactions-table tbody tr:hover {
+    background-color: #f9f9f9;
+}
+
+#transactions-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+}
+
+.btn-small {
+    padding: 6px 12px;
+    font-size: 1em;
+    border: 2px solid #000;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.btn-edit {
+    background-color: #3498db;
+    color: white;
+}
+
+.btn-edit:hover {
+    background-color: #2980b9;
+}
+
+.btn-delete {
+    background-color: #e74c3c;
+    color: white;
+}
+
+.btn-delete:hover {
+    background-color: #c0392b;
+}
+
+.btn-primary {
+    background-color: #27ae60;
+    color: white;
+    padding: 10px 20px;
+    border: 2px solid #000;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    font-size: 1em;
+}
+
+.btn-primary:hover {
+    background-color: #229954;
+}
+
+.btn-secondary {
+    background-color: #7f8c8d;
+    color: white;
+    padding: 10px 20px;
+    border: 2px solid #000;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    font-size: 1em;
+}
+
+.btn-secondary:hover {
+    background-color: #6c7a7b;
+}
+
+.btn-danger {
+    background-color: #e74c3c;
+    color: white;
+    padding: 10px 20px;
+    border: 2px solid #000;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    font-size: 1em;
+}
+
+.btn-danger:hover {
+    background-color: #c0392b;
+}
+
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal.hidden {
+    display: none;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 8px;
+    padding: 30px;
+    max-width: 31em;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.modal-header h2 {
+    margin: 0;
+    color: #333;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 2em;
+    cursor: pointer;
+    color: #999;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    line-height: 1;
+}
+
+.close-btn:hover {
+    color: #333;
+}
+
+.form-actions {
+    display: flex;
+    gap: 16px;
+    justify-content: flex-end;
+    margin-top: 20px;
+}
+
+.form-actions button {
+    flex: 1;
+    max-width: 120px;
+    white-space: nowrap;
+    min-width: fit-content;
+}
+
+.delete-target {
+    font-weight: 600;
+    color: #e74c3c;
+    margin: 15px 0;
+    text-align: center;
+    font-size: 1.5em;
+}
+
+#transaction-list-message,
+#form-message,
+#delete-result-message {
+    margin-top: 15px;
+    min-height: 0;
+    height: auto;
+}
+
+#transaction-list-message {
+    margin-top: 15px;
+    flex-shrink: 0;
+}
+
+#transaction-list-message:empty {
+    padding: 0;
+    margin: 0;
+    border: none;
+}
+
+.loading {
+    text-align: center;
+    padding: 20px;
+    color: #666;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 40px;
+    color: #999;
+}
+
+@media (max-width: 768px) {
+    .transaction-management-container {
+        padding: 10px;
+    }
+
+    #transactions-table {
+        font-size: 0.85em;
+        table-layout: auto;
+    }
+
+    #transactions-table th,
+    #transactions-table td {
+        padding: 8px 4px;
+    }
+
+    .section-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .modal-content {
+        width: 95%;
+        padding: 20px;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .btn-small {
+        width: 100%;
+        padding: 8px;
+    }
+}
+
+/* Action Bar */
+.action-bar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    align-items: center;
+}
+
+.action-bar .btn {
+    flex-shrink: 0;
+}
+
+.action-bar .toggle-arrow {
+    margin-left: 8px;
+    font-size: 0.9em;
+}
+
+/* Filter Panel Styles */
+.filter-panel {
+    background: #f9f9f9;
+    border: 2px solid #999;
+    border-radius: 4px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+.filter-panel.hidden {
+    display: none;
+}
+
+.filter-form-content {
+    /* Content wrapper - no special styling needed */
+}
+
+.filter-row {
+    margin-bottom: 12px;
+}
+
+.filter-row:last-child {
+    margin-bottom: 0;
+}
+
+.filter-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.filter-group label {
+    min-width: 7em;
+    font-weight: 500;
+    flex-shrink: 0;
+}
+
+.filter-group select {
+    width: auto;
+    min-width: 150px;
+    max-width: 250px;
+    flex: 0 1 auto;
+    font-size: 1em;
+}
+
+.filter-group input[type="date"] {
+    width: auto;
+    font-size: 1em;
+}
+
+.filter-group input[type="text"] {
+    flex: 1;
+    max-width: 400px;
+    font-size: 1em;
+}
+
+.filter-group input[type="number"] {
+    font-size: 1em;
+}
+
+.filter-group .input-with-spinner {
+    width: auto;
+    min-width: 150px;
+}
+
+.filter-group .input-with-spinner input {
+    font-size: 1em;
+}
+
+.filter-group span {
+    margin: 0 4px;
+}
+
+/* Filter action buttons */
+.filter-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 15px;
+}
+
+/* Pagination Styles */
+.pagination {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 15px;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #ddd;
+}
+
+.pagination-info {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.95em;
+}
+
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#page-info {
+    min-width: 80px;
+    text-align: center;
+}

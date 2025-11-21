@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Transaction Management - KakeiBon</title>
+        <link rel="stylesheet" href="css/menu.css" />
+        <link rel="stylesheet" href="css/indicators.css" />
+        <link rel="stylesheet" href="css/transaction-management.css" />
+        <script type="importmap">
+        {
+            "imports": {
+                "@tauri-apps/api/core": "https://esm.sh/@tauri-apps/api@2/core"
+            }
+        }
+        </script>
+    </head>
+    <body>
+        <div id="menu-bar"></div>
+
+        <!-- Font Size Settings Modal -->
+        <div id="font-size-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 data-i18n="font_size.modal_title">Font Size Settings</h2>
+                    <button class="close-btn" id="font-size-modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="font-size-preset" data-i18n="font_size.preset">Preset:</label>
+                        <div class="input-wrapper">
+                            <select id="font-size-preset">
+                                <option value="small" data-i18n="font_size.small">小</option>
+                                <option value="medium" data-i18n="font_size.medium" selected>中</option>
+                                <option value="large" data-i18n="font_size.large">大</option>
+                                <option value="custom" data-i18n="font_size.custom">カスタム</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="font-size-percent" data-i18n="font_size.percentage">Percentage:</label>
+                        <div class="input-with-spinner">
+                            <input type="number" id="font-size-percent" min="50" max="200" step="5" value="100" />
+                            <div class="spinner-buttons">
+                                <button type="button" class="spinner-btn spinner-down">◀</button>
+                                <button type="button" class="spinner-btn spinner-up">▶</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" id="font-size-cancel" data-i18n="common.cancel">キャンセル</button>
+                    <button type="button" class="btn-primary" id="font-size-apply" data-i18n="common.apply">変更</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="main-content">
+            <div class="transaction-management-container">
+                <h1 data-i18n="transaction_mgmt.title">Transaction Management</h1>
+                
+                <!-- Action Bar -->
+                <div class="action-bar">
+                    <button class="btn btn-primary" id="add-transaction-btn">
+                        <span data-i18n="transaction_mgmt.add_new">+ Add New Transaction</span>
+                    </button>
+                    <button class="btn btn-secondary" id="toggle-filter-content-btn">
+                        <span data-i18n="transaction_mgmt.filter_options">Filter Options</span>
+                        <span class="toggle-arrow">▼</span>
+                    </button>
+                </div>
+
+                <!-- Filter Panel (Initially Hidden) -->
+                <div id="filter-panel" class="filter-panel hidden">
+                    <div id="filter-form-content" class="filter-form-content">
+                    
+                    <div class="filter-row">
+                        <div class="filter-group">
+                            <label data-i18n="transaction_mgmt.date_range">Date Range:</label>
+                            <input type="date" id="filter-start-date" />
+                            <span>～</span>
+                            <input type="date" id="filter-end-date" />
+                        </div>
+                    </div>
+
+                    <div class="filter-row">
+                        <div class="filter-group">
+                            <label data-i18n="transaction_mgmt.category">Category:</label>
+                            <select id="filter-category1">
+                                <option value="" data-i18n="common.all">All</option>
+                            </select>
+                            <select id="filter-category2">
+                                <option value="" data-i18n="common.all">All</option>
+                            </select>
+                            <select id="filter-category3">
+                                <option value="" data-i18n="common.all">All</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="filter-row">
+                        <div class="filter-group">
+                            <label data-i18n="transaction_mgmt.amount_range">Amount Range:</label>
+                            <div class="input-with-spinner">
+                                <input type="number" id="filter-min-amount" data-i18n-placeholder="transaction_mgmt.min_placeholder" placeholder="Min" min="0" />
+                                <div class="spinner-buttons">
+                                    <button type="button" class="spinner-btn spinner-down">◀</button>
+                                    <button type="button" class="spinner-btn spinner-up">▶</button>
+                                </div>
+                            </div>
+                            <span>～</span>
+                            <div class="input-with-spinner">
+                                <input type="number" id="filter-max-amount" data-i18n-placeholder="transaction_mgmt.max_placeholder" placeholder="Max" min="0" />
+                                <div class="spinner-buttons">
+                                    <button type="button" class="spinner-btn spinner-down">◀</button>
+                                    <button type="button" class="spinner-btn spinner-up">▶</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="filter-row">
+                        <div class="filter-group">
+                            <label data-i18n="transaction_mgmt.keyword">Keyword:</label>
+                            <input type="text" id="filter-keyword" data-i18n-placeholder="transaction_mgmt.search_placeholder" placeholder="Search in memo" />
+                        </div>
+                    </div>
+
+                    <div class="filter-actions">
+                        <button class="btn btn-secondary" id="clear-filter-btn" data-i18n="transaction_mgmt.clear_filter">Clear</button>
+                        <button class="btn btn-primary" id="apply-filter-btn" data-i18n="transaction_mgmt.apply_filter">Apply</button>
+                    </div>
+                    </div>
+                </div>
+
+                <!-- Transaction List -->
+                <div class="section">
+                    <div id="transaction-list-container">
+                        <div id="transaction-list" class="transaction-list">
+                            <!-- Transaction items will be populated here -->
+                            <div class="loading" data-i18n="common.loading">Loading...</div>
+                        </div>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div class="pagination">
+                        <div class="pagination-info">
+                            <span data-i18n="transaction_mgmt.total">Total:</span>
+                            <span id="total-count">0</span>
+                            <span data-i18n="transaction_mgmt.items">items</span>
+                        </div>
+                        <div class="pagination-controls">
+                            <button id="prev-page-btn" class="btn btn-secondary" disabled>&lt;</button>
+                            <span id="page-info">
+                                <span data-i18n="transaction_mgmt.page">Page</span>
+                                <span id="current-page">1</span>
+                                /
+                                <span id="total-pages">1</span>
+                            </span>
+                            <button id="next-page-btn" class="btn btn-secondary" disabled>&gt;</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transaction Header Modal -->
+        <div id="transaction-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="transaction-modal-title" data-i18n="transaction_mgmt.add_transaction">Add Transaction</h2>
+                    <button class="close-btn" id="close-transaction-modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="transaction-form">
+                        <div class="form-group">
+                            <label for="transaction-date" data-i18n="transaction_mgmt.transaction_date">Transaction Date:</label>
+                            <input type="datetime-local" id="transaction-date" required />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="shop" data-i18n="transaction_modal.shop">Shop:</label>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <select id="shop" style="flex: 1; min-width: 0;">
+                                    <option value="" data-i18n="common.unspecified">Unspecified</option>
+                                </select>
+                                <button type="button" class="btn btn-secondary" id="manage-shops-btn" style="white-space: nowrap; flex-shrink: 0;" data-i18n="transaction_modal.manage_shops">Manage Shops</button>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="category1" data-i18n="transaction_mgmt.category1">Category (Major):</label>
+                            <select id="category1" required>
+                                <option value="" data-i18n="transaction_mgmt.select_category">- Select category -</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group" id="from-account-group">
+                            <label for="from-account" data-i18n="transaction_mgmt.from_account">From Account:</label>
+                            <select id="from-account">
+                                <option value="NONE" data-i18n="common.unspecified">Unspecified</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group" id="to-account-group">
+                            <label for="to-account" data-i18n="transaction_mgmt.to_account">To Account:</label>
+                            <select id="to-account">
+                                <option value="NONE">Unspecified</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="total-amount" data-i18n="transaction_mgmt.total_amount">Total Amount:</label>
+                            <input type="number" id="total-amount" min="0" step="1" required />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="tax-rounding" data-i18n="transaction_mgmt.tax_rounding">Tax Rounding:</label>
+                            <select id="tax-rounding" required>
+                                <option value="0" data-i18n="transaction_mgmt.round_down">Round Down</option>
+                                <option value="1" data-i18n="transaction_mgmt.round_half">Round Half</option>
+                                <option value="2" data-i18n="transaction_mgmt.round_up">Round Up</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="tax-included-type" data-i18n="transaction_mgmt.tax_type">Tax Type:</label>
+                            <select id="tax-included-type" required>
+                                <option value="0" data-i18n="transaction_mgmt.tax_included">Tax Included (内税)</option>
+                                <option value="1" data-i18n="transaction_mgmt.tax_excluded" selected>Tax Excluded (外税)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="transaction-memo" data-i18n="transaction_mgmt.memo">Memo:</label>
+                            <textarea id="transaction-memo" rows="3"></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <button type="button" class="btn btn-secondary" id="manage-details-btn" data-i18n="transaction_mgmt.manage_details">Manage Details</button>
+                            <span id="detail-count-info">0 <span data-i18n="transaction_mgmt.detail_items">items</span></span>
+                        </div>
+
+                        <div class="modal-actions">
+                            <button type="button" class="btn btn-secondary" id="cancel-transaction-btn" data-i18n="common.cancel">Cancel</button>
+                            <button type="submit" class="btn btn-primary" data-i18n="common.save">Save</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <script type="module" src="js/transaction-management.js"></script>
+    </body>
+</html>

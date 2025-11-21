@@ -1,0 +1,386 @@
+       Fresh unicode-ident v1.0.20
+       Fresh equivalent v1.0.2
+       Fresh hashbrown v0.16.0
+       Fresh cfg-if v1.0.4
+       Fresh pkg-config v0.3.32
+       Fresh heck v0.5.0
+       Fresh winnow v0.5.40
+       Fresh version-compare v0.2.0
+       Fresh version_check v0.9.5
+       Fresh proc-macro2 v1.0.101
+       Fresh indexmap v2.12.0
+       Fresh memchr v2.7.6
+       Fresh autocfg v1.5.0
+       Fresh litemap v0.8.0
+       Fresh writeable v0.6.1
+       Fresh itoa v1.0.15
+       Fresh quote v1.0.41
+       Fresh libc v0.2.177
+       Fresh target-lexicon v0.12.16
+       Fresh pin-project-lite v0.2.16
+       Fresh futures-core v0.3.31
+       Fresh scopeguard v1.2.0
+       Fresh ryu v1.0.20
+       Fresh syn v2.0.107
+       Fresh cfg-expr v0.15.8
+       Fresh getrandom v0.2.16
+       Fresh serde_core v1.0.228
+       Fresh zerocopy v0.8.27
+       Fresh syn v1.0.109
+       Fresh icu_properties_data v2.0.1
+       Fresh lock_api v0.4.14
+       Fresh futures-sink v0.3.31
+       Fresh once_cell v1.21.3
+       Fresh smallvec v1.15.1
+       Fresh percent-encoding v2.3.2
+       Fresh serde_derive v1.0.228
+       Fresh synstructure v0.13.2
+       Fresh rand_core v0.6.4
+       Fresh zerovec-derive v0.11.1
+       Fresh displaydoc v0.2.5
+       Fresh ppv-lite86 v0.2.21
+       Fresh icu_normalizer_data v2.0.0
+       Fresh thiserror-impl v1.0.69
+       Fresh form_urlencoded v1.2.2
+       Fresh utf8_iter v1.0.4
+       Fresh futures-task v0.3.31
+       Fresh pin-utils v0.1.0
+       Fresh slab v0.4.11
+       Fresh futures-io v0.3.31
+       Fresh zerofrom-derive v0.1.6
+       Fresh yoke-derive v0.8.0
+       Fresh rand_chacha v0.3.1
+       Fresh thiserror v1.0.69
+       Fresh typenum v1.19.0
+       Fresh siphasher v1.0.1
+       Fresh bytes v1.10.1
+       Fresh fnv v1.0.7
+       Fresh thiserror-impl v2.0.17
+       Fresh siphasher v0.3.11
+       Fresh futures-macro v0.3.31
+       Fresh toml_datetime v0.6.3
+       Fresh serde_spanned v0.6.9
+       Fresh zerofrom v0.1.6
+       Fresh generic-array v0.14.9
+       Fresh byteorder v1.5.0
+       Fresh serde v1.0.228
+       Fresh toml_edit v0.20.2
+       Fresh phf_generator v0.11.3
+       Fresh thiserror v2.0.17
+       Fresh getrandom v0.1.16
+       Fresh stable_deref_trait v1.2.1
+       Fresh bitflags v1.3.2
+       Fresh strsim v0.11.1
+       Fresh ident_case v1.0.1
+       Fresh winnow v0.7.13
+       Fresh toml v0.8.2
+       Fresh rand_core v0.5.1
+       Fresh proc-macro-error-attr v1.0.4
+       Fresh yoke v0.8.0
+       Fresh toml_parser v1.0.4
+       Fresh phf_macros v0.11.3
+       Fresh darling_core v0.21.3
+       Fresh toml_writer v1.0.4
+       Fresh proc-macro-crate v2.0.2
+       Fresh rustc_version v0.4.1
+       Fresh system-deps v6.2.2
+       Fresh proc-macro-error v1.0.4
+       Fresh rand_pcg v0.2.1
+       Fresh typeid v1.0.3
+       Fresh darling_macro v0.21.3
+       Fresh zerovec v0.11.4
+       Fresh rand_chacha v0.2.2
+       Fresh phf_shared v0.8.0
+       Fresh bitflags v2.10.0
+       Fresh aho-corasick v1.1.3
+       Fresh unic-char-range v0.9.0
+       Fresh unic-common v0.9.0
+       Fresh regex-syntax v0.8.8
+       Fresh heck v0.4.1
+       Fresh rand v0.7.3
+       Fresh unic-ucd-version v0.9.0
+       Fresh darling v0.21.3
+       Fresh regex-automata v0.4.13
+       Fresh unic-char-property v0.9.0
+       Fresh glib-macros v0.18.5
+       Fresh phf_shared v0.10.0
+       Fresh find-msvc-tools v0.1.4
+       Fresh alloc-no-stdlib v2.0.4
+       Fresh shlex v1.3.0
+       Fresh new_debug_unreachable v1.0.6
+       Fresh unic-ucd-ident v0.9.0
+       Fresh serde_with_macros v3.15.0
+       Fresh glib-sys v0.18.1
+       Fresh proc-macro-hack v0.5.20+deprecated
+       Fresh alloc-stdlib v0.2.2
+       Fresh cc v1.2.41
+       Fresh phf_generator v0.10.0
+       Fresh regex v1.12.2
+       Fresh phf_generator v0.8.0
+       Fresh string_cache_codegen v0.5.4
+       Fresh phf_codegen v0.11.3
+   Compiling gobject-sys v0.18.0
+       Fresh cpufeatures v0.2.17
+       Fresh mac v0.1.1
+       Fresh precomputed-hash v0.1.1
+       Fresh getrandom v0.3.4
+       Fresh brotli-decompressor v5.0.0
+   Compiling cairo-sys-rs v0.18.2
+       Fresh phf_codegen v0.8.0
+       Fresh phf_macros v0.10.0
+       Fresh tinystr v0.8.1
+       Fresh block-buffer v0.10.4
+     Running `/home/bonojovi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name gobject_sys --edition=2021 /home/bonojovi/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gobject-sys-0.18.0/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no -C debuginfo=2 --cfg 'feature="v2_58"' --cfg 'feature="v2_62"' --cfg 'feature="v2_66"' --cfg 'feature="v2_68"' --cfg 'feature="v2_70"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("v2_58", "v2_62", "v2_66", "v2_68", "v2_70", "v2_72", "v2_74", "v2_76", "v2_78"))' -C metadata=4b9819fcbfe017a3 -C extra-filename=-971368072acace73 --out-dir /home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps -L dependency=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps --extern glib=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libglib_sys-05d63bf9b0e76517.rmeta --extern libc=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/liblibc-32f0908298dfba86.rmeta --cap-lints allow -L native=/home/linuxbrew/.linuxbrew/Cellar/glib/2.86.1/lib -L native=/home/linuxbrew/.linuxbrew/Cellar/glib/2.86.1/lib -L native=/home/linuxbrew/.linuxbrew/Cellar/glib/2.86.1/lib -l gobject-2.0 -l glib-2.0 --cfg system_deps_have_gobject_2_0`
+       Fresh futf v0.1.5
+       Fresh http v1.3.1
+       Fresh utf-8 v0.7.6
+       Fresh same-file v1.0.6
+       Fresh dtoa v1.0.10
+       Fresh anyhow v1.0.100
+       Fresh icu_locale_core v2.0.0
+     Running `/home/bonojovi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name cairo_sys --edition=2021 /home/bonojovi/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cairo-sys-rs-0.18.2/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no -C debuginfo=2 --cfg 'feature="glib"' --cfg 'feature="use_glib"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("freetype", "glib", "pdf", "png", "ps", "script", "svg", "use_glib", "v1_16", "v1_18", "win32-surface", "winapi", "x11", "xcb", "xlib"))' -C metadata=7fed584354d4e363 -C extra-filename=-9e89606f7a2eb05d --out-dir /home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps -L dependency=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps --extern glib=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libglib_sys-05d63bf9b0e76517.rmeta --extern libc=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/liblibc-32f0908298dfba86.rmeta --cap-lints allow -L native=/home/linuxbrew/.linuxbrew/Cellar/cairo/1.18.4/lib -L native=/home/linuxbrew/.linuxbrew/Cellar/cairo/1.18.4/lib -L native=/home/linuxbrew/.linuxbrew/Cellar/glib/2.86.1/lib -L native=/home/linuxbrew/.linuxbrew/Cellar/glib/2.86.1/lib -L native=/home/linuxbrew/.linuxbrew/Cellar/glib/2.86.1/lib -l cairo -l cairo-gobject -l cairo -l gobject-2.0 -l glib-2.0 --cfg system_deps_have_cairo --cfg system_deps_have_cairo_gobject`
+       Fresh dtoa-short v0.3.5
+       Fresh walkdir v2.5.0
+       Fresh crossbeam-utils v0.8.21
+       Fresh tendril v0.4.3
+       Fresh phf v0.10.1
+       Fresh string_cache v0.8.9
+       Fresh brotli v8.0.2
+       Fresh potential_utf v0.1.3
+       Fresh zerotrie v0.2.2
+       Fresh ctor v0.2.9
+       Fresh cssparser-macros v0.6.1
+       Fresh nodrop v0.1.14
+       Fresh dunce v1.0.5
+       Fresh glob v0.3.3
+       Fresh convert_case v0.4.0
+       Fresh matches v0.1.10
+       Fresh icu_provider v2.0.0
+       Fresh icu_collections v2.0.0
+       Fresh markup5ever v0.14.1
+       Fresh servo_arc v0.2.0
+       Fresh derive_more v0.99.20
+       Fresh cssparser v0.29.6
+       Fresh phf v0.8.0
+       Fresh fxhash v0.2.1
+       Fresh serde_derive_internals v0.29.1
+       Fresh match_token v0.1.0
+       Fresh hashbrown v0.12.3
+       Fresh selectors v0.24.0
+       Fresh indexmap v1.9.3
+       Fresh html5ever v0.29.1
+       Fresh schemars_derive v0.8.22
+       Fresh camino v1.2.1
+       Fresh cargo-platform v0.1.9
+       Fresh dyn-clone v1.0.20
+       Fresh icu_normalizer v2.0.0
+       Fresh icu_properties v2.0.1
+       Fresh cargo_metadata v0.19.2
+       Fresh schemars v0.8.22
+       Fresh kuchikiki v0.8.8-speedreader
+       Fresh socket2 v0.6.1
+       Fresh mio v1.1.0
+       Fresh idna_adapter v1.2.1
+       Fresh value-bag v1.11.1
+       Fresh option-ext v0.2.0
+       Fresh subtle v2.6.1
+       Fresh idna v1.1.0
+       Fresh log v0.4.28
+       Fresh crypto-common v0.1.6
+       Fresh toml_edit v0.19.15
+       Fresh parking_lot_core v0.9.12
+       Fresh base64 v0.22.1
+       Fresh dirs-sys v0.5.0
+       Fresh serde_json v1.0.145
+       Fresh memoffset v0.9.1
+       Fresh url v2.5.7
+       Fresh parking_lot v0.12.5
+       Fresh proc-macro-crate v1.3.1
+   Compiling javascriptcore-rs-sys v1.1.1
+       Fresh embed-resource v3.0.6
+       Fresh tracing-attributes v0.1.30
+       Fresh dirs v6.0.0
+       Fresh field-offset v0.3.6
+       Fresh gtk3-macros v0.18.2
+       Fresh tracing-core v0.1.34
+       Fresh simd-adler32 v0.3.7
+       Fresh allocator-api2 v0.2.21
+       Fresh foldhash v0.1.5
+       Fresh tauri-winres v0.3.3
+     Running `/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/build/javascriptcore-rs-sys-47518119c9761e9f/build-script-build`
+       Fresh hashbrown v0.15.5
+   Compiling webkit2gtk-sys v2.0.1
+       Fresh concurrent-queue v2.5.0
+       Fresh cargo_toml v0.22.3
+       Fresh vcpkg v0.2.15
+       Fresh parking v2.2.1
+       Fresh powerfmt v0.2.0
+       Fresh num-conv v0.1.0
+       Fresh crc-catalog v2.4.0
+     Running `/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/build/webkit2gtk-sys-f5f60ea1740ac9f7/build-script-build`
+       Fresh time-core v0.1.6
+       Fresh adler2 v2.0.1
+   Compiling gdkx11-sys v0.18.2
+       Fresh hashlink v0.10.0
+       Fresh event-listener v5.4.1
+   Compiling tauri-build v2.5.0
+       Fresh deranged v0.5.4
+       Fresh x11 v2.21.0
+       Fresh crc v3.3.0
+       Fresh crc32fast v1.5.0
+     Running `/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/build/gdkx11-sys-8acd681f762063ac/build-script-build`
+     Running `/home/bonojovi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name tauri_build --edition=2021 /home/bonojovi/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tauri-build-2.5.0/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --cfg 'feature="config-json"' --cfg 'feature="default"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("codegen", "config-json", "config-json5", "config-toml", "default", "isolation", "quote", "tauri-codegen"))' -C metadata=a8418d8000d87cf4 -C extra-filename=-ceaa645ae3ae09d1 --out-dir /home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps -L dependency=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps --extern anyhow=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libanyhow-9434f088452f6ecd.rmeta --extern cargo_toml=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libcargo_toml-8e2b4a2c72755ebc.rmeta --extern dirs=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libdirs-148dcbd3d654237c.rmeta --extern glob=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libglob-556ed50c26b682b2.rmeta --extern heck=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libheck-9364e4815d50607d.rmeta --extern json_patch=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libjson_patch-b4c87c2e017793c2.rmeta --extern schemars=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libschemars-9a8975ba976b7c6a.rmeta --extern semver=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libsemver-b071d439ba1960ae.rmeta --extern serde=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libserde-00f14e4cbc7c88c6.rmeta --extern serde_json=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libserde_json-6e851ead44b43f89.rmeta --extern tauri_utils=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libtauri_utils-6c479828c96500dc.rmeta --extern tauri_winres=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libtauri_winres-bcd50e7621e040e2.rmeta --extern toml=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libtoml-90e55b24ffc76adf.rmeta --extern walkdir=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libwalkdir-ba0a36a564bf5363.rmeta --cap-lints allow`
+       Fresh time-macros v0.2.24
+       Fresh miniz_oxide v0.8.9
+       Fresh crossbeam-queue v0.3.12
+       Fresh dpi v0.1.2
+       Fresh uuid v1.18.1
+       Fresh tokio-macros v2.6.0
+       Fresh signal-hook-registry v1.4.6
+       Fresh num_threads v0.1.7
+       Fresh cfb v0.7.3
+       Fresh flate2 v1.1.4
+       Fresh fdeflate v0.3.7
+       Fresh jsonptr v0.6.3
+       Fresh time v0.3.44
+       Fresh digest v0.10.7
+       Fresh tokio v1.48.0
+       Fresh erased-serde v0.4.8
+       Fresh phf_shared v0.11.3
+       Fresh futures-util v0.3.31
+       Fresh serde_spanned v1.0.3
+       Fresh spin v0.9.8
+       Fresh toml_datetime v0.7.3
+       Fresh raw-window-handle v0.6.2
+       Fresh flume v0.11.1
+       Fresh serde-untagged v0.1.9
+       Fresh cookie v0.18.1
+       Fresh toml v0.9.8
+       Fresh phf v0.11.3
+       Fresh num-traits v0.2.19
+       Fresh libsqlite3-sys v0.30.1
+       Fresh png v0.17.16
+       Fresh json-patch v3.0.1
+       Fresh x11-dl v2.21.0
+       Fresh infer v0.19.0
+       Fresh urlpattern v0.3.0
+       Fresh crossbeam-channel v0.5.15
+       Fresh serde_with v3.15.0
+       Fresh dlopen2_derive v0.4.1
+       Fresh semver v1.0.27
+       Fresh dlopen2 v0.8.0
+       Fresh ico v0.4.0
+       Fresh futures-executor v0.3.31
+   Compiling tauri-plugin v2.5.0
+       Fresh inout v0.1.4
+       Fresh tauri-utils v2.8.0
+       Fresh futures-channel v0.3.31
+       Fresh unicode-segmentation v1.12.0
+       Fresh lazy_static v1.5.0
+   Compiling tauri-codegen v2.5.0
+       Fresh cipher v0.4.4
+     Running `/home/bonojovi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name tauri_plugin --edition=2021 /home/bonojovi/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tauri-plugin-2.5.0/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --cfg 'feature="build"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("build", "runtime"))' -C metadata=c7e8a39099c11a29 -C extra-filename=-0f35596313782c11 --out-dir /home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps -L dependency=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps --extern anyhow=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libanyhow-9434f088452f6ecd.rmeta --extern glob=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libglob-556ed50c26b682b2.rmeta --extern schemars=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libschemars-9a8975ba976b7c6a.rmeta --extern serde=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libserde-00f14e4cbc7c88c6.rmeta --extern serde_json=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libserde_json-6e851ead44b43f89.rmeta --extern tauri_utils=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libtauri_utils-6c479828c96500dc.rmeta --extern toml=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libtoml-90e55b24ffc76adf.rmeta --extern walkdir=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libwalkdir-ba0a36a564bf5363.rmeta --cap-lints allow`
+       Fresh keyboard-types v0.7.0
+   Compiling sqlx-sqlite v0.8.6
+       Fresh sha2 v0.10.9
+       Fresh tokio-stream v0.1.17
+       Fresh tracing v0.1.41
+       Fresh futures-intrusive v0.5.0
+     Running `/home/bonojovi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name tauri_codegen --edition=2021 /home/bonojovi/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tauri-codegen-2.5.0/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --cfg 'feature="brotli"' --cfg 'feature="compression"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("brotli", "compression", "config-json5", "config-toml", "isolation"))' -C metadata=cbf0ddfcabe8791b -C extra-filename=-0b6b88c0a1995c6c --out-dir /home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps -L dependency=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps --extern base64=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libbase64-91b33c4ce25c46cf.rmeta --extern brotli=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libbrotli-a1e6be7d4cd50134.rmeta --extern ico=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libico-d8020035b0b9230c.rmeta --extern json_patch=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libjson_patch-b4c87c2e017793c2.rmeta --extern png=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libpng-04b15091e2ce7ec4.rmeta --extern proc_macro2=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libproc_macro2-ca0a20e3d228e340.rmeta --extern quote=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libquote-fd959a731ebd99b5.rmeta --extern semver=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libsemver-b071d439ba1960ae.rmeta --extern serde=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libserde-00f14e4cbc7c88c6.rmeta --extern serde_json=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libserde_json-6e851ead44b43f89.rmeta --extern sha2=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libsha2-a6eb1aeeafed8cb4.rmeta --extern syn=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libsyn-bf1b5d7bc4711108.rmeta --extern tauri_utils=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libtauri_utils-6c479828c96500dc.rmeta --extern thiserror=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libthiserror-df5fbec703e9ce9c.rmeta --extern url=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/liburl-c9823b36406b2a58.rmeta --extern uuid=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libuuid-bd9f0f5acb3044c2.rmeta --extern walkdir=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libwalkdir-ba0a36a564bf5363.rmeta --cap-lints allow`
+     Running `/home/bonojovi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name sqlx_sqlite --edition=2021 /home/bonojovi/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlx-sqlite-0.8.6/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no '--deny=clippy::disallowed_methods' '--deny=clippy::cast_sign_loss' '--deny=clippy::cast_possible_wrap' '--deny=clippy::cast_possible_truncation' --cfg 'feature="bundled"' --cfg 'feature="json"' --cfg 'feature="migrate"' --cfg 'feature="offline"' --cfg 'feature="serde"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("any", "bundled", "chrono", "json", "migrate", "offline", "preupdate-hook", "regexp", "serde", "time", "unbundled", "uuid"))' -C metadata=de97013d79b00c35 -C extra-filename=-f39a6c07f5d006a9 --out-dir /home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps -L dependency=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps --extern atoi=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libatoi-5aadda7142f58193.rmeta --extern flume=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libflume-900905145d37d7e8.rmeta --extern futures_channel=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libfutures_channel-2c9984cb59d88a80.rmeta --extern futures_core=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libfutures_core-7596b23e2b8e74c8.rmeta --extern futures_executor=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libfutures_executor-dbb7384c41446901.rmeta --extern futures_intrusive=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libfutures_intrusive-acf808e2b3c16e2d.rmeta --extern futures_util=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libfutures_util-1a68e22c11f55069.rmeta --extern libsqlite3_sys=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/liblibsqlite3_sys-baff6cdd81fe9e0b.rmeta --extern log=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/liblog-55fc345e32e908e5.rmeta --extern percent_encoding=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libpercent_encoding-efc84ddf6672bca2.rmeta --extern serde=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libserde-00f14e4cbc7c88c6.rmeta --extern serde_urlencoded=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libserde_urlencoded-4ec7c5106484aa96.rmeta --extern sqlx_core=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libsqlx_core-77e72c80d273139f.rmeta --extern thiserror=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libthiserror-df5fbec703e9ce9c.rmeta --extern tracing=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libtracing-d8ac3b32b9532b51.rmeta --extern url=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/liburl-c9823b36406b2a58.rmeta --cap-lints allow -L native=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/build/libsqlite3-sys-b947f6b62558e082/out`
+       Fresh universal-hash v0.5.1
+       Fresh either v1.15.0
+       Fresh serialize-to-javascript-impl v0.1.2
+       Fresh opaque-debug v0.3.1
+       Fresh arrayvec v0.7.6
+       Fresh dotenvy v0.15.7
+       Fresh hex v0.4.3
+   Compiling sqlx-core v0.8.6
+       Fresh rust_decimal v1.39.0
+       Fresh polyval v0.6.2
+       Fresh serialize-to-javascript v0.1.2
+   Compiling atoi v2.0.0
+       Fresh serde_urlencoded v0.7.1
+   Compiling serde_repr v0.1.20
+     Running `/home/bonojovi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name sqlx_core --edition=2021 /home/bonojovi/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sqlx-core-0.8.6/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no -C debuginfo=2 '--deny=clippy::disallowed_methods' '--deny=clippy::cast_sign_loss' '--deny=clippy::cast_possible_wrap' '--deny=clippy::cast_possible_truncation' --cfg 'feature="_rt-tokio"' --cfg 'feature="any"' --cfg 'feature="crc"' --cfg 'feature="default"' --cfg 'feature="json"' --cfg 'feature="migrate"' --cfg 'feature="offline"' --cfg 'feature="serde"' --cfg 'feature="serde_json"' --cfg 'feature="sha2"' --cfg 'feature="tokio"' --cfg 'feature="tokio-stream"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("_rt-async-std", "_rt-tokio", "_tls-native-tls", "_tls-none", "_tls-rustls", "_tls-rustls-aws-lc-rs", "_tls-rustls-ring-native-roots", "_tls-rustls-ring-webpki", "any", "async-io", "async-std", "bigdecimal", "bit-vec", "bstr", "chrono", "crc", "default", "ipnet", "ipnetwork", "json", "mac_address", "migrate", "native-tls", "offline", "regex", "rust_decimal", "rustls", "rustls-native-certs", "serde", "serde_json", "sha2", "time", "tokio", "tokio-stream", "uuid", "webpki-roots"))' -C metadata=4630baff201367ce -C extra-filename=-f9e3c47261fc8565 --out-dir /home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps -L dependency=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps --extern base64=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libbase64-91b33c4ce25c46cf.rmeta --extern bytes=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libbytes-51af82c7a0198611.rmeta --extern crc=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libcrc-57ca72b98df4b0aa.rmeta --extern crossbeam_queue=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libcrossbeam_queue-3468afc20033ac89.rmeta --extern either=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libeither-6b4961f0b991a551.rmeta --extern event_listener=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libevent_listener-1485312e7c785ec4.rmeta --extern futures_core=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libfutures_core-7596b23e2b8e74c8.rmeta --extern futures_intrusive=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libfutures_intrusive-a36848509d029a33.rmeta --extern futures_io=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libfutures_io-08ac9541cd7cdf53.rmeta --extern futures_util=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libfutures_util-7d6bd74eac610fe4.rmeta --extern hashbrown=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libhashbrown-408376161b930cdc.rmeta --extern hashlink=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libhashlink-6577760d8af5f0d0.rmeta --extern indexmap=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libindexmap-874afee497a43938.rmeta --extern log=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/liblog-43349e9c7734814a.rmeta --extern memchr=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libmemchr-93dad5c62431cbbb.rmeta --extern once_cell=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libonce_cell-06c8418e93bf1bc4.rmeta --extern percent_encoding=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libpercent_encoding-efc84ddf6672bca2.rmeta --extern serde=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libserde-d62a28a073fb6064.rmeta --extern serde_json=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libserde_json-fc88516b79b35af1.rmeta --extern sha2=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libsha2-bb1ba122eaad1d25.rmeta --extern smallvec=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libsmallvec-08c8d871230d7061.rmeta --extern thiserror=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libthiserror-df5fbec703e9ce9c.rmeta --extern tokio=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libtokio-de0cb43e53b1de8c.rmeta --extern tokio_stream=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libtokio_stream-0001036c1b35cbad.rmeta --extern tracing=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libtracing-99cd4b3bc58b44d0.rmeta --extern url=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/liburl-b58e20dc6a61df5f.rmeta --cap-lints allow`
+     Running `/home/bonojovi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name atoi --edition=2021 /home/bonojovi/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/atoi-2.0.0/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no -C debuginfo=2 --cfg 'feature="default"' --cfg 'feature="std"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("default", "std"))' -C metadata=183ddb6508e96617 -C extra-filename=-09db73daec8a88da --out-dir /home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps -L dependency=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps --extern num_traits=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libnum_traits-c4868551f2d056d2.rmeta --cap-lints allow`
+   Compiling base64ct v1.8.0
+   Compiling mime v0.3.17
+   Compiling utf8-width v0.1.7
+   Compiling ghash v0.5.1
+     Running `/home/bonojovi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name serde_repr --edition=2021 /home/bonojovi/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_repr-0.1.20/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type proc-macro --emit=dep-info,link -C prefer-dynamic -C embed-bitcode=no --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=778bc971a75bac65 -C extra-filename=-539b680754a0bcce --out-dir /home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps -L dependency=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps --extern proc_macro2=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libproc_macro2-ca0a20e3d228e340.rlib --extern quote=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libquote-fd959a731ebd99b5.rlib --extern syn=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libsyn-bf1b5d7bc4711108.rlib --extern proc_macro --cap-lints allow`
+   Compiling ctr v0.9.2
+     Running `/home/bonojovi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name base64ct --edition=2024 /home/bonojovi/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/base64ct-1.8.0/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no -C debuginfo=2 --cfg 'feature="alloc"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("alloc", "std"))' -C metadata=c21ba34b81b1853e -C extra-filename=-661ca55860ce66d7 --out-dir /home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps -L dependency=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps --cap-lints allow`
+     Running `/home/bonojovi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name ghash --edition=2021 /home/bonojovi/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ghash-0.5.1/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no -C debuginfo=2 --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("std", "zeroize"))' -C metadata=ec35789ca6edd98f -C extra-filename=-2637f060c9592fd9 --out-dir /home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps -L dependency=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps --extern opaque_debug=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libopaque_debug-7b969be538ad4440.rmeta --extern polyval=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libpolyval-31f947913914a2a5.rmeta --cap-lints allow`
+     Running `/home/bonojovi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name mime --edition=2015 /home/bonojovi/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/mime-0.3.17/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no -C debuginfo=2 --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=16bfb53928034e77 -C extra-filename=-3d7f2b4958ac51ea --out-dir /home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps -L dependency=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps --cap-lints allow`
+     Running `/home/bonojovi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name utf8_width --edition=2021 /home/bonojovi/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/utf8-width-0.1.7/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no -C debuginfo=2 --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=4589b958d3b8e98c -C extra-filename=-d7d1f9ddb1d96d6a --out-dir /home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps -L dependency=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps --cap-lints allow`
+     Running `/home/bonojovi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name ctr --edition=2021 /home/bonojovi/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ctr-0.9.2/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no -C debuginfo=2 --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("alloc", "block-padding", "std", "zeroize"))' -C metadata=52a2175a6516e6c5 -C extra-filename=-8c635c8eb25d2645 --out-dir /home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps -L dependency=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps --extern cipher=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libcipher-82c16bd785d79d23.rmeta --cap-lints allow`
+   Compiling byte-unit v5.1.6
+     Running `/home/bonojovi/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc --crate-name byte_unit --edition=2021 /home/bonojovi/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/byte-unit-5.1.6/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no -C debuginfo=2 --cfg 'feature="byte"' --cfg 'feature="default"' --cfg 'feature="rust_decimal"' --cfg 'feature="std"' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("bit", "byte", "default", "rocket", "rust_decimal", "serde", "std", "u128"))' -C metadata=1814c15456ed7632 -C extra-filename=-a45fbd53dc14e4f1 --out-dir /home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps -L dependency=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps --extern rust_decimal=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/librust_decimal-f37be253a0b31343.rmeta --extern utf8_width=/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/deps/libutf8_width-d7d1f9ddb1d96d6a.rmeta --cap-lints allow`
+warning: webkit2gtk-sys@2.0.1: 
+error: failed to run custom build command for `webkit2gtk-sys v2.0.1`
+
+Caused by:
+  process didn't exit successfully: `/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/build/webkit2gtk-sys-f5f60ea1740ac9f7/build-script-build` (exit status: 1)
+  --- stdout
+  cargo:rerun-if-env-changed=WEBKIT2GTK_4.1_NO_PKG_CONFIG
+  cargo:rerun-if-env-changed=PKG_CONFIG_x86_64-unknown-linux-gnu
+  cargo:rerun-if-env-changed=PKG_CONFIG_x86_64_unknown_linux_gnu
+  cargo:rerun-if-env-changed=HOST_PKG_CONFIG
+  cargo:rerun-if-env-changed=PKG_CONFIG
+  cargo:rerun-if-env-changed=PKG_CONFIG_PATH_x86_64-unknown-linux-gnu
+  cargo:rerun-if-env-changed=PKG_CONFIG_PATH_x86_64_unknown_linux_gnu
+  cargo:rerun-if-env-changed=HOST_PKG_CONFIG_PATH
+  cargo:rerun-if-env-changed=PKG_CONFIG_PATH
+  cargo:rerun-if-env-changed=PKG_CONFIG_LIBDIR_x86_64-unknown-linux-gnu
+  cargo:rerun-if-env-changed=PKG_CONFIG_LIBDIR_x86_64_unknown_linux_gnu
+  cargo:rerun-if-env-changed=HOST_PKG_CONFIG_LIBDIR
+  cargo:rerun-if-env-changed=PKG_CONFIG_LIBDIR
+  cargo:rerun-if-env-changed=PKG_CONFIG_SYSROOT_DIR_x86_64-unknown-linux-gnu
+  cargo:rerun-if-env-changed=PKG_CONFIG_SYSROOT_DIR_x86_64_unknown_linux_gnu
+  cargo:rerun-if-env-changed=HOST_PKG_CONFIG_SYSROOT_DIR
+  cargo:rerun-if-env-changed=PKG_CONFIG_SYSROOT_DIR
+  cargo:warning=
+  pkg-config exited with status code 1
+  > PKG_CONFIG_ALLOW_SYSTEM_CFLAGS=1 pkg-config --libs --cflags webkit2gtk-4.1 'webkit2gtk-4.1 >= 2.40'
+
+  The system library `webkit2gtk-4.1` required by crate `webkit2gtk-sys` was not found.
+  The file `webkit2gtk-4.1.pc` needs to be installed and the PKG_CONFIG_PATH environment variable must contain its parent directory.
+  The PKG_CONFIG_PATH environment variable is not set.
+
+  HINT: if you have installed the library, try setting PKG_CONFIG_PATH to the directory containing `webkit2gtk-4.1.pc`.
+
+warning: build failed, waiting for other jobs to finish...
+warning: javascriptcore-rs-sys@1.1.1: 
+error: failed to run custom build command for `javascriptcore-rs-sys v1.1.1`
+
+Caused by:
+  process didn't exit successfully: `/home/bonojovi/Data1/Linux/Projects/Rust/KakeiBonByRust/target/debug/build/javascriptcore-rs-sys-47518119c9761e9f/build-script-build` (exit status: 1)
+  --- stdout
+  cargo:rerun-if-env-changed=JAVASCRIPTCOREGTK_4.1_NO_PKG_CONFIG
+  cargo:rerun-if-env-changed=PKG_CONFIG_x86_64-unknown-linux-gnu
+  cargo:rerun-if-env-changed=PKG_CONFIG_x86_64_unknown_linux_gnu
+  cargo:rerun-if-env-changed=HOST_PKG_CONFIG
+  cargo:rerun-if-env-changed=PKG_CONFIG
+  cargo:rerun-if-env-changed=PKG_CONFIG_PATH_x86_64-unknown-linux-gnu
+  cargo:rerun-if-env-changed=PKG_CONFIG_PATH_x86_64_unknown_linux_gnu
+  cargo:rerun-if-env-changed=HOST_PKG_CONFIG_PATH
+  cargo:rerun-if-env-changed=PKG_CONFIG_PATH
+  cargo:rerun-if-env-changed=PKG_CONFIG_LIBDIR_x86_64-unknown-linux-gnu
+  cargo:rerun-if-env-changed=PKG_CONFIG_LIBDIR_x86_64_unknown_linux_gnu
+  cargo:rerun-if-env-changed=HOST_PKG_CONFIG_LIBDIR
+  cargo:rerun-if-env-changed=PKG_CONFIG_LIBDIR
+  cargo:rerun-if-env-changed=PKG_CONFIG_SYSROOT_DIR_x86_64-unknown-linux-gnu
+  cargo:rerun-if-env-changed=PKG_CONFIG_SYSROOT_DIR_x86_64_unknown_linux_gnu
+  cargo:rerun-if-env-changed=HOST_PKG_CONFIG_SYSROOT_DIR
+  cargo:rerun-if-env-changed=PKG_CONFIG_SYSROOT_DIR
+  cargo:warning=
+  pkg-config exited with status code 1
+  > PKG_CONFIG_ALLOW_SYSTEM_CFLAGS=1 pkg-config --libs --cflags javascriptcoregtk-4.1 'javascriptcoregtk-4.1 >= 2.38'
+
+  The system library `javascriptcoregtk-4.1` required by crate `javascriptcore-rs-sys` was not found.
+  The file `javascriptcoregtk-4.1.pc` needs to be installed and the PKG_CONFIG_PATH environment variable must contain its parent directory.
+  The PKG_CONFIG_PATH environment variable is not set.
+
+  HINT: if you have installed the library, try setting PKG_CONFIG_PATH to the directory containing `javascriptcoregtk-4.1.pc`.
+
