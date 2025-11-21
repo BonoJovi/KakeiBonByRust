@@ -6,7 +6,7 @@ import { setupLanguageMenuHandlers, setupLanguageMenu, handleLogout, handleQuit 
 import { HTML_FILES } from './html-files.js';
 import { TAX_ROUND_DOWN, TAX_ROUND_HALF_UP, TAX_ROUND_UP, ROLE_ADMIN, ROLE_USER } from './consts.js';
 import { Modal } from './modal.js';
-import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
+import { getCurrentSessionUser, isSessionAuthenticated, setSessionSourceScreen, getSessionModalState, setSessionModalState, clearSessionModalState } from './session.js';
 import { createMenuBar } from './menu.js';
 
 let currentUserId = null;
@@ -79,6 +79,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Load transactions
         await loadTransactions();
+        
+        // Check if we need to restore modal state
+        await restoreModalState();
         
         // Adjust window size after content is loaded
         await adjustWindowSize();
@@ -501,11 +504,10 @@ async function editTransaction(transactionId) {
 }
 
 async function deleteTransaction(transactionId) {
-    const confirmTitle = i18n.t('common.confirm') || 'Confirm';
     const confirmMessage = i18n.t('transaction_mgmt.delete_confirm') || 
         'Are you sure you want to delete this transaction?';
     
-    const confirmed = await Modal.confirm(confirmTitle, confirmMessage);
+    const confirmed = confirm(confirmMessage);
     if (!confirmed) {
         return;
     }
@@ -521,10 +523,7 @@ async function deleteTransaction(transactionId) {
         
     } catch (error) {
         console.error('Failed to delete transaction:', error);
-        await Modal.alert(
-            i18n.t('common.error') || 'Error',
-            i18n.t('transaction_mgmt.delete_error') || 'Failed to delete transaction: ' + error
-        );
+        alert(i18n.t('transaction_mgmt.delete_error') || 'Failed to delete transaction: ' + error);
     }
 }
 
@@ -606,7 +605,11 @@ function initializeTransactionModal() {
     // Manage shops button handler
     const manageShopsBtn = document.getElementById('manage-shops-btn');
     if (manageShopsBtn) {
-        manageShopsBtn.addEventListener('click', () => {
+        manageShopsBtn.addEventListener('click', async () => {
+            // Save modal state before navigation
+            await saveModalState();
+            // Set caller screen in session
+            await setSessionSourceScreen('transaction_mgmt');
             window.location.href = HTML_FILES.SHOP_MANAGEMENT;
         });
     }
@@ -963,5 +966,119 @@ async function updateDetailCount(transactionId) {
     } catch (error) {
         console.error('Failed to load detail count:', error);
         // Don't show alert for count update failure, just log it
+    }
+}
+
+// Modal state management functions
+async function saveModalState() {
+    const modalData = {
+        modal_open: true,
+        editing_transaction_id: editingTransactionId,
+        transaction_date: document.getElementById('transaction-date')?.value,
+        category1: document.getElementById('category1')?.value,
+        category2: document.getElementById('category2')?.value,
+        category3: document.getElementById('category3')?.value,
+        account_id: document.getElementById('account')?.value,
+        shop_id: document.getElementById('shop')?.value,
+        from_account: document.getElementById('from-account')?.value,
+        to_account: document.getElementById('to-account')?.value,
+        total_amount: document.getElementById('total-amount')?.value,
+        tax_rounding: document.getElementById('tax-rounding')?.value,
+        tax_included_type: document.getElementById('tax-included-type')?.value,
+        memo: document.getElementById('transaction-memo')?.value
+    };
+    
+    await setSessionModalState(JSON.stringify(modalData));
+}
+
+async function restoreModalState() {
+    const modalStateJson = await getSessionModalState();
+    if (!modalStateJson) {
+        return;
+    }
+    
+    try {
+        const modalData = JSON.parse(modalStateJson);
+        
+        // Clear session state
+        await clearSessionModalState();
+        
+        // Open modal
+        if (modalData.editing_transaction_id) {
+            // Editing mode - open with transaction data
+            await openTransactionModal(modalData.editing_transaction_id);
+            
+            // Wait for modal to be fully populated
+            await new Promise(resolve => setTimeout(resolve, 200));
+            
+            // Override with saved values (in case user made changes before navigating away)
+            if (modalData.transaction_date) {
+                document.getElementById('transaction-date').value = modalData.transaction_date;
+            }
+            if (modalData.shop_id && modalData.shop_id !== 'null') {
+                document.getElementById('shop').value = modalData.shop_id;
+            }
+            if (modalData.total_amount) {
+                document.getElementById('total-amount').value = modalData.total_amount;
+            }
+            if (modalData.memo) {
+                document.getElementById('transaction-memo').value = modalData.memo;
+            }
+        } else {
+            // New transaction mode
+            await openTransactionModal();
+            
+            // Restore form values
+            if (modalData.transaction_date) {
+                document.getElementById('transaction-date').value = modalData.transaction_date;
+            }
+            if (modalData.category1) {
+                document.getElementById('category1').value = modalData.category1;
+                // Trigger change to load dependent dropdowns
+                await handleCategory1Change({ target: document.getElementById('category1') });
+                
+                // Wait a bit for category2 to load
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
+                if (modalData.category2) {
+                    document.getElementById('category2').value = modalData.category2;
+                    // Trigger change to load category3
+                    document.getElementById('category2').dispatchEvent(new Event('change'));
+                    
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    
+                    if (modalData.category3) {
+                        document.getElementById('category3').value = modalData.category3;
+                    }
+                }
+            }
+            if (modalData.account_id) {
+                document.getElementById('account').value = modalData.account_id;
+            }
+            if (modalData.shop_id) {
+                document.getElementById('shop').value = modalData.shop_id;
+            }
+            if (modalData.from_account) {
+                document.getElementById('from-account').value = modalData.from_account;
+            }
+            if (modalData.to_account) {
+                document.getElementById('to-account').value = modalData.to_account;
+            }
+            if (modalData.total_amount) {
+                document.getElementById('total-amount').value = modalData.total_amount;
+            }
+            if (modalData.tax_rounding) {
+                document.getElementById('tax-rounding').value = modalData.tax_rounding;
+            }
+            if (modalData.tax_included_type) {
+                document.getElementById('tax-included-type').value = modalData.tax_included_type;
+            }
+            if (modalData.memo) {
+                document.getElementById('transaction-memo').value = modalData.memo;
+            }
+        }
+    } catch (error) {
+        console.error('Failed to restore modal state:', error);
+        await clearSessionModalState();
     }
 }

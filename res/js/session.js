@@ -121,6 +121,46 @@ export async function clearSessionCategory1Code() {
 }
 
 /**
+ * Set modal state (serialized JSON)
+ * @param {string} modalState - Modal state as JSON string
+ * @returns {Promise<void>}
+ */
+export async function setSessionModalState(modalState) {
+    try {
+        await invoke('set_session_modal_state', { modalState });
+    } catch (error) {
+        console.error('Failed to set modal state:', error);
+        throw error;
+    }
+}
+
+/**
+ * Get modal state
+ * @returns {Promise<string | null>}
+ */
+export async function getSessionModalState() {
+    try {
+        return await invoke('get_session_modal_state');
+    } catch (error) {
+        console.error('Failed to get modal state:', error);
+        throw error;
+    }
+}
+
+/**
+ * Clear modal state
+ * @returns {Promise<void>}
+ */
+export async function clearSessionModalState() {
+    try {
+        await invoke('clear_session_modal_state');
+    } catch (error) {
+        console.error('Failed to clear modal state:', error);
+        throw error;
+    }
+}
+
+/**
  * Clear all session data (user, source_screen, category1_code)
  * @returns {Promise<void>}
  */

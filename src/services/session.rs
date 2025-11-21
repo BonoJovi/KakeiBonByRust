@@ -12,6 +12,7 @@ pub struct User {
 pub struct SessionInfo {
     pub source_screen: Option<String>,
     pub category1_code: Option<String>,
+    pub modal_state: Option<String>,
 }
 
 #[derive(Default)]
@@ -63,6 +64,18 @@ impl SessionState {
 
     pub fn clear_category1_code(&self) {
         self.session_info.lock().unwrap().category1_code = None;
+    }
+
+    pub fn set_modal_state(&self, modal_state: String) {
+        self.session_info.lock().unwrap().modal_state = Some(modal_state);
+    }
+
+    pub fn get_modal_state(&self) -> Option<String> {
+        self.session_info.lock().unwrap().modal_state.clone()
+    }
+
+    pub fn clear_modal_state(&self) {
+        self.session_info.lock().unwrap().modal_state = None;
     }
 
     pub fn clear_all(&self) {

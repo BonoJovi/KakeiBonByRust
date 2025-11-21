@@ -602,3 +602,15 @@ body {
     min-width: 80px;
     text-align: center;
 }
+
+/* Modal actions (buttons) */
+.modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 20px;
+}
+
+.modal-actions button {
+    min-width: 100px;
+}

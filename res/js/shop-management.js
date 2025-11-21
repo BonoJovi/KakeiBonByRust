@@ -4,7 +4,7 @@ import i18n from './i18n.js';
 import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers, adjustWindowSize } from './font-size.js';
 import { Modal } from './modal.js';
 import { setupIndicators } from './indicators.js';
-import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
+import { getCurrentSessionUser, isSessionAuthenticated, getSessionSourceScreen, clearSessionSourceScreen } from './session.js';
 import { createMenuBar } from './menu.js';
 
 console.log('=== SHOP-MANAGEMENT.JS LOADED ===');
@@ -275,6 +275,14 @@ async function saveShop() {
 
         // Reload shops list (modal will be closed by Modal class)
         await loadShops();
+        
+        // Check if called from another screen
+        const callerScreen = await getSessionSourceScreen();
+        if (callerScreen) {
+            // Clear session and return to caller screen
+            await clearSessionSourceScreen();
+            window.location.href = HTML_FILES.TRANSACTION_MANAGEMENT;
+        }
     } catch (error) {
         console.error('Failed to save shop:', error);
 

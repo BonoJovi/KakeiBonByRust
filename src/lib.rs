@@ -202,6 +202,26 @@ fn clear_session_category1_code(state: tauri::State<'_, AppState>) -> Result<(),
 }
 
 #[tauri::command]
+fn set_session_modal_state(
+    modal_state: String,
+    state: tauri::State<'_, AppState>
+) -> Result<(), String> {
+    state.session.set_modal_state(modal_state);
+    Ok(())
+}
+
+#[tauri::command]
+fn get_session_modal_state(state: tauri::State<'_, AppState>) -> Result<Option<String>, String> {
+    Ok(state.session.get_modal_state())
+}
+
+#[tauri::command]
+fn clear_session_modal_state(state: tauri::State<'_, AppState>) -> Result<(), String> {
+    state.session.clear_modal_state();
+    Ok(())
+}
+
+#[tauri::command]
 fn clear_session(state: tauri::State<'_, AppState>) -> Result<(), String> {
     state.session.clear_all();
     Ok(())
@@ -1848,6 +1868,9 @@ pub fn run() {
             set_session_category1_code,
             get_session_category1_code,
             clear_session_category1_code,
+            set_session_modal_state,
+            get_session_modal_state,
+            clear_session_modal_state,
             clear_session,
             test_db_connection,
             validate_password_frontend,
