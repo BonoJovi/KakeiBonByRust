@@ -97,6 +97,9 @@ function initAccountModal() {
                 modalTitle.textContent = i18n.t('account_mgmt.modal_title_add');
                 accountCodeInput.removeAttribute('readonly');
                 editingAccountCode = null;
+                
+                // Focus on account code input after modal opens
+                setTimeout(() => accountCodeInput.focus(), 0);
             } else if (mode === 'edit') {
                 modalTitle.setAttribute('data-i18n', 'account_mgmt.modal_title_edit');
                 modalTitle.textContent = i18n.t('account_mgmt.modal_title_edit');

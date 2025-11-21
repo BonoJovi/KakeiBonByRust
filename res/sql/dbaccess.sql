@@ -997,3 +997,271 @@ INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESO
 INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (904, 'manufacturer_mgmt.duplicate_error', 'ja', 'このメーカー名は既に存在します。', 'manufacturer_mgmt', '重複メーカー名エラー', datetime('now'));
 INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (905, 'product_mgmt.duplicate_error', 'en', 'This product name already exists.', 'product_mgmt', 'Duplicate product name error', datetime('now'));
 INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (906, 'product_mgmt.duplicate_error', 'ja', 'この商品名は既に存在します。', 'product_mgmt', '重複商品名エラー', datetime('now'));
+-- Missing i18n resources - to be added to database
+-- Generated: 2024-11-21 JST
+
+-- Common resources (9 keys = 18 records)
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1291, 'common.apply', 'en', 'Apply', 'common', 'Apply button', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1292, 'common.apply', 'ja', '適用', 'common', '適用ボタン', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1293, 'common.category', 'en', 'Category', 'common', 'Category label', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1294, 'common.category', 'ja', 'カテゴリ', 'common', 'カテゴリラベル', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1295, 'common.category2', 'en', 'Medium Category', 'common', 'Medium category label', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1296, 'common.category2', 'ja', '中分類', 'common', '中分類ラベル', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1297, 'common.category3', 'en', 'Minor Category', 'common', 'Minor category label', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1298, 'common.category3', 'ja', '小分類', 'common', '小分類ラベル', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1299, 'common.confirm', 'en', 'Confirm', 'common', 'Confirm button', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1300, 'common.confirm', 'ja', '確認', 'common', '確認ボタン', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1301, 'common.disabled_label', 'en', '(Disabled)', 'common', 'Disabled item label', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1302, 'common.disabled_label', 'ja', '（非表示）', 'common', '非表示項目ラベル', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1303, 'common.error', 'en', 'Error', 'common', 'Error title', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1304, 'common.error', 'ja', 'エラー', 'common', 'エラータイトル', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1305, 'common.no_data', 'en', 'No data', 'common', 'No data message', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1306, 'common.no_data', 'ja', 'データがありません', 'common', 'データなしメッセージ', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1307, 'common.select', 'en', 'Select', 'common', 'Select placeholder', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1308, 'common.select', 'ja', '選択してください', 'common', '選択プレースホルダー', datetime('now'));
+
+-- Manufacturer Management (6 keys = 12 records)
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1309, 'manufacturer_mgmt.delete_manufacturer', 'en', 'Delete Manufacturer', 'manufacturer_mgmt', 'Delete manufacturer button', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1310, 'manufacturer_mgmt.delete_manufacturer', 'ja', 'メーカー削除', 'manufacturer_mgmt', 'メーカー削除ボタン', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1311, 'manufacturer_mgmt.empty_name', 'en', 'Manufacturer name is required', 'manufacturer_mgmt', 'Empty name error', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1312, 'manufacturer_mgmt.empty_name', 'ja', 'メーカー名を入力してください', 'manufacturer_mgmt', '空名前エラー', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1313, 'manufacturer_mgmt.failed_to_delete', 'en', 'Failed to delete manufacturer', 'manufacturer_mgmt', 'Delete failure message', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1314, 'manufacturer_mgmt.failed_to_delete', 'ja', 'メーカーの削除に失敗しました', 'manufacturer_mgmt', '削除失敗メッセージ', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1315, 'manufacturer_mgmt.failed_to_initialize', 'en', 'Failed to initialize', 'manufacturer_mgmt', 'Initialization failure message', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1316, 'manufacturer_mgmt.failed_to_initialize', 'ja', '初期化に失敗しました', 'manufacturer_mgmt', '初期化失敗メッセージ', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1317, 'manufacturer_mgmt.failed_to_load', 'en', 'Failed to load manufacturers', 'manufacturer_mgmt', 'Load failure message', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1318, 'manufacturer_mgmt.failed_to_load', 'ja', 'メーカーの読み込みに失敗しました', 'manufacturer_mgmt', '読み込み失敗メッセージ', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1319, 'manufacturer_mgmt.manufacturer_list', 'en', 'Manufacturer List', 'manufacturer_mgmt', 'Manufacturer list header', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1320, 'manufacturer_mgmt.manufacturer_list', 'ja', 'メーカー一覧', 'manufacturer_mgmt', 'メーカー一覧ヘッダー', datetime('now'));
+
+-- Product Management (6 keys = 12 records)
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1321, 'product_mgmt.delete_product', 'en', 'Delete Product', 'product_mgmt', 'Delete product button', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1322, 'product_mgmt.delete_product', 'ja', '商品削除', 'product_mgmt', '商品削除ボタン', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1323, 'product_mgmt.empty_name', 'en', 'Product name is required', 'product_mgmt', 'Empty name error', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1324, 'product_mgmt.empty_name', 'ja', '商品名を入力してください', 'product_mgmt', '空名前エラー', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1325, 'product_mgmt.failed_to_delete', 'en', 'Failed to delete product', 'product_mgmt', 'Delete failure message', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1326, 'product_mgmt.failed_to_delete', 'ja', '商品の削除に失敗しました', 'product_mgmt', '削除失敗メッセージ', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1327, 'product_mgmt.failed_to_initialize', 'en', 'Failed to initialize', 'product_mgmt', 'Initialization failure message', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1328, 'product_mgmt.failed_to_initialize', 'ja', '初期化に失敗しました', 'product_mgmt', '初期化失敗メッセージ', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1329, 'product_mgmt.failed_to_load', 'en', 'Failed to load products', 'product_mgmt', 'Load failure message', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1330, 'product_mgmt.failed_to_load', 'ja', '商品の読み込みに失敗しました', 'product_mgmt', '読み込み失敗メッセージ', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1331, 'product_mgmt.product_list', 'en', 'Product List', 'product_mgmt', 'Product list header', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1332, 'product_mgmt.product_list', 'ja', '商品一覧', 'product_mgmt', '商品一覧ヘッダー', datetime('now'));
+
+-- Shop Management (2 keys = 4 records)
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1333, 'shop_mgmt.delete_shop', 'en', 'Delete Shop', 'shop_mgmt', 'Delete shop button', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1334, 'shop_mgmt.delete_shop', 'ja', '店舗削除', 'shop_mgmt', '店舗削除ボタン', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1335, 'shop_mgmt.shop_list', 'en', 'Shop List', 'shop_mgmt', 'Shop list header', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1336, 'shop_mgmt.shop_list', 'ja', '店舗一覧', 'shop_mgmt', '店舗一覧ヘッダー', datetime('now'));
+
+-- Transaction Management (5 keys = 10 records)
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1337, 'transaction_mgmt.delete_error', 'en', 'Failed to delete transaction', 'transaction_mgmt', 'Delete error message', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1338, 'transaction_mgmt.delete_error', 'ja', '入出金の削除に失敗しました', 'transaction_mgmt', '削除エラーメッセージ', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1339, 'transaction_mgmt.save_before_details', 'en', 'Please save the transaction before managing details', 'transaction_mgmt', 'Save before details message', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1340, 'transaction_mgmt.save_before_details', 'ja', '明細を管理する前に入出金を保存してください', 'transaction_mgmt', '明細前保存メッセージ', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1341, 'transaction_mgmt.tax_excluded', 'en', 'Tax Excluded', 'transaction_mgmt', 'Tax excluded option', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1342, 'transaction_mgmt.tax_excluded', 'ja', '外税', 'transaction_mgmt', '外税オプション', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1343, 'transaction_mgmt.tax_included', 'en', 'Tax Included', 'transaction_mgmt', 'Tax included option', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1344, 'transaction_mgmt.tax_included', 'ja', '内税', 'transaction_mgmt', '内税オプション', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1345, 'transaction_mgmt.tax_type', 'en', 'Tax Type', 'transaction_mgmt', 'Tax type label', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1346, 'transaction_mgmt.tax_type', 'ja', '税区分', 'transaction_mgmt', '税区分ラベル', datetime('now'));
+-- Translation resources for aggregation
+-- Auto-generated from database
+-- Category: aggregation
+
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT)
+VALUES
+(1055, 'aggregation.title', 'en', 'Monthly Aggregation', 'aggregation', 'Aggregation page title', datetime('now')),
+(1056, 'aggregation.title', 'ja', '月次集計', 'aggregation', '集計ページタイトル', datetime('now')),
+(1057, 'aggregation.filter', 'en', 'Filter', 'aggregation', 'Filter section title', datetime('now')),
+(1058, 'aggregation.filter', 'ja', 'フィルタ', 'aggregation', 'フィルタセクションタイトル', datetime('now')),
+(1059, 'aggregation.year', 'en', 'Year', 'aggregation', 'Year label', datetime('now')),
+(1060, 'aggregation.year', 'ja', '年', 'aggregation', '年ラベル', datetime('now')),
+(1061, 'aggregation.month', 'en', 'Month', 'aggregation', 'Month label', datetime('now')),
+(1062, 'aggregation.month', 'ja', '月', 'aggregation', '月ラベル', datetime('now')),
+(1063, 'aggregation.group_by', 'en', 'Group By', 'aggregation', 'Group by label', datetime('now')),
+(1064, 'aggregation.group_by', 'ja', '集計単位', 'aggregation', '集計単位ラベル', datetime('now')),
+(1065, 'aggregation.category1', 'en', 'Category (Major)', 'aggregation', 'Major category option', datetime('now')),
+(1066, 'aggregation.category1', 'ja', '費目（大分類）', 'aggregation', '大分類オプション', datetime('now')),
+(1067, 'aggregation.category2', 'en', 'Category (Middle)', 'aggregation', 'Middle category option', datetime('now')),
+(1068, 'aggregation.category2', 'ja', '費目（中分類）', 'aggregation', '中分類オプション', datetime('now')),
+(1069, 'aggregation.category3', 'en', 'Category (Minor)', 'aggregation', 'Minor category option', datetime('now')),
+(1070, 'aggregation.category3', 'ja', '費目（小分類）', 'aggregation', '小分類オプション', datetime('now')),
+(1071, 'aggregation.account', 'en', 'Account', 'aggregation', 'Account option', datetime('now')),
+(1072, 'aggregation.account', 'ja', '口座', 'aggregation', '口座オプション', datetime('now')),
+(1073, 'aggregation.shop', 'en', 'Shop', 'aggregation', 'Shop option', datetime('now')),
+(1074, 'aggregation.shop', 'ja', '店舗', 'aggregation', '店舗オプション', datetime('now')),
+(1075, 'aggregation.date', 'en', 'Date', 'aggregation', 'Date option', datetime('now')),
+(1076, 'aggregation.date', 'ja', '日付', 'aggregation', '日付オプション', datetime('now')),
+(1077, 'aggregation.execute', 'en', 'Execute', 'aggregation', 'Execute button', datetime('now')),
+(1078, 'aggregation.execute', 'ja', '実行', 'aggregation', '実行ボタン', datetime('now')),
+(1079, 'aggregation.results', 'en', 'Results', 'aggregation', 'Results section title', datetime('now')),
+(1080, 'aggregation.results', 'ja', '集計結果', 'aggregation', '集計結果セクションタイトル', datetime('now')),
+(1081, 'aggregation.group_name', 'en', 'Group', 'aggregation', 'Group name column header', datetime('now')),
+(1082, 'aggregation.group_name', 'ja', '集計項目', 'aggregation', '集計項目カラムヘッダー', datetime('now')),
+(1083, 'aggregation.total_amount', 'en', 'Net Amount (Income - Expense)', 'aggregation', 'Net amount column header', datetime('now')),
+(1084, 'aggregation.total_amount', 'ja', '純増減（収入 - 支出）', 'aggregation', '純増減カラムヘッダー', datetime('now')),
+(1085, 'aggregation.count', 'en', 'Count', 'aggregation', 'Count column header', datetime('now')),
+(1086, 'aggregation.count', 'ja', '件数', 'aggregation', '件数カラムヘッダー', datetime('now')),
+(1087, 'aggregation.avg_amount', 'en', 'Average Net Amount', 'aggregation', 'Average net amount column header', datetime('now')),
+(1088, 'aggregation.avg_amount', 'ja', '平均純増減', 'aggregation', '平均純増減カラムヘッダー', datetime('now')),
+(1089, 'aggregation.items', 'en', 'items', 'aggregation', 'Items count label', datetime('now')),
+(1090, 'aggregation.items', 'ja', '件', 'aggregation', '件数ラベル', datetime('now')),
+(1091, 'aggregation.total', 'en', 'Total', 'aggregation', 'Total row label', datetime('now')),
+(1092, 'aggregation.total', 'ja', '合計', 'aggregation', '合計行ラベル', datetime('now')),
+(1093, 'aggregation.no_results', 'en', 'No results found', 'aggregation', 'No results message', datetime('now')),
+(1094, 'aggregation.no_results', 'ja', '集計結果がありません', 'aggregation', '結果なしメッセージ', datetime('now')),
+(1095, 'aggregation.error_invalid_year', 'en', 'Please enter a valid year (1900-2100)', 'aggregation', 'Invalid year error', datetime('now')),
+(1096, 'aggregation.error_invalid_year', 'ja', '有効な年を入力してください（1900-2100）', 'aggregation', '無効な年エラー', datetime('now')),
+(1097, 'aggregation.error_invalid_month', 'en', 'Please select a valid month', 'aggregation', 'Invalid month error', datetime('now')),
+(1098, 'aggregation.error_invalid_month', 'ja', '有効な月を選択してください', 'aggregation', '無効な月エラー', datetime('now')),
+(1195, 'aggregation.title_daily', 'en', 'Daily Aggregation', 'aggregation', 'Daily aggregation page title', datetime('now')),
+(1196, 'aggregation.title_daily', 'ja', '日次集計', 'aggregation', '日次集計ページタイトル', datetime('now')),
+(1197, 'aggregation.error_no_date', 'en', 'Please select a date', 'aggregation', 'Error message for missing date', datetime('now')),
+(1198, 'aggregation.error_no_date', 'ja', '日付を選択してください', 'aggregation', '日付未選択エラーメッセージ', datetime('now')),
+(1199, 'aggregation.account_note', 'en', '※ Account aggregation includes transfers (account-to-account movements)', 'aggregation', 'Account aggregation note', datetime('now')),
+(1200, 'aggregation.account_note', 'ja', '※ 口座別集計では振替（口座間移動）も含まれます', 'aggregation', '口座別集計注釈', datetime('now')),
+(1203, 'aggregation.title_weekly', 'en', 'Weekly Aggregation', 'aggregation', 'Weekly aggregation page title', datetime('now')),
+(1204, 'aggregation.title_weekly', 'ja', '週次集計', 'aggregation', '週次集計ページタイトル', datetime('now')),
+(1205, 'aggregation.week', 'en', 'Week', 'aggregation', 'Week label', datetime('now')),
+(1206, 'aggregation.week', 'ja', '週', 'aggregation', '週ラベル', datetime('now')),
+(1207, 'aggregation.week_start', 'en', 'Week Start', 'aggregation', 'Week start label', datetime('now')),
+(1208, 'aggregation.week_start', 'ja', '週の開始', 'aggregation', '週の開始ラベル', datetime('now')),
+(1209, 'aggregation.sunday', 'en', 'Sunday', 'aggregation', 'Sunday option', datetime('now')),
+(1210, 'aggregation.sunday', 'ja', '日曜', 'aggregation', '日曜オプション', datetime('now')),
+(1211, 'aggregation.monday', 'en', 'Monday', 'aggregation', 'Monday option', datetime('now')),
+(1212, 'aggregation.monday', 'ja', '月曜', 'aggregation', '月曜オプション', datetime('now')),
+(1213, 'aggregation.error_invalid_week', 'en', 'Please enter a valid week (1-53)', 'aggregation', 'Invalid week error', datetime('now')),
+(1214, 'aggregation.error_invalid_week', 'ja', '有効な週番号を入力してください（1-53）', 'aggregation', '無効な週エラー', datetime('now')),
+(1215, 'aggregation.reference_date', 'en', 'Reference Date', 'aggregation', 'Reference date label for weekly aggregation', datetime('now')),
+(1216, 'aggregation.reference_date', 'ja', '基準日', 'aggregation', '週次集計の基準日ラベル', datetime('now')),
+(1219, 'aggregation.title_yearly', 'en', 'Yearly Aggregation', 'aggregation', 'Yearly aggregation page title', datetime('now')),
+(1220, 'aggregation.title_yearly', 'ja', '年次集計', 'aggregation', '年次集計ページタイトル', datetime('now')),
+(1221, 'aggregation.year_start', 'en', 'Year Start', 'aggregation', 'Year start label', datetime('now')),
+(1222, 'aggregation.year_start', 'ja', '年度開始', 'aggregation', '年度開始ラベル', datetime('now')),
+(1223, 'aggregation.january', 'en', 'January (Calendar Year)', 'aggregation', 'January/Calendar year option', datetime('now')),
+(1224, 'aggregation.january', 'ja', '1月（暦年）', 'aggregation', '1月/暦年オプション', datetime('now')),
+(1225, 'aggregation.april', 'en', 'April (Fiscal Year)', 'aggregation', 'April/Fiscal year option', datetime('now')),
+(1226, 'aggregation.april', 'ja', '4月（会計年度）', 'aggregation', '4月/会計年度オプション', datetime('now')),
+(1229, 'aggregation.title_period', 'en', 'Period Aggregation', 'aggregation', 'Period aggregation page title', datetime('now')),
+(1230, 'aggregation.title_period', 'ja', '期間別集計', 'aggregation', '期間別集計ページタイトル', datetime('now')),
+(1231, 'aggregation.start_date', 'en', 'Start Date', 'aggregation', 'Start date label', datetime('now')),
+(1232, 'aggregation.start_date', 'ja', '開始日', 'aggregation', '開始日ラベル', datetime('now')),
+(1233, 'aggregation.end_date', 'en', 'End Date', 'aggregation', 'End date label', datetime('now')),
+(1234, 'aggregation.end_date', 'ja', '終了日', 'aggregation', '終了日ラベル', datetime('now')),
+(1235, 'aggregation.error_no_dates', 'en', 'Please select start and end dates', 'aggregation', 'Missing dates error', datetime('now')),
+(1236, 'aggregation.error_no_dates', 'ja', '開始日と終了日を選択してください', 'aggregation', '日付未選択エラー', datetime('now')),
+(1237, 'aggregation.error_invalid_date_range', 'en', 'Start date must be before end date', 'aggregation', 'Invalid date range error', datetime('now')),
+(1238, 'aggregation.error_invalid_date_range', 'ja', '開始日は終了日より前でなければなりません', 'aggregation', '無効な日付範囲エラー', datetime('now'));
+-- Translation resources for detail_mgmt
+-- Auto-generated from database
+-- Category: detail_mgmt
+
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT)
+VALUES
+(1239, 'detail_mgmt.title', 'en', 'Transaction Detail Management', 'detail_mgmt', 'Detail management page title', datetime('now')),
+(1240, 'detail_mgmt.title', 'ja', '明細管理', 'detail_mgmt', '明細管理ページタイトル', datetime('now')),
+(1241, 'detail_mgmt.transaction_date', 'en', 'Transaction Date', 'detail_mgmt', 'Transaction date label', datetime('now')),
+(1242, 'detail_mgmt.transaction_date', 'ja', '取引日', 'detail_mgmt', '取引日ラベル', datetime('now')),
+(1243, 'detail_mgmt.account', 'en', 'Account', 'detail_mgmt', 'Account label', datetime('now')),
+(1244, 'detail_mgmt.account', 'ja', '口座', 'detail_mgmt', '口座ラベル', datetime('now')),
+(1245, 'detail_mgmt.shop', 'en', 'Shop', 'detail_mgmt', 'Shop label', datetime('now')),
+(1246, 'detail_mgmt.shop', 'ja', '店舗', 'detail_mgmt', '店舗ラベル', datetime('now')),
+(1247, 'detail_mgmt.total_amount', 'en', 'Total Amount', 'detail_mgmt', 'Total amount label', datetime('now')),
+(1248, 'detail_mgmt.total_amount', 'ja', '合計金額', 'detail_mgmt', '合計金額ラベル', datetime('now')),
+(1249, 'detail_mgmt.add_detail', 'en', '+ Add Detail', 'detail_mgmt', 'Add detail button', datetime('now')),
+(1250, 'detail_mgmt.add_detail', 'ja', '+ 明細追加', 'detail_mgmt', '明細追加ボタン', datetime('now')),
+(1251, 'detail_mgmt.edit_detail', 'en', 'Edit Detail', 'detail_mgmt', 'Edit detail title', datetime('now')),
+(1252, 'detail_mgmt.edit_detail', 'ja', '明細編集', 'detail_mgmt', '明細編集タイトル', datetime('now')),
+(1253, 'detail_mgmt.item_name', 'en', 'Item Name', 'detail_mgmt', 'Item name label', datetime('now')),
+(1254, 'detail_mgmt.item_name', 'ja', '品目名', 'detail_mgmt', '品目名ラベル', datetime('now')),
+(1255, 'detail_mgmt.amount', 'en', 'Amount', 'detail_mgmt', 'Amount label', datetime('now')),
+(1256, 'detail_mgmt.amount', 'ja', '金額', 'detail_mgmt', '金額ラベル', datetime('now')),
+(1257, 'detail_mgmt.amount_excluding_tax', 'en', 'Amount (Excl. Tax)', 'detail_mgmt', 'Amount excluding tax label', datetime('now')),
+(1258, 'detail_mgmt.amount_excluding_tax', 'ja', '税抜金額', 'detail_mgmt', '税抜金額ラベル', datetime('now')),
+(1259, 'detail_mgmt.amount_including_tax', 'en', 'Amount (Incl. Tax)', 'detail_mgmt', 'Amount including tax label', datetime('now')),
+(1260, 'detail_mgmt.amount_including_tax', 'ja', '税込金額', 'detail_mgmt', '税込金額ラベル', datetime('now')),
+(1261, 'detail_mgmt.tax', 'en', 'Tax', 'detail_mgmt', 'Tax label', datetime('now')),
+(1262, 'detail_mgmt.tax', 'ja', '税額', 'detail_mgmt', '税額ラベル', datetime('now')),
+(1263, 'detail_mgmt.tax_rate', 'en', 'Tax Rate (%)', 'detail_mgmt', 'Tax rate label', datetime('now')),
+(1264, 'detail_mgmt.tax_rate', 'ja', '税率 (%)', 'detail_mgmt', '税率ラベル', datetime('now')),
+(1265, 'detail_mgmt.tax_amount', 'en', 'Tax Amount', 'detail_mgmt', 'Tax amount label', datetime('now')),
+(1266, 'detail_mgmt.tax_amount', 'ja', '税額', 'detail_mgmt', '税額ラベル', datetime('now')),
+(1267, 'detail_mgmt.memo', 'en', 'Memo', 'detail_mgmt', 'Memo label', datetime('now')),
+(1268, 'detail_mgmt.memo', 'ja', 'メモ', 'detail_mgmt', 'メモラベル', datetime('now')),
+(1269, 'detail_mgmt.delete_confirm_title', 'en', 'Delete Detail', 'detail_mgmt', 'Delete confirmation title', datetime('now')),
+(1270, 'detail_mgmt.delete_confirm_title', 'ja', '明細削除', 'detail_mgmt', '削除確認タイトル', datetime('now')),
+(1271, 'detail_mgmt.delete_confirm_message', 'en', 'Are you sure you want to delete this detail?', 'detail_mgmt', 'Delete confirmation message', datetime('now')),
+(1272, 'detail_mgmt.delete_confirm_message', 'ja', 'この明細を削除してもよろしいですか？', 'detail_mgmt', '削除確認メッセージ', datetime('now')),
+(1273, 'detail_mgmt.error_item_name_required', 'en', 'Item name is required', 'detail_mgmt', 'Item name required error', datetime('now')),
+(1274, 'detail_mgmt.error_item_name_required', 'ja', '品目名を入力してください', 'detail_mgmt', '品目名必須エラー', datetime('now')),
+(1275, 'detail_mgmt.error_category_required', 'en', 'Category is required', 'detail_mgmt', 'Category required error', datetime('now')),
+(1276, 'detail_mgmt.error_category_required', 'ja', 'カテゴリを選択してください', 'detail_mgmt', 'カテゴリ必須エラー', datetime('now')),
+(1277, 'detail_mgmt.error_invalid_amount', 'en', 'Please enter a valid amount', 'detail_mgmt', 'Invalid amount error', datetime('now')),
+(1278, 'detail_mgmt.error_invalid_amount', 'ja', '有効な金額を入力してください', 'detail_mgmt', '無効な金額エラー', datetime('now')),
+(1279, 'detail_mgmt.save_success', 'en', 'Detail saved successfully', 'detail_mgmt', 'Save success message', datetime('now')),
+(1280, 'detail_mgmt.save_success', 'ja', '明細を保存しました', 'detail_mgmt', '保存成功メッセージ', datetime('now')),
+(1281, 'detail_mgmt.save_error', 'en', 'Failed to save detail', 'detail_mgmt', 'Save error message', datetime('now')),
+(1282, 'detail_mgmt.save_error', 'ja', '明細の保存に失敗しました', 'detail_mgmt', '保存エラーメッセージ', datetime('now')),
+(1283, 'detail_mgmt.delete_success', 'en', 'Detail deleted successfully', 'detail_mgmt', 'Delete success message', datetime('now')),
+(1284, 'detail_mgmt.delete_success', 'ja', '明細を削除しました', 'detail_mgmt', '削除成功メッセージ', datetime('now')),
+(1285, 'detail_mgmt.delete_error', 'en', 'Failed to delete detail', 'detail_mgmt', 'Delete error message', datetime('now')),
+(1286, 'detail_mgmt.delete_error', 'ja', '明細の削除に失敗しました', 'detail_mgmt', '削除エラーメッセージ', datetime('now')),
+(1287, 'detail_mgmt.rounding_warning_title', 'en', 'Rounding Warning', 'detail_mgmt', 'Rounding warning title', datetime('now')),
+(1288, 'detail_mgmt.rounding_warning_title', 'ja', '端数調整警告', 'detail_mgmt', '端数調整警告タイトル', datetime('now')),
+(1289, 'detail_mgmt.rounding_warning_message', 'en', 'Tax calculation resulted in rounding. The total may not match exactly.', 'detail_mgmt', 'Rounding warning message', datetime('now')),
+(1290, 'detail_mgmt.rounding_warning_message', 'ja', '税額計算で端数が発生しました。合計金額が一致しない可能性があります。', 'detail_mgmt', '端数調整警告メッセージ', datetime('now'));
+-- Translation resources for language
+-- Auto-generated from database
+-- Category: language
+
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT)
+VALUES
+(13, 'lang.english', 'en', 'English', 'language', 'English language option', datetime('now')),
+(14, 'lang.english', 'ja', 'English', 'language', '英語オプション', datetime('now')),
+(15, 'lang.japanese', 'en', '日本語 (Japanese)', 'language', 'Japanese language option', datetime('now')),
+(16, 'lang.japanese', 'ja', '日本語', 'language', '日本語オプション', datetime('now')),
+(17, 'lang.name.en', 'en', 'English', 'language', 'English language name', datetime('now')),
+(18, 'lang.name.en', 'ja', '英語', 'language', '英語の名称', datetime('now')),
+(19, 'lang.name.ja', 'en', 'Japanese', 'language', 'Japanese language name', datetime('now')),
+(20, 'lang.name.ja', 'ja', '日本語', 'language', '日本語の名称', datetime('now'));
+-- Translation resources for message
+-- Auto-generated from database
+-- Category: message
+
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT)
+VALUES
+(21, 'msg.lang_changed', 'en', 'Language changed to {0}.', 'message', 'Language change confirmation', datetime('now')),
+(22, 'msg.lang_changed', 'ja', '言語を{0}に変更しました。', 'message', '言語変更確認メッセージ', datetime('now')),
+(23, 'msg.error', 'en', 'Error', 'message', 'Error message title', datetime('now')),
+(24, 'msg.error', 'ja', 'エラー', 'message', 'エラーメッセージタイトル', datetime('now')),
+(25, 'msg.success', 'en', 'Success', 'message', 'Success message title', datetime('now')),
+(26, 'msg.success', 'ja', '成功', 'message', '成功メッセージタイトル', datetime('now')),
+(27, 'msg.info', 'en', 'Information', 'message', 'Info message title', datetime('now')),
+(28, 'msg.info', 'ja', '情報', 'message', '情報メッセージタイトル', datetime('now'));
+-- Translation resources for transaction_modal
+-- Auto-generated from database
+-- Category: transaction_modal
+
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT)
+VALUES
+(1113, 'transaction_modal.shop', 'en', 'Shop', 'transaction_modal', 'Shop label', datetime('now')),
+(1114, 'transaction_modal.shop', 'ja', '店舗', 'transaction_modal', '店舗ラベル', datetime('now')),
+(1115, 'transaction_modal.manage_shops', 'en', 'Manage Shops', 'transaction_modal', 'Manage shops button', datetime('now')),
+(1116, 'transaction_modal.manage_shops', 'ja', '店舗管理', 'transaction_modal', '店舗管理ボタン', datetime('now'));
+
+-- Additional menu items for admin submenu (added 2024-11-21)
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1347, 'menu.master_data', 'en', 'Master Data', 'menu', 'Master data submenu', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1348, 'menu.master_data', 'ja', 'マスタ管理', 'menu', 'マスタ管理サブメニュー', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1349, 'menu.reports', 'en', 'Reports', 'menu', 'Reports submenu', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1350, 'menu.reports', 'ja', '集計', 'menu', '集計サブメニュー', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1351, 'menu.aggregation_daily', 'en', 'Daily Aggregation', 'menu', 'Daily aggregation menu item', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1352, 'menu.aggregation_daily', 'ja', '日次集計', 'menu', '日次集計メニュー項目', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1353, 'menu.aggregation_weekly', 'en', 'Weekly Aggregation', 'menu', 'Weekly aggregation menu item', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1354, 'menu.aggregation_weekly', 'ja', '週次集計', 'menu', '週次集計メニュー項目', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1355, 'menu.aggregation', 'en', 'Monthly Aggregation', 'menu', 'Monthly aggregation menu item', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1356, 'menu.aggregation', 'ja', '月次集計', 'menu', '月次集計メニュー項目', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1357, 'menu.aggregation_yearly', 'en', 'Yearly Aggregation', 'menu', 'Yearly aggregation menu item', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1358, 'menu.aggregation_yearly', 'ja', '年次集計', 'menu', '年次集計メニュー項目', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1359, 'menu.aggregation_period', 'en', 'Period Aggregation', 'menu', 'Period aggregation menu item', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (1360, 'menu.aggregation_period', 'ja', '期間別集計', 'menu', '期間別集計メニュー項目', datetime('now'));

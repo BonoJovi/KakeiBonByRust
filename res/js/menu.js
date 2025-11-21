@@ -49,18 +49,28 @@ export function createMenuBar(pageType = 'management') {
         <div id="admin-menu" class="menu-item">
             <span data-i18n="menu.admin">Admin</span>
             <div id="admin-dropdown" class="dropdown">
-                <div class="dropdown-item" data-i18n="menu.user_management">User Management</div>
-                <div class="dropdown-item" data-i18n="menu.category_management">Category Management</div>
-                <div class="dropdown-item" data-i18n="menu.account_management">Account Management</div>
-                <div class="dropdown-item" data-i18n="menu.shop_management">Shop Management</div>
-                <div class="dropdown-item" data-i18n="menu.manufacturer_management">Manufacturer Management</div>
-                <div class="dropdown-item" data-i18n="menu.product_management">Product Management</div>
+                <div class="dropdown-item has-submenu">
+                    <span data-i18n="menu.master_data">Master Data</span>
+                    <div class="submenu">
+                        <div class="dropdown-item" data-i18n="menu.user_management">User Management</div>
+                        <div class="dropdown-item" data-i18n="menu.category_management">Category Management</div>
+                        <div class="dropdown-item" data-i18n="menu.account_management">Account Management</div>
+                        <div class="dropdown-item" data-i18n="menu.shop_management">Shop Management</div>
+                        <div class="dropdown-item" data-i18n="menu.manufacturer_management">Manufacturer Management</div>
+                        <div class="dropdown-item" data-i18n="menu.product_management">Product Management</div>
+                    </div>
+                </div>
                 <div class="dropdown-item" data-i18n="menu.transaction_management">Transaction Management</div>
-                <div class="dropdown-item" data-i18n="menu.aggregation">Monthly Aggregation</div>
-                <div class="dropdown-item" data-i18n="menu.aggregation_weekly">Weekly Aggregation</div>
-                <div class="dropdown-item" data-i18n="menu.aggregation_daily">Daily Aggregation</div>
-                <div class="dropdown-item" data-i18n="menu.aggregation_yearly">Yearly Aggregation</div>
-                <div class="dropdown-item" data-i18n="menu.aggregation_period">Period Aggregation</div>
+                <div class="dropdown-item has-submenu">
+                    <span data-i18n="menu.reports">Reports</span>
+                    <div class="submenu">
+                        <div class="dropdown-item" data-i18n="menu.aggregation_daily">Daily Aggregation</div>
+                        <div class="dropdown-item" data-i18n="menu.aggregation_weekly">Weekly Aggregation</div>
+                        <div class="dropdown-item" data-i18n="menu.aggregation">Monthly Aggregation</div>
+                        <div class="dropdown-item" data-i18n="menu.aggregation_yearly">Yearly Aggregation</div>
+                        <div class="dropdown-item" data-i18n="menu.aggregation_period">Period Aggregation</div>
+                    </div>
+                </div>
             </div>
         </div>
         <div id="language-menu" class="menu-item">
@@ -246,64 +256,75 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
         
         adminDropdown.addEventListener('click', function(e) {
+            // Allow submenu items to close the dropdown
+            if (e.target.classList.contains('dropdown-item') && !e.target.classList.contains('has-submenu')) {
+                return; // Let the item handler close the dropdown
+            }
             e.stopPropagation();
         });
         
-        const userMgmtItem = adminDropdown.querySelector('.dropdown-item:nth-child(1)');
-        if (userMgmtItem) {
-            userMgmtItem.addEventListener('click', function(e) {
-                console.log('User Management item clicked');
-                window.location.href = HTML_FILES.USER_MANAGEMENT;
-                adminDropdown.classList.remove('show');
-            });
+        // Master Data submenu items
+        const masterDataSubmenu = adminDropdown.querySelector('.has-submenu:first-child .submenu');
+        if (masterDataSubmenu) {
+            const submenuItems = masterDataSubmenu.querySelectorAll('.dropdown-item');
+            
+            // User Management
+            if (submenuItems[0]) {
+                submenuItems[0].addEventListener('click', function(e) {
+                    console.log('User Management item clicked');
+                    window.location.href = HTML_FILES.USER_MANAGEMENT;
+                    adminDropdown.classList.remove('show');
+                });
+            }
+            
+            // Category Management
+            if (submenuItems[1]) {
+                submenuItems[1].addEventListener('click', function(e) {
+                    console.log('Category Management item clicked');
+                    window.location.href = HTML_FILES.CATEGORY_MANAGEMENT;
+                    adminDropdown.classList.remove('show');
+                });
+            }
+            
+            // Account Management
+            if (submenuItems[2]) {
+                submenuItems[2].addEventListener('click', function(e) {
+                    console.log('Account Management item clicked');
+                    window.location.href = HTML_FILES.ACCOUNT_MANAGEMENT;
+                    adminDropdown.classList.remove('show');
+                });
+            }
+            
+            // Shop Management
+            if (submenuItems[3]) {
+                submenuItems[3].addEventListener('click', function(e) {
+                    console.log('Shop Management item clicked');
+                    window.location.href = HTML_FILES.SHOP_MANAGEMENT;
+                    adminDropdown.classList.remove('show');
+                });
+            }
+            
+            // Manufacturer Management
+            if (submenuItems[4]) {
+                submenuItems[4].addEventListener('click', function(e) {
+                    console.log('Manufacturer Management item clicked');
+                    window.location.href = HTML_FILES.MANUFACTURER_MANAGEMENT;
+                    adminDropdown.classList.remove('show');
+                });
+            }
+            
+            // Product Management
+            if (submenuItems[5]) {
+                submenuItems[5].addEventListener('click', function(e) {
+                    console.log('Product Management item clicked');
+                    window.location.href = HTML_FILES.PRODUCT_MANAGEMENT;
+                    adminDropdown.classList.remove('show');
+                });
+            }
         }
         
-        const categoryMgmtItem = adminDropdown.querySelector('.dropdown-item:nth-child(2)');
-        if (categoryMgmtItem) {
-            categoryMgmtItem.addEventListener('click', function(e) {
-                console.log('Category Management item clicked');
-                window.location.href = HTML_FILES.CATEGORY_MANAGEMENT;
-                adminDropdown.classList.remove('show');
-            });
-        }
-        
-        const accountMgmtItem = adminDropdown.querySelector('.dropdown-item:nth-child(3)');
-        if (accountMgmtItem) {
-            accountMgmtItem.addEventListener('click', function(e) {
-                console.log('Account Management item clicked');
-                window.location.href = HTML_FILES.ACCOUNT_MANAGEMENT;
-                adminDropdown.classList.remove('show');
-            });
-        }
-
-        const shopMgmtItem = adminDropdown.querySelector('.dropdown-item:nth-child(4)');
-        if (shopMgmtItem) {
-            shopMgmtItem.addEventListener('click', function(e) {
-                console.log('Shop Management item clicked');
-                window.location.href = HTML_FILES.SHOP_MANAGEMENT;
-                adminDropdown.classList.remove('show');
-            });
-        }
-
-        const manufacturerMgmtItem = adminDropdown.querySelector('.dropdown-item:nth-child(5)');
-        if (manufacturerMgmtItem) {
-            manufacturerMgmtItem.addEventListener('click', function(e) {
-                console.log('Manufacturer Management item clicked');
-                window.location.href = HTML_FILES.MANUFACTURER_MANAGEMENT;
-                adminDropdown.classList.remove('show');
-            });
-        }
-
-        const productMgmtItem = adminDropdown.querySelector('.dropdown-item:nth-child(6)');
-        if (productMgmtItem) {
-            productMgmtItem.addEventListener('click', function(e) {
-                console.log('Product Management item clicked');
-                window.location.href = HTML_FILES.PRODUCT_MANAGEMENT;
-                adminDropdown.classList.remove('show');
-            });
-        }
-
-        const transactionMgmtItem = adminDropdown.querySelector('.dropdown-item:nth-child(7)');
+        // Transaction Management (direct item between two has-submenu items)
+        const transactionMgmtItem = adminDropdown.querySelector('.dropdown-item:not(.has-submenu)[data-i18n="menu.transaction_management"]');
         if (transactionMgmtItem) {
             transactionMgmtItem.addEventListener('click', function(e) {
                 console.log('Transaction Management item clicked');
@@ -311,50 +332,56 @@ document.addEventListener('DOMContentLoaded', async function() {
                 adminDropdown.classList.remove('show');
             });
         }
-
-        const aggregationItem = adminDropdown.querySelector('.dropdown-item:nth-child(8)');
-        if (aggregationItem) {
-            aggregationItem.addEventListener('click', function(e) {
-                console.log('Aggregation item clicked');
-                window.location.href = HTML_FILES.AGGREGATION;
-                adminDropdown.classList.remove('show');
-            });
-        }
-
-        const aggregationWeeklyItem = adminDropdown.querySelector('.dropdown-item:nth-child(9)');
-        if (aggregationWeeklyItem) {
-            aggregationWeeklyItem.addEventListener('click', function(e) {
-                console.log('Weekly Aggregation item clicked');
-                window.location.href = HTML_FILES.AGGREGATION_WEEKLY;
-                adminDropdown.classList.remove('show');
-            });
-        }
-
-        const aggregationDailyItem = adminDropdown.querySelector('.dropdown-item:nth-child(10)');
-        if (aggregationDailyItem) {
-            aggregationDailyItem.addEventListener('click', function(e) {
-                console.log('Daily Aggregation item clicked');
-                window.location.href = HTML_FILES.AGGREGATION_DAILY;
-                adminDropdown.classList.remove('show');
-            });
-        }
-
-        const aggregationYearlyItem = adminDropdown.querySelector('.dropdown-item:nth-child(11)');
-        if (aggregationYearlyItem) {
-            aggregationYearlyItem.addEventListener('click', function(e) {
-                console.log('Yearly Aggregation item clicked');
-                window.location.href = HTML_FILES.AGGREGATION_YEARLY;
-                adminDropdown.classList.remove('show');
-            });
-        }
-
-        const aggregationPeriodItem = adminDropdown.querySelector('.dropdown-item:nth-child(12)');
-        if (aggregationPeriodItem) {
-            aggregationPeriodItem.addEventListener('click', function(e) {
-                console.log('Period Aggregation item clicked');
-                window.location.href = HTML_FILES.AGGREGATION_PERIOD;
-                adminDropdown.classList.remove('show');
-            });
+        
+        // Reports submenu items
+        const reportsSubmenu = adminDropdown.querySelector('.has-submenu:last-child .submenu');
+        if (reportsSubmenu) {
+            const reportItems = reportsSubmenu.querySelectorAll('.dropdown-item');
+            
+            // Daily Aggregation
+            if (reportItems[0]) {
+                reportItems[0].addEventListener('click', function(e) {
+                    console.log('Daily Aggregation item clicked');
+                    window.location.href = HTML_FILES.AGGREGATION_DAILY;
+                    adminDropdown.classList.remove('show');
+                });
+            }
+            
+            // Weekly Aggregation
+            if (reportItems[1]) {
+                reportItems[1].addEventListener('click', function(e) {
+                    console.log('Weekly Aggregation item clicked');
+                    window.location.href = HTML_FILES.AGGREGATION_WEEKLY;
+                    adminDropdown.classList.remove('show');
+                });
+            }
+            
+            // Monthly Aggregation
+            if (reportItems[2]) {
+                reportItems[2].addEventListener('click', function(e) {
+                    console.log('Monthly Aggregation item clicked');
+                    window.location.href = HTML_FILES.AGGREGATION;
+                    adminDropdown.classList.remove('show');
+                });
+            }
+            
+            // Yearly Aggregation
+            if (reportItems[3]) {
+                reportItems[3].addEventListener('click', function(e) {
+                    console.log('Yearly Aggregation item clicked');
+                    window.location.href = HTML_FILES.AGGREGATION_YEARLY;
+                    adminDropdown.classList.remove('show');
+                });
+            }
+            
+            // Period Aggregation
+            if (reportItems[4]) {
+                reportItems[4].addEventListener('click', function(e) {
+                    console.log('Period Aggregation item clicked');
+                    window.location.href = HTML_FILES.AGGREGATION_PERIOD;
+                    adminDropdown.classList.remove('show');
+                });
+            }
         }
     }
     

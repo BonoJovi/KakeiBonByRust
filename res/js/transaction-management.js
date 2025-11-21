@@ -130,12 +130,15 @@ function setupMenuHandlers() {
 }
 
 function setupEventListeners() {
-    // Toggle filter panel
-    const toggleFilterBtn = document.getElementById('toggle-filter-btn');
+    // Toggle filter panel content
+    const toggleFilterContentBtn = document.getElementById('toggle-filter-content-btn');
     const filterPanel = document.getElementById('filter-panel');
+    const toggleArrow = toggleFilterContentBtn.querySelector('.toggle-arrow');
     
-    toggleFilterBtn.addEventListener('click', () => {
+    toggleFilterContentBtn.addEventListener('click', () => {
         filterPanel.classList.toggle('hidden');
+        // Change arrow direction
+        toggleArrow.textContent = filterPanel.classList.contains('hidden') ? '▼' : '▲';
     });
 
     // Apply filter
@@ -168,6 +171,49 @@ function setupEventListeners() {
     
     // Initialize transaction modal with common Modal class
     initializeTransactionModal();
+    
+    // Setup spinner buttons for amount range filters
+    setupAmountSpinners();
+}
+
+function setupAmountSpinners() {
+    // Setup spinner for min amount
+    const minAmountInput = document.getElementById('filter-min-amount');
+    const minSpinnerContainer = minAmountInput.closest('.input-with-spinner');
+    const minUpBtn = minSpinnerContainer.querySelector('.spinner-up');
+    const minDownBtn = minSpinnerContainer.querySelector('.spinner-down');
+    
+    minUpBtn.addEventListener('click', () => {
+        const currentValue = parseInt(minAmountInput.value) || 0;
+        const step = 1000; // Increment by 1000
+        minAmountInput.value = currentValue + step;
+    });
+    
+    minDownBtn.addEventListener('click', () => {
+        const currentValue = parseInt(minAmountInput.value) || 0;
+        const step = 1000; // Decrement by 1000
+        const newValue = Math.max(0, currentValue - step);
+        minAmountInput.value = newValue;
+    });
+    
+    // Setup spinner for max amount
+    const maxAmountInput = document.getElementById('filter-max-amount');
+    const maxSpinnerContainer = maxAmountInput.closest('.input-with-spinner');
+    const maxUpBtn = maxSpinnerContainer.querySelector('.spinner-up');
+    const maxDownBtn = maxSpinnerContainer.querySelector('.spinner-down');
+    
+    maxUpBtn.addEventListener('click', () => {
+        const currentValue = parseInt(maxAmountInput.value) || 0;
+        const step = 1000; // Increment by 1000
+        maxAmountInput.value = currentValue + step;
+    });
+    
+    maxDownBtn.addEventListener('click', () => {
+        const currentValue = parseInt(maxAmountInput.value) || 0;
+        const step = 1000; // Decrement by 1000
+        const newValue = Math.max(0, currentValue - step);
+        maxAmountInput.value = newValue;
+    });
 }
 
 async function loadCategoriesForFilter() {

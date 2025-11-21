@@ -474,3 +474,131 @@ body {
         padding: 8px;
     }
 }
+
+/* Action Bar */
+.action-bar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    align-items: center;
+}
+
+.action-bar .btn {
+    flex-shrink: 0;
+}
+
+.action-bar .toggle-arrow {
+    margin-left: 8px;
+    font-size: 0.9em;
+}
+
+/* Filter Panel Styles */
+.filter-panel {
+    background: #f9f9f9;
+    border: 2px solid #999;
+    border-radius: 4px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+.filter-panel.hidden {
+    display: none;
+}
+
+.filter-form-content {
+    /* Content wrapper - no special styling needed */
+}
+
+.filter-row {
+    margin-bottom: 12px;
+}
+
+.filter-row:last-child {
+    margin-bottom: 0;
+}
+
+.filter-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.filter-group label {
+    min-width: 7em;
+    font-weight: 500;
+    flex-shrink: 0;
+}
+
+.filter-group select {
+    width: auto;
+    min-width: 150px;
+    max-width: 250px;
+    flex: 0 1 auto;
+    font-size: 1em;
+}
+
+.filter-group input[type="date"] {
+    width: auto;
+    font-size: 1em;
+}
+
+.filter-group input[type="text"] {
+    flex: 1;
+    max-width: 400px;
+    font-size: 1em;
+}
+
+.filter-group input[type="number"] {
+    font-size: 1em;
+}
+
+.filter-group .input-with-spinner {
+    width: auto;
+    min-width: 150px;
+}
+
+.filter-group .input-with-spinner input {
+    font-size: 1em;
+}
+
+.filter-group span {
+    margin: 0 4px;
+}
+
+/* Filter action buttons */
+.filter-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 15px;
+}
+
+/* Pagination Styles */
+.pagination {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 15px;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #ddd;
+}
+
+.pagination-info {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.95em;
+}
+
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#page-info {
+    min-width: 80px;
+    text-align: center;
+}
