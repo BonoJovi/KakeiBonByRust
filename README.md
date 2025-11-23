@@ -7,7 +7,7 @@
 
 [![Rust](https://img.shields.io/badge/Rust-1.70+-orange.svg)](https://www.rust-lang.org/)
 [![Tauri](https://img.shields.io/badge/Tauri-v2.9.3-blue.svg)](https://tauri.app/)
-[![Tests](https://img.shields.io/badge/tests-602%20passing-brightgreen.svg)](#test-results--テスト結果)
+[![Tests](https://img.shields.io/badge/tests-613%20passing-brightgreen.svg)](#test-results--テスト結果)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 [🇯🇵 日本語詳細](README_ja.md) | [🇬🇧 English Details](README_en.md)
@@ -22,33 +22,45 @@
 
 ### 愛すべきKakeiBonユーザの皆さんへ
 
-いつもKakeiBonに気を留めていただき、誠にありがとうございます。  
+いつもKakeiBonに気を留めていただき、誠にありがとうございます。
 プロジェクト発案者のBonoJovi(Yoshihiro NAKAHARA)です。
 
-本日は、開発の進捗状況についてお知らせがあります。  
-現在急ピッチで開発を進めており、その甲斐あって、本日(日本時:2025-11-19)中に入力系の画面の基本実装がほぼ完了する目処が立ちました。  
-入力系画面の実装が完了すれば、残りの大きな実装は集計機能を残すのみとなります。細々した機能は追々実装する予定でいますので、これで終わりということではなく、機能拡張は随時行っていきますので、ご期待いただければと思います。  
-取り急ぎ、Ver.1.0.0のリリースまで残すところ、あと僅かとなっています。GitHubのissueやeメールでのメッセージも受け付けていますので、応援メッセージやこんな機能が将来的に実装してもらえると嬉しいなど、ちょっとしたことでも良いのでご連絡いただければと思います。
+**Ver.1.0.0を正式リリースいたしました！**
+
+入出金データの入力機能が完成し、基本的な家計簿アプリケーションとしてご利用いただける状態となりました。
+正規リリース版をご利用になりたい方は、[mainブランチ](https://github.com/BonoJovi/KakeiBonByRust/tree/main)をご参照ください。
+
+現在ご覧いただいているdevブランチは開発版となり、次期バージョンの機能を開発中です。
+最新の機能をいち早く試してみたい方は、こちらのdevブランチをお使いください。
+
+今後は集計・レポート機能の実装を進めていく予定です。細々した機能も追々実装していきますので、機能拡張にご期待いただければと思います。
+GitHubのissueやeメールでのメッセージも受け付けていますので、応援メッセージや将来的に実装してほしい機能など、ちょっとしたことでも良いのでご連絡いただければ幸いです。
 
 それでは、引き続きKakeiBonをご愛顧頂ますよう、お願い申し上げます。
 
-**2025-11-19 (JST) Written by Yoshihiro NAKAHARA**
+**2025-11-23 (JST) Written by Yoshihiro NAKAHARA**
 
 ---
 
 ### To All Beloved KakeiBon Users
 
-Thank you for your continued interest in KakeiBon.  
+Thank you for your continued interest in KakeiBon.
 I'm BonoJovi (Yoshihiro NAKAHARA), the project initiator.
 
-Today, I have an update on our development progress.  
-We've been developing at a rapid pace, and I'm pleased to announce that the basic implementation of the input screens is expected to be completed today (Japan time: 2025-11-19).  
-Once the input screens are finished, the only major implementation remaining will be the aggregation/reporting feature. We will continue to add various features incrementally, so this is not the end—you can expect continuous enhancements to the application.  
-We are now very close to the Ver.1.0.0 release! We welcome messages via GitHub issues or email, whether it's words of encouragement or suggestions for features you'd like to see in the future—any feedback is appreciated.
+**We have officially released Ver.1.0.0!**
+
+The transaction data input functionality is now complete, and KakeiBon is ready to be used as a basic household budget application.
+If you would like to use the stable release version, please refer to the [main branch](https://github.com/BonoJovi/KakeiBonByRust/tree/main).
+
+The dev branch you are currently viewing is the development version, where we are working on features for the next release.
+If you want to try the latest features early, please use this dev branch.
+
+We plan to proceed with implementing aggregation and reporting features next. We will continue to add various features incrementally, so please look forward to continuous enhancements.
+We welcome messages via GitHub issues or email, whether it's words of encouragement or suggestions for features you'd like to see in the future—any feedback is appreciated.
 
 Thank you for your continued support of KakeiBon.
 
-**2025-11-19 (JST) Written by Yoshihiro NAKAHARA**
+**2025-11-23 (JST) Written by Yoshihiro NAKAHARA**
 
 </div>
 
@@ -78,8 +90,8 @@ Thank you for your continued support of KakeiBon.
 Development is progressing smoothly, and we strive to update daily!  
 開発は順調に進んでおり、できるだけ日々更新するようにしています！
 
-**Project Started / プロジェクト開始**: 2025-10-22 (JST)  
-**Last Updated / 最終更新**: 2025-11-19 (JST)
+**Project Started / プロジェクト開始**: 2025-10-22 (JST)
+**Last Updated / 最終更新**: 2025-11-23 (JST)
 
 > **🤖 AI-Assisted Development / AI支援開発**  
 > This project's source code and documentation are **100% generated** with the assistance of generative AI (GitHub Copilot, Claude), supervised and reviewed by the developer. This demonstrates the potential of AI-assisted development.  
@@ -191,21 +203,21 @@ Switch between Japanese and English seamlessly
 | 🔧 **Customization**<br/>**カスタマイズ** | Font size, language preferences<br/>フォントサイズ、言語設定 | ✅ Complete<br/>完成 |
 | 📝 **Transaction Management**<br/>**入出金管理** | Header-level CRUD, filters, pagination<br/>ヘッダレベルCRUD、フィルター、ページネーション | ✅ Complete<br/>完成 |
 | 🧾 **Transaction Details**<br/>**入出金明細** | CRUD operations with smart tax calculation, automatic rounding detection<br/>スマート税計算付きCRUD操作、端数処理自動検出 | ✅ Complete<br/>完成 |
-| 📊 **Reports**<br/>**集計・レポート** | Monthly/annual summaries, graphs<br/>月次・年次レポート、グラフ | 📅 Planned<br/>予定 |
+| 📊 **Reports**<br/>**集計・レポート** | Monthly/annual summaries, graphs<br/>月次・年次レポート、グラフ | 🚧 In Progress<br/>開発中 |
 
 ---
 
 ## 💻 Technology Stack / 技術スタック
 
-```
-Frontend / フロントエンド:  Vanilla JavaScript (ES6 Modules) + HTML5 + CSS3
-Backend / バックエンド:     Rust + Tauri v2.8.5
-Database / データベース:    SQLite (WAL mode)
-Security / セキュリティ:   Argon2id + AES-256-GCM
-Testing / テスト:          602 tests passing (Rust: 165, JS: 437)
-i18n Resources / 翻訳:     992 resources (496 unique keys, 2 languages)
-Code Lines / コード行数:    ~27,725 lines (Rust: 11,895, JS: 7,195, HTML: 2,788, CSS: 3,722, SQL: 2,125)
-```
+| Category / カテゴリ | Technology / 技術 | Details / 詳細 |
+|---------------------|-------------------|----------------|
+| **Frontend** / **フロントエンド** | Vanilla JavaScript + HTML5 + CSS3 | ES6 Modules |
+| **Backend** / **バックエンド** | Rust + Tauri | v2.8.5 |
+| **Database** / **データベース** | SQLite | WAL mode |
+| **Security** / **セキュリティ** | Argon2id + AES-256-GCM | Password hashing + Data encryption |
+| **Testing** / **テスト** | Jest + Cargo Test | 613 tests passing (Rust: 201, JS: 412) |
+| **i18n Resources** / **翻訳** | JSON-based | 992 resources (496 unique keys, 2 languages) |
+| **Code Lines** / **コード行数** | Total / 合計 | ~35,478 lines (Rust: 13,870, JS: 8,810, HTML: 3,355, CSS: 6,109, SQL: 3,334) |
 
 ---
 
@@ -234,9 +246,9 @@ cargo tauri build
 ## 🧪 Test Results / テスト結果
 
 ```
-Backend (Rust) / バックエンド:    165 passing
-Frontend (JavaScript) / フロント:  437 passing
-Total Tests / 総テスト数:          602 passing ✅
+Backend (Rust) / バックエンド:    201 passing
+Frontend (JavaScript) / フロント:  412 passing
+Total Tests / 総テスト数:          613 passing ✅
 Success Rate / 成功率:            100%
 ```
 
@@ -352,8 +364,8 @@ This project is licensed under the terms in the [LICENSE](LICENSE) file.
 - [x] Category management / 費目管理機能
 - [x] Multilingual support / 多言語対応
 - [x] Accessibility features / アクセシビリティ機能
-- [ ] Transaction management / 入出金データ管理 (**In Progress / 開発中**)
-- [ ] Monthly/annual reports / 月次・年次集計
+- [x] Transaction management / 入出金データ管理
+- [x] Monthly/annual reports / 月次・年次集計
 - [ ] Data export (CSV) / データエクスポート（CSV）
 - [ ] Backup & restore / バックアップ・リストア
 
