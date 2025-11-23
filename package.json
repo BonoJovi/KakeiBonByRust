@@ -20,5 +20,11 @@
   "bugs": {
     "url": "https://github.com/BonoJovi/KakeiBonByRust/issues"
   },
-  "homepage": "https://github.com/BonoJovi/KakeiBonByRust#readme"
+  "homepage": "https://github.com/BonoJovi/KakeiBonByRust#readme",
+  "dependencies": {
+    "tauri": "^0.15.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.9.4"
+  }
 }
