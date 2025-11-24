@@ -5,6 +5,9 @@ This file automatically loads project context at the start of each Claude Code s
 ## Project Overview
 @.ai-context/README.md
 
+## Development Methodology (IMPORTANT - AI Collaboration Best Practices)
+@.ai-context/DEVELOPMENT_METHODOLOGY.md
+
 ## Coding Conventions
 @.ai-context/CONVENTIONS.md
 
