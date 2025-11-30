@@ -26,7 +26,7 @@ KakeiBonは**100% AI支援開発**により、従来開発と比較して：
 | **Code Lines**<br/>コード行数 | 35,478 lines<br/>35,478行 | 20,000-40,000 | 50,000-100,000 |
 | **Test Coverage**<br/>テストカバレッジ | 527 tests (100%)<br/>527テスト（100%） | 200-400 tests<br/>200-400テスト | 1,000-2,000 tests<br/>1,000-2,000テスト |
 | **Documentation**<br/>ドキュメント | 50+ documents<br/>50+文書 | 10-20 documents<br/>10-20文書 | 50-100 documents<br/>50-100文書 |
-| **Cost (Estimate)**<br/>コスト（推定） | ~$2,000 USD<br/>~20万円 | $50,000-100,000<br/>500-1,000万円 | $500,000-1,000,000<br/>5,000万-1億円 |
+| **Cost (Estimate)**<br/>コスト（推定） | ~$500 USD<br/>~5万円 | $50,000-100,000<br/>500-1,000万円 | $500,000-1,000,000<br/>5,000万-1億円 |
 
 ---
 
@@ -155,9 +155,24 @@ KakeiBonは**100% AI支援開発**により、従来開発と比較して：
 | **Developer Salary**<br/>開発者給与 | $80,000/year<br/>800万円/年 | $80,000/year<br/>800万円/年 | - |
 | **Team Size**<br/>チームサイズ | 3-5 people<br/>3-5人 | 1 person<br/>1人 | **70-80%** |
 | **Development Time**<br/>開発期間 | 6-12 months<br/>6-12ヶ月 | 39 days<br/>39日 | **85-90%** |
-| **Total Cost**<br/>総コスト | $50,000-100,000<br/>500-1,000万円 | ~$2,000<br/>~20万円 | **~98%** |
+| **Total Cost**<br/>総コスト | $50,000-100,000<br/>500-1,000万円 | ~$500<br/>~5万円 | **~99.5%** |
 
-**ROI (Return on Investment) / 投資収益率**: **2,500-5,000%**
+**ROI (Return on Investment) / 投資収益率**: **10,000-20,000%**
+
+### Actual Cost Breakdown / 実際のコスト内訳
+
+KakeiBonの実際の開発コスト（39日間）:
+
+| Item / 項目 | Cost / コスト | Note / 備考 |
+|------------|--------------|------------|
+| **AI Subscription**<br/>AIサブスクリプション | ~$100<br/>~1万円 | GitHub Copilot, Claude API |
+| **Electricity**<br/>電気代 | ~$50<br/>~5千円 | Development PC (39 days) |
+| **Coffee ☕**<br/>コーヒー代 | ~$200<br/>~2万円 | Essential fuel! / 必須の燃料！ |
+| **Internet**<br/>インターネット | ~$150<br/>~1.5万円 | Already have / 既存契約 |
+| **Total**<br/>合計 | **~$500**<br/>**~5万円** | **Incredibly low! / 驚異的な低コスト！** |
+
+**Note / 注意**: Developer time is not counted as cost in this calculation, as it's personal project time. For commercial projects, add developer salary proportionally.  
+開発者の時間は個人プロジェクトのため計算に含めていません。商用プロジェクトの場合は、開発者給与を比例配分して追加してください。
 
 ---
 
