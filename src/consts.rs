@@ -1,6 +1,9 @@
 // User role constants
 pub const ROLE_ADMIN: i64 = 0;
 pub const ROLE_USER: i64 = 1;
+
+// Reserved for future implementation: Read-only visitor role
+// TODO: Implement guest/visitor access feature with limited permissions
 pub const ROLE_VISIT: i64 = 999;
 
 // Database constants

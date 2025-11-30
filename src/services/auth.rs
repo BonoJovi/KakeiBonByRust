@@ -106,11 +106,16 @@ impl AuthService {
         // Hash password using Argon2
         let password_hash = hash_password(password)?;
         
+        // Get next user ID (auto-increment)
+        let next_id: i64 = sqlx::query_scalar(sql_queries::AUTH_GET_NEXT_USER_ID)
+            .fetch_one(&self.pool)
+            .await?;
+        
         // Start transaction
         let mut tx = self.pool.begin().await?;
         
         sqlx::query(sql_queries::AUTH_INSERT_USER)
-            .bind(1)  // USER_ID = 1 for admin
+            .bind(next_id)  // Use auto-incremented ID instead of hardcoded 1
             .bind(username)
             .bind(password_hash)
             .bind(ROLE_ADMIN)
@@ -123,13 +128,13 @@ impl AuthService {
 
         // Populate default categories for admin user as template
         let category_service = category::CategoryService::new(self.pool.clone());
-        category_service.populate_default_categories(1).await
+        category_service.populate_default_categories(next_id).await
             .map_err(|e| AuthError::DatabaseError(sqlx::Error::Configuration(
                 format!("Failed to populate default categories for admin: {}", e).into()
             )))?;
 
         // Initialize NONE account for the admin user
-        crate::services::account::initialize_none_account(&self.pool, 1).await
+        crate::services::account::initialize_none_account(&self.pool, next_id).await
             .map_err(|e| AuthError::DatabaseError(sqlx::Error::Configuration(
                 format!("Failed to initialize NONE account for admin: {}", e).into()
             )))?;
