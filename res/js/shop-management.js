@@ -165,10 +165,8 @@ async function loadShops() {
         loading.style.display = 'block';
         table.style.display = 'none';
 
-        console.log('Loading shops for user:', currentUserId);
-        shops = await invoke('get_shops', {
-            userId: currentUserId
-        });
+        console.log('Loading shops');
+        shops = await invoke('get_shops', {});
         console.log('Loaded shops:', shops);
 
         renderShops();
@@ -256,7 +254,6 @@ async function saveShop() {
             // Update existing shop
             const shop = shops.find(s => s.shop_id === editingShopId);
             await invoke('update_shop', {
-                userId: currentUserId,
                 shopId: editingShopId,
                 shopName: shopName,
                 memo: memo || null,
@@ -266,7 +263,6 @@ async function saveShop() {
         } else {
             // Add new shop
             await invoke('add_shop', {
-                userId: currentUserId,
                 shopName: shopName,
                 memo: memo || null
             });
@@ -309,7 +305,6 @@ async function saveShop() {
 async function deleteShop(shopId) {
     try {
         await invoke('delete_shop', {
-            userId: currentUserId,
             shopId: shopId
         });
         console.log('Shop deleted successfully');

@@ -1176,20 +1176,20 @@ async fn delete_account(
 
 #[tauri::command]
 async fn get_shops(
-    user_id: i64,
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::shop::Shop>, String> {
+    let user_id = get_session_user_id(&state)?;
     let db = state.db.lock().await;
     services::shop::get_shops(db.pool(), user_id).await
 }
 
 #[tauri::command]
 async fn add_shop(
-    user_id: i64,
     shop_name: String,
     memo: Option<String>,
     state: tauri::State<'_, AppState>
 ) -> Result<String, String> {
+    let user_id = get_session_user_id(&state)?;
     let db = state.db.lock().await;
 
     let request = services::shop::AddShopRequest {
@@ -1202,13 +1202,13 @@ async fn add_shop(
 
 #[tauri::command]
 async fn update_shop(
-    user_id: i64,
     shop_id: i64,
     shop_name: String,
     memo: Option<String>,
     display_order: i64,
     state: tauri::State<'_, AppState>
 ) -> Result<String, String> {
+    let user_id = get_session_user_id(&state)?;
     let db = state.db.lock().await;
 
     let request = services::shop::UpdateShopRequest {
@@ -1222,10 +1222,10 @@ async fn update_shop(
 
 #[tauri::command]
 async fn delete_shop(
-    user_id: i64,
     shop_id: i64,
     state: tauri::State<'_, AppState>
 ) -> Result<String, String> {
+    let user_id = get_session_user_id(&state)?;
     let db = state.db.lock().await;
     services::shop::delete_shop(db.pool(), user_id, shop_id).await
 }

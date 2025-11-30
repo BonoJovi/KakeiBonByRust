@@ -721,9 +721,7 @@ async function loadAccountsForModal() {
 
 async function loadShopsForModal() {
     try {
-        const shops = await invoke('get_shops', {
-            userId: currentUserId
-        });
+        const shops = await invoke('get_shops', {});
 
         // Populate shop dropdown
         const shopSelect = document.getElementById('shop');

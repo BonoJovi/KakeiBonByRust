@@ -10,26 +10,34 @@ mod tests {
     use std::path::PathBuf;
 
     /// Helper function to create a temporary settings file for testing
-    fn create_test_settings() -> (SettingsManager, PathBuf) {
-        let temp_dir = std::env::temp_dir().join(format!("kakeibon_test_{}", std::process::id()));
+    fn create_test_settings() -> (SettingsManager, PathBuf, String) {
+        // Save original HOME
+        let original_home = std::env::var("HOME")
+            .or_else(|_| std::env::var("USERPROFILE"))
+            .unwrap_or_else(|_| ".".to_string());
+        
+        // Create temporary test directory
+        let temp_dir = std::env::temp_dir().join(format!("kakeibon_test_{}_{}", std::process::id(), std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
         fs::create_dir_all(&temp_dir).unwrap();
         
-        let settings_path = temp_dir.join("test_settings.json");
+        // Set HOME environment variable to temp directory for this test
+        std::env::set_var("HOME", &temp_dir);
         
-        // Create a custom SettingsManager for testing
+        // Now SettingsManager::new() will use the temp directory
         let settings = SettingsManager::new().unwrap();
         
-        (settings, temp_dir)
+        (settings, temp_dir, original_home)
     }
 
-    /// Clean up test directory
-    fn cleanup_test_dir(dir: PathBuf) {
+    /// Clean up test directory and restore HOME
+    fn cleanup_test_dir(dir: PathBuf, original_home: String) {
         let _ = fs::remove_dir_all(dir);
+        std::env::set_var("HOME", original_home);
     }
 
     #[test]
     fn test_font_size_default() {
-        let (settings, temp_dir) = create_test_settings();
+        let (settings, temp_dir, original_home) = create_test_settings();
         
         // Get font size, use default if not set
         let size = settings.get_string("font_size")
@@ -44,12 +52,12 @@ mod tests {
             "Font size should be a valid preset or percentage"
         );
         
-        cleanup_test_dir(temp_dir);
+        cleanup_test_dir(temp_dir, original_home);
     }
 
     #[test]
     fn test_set_font_size_small() {
-        let (mut settings, temp_dir) = create_test_settings();
+        let (mut settings, temp_dir, original_home) = create_test_settings();
         
         // Set font size to small
         settings.set("font_size", FONT_SIZE_SMALL).unwrap();
@@ -59,12 +67,12 @@ mod tests {
         let size = settings.get_string("font_size").unwrap();
         assert_eq!(size, FONT_SIZE_SMALL);
         
-        cleanup_test_dir(temp_dir);
+        cleanup_test_dir(temp_dir, original_home);
     }
 
     #[test]
     fn test_set_font_size_medium() {
-        let (mut settings, temp_dir) = create_test_settings();
+        let (mut settings, temp_dir, original_home) = create_test_settings();
         
         // Set font size to medium
         settings.set("font_size", FONT_SIZE_MEDIUM).unwrap();
@@ -74,12 +82,12 @@ mod tests {
         let size = settings.get_string("font_size").unwrap();
         assert_eq!(size, FONT_SIZE_MEDIUM);
         
-        cleanup_test_dir(temp_dir);
+        cleanup_test_dir(temp_dir, original_home);
     }
 
     #[test]
     fn test_set_font_size_large() {
-        let (mut settings, temp_dir) = create_test_settings();
+        let (mut settings, temp_dir, original_home) = create_test_settings();
         
         // Set font size to large
         settings.set("font_size", FONT_SIZE_LARGE).unwrap();
@@ -89,7 +97,7 @@ mod tests {
         let size = settings.get_string("font_size").unwrap();
         assert_eq!(size, FONT_SIZE_LARGE);
         
-        cleanup_test_dir(temp_dir);
+        cleanup_test_dir(temp_dir, original_home);
     }
 
     #[test]
@@ -157,7 +165,7 @@ mod tests {
 
     #[test]
     fn test_font_size_persistence() {
-        let (mut settings, temp_dir) = create_test_settings();
+        let (mut settings, temp_dir, original_home) = create_test_settings();
         
         // Set multiple font sizes in sequence
         let sizes = vec![FONT_SIZE_SMALL, FONT_SIZE_LARGE, FONT_SIZE_MEDIUM];
@@ -170,12 +178,12 @@ mod tests {
             assert_eq!(retrieved, size, "Font size should persist correctly");
         }
         
-        cleanup_test_dir(temp_dir);
+        cleanup_test_dir(temp_dir, original_home);
     }
 
     #[test]
     fn test_font_size_custom_percentage_persistence() {
-        let (mut settings, temp_dir) = create_test_settings();
+        let (mut settings, temp_dir, original_home) = create_test_settings();
         
         // Set custom percentages
         let percentages = vec!["85", "100", "115", "130"];
@@ -188,12 +196,12 @@ mod tests {
             assert_eq!(retrieved, percentage, "Custom percentage should persist correctly");
         }
         
-        cleanup_test_dir(temp_dir);
+        cleanup_test_dir(temp_dir, original_home);
     }
 
     #[test]
     fn test_font_size_boundary_values() {
-        let (mut settings, temp_dir) = create_test_settings();
+        let (mut settings, temp_dir, original_home) = create_test_settings();
         
         // Test boundary values
         let boundary_values = vec!["50", "200"];
@@ -213,12 +221,12 @@ mod tests {
             );
         }
         
-        cleanup_test_dir(temp_dir);
+        cleanup_test_dir(temp_dir, original_home);
     }
 
     #[test]
     fn test_font_size_overwrite() {
-        let (mut settings, temp_dir) = create_test_settings();
+        let (mut settings, temp_dir, original_home) = create_test_settings();
         
         // Set initial font size
         settings.set("font_size", FONT_SIZE_SMALL).unwrap();
@@ -235,7 +243,7 @@ mod tests {
         assert_eq!(second, FONT_SIZE_LARGE);
         assert_ne!(first, second);
         
-        cleanup_test_dir(temp_dir);
+        cleanup_test_dir(temp_dir, original_home);
     }
 
     #[test]
