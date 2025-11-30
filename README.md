@@ -25,10 +25,10 @@
 いつもKakeiBonに気を留めていただき、誠にありがとうございます。
 プロジェクト発案者のBonoJovi(Yoshihiro NAKAHARA)です。
 
-**Ver.1.0.0を正式リリースいたしました！**
+**Ver.1.0.1を正式リリースいたしました！**
 
 入出金データの入力機能が完成し、基本的な家計簿アプリケーションとしてご利用いただける状態となりました。
-正規リリース版をご利用になりたい方は、[mainブランチ](https://github.com/BonoJovi/KakeiBonByRust/tree/main)をご参照ください。
+安定版リリースをご利用になりたい方は、[mainブランチ](https://github.com/BonoJovi/KakeiBonByRust/tree/main)をご参照ください。
 
 現在ご覧いただいているdevブランチは開発版となり、次期バージョンの機能を開発中です。
 最新の機能をいち早く試してみたい方は、こちらのdevブランチをお使いください。
@@ -38,7 +38,7 @@ GitHubのissueやeメールでのメッセージも受け付けていますの�
 
 それでは、引き続きKakeiBonをご愛顧頂ますよう、お願い申し上げます。
 
-**2025-11-23 (JST) Written by Yoshihiro NAKAHARA**
+**2025-11-30 (JST) Written by Yoshihiro NAKAHARA**
 
 ---
 
@@ -47,7 +47,7 @@ GitHubのissueやeメールでのメッセージも受け付けていますの�
 Thank you for your continued interest in KakeiBon.
 I'm BonoJovi (Yoshihiro NAKAHARA), the project initiator.
 
-**We have officially released Ver.1.0.0!**
+**We have officially released Ver.1.0.1!**
 
 The transaction data input functionality is now complete, and KakeiBon is ready to be used as a basic household budget application.
 If you would like to use the stable release version, please refer to the [main branch](https://github.com/BonoJovi/KakeiBonByRust/tree/main).
@@ -60,7 +60,7 @@ We welcome messages via GitHub issues or email, whether it's words of encouragem
 
 Thank you for your continued support of KakeiBon.
 
-**2025-11-23 (JST) Written by Yoshihiro NAKAHARA**
+**2025-11-30 (JST) Written by Yoshihiro NAKAHARA**
 
 </div>
 

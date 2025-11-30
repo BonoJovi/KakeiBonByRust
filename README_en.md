@@ -1,128 +1,344 @@
-# KakeiBon built with Rust
-Household Budget App "KakeiBon" Built with Rust Language.
+# 📖 KakeiBon (Household Budget App)
+
+<div align="center">
+
+> **A Modern Household Budget App with Focus on Readability and Usability**
+
+[![Rust](https://img.shields.io/badge/Rust-1.70+-orange.svg)](https://www.rust-lang.org/)
+[![Tauri](https://img.shields.io/badge/Tauri-v2.9.3-blue.svg)](https://tauri.app/)
+[![Tests](https://img.shields.io/badge/tests-527%20passing-brightgreen.svg)](#test-results)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
+[🇯🇵 Japanese Version](README_ja.md) | [🌐 Bilingual README](README.md)
+
+</div>
+
+---
+
+## 💌 Message from Developer
+
+<div style="border: 3px solid #4a90e2; padding: 20px; margin: 20px 0; background-color: #f8f9fa; font-size: 1.1em;">
+
+### To All Beloved KakeiBon Users
+
+Thank you for your continued interest in KakeiBon.
+I'm BonoJovi (Yoshihiro NAKAHARA), the project initiator.
+
+**We have officially released Ver.1.0.1!**
+
+The transaction data input functionality is now complete, and KakeiBon is ready to be used as a basic household budget application.
+If you would like to use the stable release version, please refer to the [main branch](https://github.com/BonoJovi/KakeiBonByRust/tree/main).
+
+The dev branch you are currently viewing is the development version, where we are working on features for the next release.
+If you want to try the latest features early, please use this dev branch.
+
+We plan to proceed with implementing aggregation and reporting features next. We will continue to add various features incrementally, so please look forward to continuous enhancements.
+We welcome messages via GitHub issues or email, whether it's words of encouragement or suggestions for features you'd like to see in the future—any feedback is appreciated.
+
+Thank you for your continued support of KakeiBon.
+
+**2025-11-30 (JST) Written by Yoshihiro NAKAHARA**
+
+</div>
+
+---
+
+## 📑 Table of Contents
+
+- [🚧 Development Status](#-development-status)
+- [📊 Repository Statistics](#-repository-statistics)
+- [📚 Legacy Version](#-legacy-version)
+- [✨ Key Features](#-key-features)
+- [🚀 Current Features](#-current-features)
+- [💻 Technology Stack](#-technology-stack)
+- [📦 Installation](#-installation)
+- [🧪 Test Results](#-test-results)
+- [📚 Documentation](#-documentation)
+- [🤝 Contributing](#-contributing)
+- [📄 License](#-license)
+- [🌟 Development Roadmap](#-development-roadmap)
+
+---
+
+## 🚧 Development Status
+
+**🔥 Actively Under Development**
+
+Development is progressing smoothly, and we strive to update daily!
+
+**Project Started**: 2025-10-22 (JST)  
+**Last Updated**: 2025-11-30 (JST)
+
+> **🤖 AI-Assisted Development**  
+> This project's source code and documentation are **100% generated** with the assistance of generative AI (GitHub Copilot, Claude), supervised and reviewed by the developer. This demonstrates the potential of AI-assisted development.
+> 
+> 📊 **[See AI Development Metrics & Quality Analysis →](docs/AI_DEVELOPMENT_METRICS.md)**
+
+<!-- STATS_START -->
+## 📊 Repository Statistics
+
+<div align="center">
+
+### 📈 Daily Traffic
+
+![Daily Traffic Stats](docs/stats_graph_daily.png)
+
+### 📊 Cumulative Traffic
+
+![Cumulative Traffic Stats](docs/stats_graph_cumulative.png)
+
+| Metric | Count |
+|--------|-------|
+| 👁️ **Total Views** | **660** |
+| 📦 **Total Clones** | **214** |
+
+*Last Updated: 2025-11-30 12:09 UTC*
+
+</div>
+<!-- STATS_END -->
+
+---
 
 ## 📚 Legacy Version
 
-**Looking for the stable, production-ready version?**
+**Looking for the stable Lazarus/Free Pascal version?**
 
 👉 **[KakeiBon (Original)](https://github.com/BonoJovi/KakeiBon)** - Ready to use now!
 
-The original KakeiBon is a **fully functional household budget app built with Lazarus/Free Pascal**.
+The original KakeiBon is a **fully functional household budget app** ready to use right now!
 
 **Key Differences:**
-- ✅ **Stable & Production-Ready** - Use it right away
-- 📦 **Pre-built Binaries Available** - Download from [Releases](https://github.com/BonoJovi/KakeiBon/releases/)
+- ✅ **Stable & Production-Ready**
+- 📦 **Pre-built Binaries Available** ([Releases](https://github.com/BonoJovi/KakeiBon/releases/))
 - 🇯🇵 **Japanese Interface Only**
 - 🖥️ **Linux & Windows Support**
-- 🔤 **Large Fonts & Accessibility Features**
+- 🔤 **Large Fonts & Accessibility**
 
-**Why the Rust Rewrite?**
+**Why Rust Version?**
 
-This Rust version offers:
-- ⚡ Better performance
-- 🔒 Enhanced security (Argon2 + AES-256-GCM)
-- 🌐 Full multilingual support (Japanese/English)
-- 🎨 Modern architecture
-- 🔮 Future expandability
+This Rust rewrite offers:
+- ⚡ **Better Performance**
+- 🔒 **Enhanced Security** (Argon2 + AES-256-GCM)
+- 🌐 **Full Multilingual Support**
+- 🎨 **Modern Architecture**
+- 🔮 **Future Expandability**
 
 💡 **Try both and choose what works best for you!**
 
 ---
 
-## Overview
-A modern household budget management application built with Rust and Tauri framework.
+## ✨ Key Features
 
-**Project Started**: 2025-10-22 (JST)
+### 🎨 NOT Vibe Coding
+Built with **proper planning and documentation first**, not vibes
 
-## Features
-- 💰 Expense and income tracking
-- 👥 Multi-user support with role-based access control
-- 🔐 Secure password management (Argon2id)
-- 🔒 Data encryption (AES-256-GCM)
-- 🌐 Multilingual support (English, Japanese)
-- 📊 Hierarchical category management
-- ⚙️ User settings management
+### 👤 Clear User-First Policy
+Every feature is designed with **explicit user needs and usability** in mind
 
-## Technology Stack
-- **Frontend**: HTML, CSS, JavaScript
-- **Backend**: Rust
-- **Framework**: Tauri v2.8.5
-- **Database**: SQLite with WAL mode
-- **Security**: Argon2id (password hashing), AES-256-GCM (data encryption)
+### 🔤 Large, Easy-to-Read Text
+Designed with high visibility in mind - comfortable for long-term use
 
-## Documentation
+### 🏗️ Enterprise-Grade Architecture
+**Session-Based Authentication** throughout all 52 API functions
 
-📚 **[日本語版 (Japanese)](./README_ja.md)** is also available.
+- 🔐 **Secure Session Management**
+- 👥 **User Isolation**
+- ✅ **Zero Hardcoded User IDs**
+- 🧪 **527 Tests (100% Pass)**
 
-Detailed documentation is available in the [docs/en](./docs/en) directory:
+### 🎯 Intuitive User Interface
+Simple and clear UI that anyone can master quickly
 
-- [User Management](./docs/en/USER_MANAGEMENT.md) - User registration, authentication, and management
-- [Encryption Management](./docs/en/ENCRYPTION_MANAGEMENT.md) - Data encryption and re-encryption system
-- [Settings Management](./docs/en/SETTINGS_MANAGEMENT.md) - User settings and preferences
-- [I18N Implementation](./docs/en/I18N_IMPLEMENTATION.md) - Multilingual support system
-- [Test Summary](./docs/en/TEST_SUMMARY.md) - Test results and coverage
+### ♿ Accessibility Support
+- **Font Size Adjustment**: Small/Medium/Large/Custom (10-30px)
+- **Keyboard Navigation**: Fully supported
+- **Focus Indicators**: Clear visual feedback
 
-## Getting Started
+### 🌐 Multilingual Support
+Switch between Japanese and English seamlessly
 
-### Prerequisites
-- Rust 1.70+
-- Node.js (for Tauri development)
-
-### Build
-```bash
-cargo build
-```
-
-### Run Tests
-```bash
-cargo test --lib
-```
-
-### Run Application
-```bash
-cargo tauri dev
-```
-
-## Project Structure
-```
-KakeiBonByRust/
-├── src/               # Rust source code
-│   ├── services/      # Business logic services
-│   ├── db.rs          # Database management
-│   ├── crypto.rs      # Encryption utilities
-│   ├── consts.rs      # Application constants
-│   └── ...
-├── res/               # Resources
-│   └── sql/           # SQL schema files
-├── docs/              # Documentation
-│   ├── en/            # English documentation
-│   └── ja/            # Japanese documentation
-└── $HOME/.kakeibon/   # User data directory
-    ├── KakeiBonDB.sqlite3
-    └── KakeiBon.json
-```
-
-## Test Results
-```
-Total Tests: 90
-Passed: 90
-Failed: 0
-Success Rate: 100%
-```
-
-## Security Features
-- Password hashing with Argon2id
-- Data encryption with AES-256-GCM
-- Password length: 16-128 characters
-- Password complexity requirements enforced
-- Re-encryption on password change
+### 🔒 Strong Security
+- Argon2id password hashing
+- AES-256-GCM data encryption
 - Role-based access control
 
-## License
-See [LICENSE](./LICENSE) file for details.
+---
 
-## Contributing
-Contributions are welcome! Please feel free to submit a Pull Request.
+## 🚀 Current Features
 
-## Contact
-For questions or feedback, please open an issue on GitHub.
+| Feature | Description | Status |
+|---------|-------------|--------|
+| 🔐 **Session Management** | In-memory session state management | ✅ Complete |
+| 💰 **Category Management** | Hierarchical category system (Major/Middle/Minor) | ✅ Complete |
+| 👥 **User Management** | Multi-user support (Admin/General) | ✅ Complete |
+| 🏦 **Account Management** | Account master data management | ✅ Complete |
+| 🏪 **Shop Management** | Shop master data management | ✅ Complete |
+| 🏭 **Manufacturer Management** | Manufacturer master data with IS_DISABLED feature | ✅ Complete |
+| 📦 **Product Management** | Product master data with manufacturer linkage | ✅ Complete |
+| 🌍 **Multilingual** | Dynamic language switching (JP/EN) - 992 resources | ✅ Complete |
+| 🔧 **Customization** | Font size, language preferences | ✅ Complete |
+| 📝 **Transaction Management** | Header-level CRUD, filters, pagination | ✅ Complete |
+| 🧾 **Transaction Details** | CRUD operations with smart tax calculation, automatic rounding detection | ✅ Complete |
+| 📊 **Reports** | Monthly/annual summaries, graphs | 🚧 In Progress |
+
+---
+
+## 💻 Technology Stack
+
+| Category | Technology | Details |
+|----------|------------|---------|
+| **Frontend** | Vanilla JavaScript + HTML5 + CSS3 | ES6 Modules |
+| **Backend** | Rust + Tauri | v2.8.5 |
+| **Database** | SQLite | WAL mode |
+| **Security** | Argon2id + AES-256-GCM | Password hashing + Data encryption |
+| **Testing** | Jest + Cargo Test | 527 tests passing (Rust: 201, JS: 326) |
+| **i18n Resources** | JSON-based | 992 resources (496 unique keys, 2 languages) |
+| **Code Lines** | Total | ~35,478 lines (Rust: 13,870, JS: 8,810, HTML: 3,355, CSS: 6,109, SQL: 3,334) |
+
+---
+
+## 📦 Installation
+
+### Prerequisites
+- Rust 1.70+ (Install via [rustup](https://rustup.rs/))
+- Node.js 18+ (for Tauri CLI)
+
+### Build & Run
+
+```bash
+# Clone repository
+git clone https://github.com/BonoJovi/KakeiBonByRust.git
+cd KakeiBonByRust
+
+# Run in development mode
+cargo tauri dev
+
+# Production build
+cargo tauri build
+```
+
+---
+
+## 🧪 Test Results
+
+```
+Backend (Rust):       201 passing ✅
+Frontend (JavaScript): 326 passing ✅
+Total Tests:          527 passing ✅
+Success Rate:         100%
+```
+
+**Recent Improvements**:
+- ✅ **Session Management Integration** (2025-11-30)
+  - All 52 API functions now use session-based authentication
+  - Enhanced security with proper user isolation
+  - Removed hardcoded user IDs throughout the codebase
+
+- ✅ **Test Quality Enhancement** (2025-11-30)
+  - Added explicit assertions to delegated tests
+  - Improved test readability and maintainability
+  - Enterprise-grade test structure achieved
+
+**Test Count Methodology** (Updated 2025-11-30):
+- **Previous count (613)**: Included nested `describe` blocks and test structure
+- **Current count (527)**: Counts only actual executable test cases
+- **Reason for change**: Improved accuracy and industry-standard methodology
+- **Note**: No tests were removed; this is purely a measurement refinement
+
+See [TEST_SUMMARY.md](docs/en/TEST_SUMMARY.md) for details
+
+---
+
+## 📚 Documentation
+
+### For Users
+- 🔧 **[Troubleshooting](docs/en/TROUBLESHOOTING.md)**
+
+### For Developers
+
+#### Core Guides
+- 🏗️ **[Developer Guide](docs/en/DEVELOPER_GUIDE.md)**
+- 🧪 **[Testing Strategy](docs/en/TESTING.md)**
+- 📊 **[Test Summary](docs/en/TEST_SUMMARY.md)**
+
+#### API Documentation
+- 📁 **[Category Management API](docs/en/API_CATEGORY.md)**
+- 🏪 **[Shop Management API](docs/en/API_SHOP.md)**
+- 🏭 **[Manufacturer Management API](docs/en/API_MANUFACTURER.md)**
+- 📦 **[Product Management API](docs/en/API_PRODUCT.md)**
+- 💰 **[Transaction Management API](docs/en/API_TRANSACTION.md)**
+
+#### UI Documentation
+- 👥 **[User Management UI](docs/en/USER_MANAGEMENT_UI.md)**
+- 🏦 **[Account Management UI](docs/en/ACCOUNT_MANAGEMENT_UI.md)**
+- 📁 **[Category Management UI](docs/en/CATEGORY_MANAGEMENT_UI.md)**
+- 🏭 **[Manufacturer & Product Management](docs/en/MANUFACTURER_PRODUCT_MANAGEMENT.md)**
+- 💰 **[Transaction Management UI](docs/en/TRANSACTION_MANAGEMENT_UI_V2.md)**
+
+#### Feature Implementation
+- 🧮 **[Tax Calculation Logic](docs/tax-calculation-logic.md)** (Bilingual)
+- 🌐 **[I18N Implementation](docs/en/I18N_IMPLEMENTATION.md)**
+- 🌍 **[I18N Resources](docs/en/I18N_RESOURCES.md)**
+- 🌐 **[Dynamic Language Menu](docs/en/DYNAMIC_LANGUAGE_MENU.md)**
+- 🔤 **[Font Size Implementation](docs/en/font-size-implementation.md)**
+- ♿ **[Accessibility Indicators](docs/en/ACCESSIBILITY_INDICATORS.md)**
+- 🚫 **[IS_DISABLED Implementation](docs/en/IS_DISABLED_IMPLEMENTATION_GUIDE.md)**
+
+#### Database & Security
+- 🗄️ **[Database Configuration](docs/en/DATABASE_CONFIGURATION.md)**
+- 🔄 **[Database Migration](docs/en/DATABASE_MIGRATION.md)**
+- 🔐 **[Encryption Management](docs/en/ENCRYPTION_MANAGEMENT.md)**
+- 👤 **[User Management](docs/en/USER_MANAGEMENT.md)**
+- ⚙️ **[Settings Management](docs/en/SETTINGS_MANAGEMENT.md)**
+
+#### Design Documents
+- 💰 **[Transaction Design V2](docs/en/TRANSACTION_DESIGN_V2.md)**
+
+### Project Information
+- 👥 **[Project Participants](docs/en/PROJECT_PARTICIPANTS.md)**
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome!
+
+1. Fork this repository
+2. Create a feature branch  
+   `git checkout -b feature/AmazingFeature`
+3. Commit your changes  
+   `git commit -m 'Add some AmazingFeature'`
+4. Push to the branch  
+   `git push origin feature/AmazingFeature`
+5. Open a Pull Request
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for details
+
+---
+
+## 📄 License
+
+This project is licensed under the terms in the [LICENSE](LICENSE) file.
+
+---
+
+## 🌟 Development Roadmap
+
+- [x] User management
+- [x] Category management
+- [x] Multilingual support
+- [x] Accessibility features
+- [x] Transaction management
+- [x] Monthly/annual reports
+- [ ] Data export (CSV)
+- [ ] Backup & restore
+
+---
+
+<div align="center">
+
+**Made with ❤️ and Rust**
+
+[Report Bug](https://github.com/BonoJovi/KakeiBonByRust/issues) · [Request Feature](https://github.com/BonoJovi/KakeiBonByRust/issues)
+
+</div>

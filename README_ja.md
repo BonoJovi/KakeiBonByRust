@@ -1,128 +1,344 @@
-# KakeiBonByRust
-Rust言語で構築された家計簿アプリケーション「KakeiBon」
+# 📖 KakeiBon（家計簿）
+
+<div align="center">
+
+> **見やすさと使いやすさを追求した、モダンな家計簿アプリケーション**
+
+[![Rust](https://img.shields.io/badge/Rust-1.70+-orange.svg)](https://www.rust-lang.org/)
+[![Tauri](https://img.shields.io/badge/Tauri-v2.9.3-blue.svg)](https://tauri.app/)
+[![Tests](https://img.shields.io/badge/tests-527%20passing-brightgreen.svg)](#テスト結果)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
+[🇬🇧 English Version](README_en.md) | [🌐 Bilingual README](README.md)
+
+</div>
+
+---
+
+## 💌 開発者からのメッセージ
+
+<div style="border: 3px solid #4a90e2; padding: 20px; margin: 20px 0; background-color: #f8f9fa; font-size: 1.1em;">
+
+### 愛すべきKakeiBonユーザの皆さんへ
+
+いつもKakeiBonに気を留めていただき、誠にありがとうございます。
+プロジェクト発案者のBonoJovi(Yoshihiro NAKAHARA)です。
+
+**Ver.1.0.1を正式リリースいたしました！**
+
+入出金データの入力機能が完成し、基本的な家計簿アプリケーションとしてご利用いただける状態となりました。
+安定版リリースをご利用になりたい方は、[mainブランチ](https://github.com/BonoJovi/KakeiBonByRust/tree/main)をご参照ください。
+
+現在ご覧いただいているdevブランチは開発版となり、次期バージョンの機能を開発中です。
+最新の機能をいち早く試してみたい方は、こちらのdevブランチをお使いください。
+
+今後は集計・レポート機能の実装を進めていく予定です。細々した機能も追々実装していきますので、機能拡張にご期待いただければと思います。
+GitHubのissueやeメールでのメッセージも受け付けていますので、応援メッセージや将来的に実装してほしい機能など、ちょっとしたことでも良いのでご連絡いただければ幸いです。
+
+それでは、引き続きKakeiBonをご愛顧頂ますよう、お願い申し上げます。
+
+**2025-11-30 (JST) Written by Yoshihiro NAKAHARA**
+
+</div>
+
+---
+
+## 📑 目次
+
+- [🚧 開発状況](#-開発状況)
+- [📊 リポジトリ統計](#-リポジトリ統計)
+- [📚 前身プロジェクト](#-前身プロジェクト)
+- [✨ 主な特徴](#-主な特徴)
+- [🚀 実装済み機能](#-実装済み機能)
+- [💻 技術スタック](#-技術スタック)
+- [📦 インストール](#-インストール)
+- [🧪 テスト結果](#-テスト結果)
+- [📚 ドキュメント](#-ドキュメント)
+- [🤝 コントリビューション](#-コントリビューション)
+- [📄 ライセンス](#-ライセンス)
+- [🌟 開発ロードマップ](#-開発ロードマップ)
+
+---
+
+## 🚧 開発状況
+
+**🔥 鋭意開発中**
+
+開発は順調に進んでおり、できるだけ日々更新するようにしています！
+
+**プロジェクト開始**: 2025-10-22 (JST)  
+**最終更新**: 2025-11-30 (JST)
+
+> **🤖 AI支援開発**  
+> 本プロジェクトのソースコードおよびドキュメントは、生成AI（GitHub Copilot、Claude）の支援により**100%生成**され、開発者による監修とレビューを経ています。これは、AI支援開発の可能性を示す事例です。
+> 
+> 📊 **[AI開発の生産性と品質分析を見る →](docs/AI_DEVELOPMENT_METRICS.md)**
+
+<!-- STATS_START -->
+## 📊 リポジトリ統計
+
+<div align="center">
+
+### 📈 日次トラフィック
+
+![Daily Traffic Stats](docs/stats_graph_daily.png)
+
+### 📊 累積トラフィック
+
+![Cumulative Traffic Stats](docs/stats_graph_cumulative.png)
+
+| 指標 | 件数 |
+|------|------|
+| 👁️ **総閲覧数** | **660** |
+| 📦 **総クローン数** | **214** |
+
+*最終更新: 2025-11-30 12:09 UTC*
+
+</div>
+<!-- STATS_END -->
+
+---
 
 ## 📚 前身プロジェクト
 
-**すぐに使える完成版をお探しですか？**
+**安定版（Lazarus/Free Pascal版）をお探しですか？**
 
 👉 **[KakeiBon (オリジナル版)](https://github.com/BonoJovi/KakeiBon)** - 今すぐ使える完成版！
 
-元祖KakeiBonは、**Lazarus/Free Pascalで作られた完成版の家計簿アプリ**です。
+元祖KakeiBonは、**今すぐ使える完成版の家計簿アプリ**です！
 
 **主な違い:**
-- ✅ **安定版・本番利用可能** - すぐに使えます
-- 📦 **ビルド済みバイナリあり** - [Releases](https://github.com/BonoJovi/KakeiBon/releases/)からダウンロード
-- 🇯🇵 **日本語専用インターフェース**
+- ✅ **安定版・本番利用可能**
+- 📦 **ビルド済みバイナリあり**（[Releases](https://github.com/BonoJovi/KakeiBon/releases/)）
+- 🇯🇵 **日本語インターフェース専用**
 - 🖥️ **Linux & Windows 対応**
-- 🔤 **大きな文字とアクセシビリティ対応**
+- 🔤 **大きな文字とアクセシビリティ**
 
-**なぜRust版を開発？**
+**なぜRust版？**
 
 このRust版では以下を実現：
-- ⚡ より高速な動作
-- 🔒 強化されたセキュリティ（Argon2 + AES-256-GCM）
-- 🌐 完全多言語対応（日本語・英語）
-- 🎨 モダンなアーキテクチャ
-- 🔮 将来の拡張性
+- ⚡ **より高速**
+- 🔒 **強化されたセキュリティ** (Argon2 + AES-256-GCM)
+- 🌐 **完全多言語対応**
+- 🎨 **モダンなアーキテクチャ**
+- 🔮 **将来の拡張性**
 
 💡 **両方試して、お好みの方をお使いください！**
 
 ---
 
-## 概要
-RustとTauriフレームワークで構築された、モダンな家計簿管理アプリケーションです。
+## ✨ 主な特徴
 
-**プロジェクト開始**: 2025-10-22 (JST)
+### 🎨 NOTバイブコーディング
+雰囲気ではなく、**きちんとした計画とドキュメント作成**を先に行う開発スタイル
 
-## 機能
-- 💰 支出・収入の記録
-- 👥 ロールベースのアクセス制御によるマルチユーザサポート
-- 🔐 安全なパスワード管理（Argon2id）
-- 🔒 データ暗号化（AES-256-GCM）
-- 🌐 多言語対応（英語、日本語）
-- 📊 階層的な費目管理
-- ⚙️ ユーザ設定管理
+### 👤 明確なユーザーファーストポリシーによる設計
+すべての機能は**明確なユーザーニーズと使いやすさ**を念頭に置いて設計されています
 
-## 技術スタック
-- **フロントエンド**: HTML, CSS, JavaScript
-- **バックエンド**: Rust
-- **フレームワーク**: Tauri v2.8.5
-- **データベース**: SQLite (WALモード)
-- **セキュリティ**: Argon2id（パスワードハッシュ化）、AES-256-GCM（データ暗号化）
+### 🔤 大きな文字で見やすい
+視認性を重視した設計で、長時間の使用でも目が疲れにくい
 
-## ドキュメント
+### 🏗️ エンタープライズグレードのアーキテクチャ
+**セッションベース認証**を全52個のAPI関数で実装
 
-📚 **[English Documentation](./README_en.md)** is also available.
+- 🔐 **セキュアなセッション管理**
+- 👥 **ユーザーデータの完全分離**
+- ✅ **ハードコードされたユーザーID排除**
+- 🧪 **527テスト（100%合格）**
 
-詳細なドキュメントは [docs/ja](./docs/ja) ディレクトリにあります：
+### 🎯 直感的な操作性
+誰でもすぐに使いこなせる、シンプルで分かりやすいUI
 
-- [ユーザ管理](./docs/ja/USER_MANAGEMENT.md) - ユーザ登録、認証、管理
-- [暗号化管理](./docs/ja/ENCRYPTION_MANAGEMENT.md) - データ暗号化と再暗号化システム
-- [設定管理](./docs/ja/SETTINGS_MANAGEMENT.md) - ユーザ設定と環境設定
-- [多言語対応実装](./docs/ja/I18N_IMPLEMENTATION.md) - 多言語対応システム
-- [テストサマリー](./docs/ja/TEST_SUMMARY.md) - テスト結果とカバレッジ
+### ♿ アクセシビリティ対応
+- **フォントサイズ調整**: 小/中/大/カスタム（10-30px）
+- **キーボードナビゲーション**: 完全対応
+- **フォーカスインジケーター**: 明確な視覚フィードバック
 
-## セットアップ
+### 🌐 多言語対応
+日本語・英語の切り替えが可能
 
-### 必要な環境
-- Rust 1.70+
-- Node.js（Tauri開発用）
-
-### ビルド
-```bash
-cargo build
-```
-
-### テスト実行
-```bash
-cargo test --lib
-```
-
-### アプリケーション実行
-```bash
-cargo tauri dev
-```
-
-## プロジェクト構造
-```
-KakeiBonByRust/
-├── src/               # Rustソースコード
-│   ├── services/      # ビジネスロジックサービス
-│   ├── db.rs          # データベース管理
-│   ├── crypto.rs      # 暗号化ユーティリティ
-│   ├── consts.rs      # アプリケーション定数
-│   └── ...
-├── res/               # リソース
-│   └── sql/           # SQLスキーマファイル
-├── docs/              # ドキュメント
-│   ├── en/            # 英語ドキュメント
-│   └── ja/            # 日本語ドキュメント
-└── $HOME/.kakeibon/   # ユーザデータディレクトリ
-    ├── KakeiBonDB.sqlite3
-    └── KakeiBon.json
-```
-
-## テスト結果
-```
-総テスト数: 90
-成功: 90
-失敗: 0
-成功率: 100%
-```
-
-## セキュリティ機能
-- Argon2idによるパスワードハッシュ化
-- AES-256-GCMによるデータ暗号化
-- パスワード長: 16-128文字
-- パスワード複雑性要件の強制
-- パスワード変更時の再暗号化
+### 🔒 強固なセキュリティ
+- Argon2idパスワードハッシュ化
+- AES-256-GCMデータ暗号化
 - ロールベースのアクセス制御
 
-## ライセンス
-詳細は[LICENSE](./LICENSE)ファイルをご確認ください。
+---
 
-## コントリビューション
-プルリクエストを歓迎します！お気軽にご提出ください。
+## 🚀 実装済み機能
 
-## お問い合わせ
-質問やフィードバックは、GitHubのIssueでお願いします。
+| 機能 | 説明 | ステータス |
+|------|------|------------|
+| 🔐 **セッション管理** | メモリ内セッション状態管理 | ✅ 完成 |
+| 💰 **費目管理** | 大分類・中分類・小分類の階層的管理 | ✅ 完成 |
+| 👥 **ユーザー管理** | マルチユーザー対応（管理者/一般） | ✅ 完成 |
+| 🏦 **口座管理** | 口座マスタ管理 | ✅ 完成 |
+| 🏪 **店舗管理** | 店舗マスタ管理 | ✅ 完成 |
+| 🏭 **メーカー管理** | IS_DISABLED機能付きメーカーマスタ管理 | ✅ 完成 |
+| 📦 **商品管理** | メーカー連携付き商品マスタ管理 | ✅ 完成 |
+| 🌍 **多言語対応** | 日本語・英語の動的切り替え - 992リソース | ✅ 完成 |
+| 🔧 **カスタマイズ** | フォントサイズ、言語設定 | ✅ 完成 |
+| 📝 **入出金管理** | ヘッダレベルCRUD、フィルター、ページネーション | ✅ 完成 |
+| 🧾 **入出金明細** | スマート税計算付きCRUD操作、端数処理自動検出 | ✅ 完成 |
+| 📊 **集計・レポート** | 月次・年次レポート、グラフ | 🚧 開発中 |
+
+---
+
+## 💻 技術スタック
+
+| カテゴリ | 技術 | 詳細 |
+|----------|------|------|
+| **フロントエンド** | Vanilla JavaScript + HTML5 + CSS3 | ES6 Modules |
+| **バックエンド** | Rust + Tauri | v2.8.5 |
+| **データベース** | SQLite | WAL mode |
+| **セキュリティ** | Argon2id + AES-256-GCM | Password hashing + Data encryption |
+| **テスト** | Jest + Cargo Test | 527 tests passing (Rust: 201, JS: 326) |
+| **翻訳** | JSON-based | 992 resources (496 unique keys, 2 languages) |
+| **コード行数** | 合計 | ~35,478 lines (Rust: 13,870, JS: 8,810, HTML: 3,355, CSS: 6,109, SQL: 3,334) |
+
+---
+
+## 📦 インストール
+
+### 前提条件
+- Rust 1.70+ ([rustup](https://rustup.rs/)でインストール)
+- Node.js 18+ (Tauri CLI用)
+
+### ビルド・実行
+
+```bash
+# リポジトリをクローン
+git clone https://github.com/BonoJovi/KakeiBonByRust.git
+cd KakeiBonByRust
+
+# 開発モードで起動
+cargo tauri dev
+
+# プロダクションビルド
+cargo tauri build
+```
+
+---
+
+## 🧪 テスト結果
+
+```
+バックエンド (Rust):      201 passing ✅
+フロントエンド (JavaScript): 326 passing ✅
+総テスト数:               527 passing ✅
+成功率:                  100%
+```
+
+**最近の改善**:
+- ✅ **セッション管理統合** (2025-11-30)
+  - 全52個のAPI関数がセッションベース認証を使用
+  - 適切なユーザー分離による強化されたセキュリティ
+  - コードベース全体からハードコードされたユーザーIDを削除
+
+- ✅ **テスト品質向上** (2025-11-30)
+  - 委譲されたテストに明示的なアサーションを追加
+  - テストの可読性と保守性を向上
+  - エンタープライズグレードのテスト構造を実現
+
+**テスト件数計測方法** (2025-11-30更新):
+- **以前のカウント (613)**: ネストされた`describe`ブロックとテスト構造を含む
+- **現在のカウント (527)**: 実際に実行可能なテストケースのみをカウント
+- **変更理由**: 精度の向上と業界標準の方法論
+- **注意**: テストは削除されておらず、計測方法の精密化のみです
+
+詳細は [TEST_SUMMARY.md](docs/ja/TEST_SUMMARY.md) を参照
+
+---
+
+## 📚 ドキュメント
+
+### ユーザー向け
+- 🔧 **[トラブルシューティング](docs/ja/TROUBLESHOOTING.md)**
+
+### 開発者向け
+
+#### コアガイド
+- 🏗️ **[開発者ガイド](docs/ja/DEVELOPER_GUIDE.md)**
+- 🧪 **[テスト戦略](docs/ja/TESTING.md)**
+- 📊 **[テストサマリー](docs/ja/TEST_SUMMARY.md)**
+
+#### API ドキュメント
+- 📁 **[費目管理 API](docs/ja/API_CATEGORY.md)**
+- 🏪 **[店舗管理 API](docs/ja/API_SHOP.md)**
+- 🏭 **[メーカー管理 API](docs/ja/API_MANUFACTURER.md)**
+- 📦 **[商品管理 API](docs/ja/API_PRODUCT.md)**
+- 💰 **[入出金管理 API](docs/ja/API_TRANSACTION.md)**
+
+#### UI ドキュメント
+- 👥 **[ユーザー管理 UI](docs/ja/USER_MANAGEMENT_UI.md)**
+- 🏦 **[口座管理 UI](docs/ja/ACCOUNT_MANAGEMENT_UI.md)**
+- 📁 **[費目管理 UI](docs/ja/CATEGORY_MANAGEMENT_UI.md)**
+- 🏭 **[メーカー・商品管理](docs/ja/MANUFACTURER_PRODUCT_MANAGEMENT.md)**
+- 💰 **[入出金管理 UI](docs/ja/TRANSACTION_MANAGEMENT_UI_V2.md)**
+
+#### 機能実装
+- 🧮 **[税計算ロジック](docs/tax-calculation-logic.md)** (日英併記)
+- 🌐 **[国際化実装](docs/ja/I18N_IMPLEMENTATION.md)**
+- 🌍 **[国際化リソース](docs/ja/I18N_RESOURCES.md)**
+- 🌐 **[動的言語メニュー](docs/ja/DYNAMIC_LANGUAGE_MENU.md)**
+- 🔤 **[フォントサイズ実装](docs/ja/font-size-implementation.md)**
+- ♿ **[アクセシビリティインジケーター](docs/ja/ACCESSIBILITY_INDICATORS.md)**
+- 🚫 **[IS_DISABLED実装](docs/ja/IS_DISABLED_IMPLEMENTATION_GUIDE.md)**
+
+#### データベース・セキュリティ
+- 🗄️ **[データベース設定](docs/ja/DATABASE_CONFIGURATION.md)**
+- 🔄 **[データベースマイグレーション](docs/ja/DATABASE_MIGRATION.md)**
+- 🔐 **[暗号化管理](docs/ja/ENCRYPTION_MANAGEMENT.md)**
+- 👤 **[ユーザー管理](docs/ja/USER_MANAGEMENT.md)**
+- ⚙️ **[設定管理](docs/ja/SETTINGS_MANAGEMENT.md)**
+
+#### 設計ドキュメント
+- 💰 **[入出金設計 V2](docs/ja/TRANSACTION_DESIGN_V2.md)**
+
+### プロジェクト情報
+- 👥 **[プロジェクト参加者](docs/ja/PROJECT_PARTICIPANTS.md)**
+
+---
+
+## 🤝 コントリビューション
+
+プルリクエストを歓迎します！
+
+1. このリポジトリをフォーク
+2. フィーチャーブランチを作成  
+   `git checkout -b feature/AmazingFeature`
+3. 変更をコミット  
+   `git commit -m 'Add some AmazingFeature'`
+4. ブランチにプッシュ  
+   `git push origin feature/AmazingFeature`
+5. プルリクエストを開く
+
+詳細は [CONTRIBUTING.md](CONTRIBUTING.md) を参照
+
+---
+
+## 📄 ライセンス
+
+このプロジェクトは [LICENSE](LICENSE) の下でライセンスされています。
+
+---
+
+## 🌟 開発ロードマップ
+
+- [x] ユーザー管理機能
+- [x] 費目管理機能
+- [x] 多言語対応
+- [x] アクセシビリティ機能
+- [x] 入出金データ管理
+- [x] 月次・年次集計
+- [ ] データエクスポート（CSV）
+- [ ] バックアップ・リストア
+
+---
+
+<div align="center">
+
+**Made with ❤️ and Rust**
+
+[バグ報告](https://github.com/BonoJovi/KakeiBonByRust/issues) · [機能リクエスト](https://github.com/BonoJovi/KakeiBonByRust/issues)
+
+</div>
