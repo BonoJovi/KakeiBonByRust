@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Category Management - KakeiBon</title>
+        <link rel="stylesheet" href="css/menu.css" />
+        <link rel="stylesheet" href="css/indicators.css" />
+        <link rel="stylesheet" href="css/category-management.css" />
+        <script type="importmap">
+        {
+            "imports": {
+                "@tauri-apps/api/core": "https://esm.sh/@tauri-apps/api@2/core"
+            }
+        }
+        </script>
+    </head>
+    <body>
+        <div id="menu-bar"></div>
+
+        <!-- Font Size Settings Modal -->
+        <div id="font-size-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 data-i18n="font_size.modal_title">Font Size Settings</h2>
+                    <button class="close-btn" id="font-size-modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="font-size-preset" data-i18n="font_size.preset">Preset:</label>
+                        <div class="input-wrapper">
+                            <select id="font-size-preset">
+                                <option value="small" data-i18n="font_size.small">小</option>
+                                <option value="medium" data-i18n="font_size.medium" selected>中</option>
+                                <option value="large" data-i18n="font_size.large">大</option>
+                                <option value="custom" data-i18n="font_size.custom">カスタム</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="font-size-percent" data-i18n="font_size.percentage">Percentage:</label>
+                        <div class="input-with-spinner">
+                            <input type="number" id="font-size-percent" min="50" max="200" step="5" value="100" />
+                            <div class="spinner-buttons">
+                                <button type="button" class="spinner-btn spinner-down">◀</button>
+                                <button type="button" class="spinner-btn spinner-up">▶</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" id="font-size-cancel" data-i18n="common.cancel">キャンセル</button>
+                    <button type="button" class="btn-primary" id="font-size-apply" data-i18n="common.apply">変更</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="main-content">
+            <div class="category-management-container">
+                <h1 data-i18n="category_mgmt.title">Category Management</h1>
+                
+                <!-- Category Tree Section -->
+                <div class="section">
+                    <div class="section-header">
+                        <h2 data-i18n="category_mgmt.category_tree">Category Tree</h2>
+                    </div>
+                    
+                    <div class="category-tree" id="category-tree">
+                        <!-- Category tree will be populated dynamically -->
+                        <div class="loading" data-i18n="common.loading">Loading...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add/Edit Category1 Modal -->
+        <div id="category1-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="category1-modal-title" data-i18n="category_mgmt.add_category1">Add Major Category</h2>
+                    <button class="close-btn" id="category1-modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="category1-form">
+                        <input type="hidden" id="category1-id" />
+                        
+                        <div class="form-group">
+                            <label for="category1-name-ja" data-i18n="category_mgmt.name_ja">Name (Japanese):</label>
+                            <input type="text" id="category1-name-ja" required />
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="category1-name-en" data-i18n="category_mgmt.name_en">Name (English):</label>
+                            <input type="text" id="category1-name-en" required />
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="category1-order" data-i18n="category_mgmt.display_order">Display Order:</label>
+                            <input type="number" id="category1-order" min="1" required />
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" id="category1-cancel" data-i18n="common.cancel">Cancel</button>
+                    <button type="button" class="btn-primary" id="category1-save" data-i18n="common.save">Save</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add/Edit Category2 Modal -->
+        <div id="category2-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="category2-modal-title" data-i18n="category_mgmt.add_category2">Add Middle Category</h2>
+                    <button class="close-btn" id="category2-modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="category2-form">
+                        <input type="hidden" id="category2-id" />
+                        <input type="hidden" id="category2-parent-id" />
+                        
+                        <div class="form-group">
+                            <label for="category2-parent-name" data-i18n="category_mgmt.parent_category">Parent Category:</label>
+                            <input type="text" id="category2-parent-name" readonly />
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="category2-name-ja" data-i18n="category_mgmt.name_ja">Name (Japanese):</label>
+                            <input type="text" id="category2-name-ja" required />
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="category2-name-en" data-i18n="category_mgmt.name_en">Name (English):</label>
+                            <input type="text" id="category2-name-en" required />
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" id="category2-cancel" data-i18n="common.cancel">Cancel</button>
+                    <button type="button" class="btn-primary" id="category2-save" data-i18n="common.save">Save</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add/Edit Category3 Modal -->
+        <div id="category3-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="category3-modal-title" data-i18n="category_mgmt.add_category3">Add Minor Category</h2>
+                    <button class="close-btn" id="category3-modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="category3-form">
+                        <input type="hidden" id="category3-id" />
+                        <input type="hidden" id="category3-parent-id" />
+                        
+                        <div class="form-group">
+                            <label for="category3-parent-name" data-i18n="category_mgmt.parent_category">Parent Category:</label>
+                            <input type="text" id="category3-parent-name" readonly />
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="category3-name-ja" data-i18n="category_mgmt.name_ja">Name (Japanese):</label>
+                            <input type="text" id="category3-name-ja" required />
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="category3-name-en" data-i18n="category_mgmt.name_en">Name (English):</label>
+                            <input type="text" id="category3-name-en" required />
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" id="category3-cancel" data-i18n="common.cancel">Cancel</button>
+                    <button type="button" class="btn-primary" id="category3-save" data-i18n="common.save">Save</button>
+                </div>
+            </div>
+        </div>
+
+        <script type="module" src="js/i18n.js"></script>
+        <script type="module" src="js/modal.js"></script>
+        <script type="module" src="js/category-management.js"></script>
+        
+        <!-- UI Tests (development only) -->
+        <script>
+            // Auto-run tests after page load in development
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                window.addEventListener('load', () => {
+                    setTimeout(() => {
+                        const script = document.createElement('script');
+                        script.src = 'tests/category-management-ui-tests.js';
+                        document.body.appendChild(script);
+                    }, 2000); // Wait 2 seconds for content to render
+                });
+            }
+        </script>
+    </body>
+</html>

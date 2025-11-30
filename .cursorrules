@@ -1,0 +1,203 @@
+# KakeiBon Project Rules for Cursor AI
+
+## Project Overview
+- **Name**: KakeiBon (家計簿)
+- **Type**: Desktop household budget management app
+- **Tech Stack**: Rust + Tauri v2 + Vanilla JavaScript/HTML/CSS
+- **Database**: SQLite with AES-256-GCM encryption
+- **Security**: Argon2id password hashing
+
+## Test Coverage
+- Backend (Rust): 121 tests passing
+- Frontend (JavaScript): 308 tests passing
+- Total: 429 tests - maintain 100% success rate
+
+## General Principles
+1. **DRY**: Use common modules for shared logic
+2. **Consistency**: Backend and frontend must use same validation rules
+3. **Type Safety**: Use Rust's type system properly
+4. **Error Handling**: Always handle errors explicitly
+5. **Test First**: Maintain test coverage when adding features
+
+## Coding Conventions
+
+### Rust
+- **Functions**: snake_case (e.g., `verify_login`, `get_user_by_id`)
+- **Structs**: PascalCase (e.g., `UserInfo`, `TransactionHeader`)
+- **Constants**: UPPER_SNAKE_CASE (e.g., `ROLE_ADMIN`, `ROLE_USER`)
+- **Error Handling**: Use `Result<T, E>`, never `unwrap()` in production
+- **SQL Queries**: Define all SQL as constants in `src/sql_queries.rs`
+
+### JavaScript
+- **ES Modules**: Always include `.js` extension in imports
+  ```javascript
+  import { validatePassword } from './validation-helpers.js';
+  ```
+- **Async/Await**: Always use try/catch with async functions
+- **Naming**: camelCase for functions, PascalCase for classes
+- **No Frameworks**: Vanilla JavaScript only (no React, Vue, etc.)
+
+### Validation Rules
+- **Password**: Minimum 16 characters (enforced in frontend and backend)
+- **Unicode**: 
+  - JavaScript: `.length` (UTF-16 code units)
+  - Rust: `.len()` (UTF-8 bytes)
+  - For tests: Use ASCII for boundary tests, Unicode for character support tests
+
+## Database
+
+### Critical Rules
+- ❌ **NEVER** use `kakeibo.db` as database filename
+- ✅ **ALWAYS** use `KakeiBonDB.sqlite3` (defined in `src/consts.rs`)
+- **Location**: `~/.kakeibon/KakeiBonDB.sqlite3`
+- **Access**: Use `./db.sh "SQL QUERY"` script
+
+### SQL Management
+- All SQL queries defined in `src/sql_queries.rs`
+- Naming: `{SCOPE}_{ACTION}` (e.g., `USER_INSERT`, `CATEGORY2_UPDATE`)
+- Test queries: Prefix with `TEST_`
+- Never hardcode SQL in service code
+
+## Git & Documentation
+
+### Commit Messages
+- **Language**: English only
+- **Format**: Conventional commits (feat/fix/docs/refactor/test/chore)
+- **Example**: `feat(transaction): add edit functionality`
+
+### Git Operations
+- **AI Scope**: Up to `git commit` only
+- **Manual**: `git push` must be done by developer (hardware key required)
+
+### Documentation Timestamps
+- **User-facing docs**: Japan Standard Time (JST, UTC+9)
+- **AI context docs**: UTC or JST
+- **Example**: `Last Updated: 2024-11-09 09:37 JST`
+
+### Bilingual Documentation
+- All user-facing docs must have Japanese and English versions
+- File naming: `FILENAME.md` (English), `FILENAME_ja.md` (Japanese)
+
+## Important Constants
+
+### Rust (`src/consts.rs`)
+```rust
+pub const ROLE_ADMIN: i64 = 0;
+pub const ROLE_USER: i64 = 1;
+pub const DB_FILENAME: &str = "KakeiBonDB.sqlite3";
+```
+
+### JavaScript (`res/js/consts.js`)
+```javascript
+export const ROLE_ADMIN = 0;
+export const ROLE_USER = 1;
+```
+
+## Key Files & Patterns
+
+### Validation
+- Backend: `src/validation.rs`
+- Frontend: `res/js/validation-helpers.js`
+- Both must enforce same rules
+
+### i18n
+- Backend: `src/services/i18n.rs`
+- Frontend: `res/js/i18n.js`
+- Resources: SQLite `I18N_RESOURCES` table
+- Keys: `namespace.key` format (e.g., `common.save`, `user_mgmt.title`)
+
+### Modal Pattern (Common Modal Class)
+- Use `res/js/modal.js` Modal class for all modals
+- Features: ESC key, backdrop click, focus trap
+- Example:
+  ```javascript
+  const modal = new Modal('modal-id', {
+    formId: 'form-id',
+    closeButtonId: 'close-btn',
+    cancelButtonId: 'cancel-btn',
+    onOpen: (mode, data) => { /* setup */ },
+    onSave: async (formData) => { /* save */ }
+  });
+  ```
+
+## Anti-Patterns to Avoid
+
+❌ Don't:
+- Duplicate validation logic across files
+- Use `unwrap()` in production Rust code
+- Ignore error handling
+- Mix concerns (UI logic in validation)
+- Hard-code strings (use i18n)
+- Commit passwords or secrets
+- Use database filename other than `KakeiBonDB.sqlite3`
+
+✅ Do:
+- Use common modules for shared logic
+- Handle all errors explicitly
+- Separate concerns (UI, logic, data)
+- Use i18n for all user-facing text
+- Write tests for new features
+- Follow existing code patterns
+
+## Project Structure
+
+### Backend (`src/`)
+- `main.rs`: Entry point
+- `lib.rs`: Tauri commands export
+- `db.rs`: Database connection management
+- `validation.rs`: Input validation
+- `security.rs`: Password hashing
+- `crypto.rs`: AES-256-GCM encryption
+- `sql_queries.rs`: All SQL query constants
+- `services/`: Business logic modules
+
+### Frontend (`res/`)
+- `*.html`: Screen templates
+- `js/`: JavaScript modules (ES6)
+- `css/`: Stylesheets
+- `tests/`: Jest test suites
+
+### Documentation (`docs/`)
+- `ja/`: Japanese documentation
+- `en/`: English documentation
+- Structure mirrors between languages
+
+## Testing Strategy
+
+### Backend (Rust)
+- Unit tests in each module
+- Integration tests in `tests/`
+- Use `#[cfg(test)]` for test-only code
+- Common test utilities in `src/test_helpers.rs`
+
+### Frontend (JavaScript)
+- Jest for unit tests
+- Test suites in `res/tests/`
+- Common test logic in `*-validation-tests.js` files
+- Reuse test suites across screens
+
+## Additional Context
+
+For detailed information, refer to:
+- `.ai-context/PROJECT_STRUCTURE.md`: Comprehensive structure
+- `.ai-context/CONVENTIONS.md`: Detailed conventions
+- `.ai-context/KEY_FILES.md`: Important files quick reference
+- `.github/copilot-instructions.md`: GitHub Copilot specific instructions
+
+## Current Work (2024-11-09)
+
+### In Progress
+- Transaction edit functionality implementation
+- Using specification: `work/入出金編集機能仕様.txt`
+
+### Recent Completed
+- Modal refactoring (common Modal class)
+- Transaction management (list, filter, add, delete)
+- Category management (full CRUD)
+- User management (full CRUD)
+- Internationalization (Japanese/English)
+- Font size customization
+
+---
+
+**Remember**: Always maintain test coverage, follow existing patterns, and keep code readable and maintainable.

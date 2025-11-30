@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>User Management - KakeiBon</title>
+        <link rel="stylesheet" href="css/menu.css" />
+        <link rel="stylesheet" href="css/indicators.css" />
+        <link rel="stylesheet" href="css/user-management.css" />
+        <script type="importmap">
+        {
+            "imports": {
+                "@tauri-apps/api/core": "https://esm.sh/@tauri-apps/api@2/core"
+            }
+        }
+        </script>
+    </head>
+    <body>
+        <div id="menu-bar"></div>
+
+        <div id="main-content">
+            <div class="user-management-container">
+                <h1 data-i18n="user_mgmt.title">User Management</h1>
+                
+                <!-- User List Section -->
+                <div class="section">
+                    <div class="section-header">
+                        <h2 data-i18n="user_mgmt.user_list">User List</h2>
+                    </div>
+                    <div id="user-list-container">
+                        <table id="user-table">
+                            <thead>
+                                <tr>
+                                    <th data-i18n="user_mgmt.user_id">User ID</th>
+                                    <th data-i18n="user_mgmt.username">Username</th>
+                                    <th data-i18n="user_mgmt.role">Role</th>
+                                    <th data-i18n="user_mgmt.created_at">Created At</th>
+                                    <th data-i18n="user_mgmt.updated_at">Updated At</th>
+                                    <th data-i18n="user_mgmt.actions">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="user-list">
+                                <!-- Users will be dynamically loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="section-footer">
+                        <button id="add-user-btn" class="btn-primary" data-i18n="user_mgmt.add_user">Add User</button>
+                    </div>
+                </div>
+                
+                <div id="user-list-message" class="message"></div>
+
+                <!-- Add/Edit User Modal -->
+                <div id="user-modal" class="modal hidden">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h2 id="modal-title" data-i18n="user_mgmt.add_user">Add User</h2>
+                            <button id="close-modal" class="close-btn">&times;</button>
+                        </div>
+                        <form id="user-form">
+                            <input type="hidden" id="user-id" name="user-id" />
+                            <div class="form-group">
+                                <label for="username" data-i18n="user_mgmt.username">Username:</label>
+                                <div class="input-wrapper">
+                                    <input type="text" id="username" name="username" required />
+                                </div>
+                            </div>
+                            <div class="form-group" id="password-group">
+                                <label for="password" data-i18n="user_mgmt.password">Password (minimum 16 characters):</label>
+                                <div class="input-wrapper">
+                                    <input type="password" id="password" name="password" minlength="16" />
+                                </div>
+                            </div>
+                            <div class="form-group" id="password-confirm-group">
+                                <label for="password-confirm" data-i18n="user_mgmt.password_confirm">Password (Confirm):</label>
+                                <div class="input-wrapper">
+                                    <input type="password" id="password-confirm" name="password-confirm" />
+                                </div>
+                            </div>
+                            <div class="form-actions">
+                                <button type="button" id="cancel-btn" class="btn-secondary" data-i18n="user_mgmt.cancel">Cancel</button>
+                                <button type="submit" class="btn-primary" data-i18n="user_mgmt.save">Save</button>
+                            </div>
+                        </form>
+                        <div id="form-message" class="message"></div>
+                    </div>
+                </div>
+
+                <!-- Delete Confirmation Modal -->
+                <div id="delete-modal" class="modal hidden">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h2 data-i18n="user_mgmt.delete_user">Delete User</h2>
+                            <button id="close-delete-modal" class="close-btn">&times;</button>
+                        </div>
+                        <p id="delete-message" data-i18n="user_mgmt.delete_confirmation">Are you sure you want to delete this user?</p>
+                        <p id="delete-username" class="delete-target"></p>
+                        <div class="form-actions">
+                            <button id="cancel-delete" class="btn-secondary" data-i18n="user_mgmt.cancel">Cancel</button>
+                            <button id="confirm-delete" class="btn-danger" data-i18n="user_mgmt.delete">Delete</button>
+                        </div>
+                        <div id="delete-result-message" class="message"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Font Size Modal -->
+        <div id="font-size-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 data-i18n="font_size.modal_title">Font Size Settings</h2>
+                    <button class="close-btn" id="font-size-modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="font-size-preset" data-i18n="font_size.preset">Preset:</label>
+                        <div class="input-wrapper">
+                            <select id="font-size-preset">
+                                <option value="small" data-i18n="font_size.small">小</option>
+                                <option value="medium" data-i18n="font_size.medium" selected>中</option>
+                                <option value="large" data-i18n="font_size.large">大</option>
+                                <option value="custom" data-i18n="font_size.custom">カスタム</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="font-size-percent" data-i18n="font_size.percentage">Percentage:</label>
+                        <div class="input-with-spinner">
+                            <input type="number" id="font-size-percent" min="50" max="200" step="5" value="100" />
+                            <div class="spinner-buttons">
+                                <button type="button" class="spinner-btn spinner-down">◀</button>
+                                <button type="button" class="spinner-btn spinner-up">▶</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" id="font-size-cancel" data-i18n="common.cancel">キャンセル</button>
+                    <button type="button" class="btn-primary" id="font-size-apply" data-i18n="common.apply">変更</button>
+                </div>
+            </div>
+        </div>
+
+        <script type="module" src="js/i18n.js"></script>
+        <script type="module" src="js/modal.js"></script>
+        <script type="module" src="js/user-management.js"></script>
+    </body>
+</html>

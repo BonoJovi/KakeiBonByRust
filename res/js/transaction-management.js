@@ -223,7 +223,6 @@ async function loadCategoriesForFilter() {
     try {
         // Get category tree
         const categoryTree = await invoke('get_category_tree_with_lang', {
-            userId: currentUserId,
             langCode: i18n.currentLanguage
         });
         
@@ -307,7 +306,6 @@ async function loadTransactions() {
         i18n.updateUI();
 
         const response = await invoke('get_transactions', {
-            userId: currentUserId,
             startDate: currentFilters.startDate,
             endDate: currentFilters.endDate,
             category1Code: currentFilters.category1Code,
@@ -514,7 +512,6 @@ async function deleteTransaction(transactionId) {
     
     try {
         await invoke('delete_transaction', {
-            userId: currentUserId,
             transactionId: transactionId
         });
         
@@ -646,7 +643,6 @@ async function openTransactionModal(transactionId = null) {
 async function loadCategoriesForModal() {
     try {
         const categoryTree = await invoke('get_category_tree_with_lang', {
-            userId: currentUserId,
             langCode: i18n.currentLanguage
         });
         
@@ -676,10 +672,7 @@ async function loadCategoriesForModal() {
 
 async function loadAccountsForModal() {
     try {
-        accounts = await invoke('get_accounts', { 
-            userId: currentUserId,
-            userRole: currentUserRole
-        });
+        accounts = await invoke('get_accounts', {});
         
         // Populate account dropdowns
         const fromAccountSelect = document.getElementById('from-account');
@@ -724,9 +717,7 @@ async function loadAccountsForModal() {
 
 async function loadShopsForModal() {
     try {
-        const shops = await invoke('get_shops', {
-            userId: currentUserId
-        });
+        const shops = await invoke('get_shops', {});
 
         // Populate shop dropdown
         const shopSelect = document.getElementById('shop');
@@ -889,7 +880,6 @@ async function handleTransactionSubmit(event) {
         } else {
             // Create new transaction
             await invoke('save_transaction_header', {
-                userId: currentUserId,
                 shopId,
                 category1Code,
                 fromAccountCode,

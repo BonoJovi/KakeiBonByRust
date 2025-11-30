@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>KakeiBon by Rust</title>
+        <link rel="stylesheet" href="css/menu.css" />
+        <link rel="stylesheet" href="css/indicators.css" />
+        <script type="importmap">
+        {
+            "imports": {
+                "@tauri-apps/api/core": "https://esm.sh/@tauri-apps/api@2/core"
+            }
+        }
+        </script>
+    </head>
+    <body>
+        <div id="menu-bar"></div>
+
+        <div id="main-content">
+            <div id="admin-setup" class="hidden">
+                <div class="setup-container">
+                    <h2 data-i18n="admin.setup_title">Initial Setup - Register Administrator</h2>
+                    <form id="admin-setup-form">
+                        <div class="form-group">
+                            <label for="admin-username" data-i18n="admin.username">Username:</label>
+                            <input type="text" id="admin-username" name="admin-username" required />
+                        </div>
+                        <div class="form-group">
+                            <label for="admin-password" data-i18n="admin.password">Password (minimum 16 characters):</label>
+                            <input type="password" id="admin-password" name="admin-password" required minlength="16" />
+                        </div>
+                        <div class="form-group">
+                            <label for="admin-password-confirm" data-i18n="admin.password_confirm">Password (Confirm):</label>
+                            <input type="password" id="admin-password-confirm" name="admin-password-confirm" required />
+                        </div>
+                        <button type="submit" class="btn-primary" data-i18n="admin.register_button">Register Administrator</button>
+                    </form>
+                    <div id="setup-message" class="message"></div>
+                </div>
+            </div>
+            
+            <div id="user-setup" class="hidden">
+                <div class="setup-container">
+                    <h2 data-i18n="user.setup_title">Register General User Account</h2>
+                    <p style="color: #666; margin-bottom: 20px; text-align: center;" data-i18n="user.setup_description">Create a standard user account for daily use.</p>
+                    <form id="user-setup-form">
+                        <div class="form-group">
+                            <label for="user-username" data-i18n="user.username">Username:</label>
+                            <input type="text" id="user-username" name="user-username" required />
+                        </div>
+                        <div class="form-group">
+                            <label for="user-password" data-i18n="user.password">Password (minimum 16 characters):</label>
+                            <input type="password" id="user-password" name="user-password" required minlength="16" />
+                        </div>
+                        <div class="form-group">
+                            <label for="user-password-confirm" data-i18n="user.password_confirm">Password (Confirm):</label>
+                            <input type="password" id="user-password-confirm" name="user-password-confirm" required />
+                        </div>
+                        <button type="submit" class="btn-primary" data-i18n="user.register_button">Register User</button>
+                    </form>
+                    <div id="user-setup-message" class="message"></div>
+                </div>
+            </div>
+            
+            <div id="login-form" class="login-container">
+                <h2 data-i18n="login.title">Login</h2>
+                <form id="login-form-element">
+                    <div class="form-group">
+                        <label for="username" data-i18n="login.username">Username:</label>
+                        <input type="text" id="username" name="username" required />
+                    </div>
+                    <div class="form-group">
+                        <label for="password" data-i18n="login.password">Password:</label>
+                        <input type="password" id="password" name="password" required />
+                    </div>
+                    <button type="submit" class="btn-primary" data-i18n="login.button">Login</button>
+                </form>
+                <div id="login-message" class="message"></div>
+            </div>
+            
+            <div id="app-content" class="hidden">
+                <h1 data-i18n="app.welcome">Welcome to KakeiBon</h1>
+                <p data-i18n="app.logged_in">You are logged in successfully!</p>
+            </div>
+        </div>
+
+        <!-- Font Size Settings Modal -->
+        <div id="font-size-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 data-i18n="font_size.modal_title">Font Size Settings</h2>
+                    <button class="close-btn" id="font-size-modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="font-size-preset" data-i18n="font_size.preset">Preset:</label>
+                        <div class="input-wrapper">
+                            <select id="font-size-preset">
+                                <option value="small" data-i18n="font_size.small">小</option>
+                                <option value="medium" data-i18n="font_size.medium" selected>中</option>
+                                <option value="large" data-i18n="font_size.large">大</option>
+                                <option value="custom" data-i18n="font_size.custom">カスタム</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="font-size-percent" data-i18n="font_size.percentage">Percentage:</label>
+                        <div class="input-with-spinner">
+                            <input type="number" id="font-size-percent" min="50" max="200" step="5" value="100" />
+                            <div class="spinner-buttons">
+                                <button type="button" class="spinner-btn spinner-down">◀</button>
+                                <button type="button" class="spinner-btn spinner-up">▶</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" id="font-size-cancel" data-i18n="common.cancel">キャンセル</button>
+                    <button type="button" class="btn-primary" id="font-size-apply" data-i18n="common.apply">変更</button>
+                </div>
+            </div>
+        </div>
+
+        <script type="module" src="js/i18n.js"></script>
+        <script type="module" src="js/menu.js"></script>
+    </body>
+</html>

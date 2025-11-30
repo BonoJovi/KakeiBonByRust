@@ -1,0 +1,1381 @@
+use sqlx::{SqlitePool, Row};
+use serde::{Serialize, Deserialize};
+use crate::{sql_queries, consts};
+
+/// Transaction header data structure
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
+pub struct TransactionHeader {
+    #[sqlx(rename = "TRANSACTION_ID")]
+    pub transaction_id: i64,
+    #[sqlx(rename = "USER_ID")]
+    pub user_id: i64,
+    #[sqlx(rename = "SHOP_ID")]
+    pub shop_id: Option<i64>,
+    #[sqlx(rename = "TRANSACTION_DATE")]
+    pub transaction_date: String,
+    #[sqlx(rename = "CATEGORY1_CODE")]
+    pub category1_code: String,
+    #[sqlx(rename = "FROM_ACCOUNT_CODE")]
+    pub from_account_code: String,
+    #[sqlx(rename = "TO_ACCOUNT_CODE")]
+    pub to_account_code: String,
+    #[sqlx(rename = "TOTAL_AMOUNT")]
+    pub total_amount: i64,
+    #[sqlx(rename = "TAX_ROUNDING_TYPE")]
+    pub tax_rounding_type: i64,
+    #[sqlx(rename = "TAX_INCLUDED_TYPE")]
+    pub tax_included_type: i64,
+    #[sqlx(rename = "MEMO_ID")]
+    pub memo_id: Option<i64>,
+    #[sqlx(rename = "IS_DISABLED")]
+    pub is_disabled: i64,
+    #[sqlx(rename = "ENTRY_DT")]
+    pub entry_dt: String,
+    #[sqlx(rename = "UPDATE_DT")]
+    pub update_dt: Option<String>,
+}
+
+/// Request structure for saving transaction header
+#[derive(Debug, Deserialize, Clone)]
+pub struct SaveTransactionRequest {
+    pub shop_id: Option<i64>,
+    pub category1_code: String,
+    pub from_account_code: String,
+    pub to_account_code: String,
+    pub transaction_date: String,
+    pub total_amount: i64,
+    pub tax_rounding_type: i64,
+    pub tax_included_type: i64,
+    pub memo: Option<String>,
+}
+
+/// Transaction detail data structure
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
+pub struct TransactionDetail {
+    #[sqlx(rename = "DETAIL_ID")]
+    pub detail_id: i64,
+    #[sqlx(rename = "TRANSACTION_ID")]
+    pub transaction_id: i64,
+    #[sqlx(rename = "USER_ID")]
+    pub user_id: i64,
+    #[sqlx(rename = "CATEGORY1_CODE")]
+    pub category1_code: String,
+    #[sqlx(rename = "CATEGORY2_CODE")]
+    pub category2_code: String,
+    #[sqlx(rename = "CATEGORY3_CODE")]
+    pub category3_code: String,
+    #[sqlx(rename = "ITEM_NAME")]
+    pub item_name: String,
+    #[sqlx(rename = "AMOUNT")]
+    pub amount: i64,
+    #[sqlx(rename = "TAX_AMOUNT")]
+    pub tax_amount: i64,
+    #[sqlx(rename = "TAX_RATE")]
+    pub tax_rate: i32,
+    #[sqlx(rename = "AMOUNT_INCLUDING_TAX")]
+    pub amount_including_tax: Option<i64>,
+    #[sqlx(rename = "MEMO_ID")]
+    pub memo_id: Option<i64>,
+    #[sqlx(rename = "ENTRY_DT")]
+    pub entry_dt: String,
+    #[sqlx(rename = "UPDATE_DT")]
+    pub update_dt: Option<String>,
+}
+
+/// Request structure for saving transaction detail
+#[derive(Debug, Deserialize, Clone)]
+pub struct SaveTransactionDetailRequest {
+    pub detail_id: Option<i64>,
+    pub category1_code: String,
+    pub category2_code: String,
+    pub category3_code: String,
+    pub item_name: String,
+    pub amount: i64,
+    pub tax_rate: i32,
+    pub tax_amount: i64,
+    pub amount_including_tax: Option<i64>,
+    pub memo: Option<String>,
+}
+
+/// Transaction detail with related information for display
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TransactionDetailWithInfo {
+    pub detail_id: i64,
+    pub transaction_id: i64,
+    pub user_id: i64,
+    pub category1_code: String,
+    pub category2_code: String,
+    pub category3_code: String,
+    pub category1_name: Option<String>,
+    pub category2_name: Option<String>,
+    pub category3_name: Option<String>,
+    pub item_name: String,
+    pub amount: i64,
+    pub tax_amount: i64,
+    pub tax_rate: i32,
+    pub amount_including_tax: Option<i64>,
+    pub memo_id: Option<i64>,
+    pub memo_text: Option<String>,
+    pub entry_dt: String,
+    pub update_dt: Option<String>,
+}
+
+/// Transaction header with related information for display
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TransactionHeaderWithInfo {
+    pub transaction_id: i64,
+    pub user_id: i64,
+    pub shop_id: Option<i64>,
+    pub shop_name: Option<String>,
+    pub transaction_date: String,
+    pub category1_code: String,
+    pub from_account_code: String,
+    pub to_account_code: String,
+    pub from_account_name: Option<String>,
+    pub to_account_name: Option<String>,
+    pub total_amount: i64,
+    pub tax_rounding_type: i64,
+    pub tax_included_type: i64,
+    pub memo_id: Option<i64>,
+    pub memo_text: Option<String>,
+    pub is_disabled: i64,
+    pub entry_dt: String,
+    pub update_dt: Option<String>,
+}
+
+/// Memo data structure
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
+pub struct Memo {
+    #[sqlx(rename = "MEMO_ID")]
+    pub memo_id: i64,
+    #[sqlx(rename = "MEMO_TEXT")]
+    pub memo_text: String,
+    #[sqlx(rename = "ENTRY_DT")]
+    pub entry_dt: String,
+    #[sqlx(rename = "UPDATE_DT")]
+    pub update_dt: Option<String>,
+}
+
+/// Transaction data structure for list display (header-based)
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
+pub struct Transaction {
+    #[sqlx(rename = "TRANSACTION_ID")]
+    pub transaction_id: i64,
+    #[sqlx(rename = "USER_ID")]
+    pub user_id: i64,
+    #[sqlx(rename = "TRANSACTION_DATE")]
+    pub transaction_date: String,  // YYYY-MM-DD HH:MM:SS format (datetime)
+    #[sqlx(rename = "CATEGORY1_CODE")]
+    pub category1_code: String,
+    #[sqlx(rename = "FROM_ACCOUNT_CODE")]
+    pub from_account_code: String,
+    #[sqlx(rename = "TO_ACCOUNT_CODE")]
+    pub to_account_code: String,
+    #[sqlx(rename = "TOTAL_AMOUNT")]
+    pub total_amount: i64,
+    #[sqlx(rename = "TAX_ROUNDING_TYPE")]
+    pub tax_rounding_type: i64,
+    #[sqlx(rename = "MEMO_ID")]
+    pub memo_id: Option<i64>,
+    #[sqlx(rename = "CATEGORY1_NAME")]
+    pub category1_name: Option<String>,
+    #[sqlx(rename = "FROM_ACCOUNT_NAME")]
+    pub from_account_name: Option<String>,
+    #[sqlx(rename = "TO_ACCOUNT_NAME")]
+    pub to_account_name: Option<String>,
+    #[sqlx(rename = "MEMO_TEXT")]
+    pub memo_text: Option<String>,
+}
+
+/// Transaction list response with pagination
+#[derive(Debug, Serialize)]
+pub struct TransactionListResponse {
+    pub transactions: Vec<Transaction>,
+    pub total_count: i64,
+    pub page: i64,
+    pub per_page: i64,
+    pub total_pages: i64,
+}
+
+/// Transaction service for managing income/expense data
+pub struct TransactionService {
+    pool: SqlitePool,
+}
+
+#[derive(Debug)]
+pub enum TransactionError {
+    DatabaseError(String),
+    ValidationError(String),
+    NotFound,
+}
+
+impl std::fmt::Display for TransactionError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TransactionError::DatabaseError(msg) => write!(f, "Database error: {}", msg),
+            TransactionError::ValidationError(msg) => write!(f, "Validation error: {}", msg),
+            TransactionError::NotFound => write!(f, "Transaction not found"),
+        }
+    }
+}
+
+impl From<sqlx::Error> for TransactionError {
+    fn from(err: sqlx::Error) -> Self {
+        TransactionError::DatabaseError(err.to_string())
+    }
+}
+
+impl TransactionService {
+    pub fn new(pool: SqlitePool) -> Self {
+        Self { pool }
+    }
+
+    /// Add a new transaction header with save request
+    pub async fn save_transaction_header(
+        &self,
+        user_id: i64,
+        request: SaveTransactionRequest,
+    ) -> Result<i64, TransactionError> {
+        // Validate datetime format (YYYY-MM-DD HH:MM:SS)
+        if request.transaction_date.len() != 19 {
+            return Err(TransactionError::ValidationError(
+                "Invalid datetime format. Use YYYY-MM-DD HH:MM:SS".to_string(),
+            ));
+        }
+
+        // Validate amount (0 is allowed)
+        if request.total_amount < 0 || request.total_amount > 999_999_999 {
+            return Err(TransactionError::ValidationError(
+                "Amount must be between 0 and 999,999,999".to_string(),
+            ));
+        }
+
+        // Validate tax rounding type using constants
+        if request.tax_rounding_type != consts::TAX_ROUND_DOWN
+            && request.tax_rounding_type != consts::TAX_ROUND_HALF_UP
+            && request.tax_rounding_type != consts::TAX_ROUND_UP
+        {
+            return Err(TransactionError::ValidationError(
+                "Invalid tax rounding type".to_string(),
+            ));
+        }
+
+        // Save memo if provided
+        let memo_id = if let Some(text) = &request.memo {
+            if !text.trim().is_empty() {
+                if text.len() > 1000 {
+                    return Err(TransactionError::ValidationError(
+                        "Memo must be 1000 characters or less".to_string(),
+                    ));
+                }
+                let result = sqlx::query(sql_queries::MEMO_INSERT)
+                    .bind(user_id)
+                    .bind(text)
+                    .execute(&self.pool)
+                    .await?;
+                Some(result.last_insert_rowid())
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        // Insert transaction header
+        let result = sqlx::query(sql_queries::TRANSACTION_HEADER_INSERT)
+            .bind(user_id)
+            .bind(request.shop_id)
+            .bind(&request.transaction_date)
+            .bind(&request.category1_code)
+            .bind(&request.from_account_code)
+            .bind(&request.to_account_code)
+            .bind(request.total_amount)
+            .bind(request.tax_rounding_type)
+            .bind(request.tax_included_type)
+            .bind(memo_id)
+            .execute(&self.pool)
+            .await?;
+
+        Ok(result.last_insert_rowid())
+    }
+
+    /// Add a new transaction header
+    pub async fn add_transaction_header(
+        &self,
+        user_id: i64,
+        transaction_date: &str,
+        category1_code: &str,
+        from_account_code: &str,
+        to_account_code: &str,
+        total_amount: i64,
+        tax_rate: i32,
+        tax_rounding: &str,
+        memo_text: Option<&str>,
+    ) -> Result<i64, TransactionError> {
+        // Validate datetime format (YYYY-MM-DD HH:MM:SS)
+        if transaction_date.len() != 19 {
+            return Err(TransactionError::ValidationError(
+                "Invalid datetime format. Use YYYY-MM-DD HH:MM:SS".to_string(),
+            ));
+        }
+
+        // Validate amount (0 is allowed)
+        if total_amount < 0 || total_amount > 999_999_999 {
+            return Err(TransactionError::ValidationError(
+                "Amount must be between 0 and 999,999,999".to_string(),
+            ));
+        }
+
+        // Validate tax rate (typically 8% or 10% in Japan)
+        if tax_rate < 0 || tax_rate > 100 {
+            return Err(TransactionError::ValidationError(
+                "Tax rate must be between 0 and 100".to_string(),
+            ));
+        }
+
+        // Validate tax rounding method
+        if !["ROUND_UP", "ROUND_DOWN", "ROUND_HALF"].contains(&tax_rounding) {
+            return Err(TransactionError::ValidationError(
+                "Invalid tax rounding method".to_string(),
+            ));
+        }
+
+        // Save memo if provided
+        let memo_id = if let Some(text) = memo_text {
+            if !text.trim().is_empty() {
+                if text.len() > 1000 {
+                    return Err(TransactionError::ValidationError(
+                        "Memo must be 1000 characters or less".to_string(),
+                    ));
+                }
+                let result = sqlx::query(sql_queries::MEMO_INSERT)
+                    .bind(user_id)
+                    .bind(text)
+                    .execute(&self.pool)
+                    .await?;
+                Some(result.last_insert_rowid())
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        // Insert transaction header
+        let result = sqlx::query(sql_queries::TRANSACTION_HEADER_INSERT)
+            .bind(user_id)
+            .bind(transaction_date)
+            .bind(category1_code)
+            .bind(from_account_code)
+            .bind(to_account_code)
+            .bind(total_amount)
+            .bind(tax_rate)
+            .bind(tax_rounding)
+            .bind(memo_id)
+            .execute(&self.pool)
+            .await?;
+
+        Ok(result.last_insert_rowid())
+    }
+
+    /// Get transaction header by ID
+    pub async fn get_transaction_header(
+        &self,
+        user_id: i64,
+        transaction_id: i64,
+    ) -> Result<TransactionHeader, TransactionError> {
+        let header = sqlx::query_as::<_, TransactionHeader>(sql_queries::TRANSACTION_HEADER_GET_BY_ID)
+            .bind(transaction_id)
+            .bind(user_id)
+            .fetch_optional(&self.pool)
+            .await?;
+
+        header.ok_or(TransactionError::NotFound)
+    }
+
+    /// Get transaction header by ID with memo text
+    pub async fn get_transaction_header_with_memo(
+        &self,
+        user_id: i64,
+        transaction_id: i64,
+    ) -> Result<(TransactionHeader, Option<String>), TransactionError> {
+        let row = sqlx::query(sql_queries::TRANSACTION_HEADER_GET_BY_ID_WITH_MEMO)
+            .bind(transaction_id)
+            .bind(user_id)
+            .fetch_optional(&self.pool)
+            .await?;
+
+        if let Some(row) = row {
+            let header = TransactionHeader {
+                transaction_id: row.get(0),
+                user_id: row.get(1),
+                shop_id: row.get(2),
+                transaction_date: row.get(3),
+                category1_code: row.get(4),
+                from_account_code: row.get(5),
+                to_account_code: row.get(6),
+                total_amount: row.get(7),
+                tax_rounding_type: row.get(8),
+                tax_included_type: row.get(9),
+                memo_id: row.get(10),
+                is_disabled: row.get(11),
+                entry_dt: row.get(12),
+                update_dt: row.get(13),
+            };
+            let memo_text: Option<String> = row.get(14);
+            Ok((header, memo_text))
+        } else {
+            Err(TransactionError::NotFound)
+        }
+    }
+
+    /// Add a new transaction (legacy method for backward compatibility)
+    pub async fn add_transaction(
+        &self,
+        user_id: i64,
+        transaction_date: &str,
+        category1_code: &str,
+        category2_code: &str,
+        category3_code: &str,
+        amount: i64,
+        description: Option<&str>,
+        memo: Option<&str>,
+    ) -> Result<i64, TransactionError> {
+        // Validate amount
+        if amount < 1 || amount > 999_999_999 {
+            return Err(TransactionError::ValidationError(
+                "Amount must be between 1 and 999,999,999".to_string(),
+            ));
+        }
+
+        // Validate datetime format (YYYY-MM-DD HH:MM:SS)
+        if transaction_date.len() != 19 {
+            return Err(TransactionError::ValidationError(
+                "Invalid datetime format. Use YYYY-MM-DD HH:MM:SS".to_string(),
+            ));
+        }
+
+        // Validate description length
+        if let Some(desc) = description {
+            if desc.trim().is_empty() {
+                return Err(TransactionError::ValidationError(
+                    "Description cannot be empty or whitespace only".to_string(),
+                ));
+            }
+            if desc.len() > 500 {
+                return Err(TransactionError::ValidationError(
+                    "Description must be 500 characters or less".to_string(),
+                ));
+            }
+        }
+
+        // Validate memo length
+        if let Some(m) = memo {
+            if m.trim().is_empty() {
+                return Err(TransactionError::ValidationError(
+                    "Memo cannot be empty or whitespace only".to_string(),
+                ));
+            }
+            if m.len() > 1000 {
+                return Err(TransactionError::ValidationError(
+                    "Memo must be 1000 characters or less".to_string(),
+                ));
+            }
+        }
+
+        let result = sqlx::query(sql_queries::TRANSACTION_INSERT)
+            .bind(user_id)
+            .bind(transaction_date)
+            .bind(category1_code)
+            .bind(category2_code)
+            .bind(category3_code)
+            .bind(amount)
+            .bind(description)
+            .bind(memo)
+            .execute(&self.pool)
+            .await?;
+
+        Ok(result.last_insert_rowid())
+    }
+
+    /// Get a single transaction by ID
+    pub async fn get_transaction(
+        &self,
+        user_id: i64,
+        transaction_id: i64,
+    ) -> Result<Transaction, TransactionError> {
+        let transaction = sqlx::query_as::<_, Transaction>(sql_queries::TRANSACTION_SELECT_BY_ID)
+            .bind(user_id)
+            .bind(transaction_id)
+            .fetch_optional(&self.pool)
+            .await?;
+
+        transaction.ok_or(TransactionError::NotFound)
+    }
+
+    /// Get transactions with filters and pagination
+    pub async fn get_transactions(
+        &self,
+        user_id: i64,
+        start_date: Option<&str>,
+        end_date: Option<&str>,
+        category1_code: Option<&str>,
+        category2_code: Option<&str>,
+        category3_code: Option<&str>,
+        min_amount: Option<i64>,
+        max_amount: Option<i64>,
+        keyword: Option<&str>,
+        page: i64,
+        per_page: i64,
+    ) -> Result<TransactionListResponse, TransactionError> {
+        // Build WHERE clauses (with table alias 't.')
+        let mut where_clauses = vec!["t.USER_ID = ?".to_string()];
+        let mut params: Vec<String> = vec![user_id.to_string()];
+
+        if let Some(start) = start_date {
+            where_clauses.push("t.TRANSACTION_DATE >= ?".to_string());
+            params.push(start.to_string());
+        }
+
+        if let Some(end) = end_date {
+            where_clauses.push("t.TRANSACTION_DATE <= ?".to_string());
+            params.push(end.to_string());
+        }
+
+        if let Some(cat1) = category1_code {
+            where_clauses.push("t.CATEGORY1_CODE = ?".to_string());
+            params.push(cat1.to_string());
+        }
+
+        // Note: CATEGORY2_CODE and CATEGORY3_CODE are in TRANSACTIONS_DETAIL, not in HEADER
+        // These filters are not implemented for header-only queries
+        let _ = category2_code; // Suppress unused warning
+        let _ = category3_code; // Suppress unused warning
+
+        if let Some(min) = min_amount {
+            where_clauses.push("t.TOTAL_AMOUNT >= ?".to_string());
+            params.push(min.to_string());
+        }
+
+        if let Some(max) = max_amount {
+            where_clauses.push("t.TOTAL_AMOUNT <= ?".to_string());
+            params.push(max.to_string());
+        }
+
+        // Note: DESCRIPTION and MEMO are not in HEADER
+        // Keyword search is not implemented for header-only queries
+        let _ = keyword; // Suppress unused warning
+
+        let where_clause = where_clauses.join(" AND ");
+
+        // Get total count
+        let count_query = format!("{}{}", sql_queries::TRANSACTION_COUNT_BASE, where_clause);
+        let mut count_stmt = sqlx::query(&count_query);
+        for param in &params {
+            count_stmt = count_stmt.bind(param);
+        }
+        let total_count: i64 = count_stmt
+            .fetch_one(&self.pool)
+            .await?
+            .get(0);
+
+        // Calculate pagination
+        let offset = (page - 1) * per_page;
+        let total_pages = (total_count + per_page - 1) / per_page;
+
+        // Get transactions
+        let query = format!(
+            "{}{}{} LIMIT ? OFFSET ?",
+            sql_queries::TRANSACTION_LIST_BASE,
+            where_clause,
+            sql_queries::TRANSACTION_LIST_ORDER
+        );
+        
+        let mut stmt = sqlx::query_as::<_, Transaction>(&query);
+        for param in &params {
+            stmt = stmt.bind(param);
+        }
+        stmt = stmt.bind(per_page).bind(offset);
+        
+        let transactions = stmt.fetch_all(&self.pool).await?;
+
+        Ok(TransactionListResponse {
+            transactions,
+            total_count,
+            page,
+            per_page,
+            total_pages,
+        })
+    }
+
+    /// Update a transaction
+    pub async fn update_transaction(
+        &self,
+        user_id: i64,
+        transaction_id: i64,
+        transaction_date: &str,
+        category1_code: &str,
+        category2_code: &str,
+        category3_code: &str,
+        amount: i64,
+        description: Option<&str>,
+        memo: Option<&str>,
+    ) -> Result<(), TransactionError> {
+        // Validate amount
+        if amount < 1 || amount > 999_999_999 {
+            return Err(TransactionError::ValidationError(
+                "Amount must be between 1 and 999,999,999".to_string(),
+            ));
+        }
+
+        // Validate datetime format (YYYY-MM-DD HH:MM:SS)
+        if transaction_date.len() != 19 {
+            return Err(TransactionError::ValidationError(
+                "Invalid datetime format. Use YYYY-MM-DD HH:MM:SS".to_string(),
+            ));
+        }
+
+        let result = sqlx::query(sql_queries::TRANSACTION_UPDATE)
+            .bind(transaction_date)
+            .bind(category1_code)
+            .bind(category2_code)
+            .bind(category3_code)
+            .bind(amount)
+            .bind(description)
+            .bind(memo)
+            .bind(user_id)
+            .bind(transaction_id)
+            .execute(&self.pool)
+            .await?;
+
+        if result.rows_affected() == 0 {
+            return Err(TransactionError::NotFound);
+        }
+
+        Ok(())
+    }
+
+    /// Delete a transaction
+    pub async fn delete_transaction(
+        &self,
+        user_id: i64,
+        transaction_id: i64,
+    ) -> Result<(), TransactionError> {
+        let result = sqlx::query(sql_queries::TRANSACTION_DELETE)
+            .bind(user_id)
+            .bind(transaction_id)
+            .execute(&self.pool)
+            .await?;
+
+        if result.rows_affected() == 0 {
+            return Err(TransactionError::NotFound);
+        }
+
+        Ok(())
+    }
+
+    /// Helper function to get or create memo_id for memo text
+    /// Returns memo_id if memo text is provided, None if empty
+    async fn get_or_create_memo_id(
+        &self,
+        user_id: i64,
+        memo_text: Option<&str>,
+    ) -> Result<Option<i64>, TransactionError> {
+        let memo_text = match memo_text {
+            Some(text) => text.trim(),
+            None => return Ok(None),
+        };
+
+        if memo_text.is_empty() {
+            // Empty memo - return None (memo_id will be NULL)
+            return Ok(None);
+        }
+
+        // Validate memo length
+        if memo_text.len() > 1000 {
+            return Err(TransactionError::ValidationError(
+                "Memo must be 1000 characters or less".to_string(),
+            ));
+        }
+
+        // Check if memo with same text already exists
+        let existing_memo = sqlx::query(sql_queries::MEMO_FIND_BY_TEXT)
+            .bind(user_id)
+            .bind(memo_text)
+            .fetch_optional(&self.pool)
+            .await?;
+
+        if let Some(row) = existing_memo {
+            Ok(Some(row.get(0)))
+        } else {
+            // Create new memo
+            let result = sqlx::query(sql_queries::MEMO_INSERT)
+                .bind(user_id)
+                .bind(memo_text)
+                .execute(&self.pool)
+                .await?;
+            Ok(Some(result.last_insert_rowid()))
+        }
+    }
+
+    /// Helper function to get memo_id for update (handles shared memo_id case)
+    async fn get_memo_id_for_update(
+        &self,
+        user_id: i64,
+        memo_text: Option<&str>,
+        current_memo_id: Option<i64>,
+    ) -> Result<Option<i64>, TransactionError> {
+        let memo_text = match memo_text {
+            Some(text) => text.trim(),
+            None => return Ok(None),
+        };
+
+        if memo_text.is_empty() {
+            // Empty memo - return None (memo_id will be NULL)
+            return Ok(None);
+        }
+
+        // Validate memo length
+        if memo_text.len() > 1000 {
+            return Err(TransactionError::ValidationError(
+                "Memo must be 1000 characters or less".to_string(),
+            ));
+        }
+
+        // Check if current memo_id is shared with other transactions
+        let is_shared = if let Some(memo_id) = current_memo_id {
+            let count: i64 = sqlx::query_scalar(sql_queries::MEMO_COUNT_USAGE)
+                .bind(memo_id)
+                .fetch_one(&self.pool)
+                .await?;
+            count > 1
+        } else {
+            false
+        };
+
+        if is_shared {
+            // Current memo_id is shared - create new memo_id
+            // Check if memo with same text already exists
+            let existing_memo = sqlx::query(sql_queries::MEMO_FIND_BY_TEXT)
+                .bind(user_id)
+                .bind(memo_text)
+                .fetch_optional(&self.pool)
+                .await?;
+
+            if let Some(row) = existing_memo {
+                Ok(Some(row.get(0)))
+            } else {
+                // Create new memo
+                let result = sqlx::query(sql_queries::MEMO_INSERT)
+                    .bind(user_id)
+                    .bind(memo_text)
+                    .execute(&self.pool)
+                    .await?;
+                Ok(Some(result.last_insert_rowid()))
+            }
+        } else {
+            // Current memo_id is not shared - can reuse or create new
+            self.get_or_create_memo_id(user_id, Some(memo_text)).await
+        }
+    }
+
+    /// Update a single transaction header
+    pub async fn update_transaction_header(
+        &self,
+        user_id: i64,
+        transaction_id: i64,
+        request: SaveTransactionRequest,
+    ) -> Result<(), TransactionError> {
+        // Validate datetime format (YYYY-MM-DD HH:MM:SS)
+        if request.transaction_date.len() != 19 {
+            return Err(TransactionError::ValidationError(
+                "Invalid datetime format. Use YYYY-MM-DD HH:MM:SS".to_string(),
+            ));
+        }
+
+        // Validate amount (0 is allowed)
+        if request.total_amount < 0 || request.total_amount > 999_999_999 {
+            return Err(TransactionError::ValidationError(
+                "Amount must be between 0 and 999,999,999".to_string(),
+            ));
+        }
+
+        // Validate tax rounding type using constants
+        if request.tax_rounding_type != consts::TAX_ROUND_DOWN
+            && request.tax_rounding_type != consts::TAX_ROUND_HALF_UP
+            && request.tax_rounding_type != consts::TAX_ROUND_UP
+        {
+            return Err(TransactionError::ValidationError(
+                "Invalid tax rounding type".to_string(),
+            ));
+        }
+
+        // Get current transaction header to check current memo_id
+        let current_header = self.get_transaction_header(user_id, transaction_id).await?;
+
+        // Get or create memo_id (handles shared memo_id case)
+        let memo_id = self
+            .get_memo_id_for_update(user_id, request.memo.as_deref(), current_header.memo_id)
+            .await?;
+
+        // Update transaction header
+        let result = sqlx::query(sql_queries::TRANSACTION_HEADER_UPDATE)
+            .bind(request.shop_id)
+            .bind(&request.transaction_date)
+            .bind(&request.category1_code)
+            .bind(&request.from_account_code)
+            .bind(&request.to_account_code)
+            .bind(request.total_amount)
+            .bind(request.tax_rounding_type)
+            .bind(request.tax_included_type)
+            .bind(memo_id)
+            .bind(transaction_id)
+            .bind(user_id)
+            .execute(&self.pool)
+            .await?;
+
+        if result.rows_affected() == 0 {
+            return Err(TransactionError::NotFound);
+        }
+
+        Ok(())
+    }
+
+    /// Update multiple transaction headers
+    pub async fn update_transaction_headers(
+        &self,
+        user_id: i64,
+        transactions: Vec<(i64, SaveTransactionRequest)>,
+    ) -> Result<(), TransactionError> {
+        for (transaction_id, request) in transactions {
+            self.update_transaction_header(user_id, transaction_id, request)
+                .await?;
+        }
+        Ok(())
+    }
+
+    /// Get transaction header with related information
+    pub async fn get_transaction_header_with_info(
+        &self,
+        user_id: i64,
+        transaction_id: i64,
+    ) -> Result<TransactionHeaderWithInfo, TransactionError> {
+        let row = sqlx::query(sql_queries::TRANSACTION_HEADER_GET_WITH_INFO)
+            .bind(transaction_id)
+            .bind(user_id)
+            .fetch_optional(&self.pool)
+            .await?;
+
+        match row {
+            Some(row) => Ok(TransactionHeaderWithInfo {
+                transaction_id: row.get("TRANSACTION_ID"),
+                user_id: row.get("USER_ID"),
+                shop_id: row.get("SHOP_ID"),
+                shop_name: row.get("SHOP_NAME"),
+                transaction_date: row.get("TRANSACTION_DATE"),
+                category1_code: row.get("CATEGORY1_CODE"),
+                from_account_code: row.get("FROM_ACCOUNT_CODE"),
+                to_account_code: row.get("TO_ACCOUNT_CODE"),
+                from_account_name: row.get("FROM_ACCOUNT_NAME"),
+                to_account_name: row.get("TO_ACCOUNT_NAME"),
+                total_amount: row.get("TOTAL_AMOUNT"),
+                tax_rounding_type: row.get("TAX_ROUNDING_TYPE"),
+                tax_included_type: row.get("TAX_INCLUDED_TYPE"),
+                memo_id: row.get("MEMO_ID"),
+                memo_text: row.get("MEMO_TEXT"),
+                is_disabled: row.get("IS_DISABLED"),
+                entry_dt: row.get("ENTRY_DT"),
+                update_dt: row.get("UPDATE_DT"),
+            }),
+            None => Err(TransactionError::NotFound),
+        }
+    }
+
+    /// Get transaction details by transaction ID
+    pub async fn get_transaction_details(
+        &self,
+        user_id: i64,
+        transaction_id: i64,
+    ) -> Result<Vec<TransactionDetailWithInfo>, TransactionError> {
+        let rows = sqlx::query(sql_queries::TRANSACTION_DETAIL_GET_WITH_INFO)
+            .bind(transaction_id)
+            .bind(user_id)
+            .fetch_all(&self.pool)
+            .await?;
+
+        let details = rows
+            .iter()
+            .map(|row| TransactionDetailWithInfo {
+                detail_id: row.get("DETAIL_ID"),
+                transaction_id: row.get("TRANSACTION_ID"),
+                user_id: row.get("USER_ID"),
+                category1_code: row.get("CATEGORY1_CODE"),
+                category2_code: row.get("CATEGORY2_CODE"),
+                category3_code: row.get("CATEGORY3_CODE"),
+                category1_name: row.get("CATEGORY1_NAME"),
+                category2_name: row.get("CATEGORY2_NAME"),
+                category3_name: row.get("CATEGORY3_NAME"),
+                item_name: row.get("ITEM_NAME"),
+                amount: row.get("AMOUNT"),
+                tax_amount: row.get("TAX_AMOUNT"),
+                tax_rate: row.get("TAX_RATE"),
+                amount_including_tax: row.get("AMOUNT_INCLUDING_TAX"),
+                memo_id: row.get("MEMO_ID"),
+                memo_text: row.get("MEMO_TEXT"),
+                entry_dt: row.get("ENTRY_DT"),
+                update_dt: row.get("UPDATE_DT"),
+            })
+            .collect();
+
+        Ok(details)
+    }
+
+    /// Add a new transaction detail
+    pub async fn add_transaction_detail(
+        &self,
+        user_id: i64,
+        transaction_id: i64,
+        request: SaveTransactionDetailRequest,
+    ) -> Result<i64, TransactionError> {
+        // Validate item name
+        if request.item_name.trim().is_empty() {
+            return Err(TransactionError::ValidationError(
+                "Item name is required".to_string(),
+            ));
+        }
+
+        if request.item_name.len() > 200 {
+            return Err(TransactionError::ValidationError(
+                "Item name must be 200 characters or less".to_string(),
+            ));
+        }
+
+        // Validate amount
+        if request.amount < 0 || request.amount > 999_999_999 {
+            return Err(TransactionError::ValidationError(
+                "Amount must be between 0 and 999,999,999".to_string(),
+            ));
+        }
+
+        // Validate tax rate
+        if request.tax_rate < 0 || request.tax_rate > 100 {
+            return Err(TransactionError::ValidationError(
+                "Tax rate must be between 0 and 100".to_string(),
+            ));
+        }
+
+        // Validate tax amount
+        if request.tax_amount < 0 {
+            return Err(TransactionError::ValidationError(
+                "Tax amount cannot be negative".to_string(),
+            ));
+        }
+
+        // Save memo if provided
+        let memo_id = if let Some(text) = &request.memo {
+            if !text.trim().is_empty() {
+                if text.len() > 1000 {
+                    return Err(TransactionError::ValidationError(
+                        "Memo must be 1000 characters or less".to_string(),
+                    ));
+                }
+                let result = sqlx::query(sql_queries::MEMO_INSERT)
+                    .bind(user_id)
+                    .bind(text)
+                    .execute(&self.pool)
+                    .await?;
+                Some(result.last_insert_rowid())
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        // Insert detail
+        let result = sqlx::query(sql_queries::TRANSACTION_DETAIL_INSERT_FULL)
+            .bind(transaction_id)
+            .bind(user_id)
+            .bind(&request.category1_code)
+            .bind(&request.category2_code)
+            .bind(&request.category3_code)
+            .bind(&request.item_name)
+            .bind(request.amount)
+            .bind(request.tax_amount)
+            .bind(request.tax_rate)
+            .bind(request.amount_including_tax)
+            .bind(memo_id)
+            .execute(&self.pool)
+            .await?;
+
+        Ok(result.last_insert_rowid())
+    }
+
+    /// Update a transaction detail
+    pub async fn update_transaction_detail(
+        &self,
+        user_id: i64,
+        detail_id: i64,
+        request: SaveTransactionDetailRequest,
+    ) -> Result<(), TransactionError> {
+        // Validate item name
+        if request.item_name.trim().is_empty() {
+            return Err(TransactionError::ValidationError(
+                "Item name is required".to_string(),
+            ));
+        }
+
+        if request.item_name.len() > 200 {
+            return Err(TransactionError::ValidationError(
+                "Item name must be 200 characters or less".to_string(),
+            ));
+        }
+
+        // Validate amount
+        if request.amount < 0 || request.amount > 999_999_999 {
+            return Err(TransactionError::ValidationError(
+                "Amount must be between 0 and 999,999,999".to_string(),
+            ));
+        }
+
+        // Validate tax rate
+        if request.tax_rate < 0 || request.tax_rate > 100 {
+            return Err(TransactionError::ValidationError(
+                "Tax rate must be between 0 and 100".to_string(),
+            ));
+        }
+
+        // Validate tax amount
+        if request.tax_amount < 0 {
+            return Err(TransactionError::ValidationError(
+                "Tax amount cannot be negative".to_string(),
+            ));
+        }
+
+        // Get existing detail to check memo_id
+        let existing: Option<TransactionDetail> = sqlx::query_as(
+            sql_queries::TRANSACTION_DETAIL_GET_BY_ID
+        )
+        .bind(detail_id)
+        .bind(user_id)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        let existing_detail = existing.ok_or(TransactionError::NotFound)?;
+
+        // Handle memo update
+        let memo_id = if let Some(text) = &request.memo {
+            if !text.trim().is_empty() {
+                if text.len() > 1000 {
+                    return Err(TransactionError::ValidationError(
+                        "Memo must be 1000 characters or less".to_string(),
+                    ));
+                }
+                
+                if let Some(old_memo_id) = existing_detail.memo_id {
+                    // Update existing memo
+                    sqlx::query(sql_queries::MEMO_UPDATE)
+                        .bind(text)
+                        .bind(old_memo_id)
+                        .execute(&self.pool)
+                        .await?;
+                    Some(old_memo_id)
+                } else {
+                    // Create new memo
+                    let result = sqlx::query(sql_queries::MEMO_INSERT)
+                        .bind(user_id)
+                        .bind(text)
+                        .execute(&self.pool)
+                        .await?;
+                    Some(result.last_insert_rowid())
+                }
+            } else {
+                // Delete old memo if exists
+                if let Some(old_memo_id) = existing_detail.memo_id {
+                    sqlx::query(sql_queries::MEMO_DELETE)
+                        .bind(old_memo_id)
+                        .execute(&self.pool)
+                        .await?;
+                }
+                None
+            }
+        } else {
+            existing_detail.memo_id
+        };
+
+        // Update detail
+        let result = sqlx::query(sql_queries::TRANSACTION_DETAIL_UPDATE_FULL)
+            .bind(&request.category1_code)
+            .bind(&request.category2_code)
+            .bind(&request.category3_code)
+            .bind(&request.item_name)
+            .bind(request.amount)
+            .bind(request.tax_amount)
+            .bind(request.tax_rate)
+            .bind(request.amount_including_tax)
+            .bind(memo_id)
+            .bind(detail_id)
+            .bind(user_id)
+            .execute(&self.pool)
+            .await?;
+
+        if result.rows_affected() == 0 {
+            return Err(TransactionError::NotFound);
+        }
+
+        Ok(())
+    }
+
+    /// Delete a transaction detail
+    pub async fn delete_transaction_detail(
+        &self,
+        user_id: i64,
+        detail_id: i64,
+    ) -> Result<(), TransactionError> {
+        // Get detail to check if it exists and get memo_id
+        let detail: Option<TransactionDetail> = sqlx::query_as(
+            sql_queries::TRANSACTION_DETAIL_GET_BY_ID
+        )
+        .bind(detail_id)
+        .bind(user_id)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        let detail = detail.ok_or(TransactionError::NotFound)?;
+
+        // Save memo_id for later deletion
+        let memo_id = detail.memo_id;
+
+        // Delete detail first (to release foreign key constraint)
+        let result = sqlx::query(sql_queries::TRANSACTION_DETAIL_DELETE_BY_ID)
+            .bind(detail_id)
+            .bind(user_id)
+            .execute(&self.pool)
+            .await?;
+
+        if result.rows_affected() == 0 {
+            return Err(TransactionError::NotFound);
+        }
+
+        // Delete memo if exists (after detail is deleted)
+        if let Some(memo_id) = memo_id {
+            sqlx::query(sql_queries::MEMO_DELETE)
+                .bind(memo_id)
+                .execute(&self.pool)
+                .await?;
+        }
+
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sqlx::SqlitePool;
+    use crate::{consts, sql_queries};
+
+    async fn setup_test_db() -> SqlitePool {
+        // Create in-memory database
+        let pool = SqlitePool::connect(":memory:")
+            .await
+            .expect("Failed to create test database");
+
+        // Create USERS table
+        sqlx::query(sql_queries::TEST_TRANSACTION_CREATE_USERS_TABLE)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        // Insert test user
+        sqlx::query(sql_queries::TEST_TRANSACTION_INSERT_USER)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        // Create MEMOS table
+        sqlx::query(sql_queries::TEST_TRANSACTION_CREATE_MEMOS_TABLE)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        // Create CATEGORY1 table
+        sqlx::query(sql_queries::TEST_TRANSACTION_CREATE_CATEGORY1_TABLE)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        // Insert test category
+        sqlx::query(sql_queries::TEST_TRANSACTION_INSERT_CATEGORY1)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        // Create ACCOUNTS table
+        sqlx::query(sql_queries::TEST_TRANSACTION_CREATE_ACCOUNTS_TABLE)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        // Insert test accounts
+        sqlx::query(sql_queries::TEST_TRANSACTION_INSERT_ACCOUNT_CASH)
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query(sql_queries::TEST_TRANSACTION_INSERT_ACCOUNT_BANK)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        // Create TRANSACTIONS_HEADER table
+        sqlx::query(sql_queries::TEST_TRANSACTION_CREATE_HEADER_TABLE)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        // Create SHOPS table
+        sqlx::query(sql_queries::TEST_TRANSACTION_CREATE_SHOPS_TABLE)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        pool
+    }
+
+    #[tokio::test]
+    async fn test_save_transaction_header_with_tax_excluded() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+
+        let request = SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "EXPENSE".to_string(),
+            from_account_code: "CASH".to_string(),
+            to_account_code: "BANK".to_string(),
+            transaction_date: "2024-01-01 10:00:00".to_string(),
+            total_amount: 10000,
+            tax_rounding_type: consts::TAX_ROUND_HALF_UP,
+            tax_included_type: consts::TAX_EXCLUDED,
+            memo: Some("Test transaction".to_string()),
+        };
+
+        let result = service.save_transaction_header(2, request).await;
+        assert!(result.is_ok());
+        
+        let transaction_id = result.unwrap();
+        assert!(transaction_id > 0);
+
+        // Verify the transaction was saved with correct tax_included_type
+        let header_result = service.get_transaction_header_with_info(2, transaction_id).await;
+        assert!(header_result.is_ok());
+        
+        let header = header_result.unwrap();
+        assert_eq!(header.tax_included_type, consts::TAX_EXCLUDED);
+        assert_eq!(header.total_amount, 10000);
+    }
+
+    #[tokio::test]
+    async fn test_save_transaction_header_with_tax_included() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+
+        let request = SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "EXPENSE".to_string(),
+            from_account_code: "CASH".to_string(),
+            to_account_code: "BANK".to_string(),
+            transaction_date: "2024-01-01 10:00:00".to_string(),
+            total_amount: 10800,
+            tax_rounding_type: consts::TAX_ROUND_DOWN,
+            tax_included_type: consts::TAX_INCLUDED,
+            memo: Some("Tax included transaction".to_string()),
+        };
+
+        let result = service.save_transaction_header(2, request).await;
+        assert!(result.is_ok());
+        
+        let transaction_id = result.unwrap();
+        
+        // Verify the transaction was saved with correct tax_included_type
+        let header_result = service.get_transaction_header_with_info(2, transaction_id).await;
+        assert!(header_result.is_ok());
+        
+        let header = header_result.unwrap();
+        assert_eq!(header.tax_included_type, consts::TAX_INCLUDED);
+        assert_eq!(header.total_amount, 10800);
+    }
+
+    #[tokio::test]
+    async fn test_update_transaction_header_tax_type() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+
+        // Create initial transaction with tax excluded
+        let initial_request = SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "EXPENSE".to_string(),
+            from_account_code: "CASH".to_string(),
+            to_account_code: "BANK".to_string(),
+            transaction_date: "2024-01-01 10:00:00".to_string(),
+            total_amount: 10000,
+            tax_rounding_type: consts::TAX_ROUND_HALF_UP,
+            tax_included_type: consts::TAX_EXCLUDED,
+            memo: None,
+        };
+
+        let transaction_id = service.save_transaction_header(2, initial_request).await.unwrap();
+
+        // Update to tax included
+        let update_request = SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "EXPENSE".to_string(),
+            from_account_code: "CASH".to_string(),
+            to_account_code: "BANK".to_string(),
+            transaction_date: "2024-01-01 10:00:00".to_string(),
+            total_amount: 10800,
+            tax_rounding_type: consts::TAX_ROUND_HALF_UP,
+            tax_included_type: consts::TAX_INCLUDED,
+            memo: None,
+        };
+
+        let update_result = service.update_transaction_header(2, transaction_id, update_request).await;
+        assert!(update_result.is_ok());
+
+        // Verify the update
+        let header = service.get_transaction_header_with_info(2, transaction_id).await.unwrap();
+        assert_eq!(header.tax_included_type, consts::TAX_INCLUDED);
+        assert_eq!(header.total_amount, 10800);
+    }
+
+    #[tokio::test]
+    async fn test_default_tax_type_is_excluded() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+
+        // Create transaction using default tax type (should be TAX_EXCLUDED = 1)
+        let request = SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "EXPENSE".to_string(),
+            from_account_code: "CASH".to_string(),
+            to_account_code: "BANK".to_string(),
+            transaction_date: "2024-01-01 10:00:00".to_string(),
+            total_amount: 10000,
+            tax_rounding_type: consts::TAX_ROUND_HALF_UP,
+            tax_included_type: consts::TAX_EXCLUDED, // Explicitly set default
+            memo: None,
+        };
+
+        let transaction_id = service.save_transaction_header(2, request).await.unwrap();
+        let header = service.get_transaction_header_with_info(2, transaction_id).await.unwrap();
+        
+        assert_eq!(header.tax_included_type, consts::TAX_EXCLUDED);
+    }
+
+    #[tokio::test]
+    async fn test_tax_type_validation_values() {
+        // Test that our constants match expected values
+        assert_eq!(consts::TAX_INCLUDED, 0, "TAX_INCLUDED should be 0");
+        assert_eq!(consts::TAX_EXCLUDED, 1, "TAX_EXCLUDED should be 1");
+    }
+}
+

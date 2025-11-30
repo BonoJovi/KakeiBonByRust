@@ -2,14 +2,13 @@
 
 <div align="center">
 
-> **A Modern Household Budget App with Focus on Readability and Usability**
+> **A Modern Household Budget App with Focus on Readability and Usability**  
 > **見やすさと使いやすさを追求した、モダンな家計簿アプリケーション**
 
 [![Rust](https://img.shields.io/badge/Rust-1.70+-orange.svg)](https://www.rust-lang.org/)
 [![Tauri](https://img.shields.io/badge/Tauri-v2.9.3-blue.svg)](https://tauri.app/)
-[![Tests](https://img.shields.io/badge/tests-613%20passing-brightgreen.svg)](#test-results--テスト結果)
+[![Tests](https://img.shields.io/badge/tests-527%20passing-brightgreen.svg)](#test-results--テスト結果)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/BonoJovi/KakeiBonByRust/releases)
 
 [🇯🇵 日本語詳細](README_ja.md) | [🇬🇧 English Details](README_en.md)
 
@@ -29,11 +28,13 @@
 **Ver.1.0.0を正式リリースいたしました！**
 
 入出金データの入力機能が完成し、基本的な家計簿アプリケーションとしてご利用いただける状態となりました。
-このmainブランチは正規リリース版です。安定版をお使いになりたい方は、こちらをご利用ください。
+正規リリース版をご利用になりたい方は、[mainブランチ](https://github.com/BonoJovi/KakeiBonByRust/tree/main)をご参照ください。
 
-最新の開発版や次期バージョンの機能を試してみたい方は、[devブランチ](https://github.com/BonoJovi/KakeiBonByRust/tree/dev)をご覧ください。
+現在ご覧いただいているdevブランチは開発版となり、次期バージョンの機能を開発中です。
+最新の機能をいち早く試してみたい方は、こちらのdevブランチをお使いください。
 
-今後も機能拡張を続けていく予定です。GitHubのissueやeメールでのメッセージも受け付けていますので、応援メッセージや将来的に実装してほしい機能など、ちょっとしたことでも良いのでご連絡いただければ幸いです。
+今後は集計・レポート機能の実装を進めていく予定です。細々した機能も追々実装していきますので、機能拡張にご期待いただければと思います。
+GitHubのissueやeメールでのメッセージも受け付けていますので、応援メッセージや将来的に実装してほしい機能など、ちょっとしたことでも良いのでご連絡いただければ幸いです。
 
 それでは、引き続きKakeiBonをご愛顧頂ますよう、お願い申し上げます。
 
@@ -49,11 +50,13 @@ I'm BonoJovi (Yoshihiro NAKAHARA), the project initiator.
 **We have officially released Ver.1.0.0!**
 
 The transaction data input functionality is now complete, and KakeiBon is ready to be used as a basic household budget application.
-This main branch is the stable release version. If you want to use the stable version, please use this branch.
+If you would like to use the stable release version, please refer to the [main branch](https://github.com/BonoJovi/KakeiBonByRust/tree/main).
 
-If you want to try the latest development version or next version features, please check the [dev branch](https://github.com/BonoJovi/KakeiBonByRust/tree/dev).
+The dev branch you are currently viewing is the development version, where we are working on features for the next release.
+If you want to try the latest features early, please use this dev branch.
 
-We will continue to expand features in the future. We welcome messages via GitHub issues or email, whether it's words of encouragement or suggestions for features you'd like to see in the future—any feedback is appreciated.
+We plan to proceed with implementing aggregation and reporting features next. We will continue to add various features incrementally, so please look forward to continuous enhancements.
+We welcome messages via GitHub issues or email, whether it's words of encouragement or suggestions for features you'd like to see in the future—any feedback is appreciated.
 
 Thank you for your continued support of KakeiBon.
 
@@ -65,66 +68,37 @@ Thank you for your continued support of KakeiBon.
 
 ## 📑 Table of Contents / 目次
 
-- [🎉 What's New in Ver.1.0.0 / Ver.1.0.0の新機能](#-whats-new-in-ver100--ver100の新機能)
+- [🚧 Development Status / 開発状況](#-development-status--開発状況)
 - [📊 Repository Statistics / リポジトリ統計](#-repository-statistics--リポジトリ統計)
 - [📚 Legacy Version / 前身プロジェクト](#-legacy-version--前身プロジェクト)
 - [✨ Key Features / 主な特徴](#-key-features--主な特徴)
-- [🚀 Implemented Features / 実装済み機能](#-implemented-features--実装済み機能)
+- [🚀 Current Features / 実装済み機能](#-current-features--実装済み機能)
 - [💻 Technology Stack / 技術スタック](#-technology-stack--技術スタック)
 - [📦 Installation / インストール](#-installation--インストール)
 - [🧪 Test Results / テスト結果](#-test-results--テスト結果)
 - [📚 Documentation / ドキュメント](#-documentation--ドキュメント)
 - [🤝 Contributing / コントリビューション](#-contributing--コントリビューション)
 - [📄 License / ライセンス](#-license--ライセンス)
+- [🌟 Development Roadmap / 開発ロードマップ](#-development-roadmap--開発ロードマップ)
 
 ---
 
-## 🎉 What's New in Ver.1.0.0 / Ver.1.0.0の新機能
+## 🚧 Development Status / 開発状況
 
-**Ver.1.0.0 (2025-11-23) - Initial Stable Release**
+**🔥 Actively Under Development / 鋭意開発中**
 
-### Core Features / コア機能
-- ✅ **Complete Transaction Management** / **完全な入出金管理**
-  - Transaction header and detail CRUD operations
-  - Smart tax calculation with automatic rounding detection
-  - Flexible filtering and pagination
-  - 入出金ヘッダ・明細のCRUD操作
-  - スマート税計算と端数処理自動検出
-  - 柔軟なフィルタリングとページネーション
+Development is progressing smoothly, and we strive to update daily!  
+開発は順調に進んでおり、できるだけ日々更新するようにしています！
 
-- ✅ **Master Data Management** / **マスタデータ管理**
-  - Category management (hierarchical: Major/Middle/Minor)
-  - Account management
-  - Shop management
-  - Manufacturer & Product management
-  - 費目管理（階層的：大分類/中分類/小分類）
-  - 口座管理
-  - 店舗管理
-  - メーカー・商品管理
+**Project Started / プロジェクト開始**: 2025-10-22 (JST)
+**Last Updated / 最終更新**: 2025-11-30 (JST)
 
-- ✅ **User & Security** / **ユーザー・セキュリティ**
-  - Multi-user support (Admin/General users)
-  - Argon2id password hashing
-  - AES-256-GCM data encryption
-  - マルチユーザー対応（管理者/一般ユーザー）
-  - Argon2idパスワードハッシュ化
-  - AES-256-GCMデータ暗号化
-
-- ✅ **Accessibility & i18n** / **アクセシビリティ・国際化**
-  - Full multilingual support (Japanese/English)
-  - Font size customization (10-30px)
-  - Keyboard navigation support
-  - 完全多言語対応（日本語/英語）
-  - フォントサイズカスタマイズ（10-30px）
-  - キーボードナビゲーション対応
-
-### Technical Achievements / 技術的達成
-- 📊 **613 tests** passing (100% success rate)
-- 📝 **~35,478 lines** of code
-- 🌐 **992 i18n resources** (496 unique keys, 2 languages)
-- 🤖 **100% AI-assisted development** (GitHub Copilot + Claude)
-
----
+> **🤖 AI-Assisted Development / AI支援開発**  
+> This project's source code and documentation are **100% generated** with the assistance of generative AI (GitHub Copilot, Claude), supervised and reviewed by the developer. This demonstrates the potential of AI-assisted development.  
+> 本プロジェクトのソースコードおよびドキュメントは、生成AI（GitHub Copilot、Claude）の支援により**100%生成**され、開発者による監修とレビューを経ています。これは、AI支援開発の可能性を示す事例です。
+> 
+> 📊 **[See AI Development Metrics & Quality Analysis →](docs/AI_DEVELOPMENT_METRICS.md)**  
+> **[AI開発の生産性と品質分析を見る →](docs/AI_DEVELOPMENT_METRICS.md)**
 
 <!-- STATS_START -->
 ## 📊 Repository Statistics / リポジトリ統計
@@ -141,10 +115,10 @@ Thank you for your continued support of KakeiBon.
 
 | Metric | Count |
 |--------|-------|
-| 👁️ **Total Views** / 総閲覧数 | **583** |
-| 📦 **Total Clones** / 総クローン数 | **170** |
+| 👁️ **Total Views** / 総閲覧数 | **660** |
+| 📦 **Total Clones** / 総クローン数 | **214** |
 
-*Last Updated / 最終更新: 2025-11-22 00:07 UTC*
+*Last Updated / 最終更新: 2025-11-30 12:09 UTC*
 
 </div>
 <!-- STATS_END -->
@@ -157,7 +131,7 @@ Thank you for your continued support of KakeiBon.
 
 👉 **[KakeiBon (Original)](https://github.com/BonoJovi/KakeiBon)** - すぐに使える完成版！
 
-The original KakeiBon is a **fully functional household budget app** ready to use right now!
+The original KakeiBon is a **fully functional household budget app** ready to use right now!  
 元祖KakeiBonは、**今すぐ使える完成版の家計簿アプリ**です！
 
 **Key Differences / 主な違い:**
@@ -183,31 +157,40 @@ This Rust rewrite offers:
 ## ✨ Key Features / 主な特徴
 
 ### 🎨 NOT Vibe Coding / NOTバイブコーディング
-Built with **proper planning and documentation first**, not vibes
+Built with **proper planning and documentation first**, not vibes  
 雰囲気ではなく、**きちんとした計画とドキュメント作成**を先に行う開発スタイル
 
 ### 👤 Clear User-First Policy / 明確なユーザーファーストポリシーによる設計
-Every feature is designed with **explicit user needs and usability** in mind
+Every feature is designed with **explicit user needs and usability** in mind  
 すべての機能は**明確なユーザーニーズと使いやすさ**を念頭に置いて設計されています
 
 ### 🔤 Large, Easy-to-Read Text / 大きな文字で見やすい
-Designed with high visibility in mind - comfortable for long-term use
+Designed with high visibility in mind - comfortable for long-term use  
 視認性を重視した設計で、長時間の使用でも目が疲れにくい
 
+### 🏗️ Enterprise-Grade Architecture / エンタープライズグレードのアーキテクチャ
+**Session-Based Authentication** throughout all 52 API functions  
+**セッションベース認証**を全52個のAPI関数で実装
+
+- 🔐 **Secure Session Management** / セキュアなセッション管理
+- 👥 **User Isolation** / ユーザーデータの完全分離
+- ✅ **Zero Hardcoded User IDs** / ハードコードされたユーザーID排除
+- 🧪 **527 Tests (100% Pass)** / 527テスト（100%合格）
+
 ### 🎯 Intuitive User Interface / 直感的な操作性
-Simple and clear UI that anyone can master quickly
+Simple and clear UI that anyone can master quickly  
 誰でもすぐに使いこなせる、シンプルで分かりやすいUI
 
 ### ♿ Accessibility Support / アクセシビリティ対応
-- **Font Size Adjustment**: Small/Medium/Large/Custom (10-30px)
+- **Font Size Adjustment**: Small/Medium/Large/Custom (10-30px)  
   **フォントサイズ調整**: 小/中/大/カスタム（10-30px）
-- **Keyboard Navigation**: Fully supported
+- **Keyboard Navigation**: Fully supported  
   **キーボードナビゲーション**: 完全対応
-- **Focus Indicators**: Clear visual feedback
+- **Focus Indicators**: Clear visual feedback  
   **フォーカスインジケーター**: 明確な視覚フィードバック
 
 ### 🌐 Multilingual Support / 多言語対応
-Switch between Japanese and English seamlessly
+Switch between Japanese and English seamlessly  
 日本語・英語の切り替えが可能
 
 ### 🔒 Strong Security / 強固なセキュリティ
@@ -217,7 +200,7 @@ Switch between Japanese and English seamlessly
 
 ---
 
-## 🚀 Implemented Features / 実装済み機能
+## 🚀 Current Features / 実装済み機能
 
 | Feature / 機能 | Description / 説明 | Status / ステータス |
 |----------------|-------------------|---------------------|
@@ -232,6 +215,7 @@ Switch between Japanese and English seamlessly
 | 🔧 **Customization**<br/>**カスタマイズ** | Font size, language preferences<br/>フォントサイズ、言語設定 | ✅ Complete<br/>完成 |
 | 📝 **Transaction Management**<br/>**入出金管理** | Header-level CRUD, filters, pagination<br/>ヘッダレベルCRUD、フィルター、ページネーション | ✅ Complete<br/>完成 |
 | 🧾 **Transaction Details**<br/>**入出金明細** | CRUD operations with smart tax calculation, automatic rounding detection<br/>スマート税計算付きCRUD操作、端数処理自動検出 | ✅ Complete<br/>完成 |
+| 📊 **Reports**<br/>**集計・レポート** | Monthly/annual summaries, graphs<br/>月次・年次レポート、グラフ | 🚧 In Progress<br/>開発中 |
 
 ---
 
@@ -243,7 +227,7 @@ Switch between Japanese and English seamlessly
 | **Backend** / **バックエンド** | Rust + Tauri | v2.8.5 |
 | **Database** / **データベース** | SQLite | WAL mode |
 | **Security** / **セキュリティ** | Argon2id + AES-256-GCM | Password hashing + Data encryption |
-| **Testing** / **テスト** | Jest + Cargo Test | 613 tests passing (Rust: 201, JS: 412) |
+| **Testing** / **テスト** | Jest + Cargo Test | 527 tests passing (Rust: 201, JS: 326) |
 | **i18n Resources** / **翻訳** | JSON-based | 992 resources (496 unique keys, 2 languages) |
 | **Code Lines** / **コード行数** | Total / 合計 | ~35,478 lines (Rust: 13,870, JS: 8,810, HTML: 3,355, CSS: 6,109, SQL: 3,334) |
 
@@ -274,11 +258,29 @@ cargo tauri build
 ## 🧪 Test Results / テスト結果
 
 ```
-Backend (Rust) / バックエンド:    201 passing
-Frontend (JavaScript) / フロント:  412 passing
-Total Tests / 総テスト数:          613 passing ✅
+Backend (Rust) / バックエンド:    201 passing ✅
+Frontend (JavaScript) / フロント:  326 passing ✅
+Total Tests / 総テスト数:          527 passing ✅
 Success Rate / 成功率:            100%
 ```
+
+**Recent Improvements / 最近の改善**:
+- ✅ **Session Management Integration** / **セッション管理統合** (2025-11-30)
+  - All 52 API functions now use session-based authentication
+  - Enhanced security with proper user isolation
+  - Removed hardcoded user IDs throughout the codebase
+
+- ✅ **Test Quality Enhancement** / **テスト品質向上** (2025-11-30)
+  - Added explicit assertions to delegated tests
+  - Improved test readability and maintainability
+  - Enterprise-grade test structure achieved
+
+**Test Count Methodology / テスト件数計測方法** (Updated 2025-11-30):
+- **Previous count (613)**: Included nested `describe` blocks and test structure
+- **Current count (527)**: Counts only actual executable test cases
+- **Reason for change / 変更理由**: Improved accuracy and industry-standard methodology
+- **Note / 注意**: No tests were removed; this is purely a measurement refinement
+  テストは削除されておらず、計測方法の精密化のみです
 
 See [TEST_SUMMARY.md](docs/ja/TEST_SUMMARY.md) for details / 詳細は [TEST_SUMMARY.md](docs/ja/TEST_SUMMARY.md) を参照
 
@@ -367,11 +369,11 @@ See [TEST_SUMMARY.md](docs/ja/TEST_SUMMARY.md) for details / 詳細は [TEST_SUM
 Contributions are welcome! / プルリクエストを歓迎します！
 
 1. Fork this repository / このリポジトリをフォーク
-2. Create a feature branch / フィーチャーブランチを作成
+2. Create a feature branch / フィーチャーブランチを作成  
    `git checkout -b feature/AmazingFeature`
-3. Commit your changes / 変更をコミット
+3. Commit your changes / 変更をコミット  
    `git commit -m 'Add some AmazingFeature'`
-4. Push to the branch / ブランチにプッシュ
+4. Push to the branch / ブランチにプッシュ  
    `git push origin feature/AmazingFeature`
 5. Open a Pull Request / プルリクエストを開く
 
@@ -381,8 +383,21 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for details / 詳細は [CONTRIBUTING.md]
 
 ## 📄 License / ライセンス
 
-This project is licensed under the terms in the [LICENSE](LICENSE) file.
+This project is licensed under the terms in the [LICENSE](LICENSE) file.  
 このプロジェクトは [LICENSE](LICENSE) の下でライセンスされています。
+
+---
+
+## 🌟 Development Roadmap / 開発ロードマップ
+
+- [x] User management / ユーザー管理機能
+- [x] Category management / 費目管理機能
+- [x] Multilingual support / 多言語対応
+- [x] Accessibility features / アクセシビリティ機能
+- [x] Transaction management / 入出金データ管理
+- [x] Monthly/annual reports / 月次・年次集計
+- [ ] Data export (CSV) / データエクスポート（CSV）
+- [ ] Backup & restore / バックアップ・リストア
 
 ---
 
@@ -390,8 +405,6 @@ This project is licensed under the terms in the [LICENSE](LICENSE) file.
 
 **Made with ❤️ and Rust**
 
-**Ver.1.0.0 Stable Release**
-
-[Report Bug / バグ報告](https://github.com/BonoJovi/KakeiBonByRust/issues) · [Request Feature / 機能リクエスト](https://github.com/BonoJovi/KakeiBonByRust/issues) · [Development Version / 開発版](https://github.com/BonoJovi/KakeiBonByRust/tree/dev)
+[Report Bug / バグ報告](https://github.com/BonoJovi/KakeiBonByRust/issues) · [Request Feature / 機能リクエスト](https://github.com/BonoJovi/KakeiBonByRust/issues)
 
 </div>

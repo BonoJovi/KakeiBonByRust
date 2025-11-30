@@ -1,0 +1,108 @@
+/* Indicator styles for active elements */
+/* This file contains common indicator styles used across the application */
+
+/* Dropdown item indicator (circle) */
+.dropdown-item::before {
+    content: '';
+    display: inline-block;
+    width: 0.75em;   /* Scaled relative to font size */
+    height: 0.75em;  /* Scaled relative to font size */
+    border-radius: 50%;
+    border: 2px solid #666;
+    background-color: transparent;
+    flex-shrink: 0;
+}
+
+.dropdown-item.active::before {
+    background-color: #4CAF50;
+    border-color: #000;  /* Black border for better contrast and visibility for color-blind users */
+    border-width: 2px;
+}
+
+/* Form field wrapper for indicator */
+.form-group .input-wrapper {
+    display: flex;
+    align-items: center;  /* Vertical center alignment */
+    gap: 0.5rem;
+    margin: 0;  /* Remove any default margins */
+    padding: 0;  /* Remove any default padding */
+}
+
+/* Active field indicator (filled circle) - using flexbox for perfect centering */
+.form-group.active .input-wrapper::before {
+    content: '●';
+    color: #4CAF50;
+    font-size: 2em;  /* Significantly larger for visibility */
+    line-height: 1;
+    flex-shrink: 0;  /* Don't shrink */
+    /* Black outline for better visibility for color-blind users */
+    text-shadow: 
+        -2px -2px 0 #000,
+         2px -2px 0 #000,
+        -2px  2px 0 #000,
+         2px  2px 0 #000,
+        -2px  0   0 #000,
+         2px  0   0 #000,
+         0   -2px 0 #000,
+         0    2px 0 #000;
+}
+
+/* Focus indicator for all buttons - unified double border style (white + black) */
+button:focus,
+.btn-primary:focus,
+.btn-secondary:focus,
+.btn-danger:focus,
+.btn-small:focus,
+.btn-edit:focus,
+.btn-delete:focus,
+.close-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px white, 0 0 0 4px #000;
+}
+
+/* Alternative: underline indicator for focused buttons */
+.btn-primary.focus-indicator,
+.btn-secondary.focus-indicator,
+.btn-danger.focus-indicator {
+    position: relative;
+}
+
+.btn-primary.focus-indicator:focus::after,
+.btn-secondary.focus-indicator:focus::after,
+.btn-danger.focus-indicator:focus::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 10%;
+    right: 10%;
+    height: 3px;
+    background-color: #2e7d32;
+    border-radius: 2px;
+}
+
+/* Checkbox/Radio label indicator */
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+}
+
+.checkbox-label.active::before {
+    content: '●';
+    color: #4CAF50;
+    font-size: 2em;
+    line-height: 1;
+    flex-shrink: 0;
+    margin-right: 0.5rem;
+    /* Black outline for better visibility for color-blind users */
+    text-shadow: 
+        -2px -2px 0 #000,
+         2px -2px 0 #000,
+        -2px  2px 0 #000,
+         2px  2px 0 #000,
+        -2px  0   0 #000,
+         2px  0   0 #000,
+         0   -2px 0 #000,
+         0    2px 0 #000;
+}

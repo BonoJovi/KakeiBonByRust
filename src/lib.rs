@@ -1,20 +1,3 @@
-<<<<<<< HEAD
-#[cfg_attr(mobile, tauri::mobile_entry_point)]
-pub fn run() {
-  tauri::Builder::default()
-    .setup(|app| {
-      if cfg!(debug_assertions) {
-        app.handle().plugin(
-          tauri_plugin_log::Builder::default()
-            .level(log::LevelFilter::Info)
-            .build(),
-        )?;
-      }
-      Ok(())
-    })
-    .run(tauri::generate_context!())
-    .expect("error while running tauri application");
-=======
 mod db;
 mod validation;
 mod consts;
@@ -71,6 +54,15 @@ pub struct AppState {
     pub category: Arc<Mutex<CategoryService>>,
     pub transaction: Arc<Mutex<TransactionService>>,
     pub session: Arc<SessionState>,
+}
+
+/// Helper function to get user_id from session
+/// Returns error if user is not authenticated
+fn get_session_user_id(state: &tauri::State<'_, AppState>) -> Result<i64, String> {
+    match state.session.get_user() {
+        Some(user) => Ok(user.user_id),
+        None => Err("User not authenticated. Please login first.".to_string()),
+    }
 }
 
 #[tauri::command]
@@ -294,6 +286,8 @@ async fn get_user(
     user_id: i64,
     state: tauri::State<'_, AppState>
 ) -> Result<serde_json::Value, String> {
+    // Note: This function keeps user_id parameter as it's used for admin to query other users
+    // If querying self, frontend should pass session user_id
     let user_mgmt = state.user_mgmt.lock().await;
     
     match user_mgmt.get_user(user_id).await {
@@ -334,11 +328,11 @@ async fn create_general_user(
 
 #[tauri::command]
 async fn update_general_user_info(
-    user_id: i64,
     username: Option<String>,
     password: Option<String>,
     state: tauri::State<'_, AppState>
 ) -> Result<(), String> {
+    let user_id = get_session_user_id(&state)?;
     if let Some(ref pwd) = password {
         validate_password(pwd)?;
     }
@@ -357,12 +351,12 @@ async fn update_general_user_info(
 
 #[tauri::command]
 async fn update_general_user_with_reencryption(
-    user_id: i64,
     old_password: String,
     username: Option<String>,
     new_password: Option<String>,
     state: tauri::State<'_, AppState>
 ) -> Result<(), String> {
+    let user_id = get_session_user_id(&state)?;
     if let Some(ref pwd) = new_password {
         validate_password(pwd)?;
     }
@@ -382,11 +376,11 @@ async fn update_general_user_with_reencryption(
 
 #[tauri::command]
 async fn update_admin_user_info(
-    user_id: i64,
     username: Option<String>,
     password: Option<String>,
     state: tauri::State<'_, AppState>
 ) -> Result<(), String> {
+    let user_id = get_session_user_id(&state)?;
     if let Some(ref pwd) = password {
         validate_password(pwd)?;
     }
@@ -405,12 +399,12 @@ async fn update_admin_user_info(
 
 #[tauri::command]
 async fn update_admin_user_with_reencryption(
-    user_id: i64,
     old_password: String,
     username: Option<String>,
     new_password: Option<String>,
     state: tauri::State<'_, AppState>
 ) -> Result<(), String> {
+    let user_id = get_session_user_id(&state)?;
     if let Some(ref pwd) = new_password {
         validate_password(pwd)?;
     }
@@ -433,6 +427,7 @@ async fn delete_general_user_info(
     user_id: i64,
     state: tauri::State<'_, AppState>
 ) -> Result<(), String> {
+    // Note: This function keeps user_id parameter as it's used for admin to delete other users
     let user_mgmt = state.user_mgmt.lock().await;
     
     match user_mgmt.delete_general_user(user_id).await {
@@ -818,10 +813,10 @@ async fn adjust_window_size(
 
 #[tauri::command]
 async fn get_category_tree_with_lang(
-    user_id: i64,
     lang_code: String,
     state: tauri::State<'_, AppState>
 ) -> Result<serde_json::Value, String> {
+    let user_id = get_session_user_id(&state)?;
     let category = state.category.lock().await;
     
     category.get_category_tree(user_id, &lang_code)
@@ -831,12 +826,12 @@ async fn get_category_tree_with_lang(
 
 #[tauri::command]
 async fn add_category2(
-    user_id: i64,
     category1_code: String,
     name_ja: String,
     name_en: String,
     state: tauri::State<'_, AppState>
 ) -> Result<String, String> {
+    let user_id = get_session_user_id(&state)?;
     let category = state.category.lock().await;
     
     category.add_category2(user_id, &category1_code, &name_ja, &name_en)
@@ -846,13 +841,13 @@ async fn add_category2(
 
 #[tauri::command]
 async fn add_category3(
-    user_id: i64,
     category1_code: String,
     category2_code: String,
     name_ja: String,
     name_en: String,
     state: tauri::State<'_, AppState>
 ) -> Result<String, String> {
+    let user_id = get_session_user_id(&state)?;
     let category = state.category.lock().await;
     
     category.add_category3(user_id, &category1_code, &category2_code, &name_ja, &name_en)
@@ -862,11 +857,11 @@ async fn add_category3(
 
 #[tauri::command]
 async fn get_category2_for_edit(
-    user_id: i64,
     category1_code: String,
     category2_code: String,
     state: tauri::State<'_, AppState>
 ) -> Result<services::category::CategoryForEdit, String> {
+    let user_id = get_session_user_id(&state)?;
     let category = state.category.lock().await;
     category.get_category2_for_edit(user_id, &category1_code, &category2_code)
         .await
@@ -875,12 +870,12 @@ async fn get_category2_for_edit(
 
 #[tauri::command]
 async fn get_category3_for_edit(
-    user_id: i64,
     category1_code: String,
     category2_code: String,
     category3_code: String,
     state: tauri::State<'_, AppState>
 ) -> Result<services::category::CategoryForEdit, String> {
+    let user_id = get_session_user_id(&state)?;
     let category = state.category.lock().await;
     category.get_category3_for_edit(user_id, &category1_code, &category2_code, &category3_code)
         .await
@@ -889,13 +884,13 @@ async fn get_category3_for_edit(
 
 #[tauri::command]
 async fn update_category2(
-    user_id: i64,
     category1_code: String,
     category2_code: String,
     name_ja: String,
     name_en: String,
     state: tauri::State<'_, AppState>
 ) -> Result<(), String> {
+    let user_id = get_session_user_id(&state)?;
     let category = state.category.lock().await;
     category.update_category2_i18n(user_id, &category1_code, &category2_code, &name_ja, &name_en)
         .await
@@ -904,7 +899,6 @@ async fn update_category2(
 
 #[tauri::command]
 async fn update_category3(
-    user_id: i64,
     category1_code: String,
     category2_code: String,
     category3_code: String,
@@ -912,6 +906,7 @@ async fn update_category3(
     name_en: String,
     state: tauri::State<'_, AppState>
 ) -> Result<(), String> {
+    let user_id = get_session_user_id(&state)?;
     let category = state.category.lock().await;
     category.update_category3_i18n(user_id, &category1_code, &category2_code, &category3_code, &name_ja, &name_en)
         .await
@@ -920,11 +915,11 @@ async fn update_category3(
 
 #[tauri::command]
 async fn move_category2_up(
-    user_id: i64,
     category1_code: String,
     category2_code: String,
     state: tauri::State<'_, AppState>
 ) -> Result<(), String> {
+    let user_id = get_session_user_id(&state)?;
     let category = state.category.lock().await;
     category.move_category2_up(user_id, &category1_code, &category2_code)
         .await
@@ -933,11 +928,11 @@ async fn move_category2_up(
 
 #[tauri::command]
 async fn move_category2_down(
-    user_id: i64,
     category1_code: String,
     category2_code: String,
     state: tauri::State<'_, AppState>
 ) -> Result<(), String> {
+    let user_id = get_session_user_id(&state)?;
     let category = state.category.lock().await;
     category.move_category2_down(user_id, &category1_code, &category2_code)
         .await
@@ -946,12 +941,12 @@ async fn move_category2_down(
 
 #[tauri::command]
 async fn move_category3_up(
-    user_id: i64,
     category1_code: String,
     category2_code: String,
     category3_code: String,
     state: tauri::State<'_, AppState>
 ) -> Result<(), String> {
+    let user_id = get_session_user_id(&state)?;
     let category = state.category.lock().await;
     category.move_category3_up(user_id, &category1_code, &category2_code, &category3_code)
         .await
@@ -960,12 +955,12 @@ async fn move_category3_up(
 
 #[tauri::command]
 async fn move_category3_down(
-    user_id: i64,
     category1_code: String,
     category2_code: String,
     category3_code: String,
     state: tauri::State<'_, AppState>
 ) -> Result<(), String> {
+    let user_id = get_session_user_id(&state)?;
     let category = state.category.lock().await;
     category.move_category3_down(user_id, &category1_code, &category2_code, &category3_code)
         .await
@@ -978,7 +973,6 @@ async fn move_category3_down(
 
 #[tauri::command]
 async fn add_transaction(
-    user_id: i64,
     transaction_date: String,
     category1_code: String,
     category2_code: String,
@@ -988,6 +982,7 @@ async fn add_transaction(
     memo: Option<String>,
     state: tauri::State<'_, AppState>
 ) -> Result<i64, String> {
+    let user_id = get_session_user_id(&state)?;
     let transaction = state.transaction.lock().await;
     transaction.add_transaction(
         user_id,
@@ -1005,10 +1000,10 @@ async fn add_transaction(
 
 #[tauri::command]
 async fn get_transaction(
-    user_id: i64,
     transaction_id: i64,
     state: tauri::State<'_, AppState>
 ) -> Result<services::transaction::Transaction, String> {
+    let user_id = get_session_user_id(&state)?;
     let transaction = state.transaction.lock().await;
     transaction.get_transaction(user_id, transaction_id)
         .await
@@ -1017,7 +1012,6 @@ async fn get_transaction(
 
 #[tauri::command]
 async fn get_transactions(
-    user_id: i64,
     start_date: Option<String>,
     end_date: Option<String>,
     category1_code: Option<String>,
@@ -1030,6 +1024,7 @@ async fn get_transactions(
     per_page: i64,
     state: tauri::State<'_, AppState>
 ) -> Result<services::transaction::TransactionListResponse, String> {
+    let user_id = get_session_user_id(&state)?;
     let transaction = state.transaction.lock().await;
     transaction.get_transactions(
         user_id,
@@ -1050,7 +1045,6 @@ async fn get_transactions(
 
 #[tauri::command]
 async fn update_transaction(
-    user_id: i64,
     transaction_id: i64,
     transaction_date: String,
     category1_code: String,
@@ -1061,6 +1055,7 @@ async fn update_transaction(
     memo: Option<String>,
     state: tauri::State<'_, AppState>
 ) -> Result<(), String> {
+    let user_id = get_session_user_id(&state)?;
     let transaction = state.transaction.lock().await;
     transaction.update_transaction(
         user_id,
@@ -1079,10 +1074,10 @@ async fn update_transaction(
 
 #[tauri::command]
 async fn delete_transaction(
-    user_id: i64,
     transaction_id: i64,
     state: tauri::State<'_, AppState>
 ) -> Result<(), String> {
+    let user_id = get_session_user_id(&state)?;
     let transaction = state.transaction.lock().await;
     transaction.delete_transaction(user_id, transaction_id)
         .await
@@ -1103,10 +1098,13 @@ async fn get_account_templates(
 
 #[tauri::command]
 async fn get_accounts(
-    user_id: i64,
-    user_role: i64,
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::account::Account>, String> {
+    let session_user = state.session.get_user()
+        .ok_or("User not authenticated. Please login first.".to_string())?;
+    let user_id = session_user.user_id;
+    let user_role = session_user.role;
+    
     let db = state.db.lock().await;
     
     // Admin (role 0) can see all accounts, regular users see only their own
@@ -1119,13 +1117,13 @@ async fn get_accounts(
 
 #[tauri::command]
 async fn add_account(
-    user_id: i64,
     account_code: String,
     account_name: String,
     template_code: String,
     initial_balance: i64,
     state: tauri::State<'_, AppState>
 ) -> Result<String, String> {
+    let user_id = get_session_user_id(&state)?;
     let db = state.db.lock().await;
     
     let request = services::account::AddAccountRequest {
@@ -1140,7 +1138,6 @@ async fn add_account(
 
 #[tauri::command]
 async fn update_account(
-    user_id: i64,
     account_code: String,
     account_name: String,
     template_code: String,
@@ -1148,6 +1145,7 @@ async fn update_account(
     display_order: i64,
     state: tauri::State<'_, AppState>
 ) -> Result<String, String> {
+    let user_id = get_session_user_id(&state)?;
     let db = state.db.lock().await;
     
     let request = services::account::UpdateAccountRequest {
@@ -1163,10 +1161,10 @@ async fn update_account(
 
 #[tauri::command]
 async fn delete_account(
-    user_id: i64,
     account_code: String,
     state: tauri::State<'_, AppState>
 ) -> Result<String, String> {
+    let user_id = get_session_user_id(&state)?;
     let db = state.db.lock().await;
     
     services::account::delete_account(db.pool(), user_id, &account_code).await
@@ -1178,20 +1176,20 @@ async fn delete_account(
 
 #[tauri::command]
 async fn get_shops(
-    user_id: i64,
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::shop::Shop>, String> {
+    let user_id = get_session_user_id(&state)?;
     let db = state.db.lock().await;
     services::shop::get_shops(db.pool(), user_id).await
 }
 
 #[tauri::command]
 async fn add_shop(
-    user_id: i64,
     shop_name: String,
     memo: Option<String>,
     state: tauri::State<'_, AppState>
 ) -> Result<String, String> {
+    let user_id = get_session_user_id(&state)?;
     let db = state.db.lock().await;
 
     let request = services::shop::AddShopRequest {
@@ -1204,13 +1202,13 @@ async fn add_shop(
 
 #[tauri::command]
 async fn update_shop(
-    user_id: i64,
     shop_id: i64,
     shop_name: String,
     memo: Option<String>,
     display_order: i64,
     state: tauri::State<'_, AppState>
 ) -> Result<String, String> {
+    let user_id = get_session_user_id(&state)?;
     let db = state.db.lock().await;
 
     let request = services::shop::UpdateShopRequest {
@@ -1224,10 +1222,10 @@ async fn update_shop(
 
 #[tauri::command]
 async fn delete_shop(
-    user_id: i64,
     shop_id: i64,
     state: tauri::State<'_, AppState>
 ) -> Result<String, String> {
+    let user_id = get_session_user_id(&state)?;
     let db = state.db.lock().await;
     services::shop::delete_shop(db.pool(), user_id, shop_id).await
 }
@@ -1238,22 +1236,22 @@ async fn delete_shop(
 
 #[tauri::command]
 async fn get_manufacturers(
-    user_id: i64,
     include_disabled: bool,
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::manufacturer::Manufacturer>, String> {
+    let user_id = get_session_user_id(&state)?;
     let db = state.db.lock().await;
     services::manufacturer::get_manufacturers(db.pool(), user_id, include_disabled).await
 }
 
 #[tauri::command]
 async fn add_manufacturer(
-    user_id: i64,
     manufacturer_name: String,
     memo: Option<String>,
     is_disabled: Option<i64>,
     state: tauri::State<'_, AppState>
 ) -> Result<String, String> {
+    let user_id = get_session_user_id(&state)?;
     let db = state.db.lock().await;
 
     let request = services::manufacturer::AddManufacturerRequest {
@@ -1267,7 +1265,6 @@ async fn add_manufacturer(
 
 #[tauri::command]
 async fn update_manufacturer(
-    user_id: i64,
     manufacturer_id: i64,
     manufacturer_name: String,
     memo: Option<String>,
@@ -1275,6 +1272,7 @@ async fn update_manufacturer(
     is_disabled: i64,
     state: tauri::State<'_, AppState>
 ) -> Result<String, String> {
+    let user_id = get_session_user_id(&state)?;
     let db = state.db.lock().await;
 
     let request = services::manufacturer::UpdateManufacturerRequest {
@@ -1289,10 +1287,10 @@ async fn update_manufacturer(
 
 #[tauri::command]
 async fn delete_manufacturer(
-    user_id: i64,
     manufacturer_id: i64,
     state: tauri::State<'_, AppState>
 ) -> Result<String, String> {
+    let user_id = get_session_user_id(&state)?;
     let db = state.db.lock().await;
     services::manufacturer::delete_manufacturer(db.pool(), user_id, manufacturer_id).await
 }
@@ -1303,23 +1301,23 @@ async fn delete_manufacturer(
 
 #[tauri::command]
 async fn get_products(
-    user_id: i64,
     include_disabled: bool,
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::product::Product>, String> {
+    let user_id = get_session_user_id(&state)?;
     let db = state.db.lock().await;
     services::product::get_products(db.pool(), user_id, include_disabled).await
 }
 
 #[tauri::command]
 async fn add_product(
-    user_id: i64,
     product_name: String,
     manufacturer_id: Option<i64>,
     memo: Option<String>,
     is_disabled: Option<i64>,
     state: tauri::State<'_, AppState>
 ) -> Result<String, String> {
+    let user_id = get_session_user_id(&state)?;
     let db = state.db.lock().await;
 
     let request = services::product::AddProductRequest {
@@ -1334,7 +1332,6 @@ async fn add_product(
 
 #[tauri::command]
 async fn update_product(
-    user_id: i64,
     product_id: i64,
     product_name: String,
     manufacturer_id: Option<i64>,
@@ -1343,6 +1340,7 @@ async fn update_product(
     is_disabled: i64,
     state: tauri::State<'_, AppState>
 ) -> Result<String, String> {
+    let user_id = get_session_user_id(&state)?;
     let db = state.db.lock().await;
 
     let request = services::product::UpdateProductRequest {
@@ -1358,10 +1356,10 @@ async fn update_product(
 
 #[tauri::command]
 async fn delete_product(
-    user_id: i64,
     product_id: i64,
     state: tauri::State<'_, AppState>
 ) -> Result<String, String> {
+    let user_id = get_session_user_id(&state)?;
     let db = state.db.lock().await;
     services::product::delete_product(db.pool(), user_id, product_id).await
 }
@@ -1372,7 +1370,6 @@ async fn delete_product(
 
 #[tauri::command]
 async fn save_transaction_header(
-    user_id: i64,
     shop_id: Option<i64>,
     category1_code: String,
     from_account_code: String,
@@ -1384,6 +1381,7 @@ async fn save_transaction_header(
     memo: Option<String>,
     state: tauri::State<'_, AppState>
 ) -> Result<i64, String> {
+    let user_id = get_session_user_id(&state)?;
     let transaction = state.transaction.lock().await;
 
     let request = services::transaction::SaveTransactionRequest {
@@ -1408,9 +1406,9 @@ async fn get_transaction_header(
     state: tauri::State<'_, AppState>
 ) -> Result<serde_json::Value, String> {
     let transaction = state.transaction.lock().await;
-    // TODO: Get user_id from session/auth
-    // For now, use user_id = 2 to match frontend currentUserId
-    let user_id = 2;
+    // Get user_id from session
+    // Get user_id from session
+    let user_id = get_session_user_id(&state)?;
     
     let (header, memo_text) = transaction.get_transaction_header_with_memo(user_id, transaction_id).await
         .map_err(|e| e.to_string())?;
@@ -1439,9 +1437,9 @@ async fn select_transaction_headers(
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::transaction::TransactionHeader>, String> {
     let transaction = state.transaction.lock().await;
-    // TODO: Get user_id from session/auth
-    // For now, use user_id = 2 to match frontend currentUserId
-    let user_id = 2;
+    // Get user_id from session
+    // Get user_id from session
+    let user_id = get_session_user_id(&state)?;
     
     let mut headers = Vec::new();
     for transaction_id in transaction_ids {
@@ -1468,9 +1466,9 @@ async fn update_transaction_header(
     state: tauri::State<'_, AppState>
 ) -> Result<(), String> {
     let transaction = state.transaction.lock().await;
-    // TODO: Get user_id from session/auth
-    // For now, use user_id = 2 to match frontend currentUserId
-    let user_id = 2;
+    // Get user_id from session
+    // Get user_id from session
+    let user_id = get_session_user_id(&state)?;
 
     let request = services::transaction::SaveTransactionRequest {
         shop_id,
@@ -1498,8 +1496,8 @@ async fn get_transaction_header_with_info(
     state: tauri::State<'_, AppState>
 ) -> Result<services::transaction::TransactionHeaderWithInfo, String> {
     let transaction = state.transaction.lock().await;
-    // TODO: Get user_id from session/auth
-    let user_id = 2;
+    // Get user_id from session
+    let user_id = get_session_user_id(&state)?;
 
     transaction.get_transaction_header_with_info(user_id, transaction_id).await
         .map_err(|e| e.to_string())
@@ -1511,8 +1509,8 @@ async fn get_transaction_details(
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::transaction::TransactionDetailWithInfo>, String> {
     let transaction = state.transaction.lock().await;
-    // TODO: Get user_id from session/auth
-    let user_id = 2;
+    // Get user_id from session
+    let user_id = get_session_user_id(&state)?;
 
     transaction.get_transaction_details(user_id, transaction_id).await
         .map_err(|e| e.to_string())
@@ -1533,8 +1531,8 @@ async fn add_transaction_detail(
     state: tauri::State<'_, AppState>
 ) -> Result<i64, String> {
     let transaction = state.transaction.lock().await;
-    // TODO: Get user_id from session/auth
-    let user_id = 2;
+    // Get user_id from session
+    let user_id = get_session_user_id(&state)?;
 
     let request = services::transaction::SaveTransactionDetailRequest {
         detail_id: None,
@@ -1568,8 +1566,8 @@ async fn update_transaction_detail(
     state: tauri::State<'_, AppState>
 ) -> Result<(), String> {
     let transaction = state.transaction.lock().await;
-    // TODO: Get user_id from session/auth
-    let user_id = 2;
+    // Get user_id from session
+    let user_id = get_session_user_id(&state)?;
 
     let request = services::transaction::SaveTransactionDetailRequest {
         detail_id: Some(detail_id),
@@ -1594,8 +1592,8 @@ async fn delete_transaction_detail(
     state: tauri::State<'_, AppState>
 ) -> Result<(), String> {
     let transaction = state.transaction.lock().await;
-    // TODO: Get user_id from session/auth
-    let user_id = 2;
+    // Get user_id from session
+    let user_id = get_session_user_id(&state)?;
 
     transaction.delete_transaction_detail(user_id, detail_id).await
         .map_err(|e| e.to_string())
@@ -1625,12 +1623,12 @@ fn parse_group_by(group_by: &str) -> Result<services::aggregation::GroupBy, Stri
 
 #[tauri::command]
 async fn get_monthly_aggregation(
-    user_id: i64,
     year: i32,
     month: u32,
     group_by: String,
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::aggregation::AggregationResult>, String> {
+    let user_id = get_session_user_id(&state)?;
     let db = state.db.lock().await;
     let settings = state.settings.lock().await;
     let lang = settings.get_string("language")
@@ -1651,11 +1649,11 @@ async fn get_monthly_aggregation(
 
 #[tauri::command]
 async fn get_daily_aggregation(
-    user_id: i64,
     date: String, // Format: "YYYY-MM-DD"
     group_by: String,
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::aggregation::AggregationResult>, String> {
+    let user_id = get_session_user_id(&state)?;
     let db = state.db.lock().await;
     let settings = state.settings.lock().await;
     let lang = settings.get_string("language")
@@ -1679,12 +1677,12 @@ async fn get_daily_aggregation(
 
 #[tauri::command]
 async fn get_period_aggregation(
-    user_id: i64,
     start_date: String, // Format: "YYYY-MM-DD"
     end_date: String, // Format: "YYYY-MM-DD"
     group_by: String,
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::aggregation::AggregationResult>, String> {
+    let user_id = get_session_user_id(&state)?;
     let db = state.db.lock().await;
     let settings = state.settings.lock().await;
     let lang = settings.get_string("language")
@@ -1711,13 +1709,13 @@ async fn get_period_aggregation(
 
 #[tauri::command]
 async fn get_weekly_aggregation(
-    user_id: i64,
     year: i32,
     week: u32,
     week_start: String, // "sunday" or "monday"
     group_by: String,
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::aggregation::AggregationResult>, String> {
+    let user_id = get_session_user_id(&state)?;
     let db = state.db.lock().await;
     let settings = state.settings.lock().await;
     let lang = settings.get_string("language")
@@ -1746,12 +1744,12 @@ async fn get_weekly_aggregation(
 
 #[tauri::command]
 async fn get_weekly_aggregation_by_date(
-    user_id: i64,
     reference_date: String, // Format: "YYYY-MM-DD"
     week_start: String, // "sunday" or "monday"
     group_by: String,
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::aggregation::AggregationResult>, String> {
+    let user_id = get_session_user_id(&state)?;
     let db = state.db.lock().await;
     let settings = state.settings.lock().await;
     let lang = settings.get_string("language")
@@ -1783,12 +1781,12 @@ async fn get_weekly_aggregation_by_date(
 
 #[tauri::command]
 async fn get_yearly_aggregation(
-    user_id: i64,
     year: i32,
     year_start: String, // "january" or "april"
     group_by: String,
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::aggregation::AggregationResult>, String> {
+    let user_id = get_session_user_id(&state)?;
     let db = state.db.lock().await;
     let settings = state.settings.lock().await;
     let lang = settings.get_string("language")
@@ -1816,7 +1814,6 @@ async fn get_yearly_aggregation(
 
 #[tauri::command]
 async fn get_monthly_aggregation_by_category(
-    user_id: i64,
     year: i32,
     month: u32,
     group_by: String,
@@ -1825,6 +1822,7 @@ async fn get_monthly_aggregation_by_category(
     category3_code: Option<String>,
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::aggregation::AggregationResult>, String> {
+    let user_id = get_session_user_id(&state)?;
     let db = state.db.lock().await;
     let settings = state.settings.lock().await;
     let lang = settings.get_string("language")
@@ -2021,5 +2019,4 @@ pub fn run() {
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
->>>>>>> 797f6ff (feat: implement Ver.1.0.0 release features)
 }

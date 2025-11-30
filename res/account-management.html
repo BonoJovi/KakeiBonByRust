@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Account Management - KakeiBon</title>
+        <link rel="stylesheet" href="css/menu.css" />
+        <link rel="stylesheet" href="css/indicators.css" />
+        <link rel="stylesheet" href="css/account-management.css" />
+        <script type="importmap">
+        {
+            "imports": {
+                "@tauri-apps/api/core": "https://esm.sh/@tauri-apps/api@2/core"
+            }
+        }
+        </script>
+    </head>
+    <body>
+        <div id="menu-bar"></div>
+
+        <div id="main-content">
+            <div class="account-management-container">
+                <h1 data-i18n="account_mgmt.title">Account Management</h1>
+                
+                <!-- Account List Section -->
+                <div class="section">
+                    <div class="section-header">
+                        <h2 data-i18n="account_mgmt.account_list">Account List</h2>
+                    </div>
+                    <div id="account-list-container">
+                        <div id="loading" class="loading" style="display: none;" data-i18n="common.loading">Loading...</div>
+                        <table id="accounts-table">
+                            <thead>
+                                <tr>
+                                    <th data-i18n="account_mgmt.account_code">Account Code</th>
+                                    <th data-i18n="account_mgmt.account_name">Account Name</th>
+                                    <th data-i18n="account_mgmt.template">Template</th>
+                                    <th data-i18n="account_mgmt.initial_balance">Initial Balance</th>
+                                    <th data-i18n="common.actions">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="accounts-tbody">
+                                <!-- Account rows will be inserted here -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="section-footer">
+                        <button id="add-account-btn" class="btn-primary" data-i18n="account_mgmt.add_new">Add New Account</button>
+                    </div>
+                </div>
+                
+                <div id="account-list-message" class="message"></div>
+            </div>
+        </div>
+
+        <!-- Account Modal -->
+        <div id="account-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="modal-title" data-i18n="account_mgmt.modal_title_add">Add Account</h2>
+                    <button class="close-btn" id="close-modal">&times;</button>
+                </div>
+                <form id="account-form">
+                    <div class="form-group">
+                        <label for="account-code" data-i18n="account_mgmt.account_code">Account Code:</label>
+                        <div class="input-wrapper">
+                            <input type="text" id="account-code" name="account-code" required />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="account-name" data-i18n="account_mgmt.account_name">Account Name:</label>
+                        <div class="input-wrapper">
+                            <input type="text" id="account-name" name="account-name" required />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="template-code" data-i18n="account_mgmt.template">Template:</label>
+                        <div class="input-wrapper">
+                            <select id="template-code" name="template-code" required>
+                                <option value="" data-i18n="account_mgmt.select_template">- Select Template -</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="initial-balance" data-i18n="account_mgmt.initial_balance">Initial Balance:</label>
+                        <div class="input-wrapper">
+                            <input type="number" id="initial-balance" name="initial-balance" value="0" required />
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" id="cancel-btn" class="btn-secondary" data-i18n="common.cancel">Cancel</button>
+                        <button type="submit" class="btn-primary" data-i18n="common.save">Save</button>
+                    </div>
+                </form>
+                <div id="form-message" class="message"></div>
+            </div>
+        </div>
+
+        <!-- Font Size Modal -->
+        <div id="font-size-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 data-i18n="font_size.modal_title">Font Size Settings</h2>
+                    <button class="close-btn" id="font-size-modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="font-size-preset" data-i18n="font_size.preset">Preset:</label>
+                        <div class="input-wrapper">
+                            <select id="font-size-preset">
+                                <option value="small" data-i18n="font_size.small">小</option>
+                                <option value="medium" data-i18n="font_size.medium" selected>中</option>
+                                <option value="large" data-i18n="font_size.large">大</option>
+                                <option value="custom" data-i18n="font_size.custom">カスタム</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="font-size-percent" data-i18n="font_size.percentage">Percentage:</label>
+                        <div class="input-with-spinner">
+                            <input type="number" id="font-size-percent" min="50" max="200" step="5" value="100" />
+                            <div class="spinner-buttons">
+                                <button type="button" class="spinner-btn spinner-down">◀</button>
+                                <button type="button" class="spinner-btn spinner-up">▶</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" id="font-size-cancel" data-i18n="common.cancel">キャンセル</button>
+                    <button type="button" class="btn-primary" id="font-size-apply" data-i18n="common.apply">変更</button>
+                </div>
+            </div>
+        </div>
+
+        <script type="module" src="js/i18n.js"></script>
+        <script type="module" src="js/modal.js"></script>
+        <script type="module" src="js/account-management.js"></script>
+    </body>
+</html>

@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Transaction Detail Management - KakeiBon</title>
+        <link rel="stylesheet" href="css/menu.css" />
+        <link rel="stylesheet" href="css/indicators.css" />
+        <link rel="stylesheet" href="css/transaction-detail-management.css" />
+        <script type="importmap">
+        {
+            "imports": {
+                "@tauri-apps/api/core": "https://esm.sh/@tauri-apps/api@2/core"
+            }
+        }
+        </script>
+    </head>
+    <body>
+        <div id="menu-bar"></div>
+
+        <!-- Font Size Settings Modal -->
+        <div id="font-size-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 data-i18n="font_size.modal_title">Font Size Settings</h2>
+                    <button class="close-btn" id="font-size-modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="font-size-preset" data-i18n="font_size.preset">Preset:</label>
+                        <div class="input-wrapper">
+                            <select id="font-size-preset">
+                                <option value="small" data-i18n="font_size.small">小</option>
+                                <option value="medium" data-i18n="font_size.medium" selected>中</option>
+                                <option value="large" data-i18n="font_size.large">大</option>
+                                <option value="custom" data-i18n="font_size.custom">カスタム</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="font-size-percent" data-i18n="font_size.percentage">Percentage:</label>
+                        <div class="input-with-spinner">
+                            <input type="number" id="font-size-percent" min="50" max="200" step="5" value="100" />
+                            <div class="spinner-buttons">
+                                <button type="button" class="spinner-btn spinner-down">◀</button>
+                                <button type="button" class="spinner-btn spinner-up">▶</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" id="font-size-cancel" data-i18n="common.cancel">キャンセル</button>
+                    <button type="button" class="btn-primary" id="font-size-apply" data-i18n="common.apply">変更</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="main-content">
+            <div class="detail-management-container">
+                <h1 data-i18n="detail_mgmt.title">Transaction Detail Management</h1>
+                
+                <!-- Transaction Header Info -->
+                <div class="transaction-header-info">
+                    <div class="info-row">
+                        <span class="info-label" data-i18n="detail_mgmt.transaction_date">Transaction Date:</span>
+                        <span id="header-transaction-date" class="info-value">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label" data-i18n="detail_mgmt.account">Account:</span>
+                        <span id="header-account" class="info-value">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label" data-i18n="detail_mgmt.shop">Shop:</span>
+                        <span id="header-shop" class="info-value">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label" data-i18n="detail_mgmt.total_amount">Total Amount:</span>
+                        <span id="header-total-amount" class="info-value">¥0</span>
+                    </div>
+                </div>
+
+                <!-- Action Bar -->
+                <div class="action-bar">
+                    <button class="btn btn-primary" id="add-detail-btn">
+                        <span data-i18n="detail_mgmt.add_detail">+ Add Detail</span>
+                    </button>
+                </div>
+
+                <!-- Detail List -->
+                <div class="section">
+                    <div class="detail-list-container">
+                        <table id="detail-table">
+                            <thead>
+                                <tr>
+                                    <th data-i18n="detail_mgmt.item_name">Item Name</th>
+                                    <th data-i18n="common.category">Category</th>
+                                    <th data-i18n="detail_mgmt.amount">Amount</th>
+                                    <th data-i18n="detail_mgmt.tax">Tax</th>
+                                    <th data-i18n="common.actions">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="detail-list">
+                                <!-- Details will be dynamically loaded here -->
+                                <tr class="loading-row">
+                                    <td colspan="5" class="loading" data-i18n="common.loading">Loading...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="detail-message" class="message"></div>
+            </div>
+        </div>
+
+        <!-- Add/Edit Detail Modal -->
+        <div id="detail-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="modal-title" data-i18n="detail_mgmt.add_detail">Add Detail</h2>
+                    <button class="close-btn" id="close-modal">&times;</button>
+                </div>
+                <form id="detail-form">
+                    <input type="hidden" id="detail-id" name="detail-id" />
+                    <input type="hidden" id="category1-code" name="category1-code" />
+                    
+                    <div class="form-group">
+                        <label for="item-name" data-i18n="detail_mgmt.item_name">Item Name:</label>
+                        <div class="input-wrapper">
+                            <input type="text" id="item-name" name="item-name" required />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="category2-code" data-i18n="common.category2">Medium Category:</label>
+                        <div class="input-wrapper">
+                            <select id="category2-code" name="category2-code" required>
+                                <option value="" data-i18n="common.select">Select</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="category3-code" data-i18n="common.category3">Minor Category:</label>
+                        <div class="input-wrapper">
+                            <select id="category3-code" name="category3-code" required>
+                                <option value="" data-i18n="common.select">Select</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="tax-rate" data-i18n="detail_mgmt.tax_rate">Tax Rate (%):</label>
+                        <div class="input-wrapper">
+                            <select id="tax-rate" name="tax-rate">
+                                <option value="0">0%</option>
+                                <option value="8">8%</option>
+                                <option value="10" selected>10%</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="amount-excluding-tax" data-i18n="detail_mgmt.amount_excluding_tax">Amount (Excl. Tax):</label>
+                        <div class="input-wrapper">
+                            <input type="number" id="amount-excluding-tax" name="amount-excluding-tax" min="0" />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="amount-including-tax" data-i18n="detail_mgmt.amount_including_tax">Amount (Incl. Tax):</label>
+                        <div class="input-wrapper">
+                            <input type="number" id="amount-including-tax" name="amount-including-tax" min="0" />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="tax-amount" data-i18n="detail_mgmt.tax_amount">Tax Amount:</label>
+                        <div class="input-wrapper">
+                            <input type="number" id="tax-amount" name="tax-amount" min="0" readonly />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="memo" data-i18n="detail_mgmt.memo">Memo:</label>
+                        <div class="input-wrapper">
+                            <textarea id="memo" name="memo" rows="3"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary" id="cancel-btn" data-i18n="common.cancel">Cancel</button>
+                        <button type="submit" class="btn btn-primary" id="save-btn" data-i18n="common.save">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Delete Confirmation Modal -->
+        <div id="delete-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 data-i18n="detail_mgmt.delete_confirm_title">Delete Detail</h2>
+                    <button class="close-btn" id="close-delete-modal">&times;</button>
+                </div>
+                <p data-i18n="detail_mgmt.delete_confirm_message">Are you sure you want to delete this detail?</p>
+                <p id="delete-detail-name" class="delete-target"></p>
+                <div class="form-actions">
+                    <button class="btn btn-secondary" id="cancel-delete-btn" data-i18n="common.cancel">Cancel</button>
+                    <button class="btn btn-danger" id="confirm-delete-btn" data-i18n="common.delete">Delete</button>
+                </div>
+                <div id="delete-result-message" class="message"></div>
+            </div>
+        </div>
+
+        <script type="module" src="js/transaction-detail-management.js"></script>
+    </body>
+</html>

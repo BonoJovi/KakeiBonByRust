@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Integration Tests</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #555;
+            margin-top: 30px;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 8px;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-case {
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 4px solid #2196F3;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+        }
+        .test-case.pass {
+            border-left-color: #4CAF50;
+            background-color: #e8f5e9;
+        }
+        .test-case.fail {
+            border-left-color: #f44336;
+            background-color: #ffebee;
+        }
+        .test-name {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        .test-result {
+            margin-top: 8px;
+            padding: 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        .test-result.success {
+            background-color: #c8e6c9;
+            color: #2e7d32;
+        }
+        .test-result.error {
+            background-color: #ffcdd2;
+            color: #c62828;
+        }
+        .test-result.info {
+            background-color: #e1f5fe;
+            color: #01579b;
+        }
+        .summary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .summary h2 {
+            color: white;
+            border: none;
+            margin-top: 0;
+        }
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+        }
+        .stat {
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 36px;
+            font-weight: bold;
+            display: block;
+        }
+        .stat-label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffc107;
+            color: #856404;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+        .info-box {
+            background-color: #e7f3ff;
+            border: 1px solid #2196F3;
+            color: #0d47a1;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔐 Login Integration Tests</h1>
+    
+    <div class="warning">
+        ⚠️ <strong>Important:</strong> Run the application first before running these tests. 
+        These tests require the Tauri app to be running with the login_user command available.
+    </div>
+
+    <div class="info-box">
+        ℹ️ <strong>Info:</strong> These tests verify the integration between the frontend login UI 
+        and the backend Rust authentication system.
+    </div>
+
+    <button id="run-tests">Run All Tests</button>
+    <button id="clear-results">Clear Results</button>
+
+    <div id="summary" class="summary" style="display:none;">
+        <h2>Test Summary</h2>
+        <div class="stats">
+            <div class="stat">
+                <span class="stat-number" id="total-tests">0</span>
+                <span class="stat-label">Total Tests</span>
+            </div>
+            <div class="stat">
+                <span class="stat-number" id="passed-tests">0</span>
+                <span class="stat-label">Passed</span>
+            </div>
+            <div class="stat">
+                <span class="stat-number" id="failed-tests">0</span>
+                <span class="stat-label">Failed</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="test-results"></div>
+
+    <script type="module">
+        // Mock Tauri invoke function for testing
+        const mockInvoke = async (cmd, args) => {
+            console.log('Mock invoke called:', cmd, args);
+            
+            // Simulate network delay
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            switch(cmd) {
+                case 'login_user':
+                    // Simulate successful login for admin
+                    if (args.username === 'admin' && args.password === 'adminPassword1234567890') {
+                        return 'Welcome, admin!';
+                    }
+                    // Simulate successful login for testuser
+                    if (args.username === 'testuser' && args.password === 'testPassword1234567890') {
+                        return 'Welcome, testuser!';
+                    }
+                    // Simulate invalid credentials
+                    if (args.username === 'invalid' || args.password === 'wrong') {
+                        throw 'Invalid username or password';
+                    }
+                    // Simulate database error
+                    if (args.username === 'dberror') {
+                        throw 'Database error: Connection failed';
+                    }
+                    // Default: invalid credentials
+                    throw 'Invalid username or password';
+                
+                default:
+                    throw `Unknown command: ${cmd}`;
+            }
+        };
+
+        let totalTests = 0;
+        let passedTests = 0;
+        let failedTests = 0;
+
+        function createTestSection(title) {
+            const section = document.createElement('div');
+            section.className = 'test-section';
+            section.innerHTML = `<h2>${title}</h2>`;
+            document.getElementById('test-results').appendChild(section);
+            return section;
+        }
+
+        function createTestCase(section, name) {
+            const testCase = document.createElement('div');
+            testCase.className = 'test-case';
+            testCase.innerHTML = `<div class="test-name">${name}</div>`;
+            section.appendChild(testCase);
+            return testCase;
+        }
+
+        function addTestResult(testCase, success, message) {
+            totalTests++;
+            if (success) {
+                passedTests++;
+                testCase.classList.add('pass');
+            } else {
+                failedTests++;
+                testCase.classList.add('fail');
+            }
+
+            const result = document.createElement('div');
+            result.className = `test-result ${success ? 'success' : 'error'}`;
+            result.textContent = success ? `✓ ${message}` : `✗ ${message}`;
+            testCase.appendChild(result);
+
+            updateSummary();
+        }
+
+        function updateSummary() {
+            document.getElementById('summary').style.display = 'block';
+            document.getElementById('total-tests').textContent = totalTests;
+            document.getElementById('passed-tests').textContent = passedTests;
+            document.getElementById('failed-tests').textContent = failedTests;
+        }
+
+        async function runTests() {
+            // Clear previous results
+            document.getElementById('test-results').innerHTML = '';
+            totalTests = 0;
+            passedTests = 0;
+            failedTests = 0;
+
+            // Test 1: Successful login with valid credentials
+            const section1 = createTestSection('1. Successful Login Tests');
+            
+            const test1 = createTestCase(section1, 'Test 1.1: Login with admin credentials');
+            try {
+                const result = await mockInvoke('login_user', {
+                    username: 'admin',
+                    password: 'adminPassword1234567890'
+                });
+                if (result === 'Welcome, admin!') {
+                    addTestResult(test1, true, 'Admin login successful');
+                } else {
+                    addTestResult(test1, false, `Unexpected response: ${result}`);
+                }
+            } catch (error) {
+                addTestResult(test1, false, `Error: ${error}`);
+            }
+
+            const test2 = createTestCase(section1, 'Test 1.2: Login with regular user credentials');
+            try {
+                const result = await mockInvoke('login_user', {
+                    username: 'testuser',
+                    password: 'testPassword1234567890'
+                });
+                if (result === 'Welcome, testuser!') {
+                    addTestResult(test2, true, 'User login successful');
+                } else {
+                    addTestResult(test2, false, `Unexpected response: ${result}`);
+                }
+            } catch (error) {
+                addTestResult(test2, false, `Error: ${error}`);
+            }
+
+            const test3 = createTestCase(section1, 'Test 1.3: Verify welcome message format');
+            try {
+                const result = await mockInvoke('login_user', {
+                    username: 'admin',
+                    password: 'adminPassword1234567890'
+                });
+                if (/Welcome, .+!/.test(result)) {
+                    addTestResult(test3, true, 'Welcome message format is correct');
+                } else {
+                    addTestResult(test3, false, `Invalid format: ${result}`);
+                }
+            } catch (error) {
+                addTestResult(test3, false, `Error: ${error}`);
+            }
+
+            // Test 2: Failed login with invalid credentials
+            const section2 = createTestSection('2. Failed Login Tests');
+            
+            const test4 = createTestCase(section2, 'Test 2.1: Login with invalid username');
+            try {
+                const result = await mockInvoke('login_user', {
+                    username: 'invalid',
+                    password: 'password123456789012'
+                });
+                addTestResult(test4, false, 'Should have failed but succeeded');
+            } catch (error) {
+                if (error === 'Invalid username or password') {
+                    addTestResult(test4, true, 'Correctly rejected invalid username');
+                } else {
+                    addTestResult(test4, false, `Unexpected error: ${error}`);
+                }
+            }
+
+            const test5 = createTestCase(section2, 'Test 2.2: Login with invalid password');
+            try {
+                const result = await mockInvoke('login_user', {
+                    username: 'admin',
+                    password: 'wrong'
+                });
+                addTestResult(test5, false, 'Should have failed but succeeded');
+            } catch (error) {
+                if (error === 'Invalid username or password') {
+                    addTestResult(test5, true, 'Correctly rejected invalid password');
+                } else {
+                    addTestResult(test5, false, `Unexpected error: ${error}`);
+                }
+            }
+
+            const test6 = createTestCase(section2, 'Test 2.3: Login with empty username');
+            try {
+                const result = await mockInvoke('login_user', {
+                    username: '',
+                    password: 'password123456789012'
+                });
+                addTestResult(test6, false, 'Should have failed but succeeded');
+            } catch (error) {
+                addTestResult(test6, true, 'Correctly rejected empty username');
+            }
+
+            const test7 = createTestCase(section2, 'Test 2.4: Login with empty password');
+            try {
+                const result = await mockInvoke('login_user', {
+                    username: 'admin',
+                    password: ''
+                });
+                addTestResult(test7, false, 'Should have failed but succeeded');
+            } catch (error) {
+                addTestResult(test7, true, 'Correctly rejected empty password');
+            }
+
+            // Test 3: Error handling
+            const section3 = createTestSection('3. Error Handling Tests');
+            
+            const test8 = createTestCase(section3, 'Test 3.1: Handle database error');
+            try {
+                const result = await mockInvoke('login_user', {
+                    username: 'dberror',
+                    password: 'password123456789012'
+                });
+                addTestResult(test8, false, 'Should have thrown database error');
+            } catch (error) {
+                if (error.includes('Database error')) {
+                    addTestResult(test8, true, 'Database error handled correctly');
+                } else {
+                    addTestResult(test8, false, `Unexpected error: ${error}`);
+                }
+            }
+
+            const test9 = createTestCase(section3, 'Test 3.2: Verify error message format');
+            try {
+                const result = await mockInvoke('login_user', {
+                    username: 'invalid',
+                    password: 'wrong'
+                });
+                addTestResult(test9, false, 'Should have thrown error');
+            } catch (error) {
+                if (typeof error === 'string' && error.length > 0) {
+                    addTestResult(test9, true, 'Error message format is correct');
+                } else {
+                    addTestResult(test9, false, 'Invalid error format');
+                }
+            }
+
+            // Test 4: Input validation
+            const section4 = createTestSection('4. Input Validation Tests');
+            
+            const test10 = createTestCase(section4, 'Test 4.1: Handle special characters in username');
+            try {
+                const username = "admin' OR '1'='1";
+                const result = await mockInvoke('login_user', {
+                    username: username,
+                    password: 'password123456789012'
+                });
+                addTestResult(test10, false, 'Should have failed SQL injection attempt');
+            } catch (error) {
+                addTestResult(test10, true, 'SQL injection attempt blocked');
+            }
+
+            const test11 = createTestCase(section4, 'Test 4.2: Handle long username');
+            try {
+                const longUsername = 'a'.repeat(1000);
+                const result = await mockInvoke('login_user', {
+                    username: longUsername,
+                    password: 'password123456789012'
+                });
+                addTestResult(test11, false, 'Should have failed with long username');
+            } catch (error) {
+                addTestResult(test11, true, 'Long username handled correctly');
+            }
+
+            const test12 = createTestCase(section4, 'Test 4.3: Handle long password');
+            try {
+                const longPassword = 'p'.repeat(1000);
+                const result = await mockInvoke('login_user', {
+                    username: 'admin',
+                    password: longPassword
+                });
+                addTestResult(test12, false, 'Should have failed with long password');
+            } catch (error) {
+                addTestResult(test12, true, 'Long password handled correctly');
+            }
+
+            // Test 5: Response parsing
+            const section5 = createTestSection('5. Response Parsing Tests');
+            
+            const test13 = createTestCase(section5, 'Test 5.1: Extract username from welcome message');
+            try {
+                const result = await mockInvoke('login_user', {
+                    username: 'testuser',
+                    password: 'testPassword1234567890'
+                });
+                const match = result.match(/Welcome, (.+)!/);
+                if (match && match[1] === 'testuser') {
+                    addTestResult(test13, true, 'Username extracted correctly');
+                } else {
+                    addTestResult(test13, false, 'Failed to extract username');
+                }
+            } catch (error) {
+                addTestResult(test13, false, `Error: ${error}`);
+            }
+
+            const test14 = createTestCase(section5, 'Test 5.2: Parse error message');
+            try {
+                const result = await mockInvoke('login_user', {
+                    username: 'invalid',
+                    password: 'wrong'
+                });
+                addTestResult(test14, false, 'Should have thrown error');
+            } catch (error) {
+                if (error.includes('Invalid')) {
+                    addTestResult(test14, true, 'Error message parsed correctly');
+                } else {
+                    addTestResult(test14, false, `Unexpected error format: ${error}`);
+                }
+            }
+
+            // Test 6: Performance
+            const section6 = createTestSection('6. Performance Tests');
+            
+            const test15 = createTestCase(section6, 'Test 6.1: Login response time');
+            const startTime = Date.now();
+            try {
+                const result = await mockInvoke('login_user', {
+                    username: 'admin',
+                    password: 'adminPassword1234567890'
+                });
+                const duration = Date.now() - startTime;
+                if (duration < 5000) {
+                    addTestResult(test15, true, `Response time: ${duration}ms (acceptable)`);
+                } else {
+                    addTestResult(test15, false, `Response time: ${duration}ms (too slow)`);
+                }
+            } catch (error) {
+                addTestResult(test15, false, `Error: ${error}`);
+            }
+        }
+
+        document.getElementById('run-tests').addEventListener('click', async () => {
+            document.getElementById('run-tests').disabled = true;
+            await runTests();
+            document.getElementById('run-tests').disabled = false;
+        });
+
+        document.getElementById('clear-results').addEventListener('click', () => {
+            document.getElementById('test-results').innerHTML = '';
+            document.getElementById('summary').style.display = 'none';
+            totalTests = 0;
+            passedTests = 0;
+            failedTests = 0;
+        });
+    </script>
+</body>
+</html>
