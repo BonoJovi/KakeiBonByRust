@@ -184,9 +184,8 @@ function updateToggleButton() {
 
 async function loadManufacturers() {
     try {
-        console.log('Loading manufacturers for user:', currentUserId);
+        console.log('Loading manufacturers');
         manufacturers = await invoke('get_manufacturers', {
-            userId: currentUserId,
             includeDisabled: false
         });
         console.log('Loaded manufacturers:', manufacturers);
@@ -225,9 +224,8 @@ async function loadProducts() {
         loading.style.display = 'block';
         table.style.display = 'none';
 
-        console.log('Loading products for user:', currentUserId, 'includeDisabled:', showDisabledItems);
+        console.log('Loading products, includeDisabled:', showDisabledItems);
         products = await invoke('get_products', {
-            userId: currentUserId,
             includeDisabled: showDisabledItems
         });
         console.log('Loaded products:', products);
@@ -346,7 +344,6 @@ async function saveProduct() {
             // Update existing product
             const product = products.find(p => p.product_id === editingProductId);
             await invoke('update_product', {
-                userId: currentUserId,
                 productId: editingProductId,
                 productName: productName,
                 manufacturerId: manufacturerId,
@@ -358,7 +355,6 @@ async function saveProduct() {
         } else {
             // Add new product
             await invoke('add_product', {
-                userId: currentUserId,
                 productName: productName,
                 manufacturerId: manufacturerId,
                 memo: memo || null,
@@ -395,7 +391,6 @@ async function saveProduct() {
 async function deleteProduct(productId) {
     try {
         await invoke('delete_product', {
-            userId: currentUserId,
             productId: productId
         });
         console.log('Product deleted successfully');

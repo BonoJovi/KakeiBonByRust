@@ -186,9 +186,8 @@ async function loadManufacturers() {
         loading.style.display = 'block';
         table.style.display = 'none';
 
-        console.log('Loading manufacturers for user:', currentUserId, 'includeDisabled:', showDisabledItems);
+        console.log('Loading manufacturers, includeDisabled:', showDisabledItems);
         manufacturers = await invoke('get_manufacturers', {
-            userId: currentUserId,
             includeDisabled: showDisabledItems
         });
         console.log('Loaded manufacturers:', manufacturers);
@@ -296,7 +295,6 @@ async function saveManufacturer() {
             // Update existing manufacturer
             const manufacturer = manufacturers.find(m => m.manufacturer_id === editingManufacturerId);
             await invoke('update_manufacturer', {
-                userId: currentUserId,
                 manufacturerId: editingManufacturerId,
                 manufacturerName: manufacturerName,
                 memo: memo || null,
@@ -307,7 +305,6 @@ async function saveManufacturer() {
         } else {
             // Add new manufacturer
             await invoke('add_manufacturer', {
-                userId: currentUserId,
                 manufacturerName: manufacturerName,
                 memo: memo || null,
                 isDisabled: isDisabled === 1 ? isDisabled : null
@@ -343,7 +340,6 @@ async function saveManufacturer() {
 async function deleteManufacturer(manufacturerId) {
     try {
         await invoke('delete_manufacturer', {
-            userId: currentUserId,
             manufacturerId: manufacturerId
         });
         console.log('Manufacturer deleted successfully');

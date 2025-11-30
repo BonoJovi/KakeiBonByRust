@@ -1236,22 +1236,22 @@ async fn delete_shop(
 
 #[tauri::command]
 async fn get_manufacturers(
-    user_id: i64,
     include_disabled: bool,
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::manufacturer::Manufacturer>, String> {
+    let user_id = get_session_user_id(&state)?;
     let db = state.db.lock().await;
     services::manufacturer::get_manufacturers(db.pool(), user_id, include_disabled).await
 }
 
 #[tauri::command]
 async fn add_manufacturer(
-    user_id: i64,
     manufacturer_name: String,
     memo: Option<String>,
     is_disabled: Option<i64>,
     state: tauri::State<'_, AppState>
 ) -> Result<String, String> {
+    let user_id = get_session_user_id(&state)?;
     let db = state.db.lock().await;
 
     let request = services::manufacturer::AddManufacturerRequest {
@@ -1265,7 +1265,6 @@ async fn add_manufacturer(
 
 #[tauri::command]
 async fn update_manufacturer(
-    user_id: i64,
     manufacturer_id: i64,
     manufacturer_name: String,
     memo: Option<String>,
@@ -1273,6 +1272,7 @@ async fn update_manufacturer(
     is_disabled: i64,
     state: tauri::State<'_, AppState>
 ) -> Result<String, String> {
+    let user_id = get_session_user_id(&state)?;
     let db = state.db.lock().await;
 
     let request = services::manufacturer::UpdateManufacturerRequest {
@@ -1287,10 +1287,10 @@ async fn update_manufacturer(
 
 #[tauri::command]
 async fn delete_manufacturer(
-    user_id: i64,
     manufacturer_id: i64,
     state: tauri::State<'_, AppState>
 ) -> Result<String, String> {
+    let user_id = get_session_user_id(&state)?;
     let db = state.db.lock().await;
     services::manufacturer::delete_manufacturer(db.pool(), user_id, manufacturer_id).await
 }
@@ -1301,23 +1301,23 @@ async fn delete_manufacturer(
 
 #[tauri::command]
 async fn get_products(
-    user_id: i64,
     include_disabled: bool,
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::product::Product>, String> {
+    let user_id = get_session_user_id(&state)?;
     let db = state.db.lock().await;
     services::product::get_products(db.pool(), user_id, include_disabled).await
 }
 
 #[tauri::command]
 async fn add_product(
-    user_id: i64,
     product_name: String,
     manufacturer_id: Option<i64>,
     memo: Option<String>,
     is_disabled: Option<i64>,
     state: tauri::State<'_, AppState>
 ) -> Result<String, String> {
+    let user_id = get_session_user_id(&state)?;
     let db = state.db.lock().await;
 
     let request = services::product::AddProductRequest {
@@ -1332,7 +1332,6 @@ async fn add_product(
 
 #[tauri::command]
 async fn update_product(
-    user_id: i64,
     product_id: i64,
     product_name: String,
     manufacturer_id: Option<i64>,
@@ -1341,6 +1340,7 @@ async fn update_product(
     is_disabled: i64,
     state: tauri::State<'_, AppState>
 ) -> Result<String, String> {
+    let user_id = get_session_user_id(&state)?;
     let db = state.db.lock().await;
 
     let request = services::product::UpdateProductRequest {
@@ -1356,10 +1356,10 @@ async fn update_product(
 
 #[tauri::command]
 async fn delete_product(
-    user_id: i64,
     product_id: i64,
     state: tauri::State<'_, AppState>
 ) -> Result<String, String> {
+    let user_id = get_session_user_id(&state)?;
     let db = state.db.lock().await;
     services::product::delete_product(db.pool(), user_id, product_id).await
 }
