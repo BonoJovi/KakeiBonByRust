@@ -1,7 +1,7 @@
 # AI Context: KakeiBon Project Structure
 
 **Purpose**: This document helps AI assistants quickly understand the project structure without reading every file.
-**Last Updated**: 2024-10-26
+**Last Updated**: 2025-11-30 23:34 JST
 
 ---
 
@@ -26,7 +26,7 @@
 
 ```
 KakeiBonByRust/
-├── src/                      # Rust backend source
+├── src/                      # Rust backend source (24 files)
 │   ├── main.rs               # Entry point
 │   ├── lib.rs                # Tauri commands export
 │   ├── db.rs                 # Database operations
@@ -35,35 +35,79 @@ KakeiBonByRust/
 │   ├── crypto.rs             # Encryption/decryption
 │   ├── settings.rs           # Application settings
 │   ├── consts.rs             # Constants (ROLE_ADMIN=0, ROLE_USER=1)
+│   ├── sql_queries.rs        # ALL SQL queries centralized
 │   ├── test_helpers.rs       # Common test utilities (test only)
 │   ├── validation_tests.rs   # Reusable validation test suites (test only)
-│   └── services/             # Business logic modules
+│   └── services/             # Business logic modules (12 services)
 │       ├── auth.rs           # Authentication
 │       ├── user_management.rs # User CRUD
-│       ├── category.rs       # Category management
+│       ├── category.rs       # Category management (3-level hierarchy)
+│       ├── account.rs        # Account management (income/expense tracking)
+│       ├── transaction.rs    # Transaction recording & editing
+│       ├── manufacturer.rs   # Manufacturer master data
+│       ├── product.rs        # Product master data
+│       ├── shop.rs           # Shop master data
+│       ├── aggregation.rs    # Data aggregation (daily/weekly/monthly/period/yearly)
 │       ├── encryption.rs     # Encryption service
+│       ├── session.rs        # Session management
 │       └── i18n.rs           # Internationalization
 │
 ├── res/                      # Frontend resources
 │   ├── index.html            # Login/Admin setup screen
 │   ├── user-management.html  # User management screen
-│   ├── js/                   # JavaScript modules
-│   │   ├── menu.js           # Admin setup logic
+│   ├── category-management.html # Category management (3-level)
+│   ├── account-management.html # Account management
+│   ├── transaction-management.html # Transaction list & search
+│   ├── transaction-detail-management.html # Transaction detail editing
+│   ├── manufacturer-management.html # Manufacturer master
+│   ├── product-management.html # Product master
+│   ├── shop-management.html  # Shop master
+│   ├── aggregation.html      # Monthly aggregation (default)
+│   ├── aggregation-daily.html # Daily aggregation
+│   ├── aggregation-weekly.html # Weekly aggregation
+│   ├── aggregation-period.html # Period aggregation
+│   ├── aggregation-yearly.html # Yearly aggregation
+│   ├── js/                   # JavaScript modules (23 files)
+│   │   ├── menu.js           # Main menu & admin setup logic
 │   │   ├── user-management.js # User CRUD logic
+│   │   ├── category-management.js # Category CRUD
+│   │   ├── account-management.js # Account CRUD
+│   │   ├── transaction-management.js # Transaction list & search
+│   │   ├── transaction-detail-management.js # Transaction editing
+│   │   ├── manufacturer-management.js # Manufacturer CRUD
+│   │   ├── product-management.js # Product CRUD
+│   │   ├── shop-management.js # Shop CRUD
+│   │   ├── aggregation.js    # Monthly aggregation
+│   │   ├── aggregation-daily.js # Daily aggregation
+│   │   ├── aggregation-weekly.js # Weekly aggregation
+│   │   ├── aggregation-period.js # Period aggregation
+│   │   ├── aggregation-yearly.js # Yearly aggregation
+│   │   ├── aggregation-common.js # Common aggregation logic
+│   │   ├── modal.js          # Common modal class
+│   │   ├── modal-utils.js    # Modal helper utilities
+│   │   ├── font-size.js      # Font size adjustment
+│   │   ├── session.js        # Session management
 │   │   ├── i18n.js           # i18n client
 │   │   ├── indicators.js     # Caps Lock indicator
+│   │   ├── html-files.js     # HTML file paths
 │   │   └── consts.js         # JS constants
 │   ├── css/                  # Stylesheets
 │   └── locales/              # Translation files (ja, en)
 │
-├── res/tests/                # Test suites
+├── res/tests/                # Test suites (29 test files, 488 tests)
 │   ├── validation-helpers.js          # Common validation logic
 │   ├── password-validation-tests.js   # Password test suite
 │   ├── username-validation-tests.js   # Username test suite
-│   ├── admin-setup.test.js            # Admin setup tests (29 tests)
-│   ├── user-addition.test.js          # User addition tests (49 tests)
-│   ├── login.test.js                  # Login tests (58 tests)
-│   └── [docs]                         # See TEST_INDEX.md
+│   ├── admin-setup.test.js            # Admin setup tests
+│   ├── user-addition.test.js          # User addition tests
+│   ├── login.test.js                  # Login tests
+│   ├── category-management.test.js    # Category CRUD tests
+│   ├── account-management.test.js     # Account CRUD tests
+│   ├── transaction-edit.test.js       # Transaction editing tests
+│   ├── manufacturer-management.test.js # Manufacturer tests
+│   ├── product-management.test.js     # Product tests
+│   ├── shop-management.test.js        # Shop tests
+│   └── [additional test files]        # See test output for full list
 │
 ├── .ai-context/              # AI assistant context (THIS DIRECTORY)
 │   ├── PROJECT_STRUCTURE.md  # This file
@@ -86,12 +130,21 @@ KakeiBonByRust/
 | Main | `src/main.rs` | Application entry point |
 | Library | `src/lib.rs` | Export all Tauri commands |
 | Database | `src/db.rs` | SQLite connection, migrations, queries |
+| SQL Queries | `src/sql_queries.rs` | ALL SQL queries centralized |
 | Validation | `src/validation.rs` | Input validation (password length, etc.) |
 | Security | `src/security.rs` | Argon2 password hashing |
 | Crypto | `src/crypto.rs` | AES-256-GCM encryption/decryption |
 | Auth | `src/services/auth.rs` | Login, authentication |
 | User Mgmt | `src/services/user_management.rs` | User CRUD operations |
+| Category | `src/services/category.rs` | 3-level category management |
+| Account | `src/services/account.rs` | Account (income/expense) management |
+| Transaction | `src/services/transaction.rs` | Transaction recording & editing |
+| Manufacturer | `src/services/manufacturer.rs` | Manufacturer master data |
+| Product | `src/services/product.rs` | Product master data |
+| Shop | `src/services/shop.rs` | Shop master data |
+| Aggregation | `src/services/aggregation.rs` | Data aggregation (5 types) |
 | Encryption | `src/services/encryption.rs` | Encryption service layer |
+| Session | `src/services/session.rs` | Session management |
 | i18n | `src/services/i18n.rs` | Backend i18n support |
 | **Test Helpers** | `src/test_helpers.rs` | **Common test utilities and database setup** |
 | **Validation Tests** | `src/validation_tests.rs` | **Reusable password validation test suites** |
@@ -100,8 +153,19 @@ KakeiBonByRust/
 
 | Module | File | Purpose |
 |--------|------|---------|
-| Admin Setup | `res/js/menu.js` | Admin user registration |
+| Main Menu | `res/js/menu.js` | Main menu & admin user registration |
 | User Management | `res/js/user-management.js` | User CRUD UI |
+| Category Management | `res/js/category-management.js` | Category CRUD UI |
+| Account Management | `res/js/account-management.js` | Account CRUD UI |
+| Transaction List | `res/js/transaction-management.js` | Transaction list & search |
+| Transaction Edit | `res/js/transaction-detail-management.js` | Transaction editing |
+| Manufacturer | `res/js/manufacturer-management.js` | Manufacturer CRUD UI |
+| Product | `res/js/product-management.js` | Product CRUD UI |
+| Shop | `res/js/shop-management.js` | Shop CRUD UI |
+| Aggregation | `res/js/aggregation*.js` | 5 aggregation screens |
+| Modal | `res/js/modal.js` | Common modal class |
+| Font Size | `res/js/font-size.js` | Font size adjustment |
+| Session | `res/js/session.js` | Session management |
 | i18n Client | `res/js/i18n.js` | Frontend translation |
 | Indicators | `res/js/indicators.js` | Caps Lock indicator |
 | Constants | `res/js/consts.js` | ROLE_ADMIN, ROLE_USER |
@@ -114,7 +178,12 @@ KakeiBonByRust/
 | Password Tests | `res/tests/password-validation-tests.js` | Reusable password test suite (26 tests) |
 | Username Tests | `res/tests/username-validation-tests.js` | Reusable username test suite (13 tests) |
 | Admin Setup Tests | `res/tests/admin-setup.test.js` | Admin registration screen tests |
-| User Addition Tests | `res/tests/user-addition.test.js` | User addition screen tests |
+| User Tests | `res/tests/user-*.test.js` | User addition, deletion, update tests |
+| Login Tests | `res/tests/login.test.js` | Login functionality tests |
+| Category Tests | `res/tests/category-management.test.js` | Category CRUD tests |
+| Account Tests | `res/tests/account-management.test.js` | Account CRUD tests |
+| Transaction Tests | `res/tests/transaction-*.test.js` | Transaction editing tests |
+| Master Data Tests | `res/tests/*-management.test.js` | Manufacturer, Product, Shop tests |
 
 ---
 
@@ -141,26 +210,150 @@ user-management.html → user-management.js → [Tauri]
   └── delete_general_user_info() → user_management.rs → db.rs
 ```
 
+### 4. Transaction Recording
+```
+transaction-management.html → transaction-management.js → [Tauri]
+  ├── list_transactions() → transaction.rs → db.rs
+  ├── search_transactions() → transaction.rs → db.rs
+  └── get_transaction_detail() → transaction.rs → db.rs
+
+transaction-detail-management.html → transaction-detail-management.js → [Tauri]
+  ├── create_transaction() → transaction.rs → db.rs
+  └── update_transaction() → transaction.rs → db.rs
+```
+
+### 5. Category/Account/Master Data Management
+```
+category-management.html → category-management.js → [Tauri]
+  ├── get_category_tree() → category.rs → db.rs
+  ├── add_category2/3() → category.rs → db.rs
+  ├── update_category2/3() → category.rs → db.rs
+  └── delete_category2/3() → category.rs → db.rs
+  
+  Note: CATEGORY1 is fixed (EXPENSE/INCOME/TRANSFER only)
+        - No add/edit/delete for CATEGORY1
+        - User can only manage CATEGORY2/3 under selected CATEGORY1
+
+account-management.html → account-management.js → [Tauri]
+  └── Similar pattern for accounts
+
+manufacturer/product/shop-management.html → [Similar patterns]
+```
+
+### 6. Aggregation (5 Types)
+```
+aggregation*.html → aggregation*.js → [Tauri]
+  ├── aggregate_monthly() → aggregation.rs → db.rs
+  ├── aggregate_daily() → aggregation.rs → db.rs
+  ├── aggregate_weekly() → aggregation.rs → db.rs
+  ├── aggregate_period() → aggregation.rs → db.rs
+  └── aggregate_yearly() → aggregation.rs → db.rs
+```
+
 ---
 
 ## Database Schema (SQLite)
 
-### USERS Table
+### Core Tables
+
+**USERS**: User authentication and authorization
 ```sql
 CREATE TABLE USERS (
     USER_ID INTEGER PRIMARY KEY,
     NAME VARCHAR(128) UNIQUE NOT NULL,
     PAW VARCHAR(128) NOT NULL,        -- Argon2 hash
-    ROLE INTEGER NOT NULL,             -- 1=ADMIN, 2=USER
+    ROLE INTEGER NOT NULL,             -- 0=ADMIN, 1=USER
     ENTRY_DT DATETIME NOT NULL,
     UPDATE_DT DATETIME
 );
 ```
 
-### Other Tables (Future)
-- CATEGORIES: Expense categories
-- TRANSACTIONS: Financial transactions
-- ENCRYPTED_DATA: User-encrypted sensitive data
+**CATEGORY1/CATEGORY2/CATEGORY3**: 3-level category hierarchy
+```sql
+CREATE TABLE CATEGORY1 (
+    USER_ID INTEGER NOT NULL,
+    CATEGORY1_CODE VARCHAR(64) NOT NULL,
+    DISPLAY_ORDER INTEGER NOT NULL,
+    CATEGORY1_NAME VARCHAR(128) NOT NULL,
+    IS_DISABLED INTEGER NOT NULL DEFAULT 0,
+    ENTRY_DT DATETIME NOT NULL,
+    UPDATE_DT DATETIME,
+    PRIMARY KEY(USER_ID, CATEGORY1_CODE)
+);
+-- CATEGORY1 is fixed: EXPENSE (出金), INCOME (入金), TRANSFER (振替)
+-- Users cannot add/edit/delete CATEGORY1 records
+
+CREATE TABLE CATEGORY2 (
+    USER_ID INTEGER NOT NULL,
+    CATEGORY1_CODE VARCHAR(64) NOT NULL,
+    CATEGORY2_CODE VARCHAR(64) NOT NULL,
+    DISPLAY_ORDER INTEGER NOT NULL,
+    CATEGORY2_NAME VARCHAR(128) NOT NULL,
+    IS_DISABLED INTEGER NOT NULL DEFAULT 0,
+    ENTRY_DT DATETIME NOT NULL,
+    UPDATE_DT DATETIME,
+    PRIMARY KEY(USER_ID, CATEGORY1_CODE, CATEGORY2_CODE),
+    FOREIGN KEY(USER_ID, CATEGORY1_CODE) 
+        REFERENCES CATEGORY1(USER_ID, CATEGORY1_CODE) ON DELETE CASCADE
+);
+-- Users can add/edit/delete CATEGORY2 under selected CATEGORY1
+
+CREATE TABLE CATEGORY3 (
+    USER_ID INTEGER NOT NULL,
+    CATEGORY1_CODE VARCHAR(64) NOT NULL,
+    CATEGORY2_CODE VARCHAR(64) NOT NULL,
+    CATEGORY3_CODE VARCHAR(64) NOT NULL,
+    DISPLAY_ORDER INTEGER NOT NULL,
+    CATEGORY3_NAME VARCHAR(128) NOT NULL,
+    IS_DISABLED INTEGER NOT NULL DEFAULT 0,
+    ENTRY_DT DATETIME NOT NULL,
+    UPDATE_DT DATETIME,
+    PRIMARY KEY(USER_ID, CATEGORY1_CODE, CATEGORY2_CODE, CATEGORY3_CODE),
+    FOREIGN KEY(USER_ID, CATEGORY1_CODE, CATEGORY2_CODE) 
+        REFERENCES CATEGORY2(USER_ID, CATEGORY1_CODE, CATEGORY2_CODE) ON DELETE CASCADE
+);
+-- Users can add/edit/delete CATEGORY3 under selected CATEGORY2
+```
+
+**ACCOUNT**: Income/expense accounts
+```sql
+CREATE TABLE ACCOUNT (
+    USER_ID INTEGER,
+    ACCOUNT_CODE TEXT,
+    ACCOUNT_NAME TEXT,
+    CATEGORY1_CODE TEXT,
+    PRIMARY KEY (USER_ID, ACCOUNT_CODE)
+);
+```
+
+**TRANSACTIONS**: Financial transactions
+```sql
+CREATE TABLE TRANSACTIONS (
+    USER_ID INTEGER,
+    TRANSACTION_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    TRANSACTION_DT TEXT,              -- YYYY-MM-DD HH:MM:SS
+    ACCOUNT_CODE TEXT,
+    AMOUNT INTEGER,
+    TAX INTEGER,
+    TAX_RATE_DIV INTEGER,
+    TAX_ROUNDING_DIV INTEGER,
+    MEMO_ID INTEGER,
+    -- Plus many other fields for details
+);
+```
+
+**MEMO**: Shared memo data
+```sql
+CREATE TABLE MEMO (
+    MEMO_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    MEMO TEXT
+);
+```
+
+**Master Data Tables**:
+- **MANUFACTURER**: Manufacturer master
+- **PRODUCT**: Product master (linked to manufacturer)
+- **SHOP**: Shop master
 
 ---
 
@@ -252,7 +445,7 @@ cargo tauri dev
 # Rust tests
 cargo test
 
-# JavaScript tests
+# JavaScript tests (488 tests)
 cd res/tests
 npm test
 
@@ -261,9 +454,9 @@ npm test
 ```
 
 **Test Count:**
-- Rust backend: 94 tests
-- JavaScript frontend: 199 tests
-- **Total: 293 tests**
+- Rust backend: 121 tests (when passing)
+- JavaScript frontend: 488 tests
+- **Total: 600+ tests**
 ```
 
 ### Build
@@ -309,10 +502,10 @@ cargo tauri build
 
 ## Known Issues / TODOs
 
-- [ ] JWT/Session management not yet implemented
-- [ ] Encryption key derivation uses placeholder
-- [ ] Category management UI not yet created
-- [ ] Transaction recording UI not yet created
+- [ ] Session timeout mechanism (basic session management implemented)
+- [ ] Data export/import functionality
+- [ ] Report generation features
+- [ ] Mobile responsive design
 
 ---
 
