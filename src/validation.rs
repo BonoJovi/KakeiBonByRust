@@ -64,23 +64,39 @@ mod tests {
     // Use the common password test suite
     #[test]
     fn test_all_password_validations() {
-        password_tests::run_all_tests();
+        // Execute common test suite and verify it doesn't panic
+        let result = std::panic::catch_unwind(|| {
+            password_tests::run_all_tests();
+        });
+        assert!(result.is_ok(), "Common password test suite should not panic");
     }
 
     // Keep individual tests for backwards compatibility and granular failure reporting
     #[test]
     fn test_empty_password() {
-        password_tests::test_empty_passwords();
+        // Execute common test and verify it doesn't panic
+        let result = std::panic::catch_unwind(|| {
+            password_tests::test_empty_passwords();
+        });
+        assert!(result.is_ok(), "Empty password test should pass without panic");
     }
 
     #[test]
     fn test_whitespace_only_password() {
-        password_tests::test_whitespace_only_passwords();
+        // Execute common test and verify it doesn't panic
+        let result = std::panic::catch_unwind(|| {
+            password_tests::test_whitespace_only_passwords();
+        });
+        assert!(result.is_ok(), "Whitespace-only password test should pass without panic");
     }
 
     #[test]
     fn test_password_too_short() {
-        password_tests::test_short_passwords();
+        // Execute common test and verify it doesn't panic
+        let result = std::panic::catch_unwind(|| {
+            password_tests::test_short_passwords();
+        });
+        assert!(result.is_ok(), "Short password test should pass without panic");
     }
 
     #[test]
@@ -146,7 +162,11 @@ mod tests {
 
     #[test]
     fn test_password_confirmation_matching() {
-        password_tests::test_password_confirmation_logic();
+        // Execute common test and verify it doesn't panic
+        let result = std::panic::catch_unwind(|| {
+            password_tests::test_password_confirmation_logic();
+        });
+        assert!(result.is_ok(), "Password confirmation test should pass without panic");
     }
 
     #[test]
@@ -202,12 +222,20 @@ mod tests {
 
     #[test]
     fn test_full_validation_error_priority() {
-        password_tests::test_validation_error_priority();
+        // Execute common test and verify it doesn't panic
+        let result = std::panic::catch_unwind(|| {
+            password_tests::test_validation_error_priority();
+        });
+        assert!(result.is_ok(), "Validation error priority test should pass without panic");
     }
 
     #[test]
     fn test_password_with_leading_trailing_spaces() {
-        password_tests::test_passwords_with_spaces();
+        // Execute common test and verify it doesn't panic
+        let result = std::panic::catch_unwind(|| {
+            password_tests::test_passwords_with_spaces();
+        });
+        assert!(result.is_ok(), "Password with spaces test should pass without panic");
     }
 
     #[test]
@@ -218,6 +246,10 @@ mod tests {
 
     #[test]
     fn test_password_boundary_cases() {
-        password_tests::test_boundary_cases();
+        // Execute common test and verify it doesn't panic
+        let result = std::panic::catch_unwind(|| {
+            password_tests::test_boundary_cases();
+        });
+        assert!(result.is_ok(), "Boundary cases test should pass without panic");
     }
 }
