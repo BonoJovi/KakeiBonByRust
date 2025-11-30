@@ -272,6 +272,13 @@ Success Rate / 成功率:            100%
   - Improved test readability and maintainability
   - Enterprise-grade test structure achieved
 
+**Test Count Methodology / テスト件数計測方法** (Updated 2025-11-30):
+- **Previous count (613)**: Included nested `describe` blocks and test structure
+- **Current count (527)**: Counts only actual executable test cases
+- **Reason for change / 変更理由**: Improved accuracy and industry-standard methodology
+- **Note / 注意**: No tests were removed; this is purely a measurement refinement
+  テストは削除されておらず、計測方法の精密化のみです
+
 See [TEST_SUMMARY.md](docs/ja/TEST_SUMMARY.md) for details / 詳細は [TEST_SUMMARY.md](docs/ja/TEST_SUMMARY.md) を参照
 
 ---
