@@ -147,9 +147,9 @@ res/                      # Frontend resources
 - Common validation test suites: `src/validation_tests.rs`
 
 **Test Count:**
-- Rust backend: 94 tests
-- JavaScript frontend: 199 tests
-- **Total: 293 tests**
+- Rust backend: 201 tests
+- JavaScript frontend: Manual testing (test runner not configured)
+- **Total: 201+ tests**
 
 ---
 
@@ -189,4 +189,4 @@ For more detailed information, refer to files in `.ai-context/`:
 
 ---
 
-**Last Updated**: 2025-10-29
+**Last Updated**: 2024-11-30

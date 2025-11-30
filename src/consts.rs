@@ -20,6 +20,7 @@ pub const LANG_DEFAULT: &str = LANG_JAPANESE;
 pub const FONT_SIZE_SMALL: &str = "small";
 pub const FONT_SIZE_MEDIUM: &str = "medium";
 pub const FONT_SIZE_LARGE: &str = "large";
+pub const FONT_SIZE_CUSTOM: &str = "custom";
 pub const FONT_SIZE_DEFAULT: &str = FONT_SIZE_MEDIUM;
 
 // Tax rounding mode constants

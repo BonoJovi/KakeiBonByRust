@@ -298,13 +298,14 @@ Manual selection of rounding type is currently required, but future implementati
 #### 保存される値
 
 - **TRANSACTIONS_HEADER.TAX_ROUNDING_TYPE**: 端数処理タイプ（0-2）
-- **TRANSACTIONS_DETAIL.AMOUNT**: 金額（税区分に応じて税込/税抜）
+- **TRANSACTIONS_HEADER.TAX_INCLUDED_TYPE**: 税区分（0:内税, 1:外税）
+- **TRANSACTIONS_DETAIL.AMOUNT**: 金額（税抜金額）
 - **TRANSACTIONS_DETAIL.TAX_AMOUNT**: 税額
-- **TRANSACTIONS_DETAIL.TAX_DIVISION**: 税区分（0:税込, 1:税抜, 2:非課税）
+- **TRANSACTIONS_DETAIL.AMOUNT_INCLUDING_TAX**: 税込金額
 
 #### 重要な設計判断
 
-明細レベルでは税込金額ではなく、税区分に応じた金額（内税の場合は税抜金額）を保存します。これにより：
+明細レベルでは税抜金額（AMOUNT）と税込金額（AMOUNT_INCLUDING_TAX）の両方を保存します。これにより：
 
 - 税率変更時の再計算が可能
 - 税込/税抜の集計が正確
@@ -315,13 +316,14 @@ Manual selection of rounding type is currently required, but future implementati
 #### Saved Values
 
 - **TRANSACTIONS_HEADER.TAX_ROUNDING_TYPE**: Rounding type (0-2)
-- **TRANSACTIONS_DETAIL.AMOUNT**: Amount (tax-included/excluded based on tax division)
+- **TRANSACTIONS_HEADER.TAX_INCLUDED_TYPE**: Tax division (0: inclusive, 1: exclusive)
+- **TRANSACTIONS_DETAIL.AMOUNT**: Amount (tax-excluded amount)
 - **TRANSACTIONS_DETAIL.TAX_AMOUNT**: Tax amount
-- **TRANSACTIONS_DETAIL.TAX_DIVISION**: Tax division (0: inclusive, 1: exclusive, 2: tax-free)
+- **TRANSACTIONS_DETAIL.AMOUNT_INCLUDING_TAX**: Tax-included amount
 
 #### Important Design Decision
 
-Detail level stores amount according to tax division (tax-excluded for inclusive tax), not tax-included amount. This enables:
+Detail level stores both tax-excluded amount (AMOUNT) and tax-included amount (AMOUNT_INCLUDING_TAX). This enables:
 
 - Recalculation when tax rate changes
 - Accurate tax-included/excluded aggregation

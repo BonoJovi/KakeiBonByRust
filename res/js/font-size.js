@@ -56,6 +56,7 @@ export async function setupFontSizeMenu() {
     try {
         // Get current font size
         const currentSize = await invoke('get_font_size');
+        console.log('[setupFontSizeMenu] Current font size:', currentSize);
         
         // Get dropdown container
         const fontSizeDropdown = document.getElementById('font-size-dropdown');
@@ -68,6 +69,16 @@ export async function setupFontSizeMenu() {
         // Clear existing items
         fontSizeDropdown.innerHTML = '';
         
+        // Determine which menu item should be marked as active
+        let activeCode;
+        if ([FONT_SIZE_SMALL, FONT_SIZE_MEDIUM, FONT_SIZE_LARGE].includes(currentSize)) {
+            activeCode = currentSize;
+        } else {
+            // It's a custom percentage value
+            activeCode = FONT_SIZE_CUSTOM;
+        }
+        console.log('[setupFontSizeMenu] Active menu code:', activeCode);
+        
         // Add font size items from constants
         for (const size of FONT_SIZE_OPTIONS) {
             const item = document.createElement('div');
@@ -76,8 +87,9 @@ export async function setupFontSizeMenu() {
             item.dataset.sizeCode = size.code;
             
             // Mark current size with active class
-            if (size.code === currentSize) {
+            if (size.code === activeCode) {
                 item.classList.add('active');
+                console.log('[setupFontSizeMenu] Marked as active:', size.code);
             }
             
             item.addEventListener('click', async function(e) {
