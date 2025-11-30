@@ -178,10 +178,7 @@ async function loadAccounts() {
     tbody.innerHTML = '';
 
     try {
-        accounts = await invoke('get_accounts', {
-            userId: currentUserId,
-            userRole: currentUserRole
-        });
+        accounts = await invoke('get_accounts', {});
         
         if (accounts.length === 0) {
             tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #999;">${i18n.t('account_mgmt.no_accounts')}</td></tr>`;
@@ -282,7 +279,6 @@ async function saveAccount() {
             // Update existing account
             const displayOrder = accounts.find(a => a.account_code === editingAccountCode).display_order;
             await invoke('update_account', {
-                userId: currentUserId,
                 accountCode: accountCode,
                 accountName: accountName,
                 templateCode: templateCode,
@@ -293,7 +289,6 @@ async function saveAccount() {
         } else {
             // Add new account
             await invoke('add_account', {
-                userId: currentUserId,
                 accountCode: accountCode,
                 accountName: accountName,
                 templateCode: templateCode,
@@ -321,7 +316,6 @@ async function deleteAccount(accountCode, accountName) {
 
     try {
         await invoke('delete_account', { 
-            userId: currentUserId,
             accountCode: accountCode 
         });
         alert(i18n.t('common.success') || 'Account deleted successfully')

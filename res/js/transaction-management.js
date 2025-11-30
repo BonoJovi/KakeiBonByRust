@@ -676,10 +676,7 @@ async function loadCategoriesForModal() {
 
 async function loadAccountsForModal() {
     try {
-        accounts = await invoke('get_accounts', { 
-            userId: currentUserId,
-            userRole: currentUserRole
-        });
+        accounts = await invoke('get_accounts', {});
         
         // Populate account dropdowns
         const fromAccountSelect = document.getElementById('from-account');

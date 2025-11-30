@@ -454,7 +454,6 @@ async function updateUser(userId, username, password) {
     }
     
     const updateParams = {
-        userId: userId,
         username: username !== user.name ? username : null,
         password: password
     };

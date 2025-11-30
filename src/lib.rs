@@ -286,6 +286,8 @@ async fn get_user(
     user_id: i64,
     state: tauri::State<'_, AppState>
 ) -> Result<serde_json::Value, String> {
+    // Note: This function keeps user_id parameter as it's used for admin to query other users
+    // If querying self, frontend should pass session user_id
     let user_mgmt = state.user_mgmt.lock().await;
     
     match user_mgmt.get_user(user_id).await {
@@ -326,11 +328,11 @@ async fn create_general_user(
 
 #[tauri::command]
 async fn update_general_user_info(
-    user_id: i64,
     username: Option<String>,
     password: Option<String>,
     state: tauri::State<'_, AppState>
 ) -> Result<(), String> {
+    let user_id = get_session_user_id(&state)?;
     if let Some(ref pwd) = password {
         validate_password(pwd)?;
     }
@@ -349,12 +351,12 @@ async fn update_general_user_info(
 
 #[tauri::command]
 async fn update_general_user_with_reencryption(
-    user_id: i64,
     old_password: String,
     username: Option<String>,
     new_password: Option<String>,
     state: tauri::State<'_, AppState>
 ) -> Result<(), String> {
+    let user_id = get_session_user_id(&state)?;
     if let Some(ref pwd) = new_password {
         validate_password(pwd)?;
     }
@@ -374,11 +376,11 @@ async fn update_general_user_with_reencryption(
 
 #[tauri::command]
 async fn update_admin_user_info(
-    user_id: i64,
     username: Option<String>,
     password: Option<String>,
     state: tauri::State<'_, AppState>
 ) -> Result<(), String> {
+    let user_id = get_session_user_id(&state)?;
     if let Some(ref pwd) = password {
         validate_password(pwd)?;
     }
@@ -397,12 +399,12 @@ async fn update_admin_user_info(
 
 #[tauri::command]
 async fn update_admin_user_with_reencryption(
-    user_id: i64,
     old_password: String,
     username: Option<String>,
     new_password: Option<String>,
     state: tauri::State<'_, AppState>
 ) -> Result<(), String> {
+    let user_id = get_session_user_id(&state)?;
     if let Some(ref pwd) = new_password {
         validate_password(pwd)?;
     }
@@ -425,6 +427,7 @@ async fn delete_general_user_info(
     user_id: i64,
     state: tauri::State<'_, AppState>
 ) -> Result<(), String> {
+    // Note: This function keeps user_id parameter as it's used for admin to delete other users
     let user_mgmt = state.user_mgmt.lock().await;
     
     match user_mgmt.delete_general_user(user_id).await {
@@ -1095,10 +1098,13 @@ async fn get_account_templates(
 
 #[tauri::command]
 async fn get_accounts(
-    user_id: i64,
-    user_role: i64,
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::account::Account>, String> {
+    let session_user = state.session.get_user()
+        .ok_or("User not authenticated. Please login first.".to_string())?;
+    let user_id = session_user.user_id;
+    let user_role = session_user.role;
+    
     let db = state.db.lock().await;
     
     // Admin (role 0) can see all accounts, regular users see only their own
@@ -1111,13 +1117,13 @@ async fn get_accounts(
 
 #[tauri::command]
 async fn add_account(
-    user_id: i64,
     account_code: String,
     account_name: String,
     template_code: String,
     initial_balance: i64,
     state: tauri::State<'_, AppState>
 ) -> Result<String, String> {
+    let user_id = get_session_user_id(&state)?;
     let db = state.db.lock().await;
     
     let request = services::account::AddAccountRequest {
@@ -1132,7 +1138,6 @@ async fn add_account(
 
 #[tauri::command]
 async fn update_account(
-    user_id: i64,
     account_code: String,
     account_name: String,
     template_code: String,
@@ -1140,6 +1145,7 @@ async fn update_account(
     display_order: i64,
     state: tauri::State<'_, AppState>
 ) -> Result<String, String> {
+    let user_id = get_session_user_id(&state)?;
     let db = state.db.lock().await;
     
     let request = services::account::UpdateAccountRequest {
@@ -1155,10 +1161,10 @@ async fn update_account(
 
 #[tauri::command]
 async fn delete_account(
-    user_id: i64,
     account_code: String,
     state: tauri::State<'_, AppState>
 ) -> Result<String, String> {
+    let user_id = get_session_user_id(&state)?;
     let db = state.db.lock().await;
     
     services::account::delete_account(db.pool(), user_id, &account_code).await
