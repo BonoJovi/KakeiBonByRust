@@ -146,7 +146,6 @@ async function executeAggregation() {
         console.log(`Executing yearly aggregation: user_id=${user.user_id}, year=${year}, year_start=${yearStart}, group_by=${groupBy}`);
 
         const results = await invoke('get_yearly_aggregation', {
-            userId: user.user_id,
             year: year,
             yearStart: yearStart,
             groupBy: groupBy

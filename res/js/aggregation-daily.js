@@ -157,7 +157,6 @@ async function executeAggregation() {
         console.log(`Executing daily aggregation: user_id=${user.user_id}, date=${dateStr}, group_by=${groupBy}`);
 
         const results = await invoke('get_daily_aggregation', {
-            userId: user.user_id,
             date: dateStr,
             groupBy: groupBy
         });

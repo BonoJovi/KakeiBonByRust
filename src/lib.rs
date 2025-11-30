@@ -973,7 +973,6 @@ async fn move_category3_down(
 
 #[tauri::command]
 async fn add_transaction(
-    user_id: i64,
     transaction_date: String,
     category1_code: String,
     category2_code: String,
@@ -983,6 +982,7 @@ async fn add_transaction(
     memo: Option<String>,
     state: tauri::State<'_, AppState>
 ) -> Result<i64, String> {
+    let user_id = get_session_user_id(&state)?;
     let transaction = state.transaction.lock().await;
     transaction.add_transaction(
         user_id,
@@ -1000,10 +1000,10 @@ async fn add_transaction(
 
 #[tauri::command]
 async fn get_transaction(
-    user_id: i64,
     transaction_id: i64,
     state: tauri::State<'_, AppState>
 ) -> Result<services::transaction::Transaction, String> {
+    let user_id = get_session_user_id(&state)?;
     let transaction = state.transaction.lock().await;
     transaction.get_transaction(user_id, transaction_id)
         .await
@@ -1012,7 +1012,6 @@ async fn get_transaction(
 
 #[tauri::command]
 async fn get_transactions(
-    user_id: i64,
     start_date: Option<String>,
     end_date: Option<String>,
     category1_code: Option<String>,
@@ -1025,6 +1024,7 @@ async fn get_transactions(
     per_page: i64,
     state: tauri::State<'_, AppState>
 ) -> Result<services::transaction::TransactionListResponse, String> {
+    let user_id = get_session_user_id(&state)?;
     let transaction = state.transaction.lock().await;
     transaction.get_transactions(
         user_id,
@@ -1045,7 +1045,6 @@ async fn get_transactions(
 
 #[tauri::command]
 async fn update_transaction(
-    user_id: i64,
     transaction_id: i64,
     transaction_date: String,
     category1_code: String,
@@ -1056,6 +1055,7 @@ async fn update_transaction(
     memo: Option<String>,
     state: tauri::State<'_, AppState>
 ) -> Result<(), String> {
+    let user_id = get_session_user_id(&state)?;
     let transaction = state.transaction.lock().await;
     transaction.update_transaction(
         user_id,
@@ -1074,10 +1074,10 @@ async fn update_transaction(
 
 #[tauri::command]
 async fn delete_transaction(
-    user_id: i64,
     transaction_id: i64,
     state: tauri::State<'_, AppState>
 ) -> Result<(), String> {
+    let user_id = get_session_user_id(&state)?;
     let transaction = state.transaction.lock().await;
     transaction.delete_transaction(user_id, transaction_id)
         .await
@@ -1370,7 +1370,6 @@ async fn delete_product(
 
 #[tauri::command]
 async fn save_transaction_header(
-    user_id: i64,
     shop_id: Option<i64>,
     category1_code: String,
     from_account_code: String,
@@ -1382,6 +1381,7 @@ async fn save_transaction_header(
     memo: Option<String>,
     state: tauri::State<'_, AppState>
 ) -> Result<i64, String> {
+    let user_id = get_session_user_id(&state)?;
     let transaction = state.transaction.lock().await;
 
     let request = services::transaction::SaveTransactionRequest {
@@ -1406,9 +1406,9 @@ async fn get_transaction_header(
     state: tauri::State<'_, AppState>
 ) -> Result<serde_json::Value, String> {
     let transaction = state.transaction.lock().await;
-    // TODO: Get user_id from session/auth
-    // For now, use user_id = 2 to match frontend currentUserId
-    let user_id = 2;
+    // Get user_id from session
+    // Get user_id from session
+    let user_id = get_session_user_id(&state)?;
     
     let (header, memo_text) = transaction.get_transaction_header_with_memo(user_id, transaction_id).await
         .map_err(|e| e.to_string())?;
@@ -1437,9 +1437,9 @@ async fn select_transaction_headers(
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::transaction::TransactionHeader>, String> {
     let transaction = state.transaction.lock().await;
-    // TODO: Get user_id from session/auth
-    // For now, use user_id = 2 to match frontend currentUserId
-    let user_id = 2;
+    // Get user_id from session
+    // Get user_id from session
+    let user_id = get_session_user_id(&state)?;
     
     let mut headers = Vec::new();
     for transaction_id in transaction_ids {
@@ -1466,9 +1466,9 @@ async fn update_transaction_header(
     state: tauri::State<'_, AppState>
 ) -> Result<(), String> {
     let transaction = state.transaction.lock().await;
-    // TODO: Get user_id from session/auth
-    // For now, use user_id = 2 to match frontend currentUserId
-    let user_id = 2;
+    // Get user_id from session
+    // Get user_id from session
+    let user_id = get_session_user_id(&state)?;
 
     let request = services::transaction::SaveTransactionRequest {
         shop_id,
@@ -1496,8 +1496,8 @@ async fn get_transaction_header_with_info(
     state: tauri::State<'_, AppState>
 ) -> Result<services::transaction::TransactionHeaderWithInfo, String> {
     let transaction = state.transaction.lock().await;
-    // TODO: Get user_id from session/auth
-    let user_id = 2;
+    // Get user_id from session
+    let user_id = get_session_user_id(&state)?;
 
     transaction.get_transaction_header_with_info(user_id, transaction_id).await
         .map_err(|e| e.to_string())
@@ -1509,8 +1509,8 @@ async fn get_transaction_details(
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::transaction::TransactionDetailWithInfo>, String> {
     let transaction = state.transaction.lock().await;
-    // TODO: Get user_id from session/auth
-    let user_id = 2;
+    // Get user_id from session
+    let user_id = get_session_user_id(&state)?;
 
     transaction.get_transaction_details(user_id, transaction_id).await
         .map_err(|e| e.to_string())
@@ -1531,8 +1531,8 @@ async fn add_transaction_detail(
     state: tauri::State<'_, AppState>
 ) -> Result<i64, String> {
     let transaction = state.transaction.lock().await;
-    // TODO: Get user_id from session/auth
-    let user_id = 2;
+    // Get user_id from session
+    let user_id = get_session_user_id(&state)?;
 
     let request = services::transaction::SaveTransactionDetailRequest {
         detail_id: None,
@@ -1566,8 +1566,8 @@ async fn update_transaction_detail(
     state: tauri::State<'_, AppState>
 ) -> Result<(), String> {
     let transaction = state.transaction.lock().await;
-    // TODO: Get user_id from session/auth
-    let user_id = 2;
+    // Get user_id from session
+    let user_id = get_session_user_id(&state)?;
 
     let request = services::transaction::SaveTransactionDetailRequest {
         detail_id: Some(detail_id),
@@ -1592,8 +1592,8 @@ async fn delete_transaction_detail(
     state: tauri::State<'_, AppState>
 ) -> Result<(), String> {
     let transaction = state.transaction.lock().await;
-    // TODO: Get user_id from session/auth
-    let user_id = 2;
+    // Get user_id from session
+    let user_id = get_session_user_id(&state)?;
 
     transaction.delete_transaction_detail(user_id, detail_id).await
         .map_err(|e| e.to_string())
@@ -1623,12 +1623,12 @@ fn parse_group_by(group_by: &str) -> Result<services::aggregation::GroupBy, Stri
 
 #[tauri::command]
 async fn get_monthly_aggregation(
-    user_id: i64,
     year: i32,
     month: u32,
     group_by: String,
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::aggregation::AggregationResult>, String> {
+    let user_id = get_session_user_id(&state)?;
     let db = state.db.lock().await;
     let settings = state.settings.lock().await;
     let lang = settings.get_string("language")
@@ -1649,11 +1649,11 @@ async fn get_monthly_aggregation(
 
 #[tauri::command]
 async fn get_daily_aggregation(
-    user_id: i64,
     date: String, // Format: "YYYY-MM-DD"
     group_by: String,
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::aggregation::AggregationResult>, String> {
+    let user_id = get_session_user_id(&state)?;
     let db = state.db.lock().await;
     let settings = state.settings.lock().await;
     let lang = settings.get_string("language")
@@ -1677,12 +1677,12 @@ async fn get_daily_aggregation(
 
 #[tauri::command]
 async fn get_period_aggregation(
-    user_id: i64,
     start_date: String, // Format: "YYYY-MM-DD"
     end_date: String, // Format: "YYYY-MM-DD"
     group_by: String,
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::aggregation::AggregationResult>, String> {
+    let user_id = get_session_user_id(&state)?;
     let db = state.db.lock().await;
     let settings = state.settings.lock().await;
     let lang = settings.get_string("language")
@@ -1709,13 +1709,13 @@ async fn get_period_aggregation(
 
 #[tauri::command]
 async fn get_weekly_aggregation(
-    user_id: i64,
     year: i32,
     week: u32,
     week_start: String, // "sunday" or "monday"
     group_by: String,
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::aggregation::AggregationResult>, String> {
+    let user_id = get_session_user_id(&state)?;
     let db = state.db.lock().await;
     let settings = state.settings.lock().await;
     let lang = settings.get_string("language")
@@ -1744,12 +1744,12 @@ async fn get_weekly_aggregation(
 
 #[tauri::command]
 async fn get_weekly_aggregation_by_date(
-    user_id: i64,
     reference_date: String, // Format: "YYYY-MM-DD"
     week_start: String, // "sunday" or "monday"
     group_by: String,
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::aggregation::AggregationResult>, String> {
+    let user_id = get_session_user_id(&state)?;
     let db = state.db.lock().await;
     let settings = state.settings.lock().await;
     let lang = settings.get_string("language")
@@ -1781,12 +1781,12 @@ async fn get_weekly_aggregation_by_date(
 
 #[tauri::command]
 async fn get_yearly_aggregation(
-    user_id: i64,
     year: i32,
     year_start: String, // "january" or "april"
     group_by: String,
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::aggregation::AggregationResult>, String> {
+    let user_id = get_session_user_id(&state)?;
     let db = state.db.lock().await;
     let settings = state.settings.lock().await;
     let lang = settings.get_string("language")
@@ -1814,7 +1814,6 @@ async fn get_yearly_aggregation(
 
 #[tauri::command]
 async fn get_monthly_aggregation_by_category(
-    user_id: i64,
     year: i32,
     month: u32,
     group_by: String,
@@ -1823,6 +1822,7 @@ async fn get_monthly_aggregation_by_category(
     category3_code: Option<String>,
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::aggregation::AggregationResult>, String> {
+    let user_id = get_session_user_id(&state)?;
     let db = state.db.lock().await;
     let settings = state.settings.lock().await;
     let lang = settings.get_string("language")

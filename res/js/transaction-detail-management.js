@@ -436,7 +436,6 @@ async function loadCategoryDropdowns() {
     
     try {
         const categoryTree = await invoke('get_category_tree_with_lang', {
-            userId: currentUserId,
             langCode: i18n.getCurrentLanguage()
         });
         
@@ -495,7 +494,6 @@ async function loadCategory3Options(category2Code) {
     
     try {
         const categoryTree = await invoke('get_category_tree_with_lang', {
-            userId: currentUserId,
             langCode: i18n.getCurrentLanguage()
         });
         
@@ -576,7 +574,6 @@ async function loadDetails() {
         
         // Get transaction details from backend
         const details = await invoke('get_transaction_details', {
-            userId: currentUserId,
             transactionId: parseInt(transactionId)
         });
         
@@ -781,7 +778,6 @@ async function editDetail(detailId) {
     try {
         // Get all details
         const details = await invoke('get_transaction_details', {
-            userId: currentUserId,
             transactionId: parseInt(transactionId)
         });
         
@@ -808,7 +804,6 @@ async function confirmDeleteDetail(detailId) {
     try {
         // Get all details
         const details = await invoke('get_transaction_details', {
-            userId: currentUserId,
             transactionId: parseInt(transactionId)
         });
         
@@ -855,7 +850,6 @@ async function handleDeleteConfirm() {
     
     try {
         await invoke('delete_transaction_detail', {
-            userId: currentUserId,
             detailId: parseInt(detailId)
         });
         

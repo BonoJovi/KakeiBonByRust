@@ -132,7 +132,6 @@ async function executeAggregation() {
         console.log(`Executing weekly aggregation: user_id=${user.user_id}, reference_date=${dateStr}, week_start=${weekStart}, group_by=${groupBy}`);
 
         const results = await invoke('get_weekly_aggregation_by_date', {
-            userId: user.user_id,
             referenceDate: dateStr,
             weekStart: weekStart,
             groupBy: groupBy

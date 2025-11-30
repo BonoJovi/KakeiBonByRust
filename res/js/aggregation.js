@@ -164,7 +164,6 @@ async function executeAggregation() {
         console.log(`Executing aggregation: user_id=${user.user_id}, year=${year}, month=${month}, group_by=${groupBy}`);
 
         const results = await invoke('get_monthly_aggregation', {
-            userId: user.user_id,
             year: year,
             month: month,
             groupBy: groupBy

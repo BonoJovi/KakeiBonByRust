@@ -150,7 +150,6 @@ async function executeAggregation() {
         console.log(`Executing period aggregation: user_id=${user.user_id}, start=${startDateStr}, end=${endDateStr}, group_by=${groupBy}`);
 
         const results = await invoke('get_period_aggregation', {
-            userId: user.user_id,
             startDate: startDateStr,
             endDate: endDateStr,
             groupBy: groupBy
