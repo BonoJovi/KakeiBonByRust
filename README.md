@@ -7,7 +7,7 @@
 
 [![Rust](https://img.shields.io/badge/Rust-1.70+-orange.svg)](https://www.rust-lang.org/)
 [![Tauri](https://img.shields.io/badge/Tauri-v2.9.3-blue.svg)](https://tauri.app/)
-[![Tests](https://img.shields.io/badge/tests-613%20passing-brightgreen.svg)](#test-results--テスト結果)
+[![Tests](https://img.shields.io/badge/tests-527%20passing-brightgreen.svg)](#test-results--テスト結果)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 [🇯🇵 日本語詳細](README_ja.md) | [🇬🇧 English Details](README_en.md)
@@ -91,7 +91,7 @@ Development is progressing smoothly, and we strive to update daily!
 開発は順調に進んでおり、できるだけ日々更新するようにしています！
 
 **Project Started / プロジェクト開始**: 2025-10-22 (JST)
-**Last Updated / 最終更新**: 2025-11-23 (JST)
+**Last Updated / 最終更新**: 2025-11-30 (JST)
 
 > **🤖 AI-Assisted Development / AI支援開発**  
 > This project's source code and documentation are **100% generated** with the assistance of generative AI (GitHub Copilot, Claude), supervised and reviewed by the developer. This demonstrates the potential of AI-assisted development.  
@@ -165,6 +165,15 @@ Every feature is designed with **explicit user needs and usability** in mind
 Designed with high visibility in mind - comfortable for long-term use  
 視認性を重視した設計で、長時間の使用でも目が疲れにくい
 
+### 🏗️ Enterprise-Grade Architecture / エンタープライズグレードのアーキテクチャ
+**Session-Based Authentication** throughout all 52 API functions  
+**セッションベース認証**を全52個のAPI関数で実装
+
+- 🔐 **Secure Session Management** / セキュアなセッション管理
+- 👥 **User Isolation** / ユーザーデータの完全分離
+- ✅ **Zero Hardcoded User IDs** / ハードコードされたユーザーID排除
+- 🧪 **527 Tests (100% Pass)** / 527テスト（100%合格）
+
 ### 🎯 Intuitive User Interface / 直感的な操作性
 Simple and clear UI that anyone can master quickly  
 誰でもすぐに使いこなせる、シンプルで分かりやすいUI
@@ -215,7 +224,7 @@ Switch between Japanese and English seamlessly
 | **Backend** / **バックエンド** | Rust + Tauri | v2.8.5 |
 | **Database** / **データベース** | SQLite | WAL mode |
 | **Security** / **セキュリティ** | Argon2id + AES-256-GCM | Password hashing + Data encryption |
-| **Testing** / **テスト** | Jest + Cargo Test | 613 tests passing (Rust: 201, JS: 412) |
+| **Testing** / **テスト** | Jest + Cargo Test | 527 tests passing (Rust: 201, JS: 326) |
 | **i18n Resources** / **翻訳** | JSON-based | 992 resources (496 unique keys, 2 languages) |
 | **Code Lines** / **コード行数** | Total / 合計 | ~35,478 lines (Rust: 13,870, JS: 8,810, HTML: 3,355, CSS: 6,109, SQL: 3,334) |
 
@@ -246,11 +255,22 @@ cargo tauri build
 ## 🧪 Test Results / テスト結果
 
 ```
-Backend (Rust) / バックエンド:    201 passing
-Frontend (JavaScript) / フロント:  412 passing
-Total Tests / 総テスト数:          613 passing ✅
+Backend (Rust) / バックエンド:    201 passing ✅
+Frontend (JavaScript) / フロント:  326 passing ✅
+Total Tests / 総テスト数:          527 passing ✅
 Success Rate / 成功率:            100%
 ```
+
+**Recent Improvements / 最近の改善**:
+- ✅ **Session Management Integration** / **セッション管理統合** (2025-11-30)
+  - All 52 API functions now use session-based authentication
+  - Enhanced security with proper user isolation
+  - Removed hardcoded user IDs throughout the codebase
+
+- ✅ **Test Quality Enhancement** / **テスト品質向上** (2025-11-30)
+  - Added explicit assertions to delegated tests
+  - Improved test readability and maintainability
+  - Enterprise-grade test structure achieved
 
 See [TEST_SUMMARY.md](docs/ja/TEST_SUMMARY.md) for details / 詳細は [TEST_SUMMARY.md](docs/ja/TEST_SUMMARY.md) を参照
 
