@@ -56,6 +56,15 @@ pub struct AppState {
     pub session: Arc<SessionState>,
 }
 
+/// Helper function to get user_id from session
+/// Returns error if user is not authenticated
+fn get_session_user_id(state: &tauri::State<'_, AppState>) -> Result<i64, String> {
+    match state.session.get_user() {
+        Some(user) => Ok(user.user_id),
+        None => Err("User not authenticated. Please login first.".to_string()),
+    }
+}
+
 #[tauri::command]
 async fn login_user(
     username: String,
@@ -801,10 +810,10 @@ async fn adjust_window_size(
 
 #[tauri::command]
 async fn get_category_tree_with_lang(
-    user_id: i64,
     lang_code: String,
     state: tauri::State<'_, AppState>
 ) -> Result<serde_json::Value, String> {
+    let user_id = get_session_user_id(&state)?;
     let category = state.category.lock().await;
     
     category.get_category_tree(user_id, &lang_code)
@@ -814,12 +823,12 @@ async fn get_category_tree_with_lang(
 
 #[tauri::command]
 async fn add_category2(
-    user_id: i64,
     category1_code: String,
     name_ja: String,
     name_en: String,
     state: tauri::State<'_, AppState>
 ) -> Result<String, String> {
+    let user_id = get_session_user_id(&state)?;
     let category = state.category.lock().await;
     
     category.add_category2(user_id, &category1_code, &name_ja, &name_en)
@@ -829,13 +838,13 @@ async fn add_category2(
 
 #[tauri::command]
 async fn add_category3(
-    user_id: i64,
     category1_code: String,
     category2_code: String,
     name_ja: String,
     name_en: String,
     state: tauri::State<'_, AppState>
 ) -> Result<String, String> {
+    let user_id = get_session_user_id(&state)?;
     let category = state.category.lock().await;
     
     category.add_category3(user_id, &category1_code, &category2_code, &name_ja, &name_en)
@@ -845,11 +854,11 @@ async fn add_category3(
 
 #[tauri::command]
 async fn get_category2_for_edit(
-    user_id: i64,
     category1_code: String,
     category2_code: String,
     state: tauri::State<'_, AppState>
 ) -> Result<services::category::CategoryForEdit, String> {
+    let user_id = get_session_user_id(&state)?;
     let category = state.category.lock().await;
     category.get_category2_for_edit(user_id, &category1_code, &category2_code)
         .await
@@ -858,12 +867,12 @@ async fn get_category2_for_edit(
 
 #[tauri::command]
 async fn get_category3_for_edit(
-    user_id: i64,
     category1_code: String,
     category2_code: String,
     category3_code: String,
     state: tauri::State<'_, AppState>
 ) -> Result<services::category::CategoryForEdit, String> {
+    let user_id = get_session_user_id(&state)?;
     let category = state.category.lock().await;
     category.get_category3_for_edit(user_id, &category1_code, &category2_code, &category3_code)
         .await
@@ -872,13 +881,13 @@ async fn get_category3_for_edit(
 
 #[tauri::command]
 async fn update_category2(
-    user_id: i64,
     category1_code: String,
     category2_code: String,
     name_ja: String,
     name_en: String,
     state: tauri::State<'_, AppState>
 ) -> Result<(), String> {
+    let user_id = get_session_user_id(&state)?;
     let category = state.category.lock().await;
     category.update_category2_i18n(user_id, &category1_code, &category2_code, &name_ja, &name_en)
         .await
@@ -887,7 +896,6 @@ async fn update_category2(
 
 #[tauri::command]
 async fn update_category3(
-    user_id: i64,
     category1_code: String,
     category2_code: String,
     category3_code: String,
@@ -895,6 +903,7 @@ async fn update_category3(
     name_en: String,
     state: tauri::State<'_, AppState>
 ) -> Result<(), String> {
+    let user_id = get_session_user_id(&state)?;
     let category = state.category.lock().await;
     category.update_category3_i18n(user_id, &category1_code, &category2_code, &category3_code, &name_ja, &name_en)
         .await
@@ -903,11 +912,11 @@ async fn update_category3(
 
 #[tauri::command]
 async fn move_category2_up(
-    user_id: i64,
     category1_code: String,
     category2_code: String,
     state: tauri::State<'_, AppState>
 ) -> Result<(), String> {
+    let user_id = get_session_user_id(&state)?;
     let category = state.category.lock().await;
     category.move_category2_up(user_id, &category1_code, &category2_code)
         .await
@@ -916,11 +925,11 @@ async fn move_category2_up(
 
 #[tauri::command]
 async fn move_category2_down(
-    user_id: i64,
     category1_code: String,
     category2_code: String,
     state: tauri::State<'_, AppState>
 ) -> Result<(), String> {
+    let user_id = get_session_user_id(&state)?;
     let category = state.category.lock().await;
     category.move_category2_down(user_id, &category1_code, &category2_code)
         .await
@@ -929,12 +938,12 @@ async fn move_category2_down(
 
 #[tauri::command]
 async fn move_category3_up(
-    user_id: i64,
     category1_code: String,
     category2_code: String,
     category3_code: String,
     state: tauri::State<'_, AppState>
 ) -> Result<(), String> {
+    let user_id = get_session_user_id(&state)?;
     let category = state.category.lock().await;
     category.move_category3_up(user_id, &category1_code, &category2_code, &category3_code)
         .await
@@ -943,12 +952,12 @@ async fn move_category3_up(
 
 #[tauri::command]
 async fn move_category3_down(
-    user_id: i64,
     category1_code: String,
     category2_code: String,
     category3_code: String,
     state: tauri::State<'_, AppState>
 ) -> Result<(), String> {
+    let user_id = get_session_user_id(&state)?;
     let category = state.category.lock().await;
     category.move_category3_down(user_id, &category1_code, &category2_code, &category3_code)
         .await

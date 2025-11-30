@@ -290,6 +290,30 @@ mod tests {
             .await
             .expect("Failed to create MEMOS table");
 
+        // Create ACCOUNT_TEMPLATES table (required by ACCOUNTS)
+        sqlx::query(sql_queries::TEST_ACCOUNT_CREATE_TEMPLATES_TABLE)
+            .execute(&pool)
+            .await
+            .expect("Failed to create ACCOUNT_TEMPLATES table");
+
+        // Insert test account template
+        sqlx::query("INSERT INTO ACCOUNT_TEMPLATES (TEMPLATE_CODE, TEMPLATE_NAME_JA, TEMPLATE_NAME_EN, DISPLAY_ORDER) VALUES ('CASH', '現金', 'Cash', 1)")
+            .execute(&pool)
+            .await
+            .expect("Failed to insert test account template");
+
+        // Create ACCOUNTS table (required by TRANSACTIONS_HEADER foreign keys)
+        sqlx::query(sql_queries::TEST_TRANSACTION_CREATE_ACCOUNTS_TABLE)
+            .execute(&pool)
+            .await
+            .expect("Failed to create ACCOUNTS table");
+
+        // Insert test accounts
+        sqlx::query("INSERT INTO ACCOUNTS (USER_ID, ACCOUNT_CODE, ACCOUNT_NAME, TEMPLATE_CODE) VALUES (1, 'NONE', 'None', 'CASH')")
+            .execute(&pool)
+            .await
+            .expect("Failed to insert test account");
+
         // Create TRANSACTIONS_HEADER table
         sqlx::query(sql_queries::CREATE_TRANSACTIONS_HEADER_TABLE)
             .execute(&pool)

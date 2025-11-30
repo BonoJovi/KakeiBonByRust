@@ -357,11 +357,10 @@ async function loadCategories() {
         // Get current language
         const currentLang = i18n.getCurrentLanguage();
         
-        console.log('Loading categories with params:', { userId: currentUserId, langCode: currentLang });
+        console.log('Loading categories with params:', { langCode: currentLang });
         
         // Fetch categories from backend
         categories = await invoke('get_category_tree_with_lang', {
-            userId: currentUserId,
             langCode: currentLang
         });
         
@@ -639,7 +638,6 @@ async function openEditModal(categoryCode, category1Code, category2Code, level) 
         if (level === LEVEL_CATEGORY2) {
             // Fetch category2 data from backend
             const categoryData = await invoke('get_category2_for_edit', {
-                userId: currentUserId,
                 category1Code: category1Code,
                 category2Code: categoryCode
             });
@@ -656,7 +654,6 @@ async function openEditModal(categoryCode, category1Code, category2Code, level) 
         } else if (level === LEVEL_CATEGORY3) {
             // Fetch category3 data from backend
             const categoryData = await invoke('get_category3_for_edit', {
-                userId: currentUserId,
                 category1Code: category1Code,
                 category2Code: category2Code,
                 category3Code: categoryCode
@@ -714,14 +711,12 @@ async function handleCategory2Save(formData) {
     try {
         if (mode === 'add') {
             await invoke('add_category2', {
-                userId: currentUserId,
                 category1Code: category1Code,
                 nameJa: nameJa,
                 nameEn: nameEn
             });
         } else if (mode === 'edit') {
             await invoke('update_category2', {
-                userId: currentUserId,
                 category1Code: category1Code,
                 category2Code: category2Code,
                 nameJa: nameJa,
@@ -734,10 +729,6 @@ async function handleCategory2Save(formData) {
     } catch (error) {
         console.error('Failed to save category2:', error);
         
-        // Restore button state on error
-        saveButton.disabled = false;
-        saveButton.textContent = originalButtonText;
-        
         // Check if it's a duplicate name error
         if (error.includes('already exists')) {
             const match = error.match(/Category name '(.+)' already exists/);
@@ -748,6 +739,10 @@ async function handleCategory2Save(formData) {
             alert(i18n.t('error.category_save_failed') + ': ' + error);
         }
         throw error; // Re-throw to prevent modal from closing
+    } finally {
+        // Always restore button state
+        saveButton.disabled = false;
+        saveButton.textContent = originalButtonText;
     }
 }
 
@@ -777,7 +772,6 @@ async function handleCategory3Save(formData) {
     try {
         if (mode === 'add') {
             await invoke('add_category3', {
-                userId: currentUserId,
                 category1Code: category1Code,
                 category2Code: category2Code,
                 nameJa: nameJa,
@@ -785,7 +779,6 @@ async function handleCategory3Save(formData) {
             });
         } else if (mode === 'edit') {
             await invoke('update_category3', {
-                userId: currentUserId,
                 category1Code: category1Code,
                 category2Code: category2Code,
                 category3Code: category3Code,
@@ -799,10 +792,6 @@ async function handleCategory3Save(formData) {
     } catch (error) {
         console.error('Failed to save category3:', error);
         
-        // Restore button state on error
-        saveButton.disabled = false;
-        saveButton.textContent = originalButtonText;
-        
         // Check if it's a duplicate name error
         if (error.includes('already exists')) {
             const match = error.match(/Category name '(.+)' already exists/);
@@ -813,6 +802,10 @@ async function handleCategory3Save(formData) {
             alert(i18n.t('error.category_save_failed') + ': ' + error);
         }
         throw error; // Re-throw to prevent modal from closing
+    } finally {
+        // Always restore button state
+        saveButton.disabled = false;
+        saveButton.textContent = originalButtonText;
     }
 }
 
@@ -826,13 +819,11 @@ async function moveCategoryUp(categoryCode, category1Code, category2Code, level)
     try {
         if (level === LEVEL_CATEGORY2) {
             await invoke('move_category2_up', {
-                userId: currentUserId,
                 category1Code: category1Code,
                 category2Code: categoryCode
             });
         } else if (level === LEVEL_CATEGORY3) {
             await invoke('move_category3_up', {
-                userId: currentUserId,
                 category1Code: category1Code,
                 category2Code: category2Code,
                 category3Code: categoryCode
@@ -865,13 +856,11 @@ async function moveCategoryDown(categoryCode, category1Code, category2Code, leve
     try {
         if (level === LEVEL_CATEGORY2) {
             await invoke('move_category2_down', {
-                userId: currentUserId,
                 category1Code: category1Code,
                 category2Code: categoryCode
             });
         } else if (level === LEVEL_CATEGORY3) {
             await invoke('move_category3_down', {
-                userId: currentUserId,
                 category1Code: category1Code,
                 category2Code: category2Code,
                 category3Code: categoryCode
