@@ -167,7 +167,7 @@ KakeiBonByRust/
 | Font Size | `res/js/font-size.js` | Font size adjustment |
 | Session | `res/js/session.js` | Session management |
 | i18n Client | `res/js/i18n.js` | Frontend translation |
-| Indicators | `res/js/indicators.js` | Caps Lock indicator |
+| Indicators | `res/js/indicators.js` | Low Vision Support Indicator |
 | Constants | `res/js/consts.js` | ROLE_ADMIN, ROLE_USER |
 
 ### Test Modules (Jest + ES Modules)
