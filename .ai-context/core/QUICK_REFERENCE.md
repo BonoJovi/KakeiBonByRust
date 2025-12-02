@@ -106,7 +106,7 @@ cargo test user_management   # Specific module
 ### Dependabot Alerts
 - **Active Alert #1**: glib VariantStrIter (Medium severity)
   - Status: Monitoring (indirect dependency, no direct usage)
-  - See: `docs/security/dependabot-alert-1-glib.md`
+  - See: `docs/security/alerts/dependabot-alert-1-glib.md`
 
 ---
 

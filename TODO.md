@@ -81,11 +81,11 @@
 
 ### 作成済み
 - [x] トラブルシューティングガイド（日本語・英語）
-  - docs/ja/TROUBLESHOOTING.md
-  - docs/en/TROUBLESHOOTING.md
+  - docs/user/ja/TROUBLESHOOTING.md
+  - docs/user/en/TROUBLESHOOTING.md
 - [x] データベース設定ガイド（日本語・英語）
-  - docs/ja/DATABASE_CONFIGURATION.md
-  - docs/en/DATABASE_CONFIGURATION.md
+  - docs/developer/ja/guides/DATABASE_CONFIGURATION.md
+  - docs/developer/en/guides/DATABASE_CONFIGURATION.md
 
 ### 完了済み
 - [x] トラブルシューティングガイド（日本語・英語）
@@ -94,14 +94,14 @@
 - [x] 開発者向けガイド（日本語・英語）
 - [x] データベースマイグレーションガイド（日本語・英語）
 - [x] 翻訳リソース統計ドキュメント（日本語・英語）
-  - docs/ja/I18N_RESOURCES.md
-  - docs/en/I18N_RESOURCES.md
+  - docs/developer/ja/guides/I18N_RESOURCES.md
+  - docs/developer/en/guides/I18N_RESOURCES.md
 - [x] 店舗管理APIドキュメント（日本語・英語）
-  - docs/ja/API_SHOP.md
-  - docs/en/API_SHOP.md
+  - docs/developer/ja/api/API_SHOP.md
+  - docs/developer/en/api/API_SHOP.md
 - [x] 入出金管理APIドキュメント更新（SHOP_ID追加、外部キー制約修正）
-  - docs/ja/API_TRANSACTION.md
-  - docs/en/API_TRANSACTION.md
+  - docs/developer/ja/api/API_TRANSACTION.md
+  - docs/developer/en/api/API_TRANSACTION.md
 
 ### 未完了
 - [ ] Rust APIドキュメント（rustdoc）の整備
@@ -225,7 +225,7 @@
 - [x] ビジネスロジックテスト
   - [x] 表示順管理テスト
   - [x] ユーザーデータ分離テスト
-- [x] テスト戦略ドキュメント作成（docs/TESTING.md）
+- [x] テスト戦略ドキュメント作成（docs/developer/en/testing/TESTING.md）
 
 **テスト結果**: 11 tests passed ✅
 
@@ -355,10 +355,10 @@
 
 **完了日**: 2025-11-04  
 **ドキュメント**:
-- `docs/ja/CATEGORY_MANAGEMENT_UI.md` - 費目管理画面実装ドキュメント（日本語）
-- `docs/en/CATEGORY_MANAGEMENT_UI.md` - Category Management Screen Implementation（英語）
-- `docs/ja/API_CATEGORY_ja.md` - 費目管理APIドキュメント（日本語）
-- `docs/en/API_CATEGORY.md` - Category Management API Documentation（英語）
+- `docs/developer/ja/guides/CATEGORY_MANAGEMENT_UI.md` - 費目管理画面実装ドキュメント（日本語）
+- `docs/developer/en/guides/CATEGORY_MANAGEMENT_UI.md` - Category Management Screen Implementation（英語）
+- `docs/developer/ja/api/API_CATEGORY_ja.md` - 費目管理APIドキュメント（日本語）
+- `docs/developer/en/api/API_CATEGORY.md` - Category Management API Documentation（英語）
 
 ---
 

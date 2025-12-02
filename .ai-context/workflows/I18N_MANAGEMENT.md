@@ -279,6 +279,6 @@ VALUES
 
 ## See Also
 
-- [I18N Implementation](../docs/ja/I18N_IMPLEMENTATION.md)
-- [I18N Resources](../docs/ja/I18N_RESOURCES.md)
-- [Database Configuration](../docs/ja/DATABASE_CONFIGURATION.md)
+- [I18N Implementation](../../docs/developer/ja/guides/I18N_IMPLEMENTATION.md)
+- [I18N Resources](../../docs/developer/ja/guides/I18N_RESOURCES.md)
+- [Database Configuration](../../docs/developer/ja/guides/DATABASE_CONFIGURATION.md)

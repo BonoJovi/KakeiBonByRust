@@ -109,8 +109,8 @@ Development is progressing smoothly, and we strive to update daily!
 > This project's source code and documentation are **100% generated** with the assistance of generative AI (GitHub Copilot, Claude), supervised and reviewed by the developer. This demonstrates the potential of AI-assisted development.  
 > 本プロジェクトのソースコードおよびドキュメントは、生成AI（GitHub Copilot、Claude）の支援により**100%生成**され、開発者による監修とレビューを経ています。これは、AI支援開発の可能性を示す事例です。
 > 
-> 📊 **[See AI Development Metrics & Quality Analysis →](docs/AI_DEVELOPMENT_METRICS.md)**  
-> **[AI開発の生産性と品質分析を見る →](docs/AI_DEVELOPMENT_METRICS.md)**
+> 📊 **[See AI Development Metrics & Quality Analysis →](docs/etc/AI_DEVELOPMENT_METRICS.md)**  
+> **[AI開発の生産性と品質分析を見る →](docs/etc/AI_DEVELOPMENT_METRICS.md)**
 
 <!-- STATS_START -->
 ## 📊 Repository Statistics / リポジトリ統計
@@ -294,7 +294,7 @@ Success Rate / 成功率:            100%
 - **Note / 注意**: No tests were removed; this is purely a measurement refinement
   テストは削除されておらず、計測方法の精密化のみです
 
-See [TEST_SUMMARY.md](docs/ja/TEST_SUMMARY.md) for details / 詳細は [TEST_SUMMARY.md](docs/ja/TEST_SUMMARY.md) を参照
+See [TEST_SUMMARY.md](docs/developer/ja/testing/TEST_SUMMARY.md) for details / 詳細は [TEST_SUMMARY.md](docs/developer/ja/testing/TEST_SUMMARY.md) を参照
 
 ---
 
@@ -302,77 +302,77 @@ See [TEST_SUMMARY.md](docs/ja/TEST_SUMMARY.md) for details / 詳細は [TEST_SUM
 
 ### For Users / ユーザー向け
 - 🔧 **Troubleshooting / トラブルシューティング**
-  - [English](docs/en/TROUBLESHOOTING.md) / [日本語](docs/ja/TROUBLESHOOTING.md)
+  - [English](docs/user/en/TROUBLESHOOTING.md) / [日本語](docs/user/ja/TROUBLESHOOTING.md)
 
 ### For Developers / 開発者向け
 
 #### Core Guides / コアガイド
 - 🏗️ **Developer Guide / 開発者ガイド**
-  - [English](docs/en/DEVELOPER_GUIDE.md) / [日本語](docs/ja/DEVELOPER_GUIDE.md)
+  - [English](docs/developer/en/guides/DEVELOPER_GUIDE.md) / [日本語](docs/developer/ja/guides/DEVELOPER_GUIDE.md)
 - 🧪 **Testing Strategy / テスト戦略**
-  - [English](docs/en/TESTING.md) / [日本語](docs/ja/TESTING.md)
+  - [English](docs/developer/en/testing/TESTING.md) / [日本語](docs/developer/ja/testing/TESTING.md)
 - 📊 **Test Summary / テストサマリー**
-  - [English](docs/en/TEST_SUMMARY.md) / [日本語](docs/ja/TEST_SUMMARY.md)
+  - [English](docs/developer/en/testing/TEST_SUMMARY.md) / [日本語](docs/developer/ja/testing/TEST_SUMMARY.md)
 
 #### API Documentation / API ドキュメント
 - 📁 **Category Management API / 費目管理 API**
-  - [English](docs/en/API_CATEGORY.md) / [日本語](docs/ja/API_CATEGORY.md)
+  - [English](docs/developer/en/api/API_CATEGORY.md) / [日本語](docs/developer/ja/api/API_CATEGORY.md)
 - 🏪 **Shop Management API / 店舗管理 API**
-  - [English](docs/en/API_SHOP.md) / [日本語](docs/ja/API_SHOP.md)
+  - [English](docs/developer/en/api/API_SHOP.md) / [日本語](docs/developer/ja/api/API_SHOP.md)
 - 🏭 **Manufacturer Management API / メーカー管理 API**
-  - [English](docs/en/API_MANUFACTURER.md) / [日本語](docs/ja/API_MANUFACTURER.md)
+  - [English](docs/developer/en/api/API_MANUFACTURER.md) / [日本語](docs/developer/ja/api/API_MANUFACTURER.md)
 - 📦 **Product Management API / 商品管理 API**
-  - [English](docs/en/API_PRODUCT.md) / [日本語](docs/ja/API_PRODUCT.md)
+  - [English](docs/developer/en/api/API_PRODUCT.md) / [日本語](docs/developer/ja/api/API_PRODUCT.md)
 - 💰 **Transaction Management API / 入出金管理 API**
-  - [English](docs/en/API_TRANSACTION.md) / [日本語](docs/ja/API_TRANSACTION.md)
+  - [English](docs/developer/en/api/API_TRANSACTION.md) / [日本語](docs/developer/ja/api/API_TRANSACTION.md)
 
 #### UI Documentation / UI ドキュメント
 - 👥 **User Management UI / ユーザー管理 UI**
-  - [English](docs/en/USER_MANAGEMENT_UI.md) / [日本語](docs/ja/USER_MANAGEMENT_UI.md)
+  - [English](docs/developer/en/guides/USER_MANAGEMENT_UI.md) / [日本語](docs/developer/ja/guides/USER_MANAGEMENT_UI.md)
 - 🏦 **Account Management UI / 口座管理 UI**
-  - [English](docs/en/ACCOUNT_MANAGEMENT_UI.md) / [日本語](docs/ja/ACCOUNT_MANAGEMENT_UI.md)
+  - [English](docs/developer/en/guides/ACCOUNT_MANAGEMENT_UI.md) / [日本語](docs/developer/ja/guides/ACCOUNT_MANAGEMENT_UI.md)
 - 📁 **Category Management UI / 費目管理 UI**
-  - [English](docs/en/CATEGORY_MANAGEMENT_UI.md) / [日本語](docs/ja/CATEGORY_MANAGEMENT_UI.md)
+  - [English](docs/developer/en/guides/CATEGORY_MANAGEMENT_UI.md) / [日本語](docs/developer/ja/guides/CATEGORY_MANAGEMENT_UI.md)
 - 🏭 **Manufacturer & Product Management / メーカー・商品管理**
-  - [English](docs/en/MANUFACTURER_PRODUCT_MANAGEMENT.md) / [日本語](docs/ja/MANUFACTURER_PRODUCT_MANAGEMENT.md)
+  - [English](docs/etc/MANUFACTURER_PRODUCT_MANAGEMENT.md) / [日本語](docs/etc/MANUFACTURER_PRODUCT_MANAGEMENT.md)
 - 💰 **Transaction Management UI / 入出金管理 UI**
-  - [English](docs/en/TRANSACTION_MANAGEMENT_UI_V2.md) / [日本語](docs/ja/TRANSACTION_MANAGEMENT_UI_V2.md)
+  - [English](docs/developer/en/guides/TRANSACTION_MANAGEMENT_UI_V2.md) / [日本語](docs/developer/ja/guides/TRANSACTION_MANAGEMENT_UI_V2.md)
 
 #### Feature Implementation / 機能実装
 - 🧮 **Tax Calculation Logic / 税計算ロジック**
-  - [Bilingual / 日英併記](docs/tax-calculation-logic.md)
+  - [Bilingual / 日英併記](docs/design/architecture/tax-calculation-logic.md)
 - 🌐 **I18N Implementation / 国際化実装**
-  - [English](docs/en/I18N_IMPLEMENTATION.md) / [日本語](docs/ja/I18N_IMPLEMENTATION.md)
+  - [English](docs/developer/en/guides/I18N_IMPLEMENTATION.md) / [日本語](docs/developer/ja/guides/I18N_IMPLEMENTATION.md)
 - 🌍 **I18N Resources / 国際化リソース**
-  - [English](docs/en/I18N_RESOURCES.md) / [日本語](docs/ja/I18N_RESOURCES.md)
+  - [English](docs/developer/en/guides/I18N_RESOURCES.md) / [日本語](docs/developer/ja/guides/I18N_RESOURCES.md)
 - 🌐 **Dynamic Language Menu / 動的言語メニュー**
-  - [English](docs/en/DYNAMIC_LANGUAGE_MENU.md) / [日本語](docs/ja/DYNAMIC_LANGUAGE_MENU.md)
+  - [English](docs/developer/en/guides/DYNAMIC_LANGUAGE_MENU.md) / [日本語](docs/developer/ja/guides/DYNAMIC_LANGUAGE_MENU.md)
 - 🔤 **Font Size Implementation / フォントサイズ実装**
-  - [English](docs/en/font-size-implementation.md) / [日本語](docs/ja/font-size-implementation.md)
+  - [English](docs/developer/en/guides/font-size-implementation.md) / [日本語](docs/developer/ja/guides/font-size-implementation.md)
 - ♿ **Accessibility Indicators / アクセシビリティインジケーター**
-  - [English](docs/en/ACCESSIBILITY_INDICATORS.md) / [日本語](docs/ja/ACCESSIBILITY_INDICATORS.md)
+  - [English](docs/etc/ACCESSIBILITY_INDICATORS.md) / [日本語](docs/etc/ACCESSIBILITY_INDICATORS.md)
 - 🚫 **IS_DISABLED Implementation / IS_DISABLED実装**
-  - [English](docs/en/IS_DISABLED_IMPLEMENTATION_GUIDE.md) / [日本語](docs/ja/IS_DISABLED_IMPLEMENTATION_GUIDE.md)
+  - [English](docs/developer/en/guides/IS_DISABLED_IMPLEMENTATION_GUIDE.md) / [日本語](docs/developer/ja/guides/IS_DISABLED_IMPLEMENTATION_GUIDE.md)
 
 #### Database & Security / データベース・セキュリティ
 - 🗄️ **Database Configuration / データベース設定**
-  - [English](docs/en/DATABASE_CONFIGURATION.md) / [日本語](docs/ja/DATABASE_CONFIGURATION.md)
+  - [English](docs/developer/en/guides/DATABASE_CONFIGURATION.md) / [日本語](docs/developer/ja/guides/DATABASE_CONFIGURATION.md)
 - 🔄 **Database Migration / データベースマイグレーション**
-  - [English](docs/en/DATABASE_MIGRATION.md) / [日本語](docs/ja/DATABASE_MIGRATION.md)
+  - [English](docs/developer/en/guides/DATABASE_MIGRATION.md) / [日本語](docs/developer/ja/guides/DATABASE_MIGRATION.md)
 - 🔐 **Encryption Management / 暗号化管理**
-  - [English](docs/en/ENCRYPTION_MANAGEMENT.md) / [日本語](docs/ja/ENCRYPTION_MANAGEMENT.md)
+  - [English](docs/developer/en/guides/ENCRYPTION_MANAGEMENT.md) / [日本語](docs/developer/ja/guides/ENCRYPTION_MANAGEMENT.md)
 - 👤 **User Management / ユーザー管理**
-  - [English](docs/en/USER_MANAGEMENT.md) / [日本語](docs/ja/USER_MANAGEMENT.md)
+  - [English](docs/developer/en/guides/USER_MANAGEMENT.md) / [日本語](docs/developer/ja/guides/USER_MANAGEMENT.md)
 - ⚙️ **Settings Management / 設定管理**
-  - [English](docs/en/SETTINGS_MANAGEMENT.md) / [日本語](docs/ja/SETTINGS_MANAGEMENT.md)
+  - [English](docs/developer/en/guides/SETTINGS_MANAGEMENT.md) / [日本語](docs/developer/ja/guides/SETTINGS_MANAGEMENT.md)
 
 #### Design Documents / 設計ドキュメント
 - 💰 **Transaction Design V2 / 入出金設計 V2**
-  - [English](docs/en/TRANSACTION_DESIGN_V2.md) / [日本語](docs/ja/TRANSACTION_DESIGN_V2.md)
+  - [English](docs/design/architecture/TRANSACTION_DESIGN_V2.md) / [日本語](docs/design/architecture/TRANSACTION_DESIGN_V2_ja.md)
 
 ### Project Information / プロジェクト情報
 - 👥 **Project Participants / プロジェクト参加者**
-  - [English](docs/en/PROJECT_PARTICIPANTS.md) / [日本語](docs/ja/PROJECT_PARTICIPANTS.md)
+  - [English](docs/etc/PROJECT_PARTICIPANTS.md) / [日本語](docs/etc/PROJECT_PARTICIPANTS.md)
 
 ---
 

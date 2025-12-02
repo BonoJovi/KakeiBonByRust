@@ -72,7 +72,7 @@ Development is progressing smoothly, and we strive to update daily!
 > **🤖 AI-Assisted Development**  
 > This project's source code and documentation are **100% generated** with the assistance of generative AI (GitHub Copilot, Claude), supervised and reviewed by the developer. This demonstrates the potential of AI-assisted development.
 > 
-> 📊 **[See AI Development Metrics & Quality Analysis →](docs/AI_DEVELOPMENT_METRICS.md)**
+> 📊 **[See AI Development Metrics & Quality Analysis →](docs/etc/AI_DEVELOPMENT_METRICS.md)**
 
 <!-- STATS_START -->
 ## 📊 Repository Statistics
@@ -245,57 +245,57 @@ Success Rate:         100%
 - **Reason for change**: Improved accuracy and industry-standard methodology
 - **Note**: No tests were removed; this is purely a measurement refinement
 
-See [TEST_SUMMARY.md](docs/en/TEST_SUMMARY.md) for details
+See [TEST_SUMMARY.md](docs/developer/en/testing/TEST_SUMMARY.md) for details
 
 ---
 
 ## 📚 Documentation
 
 ### For Users
-- 🔧 **[Troubleshooting](docs/en/TROUBLESHOOTING.md)**
+- 🔧 **[Troubleshooting](docs/user/en/TROUBLESHOOTING.md)**
 
 ### For Developers
 
 #### Core Guides
-- 🏗️ **[Developer Guide](docs/en/DEVELOPER_GUIDE.md)**
-- 🧪 **[Testing Strategy](docs/en/TESTING.md)**
-- 📊 **[Test Summary](docs/en/TEST_SUMMARY.md)**
+- 🏗️ **[Developer Guide](docs/developer/en/guides/DEVELOPER_GUIDE.md)**
+- 🧪 **[Testing Strategy](docs/developer/en/testing/TESTING.md)**
+- 📊 **[Test Summary](docs/developer/en/testing/TEST_SUMMARY.md)**
 
 #### API Documentation
-- 📁 **[Category Management API](docs/en/API_CATEGORY.md)**
-- 🏪 **[Shop Management API](docs/en/API_SHOP.md)**
-- 🏭 **[Manufacturer Management API](docs/en/API_MANUFACTURER.md)**
-- 📦 **[Product Management API](docs/en/API_PRODUCT.md)**
-- 💰 **[Transaction Management API](docs/en/API_TRANSACTION.md)**
+- 📁 **[Category Management API](docs/developer/en/api/API_CATEGORY.md)**
+- 🏪 **[Shop Management API](docs/developer/en/api/API_SHOP.md)**
+- 🏭 **[Manufacturer Management API](docs/developer/en/api/API_MANUFACTURER.md)**
+- 📦 **[Product Management API](docs/developer/en/api/API_PRODUCT.md)**
+- 💰 **[Transaction Management API](docs/developer/en/api/API_TRANSACTION.md)**
 
 #### UI Documentation
-- 👥 **[User Management UI](docs/en/USER_MANAGEMENT_UI.md)**
-- 🏦 **[Account Management UI](docs/en/ACCOUNT_MANAGEMENT_UI.md)**
-- 📁 **[Category Management UI](docs/en/CATEGORY_MANAGEMENT_UI.md)**
-- 🏭 **[Manufacturer & Product Management](docs/en/MANUFACTURER_PRODUCT_MANAGEMENT.md)**
-- 💰 **[Transaction Management UI](docs/en/TRANSACTION_MANAGEMENT_UI_V2.md)**
+- 👥 **[User Management UI](docs/developer/en/guides/USER_MANAGEMENT_UI.md)**
+- 🏦 **[Account Management UI](docs/developer/en/guides/ACCOUNT_MANAGEMENT_UI.md)**
+- 📁 **[Category Management UI](docs/developer/en/guides/CATEGORY_MANAGEMENT_UI.md)**
+- 🏭 **[Manufacturer & Product Management](docs/etc/MANUFACTURER_PRODUCT_MANAGEMENT.md)**
+- 💰 **[Transaction Management UI](docs/developer/en/guides/TRANSACTION_MANAGEMENT_UI_V2.md)**
 
 #### Feature Implementation
-- 🧮 **[Tax Calculation Logic](docs/tax-calculation-logic.md)** (Bilingual)
-- 🌐 **[I18N Implementation](docs/en/I18N_IMPLEMENTATION.md)**
-- 🌍 **[I18N Resources](docs/en/I18N_RESOURCES.md)**
-- 🌐 **[Dynamic Language Menu](docs/en/DYNAMIC_LANGUAGE_MENU.md)**
-- 🔤 **[Font Size Implementation](docs/en/font-size-implementation.md)**
-- ♿ **[Accessibility Indicators](docs/en/ACCESSIBILITY_INDICATORS.md)**
-- 🚫 **[IS_DISABLED Implementation](docs/en/IS_DISABLED_IMPLEMENTATION_GUIDE.md)**
+- 🧮 **[Tax Calculation Logic](docs/design/architecture/tax-calculation-logic.md)** (Bilingual)
+- 🌐 **[I18N Implementation](docs/developer/en/guides/I18N_IMPLEMENTATION.md)**
+- 🌍 **[I18N Resources](docs/developer/en/guides/I18N_RESOURCES.md)**
+- 🌐 **[Dynamic Language Menu](docs/developer/en/guides/DYNAMIC_LANGUAGE_MENU.md)**
+- 🔤 **[Font Size Implementation](docs/developer/en/guides/font-size-implementation.md)**
+- ♿ **[Accessibility Indicators](docs/etc/ACCESSIBILITY_INDICATORS.md)**
+- 🚫 **[IS_DISABLED Implementation](docs/developer/en/guides/IS_DISABLED_IMPLEMENTATION_GUIDE.md)**
 
 #### Database & Security
-- 🗄️ **[Database Configuration](docs/en/DATABASE_CONFIGURATION.md)**
-- 🔄 **[Database Migration](docs/en/DATABASE_MIGRATION.md)**
-- 🔐 **[Encryption Management](docs/en/ENCRYPTION_MANAGEMENT.md)**
-- 👤 **[User Management](docs/en/USER_MANAGEMENT.md)**
-- ⚙️ **[Settings Management](docs/en/SETTINGS_MANAGEMENT.md)**
+- 🗄️ **[Database Configuration](docs/developer/en/guides/DATABASE_CONFIGURATION.md)**
+- 🔄 **[Database Migration](docs/developer/en/guides/DATABASE_MIGRATION.md)**
+- 🔐 **[Encryption Management](docs/developer/en/guides/ENCRYPTION_MANAGEMENT.md)**
+- 👤 **[User Management](docs/developer/en/guides/USER_MANAGEMENT.md)**
+- ⚙️ **[Settings Management](docs/developer/en/guides/SETTINGS_MANAGEMENT.md)**
 
 #### Design Documents
-- 💰 **[Transaction Design V2](docs/en/TRANSACTION_DESIGN_V2.md)**
+- 💰 **[Transaction Design V2](docs/design/architecture/TRANSACTION_DESIGN_V2.md)**
 
 ### Project Information
-- 👥 **[Project Participants](docs/en/PROJECT_PARTICIPANTS.md)**
+- 👥 **[Project Participants](docs/etc/PROJECT_PARTICIPANTS.md)**
 
 ---
 
