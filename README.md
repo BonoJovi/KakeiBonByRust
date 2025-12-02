@@ -66,6 +66,18 @@ Thank you for your continued support of KakeiBon.
 
 ---
 
+## 📝 Technical Articles / 技術記事
+
+**Read more about AI-assisted development and other technical insights on Qiita!**  
+**AI支援開発やその他の技術的知見についてQiitaで詳しく紹介しています！**
+
+We share articles not only about KakeiBon development but also about AI collaboration techniques, design philosophy, and various technical topics.  
+KakeiBon開発だけでなく、AI協働手法、設計思想、その他さまざまな技術トピックについて記事を公開しています。
+
+👉 **[Visit Qiita Profile / Qiitaプロフィールを見る](https://qiita.com/BonoJovi/)**
+
+---
+
 ## 📑 Table of Contents / 目次
 
 - [🚧 Development Status / 開発状況](#-development-status--開発状況)
