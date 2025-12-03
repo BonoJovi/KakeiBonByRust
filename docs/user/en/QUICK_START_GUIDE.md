@@ -159,19 +159,51 @@ Track which stores you frequent:
 
 ### 💾 Backup Your Data
 
-Your database is stored at:
-- **Linux**: `~/.kakeibon/KakeiBonDB.sqlite3`
-- **Windows**: `%USERPROFILE%\.kakeibon\KakeiBonDB.sqlite3`
-- **macOS**: `~/.kakeibon/KakeiBonDB.sqlite3`
+Your data is stored in the `.kakeibon` directory:
+
+**Linux/macOS:**
+- Database: `~/.kakeibon/KakeiBonDB.sqlite3`
+- Configuration: `~/.kakeibon/KakeiBon.json`
+
+**Windows:**
+- Database: `%USERPROFILE%\.kakeibon\KakeiBonDB.sqlite3`
+- Configuration: `%USERPROFILE%\.kakeibon\KakeiBon.json`
 
 **Backup regularly:**
 ```bash
-# Linux/macOS
-cp ~/.kakeibon/KakeiBonDB.sqlite3 ~/backups/kakeibon_$(date +%Y%m%d).sqlite3
+# Linux/macOS - Backup entire directory
+tar -czf ~/backups/kakeibon_backup_$(date +%Y%m%d).tar.gz ~/.kakeibon/
 
-# Windows (PowerShell)
-Copy-Item "$env:USERPROFILE\.kakeibon\KakeiBonDB.sqlite3" "$env:USERPROFILE\backups\kakeibon_$(Get-Date -Format 'yyyyMMdd').sqlite3"
+# Or backup files individually
+cp ~/.kakeibon/KakeiBonDB.sqlite3 ~/backups/kakeibon_db_$(date +%Y%m%d).sqlite3
+cp ~/.kakeibon/KakeiBon.json ~/backups/kakeibon_config_$(date +%Y%m%d).json
+
+# Windows (PowerShell) - Backup entire directory
+Compress-Archive -Path "$env:USERPROFILE\.kakeibon" -DestinationPath "$env:USERPROFILE\backups\kakeibon_backup_$(Get-Date -Format 'yyyyMMdd').zip"
+
+# Or backup files individually
+Copy-Item "$env:USERPROFILE\.kakeibon\KakeiBonDB.sqlite3" "$env:USERPROFILE\backups\kakeibon_db_$(Get-Date -Format 'yyyyMMdd').sqlite3"
+Copy-Item "$env:USERPROFILE\.kakeibon\KakeiBon.json" "$env:USERPROFILE\backups\kakeibon_config_$(Get-Date -Format 'yyyyMMdd').json"
 ```
+
+**Restore from backup:**
+```bash
+# Linux/macOS - Restore entire directory
+tar -xzf ~/backups/kakeibon_backup_20251203.tar.gz -C ~/
+
+# Or restore files individually
+cp ~/backups/kakeibon_db_20251203.sqlite3 ~/.kakeibon/KakeiBonDB.sqlite3
+cp ~/backups/kakeibon_config_20251203.json ~/.kakeibon/KakeiBon.json
+
+# Windows (PowerShell) - Restore entire directory
+Expand-Archive -Path "$env:USERPROFILE\backups\kakeibon_backup_20251203.zip" -DestinationPath "$env:USERPROFILE" -Force
+
+# Or restore files individually
+Copy-Item "$env:USERPROFILE\backups\kakeibon_db_20251203.sqlite3" "$env:USERPROFILE\.kakeibon\KakeiBonDB.sqlite3"
+Copy-Item "$env:USERPROFILE\backups\kakeibon_config_20251203.json" "$env:USERPROFILE\.kakeibon\KakeiBon.json"
+```
+
+**💡 Tip:** The configuration file (`KakeiBon.json`) stores your preferences (language, font size). Backing it up ensures you don't lose your settings.
 
 ---
 

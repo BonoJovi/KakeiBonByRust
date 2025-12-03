@@ -159,19 +159,51 @@ KakeiBonにはデフォルトのカテゴリが用意されていますが、カ
 
 ### 💾 データのバックアップ
 
-データベースは以下の場所に保存されています：
-- **Linux**: `~/.kakeibon/KakeiBonDB.sqlite3`
-- **Windows**: `%USERPROFILE%\.kakeibon\KakeiBonDB.sqlite3`
-- **macOS**: `~/.kakeibon/KakeiBonDB.sqlite3`
+データは`.kakeibon`ディレクトリに保存されています：
+
+**Linux/macOS:**
+- データベース: `~/.kakeibon/KakeiBonDB.sqlite3`
+- 設定ファイル: `~/.kakeibon/KakeiBon.json`
+
+**Windows:**
+- データベース: `%USERPROFILE%\.kakeibon\KakeiBonDB.sqlite3`
+- 設定ファイル: `%USERPROFILE%\.kakeibon\KakeiBon.json`
 
 **定期的にバックアップ:**
 ```bash
-# Linux/macOS
-cp ~/.kakeibon/KakeiBonDB.sqlite3 ~/backups/kakeibon_$(date +%Y%m%d).sqlite3
+# Linux/macOS - ディレクトリ全体をバックアップ
+tar -czf ~/backups/kakeibon_backup_$(date +%Y%m%d).tar.gz ~/.kakeibon/
 
-# Windows (PowerShell)
-Copy-Item "$env:USERPROFILE\.kakeibon\KakeiBonDB.sqlite3" "$env:USERPROFILE\backups\kakeibon_$(Get-Date -Format 'yyyyMMdd').sqlite3"
+# または個別にバックアップ
+cp ~/.kakeibon/KakeiBonDB.sqlite3 ~/backups/kakeibon_db_$(date +%Y%m%d).sqlite3
+cp ~/.kakeibon/KakeiBon.json ~/backups/kakeibon_config_$(date +%Y%m%d).json
+
+# Windows (PowerShell) - ディレクトリ全体をバックアップ
+Compress-Archive -Path "$env:USERPROFILE\.kakeibon" -DestinationPath "$env:USERPROFILE\backups\kakeibon_backup_$(Get-Date -Format 'yyyyMMdd').zip"
+
+# または個別にバックアップ
+Copy-Item "$env:USERPROFILE\.kakeibon\KakeiBonDB.sqlite3" "$env:USERPROFILE\backups\kakeibon_db_$(Get-Date -Format 'yyyyMMdd').sqlite3"
+Copy-Item "$env:USERPROFILE\.kakeibon\KakeiBon.json" "$env:USERPROFILE\backups\kakeibon_config_$(Get-Date -Format 'yyyyMMdd').json"
 ```
+
+**バックアップからの復元:**
+```bash
+# Linux/macOS - ディレクトリ全体を復元
+tar -xzf ~/backups/kakeibon_backup_20251203.tar.gz -C ~/
+
+# または個別に復元
+cp ~/backups/kakeibon_db_20251203.sqlite3 ~/.kakeibon/KakeiBonDB.sqlite3
+cp ~/backups/kakeibon_config_20251203.json ~/.kakeibon/KakeiBon.json
+
+# Windows (PowerShell) - ディレクトリ全体を復元
+Expand-Archive -Path "$env:USERPROFILE\backups\kakeibon_backup_20251203.zip" -DestinationPath "$env:USERPROFILE" -Force
+
+# または個別に復元
+Copy-Item "$env:USERPROFILE\backups\kakeibon_db_20251203.sqlite3" "$env:USERPROFILE\.kakeibon\KakeiBonDB.sqlite3"
+Copy-Item "$env:USERPROFILE\backups\kakeibon_config_20251203.json" "$env:USERPROFILE\.kakeibon\KakeiBon.json"
+```
+
+**💡 ヒント:** 設定ファイル（`KakeiBon.json`）には言語やフォントサイズなどの設定が保存されています。バックアップすることで設定を失わずに済みます。
 
 ---
 
