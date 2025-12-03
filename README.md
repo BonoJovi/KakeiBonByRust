@@ -66,6 +66,85 @@ Thank you for your continued support of KakeiBon.
 
 ---
 
+## 🤝 Join Our Community / コミュニティに参加
+
+**Help make KakeiBon accessible to users worldwide!**
+**KakeiBonを世界中のユーザーに届けるお手伝いをしてください！**
+
+We welcome **all types of contributions** - not just code! Whether you're a developer, translator, or user, there's a way for you to contribute.
+**あらゆる形の貢献**を歓迎します—コードだけではありません！開発者、翻訳者、ユーザーのいずれであっても、貢献する方法があります。
+
+---
+
+### 🌍 Translators Wanted! / 翻訳者募集！
+**No programming experience needed! / プログラミング経験不要！**
+
+Help make KakeiBon available in your language:
+あなたの言語でKakeiBonを利用可能にするお手伝いをしてください：
+
+- ✅ **Currently Supported / 現在サポート**: Japanese (ja), English (en)
+- 🌐 **Seeking / 募集中**: Chinese (zh), Korean (ko), French (fr), German (de), Spanish (es), and more!
+
+**How to contribute:**
+- Add support for a new language / 新しい言語のサポートを追加
+- Improve existing translations / 既存の翻訳を改善
+- Review translation accuracy / 翻訳の正確性をレビュー
+
+📖 **[Translation Guide](docs/developer/en/guides/translation-guide.md)** | **[翻訳ガイド](docs/developer/ja/guides/translation-guide.md)**
+🆕 **[Submit Translation Request](https://github.com/BonoJovi/KakeiBonByRust/issues/new?template=translation.yml)**
+
+---
+
+### 🧪 Testers Wanted! / テスター募集！
+**No programming experience needed! / プログラミング経験不要！**
+
+**We especially need Windows & macOS testers!**
+**特にWindows & macOSのテスターを求めています！**
+
+**Platform Status:**
+- ✅ **Linux**: Verified and tested / 検証済み・テスト済み
+- ⚠️ **Windows**: Needs testers! / テスターが必要！
+- ⚠️ **macOS**: Needs testers! / テスターが必要！
+
+**How to contribute:**
+- Test KakeiBon on your platform / お使いのプラットフォームでKakeiBonをテスト
+- Report bugs and issues / バグや問題を報告
+- Suggest UX/UI improvements / UX/UI改善を提案
+- Share your user experience / ユーザー体験を共有
+
+📖 **[Testing Guide](docs/developer/en/guides/testing-guide.md)** | **[テストガイド](docs/developer/ja/guides/testing-guide.md)**
+🆕 **[Submit Testing Feedback](https://github.com/BonoJovi/KakeiBonByRust/issues/new?template=testing-feedback.yml)**
+
+---
+
+### 💡 Feature Requests & Feedback / 機能リクエスト & フィードバック
+
+Have ideas to make KakeiBon better?
+KakeiBonをより良くするアイデアはありますか？
+
+- 🆕 **[Submit Feature Request](https://github.com/BonoJovi/KakeiBonByRust/issues/new?template=feature_request.md)**
+- 🐛 **[Report a Bug](https://github.com/BonoJovi/KakeiBonByRust/issues/new?template=bug_report.md)**
+- 💬 **[Join Discussions](https://github.com/BonoJovi/KakeiBonByRust/discussions)**
+
+---
+
+### 💻 Developers / 開発者
+
+For code contributions:
+コード貢献について：
+
+- 📋 **[Contributing Guide](CONTRIBUTING.md)**
+- 🔧 **[Development Documentation](docs/developer/en/)**
+
+---
+
+**Every contribution, no matter how small, makes KakeiBon better for everyone.**
+**どんなに小さな貢献でも、KakeiBonをみんなにとってより良いものにします。**
+
+**Thank you for your support! / ご支援ありがとうございます！**
+
+---
+
 ## 📝 Technical Articles / 技術記事
 
 **Read more about AI-assisted development and other technical insights on Qiita!**  

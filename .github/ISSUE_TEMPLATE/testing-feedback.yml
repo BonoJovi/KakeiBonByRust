@@ -1,0 +1,222 @@
+name: 🧪 Testing Feedback / テストフィードバック
+description: Report testing results or issues found during testing / テスト結果や見つかった問題の報告
+title: "[Testing] "
+labels: ["testing", "feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Thank you for testing KakeiBon!
+        ## KakeiBonのテストにご協力いただきありがとうございます！
+
+        This template is for reporting testing feedback, especially from Windows and macOS users.
+        Your feedback helps improve KakeiBon's quality across all platforms!
+
+        このテンプレートはテストフィードバックの報告用です（特にWindowsとmacOSユーザーの方）。
+        あなたのフィードバックが、すべてのプラットフォームでKakeiBonの品質向上に役立ちます！
+
+  - type: dropdown
+    id: feedback-type
+    attributes:
+      label: Feedback Type / フィードバックタイプ
+      description: What type of feedback is this?
+      options:
+        - Bug found (バグ発見)
+        - General testing feedback (一般的なテストフィードバック)
+        - UX/UI suggestion (UX/UI改善提案)
+        - Documentation issue (ドキュメントの問題)
+        - Performance issue (パフォーマンス問題)
+        - Feature works as expected (機能が正常に動作)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform / プラットフォーム
+      description: Which operating system did you test on?
+      options:
+        - Windows 11
+        - Windows 10
+        - macOS (Apple Silicon)
+        - macOS (Intel)
+        - Linux (Ubuntu/Debian)
+        - Linux (Fedora/RHEL)
+        - Linux (Arch)
+        - Linux (Other)
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: KakeiBon Version / バージョン
+      description: Which version of KakeiBon did you test?
+      placeholder: "e.g., v1.0.1"
+    validations:
+      required: true
+
+  - type: textarea
+    id: test-scenario
+    attributes:
+      label: Test Scenario / テストシナリオ
+      description: |
+        What did you test? Describe the steps you took.
+
+        Example:
+        1. Launched the application
+        2. Created a new user
+        3. Added transaction data
+        4. Generated a monthly report
+
+        何をテストしましたか？手順を説明してください。
+
+        例：
+        1. アプリケーションを起動
+        2. 新しいユーザーを作成
+        3. 入出金データを追加
+        4. 月次レポートを生成
+      placeholder: Describe your test scenario...
+    validations:
+      required: true
+
+  - type: textarea
+    id: result
+    attributes:
+      label: Test Result / テスト結果
+      description: |
+        What happened? Did it work as expected?
+        If there were issues, describe what went wrong.
+
+        何が起きましたか？期待通りに動作しましたか？
+        問題があった場合は、何がおかしかったか説明してください。
+      placeholder: Describe the result...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected Behavior / 期待される動作
+      description: |
+        What did you expect to happen?
+        (Only if different from actual result)
+
+        何が起きることを期待していましたか？
+        （実際の結果と異なる場合のみ）
+      placeholder: What should have happened...
+    validations:
+      required: false
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment Details / 環境詳細
+      description: |
+        Provide detailed environment information:
+        - OS version (e.g., Windows 11 23H2, macOS 14.2)
+        - Hardware specs (CPU, RAM, etc.)
+        - Display resolution
+        - Any other relevant details
+
+        詳細な環境情報を提供してください：
+        - OSバージョン（例：Windows 11 23H2, macOS 14.2）
+        - ハードウェアスペック（CPU、RAMなど）
+        - ディスプレイ解像度
+        - その他関連する詳細
+      placeholder: |
+        OS: Windows 11 23H2
+        CPU: Intel Core i7-12700K
+        RAM: 32GB
+        Display: 1920x1080
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots / スクリーンショット
+      description: |
+        If applicable, add screenshots or screen recordings.
+        Drag and drop images here.
+
+        該当する場合は、スクリーンショットや画面録画を添付してください。
+        ここに画像をドラッグ＆ドロップできます。
+      placeholder: Drag and drop screenshots here...
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error Logs / エラーログ
+      description: |
+        If there were errors, paste relevant logs here.
+        Check the application logs or console output.
+
+        エラーがあった場合は、関連するログをここに貼り付けてください。
+        アプリケーションログやコンソール出力を確認してください。
+      placeholder: Paste error logs here...
+      render: shell
+    validations:
+      required: false
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity / 重要度
+      description: How severe is this issue? (if applicable)
+      options:
+        - Critical - App crashes or data loss (致命的 - アプリクラッシュまたはデータ損失)
+        - High - Major functionality broken (高 - 主要機能が動作しない)
+        - Medium - Feature partially works (中 - 機能が部分的に動作)
+        - Low - Minor issue or cosmetic (低 - 軽微な問題または見た目)
+        - None - Just feedback (なし - フィードバックのみ)
+    validations:
+      required: false
+
+  - type: textarea
+    id: suggestions
+    attributes:
+      label: Suggestions / 提案
+      description: |
+        Do you have any suggestions for improvement?
+        UX/UI improvements, feature enhancements, etc.
+
+        改善の提案はありますか？
+        UX/UI改善、機能強化など。
+      placeholder: Your suggestions...
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: testing-checklist
+    attributes:
+      label: Testing Checklist / テストチェックリスト
+      description: Which areas did you test? (Optional)
+      options:
+        - label: Installation / インストール
+        - label: User management / ユーザー管理
+        - label: Account management / 口座管理
+        - label: Category management / 費目管理
+        - label: Transaction input / 入出金入力
+        - label: Reports/Aggregation / レポート・集計
+        - label: Settings / 設定
+        - label: Language switching / 言語切替
+        - label: Data backup/restore / データバックアップ・復元
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+
+        ## 📚 Resources / リソース
+
+        - **[Testing Guide (EN)](https://github.com/BonoJovi/KakeiBonByRust/blob/main/docs/developer/en/guides/testing-guide.md)**
+        - **[テストガイド (JA)](https://github.com/BonoJovi/KakeiBonByRust/blob/main/docs/developer/ja/guides/testing-guide.md)**
+        - **[Installation Guide (EN)](https://github.com/BonoJovi/KakeiBonByRust/blob/main/docs/user/en/installation.md)**
+        - **[インストールガイド (JA)](https://github.com/BonoJovi/KakeiBonByRust/blob/main/docs/user/ja/installation.md)**
+
+        Thank you for helping improve KakeiBon's quality!
+        KakeiBonの品質向上にご協力いただきありがとうございます！

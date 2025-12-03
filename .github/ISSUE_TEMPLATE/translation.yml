@@ -1,0 +1,124 @@
+name: 🌍 Translation Request / 翻訳リクエスト
+description: Request a new language or report translation issues / 新しい言語の追加または翻訳の問題報告
+title: "[Translation] "
+labels: ["translation", "enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Thank you for helping make KakeiBon multilingual!
+        ## KakeiBonの多言語化にご協力いただきありがとうございます！
+
+        This template is for:
+        - Requesting support for a new language
+        - Reporting translation issues or improvements
+        - Volunteering to translate
+
+        このテンプレートは以下の用途に使用できます：
+        - 新しい言語のサポートリクエスト
+        - 翻訳の問題や改善の報告
+        - 翻訳ボランティアの申し出
+
+  - type: dropdown
+    id: request-type
+    attributes:
+      label: Request Type / リクエストタイプ
+      description: What type of translation request is this?
+      options:
+        - New language request (新しい言語のリクエスト)
+        - Translation improvement (既存翻訳の改善)
+        - Translation error report (翻訳エラーの報告)
+        - Volunteer to translate (翻訳ボランティア)
+    validations:
+      required: true
+
+  - type: input
+    id: language
+    attributes:
+      label: Target Language / 対象言語
+      description: Which language is this request for? (e.g., Chinese, Korean, French)
+      placeholder: "e.g., Chinese (Simplified)"
+    validations:
+      required: true
+
+  - type: input
+    id: language-code
+    attributes:
+      label: Language Code / 言語コード
+      description: ISO 639-1 language code (e.g., zh, ko, fr)
+      placeholder: "e.g., zh"
+    validations:
+      required: false
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description / 説明
+      description: |
+        Describe your translation request in detail.
+
+        For new languages: Why would this language be useful? Are you willing to help translate?
+        For improvements/errors: What needs to be fixed? Provide specific examples.
+        For volunteers: What's your native language and translation experience?
+
+        詳細な説明をお願いします。
+
+        新言語の場合: この言語が必要な理由は？翻訳を手伝っていただけますか？
+        改善/エラーの場合: 何を修正すべきですか？具体例を提供してください。
+        ボランティアの場合: 母国語と翻訳経験を教えてください。
+      placeholder: Tell us more...
+    validations:
+      required: true
+
+  - type: textarea
+    id: examples
+    attributes:
+      label: Examples / 例
+      description: |
+        For translation issues, provide specific examples:
+        - Current translation (現在の翻訳)
+        - Suggested translation (提案する翻訳)
+        - Location in the app (アプリ内の場所)
+      placeholder: |
+        Current: "帳簿の管理"
+        Suggested: "家計簿管理"
+        Location: Main menu > Settings
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution Willingness / 貢献意欲
+      description: Are you willing to contribute to this translation?
+      options:
+        - label: I can help translate this language / この言語の翻訳を手伝えます
+        - label: I can review translations / 翻訳をレビューできます
+        - label: I can test the translation in the app / アプリで翻訳をテストできます
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context / 追加情報
+      description: |
+        Any other information that might be helpful.
+        Cultural considerations, regional variants, etc.
+
+        その他役立つ情報があれば教えてください。
+        文化的配慮、地域的なバリエーションなど。
+      placeholder: Additional information...
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+
+        ## 📚 Resources / リソース
+
+        - **[Translation Guide (EN)](https://github.com/BonoJovi/KakeiBonByRust/blob/main/docs/developer/en/guides/translation-guide.md)**
+        - **[翻訳ガイド (JA)](https://github.com/BonoJovi/KakeiBonByRust/blob/main/docs/developer/ja/guides/translation-guide.md)**
+
+        Thank you for helping make KakeiBon accessible to more users worldwide!
+        世界中のより多くのユーザーにKakeiBonを届けるお手伝い、ありがとうございます！
