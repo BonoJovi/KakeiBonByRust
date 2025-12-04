@@ -18,7 +18,19 @@
 
 次のステップ:
 - 📊 集計・レポート機能の実装
-- 📝 APIドキュメントの整備
+- 📝 ドキュメントの整備
+  - ✅ Phase1: API仕様書の画面別分割・統合（完了）
+  - ✅ Phase2: 英語版API仕様書作成（完了）
+  - ✅ Phase3: 旧API仕様書削除（完了）
+  - 🔄 Phase4: 設計ドキュメントの整備（進行中）
+    - ✅ ARCHITECTURE.md (ja) - アーキテクチャ設計
+    - ✅ ARCHITECTURE_en.md (en) - Architecture Design
+    - ✅ SECURITY_DESIGN.md (ja) - セキュリティ設計
+    - ✅ SECURITY_DESIGN_en.md (en) - Security Design
+    - ✅ DATABASE_DESIGN.md (ja) - データベース設計
+    - ✅ DATABASE_DESIGN_en.md (en) - Database Design
+    - ✅ UI_DESIGN.md (ja) - UI設計
+    - ⏳ UI_DESIGN_en.md (en) - UI Design
 - 🧪 テストカバレッジの拡充
 
 ### ✅ 完了済み
@@ -137,8 +149,29 @@
   - [x] API_SETTINGS.md（725行）
 
 #### Phase 3: 旧ドキュメント整理
-- [ ] 個別APIドキュメント（API_SHOP.md等）のアーカイブまたは削除
-- [ ] 統合リファレンス（API_REFERENCE.md）の位置付け見直し
+- [x] 個別APIドキュメント（API_SHOP.md等）のアーカイブまたは削除
+- [x] 統合リファレンス（API_REFERENCE.md）の位置付け見直し
+
+### 🏗️ 設計ドキュメント整備 (Design Documentation)
+
+#### Phase 1: 設計ドキュメント検証と整理
+- [ ] TRANSACTION_DESIGN_V2.md / _ja.md の最新コードとの整合性確認
+- [ ] session-management-spec.md の検証
+- [ ] tax-calculation-logic.md の検証
+- [ ] TRANSACTION_REQUIREMENTS.md の検証
+- [ ] DESIGN_ISSUES_AND_FIXES.md の検証
+- [ ] FRONTEND_DESIGN_PHASE4.md の検証
+
+#### Phase 2: 設計ドキュメント統合・再構成
+- [ ] 重複内容の排除
+- [ ] 粒度の適正化（統合・分割）
+- [ ] ドキュメント間の相互参照整理
+- [ ] 英語版の作成（必要に応じて）
+
+#### Phase 3: 実装状況ドキュメント作成
+- [ ] 現在の実装状況を網羅的に記述
+- [ ] アーキテクチャ全体像の図解
+- [ ] 技術スタック詳細
 
 **API分布（全100コマンド）:**
 - 共通API: 24
