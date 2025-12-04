@@ -110,9 +110,49 @@
   - 使用例の追加
   - モジュールレベルのドキュメント
 
+### 🔄 進行中: APIリファレンス統合・再構成 (2025-12-05)
+**目的**: 画面ベースでAPIドキュメントを再構成し、実装コードと突合して信頼性を担保
+
+#### Phase 1: 日本語版作成（実装コード検証付き）
+- [x] API_COMMON.md - 共通API（Session, I18n, Encryption, System, Validation）
+- [x] API_AUTH.md - 認証・セットアップAPI（index.html）
+- [x] API_USER.md - ユーザー管理API（user-management.html）
+- [x] API_CATEGORY.md - 費目管理API（category-management.html）※実装検証・全面改訂
+- [x] API_TRANSACTION.md - 入出金管理API（transaction-management.html）※実装検証・全面改訂
+- [x] API_ACCOUNT.md - 口座管理API（account-management.html）
+- [x] API_MASTER_DATA.md - マスタデータAPI（shop/manufacturer/product統合）
+- [x] API_AGGREGATION.md - 集計API（aggregation screens）※実装検証・改訂
+- [x] API_SETTINGS.md - 設定API（settings screen）
+
+#### Phase 2: 英語版作成 ✅ 完了 (2025-12-05 02:42 JST)
+- [x] 日本語版ドキュメントを英訳（9ファイル） - 全5,564行完成
+  - [x] API_COMMON.md（741行）
+  - [x] API_AUTH.md（358行）
+  - [x] API_USER.md（577行）
+  - [x] API_CATEGORY.md（689行）
+  - [x] API_TRANSACTION.md（712行）
+  - [x] API_ACCOUNT.md（504行）
+  - [x] API_MASTER_DATA.md（753行）
+  - [x] API_AGGREGATION.md（505行）
+  - [x] API_SETTINGS.md（725行）
+
+#### Phase 3: 旧ドキュメント整理
+- [ ] 個別APIドキュメント（API_SHOP.md等）のアーカイブまたは削除
+- [ ] 統合リファレンス（API_REFERENCE.md）の位置付け見直し
+
+**API分布（全100コマンド）:**
+- 共通API: 24
+- Category: 16
+- Transaction: 14
+- User: 13
+- Settings: 10
+- Session: 9
+- その他: 14
+
 **注記**: 
 - 2025-10-29: 基本ドキュメント整備完了（rustdocを除く）
 - 2025-11-10: 翻訳リソース統計、店舗管理API、入出金管理API更新完了
+- 2025-12-05: 画面ベースAPI統合リファレンス作成開始
 
 ---
 

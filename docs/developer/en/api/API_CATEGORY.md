@@ -1,41 +1,34 @@
-# Category Management API Documentation
+# Category Management API Reference
+
+**Last Updated**: 2025-12-05 02:25 JST
 
 ## Overview
 
-This document describes the backend API for category management in KakeiBon.
-API exposure to the frontend is subject to the description of each item below.
+This document defines APIs used in the category management screen (category-management.html). Manages a 3-level category structure (Category1, Category2, Category3).
 
 ---
 
-## API List
+## Table of Contents
 
-### Category Tree Retrieval
-
-#### `get_category_tree`
-Get complete category tree for a user.
-
-**Parameters:**
-- `user_id` (i64): User ID
-
-**Returns:**
-- `Vec<CategoryTree>`: Array of category trees
-
-**Example:**
-```javascript
-const tree = await invoke('get_category_tree', { user_id: 1 });
-```
+1. [Category Tree Retrieval API](#category-tree-retrieval-api)
+2. [Category2 Management API](#category2-management-api)
+3. [Category3 Management API](#category3-management-api)
+4. [Data Structures](#data-structures)
 
 ---
 
-#### `get_category_tree_with_lang`
-Get complete category tree with language-specific names.
+## Category Tree Retrieval API
+
+### get_category_tree_with_lang
+
+Retrieves the complete category tree (3 levels) with multilingual names.
 
 **Parameters:**
 - `user_id` (i64): User ID
-- `lang_code` (Option<String>): Language code (e.g., "ja", "en")
+- `lang_code` (Option<String>): Language code ("ja", "en", etc.)
 
-**Returns:**
-- `Vec<CategoryTree>`: Array of category trees with i18n names
+**Return Value:**
+- `Vec<CategoryTree>`: Array of category trees with multilingual names
 
 **Response Structure:**
 ```javascript
@@ -45,7 +38,7 @@ Get complete category tree with language-specific names.
       user_id: 1,
       category1_code: "EXPENSE",
       category1_name: "支出",
-      category1_name_i18n: "Expense",  // from I18N table
+      category1_name_i18n: "Expense",  // From I18N table
       display_order: 1,
       is_disabled: false,
       entry_dt: "2025-10-28...",
@@ -84,708 +77,613 @@ Get complete category tree with language-specific names.
 ]
 ```
 
-**Example:**
+**Usage Example:**
 ```javascript
 const tree = await invoke('get_category_tree_with_lang', { 
-  user_id: 1, 
-  lang_code: "en" 
+    userId: 1, 
+    langCode: 'ja' 
 });
 ```
 
----
-
-## Category1 APIs (Major Categories)
-
-### `add_category1`
-Add a new major category.
-
-**Parameters:**
-- `user_id` (i64): User ID
-- `code` (String): Category code (e.g., "EXPENSE")
-- `name` (String): Category name (Japanese)
-
-**Returns:**
-- `Result<(), String>`: Success or error message
-
-**Notes:**
-- Display order is automatically set to max + 1
-- In current design, major categories are fixed and this API is not used from UI
-
-**Example:**
-```javascript
-await invoke('add_category1', { 
-  user_id: 1, 
-  code: "CUSTOM", 
-  name: "カスタム" 
-});
-```
+**Note:**
+- Category1 (top level) is fixed at 3: EXPENSE, INCOME, TRANSFER
+- Automatically populated when user is created
+- Category1 cannot be added, edited, or deleted
 
 ---
 
-### `update_category1`
-Update a major category name.
+## Category2 Management API
+
+### add_category2
+
+Adds a new Category2 (middle level).
 
 **Parameters:**
-- `user_id` (i64): User ID
-- `code` (String): Category code
-- `name` (String): New category name
+- `category1_code` (String): Parent Category1 code ("EXPENSE", "INCOME", "TRANSFER")
+- `name_ja` (String): Japanese name
+- `name_en` (String): English name
 
-**Returns:**
-- `Result<(), String>`: Success or error message
+**Return Value:**
+- `String`: Generated category code (e.g., "C2_E_21")
 
-**Example:**
-```javascript
-await invoke('update_category1', { 
-  user_id: 1, 
-  code: "EXPENSE", 
-  name: "支出（更新）" 
-});
-```
-
----
-
-### `move_category1_order`
-Move major category up or down.
-
-**Parameters:**
-- `user_id` (i64): User ID
-- `code` (String): Category code
-- `direction` (i32): -1 for up, 1 for down
-
-**Returns:**
-- `Result<(), String>`: Success or error message
-
-**Logic:**
-- Swaps display_order with adjacent category
-- If already at top/bottom, no change occurs
-
-**Example:**
-```javascript
-// Move up
-await invoke('move_category1_order', { 
-  user_id: 1, 
-  code: "EXPENSE", 
-  direction: -1 
-});
-```
-
----
-
-### `delete_category1`
-Delete a major category and all its children (CASCADE).
-
-**Parameters:**
-- `user_id` (i64): User ID
-- `code` (String): Category code
-
-**Returns:**
-- `Result<(), String>`: Success or error message
-
-**Notes:**
-- This is an internal API, not exposed in UI
-- Used only during user account deletion
-- Foreign key constraints ensure CASCADE delete
-
-**Example:**
-```javascript
-await invoke('delete_category1', { 
-  user_id: 1, 
-  code: "EXPENSE" 
-});
-```
-
----
-
-## Category2 APIs (Medium Categories)
-
-### `add_category2`
-Add a new medium category.
-
-**Parameters:**
-- `user_id` (i64): User ID
-- `category1_code` (String): Parent category code
-- `name_ja` (String): Category name (Japanese)
-- `name_en` (String): Category name (English)
-
-**Returns:**
-- `Result<String, String>`: New category code on success, error message on failure
-
-**Notes:**
-- Display order is automatically set to max + 1 within parent (appended to the end)
-- Category code is auto-generated (e.g., "C2_E_1")
-- **Duplicate check**: The following name duplicates are not allowed:
-  - Japanese name matches existing Japanese name
-  - English name matches existing English name
-  - Japanese name matches existing English name
-  - English name matches existing Japanese name
-- Returns `CategoryError::DuplicateName` error if duplicate is detected
-
-**Example:**
+**Usage Example:**
 ```javascript
 try {
-  const newCode = await invoke('add_category2', { 
-    userId: 1, 
-    category1Code: "EXPENSE",
-    nameJa: "娯楽費",
-    nameEn: "Entertainment"
-  });
-  console.log('Created category:', newCode);
+    const code = await invoke('add_category2', {
+        category1Code: 'EXPENSE',
+        nameJa: '日用品',
+        nameEn: 'Daily Necessities'
+    });
+    console.log(`Category2 added: ${code}`);
 } catch (error) {
-  // Error message is translated according to current language
-  alert(i18n.t('error.category_duplicate_name').replace('{0}', 'Entertainment'));
+    alert(`Addition failed: ${error}`);
+}
+```
+
+**Automatic Processing:**
+1. Category code auto-generation (C2_E_1, C2_E_2...)
+2. Display order auto-assignment (max + 1)
+3. I18N table registration (Japanese & English)
+4. is_disabled = 0 (enabled)
+
+**Validation:**
+- Duplicate name check within same parent
+
+**Error:**
+- `"Category name '...' already exists"`: Duplicate name
+
+---
+
+### get_category2_for_edit
+
+Retrieves Category2 details for editing.
+
+**Parameters:**
+- `category1_code` (String): Category1 code
+- `category2_code` (String): Category2 code
+
+**Return Value:**
+- `CategoryForEdit`: Category information for editing
+
+**CategoryForEdit Structure:**
+```javascript
+{
+    code: string,
+    name_ja: string,
+    name_en: string,
+    display_order: number
+}
+```
+
+**Usage Example:**
+```javascript
+const category = await invoke('get_category2_for_edit', {
+    category1Code: 'EXPENSE',
+    category2Code: 'C2_E_1'
+});
+
+// Populate form
+document.getElementById('name-ja').value = category.name_ja;
+document.getElementById('name-en').value = category.name_en;
+```
+
+**Note:**
+- Session user ID automatically retrieved
+- Used when displaying edit modal
+
+---
+
+### update_category2
+
+Updates a Category2.
+
+**Parameters:**
+- `category1_code` (String): Category1 code
+- `category2_code` (String): Category2 code
+- `name_ja` (String): New Japanese name
+- `name_en` (String): New English name
+
+**Return Value:** None
+
+**Usage Example:**
+```javascript
+await invoke('update_category2', {
+    category1Code: 'EXPENSE',
+    category2Code: 'C2_E_1',
+    nameJa: '食費（更新）',
+    nameEn: 'Food (Updated)'
+});
+```
+
+**Behavior:**
+- Updates name in CATEGORY table
+- Updates both languages in I18N table
+
+**Validation:**
+- Duplicate name check excluding self
+
+---
+
+### move_category2_up
+
+Moves a Category2 up one position.
+
+**Parameters:**
+- `category1_code` (String): Category1 code
+- `category2_code` (String): Category2 code
+
+**Return Value:** None
+
+**Usage Example:**
+```javascript
+await invoke('move_category2_up', {
+    category1Code: 'EXPENSE',
+    category2Code: 'C2_E_2'
+});
+```
+
+**Behavior:**
+- Swaps display_order with sibling above
+- Does nothing if already at top
+
+---
+
+### move_category2_down
+
+Moves a Category2 down one position.
+
+**Parameters:**
+- `category1_code` (String): Category1 code
+- `category2_code` (String): Category2 code
+
+**Return Value:** None
+
+**Usage Example:**
+```javascript
+await invoke('move_category2_down', {
+    category1Code: 'EXPENSE',
+    category2Code: 'C2_E_1'
+});
+```
+
+**Behavior:**
+- Swaps display_order with sibling below
+- Does nothing if already at bottom
+
+---
+
+## Category3 Management API
+
+### add_category3
+
+Adds a new Category3 (lowest level).
+
+**Parameters:**
+- `category1_code` (String): Category1 code
+- `category2_code` (String): Parent Category2 code
+- `name_ja` (String): Japanese name
+- `name_en` (String): English name
+
+**Return Value:**
+- `String`: Generated category code (e.g., "C3_127")
+
+**Usage Example:**
+```javascript
+const code = await invoke('add_category3', {
+    category1Code: 'EXPENSE',
+    category2Code: 'C2_E_1',
+    nameJa: '外食',
+    nameEn: 'Dining Out'
+});
+```
+
+**Automatic Processing:**
+- Same as add_category2
+
+---
+
+### get_category3_for_edit
+
+Retrieves Category3 details for editing.
+
+**Parameters:**
+- `category1_code` (String): Category1 code
+- `category2_code` (String): Category2 code
+- `category3_code` (String): Category3 code
+
+**Return Value:**
+- `CategoryForEdit`: Category information for editing
+
+**Usage Example:**
+```javascript
+const category = await invoke('get_category3_for_edit', {
+    category1Code: 'EXPENSE',
+    category2Code: 'C2_E_1',
+    category3Code: 'C3_1'
+});
+```
+
+---
+
+### update_category3
+
+Updates a Category3.
+
+**Parameters:**
+- `category1_code` (String): Category1 code
+- `category2_code` (String): Category2 code
+- `category3_code` (String): Category3 code
+- `name_ja` (String): New Japanese name
+- `name_en` (String): New English name
+
+**Return Value:** None
+
+**Usage Example:**
+```javascript
+await invoke('update_category3', {
+    category1Code: 'EXPENSE',
+    category2Code: 'C2_E_1',
+    category3Code: 'C3_1',
+    nameJa: '食料品（更新）',
+    nameEn: 'Groceries (Updated)'
+});
+```
+
+---
+
+### move_category3_up
+
+Moves a Category3 up one position.
+
+**Parameters:**
+- `category1_code` (String): Category1 code
+- `category2_code` (String): Category2 code
+- `category3_code` (String): Category3 code
+
+**Return Value:** None
+
+**Usage Example:**
+```javascript
+await invoke('move_category3_up', {
+    category1Code: 'EXPENSE',
+    category2Code: 'C2_E_1',
+    category3Code: 'C3_2'
+});
+```
+
+---
+
+### move_category3_down
+
+Moves a Category3 down one position.
+
+**Parameters:**
+- `category1_code` (String): Category1 code
+- `category2_code` (String): Category2 code
+- `category3_code` (String): Category3 code
+
+**Return Value:** None
+
+**Usage Example:**
+```javascript
+await invoke('move_category3_down', {
+    category1Code: 'EXPENSE',
+    category2Code: 'C2_E_1',
+    category3Code: 'C3_1'
+});
+```
+
+---
+
+## Data Structures
+
+### CategoryTree
+
+```rust
+// Top level structure (Category1)
+pub struct CategoryTree {
+    pub category1: Category1,
+    pub children: Vec<Category2Tree>,  // Array of Category2
+}
+
+// Category2 level
+pub struct Category2Tree {
+    pub category2: Category2,
+    pub children: Vec<Category3>,  // Array of Category3
+}
+```
+
+### Category1 (Top Level)
+
+```rust
+pub struct Category1 {
+    pub user_id: i64,
+    pub category1_code: String,     // "EXPENSE", "INCOME", "TRANSFER"
+    pub category1_name: String,     // "支出", "収入", "振替"
+    pub category1_name_i18n: String, // Translated name
+    pub display_order: i64,
+    pub is_disabled: bool,
+    pub entry_dt: String,
+    pub update_dt: Option<String>,
+}
+```
+
+**Fixed Values:**
+- EXPENSE (Expense)
+- INCOME (Income)
+- TRANSFER (Transfer)
+
+---
+
+### Category2 (Middle Level)
+
+```rust
+pub struct Category2 {
+    pub user_id: i64,
+    pub category1_code: String,
+    pub category2_code: String,     // "C2_E_1", "C2_E_2"...
+    pub category2_name: String,
+    pub category2_name_i18n: String,
+    pub display_order: i64,
+    pub is_disabled: bool,
+    pub entry_dt: String,
+    pub update_dt: Option<String>,
 }
 ```
 
 ---
 
-### `update_category2`
-Update a medium category name.
+### Category3 (Lowest Level)
 
-**Parameters:**
-- `user_id` (i64): User ID
-- `category1_code` (String): Parent category code
-- `category2_code` (String): Category code
-- `name` (String): New category name
-
-**Returns:**
-- `Result<(), String>`: Success or error message
-
-**Example:**
-```javascript
-await invoke('update_category2', { 
-  user_id: 1, 
-  category1_code: "EXPENSE",
-  category2_code: "C2_E_1",
-  name: "食費（更新）" 
-});
-```
-
----
-
-### `move_category2_order`
-Move medium category up or down within its parent.
-
-**Parameters:**
-- `user_id` (i64): User ID
-- `category1_code` (String): Parent category code
-- `category2_code` (String): Category code
-- `direction` (i32): -1 for up, 1 for down
-
-**Returns:**
-- `Result<(), String>`: Success or error message
-
-**Example:**
-```javascript
-await invoke('move_category2_order', { 
-  user_id: 1, 
-  category1_code: "EXPENSE",
-  category2_code: "C2_E_1",
-  direction: -1 
-});
-```
-
----
-
-### `delete_category2`
-Delete a medium category and all its children (CASCADE).
-
-**Parameters:**
-- `user_id` (i64): User ID
-- `category1_code` (String): Parent category code
-- `category2_code` (String): Category code
-
-**Returns:**
-- `Result<(), String>`: Success or error message
-
-**Notes:**
-- Internal API, not exposed in UI
-- Used only during user account deletion
-
-**Example:**
-```javascript
-await invoke('delete_category2', { 
-  user_id: 1, 
-  category1_code: "EXPENSE",
-  category2_code: "C2_E_1"
-});
-```
-
----
-
-## Category3 APIs (Minor Categories)
-
-### `add_category3`
-Add a new minor category.
-
-**Parameters:**
-- `user_id` (i64): User ID
-- `category1_code` (String): Major category code
-- `category2_code` (String): Parent category code
-- `name_ja` (String): Category name (Japanese)
-- `name_en` (String): Category name (English)
-
-**Returns:**
-- `Result<String, String>`: New category code on success, error message on failure
-
-**Notes:**
-- Display order is automatically set to max + 1 within parent (appended to the end)
-- Category code is auto-generated (e.g., "C3_E_1_1")
-- **Duplicate check**: Same as `add_category2`, all language name combinations are checked for duplicates
-- Returns `CategoryError::DuplicateName` error if duplicate is detected
-
-**Example:**
-```javascript
-try {
-  const newCode = await invoke('add_category3', { 
-    userId: 1, 
-    category1Code: "EXPENSE",
-    category2Code: "C2_E_8",
-    nameJa: "映画",
-    nameEn: "Movie"
-  });
-  console.log('Created category:', newCode);
-} catch (error) {
-  alert(i18n.t('error.category_duplicate_name').replace('{0}', 'Movie'));
+```rust
+pub struct Category3 {
+    pub user_id: i64,
+    pub category1_code: String,
+    pub category2_code: String,
+    pub category3_code: String,     // "C3_1", "C3_2"...
+    pub category3_name: String,
+    pub category3_name_i18n: String,
+    pub display_order: i64,
+    pub is_disabled: bool,
+    pub entry_dt: String,
+    pub update_dt: Option<String>,
 }
 ```
 
 ---
 
-### `update_category3`
-Update a minor category name.
+### CategoryForEdit (For Editing)
 
-**Parameters:**
-- `user_id` (i64): User ID
-- `category1_code` (String): Major category code
-- `category2_code` (String): Parent category code
-- `category3_code` (String): Category code
-- `name` (String): New category name
-
-**Returns:**
-- `Result<(), String>`: Success or error message
-
-**Example:**
-```javascript
-await invoke('update_category3', { 
-  user_id: 1, 
-  category1_code: "EXPENSE",
-  category2_code: "C2_E_1",
-  category3_code: "C3_1",
-  name: "食料品（更新）" 
-});
+```rust
+pub struct CategoryForEdit {
+    pub code: String,
+    pub name_ja: String,
+    pub name_en: String,
+    pub display_order: i64,
+}
 ```
 
----
-
-### `move_category3_order`
-Move minor category up or down within its parent.
-
-**Parameters:**
-- `user_id` (i64): User ID
-- `category1_code` (String): Major category code
-- `category2_code` (String): Parent category code
-- `category3_code` (String): Category code
-- `direction` (i32): -1 for up, 1 for down
-
-**Returns:**
-- `Result<(), String>`: Success or error message
-
-**Example:**
-```javascript
-await invoke('move_category3_order', { 
-  user_id: 1, 
-  category1_code: "EXPENSE",
-  category2_code: "C2_E_1",
-  category3_code: "C3_1",
-  direction: 1 
-});
-```
-
----
-
-### `delete_category3`
-Delete a minor category.
-
-**Parameters:**
-- `user_id` (i64): User ID
-- `category1_code` (String): Major category code
-- `category2_code` (String): Parent category code
-- `category3_code` (String): Category code
-
-**Returns:**
-- `Result<(), String>`: Success or error message
-
-**Notes:**
-- Internal API, not exposed in UI
-- Used only during user account deletion
-
-**Example:**
-```javascript
-await invoke('delete_category3', { 
-  user_id: 1, 
-  category1_code: "EXPENSE",
-  category2_code: "C2_E_1",
-  category3_code: "C3_1"
-});
-```
-
----
-
-## Utility APIs
-
-### `initialize_categories_for_new_user`
-Initialize categories for a new user by copying from template user (USER_ID=1).
-
-**Parameters:**
-- `user_id` (i64): New user ID
-
-**Returns:**
-- `Result<(), String>`: Success or error message
-
-**Notes:**
-- Copies all Category1/2/3 from template user
-- Copies all I18N records
-- Executed automatically when a new user is created
-
-**Example:**
-```javascript
-await invoke('initialize_categories_for_new_user', { 
-  user_id: 2 
-});
-```
+**Purpose:**
+- Display data in edit modal
+- Retrieve both Japanese and English names
 
 ---
 
 ## Error Handling
 
-All APIs return `Result<T, String>`:
-- **Success**: `Ok(value)` - Operation completed successfully
-- **Error**: `Err(message)` - Error message describing what went wrong
+### Common Error Patterns
 
-**Common Error Cases:**
-1. **Database connection failure**
-   - Message: "Failed to open database"
-   
-2. **Not found**
-   - Message: "Category not found"
-   
-3. **Foreign key violation**
-   - Message: "Parent category does not exist"
-   
-4. **SQL execution error**
-   - Message: Specific SQLite error message
+| Error Message | Cause | Solution |
+|--------------|-------|----------|
+| `"User not authenticated"` | Session not authenticated | Login required |
+| `"Category name '...' already exists"` | Duplicate name | Use different name |
+| `"Failed to add category2: ..."` | Addition error | Check database |
+| `"Failed to update category2: ..."` | Update error | Check database |
+| `"Failed to move category2 up: ..."` | Move error | Check database |
 
-**Frontend Error Handling Example:**
+### Frontend Error Handling Example
+
 ```javascript
-try {
-  await invoke('add_category2', params);
-  alert('Category added successfully');
-} catch (error) {
-  console.error('Failed to add category:', error);
-  alert('Failed to add category: ' + error);
+// Add Category2
+async function addCategory2(category1Code, nameJa, nameEn) {
+    try {
+        const code = await invoke('add_category2', {
+            category1Code,
+            nameJa,
+            nameEn
+        });
+        
+        alert(`Category2 added: ${code}`);
+        await reloadCategoryTree();
+        return code;
+    } catch (error) {
+        if (error.includes('already exists')) {
+            alert('This name is already in use');
+        } else {
+            alert(`Error: ${error}`);
+        }
+        return null;
+    }
+}
+
+// Move category
+async function moveUp(category1Code, category2Code) {
+    try {
+        await invoke('move_category2_up', {
+            category1Code,
+            category2Code
+        });
+        
+        // Optimistic UI update
+        await reloadCategoryTree();
+    } catch (error) {
+        console.error('Move error:', error);
+        alert(`Move failed: ${error}`);
+    }
 }
 ```
 
 ---
 
-## Database Schema
+## Category Structure Design
 
-### CATEGORY1 Table
-```sql
-CREATE TABLE CATEGORY1 (
-    USER_ID INTEGER NOT NULL,
-    CATEGORY1_CODE VARCHAR(64) NOT NULL,
-    DISPLAY_ORDER INTEGER NOT NULL,
-    CATEGORY1_NAME VARCHAR(128) NOT NULL,
-    IS_DISABLED INTEGER NOT NULL DEFAULT 0,
-    ENTRY_DT DATETIME NOT NULL,
-    UPDATE_DT DATETIME,
-    PRIMARY KEY(USER_ID, CATEGORY1_CODE)
-);
+### Hierarchical Structure
+
+```
+Category1 (Top) ← Fixed (3 categories)
+  ├─ Category2 (Middle) ← User-addable
+  │   ├─ Category3 (Lowest) ← User-addable
+  │   └─ Category3
+  └─ Category2
+      └─ Category3
 ```
 
-### CATEGORY2 Table
-```sql
-CREATE TABLE CATEGORY2 (
-    USER_ID INTEGER NOT NULL,
-    CATEGORY1_CODE VARCHAR(64) NOT NULL,
-    CATEGORY2_CODE VARCHAR(64) NOT NULL,
-    DISPLAY_ORDER INTEGER NOT NULL,
-    CATEGORY2_NAME VARCHAR(128) NOT NULL,
-    IS_DISABLED INTEGER NOT NULL DEFAULT 0,
-    ENTRY_DT DATETIME NOT NULL,
-    UPDATE_DT DATETIME,
-    PRIMARY KEY(USER_ID, CATEGORY1_CODE, CATEGORY2_CODE),
-    FOREIGN KEY(USER_ID, CATEGORY1_CODE) 
-        REFERENCES CATEGORY1(USER_ID, CATEGORY1_CODE) 
-        ON DELETE CASCADE
-);
-```
+### Category Code System
 
-### CATEGORY3 Table
-```sql
-CREATE TABLE CATEGORY3 (
-    USER_ID INTEGER NOT NULL,
-    CATEGORY1_CODE VARCHAR(64) NOT NULL,
-    CATEGORY2_CODE VARCHAR(64) NOT NULL,
-    CATEGORY3_CODE VARCHAR(64) NOT NULL,
-    DISPLAY_ORDER INTEGER NOT NULL,
-    CATEGORY3_NAME VARCHAR(128) NOT NULL,
-    IS_DISABLED INTEGER NOT NULL DEFAULT 0,
-    ENTRY_DT DATETIME NOT NULL,
-    UPDATE_DT DATETIME,
-    PRIMARY KEY(USER_ID, CATEGORY1_CODE, CATEGORY2_CODE, CATEGORY3_CODE),
-    FOREIGN KEY(USER_ID, CATEGORY1_CODE, CATEGORY2_CODE) 
-        REFERENCES CATEGORY2(USER_ID, CATEGORY1_CODE, CATEGORY2_CODE) 
-        ON DELETE CASCADE
-);
-```
+**Category1:**
+- EXPENSE (Expense)
+- INCOME (Income)
+- TRANSFER (Transfer)
 
-### I18N Tables
-Similar structure with `_I18N` suffix, storing language-specific names.
+**Category2:**
+- C2_E_1, C2_E_2... (Expense subcategories)
+- C2_I_1, C2_I_2... (Income subcategories)
+- C2_T_1, C2_T_2... (Transfer subcategories)
+
+**Category3:**
+- C3_1, C3_2... (Sequential numbers only)
+
+### Default Categories
+
+Auto-populated when user is created:
+
+- **Category2**: 20 categories
+- **Category3**: 126 categories
+- **I18N**: Japanese and English translations
+
+**Population Process:**
+- Automatically called when `create_general_user` executes
+- `populate_default_categories` function
+- Loaded from `res/sql/default_categories_seed.sql`
 
 ---
 
-## Code Generation
+## Security Considerations
 
-**Frontend Code Generation (Recommended):**
+### User Isolation
+
+1. **Session User ID**: Auto-retrieved in each API (`get_session_user_id`)
+2. **Data Isolation**: Each user can only access their own categories
+3. **Fixed Category1**: Prevents malicious operations
+
+### Name Uniqueness
+
+1. **No duplicates within same level and parent**
+2. **Exclude self when checking during edit**
+3. **I18N table also managed simultaneously**
+
+### Cascade Deletion
+
+1. **Category2 deletion**: Child Category3 also deleted (not implemented)
+2. **User deletion**: All categories deleted
+3. **Foreign key constraints**: Ensure data integrity
+
+---
+
+## Usage Example: Category Management Screen Implementation
+
+### Category Tree Display
+
 ```javascript
-function generateCategoryCode(level) {
-  const prefix = level === 2 ? 'C2_' : 'C3_';
-  const timestamp = Date.now();
-  return `${prefix}${timestamp}`;
+async function loadCategoryTree() {
+    try {
+        const user = await invoke('get_current_session_user');
+        const lang = localStorage.getItem('language') || 'ja';
+        
+        const tree = await invoke('get_category_tree_with_lang', {
+            userId: user.user_id,
+            langCode: lang
+        });
+        
+        renderCategoryTree(tree);
+    } catch (error) {
+        console.error('Tree loading error:', error);
+    }
+}
+
+function renderCategoryTree(tree) {
+    const container = document.getElementById('category-tree');
+    container.innerHTML = '';
+    
+    tree.forEach(cat1 => {
+        const cat1Div = createCategory1Element(cat1);
+        container.appendChild(cat1Div);
+    });
 }
 ```
 
-**For Category2 with parent-specific prefix:**
+### Add Category2 Modal
+
 ```javascript
-function generateCategory2Code(category1_code) {
-  let prefix = 'C2_';
-  if (category1_code === 'EXPENSE') prefix = 'C2_E_';
-  else if (category1_code === 'INCOME') prefix = 'C2_I_';
-  else if (category1_code === 'TRANSFER') prefix = 'C2_T_';
-  
-  return prefix + Date.now();
+async function handleAddCategory2(event) {
+    event.preventDefault();
+    
+    const category1Code = document.getElementById('category1-code').value;
+    const nameJa = document.getElementById('name-ja').value;
+    const nameEn = document.getElementById('name-en').value;
+    
+    try {
+        const code = await invoke('add_category2', {
+            category1Code,
+            nameJa,
+            nameEn
+        });
+        
+        alert(`Category2 added: ${code}`);
+        closeModal();
+        await loadCategoryTree();
+    } catch (error) {
+        alert(`Error: ${error}`);
+    }
 }
 ```
 
 ---
 
-## Design Notes
+## Test Coverage
 
-### Major Categories (Category1)
-- **Fixed set**: EXPENSE, INCOME, TRANSFER
-- **No user modification**: Users cannot add/edit/delete
-- **Display only**: Used as parent for medium categories
-
-### Medium/Minor Categories (Category2/3)
-- **User-managed**: Users can freely add/edit
-- **No delete from UI**: Delete only during user account deletion
-- **Automatic ordering**: New categories added to the end
-- **Inline editing**: Direct editing without modal dialogs
-
-### Delete Operations
-- Delete APIs are implemented but not exposed in UI
-- Used only during user account deletion
-- CASCADE delete ensures referential integrity
+**CategoryService:**
+- ✅ Category tree retrieval test
+- ✅ Category2 addition test
+- ✅ Category3 addition test
+- ✅ Category update test (Japanese/English)
+- ✅ Category move test (up/down)
+- ✅ Duplicate name check
+- ✅ Default category population test (20 Category2, 126 Category3)
 
 ---
 
-## Version History
+## Related Documents
 
-- **v0.3** (2025-10-30): Edit and initialization features
-  - Added category2/3 edit APIs
-  - Auto-insertion of category data for new users
-  - Duplicate check (excluding current target)
-  - Added test cases (6/6 tests passing)
-- **v0.2** (2025-10-29): Additional APIs
-  - Added add_category2/3
-- **v0.1** (2025-10-28): Initial API documentation
-  - Complete CRUD operations for Category1/2/3
-  - Tree retrieval with i18n support
-  - Reordering functionality
+### Implementation Files
 
-**Note**: v1.0 will be released after all features are implemented
+- Category Service: `src/services/category.rs`
+- I18N Service: `src/services/i18n.rs`
+- SQL Definitions: `src/sql_queries.rs`
+- Default Data: `res/sql/default_categories_seed.sql`
+- Tauri Commands: `src/lib.rs`
 
----
+### Other API References
 
-## See Also
-
-- [Frontend Design (Phase 4)](./FRONTEND_DESIGN_PHASE4.md)
-- [Testing Strategy](./TESTING.md)
-- [TODO.md](../TODO.md)
+- [Common API](./API_COMMON.md) - Session management, I18n
+- [Transaction Management API](./API_TRANSACTION.md) - Category usage
 
 ---
 
-### Category2 Edit Operations
-
-#### `get_category2_for_edit`
-Retrieves category2 data for editing.
-
-**Parameters:**
-- `user_id` (i64): User ID
-- `category1_code` (String): Category1 code
-- `category2_code` (String): Category2 code
-
-**Returns:**
-- `CategoryForEdit`: Edit data (code, name_ja, name_en)
-
-**Example:**
-```javascript
-const categoryData = await invoke('get_category2_for_edit', {
-    userId: 1,
-    category1Code: 'EXPENSE',
-    category2Code: 'C2_E_1'
-});
-// { code: 'C2_E_1', name_ja: '食費', name_en: 'Food' }
-```
-
----
-
-#### `update_category2`
-Updates category2 names (Japanese and English).
-
-**Parameters:**
-- `user_id` (i64): User ID
-- `category1_code` (String): Category1 code
-- `category2_code` (String): Category2 code
-- `name_ja` (String): Japanese name
-- `name_en` (String): English name
-
-**Returns:**
-- `Result<(), String>`: Success (empty) or error message
-
-**Duplicate Check:**
-- Checks for duplicate names within the same category1
-- Bidirectional check (Japanese ↔ English)
-- Excludes the current editing target
-
-**Example:**
-```javascript
-await invoke('update_category2', {
-    userId: 1,
-    category1Code: 'EXPENSE',
-    category2Code: 'C2_E_1',
-    nameJa: '食料品費',
-    nameEn: 'Food Expenses'
-});
-```
-
----
-
-### Category3 Edit Operations
-
-#### `get_category3_for_edit`
-Retrieves category3 data for editing.
-
-**Parameters:**
-- `user_id` (i64): User ID
-- `category1_code` (String): Category1 code
-- `category2_code` (String): Category2 code
-- `category3_code` (String): Category3 code
-
-**Returns:**
-- `CategoryForEdit`: Edit data (code, name_ja, name_en)
-
-**Example:**
-```javascript
-const categoryData = await invoke('get_category3_for_edit', {
-    userId: 1,
-    category1Code: 'EXPENSE',
-    category2Code: 'C2_E_1',
-    category3Code: 'C3_E_1_1'
-});
-```
-
----
-
-#### `update_category3`
-Updates category3 names (Japanese and English).
-
-**Parameters:**
-- `user_id` (i64): User ID
-- `category1_code` (String): Category1 code
-- `category2_code` (String): Category2 code
-- `category3_code` (String): Category3 code
-- `name_ja` (String): Japanese name
-- `name_en` (String): English name
-
-**Returns:**
-- `Result<(), String>`: Success (empty) or error message
-
-**Duplicate Check:**
-- Checks for duplicate names within the same category2
-- Bidirectional check (Japanese ↔ English)
-- Excludes the current editing target
-
-**Example:**
-```javascript
-await invoke('update_category3', {
-    userId: 1,
-    category1Code: 'EXPENSE',
-    category2Code: 'C2_E_1',
-    category3Code: 'C3_E_1_1',
-    nameJa: 'スーパー',
-    nameEn: 'Supermarket'
-});
-```
-
----
-
-## Category Data Initialization
-
-### Overview
-Default category data is automatically inserted when creating new users.
-
-### Auto-Inserted Data
-- **Category2 (Middle categories)**: 20 records
-  - Expense (EXPENSE): 14 records (Food, Daily necessities, Transportation, etc.)
-  - Income (INCOME): 6 records (Salary, Bonus, Pension, etc.)
-- **Category3 (Small categories)**: 126 records
-  - Detailed classifications linked to each category2
-- **I18N (Multilingual names)**: Japanese and English
-
-### Data Source
-- SQL file: `res/sql/init_user_categories.sql`
-- Original data: Converted from `work/migrate_categories.sql` to new code system
-- Generation script: `work/generate_init_categories.py`
-
-### Implementation Details
-
-#### `initialize_user_categories`
-Initializes category data for new users (internal function).
-
-**Processing Flow:**
-1. Check CATEGORY2 existence (verify if already initialized)
-2. Load SQL file (`res/sql/init_user_categories.sql`)
-3. Replace `:pUserID` placeholder with actual user_id
-4. Begin transaction
-5. Execute SQL statements sequentially
-6. Commit
-
-**Called From:**
-- Automatically called within `create_general_user` Tauri command
-
-**Error Handling:**
-- File read error → CategoryError::DatabaseError
-- SQL execution error → Transaction rollback
-- User creation succeeds even if initialization fails (warning log only)
-
----
-
-## Additional Information (v0.3)
-
-### Edit Function Constraints
-- Only names can be edited (codes are immutable)
-- Duplicate names within the same parent category are not allowed
-- Bidirectional duplicate check for Japanese and English names
-
-### Modal Editing
-- Category2 and Category3 are edited via modal dialogs
-- Japanese and English names can be edited simultaneously
-- I18N table is automatically updated on save
-
----
-
-**Last Updated**: 2025-11-04 20:04 JST  
-**Version**: v0.3 (Phase 4-3 completed)
+**Change History:**
+- 2025-10-28: Initial version
+- 2025-12-05: Complete revision based on implementation code
+  - Removed unimplemented Category1 APIs
+  - Added get_category2_for_edit, get_category3_for_edit
+  - Unified with new template
+  - Fixed parameter names to camelCase

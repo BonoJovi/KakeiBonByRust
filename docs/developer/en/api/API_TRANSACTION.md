@@ -1,355 +1,553 @@
-# Transaction Management API Documentation
+# Transaction Management API Reference
+
+**Last Updated**: 2025-12-05 02:30 JST
 
 ## Overview
 
-This document describes the backend API for transaction management in KakeiBon.
-API exposure to the frontend follows the descriptions in each section below.
+This document defines APIs used in the transaction management screens (transaction-management.html, transaction-detail-management.html).
 
 ---
 
-## API List
+## Table of Contents
 
-### Get Transaction Header
+1. [Basic Transaction Operations API](#basic-transaction-operations-api)
+2. [Transaction Header Management API](#transaction-header-management-api)
+3. [Transaction Detail Management API](#transaction-detail-management-api)
+4. [Data Structures](#data-structures)
 
-#### `get_transaction_header`
-Retrieves a single transaction header including memo text.
+---
+
+## Basic Transaction Operations API
+
+### add_transaction
+
+Adds a simple transaction (simplified version).
+
+**Parameters:**
+- `transaction_date` (String): Transaction date and time ("YYYY-MM-DD HH:MM:SS")
+- `category1_code` (String): Category1 code
+- `category2_code` (String): Category2 code
+- `category3_code` (String): Category3 code
+- `amount` (i64): Amount
+- `description` (Option<String>): Description
+- `memo` (Option<String>): Memo
+
+**Return Value:**
+- `i64`: Created transaction_id
+
+**Usage Example:**
+```javascript
+const transactionId = await invoke('add_transaction', {
+    transactionDate: '2025-12-05 10:30:00',
+    category1Code: 'EXPENSE',
+    category2Code: 'C2_E_1',
+    category3Code: 'C3_1',
+    amount: 1500,
+    description: 'Groceries',
+    memo: 'Purchased at supermarket'
+});
+```
+
+**Note:**
+- Session user ID automatically retrieved
+- For simple input (without details)
+
+---
+
+### get_transaction
+
+Retrieves transaction information.
 
 **Parameters:**
 - `transaction_id` (i64): Transaction ID
 
 **Return Value:**
-- `serde_json::Value`: Transaction header information (JSON)
+- `Transaction`: Transaction information
+
+**Usage Example:**
+```javascript
+const transaction = await invoke('get_transaction', {
+    transactionId: 123
+});
+```
+
+---
+
+### get_transactions
+
+Retrieves transaction list with filters (pagination supported).
+
+**Parameters:**
+- `start_date` (Option<String>): Start date ("YYYY-MM-DD")
+- `end_date` (Option<String>): End date ("YYYY-MM-DD")
+- `category1_code` (Option<String>): Category1 filter
+- `category2_code` (Option<String>): Category2 filter
+- `category3_code` (Option<String>): Category3 filter
+- `min_amount` (Option<i64>): Minimum amount
+- `max_amount` (Option<i64>): Maximum amount
+- `keyword` (Option<String>): Keyword search
+- `page` (i64): Page number (starts from 1)
+- `per_page` (i64): Items per page
+
+**Return Value:**
+- `Vec<Transaction>`: Array of transactions
+
+**Usage Example:**
+```javascript
+const transactions = await invoke('get_transactions', {
+    startDate: '2025-12-01',
+    endDate: '2025-12-31',
+    category1Code: 'EXPENSE',
+    category2Code: null,
+    category3Code: null,
+    minAmount: null,
+    maxAmount: null,
+    keyword: null,
+    page: 1,
+    perPage: 50
+});
+```
+
+**Pagination:**
+- `page`: Starts from 1
+- `per_page`: Recommended range 1-100
+
+---
+
+### update_transaction
+
+Updates a transaction.
+
+**Parameters:**
+- `transaction_id` (i64): Transaction ID
+- `transaction_date` (String): Transaction date and time
+- `category1_code` (String): Category1 code
+- `category2_code` (String): Category2 code
+- `category3_code` (String): Category3 code
+- `amount` (i64): Amount
+- `description` (Option<String>): Description
+- `memo` (Option<String>): Memo
+
+**Return Value:** None
+
+**Usage Example:**
+```javascript
+await invoke('update_transaction', {
+    transactionId: 123,
+    transactionDate: '2025-12-05 11:00:00',
+    category1Code: 'EXPENSE',
+    category2Code: 'C2_E_1',
+    category3Code: 'C3_1',
+    amount: 2000,
+    description: 'Groceries (Updated)',
+    memo: null
+});
+```
+
+---
+
+### delete_transaction
+
+Deletes a transaction.
+
+**Parameters:**
+- `transaction_id` (i64): Transaction ID
+
+**Return Value:** None
+
+**Usage Example:**
+```javascript
+if (confirm('Are you sure you want to delete?')) {
+    await invoke('delete_transaction', { transactionId: 123 });
+}
+```
+
+**Note:**
+- Logical deletion (is_disabled = 1)
+- Related details are also deleted
+
+---
+
+## Transaction Header Management API
+
+### save_transaction_header
+
+Saves a new transaction header (for detail management).
+
+**Parameters:**
+- `shop_id` (Option<i64>): Shop ID
+- `category1_code` (String): Category1 code
+- `from_account_code` (String): Source account code
+- `to_account_code` (String): Destination account code
+- `transaction_date` (String): Transaction date and time
+- `total_amount` (i64): Total amount
+- `tax_rounding_type` (i64): Tax rounding type (0=floor, 1=ceiling, 2=round)
+- `tax_included_type` (i64): Tax inclusion type (0=exclusive, 1=inclusive)
+- `memo` (Option<String>): Memo
+
+**Return Value:**
+- `i64`: Created transaction_id
+
+**Usage Example:**
+```javascript
+const transactionId = await invoke('save_transaction_header', {
+    shopId: 1,
+    category1Code: 'EXPENSE',
+    fromAccountCode: 'CASH',
+    toAccountCode: 'NONE',
+    transactionDate: '2025-12-05 10:00:00',
+    totalAmount: 5000,
+    taxRoundingType: 0,
+    taxIncludedType: 1,
+    memo: 'Shopping at supermarket'
+});
+```
+
+**Note:**
+- Details added separately via `add_transaction_detail`
+- Memo is encrypted
+
+---
+
+### get_transaction_header
+
+Retrieves transaction header and memo.
+
+**Parameters:**
+- `transaction_id` (i64): Transaction ID
+
+**Return Value:**
+- `JSON`: Header information and memo
 
 **Response Structure:**
 ```javascript
 {
-  transaction_id: 123,
-  user_id: 2,
-  transaction_date: "2024-01-15 10:00:00",
-  category1_code: "EXPENSE",
-  from_account_code: "CASH",
-  to_account_code: "NONE",
-  total_amount: 1000,
-  tax_rounding_type: 0,
-  memo_id: 5,
-  shop_id: 1,
-  is_disabled: 0,
-  entry_dt: "2024-01-15 10:00:00",
-  update_dt: null,
-  memo: "Groceries at supermarket"
+    transaction_id: 123,
+    user_id: 2,
+    shop_id: 1,
+    transaction_date: "2025-12-05 10:00:00",
+    category1_code: "EXPENSE",
+    from_account_code: "CASH",
+    to_account_code: "NONE",
+    total_amount: 5000,
+    tax_rounding_type: 0,
+    tax_included_type: 1,
+    memo_id: 5,
+    is_disabled: 0,
+    entry_dt: "2025-12-05 10:00:00",
+    update_dt: null,
+    memo: "Shopping at supermarket"
 }
 ```
 
 **Usage Example:**
 ```javascript
-const transaction = await invoke('get_transaction_header', {
-  transactionId: 123
+const header = await invoke('get_transaction_header', {
+    transactionId: 123
 });
+console.log(header.memo);
 ```
-
-**Notes:**
-- user_id is currently fixed at 2 (session management not yet implemented)
-- When memo_id = NULL, no corresponding memo exists in the MEMOS table
-- In the frontend transaction list, '-' (hyphen) is displayed for no memo
-- transaction_date uses SQLite DATETIME format (YYYY-MM-DD HH:MM:SS)
 
 ---
 
-#### `select_transaction_headers`
-Retrieves multiple transaction headers (for future batch operations).
+### get_transaction_header_with_info
+
+Retrieves transaction header with related information (shop name, etc.).
+
+**Parameters:**
+- `transaction_id` (i64): Transaction ID
+
+**Return Value:**
+- `TransactionHeaderWithInfo`: Extended header information
+
+**TransactionHeaderWithInfo Structure:**
+```javascript
+{
+    transaction_id: 123,
+    user_id: 2,
+    shop_id: 1,
+    shop_name: "AEON Shinjuku",  // Additional info
+    transaction_date: "2025-12-05 10:00:00",
+    category1_code: "EXPENSE",
+    from_account_code: "CASH",
+    from_account_name: "Cash",  // Additional info
+    to_account_code: "NONE",
+    to_account_name: "-",  // Additional info
+    total_amount: 5000,
+    tax_rounding_type: 0,
+    tax_included_type: 1,
+    memo: "Shopping at supermarket",
+    is_disabled: 0
+}
+```
+
+**Usage Example:**
+```javascript
+const header = await invoke('get_transaction_header_with_info', {
+    transactionId: 123
+});
+console.log(`Shop: ${header.shop_name}`);
+```
+
+**Purpose:**
+- For screen display (includes shop name, account names)
+
+---
+
+### select_transaction_headers
+
+Retrieves multiple transaction headers in bulk.
 
 **Parameters:**
 - `transaction_ids` (Vec<i64>): Array of transaction IDs
 
 **Return Value:**
-- `Vec<TransactionHeader>`: Array of transaction headers
+- `Vec<TransactionHeader>`: Array of headers
 
 **Usage Example:**
 ```javascript
-const transactions = await invoke('select_transaction_headers', {
-  transactionIds: [1, 2, 3]
+const headers = await invoke('select_transaction_headers', {
+    transactionIds: [1, 2, 3, 5]
 });
 ```
 
-**Notes:**
-- Non-existent IDs are ignored (no error)
-- Memo text is not included (memo_id only)
-- For future batch edit feature implementation
+**Note:**
+- Non-existent IDs are skipped (no error)
+- For future bulk operations
 
 ---
 
-### Save Transaction Header
+### update_transaction_header
 
-#### `save_transaction_header`
-Registers a new transaction header.
-
-**Parameters:**
-- `user_id` (i64): User ID
-- `category1_code` (String): Category 1 code (e.g., "EXPENSE", "INCOME", "TRANSFER")
-- `from_account_code` (String): Withdrawal account code (use "NONE" if not applicable)
-- `to_account_code` (String): Deposit account code (use "NONE" if not applicable)
-- `transaction_date` (String): Transaction date/time (YYYY-MM-DD HH:MM:SS format)
-- `total_amount` (i64): Total amount
-- `tax_rounding_type` (i64): Tax rounding type (0=round down, 1=round up, 2=round half up)
-- `memo` (Option<String>): Memo (memo_id becomes NULL if null or empty string)
-- `shop_id` (Option<i64>): Shop ID (optional)
-
-**Return Value:**
-- `Result<i64, String>`: New transaction_id on success, error message on failure
-
-**Usage Example:**
-```javascript
-const transactionId = await invoke('save_transaction_header', {
-  userId: 2,
-  category1Code: 'EXPENSE',
-  fromAccountCode: 'CASH',
-  toAccountCode: 'NONE',
-  transactionDate: '2024-01-15 10:00:00',
-  totalAmount: 1000,
-  taxRoundingType: 0,
-  memo: 'Groceries at supermarket',
-  shopId: 1
-});
-console.log('Created transaction ID:', transactionId);
-```
-
-**Validation:**
-- Date format: YYYY-MM-DD HH:MM:SS (strict check)
-- Amount range: 0 ≤ total_amount ≤ 999,999,999
-- Tax rounding type: 0, 1, or 2
-- account_code: "NONE" is a special account code meaning "not specified" (stored as string)
-
-**Notes:**
-- Reuses existing memo if found (same memo_id)
-- Automatically adds to MEMOS table if new memo
-- transaction_id is auto-incremented (AUTOINCREMENT)
-
----
-
-### Update Transaction Header
-
-#### `update_transaction_header`
-Updates an existing transaction header.
+Updates a transaction header.
 
 **Parameters:**
-- `transaction_id` (i64): Transaction ID to update
-- `category1_code` (String): Category 1 code
-- `from_account_code` (String): Withdrawal account code
-- `to_account_code` (String): Deposit account code
-- `transaction_date` (String): Transaction date/time (YYYY-MM-DD HH:MM:SS format)
-- `total_amount` (i64): Total amount
-- `tax_rounding_type` (i64): Tax rounding type
-- `memo` (Option<String>): Memo
-- `shop_id` (Option<i64>): Shop ID
+- `transaction_id` (i64): Transaction ID
+- Other parameters same as `save_transaction_header`
 
-**Return Value:**
-- `Result<(), String>`: Empty on success, error message on failure
+**Return Value:** None
 
 **Usage Example:**
 ```javascript
 await invoke('update_transaction_header', {
-  transactionId: 123,
-  category1Code: 'EXPENSE',
-  fromAccountCode: 'BANK',
-  toAccountCode: 'NONE',
-  transactionDate: '2024-01-15 11:00:00',
-  totalAmount: 2000,
-  taxRoundingType: 0,
-  memo: 'Groceries at supermarket (amount corrected)',
-  shopId: 2
+    transactionId: 123,
+    shopId: 2,
+    category1Code: 'EXPENSE',
+    fromAccountCode: 'CASH',
+    toAccountCode: 'NONE',
+    transactionDate: '2025-12-05 11:00:00',
+    totalAmount: 6000,
+    taxRoundingType: 0,
+    taxIncludedType: 1,
+    memo: 'Updated memo'
 });
 ```
 
-**Validation:**
-- Same validation rules as `save_transaction_header`
-- Error if transaction_id does not exist
-
-**Notes:**
-- user_id is currently fixed at 2 (session management not yet implemented)
-- UPDATE_DT field is automatically updated
-
 ---
 
-## Memo Management Logic
+## Transaction Detail Management API
 
-### Overview
-Transaction memos are designed to be shareable; identical memo content is reused.
+### get_transaction_details
 
-### Memo States
+Retrieves transaction detail list.
 
-#### 1. Empty Memo (No Memo)
+**Parameters:**
+- `transaction_id` (i64): Transaction ID
+
+**Return Value:**
+- `Vec<TransactionDetailWithInfo>`: Array of details (with category names, etc.)
+
+**TransactionDetailWithInfo Structure:**
 ```javascript
-memo: null  // or empty string ""
-```
-- **Behavior**: memo_id = NULL
-- **MEMOS Table**: No record created
-- **Frontend Display**: '-' (hyphen) is displayed (meaning "no memo")
-- **Use Case**: Transactions without memo
-
-#### 2. Reusing Existing Memo
-```javascript
-memo: "Shopping"  // Already exists in MEMOS table
-```
-- **Behavior**: Searches and references existing memo_id
-- **MEMOS Table**: No change
-- **Frontend Display**: Memo text is displayed
-- **Use Case**: Sharing same memo across multiple transactions
-
-#### 3. New Memo
-```javascript
-memo: "New memo content"  // Does not exist in MEMOS table
-```
-- **Behavior**: Auto-increments new memo_id
-- **MEMOS Table**: New record created
-- **Frontend Display**: New memo text is displayed
-- **Use Case**: First-time memo content
-
-### Frontend Display
-
-**Memo Display in Transaction List:**
-```javascript
-// res/js/transaction-management.js:323
-if (transaction.memo) {
-    memoDiv.textContent = transaction.memo;
-} else {
-    memoDiv.textContent = '-';  // Hyphen for no memo
-}
-```
-
-### Memo Update Behavior
-
-#### Case 1: Changing Shared Memo
-```
-Original memo: "Shopping" (memo_id=10)
-In use: Transaction A, Transaction B → memo_id=10
-
-Edit Transaction A, change memo to: "Groceries"
-Result:
-  - New memo_id=20 is created
-  - Transaction A → memo_id=20
-  - Transaction B → memo_id=10 (unchanged)
-```
-**Reason**: To avoid affecting other transactions
-
-#### Case 2: Deleting Memo
-```
-Original memo: "Shopping" (memo_id=10)
-
-Change memo to empty: memo = null
-Result:
-  - memo_id=NULL
-  - MEMOS table: memo_id=10 remains (orphaned)
-  - Frontend display: '-' (hyphen)
-```
-**Note**: Orphaned memo cleanup is under consideration for future feature
-
-#### Case 3: Changing to Same Memo Content
-```
-Original memo: "Shopping" (memo_id=10)
-Changed memo: "Groceries" (memo_id=15 already exists)
-
-Result:
-  - Does not create new, uses existing memo_id=15
-```
-
-### Database Structure
-
-**MEMOS Table:**
-```sql
-CREATE TABLE MEMOS (
-    MEMO_ID INTEGER PRIMARY KEY AUTOINCREMENT,
-    MEMO_TEXT TEXT NOT NULL,
-    ENTRY_DT DATETIME NOT NULL,
-    UPDATE_DT DATETIME
-);
-```
-
-**TRANSACTION_HEADERS Table (memo part):**
-```sql
-CREATE TABLE TRANSACTION_HEADERS (
-    ...
-    MEMO_ID INTEGER,  -- Reference to MEMOS table (nullable)
-    ...
-    FOREIGN KEY(MEMO_ID) REFERENCES MEMOS(MEMO_ID)
-);
-```
-
----
-
-## Validation Details
-
-### Date/Time Format
-**Format**: `YYYY-MM-DD HH:MM:SS`
-
-**Valid Examples:**
-```
-2024-01-15 10:00:00  ✅
-2024-12-31 23:59:59  ✅
-```
-
-**Invalid Examples:**
-```
-2024-1-15 10:00:00   ❌ (single-digit month)
-2024-01-15 10:00     ❌ (missing seconds)
-2024/01/15 10:00:00  ❌ (wrong delimiter)
-```
-
-**Implementation:**
-```rust
-// Regex check (src/services/transaction.rs:713-717)
-if !RE_DATETIME.is_match(&request.transaction_date) {
-    return Err(TransactionError::ValidationError(
-        "Invalid date format. Use YYYY-MM-DD HH:MM:SS".to_string(),
-    ));
-}
-```
-
-### Amount Range
-**Range**: 0 ≤ total_amount ≤ 999,999,999
-
-**Valid Examples:**
-```
-0           ✅ (zero allowed)
-1           ✅
-1000000     ✅
-999999999   ✅ (maximum)
-```
-
-**Invalid Examples:**
-```
--1          ❌ (negative not allowed)
-1000000000  ❌ (1 billion or more not allowed)
-```
-
-**Implementation:**
-```rust
-// Amount check (src/services/transaction.rs:719-723)
-if request.total_amount < 0 || request.total_amount > 999_999_999 {
-    return Err(TransactionError::ValidationError(
-        "Amount must be between 0 and 999,999,999".to_string(),
-    ));
-}
-```
-
-### Tax Rounding Type
-**Valid Values**: 0, 1, 2
-
-| Value | Description | Constant Name |
-|-------|-------------|---------------|
-| 0     | Round down  | TAX_ROUND_DOWN |
-| 1     | Round up    | TAX_ROUND_UP |
-| 2     | Round half up | TAX_ROUND_HALF_UP |
-
-**Implementation:**
-```rust
-// Tax rounding type check (src/services/transaction.rs:725-731)
-if request.tax_rounding_type != consts::TAX_ROUND_DOWN
-    && request.tax_rounding_type != consts::TAX_ROUND_UP
-    && request.tax_rounding_type != consts::TAX_ROUND_HALF_UP
 {
-    return Err(TransactionError::ValidationError(
-        "Invalid tax rounding type".to_string(),
-    ));
+    detail_id: 1,
+    transaction_id: 123,
+    line_number: 1,
+    category1_code: "EXPENSE",
+    category1_name: "Expense",
+    category2_code: "C2_E_1",
+    category2_name: "Food",
+    category3_code: "C3_1",
+    category3_name: "Groceries",
+    item_name: "Vegetables",
+    quantity: 1,
+    amount: 500,
+    tax_rate: 10,
+    tax_amount: 50,
+    amount_including_tax: 550,
+    product_id: null,
+    manufacturer_id: null,
+    memo: null
+}
+```
+
+**Usage Example:**
+```javascript
+const details = await invoke('get_transaction_details', {
+    transactionId: 123
+});
+details.forEach(detail => {
+    console.log(`${detail.item_name}: ¥${detail.amount_including_tax}`);
+});
+```
+
+---
+
+### add_transaction_detail
+
+Adds a transaction detail.
+
+**Parameters:**
+- `transaction_id` (i64): Transaction ID
+- `category1_code` (String): Category1 code
+- `category2_code` (String): Category2 code
+- `category3_code` (String): Category3 code
+- `item_name` (String): Item name
+- `amount` (i64): Amount (tax-exclusive)
+- `tax_rate` (i32): Tax rate (%)
+- `tax_amount` (i64): Tax amount
+- `amount_including_tax` (Option<i64>): Amount including tax
+- `memo` (Option<String>): Memo
+- `quantity` (Option<i64>): Quantity
+- `product_id` (Option<i64>): Product ID
+- `manufacturer_id` (Option<i64>): Manufacturer ID
+
+**Return Value:**
+- `i64`: Created detail_id
+
+**Usage Example:**
+```javascript
+const detailId = await invoke('add_transaction_detail', {
+    transactionId: 123,
+    category1Code: 'EXPENSE',
+    category2Code: 'C2_E_1',
+    category3Code: 'C3_1',
+    itemName: 'Vegetables',
+    amount: 500,
+    taxRate: 10,
+    taxAmount: 50,
+    amountIncludingTax: 550,
+    memo: null,
+    quantity: 1,
+    productId: null,
+    manufacturerId: null
+});
+```
+
+**Automatic Processing:**
+- Auto-numbering of `line_number`
+
+---
+
+### update_transaction_detail
+
+Updates a transaction detail.
+
+**Parameters:**
+- `detail_id` (i64): Detail ID
+- Other parameters same as `add_transaction_detail` (except transaction_id)
+
+**Return Value:** None
+
+**Usage Example:**
+```javascript
+await invoke('update_transaction_detail', {
+    detailId: 1,
+    category1Code: 'EXPENSE',
+    category2Code: 'C2_E_1',
+    category3Code: 'C3_1',
+    itemName: 'Vegetables (Updated)',
+    amount: 600,
+    taxRate: 10,
+    taxAmount: 60,
+    amountIncludingTax: 660,
+    memo: null,
+    quantity: 1,
+    productId: null,
+    manufacturerId: null
+});
+```
+
+---
+
+### delete_transaction_detail
+
+Deletes a transaction detail.
+
+**Parameters:**
+- `detail_id` (i64): Detail ID
+
+**Return Value:** None
+
+**Usage Example:**
+```javascript
+await invoke('delete_transaction_detail', { detailId: 1 });
+```
+
+---
+
+## Data Structures
+
+### Transaction (Simple Version)
+
+```rust
+pub struct Transaction {
+    pub transaction_id: i64,
+    pub user_id: i64,
+    pub transaction_date: String,
+    pub category1_code: String,
+    pub category2_code: String,
+    pub category3_code: String,
+    pub amount: i64,
+    pub description: Option<String>,
+    pub memo: Option<String>,
+}
+```
+
+---
+
+### TransactionHeader
+
+```rust
+pub struct TransactionHeader {
+    pub transaction_id: i64,
+    pub user_id: i64,
+    pub shop_id: Option<i64>,
+    pub transaction_date: String,
+    pub category1_code: String,
+    pub from_account_code: String,
+    pub to_account_code: String,
+    pub total_amount: i64,
+    pub tax_rounding_type: i64,  // 0=floor, 1=ceiling, 2=round
+    pub tax_included_type: i64,  // 0=exclusive, 1=inclusive
+    pub memo_id: Option<i64>,
+    pub is_disabled: i64,
+    pub entry_dt: String,
+    pub update_dt: Option<String>,
+}
+```
+
+---
+
+### TransactionDetail
+
+```rust
+pub struct TransactionDetail {
+    pub detail_id: i64,
+    pub transaction_id: i64,
+    pub line_number: i64,
+    pub category1_code: String,
+    pub category2_code: String,
+    pub category3_code: String,
+    pub item_name: String,
+    pub quantity: i64,
+    pub amount: i64,           // Tax-exclusive
+    pub tax_rate: i32,         // %
+    pub tax_amount: i64,
+    pub amount_including_tax: Option<i64>,  // Tax-inclusive
+    pub product_id: Option<i64>,
+    pub manufacturer_id: Option<i64>,
+    pub memo: Option<String>,
 }
 ```
 
@@ -357,289 +555,158 @@ if request.tax_rounding_type != consts::TAX_ROUND_DOWN
 
 ## Error Handling
 
-### Error Types
+### Common Error Patterns
 
-```rust
-pub enum TransactionError {
-    DatabaseError(String),     // Database error
-    ValidationError(String),   // Validation error
-    NotFound,                  // Transaction not found
-}
-```
-
-### Common Error Cases
-
-#### 1. Validation Error
-**Cause:**
-- Invalid date format
-- Amount out of range
-- Invalid tax rounding type
-
-**Example Messages:**
-```
-"Validation error: Invalid date format. Use YYYY-MM-DD HH:MM:SS"
-"Validation error: Amount must be between 0 and 999,999,999"
-"Validation error: Invalid tax rounding type"
-```
-
-#### 2. Transaction Not Found
-**Cause:**
-- Specified non-existent transaction_id
-
-**Message:**
-```
-"Transaction not found"
-```
-
-#### 3. Database Error
-**Cause:**
-- Foreign key constraint violation
-- SQL execution error
-- Connection error
-
-**Example Messages:**
-```
-"Database error: FOREIGN KEY constraint failed"
-"Database error: no such table: TRANSACTION_HEADERS"
-```
+| Error Message | Cause | Solution |
+|--------------|-------|----------|
+| `"User not authenticated"` | Session not authenticated | Login required |
+| `"Failed to get transaction: ..."` | Retrieval error | Check database |
+| `"Failed to delete transaction: ..."` | Deletion error | Check database |
 
 ### Frontend Error Handling Example
 
 ```javascript
-try {
-  await invoke('update_transaction_header', {
-    transactionId: 123,
-    // ... parameters
-  });
-  alert('Transaction updated');
-  await loadTransactions(); // Reload list
-} catch (error) {
-  console.error('Update failed:', error);
+// Add transaction
+async function addTransaction(data) {
+    try {
+        const transactionId = await invoke('add_transaction', data);
+        alert(`Transaction added (ID: ${transactionId})`);
+        return transactionId;
+    } catch (error) {
+        alert(`Error: ${error}`);
+        return null;
+    }
+}
 
-  if (error.includes('not found')) {
-    alert('Transaction not found. It may have been deleted.');
-  } else if (error.includes('Validation error')) {
-    alert('Invalid input: ' + error);
-  } else {
-    alert('Failed to update transaction: ' + error);
-  }
+// Save transaction with details
+async function saveTransactionWithDetails(header, details) {
+    try {
+        // Save header
+        const transactionId = await invoke('save_transaction_header', header);
+        
+        // Add details sequentially
+        for (const detail of details) {
+            await invoke('add_transaction_detail', {
+                transactionId,
+                ...detail
+            });
+        }
+        
+        alert('Saved');
+        return transactionId;
+    } catch (error) {
+        alert(`Save error: ${error}`);
+        return null;
+    }
 }
 ```
 
 ---
 
-## Database Schema
+## Usage Scenarios
 
-### TRANSACTION_HEADERS Table
-```sql
-CREATE TABLE TRANSACTION_HEADERS (
-    TRANSACTION_ID INTEGER PRIMARY KEY AUTOINCREMENT,
-    USER_ID INTEGER NOT NULL,
-    TRANSACTION_DATE DATETIME NOT NULL,
-    CATEGORY1_CODE VARCHAR(64) NOT NULL,
-    FROM_ACCOUNT_CODE VARCHAR(64),
-    TO_ACCOUNT_CODE VARCHAR(64),
-    TOTAL_AMOUNT INTEGER NOT NULL,
-    TAX_ROUNDING_TYPE INTEGER NOT NULL,
-    MEMO_ID INTEGER,
-    SHOP_ID INTEGER,
-    IS_DISABLED INTEGER NOT NULL DEFAULT 0,
-    ENTRY_DT DATETIME NOT NULL,
-    UPDATE_DT DATETIME,
-    FOREIGN KEY(USER_ID) REFERENCES USERS(USER_ID),
-    FOREIGN KEY(USER_ID, CATEGORY1_CODE)
-        REFERENCES CATEGORY1(USER_ID, CATEGORY1_CODE),
-    FOREIGN KEY(USER_ID, FROM_ACCOUNT_CODE)
-        REFERENCES ACCOUNTS(USER_ID, ACCOUNT_CODE),
-    FOREIGN KEY(USER_ID, TO_ACCOUNT_CODE)
-        REFERENCES ACCOUNTS(USER_ID, ACCOUNT_CODE),
-    FOREIGN KEY(MEMO_ID) REFERENCES MEMOS(MEMO_ID),
-    FOREIGN KEY(SHOP_ID) REFERENCES SHOPS(SHOP_ID)
-);
+### Scenario 1: Simple Input (Without Details)
+
+```javascript
+// Record food expense of ¥1,500
+await invoke('add_transaction', {
+    transactionDate: '2025-12-05 10:30:00',
+    category1Code: 'EXPENSE',
+    category2Code: 'C2_E_1',  // Food
+    category3Code: 'C3_1',    // Groceries
+    amount: 1500,
+    description: 'Lunch',
+    memo: null
+});
 ```
 
-### MEMOS Table
-```sql
-CREATE TABLE MEMOS (
-    MEMO_ID INTEGER PRIMARY KEY AUTOINCREMENT,
-    MEMO_TEXT TEXT NOT NULL,
-    ENTRY_DT DATETIME NOT NULL,
-    UPDATE_DT DATETIME
-);
-```
+### Scenario 2: Input with Details
 
-### TRANSACTION_DETAILS Table
-```sql
-CREATE TABLE TRANSACTION_DETAILS (
-    DETAIL_ID INTEGER PRIMARY KEY AUTOINCREMENT,
-    TRANSACTION_ID INTEGER NOT NULL,
-    CATEGORY2_CODE VARCHAR(64) NOT NULL,
-    CATEGORY3_CODE VARCHAR(64) NOT NULL,
-    ITEM_NAME VARCHAR(256) NOT NULL,
-    AMOUNT INTEGER NOT NULL,
-    TAX_AMOUNT INTEGER NOT NULL,
-    TAX_RATE INTEGER NOT NULL,
-    MEMO_ID INTEGER,
-    ENTRY_DT DATETIME NOT NULL,
-    UPDATE_DT DATETIME,
-    FOREIGN KEY(TRANSACTION_ID)
-        REFERENCES TRANSACTION_HEADERS(TRANSACTION_ID)
-        ON DELETE CASCADE,
-    FOREIGN KEY(MEMO_ID) REFERENCES MEMOS(MEMO_ID)
-);
-```
+```javascript
+// 1. Create header
+const transactionId = await invoke('save_transaction_header', {
+    shopId: 1,
+    category1Code: 'EXPENSE',
+    fromAccountCode: 'CASH',
+    toAccountCode: 'NONE',
+    transactionDate: '2025-12-05 14:00:00',
+    totalAmount: 3250,
+    taxRoundingType: 0,
+    taxIncludedType: 1,
+    memo: 'Shopping at supermarket'
+});
 
-**Notes:**
-- Foreign key constraints to CATEGORY2/3 are currently not set
-- Reason: CATEGORY2/3 primary keys are composite keys `(USER_ID, CATEGORY1_CODE, CATEGORY2_CODE)` and `(USER_ID, CATEGORY1_CODE, CATEGORY2_CODE, CATEGORY3_CODE)`, but TRANSACTION_DETAILS table does not have USER_ID and CATEGORY1_CODE columns
-- USER_ID and CATEGORY1_CODE are designed to be obtained from TRANSACTION_HEADERS
-- Referential integrity is currently enforced at the application level (planned to be implemented as database constraints in the future)
+// 2. Add detail (vegetables)
+await invoke('add_transaction_detail', {
+    transactionId,
+    category1Code: 'EXPENSE',
+    category2Code: 'C2_E_1',
+    category3Code: 'C3_1',
+    itemName: 'Vegetables',
+    amount: 1500,
+    taxRate: 8,
+    taxAmount: 120,
+    amountIncludingTax: 1620,
+    memo: null,
+    quantity: 1,
+    productId: null,
+    manufacturerId: null
+});
 
-**Note:**
-- TRANSACTION_DETAILS planned for future implementation (detail feature)
-- Currently header-only transaction management
-
----
-
-## Data Structures
-
-### TransactionHeader
-```rust
-pub struct TransactionHeader {
-    pub transaction_id: i64,
-    pub user_id: i64,
-    pub transaction_date: String,      // YYYY-MM-DD HH:MM:SS
-    pub category1_code: String,
-    pub from_account_code: String,
-    pub to_account_code: String,
-    pub total_amount: i64,
-    pub tax_rounding_type: i64,
-    pub memo_id: Option<i64>,
-    pub shop_id: Option<i64>,
-    pub is_disabled: i64,
-    pub entry_dt: String,
-    pub update_dt: Option<String>,
-}
-```
-
-### SaveTransactionRequest
-```rust
-pub struct SaveTransactionRequest {
-    pub category1_code: String,
-    pub from_account_code: String,
-    pub to_account_code: String,
-    pub transaction_date: String,
-    pub total_amount: i64,
-    pub tax_rounding_type: i64,
-    pub memo: Option<String>,
-    pub shop_id: Option<i64>,
-}
+// 3. Add detail (meat)
+await invoke('add_transaction_detail', {
+    transactionId,
+    category1Code: 'EXPENSE',
+    category2Code: 'C2_E_1',
+    category3Code: 'C3_1',
+    itemName: 'Meat',
+    amount: 1500,
+    taxRate: 8,
+    taxAmount: 120,
+    amountIncludingTax: 1620,
+    memo: null,
+    quantity: 1,
+    productId: null,
+    manufacturerId: null
+});
 ```
 
 ---
 
-## Design Notes
+## Test Coverage
 
-### Account Codes
-- **NONE**: Special account code specified when account is not used
-- **Database Storage**: "NONE" is stored as-is as a string (not converted to NULL)
-- **ACCOUNTS Table**: Record with ACCOUNT_CODE='NONE', ACCOUNT_NAME='Not specified' exists
-- **Data Type**: from_account_code, to_account_code are String type
-- **Category-Specific Usage**:
-  - EXPENSE: FROM_ACCOUNT_CODE only
-  - INCOME: TO_ACCOUNT_CODE only
-  - TRANSFER: Both used
-
-### Tax Rounding Type
-- **Current**: Maintained at header level
-- **Future**: For tax calculation at detail level
-- **Default Value**: 0 (round down)
-
-### Session Management
-- **Current**: user_id is fixed (2)
-- **Future**: Dynamic retrieval after session/auth implementation
-- **TODO**: Comments in code `// TODO: Get user_id from session/auth`
-
-### Orphaned Memo Records
-- **Current**: Deletion feature not implemented
-- **Future**: Periodic cleanup process under consideration
-- **Reason**: Careful deletion needed to maintain memo sharing feature
+**TransactionService:**
+- ✅ Transaction addition test
+- ✅ Transaction retrieval test
+- ✅ Transaction update test
+- ✅ Transaction deletion test
+- ✅ Header and detail integration test
+- ✅ Memo encryption/decryption test
+- ✅ Pagination test
 
 ---
 
-## Implemented Features
+## Related Documents
 
-- ✅ Create new transaction header
-- ✅ Get transaction header (single)
-- ✅ Get transaction headers (multiple)
-- ✅ Update transaction header
-- ✅ Delete transaction header
-- ✅ Automatic memo management (new/reuse/NULL)
-- ✅ Validation (date/amount/tax rounding type)
-- ✅ Filtering feature (list screen)
-- ✅ Paging feature (list screen)
+### Implementation Files
 
----
+- Transaction Service: `src/services/transaction.rs`
+- SQL Definitions: `src/sql_queries.rs`
+- Tauri Commands: `src/lib.rs`
 
-## Planned Features
+### Other API References
 
-- [ ] Transaction detail (TRANSACTION_DETAILS) management
-- [ ] Dynamic user_id retrieval via session management
-- [ ] Orphaned memo record cleanup
-- [ ] Batch edit feature
-- [ ] Soft delete (using IS_DISABLED)
-- [ ] Automatic tax calculation (per detail)
-- [ ] Integration with account balance management
+- [Common API](./API_COMMON.md) - Session management
+- [Category Management API](./API_CATEGORY.md) - Category information
+- [Account Management API](./API_ACCOUNT.md) - Account information
+- [Master Data API](./API_MASTER_DATA.md) - Shop information
 
 ---
 
-## Testing
-
-### Backend Tests (Rust)
-```bash
-# Transaction service tests
-cargo test services::transaction::tests --lib
-```
-
-### Frontend Tests (JavaScript)
-```bash
-cd res/tests
-
-# Transaction edit feature tests
-npm test -- transaction-edit.test.js
-```
-
-**Test Results:**
-- Backend: 121 tests passing
-- Frontend: 404 tests passing (transaction edit: 98 tests)
-- Total Tests: 525 tests
-- Success Rate: 100%
-
----
-
-## Version History
-
-- **v0.2** (2025-11-09): Edit feature added
-  - update_transaction_header API implementation
-  - Memo management logic during edit
-  - Test cases added (98 tests)
-
-- **v0.1** (2025-11-08): Initial API documentation
-  - save_transaction_header API
-  - get_transaction_header API
-  - select_transaction_headers API
-  - Automatic memo management feature
-
----
-
-## Related Documentation
-
-- [Test Summary](../ja/TEST_SUMMARY.md)
-- [Category Management API](API_CATEGORY.md)
-- [Shop Management API](API_SHOP.md)
-- [Japanese Version](../ja/API_TRANSACTION.md)
-
----
-
-**Last Updated**: 2025-11-10 JST
-**Version**: v0.3 (Shop ID added)
+**Change History:**
+- 2024-11-10: Initial version
+- 2025-12-05: Complete revision based on implementation code
+  - Added get_transaction_header_with_info
+  - Unified parameter names to camelCase
+  - Unified with new template
+  - Added usage scenarios
