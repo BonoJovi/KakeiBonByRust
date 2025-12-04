@@ -30,7 +30,16 @@
     - ✅ DATABASE_DESIGN.md (ja) - データベース設計
     - ✅ DATABASE_DESIGN_en.md (en) - Database Design
     - ✅ UI_DESIGN.md (ja) - UI設計
-    - ⏳ UI_DESIGN_en.md (en) - UI Design
+    - ✅ UI_DESIGN_en.md (en) - UI Design
+  - 🔄 Phase5: 開発者向けガイドの整備（進行中）
+    - ✅ DEVELOPMENT_SETUP.md (ja) - 開発者向けセットアップガイド
+    - ✅ DEVELOPMENT_SETUP_en.md (en) - Developer Setup Guide
+    - ✅ CODING_STANDARDS.md (ja) - コーディング規約
+    - ✅ CODING_STANDARDS_en.md (en) - Coding Standards
+    - ⏳ DEVELOPER_GUIDE.md (ja) - 既存ガイドの検証・統合
+    - ⏳ DEVELOPER_GUIDE_en.md (en) - Developer Guide
+    - ✅ SETUP_GUIDE.md (ja) - ユーザー向けセットアップガイド（完了）
+    - ✅ SETUP_GUIDE_en.md (en) - User Setup Guide（完了）
 - 🧪 テストカバレッジの拡充
 
 ### ✅ 完了済み
