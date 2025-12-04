@@ -47,12 +47,13 @@
     - ✅ FAQ_en.md (en) - Frequently Asked Questions
     - ✅ TROUBLESHOOTING.md (ja) - トラブルシューティング
     - ✅ TROUBLESHOOTING_en.md (en) - Troubleshooting
-  - 🔄 Phase7: プロジェクト管理ドキュメントの整備（進行中）
+  - ✅ Phase7: プロジェクト管理ドキュメントの整備（完了）
     - ✅ README.md - 言語選択ランディング
     - ✅ README_ja.md - 日本語ナビゲーションハブ更新
     - ✅ README_en.md - 英語ナビゲーションハブ更新
-    - ⏳ CONTRIBUTING.md の検証・更新
-    - ⏳ CHANGELOG.md の検証・更新
+    - ✅ CONTRIBUTING.md の検証・更新、CONTRIBUTING_en.md作成
+    - ✅ CODE_OF_CONDUCT_en.md, CODE_OF_CONDUCT_ja.md作成
+    - ✅ CHANGELOG_en.md, CHANGELOG_ja.md作成
 - 🧪 テストカバレッジの拡充
 
 ### ✅ 完了済み
