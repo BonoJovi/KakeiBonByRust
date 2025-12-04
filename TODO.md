@@ -38,19 +38,21 @@
     - ✅ CODING_STANDARDS_en.md (en) - Coding Standards
     - ✅ TESTING_GUIDE.md (ja) - テストガイド
     - ✅ TESTING_GUIDE_en.md (en) - Testing Guide
-  - 🔄 Phase6: ユーザー向けドキュメントの整備（進行中）
+  - ✅ Phase6: ユーザー向けドキュメントの整備（完了）
     - ✅ SETUP_GUIDE.md (ja) - ユーザー向けセットアップガイド
     - ✅ SETUP_GUIDE_en.md (en) - User Setup Guide
     - ✅ USER_MANUAL.md (ja) - ユーザーマニュアル
     - ✅ USER_MANUAL_en.md (en) - User Manual
     - ✅ FAQ.md (ja) - よくある質問
-    - ⏳ FAQ_en.md (en) - Frequently Asked Questions
-    - ⏳ 既存ユーザードキュメントの統合判断
-      - ⏳ INSTALLATION_GUIDE vs SETUP_GUIDE の統合判断
-      - ⏳ QUICK_START_GUIDE の位置づけ整理
-      - ⏳ AGGREGATION_USER_GUIDE の位置づけ整理
-    - ✅ TROUBLESHOOTING.md (ja) - 既存の検証・統合・拡充
+    - ✅ FAQ_en.md (en) - Frequently Asked Questions
+    - ✅ TROUBLESHOOTING.md (ja) - トラブルシューティング
     - ✅ TROUBLESHOOTING_en.md (en) - Troubleshooting
+  - 🔄 Phase7: プロジェクト管理ドキュメントの整備（進行中）
+    - ✅ README.md - 言語選択ランディング
+    - ✅ README_ja.md - 日本語ナビゲーションハブ更新
+    - ✅ README_en.md - 英語ナビゲーションハブ更新
+    - ⏳ CONTRIBUTING.md の検証・更新
+    - ⏳ CHANGELOG.md の検証・更新
 - 🧪 テストカバレッジの拡充
 
 ### ✅ 完了済み
