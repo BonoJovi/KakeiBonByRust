@@ -1,6 +1,17 @@
 # Troubleshooting Guide
 
-## Translation Resource Not Displaying Issue
+This document contains solutions for common issues that may occur while using the KakeiB on application.
+
+## Table of Contents
+
+1. [Translation Resource Display Issues](#translation-resource-display-issues)
+2. [Database-Related Issues](#database-related-issues)
+3. [Startup and Operation Issues](#startup-and-operation-issues)
+4. [Build-Related Issues](#build-related-issues)
+
+---
+
+## Translation Resource Display Issues
 
 ### Symptoms
 - Translation resource keys (e.g., `menu.admin`) are displayed as literal strings in menus and UI
@@ -42,10 +53,10 @@ Verify that the code references the correct database file.
 
 ```bash
 # Search for database connection code
-grep -r "Connection::open" src-tauri/src/db/ --include="*.rs"
+grep -r "Connection::open" src/db.rs
 
 # Check database path definitions
-grep -r "DB_FILE_NAME\|DB_DIR_NAME" src-tauri/src/ --include="*.rs"
+grep -r "DB_FILE_NAME\|DB_DIR_NAME" src/consts.rs
 ```
 
 ### Common Causes and Solutions
@@ -89,25 +100,22 @@ Connection::open(get_db_path())?
 ```
 
 **Solution:**
-1. Define constants in `src-tauri/src/consts.rs`
+1. Define constants in `src/consts.rs`
 ```rust
 pub const DB_DIR_NAME: &str = ".kakeibon";
 pub const DB_FILE_NAME: &str = "KakeiBonDB.sqlite3";
 ```
 
-2. Implement database path helper function
+2. Implement database path helper function in `src/db.rs`
 ```rust
 use std::path::PathBuf;
 use crate::consts::{DB_DIR_NAME, DB_FILE_NAME};
 
 fn get_db_path() -> PathBuf {
-    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
-    PathBuf::from(home).join(DB_DIR_NAME).join(DB_FILE_NAME)
-}
-
-pub fn get_all_translations(lang_code: &str) -> Result<HashMap<String, String>> {
-    let conn = Connection::open(get_db_path())?;
-    // ...
+    dirs::home_dir()
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join(DB_DIR_NAME)
+        .join(DB_FILE_NAME)
 }
 ```
 
@@ -274,10 +282,178 @@ Add to `.gitignore` to prevent committing development databases.
 
 ## Related Documentation
 
-- [I18N Implementation Guide](./I18N_IMPLEMENTATION.md)
-- [Settings Management](./SETTINGS_MANAGEMENT.md)
-- [Development Environment Setup](../../README_en.md)
+- [User Manual](USER_MANUAL_en.md)
+- [Installation Guide](SETUP_GUIDE.md)
+- [FAQ](FAQ_en.md)
+- [Developer I18N Implementation Guide](../../developer/en/guides/I18N_IMPLEMENTATION.md)
+- [Developer Database Configuration Guide](../../developer/en/guides/DATABASE_CONFIGURATION.md)
 
 ---
 
-Last Updated: 2025-10-28
+## Database-Related Issues
+
+### Database File Not Found
+
+**Symptoms:**
+- Error occurs on application startup
+- "Cannot connect to database" message
+
+**Cause:**
+Database file is not initialized or incorrect path is referenced
+
+**Solution:**
+
+1. Check database directory
+```bash
+ls -la $HOME/.kakeibon/
+```
+
+2. If database doesn't exist, it will be automatically initialized when you start the app
+
+3. Check permissions
+```bash
+chmod 700 $HOME/.kakeibon
+chmod 600 $HOME/.kakeibon/KakeiBonDB.sqlite3
+```
+
+### Database Lock Error
+
+**Symptoms:**
+- "database is locked" error
+- Operations don't complete
+
+**Cause:**
+- Multiple app instances accessing simultaneously
+- Previous process didn't terminate properly
+
+**Solution:**
+
+1. Check running processes
+```bash
+ps aux | grep kakeibon
+```
+
+2. Terminate unnecessary processes
+```bash
+killall kakeibon
+```
+
+3. Remove lock files (last resort)
+```bash
+rm -f $HOME/.kakeibon/KakeiBonDB.sqlite3-shm
+rm -f $HOME/.kakeibon/KakeiBonDB.sqlite3-wal
+```
+
+---
+
+## Startup and Operation Issues
+
+### Application Won't Start
+
+**Symptoms:**
+- Application window doesn't appear
+- Exits without error message
+
+**Checklist:**
+
+1. Verify system requirements
+```bash
+# Rust environment
+rustc --version
+
+# Node.js environment (development only)
+node --version
+```
+
+2. Check dependencies (Linux)
+```bash
+# Check if required libraries are installed
+ldd target/release/kakeibon
+```
+
+**Solution:**
+
+- If system requirements not met: Install required software
+- If libraries missing: Install missing libraries
+
+### Blank Screen
+
+**Symptoms:**
+- App starts but screen shows nothing
+- Some UI components don't display
+
+**Cause:**
+- Frontend JavaScript error
+- Resource file loading failure
+
+**Solution:**
+
+1. Open developer tools (development mode)
+```
+Ctrl+Shift+I (Windows/Linux)
+Cmd+Option+I (Mac)
+```
+
+2. Check console errors
+
+3. Clear cache
+```
+Ctrl+Shift+R (Windows/Linux)
+Cmd+Shift+R (Mac)
+```
+
+---
+
+## Build-Related Issues
+
+### Build Fails
+
+**Symptoms:**
+- `cargo build` fails
+- Dependency errors
+
+**Solution:**
+
+1. Update dependencies
+```bash
+cargo clean
+cargo update
+cargo build --release
+```
+
+2. Update Rust toolchain
+```bash
+rustup update
+```
+
+3. Clear cache
+```bash
+rm -rf target/
+cargo build --release
+```
+
+---
+
+## General Checklist
+
+If you encounter problems, check the following in order:
+
+### Basic Checks
+- [ ] Using latest version
+- [ ] System requirements met
+- [ ] Database file exists normally (`$HOME/.kakeibon/KakeiBonDB.sqlite3`)
+- [ ] Sufficient disk space
+
+### Application Checks
+- [ ] No other instances running
+- [ ] Browser cache cleared (development mode)
+- [ ] Translation resources registered in database
+
+### Development Environment Checks (for developers)
+- [ ] Rust/Cargo installed correctly
+- [ ] All dependencies installed
+- [ ] Build completed successfully
+
+---
+
+Last Updated: 2024-12-05 05:49 JST

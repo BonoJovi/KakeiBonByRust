@@ -1,5 +1,16 @@
 # トラブルシューティングガイド
 
+KakeiBonアプリケーション使用時に発生する可能性のある問題とその解決方法を記載しています。
+
+## 目次
+
+1. [翻訳リソースが表示されない問題](#翻訳リソースが表示されない問題)
+2. [データベース関連の問題](#データベース関連の問題)
+3. [起動・動作の問題](#起動動作の問題)
+4. [ビルド関連の問題](#ビルド関連の問題)
+
+---
+
 ## 翻訳リソースが表示されない問題
 
 ### 症状
@@ -42,10 +53,10 @@ sqlite3 $HOME/.kakeibon/KakeiBonDB.sqlite3 \
 
 ```bash
 # データベース接続コードを検索
-grep -r "Connection::open" src-tauri/src/db/ --include="*.rs"
+grep -r "Connection::open" src/db.rs
 
 # データベースパスの定義を確認
-grep -r "DB_FILE_NAME\|DB_DIR_NAME" src-tauri/src/ --include="*.rs"
+grep -r "DB_FILE_NAME\|DB_DIR_NAME" src/consts.rs
 ```
 
 ### よくある原因と解決方法
@@ -89,25 +100,22 @@ Connection::open(get_db_path())?
 ```
 
 **解決方法:**
-1. `src-tauri/src/consts.rs`で定数を定義
+1. `src/consts.rs`で定数を定義
 ```rust
 pub const DB_DIR_NAME: &str = ".kakeibon";
 pub const DB_FILE_NAME: &str = "KakeiBonDB.sqlite3";
 ```
 
-2. データベースパス取得関数を実装
+2. データベースパス取得関数を実装（`src/db.rs`）
 ```rust
 use std::path::PathBuf;
 use crate::consts::{DB_DIR_NAME, DB_FILE_NAME};
 
 fn get_db_path() -> PathBuf {
-    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
-    PathBuf::from(home).join(DB_DIR_NAME).join(DB_FILE_NAME)
-}
-
-pub fn get_all_translations(lang_code: &str) -> Result<HashMap<String, String>> {
-    let conn = Connection::open(get_db_path())?;
-    // ...
+    dirs::home_dir()
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join(DB_DIR_NAME)
+        .join(DB_FILE_NAME)
 }
 ```
 
@@ -274,10 +282,178 @@ pub fn get_connection() -> Result<Connection> {
 
 ## 関連ドキュメント
 
-- [I18N実装ガイド](./I18N_IMPLEMENTATION.md)
-- [データベース設定](./SETTINGS_MANAGEMENT.md)
-- [開発環境セットアップ](../../README_ja.md)
+- [ユーザーマニュアル](USER_MANUAL.md)
+- [インストールガイド](SETUP_GUIDE.md)
+- [FAQ](FAQ.md)
+- [開発者向けI18N実装ガイド](../../developer/ja/guides/I18N_IMPLEMENTATION.md)
+- [開発者向けデータベース設定ガイド](../../developer/ja/guides/DATABASE_CONFIGURATION.md)
 
 ---
 
-最終更新: 2025-10-28
+## データベース関連の問題
+
+### データベースファイルが見つからない
+
+**症状:**
+- アプリ起動時にエラーが発生
+- 「データベースに接続できません」というメッセージ
+
+**原因:**
+データベースファイルが初期化されていない、または誤った場所を参照している
+
+**解決方法:**
+
+1. データベースディレクトリの確認
+```bash
+ls -la $HOME/.kakeibon/
+```
+
+2. データベースが存在しない場合、アプリを起動すると自動的に初期化されます
+
+3. 権限の確認
+```bash
+chmod 700 $HOME/.kakeibon
+chmod 600 $HOME/.kakeibon/KakeiBonDB.sqlite3
+```
+
+### データベースロックエラー
+
+**症状:**
+- 「database is locked」エラー
+- 操作が完了しない
+
+**原因:**
+- 複数のアプリインスタンスが同時にアクセスしている
+- 以前のプロセスが正常終了していない
+
+**解決方法:**
+
+1. 実行中のプロセスを確認
+```bash
+ps aux | grep kakeibon
+```
+
+2. 不要なプロセスを終了
+```bash
+killall kakeibon
+```
+
+3. ロックファイルの削除（最終手段）
+```bash
+rm -f $HOME/.kakeibon/KakeiBonDB.sqlite3-shm
+rm -f $HOME/.kakeibon/KakeiBonDB.sqlite3-wal
+```
+
+---
+
+## 起動・動作の問題
+
+### アプリが起動しない
+
+**症状:**
+- アプリケーションウィンドウが表示されない
+- エラーメッセージなしで終了する
+
+**確認項目:**
+
+1. システム要件の確認
+```bash
+# Rust環境
+rustc --version
+
+# Node.js環境（開発時のみ）
+node --version
+```
+
+2. 依存ライブラリの確認（Linux）
+```bash
+# 必要なライブラリがインストールされているか
+ldd target/release/kakeibon
+```
+
+**解決方法:**
+
+- システム要件を満たしていない場合：必要なソフトウェアをインストール
+- ライブラリ不足の場合：不足しているライブラリをインストール
+
+### 画面が真っ白になる
+
+**症状:**
+- アプリは起動するが画面に何も表示されない
+- または一部のUIコンポーネントが表示されない
+
+**原因:**
+- フロントエンドのJavaScriptエラー
+- リソースファイルの読み込み失敗
+
+**解決方法:**
+
+1. 開発者ツールを開く（開発モード時）
+```
+Ctrl+Shift+I (Windows/Linux)
+Cmd+Option+I (Mac)
+```
+
+2. コンソールエラーを確認
+
+3. キャッシュのクリア
+```
+Ctrl+Shift+R (Windows/Linux)
+Cmd+Shift+R (Mac)
+```
+
+---
+
+## ビルド関連の問題
+
+### ビルドが失敗する
+
+**症状:**
+- `cargo build`が失敗
+- 依存関係のエラー
+
+**解決方法:**
+
+1. 依存関係の更新
+```bash
+cargo clean
+cargo update
+cargo build --release
+```
+
+2. Rustツールチェーンの更新
+```bash
+rustup update
+```
+
+3. キャッシュのクリア
+```bash
+rm -rf target/
+cargo build --release
+```
+
+---
+
+## 一般的なチェックリスト
+
+問題が発生した場合、以下を順に確認してください：
+
+### 基本確認
+- [ ] 最新版を使用しているか
+- [ ] システム要件を満たしているか
+- [ ] データベースファイルが正常に存在するか（`$HOME/.kakeibon/KakeiBonDB.sqlite3`）
+- [ ] ディスク容量は十分か
+
+### アプリケーション確認
+- [ ] 他のインスタンスが起動していないか
+- [ ] ブラウザキャッシュをクリアしたか（開発モード時）
+- [ ] 翻訳リソースがデータベースに登録されているか
+
+### 開発環境確認（開発者向け）
+- [ ] Rust/Cargoが正しくインストールされているか
+- [ ] 依存ライブラリがすべてインストールされているか
+- [ ] ビルドが正常に完了しているか
+
+---
+
+最終更新: 2024-12-05 05:49 JST

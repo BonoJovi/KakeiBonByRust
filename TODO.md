@@ -41,14 +41,16 @@
   - 🔄 Phase6: ユーザー向けドキュメントの整備（進行中）
     - ✅ SETUP_GUIDE.md (ja) - ユーザー向けセットアップガイド
     - ✅ SETUP_GUIDE_en.md (en) - User Setup Guide
+    - ✅ USER_MANUAL.md (ja) - ユーザーマニュアル
+    - ✅ USER_MANUAL_en.md (en) - User Manual
+    - ✅ FAQ.md (ja) - よくある質問
+    - ⏳ FAQ_en.md (en) - Frequently Asked Questions
     - ⏳ 既存ユーザードキュメントの統合判断
       - ⏳ INSTALLATION_GUIDE vs SETUP_GUIDE の統合判断
       - ⏳ QUICK_START_GUIDE の位置づけ整理
       - ⏳ AGGREGATION_USER_GUIDE の位置づけ整理
-    - ⏳ USER_GUIDE.md (ja) - 基本操作ガイド
-    - ⏳ USER_GUIDE_en.md (en) - User Guide
-    - ⏳ TROUBLESHOOTING.md (ja) - 既存の検証・統合
-    - ⏳ TROUBLESHOOTING_en.md (en) - Troubleshooting
+    - ✅ TROUBLESHOOTING.md (ja) - 既存の検証・統合・拡充
+    - ✅ TROUBLESHOOTING_en.md (en) - Troubleshooting
 - 🧪 テストカバレッジの拡充
 
 ### ✅ 完了済み
