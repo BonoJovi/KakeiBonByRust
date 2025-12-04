@@ -31,15 +31,24 @@
     - ✅ DATABASE_DESIGN_en.md (en) - Database Design
     - ✅ UI_DESIGN.md (ja) - UI設計
     - ✅ UI_DESIGN_en.md (en) - UI Design
-  - 🔄 Phase5: 開発者向けガイドの整備（進行中）
+  - ✅ Phase5: 開発者向けガイドの整備（完了）
     - ✅ DEVELOPMENT_SETUP.md (ja) - 開発者向けセットアップガイド
     - ✅ DEVELOPMENT_SETUP_en.md (en) - Developer Setup Guide
     - ✅ CODING_STANDARDS.md (ja) - コーディング規約
     - ✅ CODING_STANDARDS_en.md (en) - Coding Standards
-    - ⏳ DEVELOPER_GUIDE.md (ja) - 既存ガイドの検証・統合
-    - ⏳ DEVELOPER_GUIDE_en.md (en) - Developer Guide
-    - ✅ SETUP_GUIDE.md (ja) - ユーザー向けセットアップガイド（完了）
-    - ✅ SETUP_GUIDE_en.md (en) - User Setup Guide（完了）
+    - ✅ TESTING_GUIDE.md (ja) - テストガイド
+    - ✅ TESTING_GUIDE_en.md (en) - Testing Guide
+  - 🔄 Phase6: ユーザー向けドキュメントの整備（進行中）
+    - ✅ SETUP_GUIDE.md (ja) - ユーザー向けセットアップガイド
+    - ✅ SETUP_GUIDE_en.md (en) - User Setup Guide
+    - ⏳ 既存ユーザードキュメントの統合判断
+      - ⏳ INSTALLATION_GUIDE vs SETUP_GUIDE の統合判断
+      - ⏳ QUICK_START_GUIDE の位置づけ整理
+      - ⏳ AGGREGATION_USER_GUIDE の位置づけ整理
+    - ⏳ USER_GUIDE.md (ja) - 基本操作ガイド
+    - ⏳ USER_GUIDE_en.md (en) - User Guide
+    - ⏳ TROUBLESHOOTING.md (ja) - 既存の検証・統合
+    - ⏳ TROUBLESHOOTING_en.md (en) - Troubleshooting
 - 🧪 テストカバレッジの拡充
 
 ### ✅ 完了済み
