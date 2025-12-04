@@ -18,7 +18,51 @@
 
 次のステップ:
 - 📊 集計・レポート機能の実装
-- 📝 APIドキュメントの整備
+- 📝 ドキュメントの整備
+  - ✅ Phase1: API仕様書の画面別分割・統合（完了）
+  - ✅ Phase2: 英語版API仕様書作成（完了）
+  - ✅ Phase3: 旧API仕様書削除（完了）
+  - 🔄 Phase4: 設計ドキュメントの整備（進行中）
+    - ✅ ARCHITECTURE.md (ja) - アーキテクチャ設計
+    - ✅ ARCHITECTURE_en.md (en) - Architecture Design
+    - ✅ SECURITY_DESIGN.md (ja) - セキュリティ設計
+    - ✅ SECURITY_DESIGN_en.md (en) - Security Design
+    - ✅ DATABASE_DESIGN.md (ja) - データベース設計
+    - ✅ DATABASE_DESIGN_en.md (en) - Database Design
+    - ✅ UI_DESIGN.md (ja) - UI設計
+    - ✅ UI_DESIGN_en.md (en) - UI Design
+  - ✅ Phase5: 開発者向けガイドの整備（完了）
+    - ✅ DEVELOPMENT_SETUP.md (ja) - 開発者向けセットアップガイド
+    - ✅ DEVELOPMENT_SETUP_en.md (en) - Developer Setup Guide
+    - ✅ CODING_STANDARDS.md (ja) - コーディング規約
+    - ✅ CODING_STANDARDS_en.md (en) - Coding Standards
+    - ✅ TESTING_GUIDE.md (ja) - テストガイド
+    - ✅ TESTING_GUIDE_en.md (en) - Testing Guide
+  - ✅ Phase6: ユーザー向けドキュメントの整備（完了）
+    - ✅ SETUP_GUIDE.md (ja) - ユーザー向けセットアップガイド
+    - ✅ SETUP_GUIDE_en.md (en) - User Setup Guide
+    - ✅ USER_MANUAL.md (ja) - ユーザーマニュアル
+    - ✅ USER_MANUAL_en.md (en) - User Manual
+    - ✅ FAQ.md (ja) - よくある質問
+    - ✅ FAQ_en.md (en) - Frequently Asked Questions
+    - ✅ TROUBLESHOOTING.md (ja) - トラブルシューティング
+    - ✅ TROUBLESHOOTING_en.md (en) - Troubleshooting
+  - ✅ Phase7: プロジェクト管理ドキュメントの整備（完了）
+    - ✅ README.md - 言語選択ランディング
+    - ✅ README_ja.md - 日本語ナビゲーションハブ更新
+    - ✅ README_en.md - 英語ナビゲーションハブ更新
+    - ✅ CONTRIBUTING.md の検証・更新、CONTRIBUTING_en.md作成
+    - ✅ CODE_OF_CONDUCT_en.md, CODE_OF_CONDUCT_ja.md作成
+    - ✅ CHANGELOG_en.md, CHANGELOG_ja.md作成
+  - ✅ Phase8: ドキュメント全体索引作成（完了 2025-12-05）
+    - ✅ docs/INDEX_ja.md - 日本語版全体索引
+      - API仕様書（9ファイル）
+      - 設計ドキュメント（ARCHITECTURE, SECURITY, DATABASE, UI）
+      - 開発者ガイド（DEVELOPMENT_SETUP, CODING_STANDARDS, TESTING_GUIDE）
+      - ユーザー向けドキュメント（USER_MANUAL, FAQ, TROUBLESHOOTING）
+      - カテゴリ別分類・キーワード索引・画面別クイックリファレンス
+    - ✅ docs/INDEX_en.md - 英語版全体索引
+    - ✅ README_ja.md / README_en.md への索引リンク追加
 - 🧪 テストカバレッジの拡充
 
 ### ✅ 完了済み
@@ -81,11 +125,11 @@
 
 ### 作成済み
 - [x] トラブルシューティングガイド（日本語・英語）
-  - docs/ja/TROUBLESHOOTING.md
-  - docs/en/TROUBLESHOOTING.md
+  - docs/user/ja/TROUBLESHOOTING.md
+  - docs/user/en/TROUBLESHOOTING.md
 - [x] データベース設定ガイド（日本語・英語）
-  - docs/ja/DATABASE_CONFIGURATION.md
-  - docs/en/DATABASE_CONFIGURATION.md
+  - docs/developer/ja/guides/DATABASE_CONFIGURATION.md
+  - docs/developer/en/guides/DATABASE_CONFIGURATION.md
 
 ### 完了済み
 - [x] トラブルシューティングガイド（日本語・英語）
@@ -94,14 +138,14 @@
 - [x] 開発者向けガイド（日本語・英語）
 - [x] データベースマイグレーションガイド（日本語・英語）
 - [x] 翻訳リソース統計ドキュメント（日本語・英語）
-  - docs/ja/I18N_RESOURCES.md
-  - docs/en/I18N_RESOURCES.md
+  - docs/developer/ja/guides/I18N_RESOURCES.md
+  - docs/developer/en/guides/I18N_RESOURCES.md
 - [x] 店舗管理APIドキュメント（日本語・英語）
-  - docs/ja/API_SHOP.md
-  - docs/en/API_SHOP.md
+  - docs/developer/ja/api/API_SHOP.md
+  - docs/developer/en/api/API_SHOP.md
 - [x] 入出金管理APIドキュメント更新（SHOP_ID追加、外部キー制約修正）
-  - docs/ja/API_TRANSACTION.md
-  - docs/en/API_TRANSACTION.md
+  - docs/developer/ja/api/API_TRANSACTION.md
+  - docs/developer/en/api/API_TRANSACTION.md
 
 ### 未完了
 - [ ] Rust APIドキュメント（rustdoc）の整備
@@ -110,9 +154,70 @@
   - 使用例の追加
   - モジュールレベルのドキュメント
 
+### 🔄 進行中: APIリファレンス統合・再構成 (2025-12-05)
+**目的**: 画面ベースでAPIドキュメントを再構成し、実装コードと突合して信頼性を担保
+
+#### Phase 1: 日本語版作成（実装コード検証付き）
+- [x] API_COMMON.md - 共通API（Session, I18n, Encryption, System, Validation）
+- [x] API_AUTH.md - 認証・セットアップAPI（index.html）
+- [x] API_USER.md - ユーザー管理API（user-management.html）
+- [x] API_CATEGORY.md - 費目管理API（category-management.html）※実装検証・全面改訂
+- [x] API_TRANSACTION.md - 入出金管理API（transaction-management.html）※実装検証・全面改訂
+- [x] API_ACCOUNT.md - 口座管理API（account-management.html）
+- [x] API_MASTER_DATA.md - マスタデータAPI（shop/manufacturer/product統合）
+- [x] API_AGGREGATION.md - 集計API（aggregation screens）※実装検証・改訂
+- [x] API_SETTINGS.md - 設定API（settings screen）
+
+#### Phase 2: 英語版作成 ✅ 完了 (2025-12-05 02:42 JST)
+- [x] 日本語版ドキュメントを英訳（9ファイル） - 全5,564行完成
+  - [x] API_COMMON.md（741行）
+  - [x] API_AUTH.md（358行）
+  - [x] API_USER.md（577行）
+  - [x] API_CATEGORY.md（689行）
+  - [x] API_TRANSACTION.md（712行）
+  - [x] API_ACCOUNT.md（504行）
+  - [x] API_MASTER_DATA.md（753行）
+  - [x] API_AGGREGATION.md（505行）
+  - [x] API_SETTINGS.md（725行）
+
+#### Phase 3: 旧ドキュメント整理
+- [x] 個別APIドキュメント（API_SHOP.md等）のアーカイブまたは削除
+- [x] 統合リファレンス（API_REFERENCE.md）の位置付け見直し
+
+### 🏗️ 設計ドキュメント整備 (Design Documentation)
+
+#### Phase 1: 設計ドキュメント検証と整理
+- [ ] TRANSACTION_DESIGN_V2.md / _ja.md の最新コードとの整合性確認
+- [ ] session-management-spec.md の検証
+- [ ] tax-calculation-logic.md の検証
+- [ ] TRANSACTION_REQUIREMENTS.md の検証
+- [ ] DESIGN_ISSUES_AND_FIXES.md の検証
+- [ ] FRONTEND_DESIGN_PHASE4.md の検証
+
+#### Phase 2: 設計ドキュメント統合・再構成
+- [ ] 重複内容の排除
+- [ ] 粒度の適正化（統合・分割）
+- [ ] ドキュメント間の相互参照整理
+- [ ] 英語版の作成（必要に応じて）
+
+#### Phase 3: 実装状況ドキュメント作成
+- [ ] 現在の実装状況を網羅的に記述
+- [ ] アーキテクチャ全体像の図解
+- [ ] 技術スタック詳細
+
+**API分布（全100コマンド）:**
+- 共通API: 24
+- Category: 16
+- Transaction: 14
+- User: 13
+- Settings: 10
+- Session: 9
+- その他: 14
+
 **注記**: 
 - 2025-10-29: 基本ドキュメント整備完了（rustdocを除く）
 - 2025-11-10: 翻訳リソース統計、店舗管理API、入出金管理API更新完了
+- 2025-12-05: 画面ベースAPI統合リファレンス作成開始
 
 ---
 
@@ -225,7 +330,7 @@
 - [x] ビジネスロジックテスト
   - [x] 表示順管理テスト
   - [x] ユーザーデータ分離テスト
-- [x] テスト戦略ドキュメント作成（docs/TESTING.md）
+- [x] テスト戦略ドキュメント作成（docs/developer/en/testing/TESTING.md）
 
 **テスト結果**: 11 tests passed ✅
 
@@ -355,10 +460,10 @@
 
 **完了日**: 2025-11-04  
 **ドキュメント**:
-- `docs/ja/CATEGORY_MANAGEMENT_UI.md` - 費目管理画面実装ドキュメント（日本語）
-- `docs/en/CATEGORY_MANAGEMENT_UI.md` - Category Management Screen Implementation（英語）
-- `docs/ja/API_CATEGORY_ja.md` - 費目管理APIドキュメント（日本語）
-- `docs/en/API_CATEGORY.md` - Category Management API Documentation（英語）
+- `docs/developer/ja/guides/CATEGORY_MANAGEMENT_UI.md` - 費目管理画面実装ドキュメント（日本語）
+- `docs/developer/en/guides/CATEGORY_MANAGEMENT_UI.md` - Category Management Screen Implementation（英語）
+- `docs/developer/ja/api/API_CATEGORY_ja.md` - 費目管理APIドキュメント（日本語）
+- `docs/developer/en/api/API_CATEGORY.md` - Category Management API Documentation（英語）
 
 ---
 

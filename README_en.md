@@ -72,7 +72,7 @@ Development is progressing smoothly, and we strive to update daily!
 > **🤖 AI-Assisted Development**  
 > This project's source code and documentation are **100% generated** with the assistance of generative AI (GitHub Copilot, Claude), supervised and reviewed by the developer. This demonstrates the potential of AI-assisted development.
 > 
-> 📊 **[See AI Development Metrics & Quality Analysis →](docs/AI_DEVELOPMENT_METRICS.md)**
+> 📊 **[See AI Development Metrics & Quality Analysis →](docs/etc/AI_DEVELOPMENT_METRICS.md)**
 
 <!-- STATS_START -->
 ## 📊 Repository Statistics
@@ -245,57 +245,54 @@ Success Rate:         100%
 - **Reason for change**: Improved accuracy and industry-standard methodology
 - **Note**: No tests were removed; this is purely a measurement refinement
 
-See [TEST_SUMMARY.md](docs/en/TEST_SUMMARY.md) for details
+See [TEST_SUMMARY.md](docs/developer/en/testing/TEST_SUMMARY.md) for details
 
 ---
 
 ## 📚 Documentation
 
-### For Users
-- 🔧 **[Troubleshooting](docs/en/TROUBLESHOOTING.md)**
+### 📖 Documentation Index
+- 🗂️ **[Complete Documentation Index](docs/INDEX_en.md)** - Quick access to all documentation
 
-### For Developers
+### 🎯 Getting Started
 
-#### Core Guides
-- 🏗️ **[Developer Guide](docs/en/DEVELOPER_GUIDE.md)**
-- 🧪 **[Testing Strategy](docs/en/TESTING.md)**
-- 📊 **[Test Summary](docs/en/TEST_SUMMARY.md)**
+#### Installation & Setup
+- 📦 **[Setup Guide](docs/user/en/SETUP_GUIDE.md)** - How to install the app
 
-#### API Documentation
-- 📁 **[Category Management API](docs/en/API_CATEGORY.md)**
-- 🏪 **[Shop Management API](docs/en/API_SHOP.md)**
-- 🏭 **[Manufacturer Management API](docs/en/API_MANUFACTURER.md)**
-- 📦 **[Product Management API](docs/en/API_PRODUCT.md)**
-- 💰 **[Transaction Management API](docs/en/API_TRANSACTION.md)**
+#### User Manual
+- 📖 **[User Manual](docs/user/en/USER_MANUAL_en.md)** - How to use features
+- 🔧 **[Troubleshooting](docs/user/en/TROUBLESHOOTING.md)** - Problem resolution guide
 
-#### UI Documentation
-- 👥 **[User Management UI](docs/en/USER_MANAGEMENT_UI.md)**
-- 🏦 **[Account Management UI](docs/en/ACCOUNT_MANAGEMENT_UI.md)**
-- 📁 **[Category Management UI](docs/en/CATEGORY_MANAGEMENT_UI.md)**
-- 🏭 **[Manufacturer & Product Management](docs/en/MANUFACTURER_PRODUCT_MANAGEMENT.md)**
-- 💰 **[Transaction Management UI](docs/en/TRANSACTION_MANAGEMENT_UI_V2.md)**
+---
 
-#### Feature Implementation
-- 🧮 **[Tax Calculation Logic](docs/tax-calculation-logic.md)** (Bilingual)
-- 🌐 **[I18N Implementation](docs/en/I18N_IMPLEMENTATION.md)**
-- 🌍 **[I18N Resources](docs/en/I18N_RESOURCES.md)**
-- 🌐 **[Dynamic Language Menu](docs/en/DYNAMIC_LANGUAGE_MENU.md)**
-- 🔤 **[Font Size Implementation](docs/en/font-size-implementation.md)**
-- ♿ **[Accessibility Indicators](docs/en/ACCESSIBILITY_INDICATORS.md)**
-- 🚫 **[IS_DISABLED Implementation](docs/en/IS_DISABLED_IMPLEMENTATION_GUIDE.md)**
-
-#### Database & Security
-- 🗄️ **[Database Configuration](docs/en/DATABASE_CONFIGURATION.md)**
-- 🔄 **[Database Migration](docs/en/DATABASE_MIGRATION.md)**
-- 🔐 **[Encryption Management](docs/en/ENCRYPTION_MANAGEMENT.md)**
-- 👤 **[User Management](docs/en/USER_MANAGEMENT.md)**
-- ⚙️ **[Settings Management](docs/en/SETTINGS_MANAGEMENT.md)**
+### 👨‍💻 For Developers
 
 #### Design Documents
-- 💰 **[Transaction Design V2](docs/en/TRANSACTION_DESIGN_V2.md)**
+- 🏗️ **[Architecture](docs/developer/en/design/ARCHITECTURE.md)** - System architecture overview
+- 🔒 **[Security Design](docs/developer/en/design/SECURITY_DESIGN.md)** - Security implementation
+- 🗄️ **[Database Design](docs/developer/en/design/DATABASE_DESIGN.md)** - DB schema and ER diagrams
+- 🎨 **[UI Design](docs/developer/en/design/UI_DESIGN.md)** - User interface design
 
-### Project Information
-- 👥 **[Project Participants](docs/en/PROJECT_PARTICIPANTS.md)**
+#### Development Guides
+- 🚀 **[Development Setup](docs/developer/en/guides/DEVELOPMENT_SETUP.md)** - Setting up dev environment
+- 📝 **[Coding Standards](docs/developer/en/guides/CODING_STANDARDS.md)** - Code style guide
+- 🧪 **[Testing Guide](docs/developer/en/guides/TESTING_GUIDE.md)** - Testing strategy and execution
+
+#### API Documentation
+- 🔗 **[Common API](docs/developer/en/api/API_COMMON.md)** - Auth, session, i18n
+- 👥 **[User Management API](docs/developer/en/api/API_USER.md)** - User CRUD operations
+- 📁 **[Category Management API](docs/developer/en/api/API_CATEGORY.md)** - Hierarchical category management
+- 💰 **[Transaction Management API](docs/developer/en/api/API_TRANSACTION.md)** - Transaction data management
+- 🏦 **[Account Management API](docs/developer/en/api/API_ACCOUNT.md)** - Account master management
+- 🏢 **[Master Data API](docs/developer/en/api/API_MASTER_DATA.md)** - Shops, manufacturers, products
+- 📊 **[Aggregation API](docs/developer/en/api/API_AGGREGATION.md)** - Reports and statistics
+- ⚙️ **[Settings API](docs/developer/en/api/API_SETTINGS.md)** - User settings management
+
+---
+
+### 📋 Project Information
+- 👥 **[Project Participants](docs/etc/PROJECT_PARTICIPANTS.md)** - Contributors list
+- 📊 **[AI Development Metrics](docs/etc/AI_DEVELOPMENT_METRICS.md)** - AI-assisted development analysis
 
 ---
 

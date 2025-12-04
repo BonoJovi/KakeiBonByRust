@@ -72,7 +72,7 @@ GitHubのissueやeメールでのメッセージも受け付けていますの�
 > **🤖 AI支援開発**  
 > 本プロジェクトのソースコードおよびドキュメントは、生成AI（GitHub Copilot、Claude）の支援により**100%生成**され、開発者による監修とレビューを経ています。これは、AI支援開発の可能性を示す事例です。
 > 
-> 📊 **[AI開発の生産性と品質分析を見る →](docs/AI_DEVELOPMENT_METRICS.md)**
+> 📊 **[AI開発の生産性と品質分析を見る →](docs/etc/AI_DEVELOPMENT_METRICS.md)**
 
 <!-- STATS_START -->
 ## 📊 リポジトリ統計
@@ -245,57 +245,55 @@ cargo tauri build
 - **変更理由**: 精度の向上と業界標準の方法論
 - **注意**: テストは削除されておらず、計測方法の精密化のみです
 
-詳細は [TEST_SUMMARY.md](docs/ja/TEST_SUMMARY.md) を参照
+詳細は [TEST_SUMMARY.md](docs/developer/ja/testing/TEST_SUMMARY.md) を参照
 
 ---
 
 ## 📚 ドキュメント
 
-### ユーザー向け
-- 🔧 **[トラブルシューティング](docs/ja/TROUBLESHOOTING.md)**
+### 📖 ドキュメント索引
+- 🗂️ **[ドキュメント全体索引](docs/INDEX_ja.md)** - すべてのドキュメントへのクイックアクセス
 
-### 開発者向け
+### 🎯 はじめに
 
-#### コアガイド
-- 🏗️ **[開発者ガイド](docs/ja/DEVELOPER_GUIDE.md)**
-- 🧪 **[テスト戦略](docs/ja/TESTING.md)**
-- 📊 **[テストサマリー](docs/ja/TEST_SUMMARY.md)**
+#### インストール・セットアップ
+- 📦 **[インストールガイド](docs/user/ja/SETUP_GUIDE.md)** - アプリのインストール方法
 
-#### API ドキュメント
-- 📁 **[費目管理 API](docs/ja/API_CATEGORY.md)**
-- 🏪 **[店舗管理 API](docs/ja/API_SHOP.md)**
-- 🏭 **[メーカー管理 API](docs/ja/API_MANUFACTURER.md)**
-- 📦 **[商品管理 API](docs/ja/API_PRODUCT.md)**
-- 💰 **[入出金管理 API](docs/ja/API_TRANSACTION.md)**
+#### ユーザーマニュアル
+- 📖 **[ユーザーマニュアル](docs/user/ja/USER_MANUAL.md)** - 機能の使い方
+- ❓ **[FAQ（よくある質問）](docs/user/ja/FAQ.md)** - よくある質問と回答
+- 🔧 **[トラブルシューティング](docs/user/ja/TROUBLESHOOTING.md)** - 問題解決ガイド
 
-#### UI ドキュメント
-- 👥 **[ユーザー管理 UI](docs/ja/USER_MANAGEMENT_UI.md)**
-- 🏦 **[口座管理 UI](docs/ja/ACCOUNT_MANAGEMENT_UI.md)**
-- 📁 **[費目管理 UI](docs/ja/CATEGORY_MANAGEMENT_UI.md)**
-- 🏭 **[メーカー・商品管理](docs/ja/MANUFACTURER_PRODUCT_MANAGEMENT.md)**
-- 💰 **[入出金管理 UI](docs/ja/TRANSACTION_MANAGEMENT_UI_V2.md)**
+---
 
-#### 機能実装
-- 🧮 **[税計算ロジック](docs/tax-calculation-logic.md)** (日英併記)
-- 🌐 **[国際化実装](docs/ja/I18N_IMPLEMENTATION.md)**
-- 🌍 **[国際化リソース](docs/ja/I18N_RESOURCES.md)**
-- 🌐 **[動的言語メニュー](docs/ja/DYNAMIC_LANGUAGE_MENU.md)**
-- 🔤 **[フォントサイズ実装](docs/ja/font-size-implementation.md)**
-- ♿ **[アクセシビリティインジケーター](docs/ja/ACCESSIBILITY_INDICATORS.md)**
-- 🚫 **[IS_DISABLED実装](docs/ja/IS_DISABLED_IMPLEMENTATION_GUIDE.md)**
-
-#### データベース・セキュリティ
-- 🗄️ **[データベース設定](docs/ja/DATABASE_CONFIGURATION.md)**
-- 🔄 **[データベースマイグレーション](docs/ja/DATABASE_MIGRATION.md)**
-- 🔐 **[暗号化管理](docs/ja/ENCRYPTION_MANAGEMENT.md)**
-- 👤 **[ユーザー管理](docs/ja/USER_MANAGEMENT.md)**
-- ⚙️ **[設定管理](docs/ja/SETTINGS_MANAGEMENT.md)**
+### 👨‍💻 開発者向け
 
 #### 設計ドキュメント
-- 💰 **[入出金設計 V2](docs/ja/TRANSACTION_DESIGN_V2.md)**
+- 🏗️ **[アーキテクチャ](docs/developer/ja/design/ARCHITECTURE.md)** - システム全体の構造
+- 🔒 **[セキュリティ設計](docs/developer/ja/design/SECURITY_DESIGN.md)** - セキュリティの実装
+- 🗄️ **[データベース設計](docs/developer/ja/design/DATABASE_DESIGN.md)** - DBスキーマとER図
+- 🎨 **[UI設計](docs/developer/ja/design/UI_DESIGN.md)** - ユーザーインターフェース設計
 
-### プロジェクト情報
-- 👥 **[プロジェクト参加者](docs/ja/PROJECT_PARTICIPANTS.md)**
+#### 開発ガイド
+- 🚀 **[開発環境セットアップ](docs/developer/ja/guides/DEVELOPMENT_SETUP.md)** - 開発環境の構築
+- 📝 **[コーディング規約](docs/developer/ja/guides/CODING_STANDARDS.md)** - コードスタイルガイド
+- 🧪 **[テストガイド](docs/developer/ja/guides/TESTING_GUIDE.md)** - テスト戦略と実行方法
+
+#### API ドキュメント
+- 🔗 **[共通API](docs/developer/ja/api/API_COMMON.md)** - 認証・セッション・i18n
+- 👥 **[ユーザー管理API](docs/developer/ja/api/API_USER.md)** - ユーザーCRUD操作
+- 📁 **[費目管理API](docs/developer/ja/api/API_CATEGORY.md)** - 費目の階層管理
+- 💰 **[入出金管理API](docs/developer/ja/api/API_TRANSACTION.md)** - 取引データ管理
+- 🏦 **[口座管理API](docs/developer/ja/api/API_ACCOUNT.md)** - 口座マスタ管理
+- 🏢 **[マスタデータAPI](docs/developer/ja/api/API_MASTER_DATA.md)** - 店舗・メーカー・商品
+- 📊 **[集計API](docs/developer/ja/api/API_AGGREGATION.md)** - レポートと統計
+- ⚙️ **[設定API](docs/developer/ja/api/API_SETTINGS.md)** - ユーザー設定管理
+
+---
+
+### 📋 プロジェクト情報
+- 👥 **[プロジェクト参加者](docs/etc/PROJECT_PARTICIPANTS.md)** - コントリビューター一覧
+- 📊 **[AI開発メトリクス](docs/etc/AI_DEVELOPMENT_METRICS.md)** - AI支援開発の分析
 
 ---
 
