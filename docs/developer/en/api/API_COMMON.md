@@ -1,6 +1,6 @@
 # Common API Reference
 
-**Last Updated**: 2025-12-05 02:16 JST
+**Last Updated**: 2025-12-05 02:51 JST
 
 ## Overview
 
