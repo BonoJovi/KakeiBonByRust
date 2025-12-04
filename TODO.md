@@ -54,6 +54,15 @@
     - ✅ CONTRIBUTING.md の検証・更新、CONTRIBUTING_en.md作成
     - ✅ CODE_OF_CONDUCT_en.md, CODE_OF_CONDUCT_ja.md作成
     - ✅ CHANGELOG_en.md, CHANGELOG_ja.md作成
+  - ✅ Phase8: ドキュメント全体索引作成（完了 2025-12-05）
+    - ✅ docs/INDEX_ja.md - 日本語版全体索引
+      - API仕様書（9ファイル）
+      - 設計ドキュメント（ARCHITECTURE, SECURITY, DATABASE, UI）
+      - 開発者ガイド（DEVELOPMENT_SETUP, CODING_STANDARDS, TESTING_GUIDE）
+      - ユーザー向けドキュメント（USER_MANUAL, FAQ, TROUBLESHOOTING）
+      - カテゴリ別分類・キーワード索引・画面別クイックリファレンス
+    - ✅ docs/INDEX_en.md - 英語版全体索引
+    - ✅ README_ja.md / README_en.md への索引リンク追加
 - 🧪 テストカバレッジの拡充
 
 ### ✅ 完了済み

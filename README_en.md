@@ -251,14 +251,16 @@ See [TEST_SUMMARY.md](docs/developer/en/testing/TEST_SUMMARY.md) for details
 
 ## 📚 Documentation
 
+### 📖 Documentation Index
+- 🗂️ **[Complete Documentation Index](docs/INDEX_en.md)** - Quick access to all documentation
+
 ### 🎯 Getting Started
 
 #### Installation & Setup
 - 📦 **[Setup Guide](docs/user/en/SETUP_GUIDE.md)** - How to install the app
 
 #### User Manual
-- 📖 **[User Manual](docs/user/en/USER_MANUAL.md)** - How to use features
-- ❓ **[FAQ](docs/user/en/FAQ.md)** - Frequently asked questions
+- 📖 **[User Manual](docs/user/en/USER_MANUAL_en.md)** - How to use features
 - 🔧 **[Troubleshooting](docs/user/en/TROUBLESHOOTING.md)** - Problem resolution guide
 
 ---
