@@ -1,20 +1,17 @@
-# How to Contribute / コントリビューションガイド
+# How to Contribute
 
 Thank you for your interest in contributing to KakeiBon!
-KakeiBonへの貢献に興味を持っていただき、ありがとうございます！
 
 Contributing to KakeiBon isn't just about writing code! We welcome all types of contributions.
-KakeiBonへの貢献は、コードを書くことだけではありません！あらゆる形の貢献を歓迎します。
 
 ---
 
-## 🌟 Ways to Contribute / 貢献方法
+## 🌟 Ways to Contribute
 
-### 🌍 Translation (翻訳者募集中！)
-**No coding skills required / プログラミング不要**
+### 🌍 Translation
+**No coding skills required**
 
 Help make KakeiBon accessible to users worldwide!
-KakeiBonを世界中のユーザーに届けるお手伝いをしてください！
 
 **How you can help:**
 - Add new language support (Chinese, Korean, French, German, Spanish, etc.)
@@ -25,17 +22,16 @@ KakeiBonを世界中のユーザーに届けるお手伝いをしてください
 **Currently Supported**: Japanese (ja), English (en)
 **Seeking**: Chinese (zh), Korean (ko), French (fr), German (de), Spanish (es), and more!
 
-📖 **[Translation Guide](docs/developer/en/guides/TRANSLATION_GUIDE.md)** | **[翻訳ガイド](docs/developer/ja/guides/TRANSLATION_GUIDE.md)**
+📖 **[Translation Guide](docs/developer/en/guides/TRANSLATION_GUIDE.md)**
 
 🆕 **[Submit Translation Request](https://github.com/BonoJovi/KakeiBonByRust/issues/new?template=translation.yml)**
 
 ---
 
-### 🧪 Testing (テスター募集中！)
-**No coding skills required / プログラミング不要**
+### 🧪 Testing
+**No coding skills required**
 
 Help improve KakeiBon's quality across different platforms!
-様々なプラットフォームでKakeiBonの品質向上にご協力ください！
 
 **How you can help:**
 - Test on Windows/macOS (currently unverified!)
@@ -49,16 +45,15 @@ Help improve KakeiBon's quality across different platforms!
 - ⚠️ **Windows**: Needs testers!
 - ⚠️ **macOS**: Needs testers!
 
-📖 **[Testing Guide](docs/developer/en/guides/TESTING_GUIDE.md)** | **[テストガイド](docs/developer/ja/guides/TESTING_GUIDE.md)**
+📖 **[Testing Guide](docs/developer/en/guides/TESTING_GUIDE.md)**
 
 🆕 **[Submit Testing Feedback](https://github.com/BonoJovi/KakeiBonByRust/issues/new?template=testing-feedback.yml)**
 
 ---
 
-### 💡 Feature Suggestions / 機能提案
+### 💡 Feature Suggestions
 
 Have an idea to make KakeiBon better?
-KakeiBonをより良くするアイデアはありますか？
 
 **How you can help:**
 - Propose new features
@@ -70,10 +65,9 @@ KakeiBonをより良くするアイデアはありますか？
 
 ---
 
-### 📚 Documentation / ドキュメント
+### 📚 Documentation
 
 Help make KakeiBon easier to use and understand!
-KakeiBonをより使いやすく、分かりやすくするお手伝いをしてください！
 
 **How you can help:**
 - Improve existing documentation
@@ -84,10 +78,9 @@ KakeiBonをより使いやすく、分かりやすくするお手伝いをして
 
 ---
 
-### 💻 Code Contributions / コード貢献
+### 💻 Code Contributions
 
 For developers who want to contribute code.
-コードで貢献したい開発者の方へ。
 
 **How you can help:**
 - Fix bugs (when found!)
@@ -98,25 +91,24 @@ For developers who want to contribute code.
 
 ---
 
-## 📋 Getting Started / はじめに
+## 📋 Getting Started
 
-### Before Contributing / 貢献する前に
+### Before Contributing
 
 1. **Check existing issues and discussions**
-   既存のIssueやDiscussionを確認してください
+   Review current issues and discussions to avoid duplicates
 
 2. **Read our [Code of Conduct](CODE_OF_CONDUCT.md)**
-   行動規範をお読みください
+   Understand our community guidelines
 
 3. **Choose your contribution type**
-   貢献タイプを選んでください（翻訳、テスト、機能提案、コードなど）
+   Decide whether you'll contribute through translation, testing, feature suggestions, or code
 
 ---
 
-## 🐛 Bug Reports / バグレポート
+## 🐛 Bug Reports
 
 Found a bug? Help us fix it!
-バグを見つけましたか？修正にご協力ください！
 
 **When reporting bugs, please include:**
 1. Steps to reproduce the issue
@@ -128,10 +120,9 @@ Found a bug? Help us fix it!
 
 ---
 
-## 🔧 Pull Request Workflow / プルリクエストの流れ
+## 🔧 Pull Request Workflow
 
 For code and documentation contributions:
-コードやドキュメントの貢献をする場合：
 
 1. **Fork** the repository and create a working branch
 2. Make your changes following our coding standards
@@ -144,7 +135,7 @@ For code and documentation contributions:
    - Related issue numbers (if applicable)
 7. Respond to review feedback as needed
 
-### Code Style / コードスタイル
+### Code Style
 
 - Follow existing code conventions
 - Run `cargo fmt` before committing (Rust)
@@ -154,10 +145,9 @@ For code and documentation contributions:
 
 ---
 
-## 📞 Questions and Support / 質問とサポート
+## 📞 Questions and Support
 
 Need help or have questions?
-ヘルプが必要ですか？質問はありますか？
 
 - **GitHub Issues**: For bugs and feature requests
 - **GitHub Discussions**: For questions and discussions
@@ -165,10 +155,9 @@ Need help or have questions?
 
 ---
 
-## 🌈 Community Values / コミュニティの価値観
+## 🌈 Community Values
 
 We are committed to providing a welcoming and inclusive environment for all contributors.
-全ての貢献者に対して、歓迎的で包括的な環境を提供することをお約束します。
 
 - Be respectful and considerate
 - Welcome newcomers and help them get started
@@ -177,16 +166,13 @@ We are committed to providing a welcoming and inclusive environment for all cont
 - Show empathy and kindness
 
 All participants are expected to follow our [Code of Conduct](CODE_OF_CONDUCT.md).
-全ての参加者は[行動規範](CODE_OF_CONDUCT.md)に従うことが期待されます。
 
 ---
 
-## 🙏 Thank You! / ありがとうございます！
+## 🙏 Thank You!
 
 Every contribution, no matter how small, makes KakeiBon better for everyone.
-どんなに小さな貢献でも、KakeiBonをみんなにとってより良いものにします。
 
 We appreciate your time and effort!
-あなたの時間と努力に感謝します！
 
 **- The KakeiBon Team**
