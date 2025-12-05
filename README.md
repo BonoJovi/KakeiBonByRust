@@ -120,10 +120,13 @@ CI/CDパイプライン導入によりWindows/macOSバイナリのリリース�
 - 🐛 Report any bugs or issues you encounter / 遭遇したバグや問題を報告
 - ✅ Confirm if basic features work correctly / 基本機能が正常に動作するか確認
 - 💬 Share your experience (UI/UX feedback welcome!) / 使用感を共有（UI/UXフィードバック歓迎！）
+- 🆕 **Review test case validity** - Check if our 463+ tests make sense! / **テストケースの妥当性をレビュー** - 463件以上のテストが妥当かチェック！
 
-**Download:** [Latest Release v1.0.7](https://github.com/BonoJovi/KakeiBonByRust/releases/latest)
+**Download:** [Latest Release](https://github.com/BonoJovi/KakeiBonByRust/releases/latest)
 
 📖 **[Test Overview](docs/testing/en/TEST_OVERVIEW.md)** | **[テスト概要](docs/testing/ja/TEST_OVERVIEW.md)**
+📘 **[Backend Test Index](docs/testing/en/BACKEND_TEST_INDEX.md)** (201 tests) | **[バックエンドテストインデックス](docs/testing/ja/BACKEND_TEST_INDEX.md)** (201件)
+📗 **[Frontend Test Index](docs/testing/en/FRONTEND_TEST_INDEX.md)** (262+ tests) | **[フロントエンドテストインデックス](docs/testing/ja/FRONTEND_TEST_INDEX.md)** (262件以上)
 🆕 **[Submit Testing Feedback](https://github.com/BonoJovi/KakeiBonByRust/issues/new?template=testing-feedback.yml)**
 
 ---
