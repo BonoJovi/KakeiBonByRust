@@ -20,6 +20,12 @@ def fetch_github_traffic(endpoint):
     url = f'https://api.github.com/repos/{REPO}/traffic/{endpoint}'
     headers = {'Authorization': f'token {TOKEN}'}
     response = requests.get(url, headers=headers)
+
+    # Handle 404 for new repositories with no traffic data yet
+    if response.status_code == 404:
+        print(f'No {endpoint} data available yet (new repository)')
+        return {endpoint: []}
+
     response.raise_for_status()
     return response.json()
 
