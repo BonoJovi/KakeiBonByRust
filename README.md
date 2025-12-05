@@ -102,19 +102,26 @@ Help make KakeiBon available in your language:
 ### 🧪 Testers Wanted! / テスター募集！
 **No programming experience needed! / プログラミング経験不要！**
 
-**We especially need Windows & macOS testers!**
-**特にWindows & macOSのテスターを求めています！**
+**🎉 NEW: v1.0.7 Multi-Platform Binaries Now Available!**
+**🎉 新着: v1.0.7でマルチプラットフォームバイナリが利用可能に！**
+
+We've just released Windows and macOS binaries through our new CI/CD pipeline, but we **urgently need real hardware testing** as the developer doesn't have access to Windows/Mac environments!
+
+CI/CDパイプライン導入によりWindows/macOSバイナリのリリースを開始しましたが、開発者がWindows/Mac環境を持っていないため、**実機での動作確認が緊急に必要です**！
 
 **Platform Status:**
-- ✅ **Linux**: Verified and tested / 検証済み・テスト済み
-- ⚠️ **Windows**: Needs testers! / テスターが必要！
-- ⚠️ **macOS**: Needs testers! / テスターが必要！
+- ✅ **Linux**: Verified and tested by developer / 開発者により検証済み・テスト済み
+- ⚠️ **Windows**: **Binary available but untested on real hardware!** / **バイナリは利用可能だが実機未テスト！**
+- ⚠️ **macOS (Intel & Apple Silicon)**: **Binary available but untested on real hardware!** / **バイナリは利用可能だが実機未テスト！**
 
-**How to contribute:**
-- Test KakeiBon on your platform / お使いのプラットフォームでKakeiBonをテスト
-- Report bugs and issues / バグや問題を報告
-- Suggest UX/UI improvements / UX/UI改善を提案
-- Share your user experience / ユーザー体験を共有
+**What we need from you:**
+**お願いしたいこと：**
+- 🔍 Download and test the latest release on your Windows/Mac / Windows/Macで最新リリースをダウンロード＆テスト
+- 🐛 Report any bugs or issues you encounter / 遭遇したバグや問題を報告
+- ✅ Confirm if basic features work correctly / 基本機能が正常に動作するか確認
+- 💬 Share your experience (UI/UX feedback welcome!) / 使用感を共有（UI/UXフィードバック歓迎！）
+
+**Download:** [Latest Release v1.0.7](https://github.com/BonoJovi/KakeiBonByRust/releases/latest)
 
 📖 **[Testing Guide](docs/developer/en/guides/testing-guide.md)** | **[テストガイド](docs/developer/ja/guides/testing-guide.md)**
 🆕 **[Submit Testing Feedback](https://github.com/BonoJovi/KakeiBonByRust/issues/new?template=testing-feedback.yml)**
