@@ -2,11 +2,10 @@ name: Update Repository Stats
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # Daily at midnight UTC (JST 9:00 AM)
-  workflow_dispatch:  # Manual trigger
-  push:
-    branches:
-      - dev  # Run on dev branch (default branch)
+    # Run at 01:00 UTC (JST 10:00 AM) to ensure GitHub's traffic data is updated
+    # GitHub updates traffic stats daily around midnight UTC
+    - cron: '0 1 * * *'
+  workflow_dispatch:  # Manual trigger only (no automatic triggers on push)
 
 permissions:
   contents: write
