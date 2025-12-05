@@ -202,6 +202,15 @@ GitHubのissueやeメールでのメッセージも受け付けていますの�
 ### 前提条件
 - Rust 1.70+ ([rustup](https://rustup.rs/)でインストール)
 - Node.js 18+ (Tauri CLI用)
+- SQLite3ネイティブライブラリ
+  - **Windows**: [sqlite.org](https://www.sqlite.org/download.html)からダウンロード・インストール
+    - `sqlite-dll-win-x64-*.zip` (64ビットDLL) をダウンロード
+    - `sqlite3.dll` を `C:\Windows\System32\` に配置（またはPATHに追加）
+  - **macOS**: プリインストール済み（またはHomebrewでインストール: `brew install sqlite3`）
+  - **Linux**: パッケージマネージャーでインストール
+    - Ubuntu/Debian: `sudo apt-get install libsqlite3-dev`
+    - Fedora/RHEL: `sudo dnf install sqlite-devel`
+    - Arch: `sudo pacman -S sqlite`
 
 ### ビルド・実行
 

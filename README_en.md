@@ -202,6 +202,15 @@ Switch between Japanese and English seamlessly
 ### Prerequisites
 - Rust 1.70+ (Install via [rustup](https://rustup.rs/))
 - Node.js 18+ (for Tauri CLI)
+- SQLite3 native library
+  - **Windows**: Download and install from [sqlite.org](https://www.sqlite.org/download.html)
+    - Download `sqlite-dll-win-x64-*.zip` (64-bit DLL)
+    - Extract `sqlite3.dll` to `C:\Windows\System32\` (or add to PATH)
+  - **macOS**: Pre-installed (or install via Homebrew: `brew install sqlite3`)
+  - **Linux**: Install via package manager
+    - Ubuntu/Debian: `sudo apt-get install libsqlite3-dev`
+    - Fedora/RHEL: `sudo dnf install sqlite-devel`
+    - Arch: `sudo pacman -S sqlite`
 
 ### Build & Run
 
