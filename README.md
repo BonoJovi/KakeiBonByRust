@@ -123,7 +123,7 @@ CI/CDパイプライン導入によりWindows/macOSバイナリのリリース�
 
 **Download:** [Latest Release v1.0.7](https://github.com/BonoJovi/KakeiBonByRust/releases/latest)
 
-📖 **[Testing Guide](docs/developer/en/guides/testing-guide.md)** | **[テストガイド](docs/developer/ja/guides/testing-guide.md)**
+📖 **[Test Overview](docs/testing/en/TEST_OVERVIEW.md)** | **[テスト概要](docs/testing/ja/TEST_OVERVIEW.md)**
 🆕 **[Submit Testing Feedback](https://github.com/BonoJovi/KakeiBonByRust/issues/new?template=testing-feedback.yml)**
 
 ---
@@ -384,7 +384,7 @@ Success Rate / 成功率:            100%
 - **Note / 注意**: No tests were removed; this is purely a measurement refinement
   テストは削除されておらず、計測方法の精密化のみです
 
-See [TEST_SUMMARY.md](docs/developer/ja/testing/TEST_SUMMARY.md) for details / 詳細は [TEST_SUMMARY.md](docs/developer/ja/testing/TEST_SUMMARY.md) を参照
+See [Test Overview](docs/testing/en/TEST_OVERVIEW.md) for details / 詳細は [テスト概要](docs/testing/ja/TEST_OVERVIEW.md) を参照
 
 ---
 
@@ -399,10 +399,10 @@ See [TEST_SUMMARY.md](docs/developer/ja/testing/TEST_SUMMARY.md) for details / �
 #### Core Guides / コアガイド
 - 🏗️ **Developer Guide / 開発者ガイド**
   - [English](docs/developer/en/guides/DEVELOPER_GUIDE.md) / [日本語](docs/developer/ja/guides/DEVELOPER_GUIDE.md)
-- 🧪 **Testing Strategy / テスト戦略**
-  - [English](docs/developer/en/testing/TESTING.md) / [日本語](docs/developer/ja/testing/TESTING.md)
-- 📊 **Test Summary / テストサマリー**
-  - [English](docs/developer/en/testing/TEST_SUMMARY.md) / [日本語](docs/developer/ja/testing/TEST_SUMMARY.md)
+- 🧪 **Testing Documentation / テストドキュメント**
+  - 📖 **[Test Overview](docs/testing/en/TEST_OVERVIEW.md)** / **[テスト概要](docs/testing/ja/TEST_OVERVIEW.md)** - Test strategy and execution guide
+  - 📘 **[Backend Test Index](docs/testing/en/BACKEND_TEST_INDEX.md)** / **[バックエンドテストインデックス](docs/testing/ja/BACKEND_TEST_INDEX.md)** - Complete Rust test list (201 tests)
+  - 📗 **[Frontend Test Index](docs/testing/en/FRONTEND_TEST_INDEX.md)** / **[フロントエンドテストインデックス](docs/testing/ja/FRONTEND_TEST_INDEX.md)** - Complete JavaScript test list (262+ tests)
 
 #### API Documentation / API ドキュメント
 - 📁 **Category Management API / 費目管理 API**

@@ -256,7 +256,7 @@ cargo tauri build
 - **変更理由**: 精度の向上と業界標準の方法論
 - **注意**: テストは削除されておらず、計測方法の精密化のみです
 
-詳細は [TEST_SUMMARY.md](docs/developer/ja/testing/TEST_SUMMARY.md) を参照
+詳細は [テスト概要](docs/testing/ja/TEST_OVERVIEW.md) を参照
 
 ---
 
@@ -288,7 +288,10 @@ cargo tauri build
 #### 開発ガイド
 - 🚀 **[開発環境セットアップ](docs/developer/ja/guides/DEVELOPMENT_SETUP.md)** - 開発環境の構築
 - 📝 **[コーディング規約](docs/developer/ja/guides/CODING_STANDARDS.md)** - コードスタイルガイド
-- 🧪 **[テストガイド](docs/developer/ja/guides/TESTING_GUIDE.md)** - テスト戦略と実行方法
+- 🧪 **テストドキュメント**
+  - 📖 **[テスト概要](docs/testing/ja/TEST_OVERVIEW.md)** - テスト戦略と実行方法
+  - 📘 **[バックエンドテストインデックス](docs/testing/ja/BACKEND_TEST_INDEX.md)** - Rustテスト完全一覧（201件）
+  - 📗 **[フロントエンドテストインデックス](docs/testing/ja/FRONTEND_TEST_INDEX.md)** - JavaScriptテスト完全一覧（262件以上）
 
 #### API ドキュメント
 - 🔗 **[共通API](docs/developer/ja/api/API_COMMON.md)** - 認証・セッション・i18n
