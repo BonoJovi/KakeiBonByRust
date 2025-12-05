@@ -24,7 +24,9 @@
 Thank you for your continued interest in KakeiBon.
 I'm BonoJovi (Yoshihiro NAKAHARA), the project initiator.
 
-**We have officially released Ver.1.0.1!**
+**We have officially released Ver.1.0.7!**
+
+The major version jump from Ver.1.0.1 to Ver.1.0.7 reflects the significant impact of introducing a CI/CD pipeline, enabling multi-platform support (Windows/macOS/Linux) and automated releases. This large-scale infrastructure improvement has dramatically enhanced development efficiency and enables smooth continuous feature improvements and releases going forward.
 
 The transaction data input functionality is now complete, and KakeiBon is ready to be used as a basic household budget application.
 If you would like to use the stable release version, please refer to the [main branch](https://github.com/BonoJovi/KakeiBonByRust/tree/main).
