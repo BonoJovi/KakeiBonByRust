@@ -21,9 +21,9 @@ This file provides context for GitHub Copilot CLI to understand the project stru
 ## Important AI/LLM Guidelines
 
 ### Git Operations
-- **AI/LLM scope**: Up to `git commit` only
-- **Manual operation**: `git push` must be done by developer
-- **Reason**: GitHub operations require hardware key authentication
+- **AI/LLM scope**: Full git operations including `git push` are supported
+- **Authentication**: HTTPS authentication (migrated from SSH for AI automation support)
+- **Note**: Commits are automated through AI assistance
 
 ### Commit Message Rules
 - **Language**: Always write in English
@@ -189,4 +189,4 @@ For more detailed information, refer to files in `.ai-context/`:
 
 ---
 
-**Last Updated**: 2025-11-30
+**Last Updated**: 2025-12-05 18:40 JST
