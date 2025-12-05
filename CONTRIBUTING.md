@@ -49,7 +49,9 @@ Help improve KakeiBon's quality across different platforms!
 - ⚠️ **Windows**: Needs testers!
 - ⚠️ **macOS**: Needs testers!
 
-📖 **[Testing Guide](docs/developer/en/guides/TESTING_GUIDE.md)** | **[テストガイド](docs/developer/ja/guides/TESTING_GUIDE.md)**
+📖 **[Test Overview](docs/testing/en/TEST_OVERVIEW.md)** | **[テスト概要](docs/testing/ja/TEST_OVERVIEW.md)**
+📘 **[Backend Test Index](docs/testing/en/BACKEND_TEST_INDEX.md)** | **[バックエンドテストインデックス](docs/testing/ja/BACKEND_TEST_INDEX.md)**
+📗 **[Frontend Test Index](docs/testing/en/FRONTEND_TEST_INDEX.md)** | **[フロントエンドテストインデックス](docs/testing/ja/FRONTEND_TEST_INDEX.md)**
 
 🆕 **[Submit Testing Feedback](https://github.com/BonoJovi/KakeiBonByRust/issues/new?template=testing-feedback.yml)**
 
@@ -136,8 +138,11 @@ For code and documentation contributions:
 1. **Fork** the repository and create a working branch
 2. Make your changes following our coding standards
 3. Write clear commit messages for each change
-4. Add or modify tests as needed
-5. Ensure all tests pass (`cargo test`)
+4. Add or modify tests as needed (see [Test Overview](docs/testing/en/TEST_OVERVIEW.md))
+5. Ensure all tests pass (`cargo test` and `cd res/tests && npm test`)
+6. Update test indexes if you added new tests:
+   - [Backend Test Index](docs/testing/en/BACKEND_TEST_INDEX.md) for Rust tests
+   - [Frontend Test Index](docs/testing/en/FRONTEND_TEST_INDEX.md) for JavaScript tests
 6. Create a pull request with:
    - Clear description of changes
    - Purpose and motivation

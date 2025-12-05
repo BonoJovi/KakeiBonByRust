@@ -256,7 +256,7 @@ Success Rate:         100%
 - **Reason for change**: Improved accuracy and industry-standard methodology
 - **Note**: No tests were removed; this is purely a measurement refinement
 
-See [TEST_SUMMARY.md](docs/developer/en/testing/TEST_SUMMARY.md) for details
+See [Test Overview](docs/testing/en/TEST_OVERVIEW.md) for details
 
 ---
 
@@ -287,7 +287,10 @@ See [TEST_SUMMARY.md](docs/developer/en/testing/TEST_SUMMARY.md) for details
 #### Development Guides
 - 🚀 **[Development Setup](docs/developer/en/guides/DEVELOPMENT_SETUP.md)** - Setting up dev environment
 - 📝 **[Coding Standards](docs/developer/en/guides/CODING_STANDARDS.md)** - Code style guide
-- 🧪 **[Testing Guide](docs/developer/en/guides/TESTING_GUIDE.md)** - Testing strategy and execution
+- 🧪 **Testing Documentation**
+  - 📖 **[Test Overview](docs/testing/en/TEST_OVERVIEW.md)** - Test strategy and execution guide
+  - 📘 **[Backend Test Index](docs/testing/en/BACKEND_TEST_INDEX.md)** - Complete Rust test list (201 tests)
+  - 📗 **[Frontend Test Index](docs/testing/en/FRONTEND_TEST_INDEX.md)** - Complete JavaScript test list (262+ tests)
 
 #### API Documentation
 - 🔗 **[Common API](docs/developer/en/api/API_COMMON.md)** - Auth, session, i18n
