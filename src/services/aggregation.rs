@@ -863,7 +863,8 @@ fn validate_not_future(year: i32, month: u32) -> Result<(), AggregationError> {
 /// * `Err(AggregationError)` - Validation error
 ///
 /// # Example
-/// ```
+/// ```ignore
+/// use chrono::NaiveDate;
 /// let request = monthly_aggregation(1, 2025, 11, GroupBy::Category1)?;
 /// let sql = build_query(&request, "ja");
 /// ```
@@ -948,7 +949,8 @@ pub fn daily_aggregation(
 /// * `Err(AggregationError)` - Validation error
 ///
 /// # Example
-/// ```
+/// ```ignore
+/// use chrono::NaiveDate;
 /// // Get aggregation for Oct 1 - Nov 20, 2025
 /// let start = NaiveDate::from_ymd_opt(2025, 10, 1).unwrap();
 /// let end = NaiveDate::from_ymd_opt(2025, 11, 20).unwrap();
@@ -1080,7 +1082,8 @@ fn calculate_week_range(
 /// * `Err(AggregationError)` - Validation error
 ///
 /// # Example
-/// ```
+/// ```ignore
+/// use chrono::NaiveDate;
 /// // Get aggregation for the week containing 2025-11-20, starting on Monday
 /// let date = NaiveDate::from_ymd_opt(2025, 11, 20).unwrap();
 /// let request = weekly_aggregation_by_date(1, date, WeekStart::Monday, GroupBy::Category1)?;
