@@ -1,11 +1,11 @@
-import { describe, it, expect, beforeEach, afterEach } from './node_modules/mocha/index.js';
 import {
     createMockInvoke,
     setInputValue,
     clickButton,
     getTableData,
     isVisible,
-    waitFor
+    waitFor,
+    setupYearlyAggregationDOM
 } from './aggregation-test-helpers.js';
 
 describe('Yearly Aggregation Tests', () => {
@@ -13,6 +13,9 @@ describe('Yearly Aggregation Tests', () => {
     let mockInvoke;
 
     beforeEach(() => {
+        // Setup DOM
+        setupYearlyAggregationDOM();
+        
         mockInvoke = createMockInvoke();
         originalInvoke = window.__TAURI__?.core?.invoke;
         
@@ -30,22 +33,22 @@ describe('Yearly Aggregation Tests', () => {
     describe('UI Initialization', () => {
         it('should display year input with default current year', () => {
             const yearInput = document.querySelector('#year');
-            expect(yearInput).to.exist;
+            expect(yearInput).toBeTruthy();
             
             const currentYear = new Date().getFullYear();
-            expect(parseInt(yearInput.value)).to.equal(currentYear);
+            expect(parseInt(yearInput.value)).toBe(currentYear);
         });
 
         it('should display year start month select with default January', () => {
-            const yearStartSelect = document.querySelector('#year-start-month');
-            expect(yearStartSelect).to.exist;
-            expect(parseInt(yearStartSelect.value)).to.equal(1);
+            const yearStartSelect = document.querySelector('#year-start');
+            expect(yearStartSelect).toBeTruthy();
+            expect(parseInt(yearStartSelect.value)).toBe(1);
         });
 
         it('should display group-by select with default value', () => {
             const groupBySelect = document.querySelector('#group-by');
-            expect(groupBySelect).to.exist;
-            expect(groupBySelect.value).to.equal('category1');
+            expect(groupBySelect).toBeTruthy();
+            expect(groupBySelect.value).toBe('category1');
         });
     });
 
@@ -59,7 +62,7 @@ describe('Yearly Aggregation Tests', () => {
             await waitFor(100);
             
             const errorMsg = document.querySelector('.message.error');
-            expect(errorMsg).to.not.exist.or.not.be.visible;
+            expect(errorMsg.style.display).toBe('none');
         });
 
         it('should reject year below 1900', async () => {
@@ -69,7 +72,7 @@ describe('Yearly Aggregation Tests', () => {
             await waitFor(100);
             
             const errorMsg = document.querySelector('.message.error');
-            expect(errorMsg).to.exist;
+            expect(errorMsg).toBeTruthy();
         });
 
         it('should reject year above 2100', async () => {
@@ -79,7 +82,7 @@ describe('Yearly Aggregation Tests', () => {
             await waitFor(100);
             
             const errorMsg = document.querySelector('.message.error');
-            expect(errorMsg).to.exist;
+            expect(errorMsg).toBeTruthy();
         });
     });
 
@@ -89,7 +92,7 @@ describe('Yearly Aggregation Tests', () => {
             clickButton('#year-up');
             
             const year = parseInt(document.querySelector('#year').value);
-            expect(year).to.equal(2025);
+            expect(year).toBe(2025);
         });
 
         it('should decrement year with down button', () => {
@@ -97,7 +100,7 @@ describe('Yearly Aggregation Tests', () => {
             clickButton('#year-down');
             
             const year = parseInt(document.querySelector('#year').value);
-            expect(year).to.equal(2023);
+            expect(year).toBe(2023);
         });
 
         it('should not go below 1900', () => {
@@ -105,7 +108,7 @@ describe('Yearly Aggregation Tests', () => {
             clickButton('#year-down');
             
             const year = parseInt(document.querySelector('#year').value);
-            expect(year).to.equal(1900);
+            expect(year).toBe(1900);
         });
 
         it('should not go above 2100', () => {
@@ -113,7 +116,7 @@ describe('Yearly Aggregation Tests', () => {
             clickButton('#year-up');
             
             const year = parseInt(document.querySelector('#year').value);
-            expect(year).to.equal(2100);
+            expect(year).toBe(2100);
         });
     });
 
@@ -125,12 +128,12 @@ describe('Yearly Aggregation Tests', () => {
                 return [];
             };
             
-            setInputValue('#year-start-month', '1');
+            setInputValue('#year-start', '1');
             clickButton('#execute-btn');
             
             await waitFor(100);
             
-            expect(calls[0].args.yearStartMonth).to.equal(1);
+            expect(calls[0].args.yearStartMonth).toBe(1);
         });
 
         it('should accept April (fiscal year)', async () => {
@@ -140,12 +143,12 @@ describe('Yearly Aggregation Tests', () => {
                 return [];
             };
             
-            setInputValue('#year-start-month', '4');
+            setInputValue('#year-start', '4');
             clickButton('#execute-btn');
             
             await waitFor(100);
             
-            expect(calls[0].args.yearStartMonth).to.equal(4);
+            expect(calls[0].args.yearStartMonth).toBe(4);
         });
     });
 
@@ -158,17 +161,17 @@ describe('Yearly Aggregation Tests', () => {
             };
             
             setInputValue('#year', '2024');
-            setInputValue('#year-start-month', '1');
+            setInputValue('#year-start', '1');
             setInputValue('#group-by', 'category2');
             
             clickButton('#execute-btn');
             
             await waitFor(100);
             
-            expect(calls[0].cmd).to.equal('get_yearly_aggregation');
-            expect(calls[0].args.year).to.equal(2024);
-            expect(calls[0].args.yearStartMonth).to.equal(1);
-            expect(calls[0].args.groupBy).to.equal('category2');
+            expect(calls[0].cmd).toBe('get_yearly_aggregation');
+            expect(calls[0].args.year).toBe(2024);
+            expect(calls[0].args.yearStartMonth).toBe(1);
+            expect(calls[0].args.groupBy).toBe('category2');
         });
 
         it('should call backend with correct parameters for fiscal year', async () => {
@@ -179,15 +182,15 @@ describe('Yearly Aggregation Tests', () => {
             };
             
             setInputValue('#year', '2024');
-            setInputValue('#year-start-month', '4');
+            setInputValue('#year-start', '4');
             setInputValue('#group-by', 'account');
             
             clickButton('#execute-btn');
             
             await waitFor(100);
             
-            expect(calls[0].args.year).to.equal(2024);
-            expect(calls[0].args.yearStartMonth).to.equal(4);
+            expect(calls[0].args.year).toBe(2024);
+            expect(calls[0].args.yearStartMonth).toBe(4);
         });
 
         it('should display results after execution', async () => {
@@ -201,7 +204,7 @@ describe('Yearly Aggregation Tests', () => {
             await waitFor(200);
             
             const tableData = getTableData('#results-table');
-            expect(tableData.length).to.equal(2);
+            expect(tableData.length).toBe(2);
         });
 
         it('should handle backend errors', async () => {
@@ -214,7 +217,7 @@ describe('Yearly Aggregation Tests', () => {
             await waitFor(200);
             
             const errorMsg = document.querySelector('.message.error');
-            expect(errorMsg).to.exist;
+            expect(errorMsg).toBeTruthy();
         });
     });
 
@@ -228,13 +231,13 @@ describe('Yearly Aggregation Tests', () => {
             };
             
             setInputValue('#year', '2024');
-            setInputValue('#year-start-month', '4');
+            setInputValue('#year-start', '4');
             clickButton('#execute-btn');
             
             await waitFor(100);
             
-            expect(calls[0].args.year).to.equal(2024);
-            expect(calls[0].args.yearStartMonth).to.equal(4);
+            expect(calls[0].args.year).toBe(2024);
+            expect(calls[0].args.yearStartMonth).toBe(4);
         });
 
         it('should handle calendar year 2024 (Jan 2024 - Dec 2024)', async () => {
@@ -246,13 +249,13 @@ describe('Yearly Aggregation Tests', () => {
             };
             
             setInputValue('#year', '2024');
-            setInputValue('#year-start-month', '1');
+            setInputValue('#year-start', '1');
             clickButton('#execute-btn');
             
             await waitFor(100);
             
-            expect(calls[0].args.year).to.equal(2024);
-            expect(calls[0].args.yearStartMonth).to.equal(1);
+            expect(calls[0].args.year).toBe(2024);
+            expect(calls[0].args.yearStartMonth).toBe(1);
         });
     });
 
@@ -272,7 +275,7 @@ describe('Yearly Aggregation Tests', () => {
                 
                 await waitFor(50);
                 
-                expect(calls[0].args.groupBy).to.equal(grouping);
+                expect(calls[0].args.groupBy).toBe(grouping);
             }
         });
     });
@@ -286,7 +289,7 @@ describe('Yearly Aggregation Tests', () => {
             
             await waitFor(200);
             
-            expect(isVisible('#account-note')).to.be.true;
+            expect(isVisible('#account-note')).toBe(true);
         });
 
         it('should hide note when category grouping is selected', async () => {
@@ -297,7 +300,7 @@ describe('Yearly Aggregation Tests', () => {
             
             await waitFor(200);
             
-            expect(isVisible('#account-note')).to.be.false;
+            expect(isVisible('#account-note')).toBe(false);
         });
     });
 });

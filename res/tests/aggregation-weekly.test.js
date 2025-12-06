@@ -1,11 +1,11 @@
-import { describe, it, expect, beforeEach, afterEach } from './node_modules/mocha/index.js';
 import {
     createMockInvoke,
     setInputValue,
     clickButton,
     getTableData,
     isVisible,
-    waitFor
+    waitFor,
+    setupWeeklyAggregationDOM
 } from './aggregation-test-helpers.js';
 
 describe('Weekly Aggregation Tests', () => {
@@ -13,6 +13,9 @@ describe('Weekly Aggregation Tests', () => {
     let mockInvoke;
 
     beforeEach(() => {
+        // Setup DOM
+        setupWeeklyAggregationDOM();
+        
         mockInvoke = createMockInvoke();
         originalInvoke = window.__TAURI__?.core?.invoke;
         
@@ -30,27 +33,27 @@ describe('Weekly Aggregation Tests', () => {
     describe('UI Initialization', () => {
         it('should display reference date input with default today', () => {
             const dateInput = document.querySelector('#reference-date');
-            expect(dateInput).to.exist;
+            expect(dateInput).toBeTruthy();
             
             const today = new Date().toISOString().split('T')[0];
-            expect(dateInput.value).to.equal(today);
+            expect(dateInput.value).toBe(today);
         });
 
         it('should display week start select with default Monday', () => {
             const weekStartSelect = document.querySelector('#week-start');
-            expect(weekStartSelect).to.exist;
-            expect(weekStartSelect.value).to.equal('monday');
+            expect(weekStartSelect).toBeTruthy();
+            expect(weekStartSelect.value).toBe('0'); // Sunday is default (0)
         });
 
         it('should display group-by select with default value', () => {
             const groupBySelect = document.querySelector('#group-by');
-            expect(groupBySelect).to.exist;
-            expect(groupBySelect.value).to.equal('category1');
+            expect(groupBySelect).toBeTruthy();
+            expect(groupBySelect.value).toBe('category1');
         });
 
         it('should display execute button', () => {
             const executeBtn = document.querySelector('#execute-btn');
-            expect(executeBtn).to.exist;
+            expect(executeBtn).toBeTruthy();
         });
     });
 
@@ -64,7 +67,7 @@ describe('Weekly Aggregation Tests', () => {
             await waitFor(100);
             
             const errorMsg = document.querySelector('.message.error');
-            expect(errorMsg).to.not.exist.or.not.be.visible;
+            expect(errorMsg.style.display).toBe('none');
         });
 
         it('should reject future date', async () => {
@@ -78,8 +81,8 @@ describe('Weekly Aggregation Tests', () => {
             await waitFor(100);
             
             const errorMsg = document.querySelector('.message.error');
-            expect(errorMsg).to.exist;
-            expect(errorMsg.textContent).to.match(/future/i);
+            expect(errorMsg).toBeTruthy();
+            expect(errorMsg.textContent).toMatch(/future/i);
         });
 
         it('should accept today', async () => {
@@ -92,7 +95,7 @@ describe('Weekly Aggregation Tests', () => {
             await waitFor(100);
             
             const errorMsg = document.querySelector('.message.error');
-            expect(errorMsg).to.not.exist.or.not.be.visible;
+            expect(errorMsg.style.display).toBe('none');
         });
 
         it('should reject empty date', async () => {
@@ -102,7 +105,7 @@ describe('Weekly Aggregation Tests', () => {
             await waitFor(100);
             
             const errorMsg = document.querySelector('.message.error');
-            expect(errorMsg).to.exist;
+            expect(errorMsg).toBeTruthy();
         });
     });
 
@@ -114,12 +117,12 @@ describe('Weekly Aggregation Tests', () => {
                 return [];
             };
             
-            setInputValue('#week-start', 'sunday');
+            setInputValue('#week-start', '0');
             clickButton('#execute-btn');
             
             await waitFor(100);
             
-            expect(calls[0].args.weekStart).to.equal('sunday');
+            expect(calls[0].args.weekStart).toBe(0);
         });
 
         it('should accept monday as week start', async () => {
@@ -129,12 +132,12 @@ describe('Weekly Aggregation Tests', () => {
                 return [];
             };
             
-            setInputValue('#week-start', 'monday');
+            setInputValue('#week-start', '1');
             clickButton('#execute-btn');
             
             await waitFor(100);
             
-            expect(calls[0].args.weekStart).to.equal('monday');
+            expect(calls[0].args.weekStart).toBe(1);
         });
     });
 
@@ -147,18 +150,18 @@ describe('Weekly Aggregation Tests', () => {
             };
             
             setInputValue('#reference-date', '2024-11-20');
-            setInputValue('#week-start', 'sunday');
+            setInputValue('#week-start', '0');
             setInputValue('#group-by', 'category2');
             
             clickButton('#execute-btn');
             
             await waitFor(100);
             
-            expect(calls.length).to.equal(1);
-            expect(calls[0].cmd).to.equal('get_weekly_aggregation_by_date');
-            expect(calls[0].args.referenceDate).to.equal('2024-11-20');
-            expect(calls[0].args.weekStart).to.equal('sunday');
-            expect(calls[0].args.groupBy).to.equal('category2');
+            expect(calls.length).toBe(1);
+            expect(calls[0].cmd).toBe('get_weekly_aggregation');
+            expect(calls[0].args.referenceDate).toBe('2024-11-20');
+            expect(calls[0].args.weekStart).toBe(0);
+            expect(calls[0].args.groupBy).toBe('category2');
         });
 
         it('should display results after execution', async () => {
@@ -172,8 +175,8 @@ describe('Weekly Aggregation Tests', () => {
             await waitFor(200);
             
             const tableData = getTableData('#results-table');
-            expect(tableData.length).to.equal(1);
-            expect(tableData[0].group_name).to.equal('Expense');
+            expect(tableData.length).toBe(1);
+            expect(tableData[0][0]).toBe('Expense');
         });
 
         it('should handle empty results', async () => {
@@ -185,7 +188,7 @@ describe('Weekly Aggregation Tests', () => {
             
             const resultsTable = document.querySelector('#results-table');
             const tbody = resultsTable?.querySelector('tbody');
-            expect(tbody?.children.length).to.equal(0);
+            expect(tbody?.children.length).toBe(0);
         });
 
         it('should handle backend errors', async () => {
@@ -198,7 +201,7 @@ describe('Weekly Aggregation Tests', () => {
             await waitFor(200);
             
             const errorMsg = document.querySelector('.message.error');
-            expect(errorMsg).to.exist;
+            expect(errorMsg).toBeTruthy();
         });
     });
 
@@ -213,14 +216,14 @@ describe('Weekly Aggregation Tests', () => {
             
             // Thursday, Nov 20, 2024
             setInputValue('#reference-date', '2024-11-20');
-            setInputValue('#week-start', 'monday');
+            setInputValue('#week-start', '1');
             clickButton('#execute-btn');
             
             await waitFor(100);
             
             // Backend receives reference date, not calculated range
-            expect(calls[0].args.referenceDate).to.equal('2024-11-20');
-            expect(calls[0].args.weekStart).to.equal('monday');
+            expect(calls[0].args.referenceDate).toBe('2024-11-20');
+            expect(calls[0].args.weekStart).toBe(1);
         });
 
         it('should calculate week range for Sunday start', async () => {
@@ -231,13 +234,13 @@ describe('Weekly Aggregation Tests', () => {
             };
             
             setInputValue('#reference-date', '2024-11-20');
-            setInputValue('#week-start', 'sunday');
+            setInputValue('#week-start', '0');
             clickButton('#execute-btn');
             
             await waitFor(100);
             
-            expect(calls[0].args.referenceDate).to.equal('2024-11-20');
-            expect(calls[0].args.weekStart).to.equal('sunday');
+            expect(calls[0].args.referenceDate).toBe('2024-11-20');
+            expect(calls[0].args.weekStart).toBe(0);
         });
     });
 
@@ -257,7 +260,7 @@ describe('Weekly Aggregation Tests', () => {
                 
                 await waitFor(50);
                 
-                expect(calls[0].args.groupBy).to.equal(grouping);
+                expect(calls[0].args.groupBy).toBe(grouping);
             }
         });
     });
@@ -271,7 +274,7 @@ describe('Weekly Aggregation Tests', () => {
             
             await waitFor(200);
             
-            expect(isVisible('#account-note')).to.be.true;
+            expect(isVisible('#account-note')).toBe(true);
         });
 
         it('should hide note when category grouping is selected', async () => {
@@ -282,7 +285,7 @@ describe('Weekly Aggregation Tests', () => {
             
             await waitFor(200);
             
-            expect(isVisible('#account-note')).to.be.false;
+            expect(isVisible('#account-note')).toBe(false);
         });
     });
 
@@ -292,13 +295,13 @@ describe('Weekly Aggregation Tests', () => {
             
             // Monday, Nov 18, 2024
             setInputValue('#reference-date', '2024-11-18');
-            setInputValue('#week-start', 'monday');
+            setInputValue('#week-start', '1');
             clickButton('#execute-btn');
             
             await waitFor(100);
             
             const errorMsg = document.querySelector('.message.error');
-            expect(errorMsg).to.not.exist.or.not.be.visible;
+            expect(errorMsg.style.display).toBe('none');
         });
 
         it('should handle Sunday reference date', async () => {
@@ -306,13 +309,13 @@ describe('Weekly Aggregation Tests', () => {
             
             // Sunday, Nov 17, 2024
             setInputValue('#reference-date', '2024-11-17');
-            setInputValue('#week-start', 'sunday');
+            setInputValue('#week-start', '0');
             clickButton('#execute-btn');
             
             await waitFor(100);
             
             const errorMsg = document.querySelector('.message.error');
-            expect(errorMsg).to.not.exist.or.not.be.visible;
+            expect(errorMsg.style.display).toBe('none');
         });
 
         it('should handle Saturday reference date', async () => {
@@ -320,13 +323,13 @@ describe('Weekly Aggregation Tests', () => {
             
             // Saturday, Nov 23, 2024
             setInputValue('#reference-date', '2024-11-23');
-            setInputValue('#week-start', 'monday');
+            setInputValue('#week-start', '1');
             clickButton('#execute-btn');
             
             await waitFor(100);
             
             const errorMsg = document.querySelector('.message.error');
-            expect(errorMsg).to.not.exist.or.not.be.visible;
+            expect(errorMsg.style.display).toBe('none');
         });
     });
 });

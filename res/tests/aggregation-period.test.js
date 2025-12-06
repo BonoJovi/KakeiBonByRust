@@ -1,11 +1,11 @@
-import { describe, it, expect, beforeEach, afterEach } from './node_modules/mocha/index.js';
 import {
     createMockInvoke,
     setInputValue,
     clickButton,
     getTableData,
     isVisible,
-    waitFor
+    waitFor,
+    setupPeriodAggregationDOM
 } from './aggregation-test-helpers.js';
 
 describe('Period Aggregation Tests', () => {
@@ -13,6 +13,9 @@ describe('Period Aggregation Tests', () => {
     let mockInvoke;
 
     beforeEach(() => {
+        // Setup DOM
+        setupPeriodAggregationDOM();
+        
         mockInvoke = createMockInvoke();
         originalInvoke = window.__TAURI__?.core?.invoke;
         
@@ -30,26 +33,26 @@ describe('Period Aggregation Tests', () => {
     describe('UI Initialization', () => {
         it('should display start date input with default first day of current month', () => {
             const startDateInput = document.querySelector('#start-date');
-            expect(startDateInput).to.exist;
+            expect(startDateInput).toBeTruthy();
             
             const now = new Date();
             const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
             const expectedDate = firstDay.toISOString().split('T')[0];
-            expect(startDateInput.value).to.equal(expectedDate);
+            expect(startDateInput.value).toBe(expectedDate);
         });
 
         it('should display end date input with default today', () => {
             const endDateInput = document.querySelector('#end-date');
-            expect(endDateInput).to.exist;
+            expect(endDateInput).toBeTruthy();
             
             const today = new Date().toISOString().split('T')[0];
-            expect(endDateInput.value).to.equal(today);
+            expect(endDateInput.value).toBe(today);
         });
 
         it('should display group-by select with default value', () => {
             const groupBySelect = document.querySelector('#group-by');
-            expect(groupBySelect).to.exist;
-            expect(groupBySelect.value).to.equal('category1');
+            expect(groupBySelect).toBeTruthy();
+            expect(groupBySelect.value).toBe('category1');
         });
     });
 
@@ -64,7 +67,7 @@ describe('Period Aggregation Tests', () => {
             await waitFor(100);
             
             const errorMsg = document.querySelector('.message.error');
-            expect(errorMsg).to.not.exist.or.not.be.visible;
+            expect(errorMsg.style.display).toBe('none');
         });
 
         it('should reject when start date is after end date', async () => {
@@ -75,8 +78,8 @@ describe('Period Aggregation Tests', () => {
             await waitFor(100);
             
             const errorMsg = document.querySelector('.message.error');
-            expect(errorMsg).to.exist;
-            expect(errorMsg.textContent).to.match(/start.*end|range/i);
+            expect(errorMsg).toBeTruthy();
+            expect(errorMsg.textContent).toMatch(/start.*end|range/i);
         });
 
         it('should reject future start date', async () => {
@@ -91,8 +94,8 @@ describe('Period Aggregation Tests', () => {
             await waitFor(100);
             
             const errorMsg = document.querySelector('.message.error');
-            expect(errorMsg).to.exist;
-            expect(errorMsg.textContent).to.match(/future/i);
+            expect(errorMsg).toBeTruthy();
+            expect(errorMsg.textContent).toMatch(/future/i);
         });
 
         it('should reject future end date', async () => {
@@ -107,8 +110,8 @@ describe('Period Aggregation Tests', () => {
             await waitFor(100);
             
             const errorMsg = document.querySelector('.message.error');
-            expect(errorMsg).to.exist;
-            expect(errorMsg.textContent).to.match(/future/i);
+            expect(errorMsg).toBeTruthy();
+            expect(errorMsg.textContent).toMatch(/future/i);
         });
 
         it('should accept same start and end date', async () => {
@@ -122,7 +125,7 @@ describe('Period Aggregation Tests', () => {
             await waitFor(100);
             
             const errorMsg = document.querySelector('.message.error');
-            expect(errorMsg).to.not.exist.or.not.be.visible;
+            expect(errorMsg.style.display).toBe('none');
         });
 
         it('should reject empty start date', async () => {
@@ -133,7 +136,7 @@ describe('Period Aggregation Tests', () => {
             await waitFor(100);
             
             const errorMsg = document.querySelector('.message.error');
-            expect(errorMsg).to.exist;
+            expect(errorMsg).toBeTruthy();
         });
 
         it('should reject empty end date', async () => {
@@ -144,7 +147,7 @@ describe('Period Aggregation Tests', () => {
             await waitFor(100);
             
             const errorMsg = document.querySelector('.message.error');
-            expect(errorMsg).to.exist;
+            expect(errorMsg).toBeTruthy();
         });
     });
 
@@ -164,11 +167,11 @@ describe('Period Aggregation Tests', () => {
             
             await waitFor(100);
             
-            expect(calls.length).to.equal(1);
-            expect(calls[0].cmd).to.equal('get_period_aggregation');
-            expect(calls[0].args.startDate).to.equal('2024-10-01');
-            expect(calls[0].args.endDate).to.equal('2024-11-20');
-            expect(calls[0].args.groupBy).to.equal('category2');
+            expect(calls.length).toBe(1);
+            expect(calls[0].cmd).toBe('get_period_aggregation');
+            expect(calls[0].args.startDate).toBe('2024-10-01');
+            expect(calls[0].args.endDate).toBe('2024-11-20');
+            expect(calls[0].args.groupBy).toBe('category2');
         });
 
         it('should display results after execution', async () => {
@@ -183,8 +186,8 @@ describe('Period Aggregation Tests', () => {
             await waitFor(200);
             
             const tableData = getTableData('#results-table');
-            expect(tableData.length).to.equal(1);
-            expect(tableData[0].group_name).to.equal('Expense');
+            expect(tableData.length).toBe(1);
+            expect(tableData[0][0]).toBe('Expense');
         });
 
         it('should handle empty results', async () => {
@@ -196,7 +199,7 @@ describe('Period Aggregation Tests', () => {
             
             const resultsTable = document.querySelector('#results-table');
             const tbody = resultsTable?.querySelector('tbody');
-            expect(tbody?.children.length).to.equal(0);
+            expect(tbody?.children.length).toBe(0);
         });
 
         it('should handle backend errors', async () => {
@@ -209,7 +212,7 @@ describe('Period Aggregation Tests', () => {
             await waitFor(200);
             
             const errorMsg = document.querySelector('.message.error');
-            expect(errorMsg).to.exist;
+            expect(errorMsg).toBeTruthy();
         });
     });
 
@@ -224,7 +227,7 @@ describe('Period Aggregation Tests', () => {
             await waitFor(100);
             
             const errorMsg = document.querySelector('.message.error');
-            expect(errorMsg).to.not.exist.or.not.be.visible;
+            expect(errorMsg.style.display).toBe('none');
         });
 
         it('should handle 1-month period', async () => {
@@ -237,7 +240,7 @@ describe('Period Aggregation Tests', () => {
             await waitFor(100);
             
             const errorMsg = document.querySelector('.message.error');
-            expect(errorMsg).to.not.exist.or.not.be.visible;
+            expect(errorMsg.style.display).toBe('none');
         });
 
         it('should handle quarterly period', async () => {
@@ -250,7 +253,7 @@ describe('Period Aggregation Tests', () => {
             await waitFor(100);
             
             const errorMsg = document.querySelector('.message.error');
-            expect(errorMsg).to.not.exist.or.not.be.visible;
+            expect(errorMsg.style.display).toBe('none');
         });
 
         it('should handle travel period (5 days)', async () => {
@@ -263,7 +266,7 @@ describe('Period Aggregation Tests', () => {
             await waitFor(100);
             
             const errorMsg = document.querySelector('.message.error');
-            expect(errorMsg).to.not.exist.or.not.be.visible;
+            expect(errorMsg.style.display).toBe('none');
         });
     });
 
@@ -283,7 +286,7 @@ describe('Period Aggregation Tests', () => {
                 
                 await waitFor(50);
                 
-                expect(calls[0].args.groupBy).to.equal(grouping);
+                expect(calls[0].args.groupBy).toBe(grouping);
             }
         });
     });
@@ -297,7 +300,7 @@ describe('Period Aggregation Tests', () => {
             
             await waitFor(200);
             
-            expect(isVisible('#account-note')).to.be.true;
+            expect(isVisible('#account-note')).toBe(true);
         });
 
         it('should hide note when category grouping is selected', async () => {
@@ -308,7 +311,7 @@ describe('Period Aggregation Tests', () => {
             
             await waitFor(200);
             
-            expect(isVisible('#account-note')).to.be.false;
+            expect(isVisible('#account-note')).toBe(false);
         });
     });
 
@@ -323,7 +326,7 @@ describe('Period Aggregation Tests', () => {
             await waitFor(100);
             
             const errorMsg = document.querySelector('.message.error');
-            expect(errorMsg).to.not.exist.or.not.be.visible;
+            expect(errorMsg.style.display).toBe('none');
         });
 
         it('should handle leap year February', async () => {
@@ -336,7 +339,7 @@ describe('Period Aggregation Tests', () => {
             await waitFor(100);
             
             const errorMsg = document.querySelector('.message.error');
-            expect(errorMsg).to.not.exist.or.not.be.visible;
+            expect(errorMsg.style.display).toBe('none');
         });
     });
 });
