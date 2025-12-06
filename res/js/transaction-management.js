@@ -358,7 +358,7 @@ function createTransactionItem(transaction) {
     // Date (format: YYYY-MM-DD HH:MM:SS -> YYYY-MM-DD HH:MM)
     const dateDiv = document.createElement('div');
     dateDiv.className = 'transaction-date';
-    const dateTime = transaction.transaction_date.substring(0, 16).replace(' ', ' '); // YYYY-MM-DD HH:MM
+    const dateTime = transaction.transaction_date.substring(0, 16); // YYYY-MM-DD HH:MM
     dateDiv.textContent = dateTime;
     contentWrapper.appendChild(dateDiv);
     
