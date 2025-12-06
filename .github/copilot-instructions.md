@@ -41,6 +41,55 @@ This file provides context for GitHub Copilot CLI to understand the project stru
 - **Future Phase**: Release Preparation (consolidate, audience-based restructuring)
 - **Bilingual**: All user-facing docs must be in Japanese and English
 
+### Release Workflow
+**CRITICAL**: Always follow this workflow for releases:
+
+1. **Code Development** (on `dev` branch)
+   - Write/modify code
+   - Write/update tests
+
+2. **Local Testing**
+   ```bash
+   cargo test                    # Backend tests
+   cd res && npm test           # Frontend tests
+   ```
+
+3. **Build Verification**
+   ```bash
+   cargo build --release
+   ```
+
+4. **Commit Changes**
+   ```bash
+   git add .
+   git commit -m "type(scope): message"
+   ```
+
+5. **Push to dev**
+   ```bash
+   git push origin dev
+   ```
+
+6. **Merge to main**
+   ```bash
+   git checkout main
+   git merge dev
+   ```
+
+7. **Create and Push Tag**
+   ```bash
+   git tag v1.0.x
+   git push origin main
+   git push origin v1.0.x
+   ```
+
+8. **CI/CD Automation**
+   - Tag push triggers GitHub Actions workflow
+   - Runs tests, builds binaries, publishes release
+   - No manual intervention needed
+
+**⚠️ Never skip local testing before commit/push!**
+
 ---
 
 ## Directory Structure
