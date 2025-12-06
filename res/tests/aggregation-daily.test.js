@@ -1,11 +1,11 @@
-import { describe, it, expect, beforeEach, afterEach } from './node_modules/mocha/index.js';
 import {
     createMockInvoke,
     setInputValue,
     clickButton,
     getTableData,
     isVisible,
-    waitFor
+    waitFor,
+    setupDailyAggregationDOM
 } from './aggregation-test-helpers.js';
 
 describe('Daily Aggregation Tests', () => {
@@ -13,6 +13,9 @@ describe('Daily Aggregation Tests', () => {
     let mockInvoke;
 
     beforeEach(() => {
+        // Setup DOM
+        setupDailyAggregationDOM();
+        
         mockInvoke = createMockInvoke();
         originalInvoke = window.__TAURI__?.core?.invoke;
         
@@ -30,21 +33,21 @@ describe('Daily Aggregation Tests', () => {
     describe('UI Initialization', () => {
         it('should display date input with default today', () => {
             const dateInput = document.querySelector('#date');
-            expect(dateInput).to.exist;
+            expect(dateInput).toBeTruthy();
             
             const today = new Date().toISOString().split('T')[0];
-            expect(dateInput.value).to.equal(today);
+            expect(dateInput.value).toBe(today);
         });
 
         it('should display group-by select with default value', () => {
             const groupBySelect = document.querySelector('#group-by');
-            expect(groupBySelect).to.exist;
-            expect(groupBySelect.value).to.equal('category1');
+            expect(groupBySelect).toBeTruthy();
+            expect(groupBySelect.value).toBe('category1');
         });
 
         it('should display execute button', () => {
             const executeBtn = document.querySelector('#execute-btn');
-            expect(executeBtn).to.exist;
+            expect(executeBtn).toBeTruthy();
         });
     });
 
@@ -58,7 +61,7 @@ describe('Daily Aggregation Tests', () => {
             await waitFor(100);
             
             const errorMsg = document.querySelector('.message.error');
-            expect(errorMsg).to.not.exist.or.not.be.visible;
+            expect(errorMsg.style.display).toBe('none');
         });
 
         it('should reject future date', async () => {
@@ -72,8 +75,8 @@ describe('Daily Aggregation Tests', () => {
             await waitFor(100);
             
             const errorMsg = document.querySelector('.message.error');
-            expect(errorMsg).to.exist;
-            expect(errorMsg.textContent).to.match(/future/i);
+            expect(errorMsg).toBeTruthy();
+            expect(errorMsg.textContent).toMatch(/future/i);
         });
 
         it('should accept today', async () => {
@@ -86,7 +89,7 @@ describe('Daily Aggregation Tests', () => {
             await waitFor(100);
             
             const errorMsg = document.querySelector('.message.error');
-            expect(errorMsg).to.not.exist.or.not.be.visible;
+            expect(errorMsg.style.display).toBe('none');
         });
 
         it('should reject invalid date format', async () => {
@@ -96,7 +99,7 @@ describe('Daily Aggregation Tests', () => {
             await waitFor(100);
             
             const errorMsg = document.querySelector('.message.error');
-            expect(errorMsg).to.exist;
+            expect(errorMsg).toBeTruthy();
         });
 
         it('should reject empty date', async () => {
@@ -106,7 +109,7 @@ describe('Daily Aggregation Tests', () => {
             await waitFor(100);
             
             const errorMsg = document.querySelector('.message.error');
-            expect(errorMsg).to.exist;
+            expect(errorMsg).toBeTruthy();
         });
     });
 
@@ -125,10 +128,10 @@ describe('Daily Aggregation Tests', () => {
             
             await waitFor(100);
             
-            expect(calls.length).to.equal(1);
-            expect(calls[0].cmd).to.equal('get_daily_aggregation');
-            expect(calls[0].args.date).to.equal('2024-11-20');
-            expect(calls[0].args.groupBy).to.equal('category2');
+            expect(calls.length).toBe(1);
+            expect(calls[0].cmd).toBe('get_daily_aggregation');
+            expect(calls[0].args.date).toBe('2024-11-20');
+            expect(calls[0].args.groupBy).toBe('category2');
         });
 
         it('should display results after execution', async () => {
@@ -142,8 +145,8 @@ describe('Daily Aggregation Tests', () => {
             await waitFor(200);
             
             const tableData = getTableData('#results-table');
-            expect(tableData.length).to.equal(1);
-            expect(tableData[0].group_name).to.equal('Expense');
+            expect(tableData.length).toBe(1);
+            expect(tableData[0][0]).toBe('Expense'); // First column of first row
         });
 
         it('should handle empty results', async () => {
@@ -155,7 +158,7 @@ describe('Daily Aggregation Tests', () => {
             
             const resultsTable = document.querySelector('#results-table');
             const tbody = resultsTable?.querySelector('tbody');
-            expect(tbody?.children.length).to.equal(0);
+            expect(tbody?.children.length).toBe(0);
         });
 
         it('should handle backend errors', async () => {
@@ -168,7 +171,7 @@ describe('Daily Aggregation Tests', () => {
             await waitFor(200);
             
             const errorMsg = document.querySelector('.message.error');
-            expect(errorMsg).to.exist;
+            expect(errorMsg).toBeTruthy();
         });
     });
 
@@ -188,7 +191,7 @@ describe('Daily Aggregation Tests', () => {
             
             await waitFor(100);
             
-            expect(calls.length).to.equal(1);
+            expect(calls.length).toBe(1);
         });
     });
 
@@ -208,7 +211,7 @@ describe('Daily Aggregation Tests', () => {
                 
                 await waitFor(50);
                 
-                expect(calls[0].args.groupBy).to.equal(grouping);
+                expect(calls[0].args.groupBy).toBe(grouping);
             }
         });
     });
@@ -222,7 +225,7 @@ describe('Daily Aggregation Tests', () => {
             
             await waitFor(200);
             
-            expect(isVisible('#account-note')).to.be.true;
+            expect(isVisible('#account-note')).toBe(true);
         });
 
         it('should hide note when category grouping is selected', async () => {
@@ -233,7 +236,7 @@ describe('Daily Aggregation Tests', () => {
             
             await waitFor(200);
             
-            expect(isVisible('#account-note')).to.be.false;
+            expect(isVisible('#account-note')).toBe(false);
         });
     });
 });
