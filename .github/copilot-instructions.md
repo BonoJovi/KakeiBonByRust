@@ -59,36 +59,65 @@ This file provides context for GitHub Copilot CLI to understand the project stru
    cargo build --release
    ```
 
-4. **Commit Changes**
+4. **Update Version Numbers** ⚠️ **CRITICAL**
+   **Before creating a release tag, ALL THREE version files MUST be updated:**
+   ```bash
+   # Update these files with the same version number:
+   # 1. Cargo.toml          → Used by Rust build
+   # 2. package.json        → Used by release workflow (release name)
+   # 3. tauri.conf.json     → Used by Tauri build (asset file names)
+   ```
+   
+   **Example for v1.0.10:**
+   ```toml
+   # Cargo.toml
+   version = "1.0.10"
+   ```
+   ```json
+   // package.json
+   "version": "1.0.10"
+   ```
+   ```json
+   // tauri.conf.json
+   "version": "1.0.10"
+   ```
+   
+   **⚠️ Version Mismatch Consequences:**
+   - If `package.json` is outdated → Wrong release name created
+   - If `tauri.conf.json` is outdated → Wrong asset file names
+   - Example: v1.0.9 tag with package.json=1.0.8 → Creates v1.0.8 release!
+
+5. **Commit Changes**
    ```bash
    git add .
    git commit -m "type(scope): message"
    ```
 
-5. **Push to dev**
+6. **Push to dev**
    ```bash
    git push origin dev
    ```
 
-6. **Merge to main**
+7. **Merge to main**
    ```bash
    git checkout main
    git merge dev
    ```
 
-7. **Create and Push Tag**
+8. **Create and Push Tag**
    ```bash
    git tag v1.0.x
    git push origin main
    git push origin v1.0.x
    ```
 
-8. **CI/CD Automation**
+9. **CI/CD Automation**
    - Tag push triggers GitHub Actions workflow
    - Runs tests, builds binaries, publishes release
    - No manual intervention needed
 
 **⚠️ Never skip local testing before commit/push!**
+**⚠️ Always verify version consistency across all 3 files before tagging!**
 
 ---
 
