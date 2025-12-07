@@ -104,17 +104,23 @@ This file provides context for GitHub Copilot CLI to understand the project stru
    git merge dev
    ```
 
-8. **Create and Push Tag**
+8. **Push main branch FIRST**
    ```bash
-   git tag v1.0.x
    git push origin main
-   git push origin v1.0.x
+   ```
+   ⚠️ **CRITICAL**: Push main BEFORE creating tag to ensure tag points to pushed commit
+
+9. **Create and Push Tag**
+   ```bash
+   git pull origin main    # Ensure you have the latest
+   git tag v1.0.x          # Create tag on the pushed commit
+   git push origin v1.0.x  # Push tag to trigger CI/CD
    ```
 
-9. **CI/CD Automation**
-   - Tag push triggers GitHub Actions workflow
-   - Runs tests, builds binaries, publishes release
-   - No manual intervention needed
+10. **CI/CD Automation**
+    - Tag push triggers GitHub Actions workflow
+    - Runs tests, builds binaries, publishes release
+    - No manual intervention needed
 
 **⚠️ Never skip local testing before commit/push!**
 **⚠️ Always verify version consistency across all 3 files before tagging!**
