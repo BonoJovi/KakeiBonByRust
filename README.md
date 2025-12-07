@@ -25,9 +25,9 @@
 いつもKakeiBonに気を留めていただき、誠にありがとうございます。
 プロジェクト発案者のBonoJovi(Yoshihiro NAKAHARA)です。
 
-**Ver.1.0.7を正式リリースいたしました！**
+**Ver.1.0.9を正式リリースいたしました！**
 
-Ver.1.0.1からVer.1.0.7への大幅なバージョンアップでは、CI/CDパイプラインの導入により、Windows/macOS/Linux向けのマルチプラットフォーム対応とリリース自動化を実現しました。この大規模な開発基盤の整備により、プロジェクトの開発効率が劇的に向上し、今後の継続的な機能改善とリリースがスムーズに行えるようになりました。
+Ver.1.0.1からVer.1.0.9への継続的なバージョンアップでは、CI/CDパイプラインの導入により、Windows/macOS/Linux向けのマルチプラットフォーム対応とリリース自動化を実現しました。v1.0.8ではテストドキュメントの大幅な整理を行い、v1.0.9では集計機能のテスト安定性を向上させました。この大規模な開発基盤の整備により、プロジェクトの開発効率が劇的に向上し、今後の継続的な機能改善とリリースがスムーズに行えるようになりました。
 
 入出金データの入力機能が完成し、基本的な家計簿アプリケーションとしてご利用いただける状態となりました。
 安定版リリースをご利用になりたい方は、[mainブランチ](https://github.com/BonoJovi/KakeiBonByRust/tree/main)をご参照ください。
@@ -49,9 +49,9 @@ GitHubのissueやeメールでのメッセージも受け付けていますの�
 Thank you for your continued interest in KakeiBon.
 I'm BonoJovi (Yoshihiro NAKAHARA), the project initiator.
 
-**We have officially released Ver.1.0.7!**
+**We have officially released Ver.1.0.9!**
 
-The major version jump from Ver.1.0.1 to Ver.1.0.7 reflects the significant impact of introducing a CI/CD pipeline, enabling multi-platform support (Windows/macOS/Linux) and automated releases. This large-scale infrastructure improvement has dramatically enhanced development efficiency and enables smooth continuous feature improvements and releases going forward.
+The continuous version updates from Ver.1.0.1 to Ver.1.0.9 reflect the significant impact of introducing a CI/CD pipeline, enabling multi-platform support (Windows/macOS/Linux) and automated releases. In v1.0.8, we performed major test documentation refactoring, and in v1.0.9, we improved aggregation feature test stability. This large-scale infrastructure improvement has dramatically enhanced development efficiency and enables smooth continuous feature improvements and releases going forward.
 
 The transaction data input functionality is now complete, and KakeiBon is ready to be used as a basic household budget application.
 If you would like to use the stable release version, please refer to the [main branch](https://github.com/BonoJovi/KakeiBonByRust/tree/main).
