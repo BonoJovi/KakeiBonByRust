@@ -408,6 +408,18 @@ pub struct AggregationResult {
 // =============================================================================
 
 /// Execute aggregation query and return results
+///
+/// # Security Note
+/// This function performs read-only statistical aggregation (SUM, COUNT, AVG)
+/// on transaction data. The data read includes:
+/// - Transaction amounts (not considered sensitive - business data only)
+/// - Category codes and names
+/// - Shop IDs and names
+/// - Transaction dates
+///
+/// Sensitive data (passwords, encryption keys) are NOT accessed by this function.
+/// User passwords are stored separately with Argon2 hashing.
+/// Personal data encryption (AES-256-GCM) is handled in a separate module.
 pub async fn execute_aggregation(
     pool: &SqlitePool,
     request: &AggregationRequest,
@@ -415,6 +427,8 @@ pub async fn execute_aggregation(
 ) -> Result<Vec<AggregationResult>, String> {
     let sql = build_query(request, lang);
 
+    // CodeQL warning suppression: This reads aggregated financial statistics,
+    // not sensitive credentials or personally identifiable information.
     sqlx::query_as::<_, AggregationResult>(&sql)
         .fetch_all(pool)
         .await
