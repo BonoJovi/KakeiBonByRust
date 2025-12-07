@@ -317,7 +317,7 @@ async fn create_general_user(
         Ok(user_id) => {
             // Populate default categories for the new user
             if let Err(e) = category.populate_default_categories(user_id).await {
-                eprintln!("Warning: Failed to populate default categories for user {}: {}", user_id, e);
+                eprintln!("Warning: Failed to populate default categories for user: {}", e);
                 // Continue even if category population fails
             }
             Ok(user_id)

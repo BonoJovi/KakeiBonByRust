@@ -7,7 +7,7 @@
 
 [![Rust](https://img.shields.io/badge/Rust-1.70+-orange.svg)](https://www.rust-lang.org/)
 [![Tauri](https://img.shields.io/badge/Tauri-v2.9.3-blue.svg)](https://tauri.app/)
-[![Tests](https://img.shields.io/badge/tests-527%20passing-brightgreen.svg)](#test-results--テスト結果)
+[![Tests](https://img.shields.io/badge/tests-800%20passing-brightgreen.svg)](#test-results--テスト結果)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 [🇯🇵 日本語詳細](README_ja.md) | [🇬🇧 English Details](README_en.md)
@@ -29,6 +29,8 @@
 
 Ver.1.0.1からVer.1.0.9への継続的なバージョンアップでは、CI/CDパイプラインの導入により、Windows/macOS/Linux向けのマルチプラットフォーム対応とリリース自動化を実現しました。v1.0.8ではテストドキュメントの大幅な整理を行い、v1.0.9では集計機能のテスト安定性を向上させました。この大規模な開発基盤の整備により、プロジェクトの開発効率が劇的に向上し、今後の継続的な機能改善とリリースがスムーズに行えるようになりました。
 
+また、最新バージョンでは、依存ライブラリのセキュリティパッチを適用し、より安全な環境でご利用いただけるよう対策を行っております。
+
 入出金データの入力機能が完成し、基本的な家計簿アプリケーションとしてご利用いただける状態となりました。
 安定版リリースをご利用になりたい方は、[mainブランチ](https://github.com/BonoJovi/KakeiBonByRust/tree/main)をご参照ください。
 
@@ -40,7 +42,7 @@ GitHubのissueやeメールでのメッセージも受け付けていますの�
 
 それでは、引き続きKakeiBonをご愛顧頂ますよう、お願い申し上げます。
 
-**2025-11-30 (JST) Written by Yoshihiro NAKAHARA**
+**2025-12-07 (JST) Written by Yoshihiro NAKAHARA**
 
 ---
 
@@ -53,6 +55,8 @@ I'm BonoJovi (Yoshihiro NAKAHARA), the project initiator.
 
 The continuous version updates from Ver.1.0.1 to Ver.1.0.9 reflect the significant impact of introducing a CI/CD pipeline, enabling multi-platform support (Windows/macOS/Linux) and automated releases. In v1.0.8, we performed major test documentation refactoring, and in v1.0.9, we improved aggregation feature test stability. This large-scale infrastructure improvement has dramatically enhanced development efficiency and enables smooth continuous feature improvements and releases going forward.
 
+Additionally, the latest version includes security patches for dependent libraries, ensuring a safer environment for your use.
+
 The transaction data input functionality is now complete, and KakeiBon is ready to be used as a basic household budget application.
 If you would like to use the stable release version, please refer to the [main branch](https://github.com/BonoJovi/KakeiBonByRust/tree/main).
 
@@ -64,7 +68,7 @@ We welcome messages via GitHub issues or email, whether it's words of encouragem
 
 Thank you for your continued support of KakeiBon.
 
-**2025-11-30 (JST) Written by Yoshihiro NAKAHARA**
+**2025-12-07 (JST) Written by Yoshihiro NAKAHARA**
 
 </div>
 
@@ -120,13 +124,13 @@ CI/CDパイプライン導入によりWindows/macOSバイナリのリリース�
 - 🐛 Report any bugs or issues you encounter / 遭遇したバグや問題を報告
 - ✅ Confirm if basic features work correctly / 基本機能が正常に動作するか確認
 - 💬 Share your experience (UI/UX feedback welcome!) / 使用感を共有（UI/UXフィードバック歓迎！）
-- 🆕 **Review test case validity** - Check if our 463+ tests make sense! / **テストケースの妥当性をレビュー** - 463件以上のテストが妥当かチェック！
+- 🆕 **Review test case validity** - Check if our 800+ tests make sense! / **テストケースの妥当性をレビュー** - 800件以上のテストが妥当かチェック！
 
 **Download:** [Latest Release](https://github.com/BonoJovi/KakeiBonByRust/releases/latest)
 
 📖 **[Test Overview](docs/testing/en/TEST_OVERVIEW.md)** | **[テスト概要](docs/testing/ja/TEST_OVERVIEW.md)**
 📘 **[Backend Test Index](docs/testing/en/BACKEND_TEST_INDEX.md)** (201 tests) | **[バックエンドテストインデックス](docs/testing/ja/BACKEND_TEST_INDEX.md)** (201件)
-📗 **[Frontend Test Index](docs/testing/en/FRONTEND_TEST_INDEX.md)** (262+ tests) | **[フロントエンドテストインデックス](docs/testing/ja/FRONTEND_TEST_INDEX.md)** (262件以上)
+📗 **[Frontend Test Index](docs/testing/en/FRONTEND_TEST_INDEX.md)** (599 tests) | **[フロントエンドテストインデックス](docs/testing/ja/FRONTEND_TEST_INDEX.md)** (599件)
 🆕 **[Submit Testing Feedback](https://github.com/BonoJovi/KakeiBonByRust/issues/new?template=testing-feedback.yml)**
 
 ---
@@ -196,7 +200,7 @@ Development is progressing smoothly, and we strive to update daily!
 開発は順調に進んでおり、できるだけ日々更新するようにしています！
 
 **Project Started / プロジェクト開始**: 2025-10-22 (JST)
-**Last Updated / 最終更新**: 2025-11-30 (JST)
+**Last Updated / 最終更新**: 2025-12-07 (JST)
 
 > **🤖 AI-Assisted Development / AI支援開発**  
 > This project's source code and documentation are **100% generated** with the assistance of generative AI (GitHub Copilot, Claude), supervised and reviewed by the developer. This demonstrates the potential of AI-assisted development.  
@@ -220,10 +224,10 @@ Development is progressing smoothly, and we strive to update daily!
 
 | Metric | Count |
 |--------|-------|
-| 👁️ **Total Views** / 総閲覧数 | **1,123** |
-| 📦 **Total Clones** / 総クローン数 | **868** |
+| 👁️ **Total Views** / 総閲覧数 | **1,156** |
+| 📦 **Total Clones** / 総クローン数 | **909** |
 
-*Last Updated / 最終更新: 2025-12-06 01:36 UTC*
+*Last Updated / 最終更新: 2025-12-07 01:37 UTC*
 
 </div>
 <!-- STATS_END -->
@@ -280,7 +284,7 @@ Designed with high visibility in mind - comfortable for long-term use
 - 🔐 **Secure Session Management** / セキュアなセッション管理
 - 👥 **User Isolation** / ユーザーデータの完全分離
 - ✅ **Zero Hardcoded User IDs** / ハードコードされたユーザーID排除
-- 🧪 **527 Tests (100% Pass)** / 527テスト（100%合格）
+- 🧪 **800 Tests (100% Pass)** / 800テスト（100%合格）
 
 ### 🎯 Intuitive User Interface / 直感的な操作性
 Simple and clear UI that anyone can master quickly  
@@ -332,7 +336,7 @@ Switch between Japanese and English seamlessly
 | **Backend** / **バックエンド** | Rust + Tauri | v2.8.5 |
 | **Database** / **データベース** | SQLite | WAL mode |
 | **Security** / **セキュリティ** | Argon2id + AES-256-GCM | Password hashing + Data encryption |
-| **Testing** / **テスト** | Jest + Cargo Test | 527 tests passing (Rust: 201, JS: 326) |
+| **Testing** / **テスト** | Jest + Cargo Test | 800 tests passing (Rust: 201, JS: 599) |
 | **i18n Resources** / **翻訳** | JSON-based | 992 resources (496 unique keys, 2 languages) |
 | **Code Lines** / **コード行数** | Total / 合計 | ~35,478 lines (Rust: 13,870, JS: 8,810, HTML: 3,355, CSS: 6,109, SQL: 3,334) |
 
@@ -364,28 +368,32 @@ cargo tauri build
 
 ```
 Backend (Rust) / バックエンド:    201 passing ✅
-Frontend (JavaScript) / フロント:  326 passing ✅
-Total Tests / 総テスト数:          527 passing ✅
+Frontend (JavaScript) / フロント:  599 passing ✅
+Total Tests / 総テスト数:          800 passing ✅
 Success Rate / 成功率:            100%
 ```
 
 **Recent Improvements / 最近の改善**:
+- ✅ **Test Coverage Expansion** / **テストカバレッジ拡大** (2025-12-07)
+  - Total test count increased from 527 to 800 tests
+  - Frontend tests expanded from 326 to 599 tests
+  - Enhanced test coverage for aggregation features
+  - Comprehensive validation of transaction processing logic
+
+- ✅ **Security Updates** / **セキュリティアップデート** (2025-12-07)
+  - Applied security patches to dependent libraries
+  - Enhanced overall system security and stability
+
 - ✅ **Session Management Integration** / **セッション管理統合** (2025-11-30)
   - All 52 API functions now use session-based authentication
   - Enhanced security with proper user isolation
   - Removed hardcoded user IDs throughout the codebase
 
-- ✅ **Test Quality Enhancement** / **テスト品質向上** (2025-11-30)
-  - Added explicit assertions to delegated tests
-  - Improved test readability and maintainability
-  - Enterprise-grade test structure achieved
-
-**Test Count Methodology / テスト件数計測方法** (Updated 2025-11-30):
-- **Previous count (613)**: Included nested `describe` blocks and test structure
-- **Current count (527)**: Counts only actual executable test cases
-- **Reason for change / 変更理由**: Improved accuracy and industry-standard methodology
-- **Note / 注意**: No tests were removed; this is purely a measurement refinement
-  テストは削除されておらず、計測方法の精密化のみです
+**Test Count Methodology / テスト件数計測方法** (Updated 2025-12-07):
+- **Current count (800)**: Counts only actual executable test cases (Rust: 201, JavaScript: 599)
+- **Methodology / 方法**: Industry-standard test counting (test() and it() blocks only)
+- **Note / 注意**: Test count increases reflect actual new test implementations, not measurement changes
+  テスト件数の増加は、実際の新規テスト実装を反映しています
 
 See [Test Overview](docs/testing/en/TEST_OVERVIEW.md) for details / 詳細は [テスト概要](docs/testing/ja/TEST_OVERVIEW.md) を参照
 
@@ -405,7 +413,7 @@ See [Test Overview](docs/testing/en/TEST_OVERVIEW.md) for details / 詳細は [�
 - 🧪 **Testing Documentation / テストドキュメント**
   - 📖 **[Test Overview](docs/testing/en/TEST_OVERVIEW.md)** / **[テスト概要](docs/testing/ja/TEST_OVERVIEW.md)** - Test strategy and execution guide
   - 📘 **[Backend Test Index](docs/testing/en/BACKEND_TEST_INDEX.md)** / **[バックエンドテストインデックス](docs/testing/ja/BACKEND_TEST_INDEX.md)** - Complete Rust test list (201 tests)
-  - 📗 **[Frontend Test Index](docs/testing/en/FRONTEND_TEST_INDEX.md)** / **[フロントエンドテストインデックス](docs/testing/ja/FRONTEND_TEST_INDEX.md)** - Complete JavaScript test list (262+ tests)
+  - 📗 **[Frontend Test Index](docs/testing/en/FRONTEND_TEST_INDEX.md)** / **[フロントエンドテストインデックス](docs/testing/ja/FRONTEND_TEST_INDEX.md)** - Complete JavaScript test list (599 tests)
 
 #### API Documentation / API ドキュメント
 - 📁 **Category Management API / 費目管理 API**
