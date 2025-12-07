@@ -146,10 +146,17 @@ jobs:
 
       - name: install dependencies (windows only)
         if: matrix.platform == 'windows-latest'
+        shell: powershell
         run: |
-          # Install MSYS2 and GLib for Windows
-          choco install msys2 -y
-          C:\tools\msys2\usr\bin\bash -lc "pacman -S --noconfirm mingw-w64-x86_64-glib2 mingw-w64-x86_64-pkg-config"
+          # Install MSYS2 and wait for completion
+          choco install msys2 -y --no-progress
+          # Wait for installation to complete
+          Start-Sleep -Seconds 5
+          # Update MSYS2 package database
+          & "C:\tools\msys2\usr\bin\bash.exe" -lc "pacman -Syu --noconfirm"
+          # Install GLib
+          & "C:\tools\msys2\usr\bin\bash.exe" -lc "pacman -S --noconfirm mingw-w64-x86_64-glib2 mingw-w64-x86_64-pkg-config"
+          # Add to PATH
           echo "C:\tools\msys2\mingw64\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
           echo "PKG_CONFIG_PATH=C:\tools\msys2\mingw64\lib\pkgconfig" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
