@@ -1,21 +1,65 @@
 # KakeiBon Project Context
 
-This file automatically loads project context at the start of each Claude Code session.
+This file automatically loads **minimal** project context at the start of each Claude Code session.
 
-## Project Overview
-@.ai-context/README.md
+**Token Optimization**: Only essential information is loaded by default. Load additional contexts as needed using `@` references.
 
-## Development Methodology (IMPORTANT - AI Collaboration Best Practices)
-@.ai-context/DEVELOPMENT_METHODOLOGY.md
+---
 
-## Coding Conventions
-@.ai-context/CONVENTIONS.md
+## Always Load (Essential Context Only)
 
-## Project Structure
-@.ai-context/PROJECT_STRUCTURE.md
+### Essential Information - Current Status & Critical Rules
+@.ai-context/core/QUICK_REFERENCE.md
 
-## GitHub Projects Guidelines
-@.ai-context/projects-guidelines.md
+---
 
-## Tauri Development Notes
-@.ai-context/TAURI_DEVELOPMENT.md
+## Load When Needed (On-Demand Contexts)
+
+### Project-Specific Context
+
+**For Coding Tasks**:
+- Conventions: `@.ai-context/development/CONVENTIONS.md`
+- Testing Strategy: `@.ai-context/development/TESTING_STRATEGY.md`
+
+**For Architecture Tasks**:
+- Project Structure: `@.ai-context/architecture/PROJECT_STRUCTURE.md`
+- Tauri Integration: `@.ai-context/architecture/TAURI_DEVELOPMENT.md`
+
+**For Workflow Tasks**:
+- i18n Management: `@.ai-context/workflows/I18N_MANAGEMENT.md`
+
+### Shared Context (via submodule)
+
+**For Understanding Methodology** (rarely needed):
+- AI Collaboration: `@.ai-context/shared/methodology/AI_COLLABORATION.md`
+- Design Philosophy: `@.ai-context/shared/methodology/DESIGN_PHILOSOPHY.md`
+- Scale & Architecture: `@.ai-context/shared/methodology/SCALE_ARCHITECTURE.md`
+
+**Common Workflows**:
+- Documentation Creation: `@.ai-context/shared/workflows/DOCUMENTATION_CREATION.md`
+- GitHub Projects: `@.ai-context/shared/workflows/GITHUB_PROJECTS.md`
+
+**Developer Profile** (for career/context reference):
+- `@.ai-context/shared/developer/YOSHIHIRO_NAKAHARA_PROFILE.md`
+
+**Analytics** (SEO tracking across all projects):
+- `@.ai-context/shared/analytics/SEO_Keywords_Tracking.md`
+
+**Insights** (optional reading):
+- `@.ai-context/shared/insights/` - Various architectural and development insights
+
+---
+
+## Submodule Management
+
+The `shared/` directory is a Git submodule pointing to:
+https://github.com/BonoJovi/ai-context-shared
+
+**Update shared context**:
+```bash
+git submodule update --remote
+```
+
+---
+
+**Performance Note**: This configuration loads minimal context at session startup. Load other contexts only when needed.

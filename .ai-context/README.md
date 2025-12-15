@@ -1,8 +1,10 @@
 # AI Context Directory
 
-**Last Updated**: 2025-12-03 04:41 JST  
-**Project**: KakeiBon (Personal Finance Manager)  
-**Purpose**: Hierarchical AI context for efficient information retrieval
+**Last Updated**: 2025-12-15 JST
+**Project**: KakeiBon (Personal Finance Manager)
+**Purpose**: Hierarchical AI context with shared submodule
+**Keywords**: AI context, AIコンテキスト, context directory, コンテキストディレクトリ, hierarchical structure, 階層構造, documentation, ドキュメント, KakeiBon, 家計簿, personal finance, 家計管理, Tauri, Rust, project overview, プロジェクト概要, file organization, ファイル構成, submodule, サブモジュール
+**Related**: @core/QUICK_REFERENCE.md, @shared/methodology/DESIGN_PHILOSOPHY.md, @development/CONVENTIONS.md
 
 ---
 
@@ -10,122 +12,110 @@
 
 ```
 .ai-context/
-├── README.md                          # This file
+├── core/               # [Tier 1] Always load (project status)
+│   └── QUICK_REFERENCE.md
 │
-├── core/                              # [Always Load] Critical context
-│   ├── QUICK_REFERENCE.md            # Fast lookup, current status
-│   └── DESIGN_PHILOSOPHY.md          # Core design principles
+├── development/        # [Tier 2] Project-specific coding
+│   ├── CONVENTIONS.md
+│   └── TESTING_STRATEGY.md
 │
-├── development/                       # [When Coding] Development practices
-│   ├── METHODOLOGY.md                # AI collaboration methodology
-│   ├── CONVENTIONS.md                # Coding standards
-│   └── TESTING_STRATEGY.md           # TDD strategies
+├── architecture/       # [Tier 2] Project-specific design
+│   ├── PROJECT_STRUCTURE.md
+│   └── TAURI_DEVELOPMENT.md
 │
-├── architecture/                      # [When Designing] System design
-│   ├── PROJECT_STRUCTURE.md          # Module organization
-│   └── TAURI_DEVELOPMENT.md          # Tauri framework specifics
+├── workflows/          # [Tier 2] Project-specific workflows
+│   └── I18N_MANAGEMENT.md
 │
-└── workflows/                         # [When Managing] Project workflows
-    ├── GITHUB_PROJECTS.md            # Issue & feature tracking
-    └── I18N_MANAGEMENT.md            # Localization management
+├── shared/             # [Submodule] Shared across projects
+│   ├── developer/
+│   │   └── YOSHIHIRO_NAKAHARA_PROFILE.md
+│   ├── analytics/
+│   │   └── SEO_Keywords_Tracking.md
+│   ├── methodology/
+│   │   ├── AI_COLLABORATION.md
+│   │   ├── DESIGN_PHILOSOPHY.md
+│   │   └── SCALE_ARCHITECTURE.md
+│   ├── insights/
+│   │   └── ... (9 insight documents)
+│   └── workflows/
+│       ├── DOCUMENTATION_CREATION.md
+│       └── GITHUB_PROJECTS.md
+│
+└── README.md
 ```
 
 ---
 
-## Usage Guidelines for AI
+## Shared Submodule
 
-### When Starting a Session
-**Always read**:
-- `core/QUICK_REFERENCE.md` - Current phase status, critical decisions
-- `core/DESIGN_PHILOSOPHY.md` - Design principles, security architecture
+The `shared/` directory is a Git submodule pointing to:
+**https://github.com/BonoJovi/ai-context-shared**
 
-### When Implementing Code
-**Read**:
-- `development/METHODOLOGY.md` - AI collaboration patterns
-- `development/CONVENTIONS.md` - Coding standards (Rust, JS, validation rules)
-- `development/TESTING_STRATEGY.md` - Testing approach
+### Why Submodule?
 
-### When Making Design Decisions
-**Read**:
-- `architecture/PROJECT_STRUCTURE.md` - Module responsibilities
-- `architecture/TAURI_DEVELOPMENT.md` - Framework constraints
+- **Single source of truth**: Common files managed in one place
+- **Cross-project consistency**: KakeiBonByRust and Promps share the same context
+- **Easy updates**: `git submodule update --remote` syncs all projects
 
-### When Managing Tasks
-**Read**:
-- `workflows/GITHUB_PROJECTS.md` - Issue tracking guidelines
-- `workflows/I18N_MANAGEMENT.md` - Translation workflows
+### Submodule Commands
 
----
+```bash
+# Update to latest shared context
+git submodule update --remote
 
-## File Priority Reference
+# Clone project with submodules
+git clone --recurse-submodules <repo-url>
 
-| File | Category | Priority | Description |
-|------|----------|----------|-------------|
-| QUICK_REFERENCE.md | Core | **High** | Current status, version, phase |
-| DESIGN_PHILOSOPHY.md | Core | **High** | Security-first design |
-| METHODOLOGY.md | Development | Medium | AI collaboration patterns |
-| CONVENTIONS.md | Development | Medium | Code style, validation rules |
-| TESTING_STRATEGY.md | Development | Medium | Test architecture |
-| PROJECT_STRUCTURE.md | Architecture | Low | Module organization |
-| TAURI_DEVELOPMENT.md | Architecture | Low | Tauri specifics |
-| GITHUB_PROJECTS.md | Workflow | Low | Task management |
-| I18N_MANAGEMENT.md | Workflow | Low | i18n workflows |
+# Initialize submodules after clone
+git submodule init && git submodule update
+```
 
 ---
 
-## Design Rationale
+## Usage by Task
 
-### Why Hierarchical Structure?
-
-1. **Token Efficiency**: Load only necessary context for current task
-2. **Scalability**: Easy to add new documentation as project grows
-3. **Maintainability**: Clear separation of concerns
-4. **Discoverability**: Intuitive categorization for AI navigation
-
-### Priority Levels
-
-- **High**: Core context, always relevant
-- **Medium**: Development context, frequently needed when coding
-- **Low**: Specialized context, needed for specific tasks
+| Task | Load Files |
+|------|-----------|
+| **Session Start** | `core/QUICK_REFERENCE.md` |
+| **Coding** | + `development/CONVENTIONS.md`, `development/TESTING_STRATEGY.md` |
+| **Design** | + `architecture/PROJECT_STRUCTURE.md`, `architecture/TAURI_DEVELOPMENT.md` |
+| **Project Mgmt** | + `shared/workflows/GITHUB_PROJECTS.md`, `workflows/I18N_MANAGEMENT.md` |
+| **Methodology** | + `shared/methodology/AI_COLLABORATION.md`, `shared/methodology/DESIGN_PHILOSOPHY.md` |
 
 ---
 
-## Maintenance Policy
+## Keyword Search System
 
-### When to Update
+All files include searchable keywords (English/Japanese) for better discoverability.
 
-- **core/**: When fundamental design decisions or project phase changes
-- **development/**: When coding patterns or methodologies evolve
-- **architecture/**: When module structure or framework integration changes
-- **workflows/**: When project management practices change
-
-### File Size Guidelines
-
-- **core/**: Keep QUICK_REFERENCE concise (< 200 lines)
-- **development/**: Split if exceeds 2,000 lines
-- **architecture/**: Split by subsystem if needed
-- **workflows/**: One file per workflow type
+**Examples**:
+- Status: `version`, `バージョン`, `current status`, `現在の状態`
+- Security: `Argon2`, `AES-256-GCM`, `encryption`, `暗号化`
+- Testing: `TDD`, `テスト`, `cargo test`, `unit tests`
+- i18n: `internationalization`, `国際化`, `translation`, `翻訳`
 
 ---
 
-## GitHub Copilot CLI Integration
+## Project Highlights
 
-**Automatic Loading**: GitHub Copilot CLI automatically loads contexts referenced in `.github/copilot-instructions.md` at the root of the repository.
-
-**No Manual Initialization Required**: The hierarchical structure is transparent to Copilot CLI.
-
----
-
-## Project-Specific Notes
-
-### KakeiBon Context Highlights
-
-- **Security Focus**: Argon2 password hashing, AES-256-GCM encryption
-- **Bilingual**: All user-facing content in Japanese and English
-- **Test Coverage**: 201+ tests (Rust backend comprehensive, frontend manual)
-- **Current Version**: v1.0.1
-- **Framework**: Tauri v2 (Rust + HTML/CSS/JS)
+- **Security**: Argon2 + AES-256-GCM encryption
+- **Bilingual**: Japanese & English (全機能日英対応)
+- **Version**: v1.0.1 (201+ backend tests)
+- **Stack**: Tauri v2 + Rust + Vanilla JS
 
 ---
 
-**This structure ensures AI assistants can efficiently access the right information at the right time.**
+## Migration Notes
+
+### 2025-12-15 - Submodule Migration
+- Created `ai-context-shared` repository
+- Moved common files to shared submodule:
+  - developer/, analytics/
+  - core/DESIGN_PHILOSOPHY.md → shared/methodology/
+  - development/METHODOLOGY.md → shared/methodology/AI_COLLABORATION.md
+  - workflows/DOCUMENTATION_CREATION.md, GITHUB_PROJECTS.md → shared/workflows/
+- Project-specific files remain in place
+
+---
+
+**GitHub Copilot CLI automatically loads this context via `.github/copilot-instructions.md`.**

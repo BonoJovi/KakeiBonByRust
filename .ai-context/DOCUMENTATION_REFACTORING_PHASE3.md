@@ -1,7 +1,11 @@
 # Phase 3: API Documentation Structure Refactoring
 
 **Created**: 2025-12-04 18:00 JST  
-**Status**: Proposal
+**Last Updated**: 2025-12-11 03:48 JST  
+**Status**: Proposal  
+**Purpose**: Proposal for restructuring API documentation to optimize the overall documentation structure  
+**Keywords**: documentation refactoring, ドキュメントリファクタリング, API documentation, APIドキュメント, structure optimization, 構造最適化, Phase 3, フェーズ3, API_REFERENCE.md, documentation structure, ドキュメント構造, refactoring proposal, リファクタリング提案, API organization, API構成, developer documentation, 開発者ドキュメント, restructuring, 再構築  
+**Related**: @workflows/DOCUMENTATION_CREATION.md, @core/QUICK_REFERENCE.md, @architecture/PROJECT_STRUCTURE.md
 
 ## 目的
 

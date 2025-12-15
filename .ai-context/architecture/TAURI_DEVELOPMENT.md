@@ -1,5 +1,10 @@
 # Tauri開発環境について
 
+**Last Updated**: 2025-12-11 03:48 JST  
+**Purpose**: Important Tauri-specific development guidelines and constraints  
+**Keywords**: Tauri, Tauriアプリ, desktop application, デスクトップアプリケーション, development mode, 開発モード, cargo tauri dev, hot reload, ホットリロード, no browser reload, ブラウザリロード不可, app restart, アプリ再起動, WebView, developer tools, 開発者ツール, debugging, デバッグ, frontend changes, フロントエンド変更, backend changes, バックエンド変更, Rust recompile, Rust再コンパイル, limitations, 制限事項  
+**Related**: @architecture/PROJECT_STRUCTURE.md, @core/QUICK_REFERENCE.md, @development/CONVENTIONS.md
+
 ## 重要な注意事項
 
 ### アプリの種類
