@@ -224,10 +224,10 @@ Development is progressing smoothly, and we strive to update daily!
 
 | Metric | Count |
 |--------|-------|
-| 👁️ **Total Views** / 総閲覧数 | **1,041** |
-| 📦 **Total Clones** / 総クローン数 | **763** |
+| 👁️ **Total Views** / 総閲覧数 | **558** |
+| 📦 **Total Clones** / 総クローン数 | **486** |
 
-*Last Updated / 最終更新: 2025-12-17 01:37 UTC*
+*Last Updated / 最終更新: 2025-12-18 01:37 UTC*
 
 </div>
 <!-- STATS_END -->
