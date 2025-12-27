@@ -1,13 +1,8 @@
 {
   "views": [
     {
-      "timestamp": "2025-12-12T00:00:00Z",
-      "count": 8,
-      "uniques": 1
-    },
-    {
       "timestamp": "2025-12-13T00:00:00Z",
-      "count": 6,
+      "count": 5,
       "uniques": 2
     },
     {
@@ -64,13 +59,18 @@
       "timestamp": "2025-12-25T00:00:00Z",
       "count": 11,
       "uniques": 1
+    },
+    {
+      "timestamp": "2025-12-26T00:00:00Z",
+      "count": 10,
+      "uniques": 2
     }
   ],
   "clones": [
     {
       "timestamp": "2025-12-13T00:00:00Z",
-      "count": 11,
-      "uniques": 3
+      "count": 5,
+      "uniques": 2
     },
     {
       "timestamp": "2025-12-14T00:00:00Z",
@@ -131,9 +131,14 @@
       "timestamp": "2025-12-25T00:00:00Z",
       "count": 11,
       "uniques": 4
+    },
+    {
+      "timestamp": "2025-12-26T00:00:00Z",
+      "count": 10,
+      "uniques": 4
     }
   ],
-  "total_views": 64,
-  "total_clones": 149,
-  "last_updated": "2025-12-26T01:38:08.611582"
+  "total_views": 65,
+  "total_clones": 153,
+  "last_updated": "2025-12-27T01:37:42.124301"
 }
