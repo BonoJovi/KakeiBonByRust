@@ -8,10 +8,11 @@
 
 ## 📊 Executive Summary / エグゼクティブサマリー
 
+KakeiBon was developed with **100% AI-assisted development**, achieving compared to traditional development:
 KakeiBonは**100% AI支援開発**により、従来開発と比較して：
-- ⚡ **開発速度**: 約**5-10倍**の生産性
-- 🏆 **品質レベル**: **エンタープライズグレード**達成
-- 💰 **コスト効率**: 従来の**10-20%**のコスト
+- ⚡ **Development Speed / 開発速度**: Approx. **5-10x** productivity / 約**5-10倍**の生産性
+- 🏆 **Quality Level / 品質レベル**: **Enterprise-grade** achieved / **エンタープライズグレード**達成
+- 💰 **Cost Efficiency / コスト効率**: **10-20%** of traditional cost / 従来の**10-20%**のコスト
 
 ---
 
@@ -161,6 +162,7 @@ KakeiBonは**100% AI支援開発**により、従来開発と比較して：
 
 ### Actual Cost Breakdown / 実際のコスト内訳
 
+Actual development cost for KakeiBon (39 days):
 KakeiBonの実際の開発コスト（39日間）:
 
 | Item / 項目 | Cost / コスト | Note / 備考 |
@@ -243,6 +245,7 @@ KakeiBonの実際の開発コスト（39日間）:
 
 ## 📝 Conclusion / 結論
 
+KakeiBon is a proven example of **achieving enterprise-grade quality at 1/10 the cost and time through AI-assisted development**.
 KakeiBonは、**AI支援開発により、従来の1/10のコスト・時間でエンタープライズグレードの品質を達成**した実証例です。
 
 ### Key Takeaways / 重要ポイント
