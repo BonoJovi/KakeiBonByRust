@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Dashboard - KakeiBon</title>
+        <link rel="stylesheet" href="css/menu.css" />
+        <link rel="stylesheet" href="css/indicators.css" />
+        <link rel="stylesheet" href="css/dashboard.css" />
+        <script type="importmap">
+        {
+            "imports": {
+                "@tauri-apps/api/core": "https://esm.sh/@tauri-apps/api@2/core",
+                "chart.js": "https://esm.sh/chart.js@4/auto"
+            }
+        }
+        </script>
+    </head>
+    <body>
+        <div id="menu-bar"></div>
+
+        <div id="main-content">
+            <div class="dashboard-container">
+                <h1 data-i18n="dashboard.title">Dashboard</h1>
+
+                <!-- Filter Section -->
+                <div class="section filter-section">
+                    <div class="section-header collapsible-header" id="filter-header">
+                        <h2 data-i18n="dashboard.filter">Filter</h2>
+                        <button id="toggle-filter-btn" class="toggle-btn" aria-label="Toggle filter">▲</button>
+                    </div>
+                    <div class="filter-form" id="filter-form-content">
+                        <div class="filter-row">
+                            <div class="form-group">
+                                <label for="year" data-i18n="dashboard.year">Year:</label>
+                                <div class="input-with-spinner">
+                                    <input type="number" id="year" name="year" min="1900" max="2100" />
+                                    <div class="spinner-buttons">
+                                        <button type="button" class="spinner-btn spinner-down" id="year-down">◀</button>
+                                        <button type="button" class="spinner-btn spinner-up" id="year-up">▶</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="month" data-i18n="dashboard.month">Month:</label>
+                                <div class="input-wrapper">
+                                    <select id="month" name="month">
+                                        <option value="1">1</option>
+                                        <option value="2">2</option>
+                                        <option value="3">3</option>
+                                        <option value="4">4</option>
+                                        <option value="5">5</option>
+                                        <option value="6">6</option>
+                                        <option value="7">7</option>
+                                        <option value="8">8</option>
+                                        <option value="9">9</option>
+                                        <option value="10">10</option>
+                                        <option value="11">11</option>
+                                        <option value="12">12</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="trend-months" data-i18n="dashboard.trend_months">Aggregation Period:</label>
+                                <div class="input-wrapper">
+                                    <select id="trend-months" name="trend-months">
+                                        <option value="3">3</option>
+                                        <option value="6" selected>6</option>
+                                        <option value="12">12</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="filter-actions">
+                            <button id="execute-btn" class="btn-primary" data-i18n="dashboard.execute">Execute</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Grid -->
+                <div class="dashboard-grid">
+                    <!-- Pie Chart: Expense by Category -->
+                    <div class="chart-card" id="expense-pie-card">
+                        <h3 data-i18n="dashboard.expense_by_category">Expense by Category</h3>
+                        <div class="chart-wrapper">
+                            <canvas id="expense-pie-chart"></canvas>
+                        </div>
+                        <div id="expense-pie-no-data" class="no-data-message hidden" data-i18n="dashboard.no_data">No data available</div>
+                    </div>
+
+                    <!-- Bar Chart: Category Comparison -->
+                    <div class="chart-card" id="category-bar-card">
+                        <h3 data-i18n="dashboard.category_comparison">Category Comparison</h3>
+                        <div class="chart-wrapper">
+                            <canvas id="category-bar-chart"></canvas>
+                        </div>
+                        <div id="category-bar-no-data" class="no-data-message hidden" data-i18n="dashboard.no_data">No data available</div>
+                    </div>
+
+                    <!-- Line Chart: Monthly Trend -->
+                    <div class="chart-card chart-card-wide" id="monthly-trend-card">
+                        <h3 data-i18n="dashboard.monthly_trend">Monthly Trend</h3>
+                        <div class="chart-wrapper chart-wrapper-wide">
+                            <canvas id="monthly-trend-chart"></canvas>
+                        </div>
+                        <div id="monthly-trend-no-data" class="no-data-message hidden" data-i18n="dashboard.no_data">No data available</div>
+                    </div>
+                </div>
+
+                <div id="dashboard-message" class="message"></div>
+            </div>
+        </div>
+
+        <!-- Font Size Modal -->
+        <div id="font-size-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 data-i18n="font_size.modal_title">Font Size Settings</h2>
+                    <button class="close-btn" id="font-size-modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="font-size-preset" data-i18n="font_size.preset">Preset:</label>
+                        <div class="input-wrapper">
+                            <select id="font-size-preset">
+                                <option value="small" data-i18n="font_size.small">小</option>
+                                <option value="medium" data-i18n="font_size.medium" selected>中</option>
+                                <option value="large" data-i18n="font_size.large">大</option>
+                                <option value="custom" data-i18n="font_size.custom">カスタム</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="font-size-percent" data-i18n="font_size.percentage">Percentage:</label>
+                        <div class="input-with-spinner">
+                            <input type="number" id="font-size-percent" min="50" max="200" step="5" value="100" />
+                            <div class="spinner-buttons">
+                                <button type="button" class="spinner-btn spinner-down">◀</button>
+                                <button type="button" class="spinner-btn spinner-up">▶</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" id="font-size-cancel" data-i18n="common.cancel">キャンセル</button>
+                    <button type="button" class="btn-primary" id="font-size-apply" data-i18n="common.apply">変更</button>
+                </div>
+            </div>
+        </div>
+
+        <script type="module" src="js/i18n.js"></script>
+        <script type="module" src="js/dashboard.js"></script>
+    </body>
+</html>

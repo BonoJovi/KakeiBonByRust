@@ -64,6 +64,8 @@ export function createMenuBar(pageType = 'management') {
                 <div class="dropdown-item has-submenu">
                     <span data-i18n="menu.reports">Reports</span>
                     <div class="submenu">
+                        <div class="dropdown-item" data-i18n="menu.dashboard">Dashboard</div>
+                        <div class="dropdown-separator"></div>
                         <div class="dropdown-item" data-i18n="menu.aggregation_daily">Daily Aggregation</div>
                         <div class="dropdown-item" data-i18n="menu.aggregation_weekly">Weekly Aggregation</div>
                         <div class="dropdown-item" data-i18n="menu.aggregation">Monthly Aggregation</div>
@@ -105,8 +107,19 @@ import { HTML_FILES } from './html-files.js';
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('DOM loaded');
 
-    // Create menu bar dynamically for index page
-    createMenuBar('index');
+    // Check if we're on the index page (index.html has login-form element)
+    const loginFormContainer = document.getElementById('login-form');
+    const isIndexPage = !!loginFormContainer;
+    console.log('isIndexPage:', isIndexPage);
+
+    // Only create menu bar on index.html
+    // Other pages (dashboard, management) create their own menu bar before this runs
+    if (isIndexPage) {
+        console.log('Creating menu bar for index page');
+        createMenuBar('index');
+    } else {
+        console.log('Not on index page, skipping menu bar creation');
+    }
 
     // Initialize i18n
     await i18n.init();
@@ -133,9 +146,11 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     // Setup custom validation messages
     setupCustomValidationMessages();
-    
-    // Check if initial setup is needed
-    checkSetupNeeded();
+
+    // Check if initial setup is needed (only on index page)
+    if (isIndexPage) {
+        checkSetupNeeded();
+    }
     
     const fileMenu = document.getElementById('file-menu');
     const fileDropdown = document.getElementById('file-dropdown');
@@ -201,31 +216,34 @@ document.addEventListener('DOMContentLoaded', async function() {
             console.log('Global click handler already registered, skipping');
         }
         
-        // Add event listeners to dropdown items
-        const loginItem = fileDropdown.querySelector('.dropdown-item:nth-child(1)');
-        const logoutItem = fileDropdown.querySelector('.dropdown-item:nth-child(2)');
-        const quitItem = fileDropdown.querySelector('.dropdown-item:nth-child(4)');
-        
-        if (loginItem) {
-            loginItem.addEventListener('click', function(e) {
-                console.log('Login item clicked');
-                handleLoginMenu();
-                fileDropdown.classList.remove('show');
-            });
-        }
-        if (logoutItem) {
-            logoutItem.addEventListener('click', function(e) {
-                console.log('Logout item clicked');
-                handleLogout();
-                fileDropdown.classList.remove('show');
-            });
-        }
-        if (quitItem) {
-            quitItem.addEventListener('click', function(e) {
-                console.log('Quit item clicked');
-                handleQuit();
-                fileDropdown.classList.remove('show');
-            });
+        // Add event listeners to dropdown items (only for index page)
+        // Other pages (dashboard, management) handle their own file menu handlers
+        if (isIndexPage) {
+            const loginItem = fileDropdown.querySelector('.dropdown-item:nth-child(1)');
+            const logoutItem = fileDropdown.querySelector('.dropdown-item:nth-child(2)');
+            const quitItem = fileDropdown.querySelector('.dropdown-item:nth-child(4)');
+
+            if (loginItem) {
+                loginItem.addEventListener('click', function(e) {
+                    console.log('Login item clicked');
+                    handleLoginMenu();
+                    fileDropdown.classList.remove('show');
+                });
+            }
+            if (logoutItem) {
+                logoutItem.addEventListener('click', function(e) {
+                    console.log('Logout item clicked');
+                    handleLogout();
+                    fileDropdown.classList.remove('show');
+                });
+            }
+            if (quitItem) {
+                quitItem.addEventListener('click', function(e) {
+                    console.log('Quit item clicked');
+                    handleQuit();
+                    fileDropdown.classList.remove('show');
+                });
+            }
         }
     } else {
         console.error('Elements not found!');
@@ -337,46 +355,55 @@ document.addEventListener('DOMContentLoaded', async function() {
         const reportsSubmenu = adminDropdown.querySelector('.has-submenu:last-child .submenu');
         if (reportsSubmenu) {
             const reportItems = reportsSubmenu.querySelectorAll('.dropdown-item');
-            
-            // Daily Aggregation
+
+            // Dashboard
             if (reportItems[0]) {
                 reportItems[0].addEventListener('click', function(e) {
+                    console.log('Dashboard item clicked');
+                    window.location.href = HTML_FILES.DASHBOARD;
+                    adminDropdown.classList.remove('show');
+                });
+            }
+
+            // Daily Aggregation
+            if (reportItems[1]) {
+                reportItems[1].addEventListener('click', function(e) {
                     console.log('Daily Aggregation item clicked');
                     window.location.href = HTML_FILES.AGGREGATION_DAILY;
                     adminDropdown.classList.remove('show');
                 });
             }
-            
+
             // Weekly Aggregation
-            if (reportItems[1]) {
-                reportItems[1].addEventListener('click', function(e) {
+            if (reportItems[2]) {
+                reportItems[2].addEventListener('click', function(e) {
                     console.log('Weekly Aggregation item clicked');
                     window.location.href = HTML_FILES.AGGREGATION_WEEKLY;
                     adminDropdown.classList.remove('show');
                 });
             }
-            
+
             // Monthly Aggregation
-            if (reportItems[2]) {
-                reportItems[2].addEventListener('click', function(e) {
+            if (reportItems[3]) {
+                reportItems[3].addEventListener('click', function(e) {
                     console.log('Monthly Aggregation item clicked');
                     window.location.href = HTML_FILES.AGGREGATION;
                     adminDropdown.classList.remove('show');
                 });
             }
-            
+
             // Yearly Aggregation
-            if (reportItems[3]) {
-                reportItems[3].addEventListener('click', function(e) {
+            if (reportItems[4]) {
+                reportItems[4].addEventListener('click', function(e) {
                     console.log('Yearly Aggregation item clicked');
                     window.location.href = HTML_FILES.AGGREGATION_YEARLY;
                     adminDropdown.classList.remove('show');
                 });
             }
-            
+
             // Period Aggregation
-            if (reportItems[4]) {
-                reportItems[4].addEventListener('click', function(e) {
+            if (reportItems[5]) {
+                reportItems[5].addEventListener('click', function(e) {
                     console.log('Period Aggregation item clicked');
                     window.location.href = HTML_FILES.AGGREGATION_PERIOD;
                     adminDropdown.classList.remove('show');
@@ -481,45 +508,47 @@ function setupLanguageMenuHandlers() {
 
 async function setupLanguageMenu() {
     try {
-        // Get language names (localized in current language) as array of [code, name]
-        const languageNames = await invoke('get_language_names');
-        console.log('Available languages:', languageNames);
-        
+        // Fixed language labels (not localized, so users can always understand)
+        const languages = [
+            { code: 'en', label: 'English' },
+            { code: 'ja', label: '日本語' }
+        ];
+
         // Get current language
         const currentLang = i18n.getCurrentLanguage();
-        
+
         // Get dropdown container
         const languageDropdown = document.getElementById('language-dropdown');
-        
+
         if (!languageDropdown) {
             console.error('Language dropdown not found');
             return;
         }
-        
+
         // Clear existing items only (not event listeners on parent)
         languageDropdown.innerHTML = '';
-        
-        // Add language items - languageNames is already sorted
-        for (const [langCode, langName] of languageNames) {
+
+        // Add language items with fixed labels
+        for (const lang of languages) {
             const item = document.createElement('div');
             item.className = 'dropdown-item';
-            item.textContent = langName;
-            item.dataset.langCode = langCode;
-            
+            item.textContent = lang.label;
+            item.dataset.langCode = lang.code;
+
             // Mark current language with active class (shows filled circle)
-            if (langCode === currentLang) {
+            if (lang.code === currentLang) {
                 item.classList.add('active');
             }
-            
+
             item.addEventListener('click', async function(e) {
                 e.stopPropagation();
-                await handleLanguageChange(langCode);
+                await handleLanguageChange(lang.code);
                 languageDropdown.classList.remove('show');
             });
-            
+
             languageDropdown.appendChild(item);
         }
-        
+
     } catch (error) {
         console.error('Failed to setup language menu:', error);
     }

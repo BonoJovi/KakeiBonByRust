@@ -99,4 +99,8 @@ VALUES
 (1123, 'transaction_mgmt.save_before_details', 'en', 'Please save the transaction before managing details', 'transaction_mgmt', 'Save before details message', datetime('now')),
 (1124, 'transaction_mgmt.save_before_details', 'ja', '明細管理の前に入出金を保存してください', 'transaction_mgmt', '明細管理前保存メッセージ', datetime('now')),
 (1125, 'transaction_mgmt.delete_error', 'en', 'Failed to delete transaction', 'transaction_mgmt', 'Delete error message', datetime('now')),
-(1126, 'transaction_mgmt.delete_error', 'ja', '入出金の削除に失敗しました', 'transaction_mgmt', '削除失敗メッセージ', datetime('now'));
+(1126, 'transaction_mgmt.delete_error', 'ja', '入出金の削除に失敗しました', 'transaction_mgmt', '削除失敗メッセージ', datetime('now')),
+
+-- Access control
+(1127, 'transaction.admin_access_denied', 'en', 'Transaction management is not available for administrator accounts. Please login as a regular user.', 'transaction_mgmt', 'Admin access denied message', datetime('now')),
+(1128, 'transaction.admin_access_denied', 'ja', '入出金管理は管理者アカウントでは利用できません。一般ユーザーでログインしてください。', 'transaction_mgmt', '管理者アクセス拒否メッセージ', datetime('now'));
