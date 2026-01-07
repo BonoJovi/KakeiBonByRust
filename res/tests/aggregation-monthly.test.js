@@ -123,12 +123,15 @@ describe('Monthly Aggregation Tests', () => {
 
     describe('Month Selection', () => {
         it('should accept valid month (1-12)', async () => {
+            // Use a past year to avoid "future date" validation errors
+            setInputValue('#year', '2024');
+
             for (let month = 1; month <= 12; month++) {
                 setInputValue('#month', month.toString());
                 clickButton('#execute-btn');
-                
+
                 await waitFor(50);
-                
+
                 const errorMsg = document.querySelector('.message.error');
                 expect(errorMsg === null || !isVisible(".message.error")).toBe(true);
             }
