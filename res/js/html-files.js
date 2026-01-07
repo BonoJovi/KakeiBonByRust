@@ -15,5 +15,6 @@ export const HTML_FILES = {
     AGGREGATION_DAILY: 'aggregation-daily.html',
     AGGREGATION_WEEKLY: 'aggregation-weekly.html',
     AGGREGATION_YEARLY: 'aggregation-yearly.html',
-    AGGREGATION_PERIOD: 'aggregation-period.html'
+    AGGREGATION_PERIOD: 'aggregation-period.html',
+    DASHBOARD: 'dashboard.html'
 };

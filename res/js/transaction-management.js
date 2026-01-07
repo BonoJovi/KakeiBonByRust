@@ -51,11 +51,19 @@ document.addEventListener('DOMContentLoaded', async function() {
         currentUserId = user.user_id;
         currentUserRole = user.role;
         console.log(`Logged in as: ${user.name} (ID: ${currentUserId}, Role: ${currentUserRole})`);
-        
+
         // Initialize i18n
         await i18n.init();
         i18n.updateUI();
-        
+
+        // Check if user is admin - admin cannot access transaction management
+        if (currentUserRole === ROLE_ADMIN) {
+            console.log('Admin user detected, transaction management access denied');
+            alert(i18n.t('transaction.admin_access_denied') || 'Transaction management is not available for administrator accounts. Please login as a regular user.');
+            window.location.href = HTML_FILES.INDEX;
+            return;
+        }
+
         // Setup menu handlers
         setupMenuHandlers();
         
