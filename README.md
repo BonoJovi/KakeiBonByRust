@@ -25,9 +25,9 @@
 いつもKakeiBonに気を留めていただき、誠にありがとうございます。
 プロジェクト発案者のBonoJovi(Yoshihiro NAKAHARA)です。
 
-**Ver.1.0.9を正式リリースいたしました！**
+**Ver.1.1.0を正式リリースいたしました！**
 
-Ver.1.0.1からVer.1.0.9への継続的なバージョンアップでは、CI/CDパイプラインの導入により、Windows/macOS/Linux向けのマルチプラットフォーム対応とリリース自動化を実現しました。v1.0.8ではテストドキュメントの大幅な整理を行い、v1.0.9では集計機能のテスト安定性を向上させました。この大規模な開発基盤の整備により、プロジェクトの開発効率が劇的に向上し、今後の継続的な機能改善とリリースがスムーズに行えるようになりました。
+Ver.1.0.1からVer.1.1.0への継続的なバージョンアップでは、CI/CDパイプラインの導入により、Windows/macOS/Linux向けのマルチプラットフォーム対応とリリース自動化を実現しました。v1.0.8ではテストドキュメントの大幅な整理を行い、v1.0.9では集計機能のテスト安定性を向上させ、v1.1.0ではChart.jsを活用したダッシュボード機能を追加しました。この大規模な開発基盤の整備により、プロジェクトの開発効率が劇的に向上し、今後の継続的な機能改善とリリースがスムーズに行えるようになりました。
 
 また、最新バージョンでは、依存ライブラリのセキュリティパッチを適用し、より安全な環境でご利用いただけるよう対策を行っております。
 
@@ -37,12 +37,14 @@ Ver.1.0.1からVer.1.0.9への継続的なバージョンアップでは、CI/CD
 現在ご覧いただいているdevブランチは開発版となり、次期バージョンの機能を開発中です。
 最新の機能をいち早く試してみたい方は、こちらのdevブランチをお使いください。
 
-今後は集計・レポート機能の実装を進めていく予定です。細々した機能も追々実装していきますので、機能拡張にご期待いただければと思います。
+**【devブランチ最新情報】** Chart.jsを活用したダッシュボード機能を追加しました！月次・年次の収支データをビジュアルに確認できるようになりました。
+
+今後も引き続き集計・レポート機能の拡充を進めていく予定です。細々した機能も追々実装していきますので、機能拡張にご期待いただければと思います。
 GitHubのissueやeメールでのメッセージも受け付けていますので、応援メッセージや将来的に実装してほしい機能など、ちょっとしたことでも良いのでご連絡いただければ幸いです。
 
 それでは、引き続きKakeiBonをご愛顧頂ますよう、お願い申し上げます。
 
-**2025-12-07 (JST) Written by Yoshihiro NAKAHARA**
+**2026-01-08 (JST) Written by Yoshihiro NAKAHARA**
 
 ---
 
@@ -51,9 +53,9 @@ GitHubのissueやeメールでのメッセージも受け付けていますの�
 Thank you for your continued interest in KakeiBon.
 I'm BonoJovi (Yoshihiro NAKAHARA), the project initiator.
 
-**We have officially released Ver.1.0.9!**
+**We have officially released Ver.1.1.0!**
 
-The continuous version updates from Ver.1.0.1 to Ver.1.0.9 reflect the significant impact of introducing a CI/CD pipeline, enabling multi-platform support (Windows/macOS/Linux) and automated releases. In v1.0.8, we performed major test documentation refactoring, and in v1.0.9, we improved aggregation feature test stability. This large-scale infrastructure improvement has dramatically enhanced development efficiency and enables smooth continuous feature improvements and releases going forward.
+The continuous version updates from Ver.1.0.1 to Ver.1.1.0 reflect the significant impact of introducing a CI/CD pipeline, enabling multi-platform support (Windows/macOS/Linux) and automated releases. In v1.0.8, we performed major test documentation refactoring, v1.0.9 improved aggregation feature test stability, and v1.1.0 adds a Dashboard feature powered by Chart.js. This large-scale infrastructure improvement has dramatically enhanced development efficiency and enables smooth continuous feature improvements and releases going forward.
 
 Additionally, the latest version includes security patches for dependent libraries, ensuring a safer environment for your use.
 
@@ -63,12 +65,14 @@ If you would like to use the stable release version, please refer to the [main b
 The dev branch you are currently viewing is the development version, where we are working on features for the next release.
 If you want to try the latest features early, please use this dev branch.
 
-We plan to proceed with implementing aggregation and reporting features next. We will continue to add various features incrementally, so please look forward to continuous enhancements.
+**[Dev Branch Latest]** We've added a Dashboard feature powered by Chart.js! You can now visualize your monthly and yearly income/expense data with interactive charts.
+
+We will continue to enhance the aggregation and reporting features. We will continue to add various features incrementally, so please look forward to continuous enhancements.
 We welcome messages via GitHub issues or email, whether it's words of encouragement or suggestions for features you'd like to see in the future—any feedback is appreciated.
 
 Thank you for your continued support of KakeiBon.
 
-**2025-12-07 (JST) Written by Yoshihiro NAKAHARA**
+**2026-01-08 (JST) Written by Yoshihiro NAKAHARA**
 
 </div>
 
@@ -200,7 +204,7 @@ Development is progressing smoothly, and we strive to update daily!
 開発は順調に進んでおり、できるだけ日々更新するようにしています！
 
 **Project Started / プロジェクト開始**: 2025-10-22 (JST)
-**Last Updated / 最終更新**: 2025-12-07 (JST)
+**Last Updated / 最終更新**: 2026-01-08 (JST)
 
 > **🤖 AI-Assisted Development / AI支援開発**  
 > This project's source code and documentation are **100% generated** with the assistance of generative AI (GitHub Copilot, Claude), supervised and reviewed by the developer. This demonstrates the potential of AI-assisted development.  
@@ -224,10 +228,10 @@ Development is progressing smoothly, and we strive to update daily!
 
 | Metric | Count |
 |--------|-------|
-| 👁️ **Total Views** / 総閲覧数 | **1,156** |
-| 📦 **Total Clones** / 総クローン数 | **909** |
+| 👁️ **Total Views** / 総閲覧数 | **115** |
+| 📦 **Total Clones** / 総クローン数 | **190** |
 
-*Last Updated / 最終更新: 2025-12-07 01:37 UTC*
+*Last Updated / 最終更新: 2026-01-08 01:37 UTC*
 
 </div>
 <!-- STATS_END -->
