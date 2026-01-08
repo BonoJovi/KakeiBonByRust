@@ -25,9 +25,9 @@
 いつもKakeiBonに気を留めていただき、誠にありがとうございます。
 プロジェクト発案者のBonoJovi(Yoshihiro NAKAHARA)です。
 
-**Ver.1.0.9を正式リリースいたしました！**
+**Ver.1.1.0を正式リリースいたしました！**
 
-Ver.1.0.1からVer.1.0.9への継続的なバージョンアップでは、CI/CDパイプラインの導入により、Windows/macOS/Linux向けのマルチプラットフォーム対応とリリース自動化を実現しました。v1.0.8ではテストドキュメントの大幅な整理を行い、v1.0.9では集計機能のテスト安定性を向上させました。この大規模な開発基盤の整備により、プロジェクトの開発効率が劇的に向上し、今後の継続的な機能改善とリリースがスムーズに行えるようになりました。
+Ver.1.0.1からVer.1.1.0への継続的なバージョンアップでは、CI/CDパイプラインの導入により、Windows/macOS/Linux向けのマルチプラットフォーム対応とリリース自動化を実現しました。v1.0.8ではテストドキュメントの大幅な整理を行い、v1.0.9では集計機能のテスト安定性を向上させ、v1.1.0ではChart.jsを活用したダッシュボード機能を追加しました。この大規模な開発基盤の整備により、プロジェクトの開発効率が劇的に向上し、今後の継続的な機能改善とリリースがスムーズに行えるようになりました。
 
 また、最新バージョンでは、依存ライブラリのセキュリティパッチを適用し、より安全な環境でご利用いただけるよう対策を行っております。
 
@@ -53,9 +53,9 @@ GitHubのissueやeメールでのメッセージも受け付けていますの�
 Thank you for your continued interest in KakeiBon.
 I'm BonoJovi (Yoshihiro NAKAHARA), the project initiator.
 
-**We have officially released Ver.1.0.9!**
+**We have officially released Ver.1.1.0!**
 
-The continuous version updates from Ver.1.0.1 to Ver.1.0.9 reflect the significant impact of introducing a CI/CD pipeline, enabling multi-platform support (Windows/macOS/Linux) and automated releases. In v1.0.8, we performed major test documentation refactoring, and in v1.0.9, we improved aggregation feature test stability. This large-scale infrastructure improvement has dramatically enhanced development efficiency and enables smooth continuous feature improvements and releases going forward.
+The continuous version updates from Ver.1.0.1 to Ver.1.1.0 reflect the significant impact of introducing a CI/CD pipeline, enabling multi-platform support (Windows/macOS/Linux) and automated releases. In v1.0.8, we performed major test documentation refactoring, v1.0.9 improved aggregation feature test stability, and v1.1.0 adds a Dashboard feature powered by Chart.js. This large-scale infrastructure improvement has dramatically enhanced development efficiency and enables smooth continuous feature improvements and releases going forward.
 
 Additionally, the latest version includes security patches for dependent libraries, ensuring a safer environment for your use.
 
