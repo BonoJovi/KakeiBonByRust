@@ -1,4 +1,4 @@
-# 📖 KakeiBon（家計簿）
+# [Book] KakeiBon（家計簿）
 
 <div align="center">
 
@@ -9,13 +9,13 @@
 [![Tests](https://img.shields.io/badge/tests-527%20passing-brightgreen.svg)](#テスト結果)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-[🇬🇧 English Version](README_en.md) | [🌐 Bilingual README](README.md)
+[[G][B] English Version](README_en.md) | [[Globe] Bilingual README](README.md)
 
 </div>
 
 ---
 
-## 💌 開発者からのメッセージ
+## [Love] 開発者からのメッセージ
 
 <div style="border: 3px solid #4a90e2; padding: 20px; margin: 20px 0; background-color: #f8f9fa; font-size: 1.1em;">
 
@@ -45,54 +45,54 @@ GitHubのissueやeメールでのメッセージも受け付けていますの�
 
 ---
 
-## 📑 目次
+## [Bookmark] 目次
 
-- [🚧 開発状況](#-開発状況)
-- [📊 リポジトリ統計](#-リポジトリ統計)
-- [📚 前身プロジェクト](#-前身プロジェクト)
+- [[WIP] 開発状況](#-開発状況)
+- [[Chart] リポジトリ統計](#-リポジトリ統計)
+- [[Books] 前身プロジェクト](#-前身プロジェクト)
 - [✨ 主な特徴](#-主な特徴)
-- [🚀 実装済み機能](#-実装済み機能)
-- [💻 技術スタック](#-技術スタック)
-- [📦 インストール](#-インストール)
-- [🧪 テスト結果](#-テスト結果)
-- [📚 ドキュメント](#-ドキュメント)
-- [🤝 コントリビューション](#-コントリビューション)
-- [📄 ライセンス](#-ライセンス)
-- [🌟 開発ロードマップ](#-開発ロードマップ)
+- [[Rocket] 実装済み機能](#-実装済み機能)
+- [[PC] 技術スタック](#-技術スタック)
+- [[Package] インストール](#-インストール)
+- [[Test] テスト結果](#-テスト結果)
+- [[Books] ドキュメント](#-ドキュメント)
+- [[Handshake] コントリビューション](#-コントリビューション)
+- [[Doc] ライセンス](#-ライセンス)
+- [[Star] 開発ロードマップ](#-開発ロードマップ)
 
 ---
 
-## 🚧 開発状況
+## [WIP] 開発状況
 
-**🔥 鋭意開発中**
+**[Fire] 鋭意開発中**
 
 開発は順調に進んでおり、できるだけ日々更新するようにしています！
 
 **プロジェクト開始**: 2025-10-22 (JST)  
 **最終更新**: 2025-11-30 (JST)
 
-> **🤖 AI支援開発**  
+> **[Robot] AI支援開発**  
 > 本プロジェクトのソースコードおよびドキュメントは、生成AI（GitHub Copilot、Claude）の支援により**100%生成**され、開発者による監修とレビューを経ています。これは、AI支援開発の可能性を示す事例です。
 > 
-> 📊 **[AI開発の生産性と品質分析を見る →](docs/etc/AI_DEVELOPMENT_METRICS.md)**
+> [Chart] **[AI開発の生産性と品質分析を見る →](docs/etc/AI_DEVELOPMENT_METRICS.md)**
 
 <!-- STATS_START -->
-## 📊 リポジトリ統計
+## [Chart] リポジトリ統計
 
 <div align="center">
 
-### 📈 日次トラフィック
+### [TrendUp] 日次トラフィック
 
 ![Daily Traffic Stats](docs/stats_graph_daily.png)
 
-### 📊 累積トラフィック
+### [Chart] 累積トラフィック
 
 ![Cumulative Traffic Stats](docs/stats_graph_cumulative.png)
 
 | 指標 | 件数 |
 |------|------|
-| 👁️ **総閲覧数** | **660** |
-| 📦 **総クローン数** | **214** |
+| [Eye]️ **総閲覧数** | **660** |
+| [Package] **総クローン数** | **214** |
 
 *最終更新: 2025-11-30 12:09 UTC*
 
@@ -101,54 +101,54 @@ GitHubのissueやeメールでのメッセージも受け付けていますの�
 
 ---
 
-## 📚 前身プロジェクト
+## [Books] 前身プロジェクト
 
 **安定版（Lazarus/Free Pascal版）をお探しですか？**
 
-👉 **[KakeiBon (オリジナル版)](https://github.com/BonoJovi/KakeiBon)** - 今すぐ使える完成版！
+[Point] **[KakeiBon (オリジナル版)](https://github.com/BonoJovi/KakeiBon)** - 今すぐ使える完成版！
 
 元祖KakeiBonは、**今すぐ使える完成版の家計簿アプリ**です！
 
 **主な違い:**
 - ✅ **安定版・本番利用可能**
-- 📦 **ビルド済みバイナリあり**（[Releases](https://github.com/BonoJovi/KakeiBon/releases/)）
-- 🇯🇵 **日本語インターフェース専用**
-- 🖥️ **Linux & Windows 対応**
-- 🔤 **大きな文字とアクセシビリティ**
+- [Package] **ビルド済みバイナリあり**（[Releases](https://github.com/BonoJovi/KakeiBon/releases/)）
+- [J][P] **日本語インターフェース専用**
+- [Desktop]️ **Linux & Windows 対応**
+- [Text] **大きな文字とアクセシビリティ**
 
 **なぜRust版？**
 
 このRust版では以下を実現：
 - ⚡ **より高速**
-- 🔒 **強化されたセキュリティ** (Argon2 + AES-256-GCM)
-- 🌐 **完全多言語対応**
-- 🎨 **モダンなアーキテクチャ**
-- 🔮 **将来の拡張性**
+- [Lock] **強化されたセキュリティ** (Argon2 + AES-256-GCM)
+- [Globe] **完全多言語対応**
+- [Art] **モダンなアーキテクチャ**
+- [Crystal] **将来の拡張性**
 
-💡 **両方試して、お好みの方をお使いください！**
+[Idea] **両方試して、お好みの方をお使いください！**
 
 ---
 
 ## ✨ 主な特徴
 
-### 🎨 NOTバイブコーディング
+### [Art] NOTバイブコーディング
 雰囲気ではなく、**きちんとした計画とドキュメント作成**を先に行う開発スタイル
 
-### 👤 明確なユーザーファーストポリシーによる設計
+### [User] 明確なユーザーファーストポリシーによる設計
 すべての機能は**明確なユーザーニーズと使いやすさ**を念頭に置いて設計されています
 
-### 🔤 大きな文字で見やすい
+### [Text] 大きな文字で見やすい
 視認性を重視した設計で、長時間の使用でも目が疲れにくい
 
-### 🏗️ エンタープライズグレードのアーキテクチャ
+### [Build]️ エンタープライズグレードのアーキテクチャ
 **セッションベース認証**を全52個のAPI関数で実装
 
-- 🔐 **セキュアなセッション管理**
-- 👥 **ユーザーデータの完全分離**
+- [Key] **セキュアなセッション管理**
+- [Users] **ユーザーデータの完全分離**
 - ✅ **ハードコードされたユーザーID排除**
-- 🧪 **527テスト（100%合格）**
+- [Test] **527テスト（100%合格）**
 
-### 🎯 直感的な操作性
+### [Target] 直感的な操作性
 誰でもすぐに使いこなせる、シンプルで分かりやすいUI
 
 ### ♿ アクセシビリティ対応
@@ -156,36 +156,36 @@ GitHubのissueやeメールでのメッセージも受け付けていますの�
 - **キーボードナビゲーション**: 完全対応
 - **フォーカスインジケーター**: 明確な視覚フィードバック
 
-### 🌐 多言語対応
+### [Globe] 多言語対応
 日本語・英語の切り替えが可能
 
-### 🔒 強固なセキュリティ
+### [Lock] 強固なセキュリティ
 - Argon2idパスワードハッシュ化
 - AES-256-GCMデータ暗号化
 - ロールベースのアクセス制御
 
 ---
 
-## 🚀 実装済み機能
+## [Rocket] 実装済み機能
 
 | 機能 | 説明 | ステータス |
 |------|------|------------|
-| 🔐 **セッション管理** | メモリ内セッション状態管理 | ✅ 完成 |
-| 💰 **費目管理** | 大分類・中分類・小分類の階層的管理 | ✅ 完成 |
-| 👥 **ユーザー管理** | マルチユーザー対応（管理者/一般） | ✅ 完成 |
-| 🏦 **口座管理** | 口座マスタ管理 | ✅ 完成 |
-| 🏪 **店舗管理** | 店舗マスタ管理 | ✅ 完成 |
-| 🏭 **メーカー管理** | IS_DISABLED機能付きメーカーマスタ管理 | ✅ 完成 |
-| 📦 **商品管理** | メーカー連携付き商品マスタ管理 | ✅ 完成 |
-| 🌍 **多言語対応** | 日本語・英語の動的切り替え - 992リソース | ✅ 完成 |
-| 🔧 **カスタマイズ** | フォントサイズ、言語設定 | ✅ 完成 |
-| 📝 **入出金管理** | ヘッダレベルCRUD、フィルター、ページネーション | ✅ 完成 |
-| 🧾 **入出金明細** | スマート税計算付きCRUD操作、端数処理自動検出 | ✅ 完成 |
-| 📊 **集計・レポート** | 月次・年次レポート、グラフ | 🚧 開発中 |
+| [Key] **セッション管理** | メモリ内セッション状態管理 | ✅ 完成 |
+| [Money] **費目管理** | 大分類・中分類・小分類の階層的管理 | ✅ 完成 |
+| [Users] **ユーザー管理** | マルチユーザー対応（管理者/一般） | ✅ 完成 |
+| [Bank] **口座管理** | 口座マスタ管理 | ✅ 完成 |
+| [Shop] **店舗管理** | 店舗マスタ管理 | ✅ 完成 |
+| [Factory] **メーカー管理** | IS_DISABLED機能付きメーカーマスタ管理 | ✅ 完成 |
+| [Package] **商品管理** | メーカー連携付き商品マスタ管理 | ✅ 完成 |
+| [World] **多言語対応** | 日本語・英語の動的切り替え - 992リソース | ✅ 完成 |
+| [Fix] **カスタマイズ** | フォントサイズ、言語設定 | ✅ 完成 |
+| [Note] **入出金管理** | ヘッダレベルCRUD、フィルター、ページネーション | ✅ 完成 |
+| [Receipt] **入出金明細** | スマート税計算付きCRUD操作、端数処理自動検出 | ✅ 完成 |
+| [Chart] **集計・レポート** | 月次・年次レポート、グラフ | [WIP] 開発中 |
 
 ---
 
-## 💻 技術スタック
+## [PC] 技術スタック
 
 | カテゴリ | 技術 | 詳細 |
 |----------|------|------|
@@ -199,7 +199,7 @@ GitHubのissueやeメールでのメッセージも受け付けていますの�
 
 ---
 
-## 📦 インストール
+## [Package] インストール
 
 ### 前提条件
 - Rust 1.70+ ([rustup](https://rustup.rs/)でインストール)
@@ -230,7 +230,7 @@ cargo tauri build
 
 ---
 
-## 🧪 テスト結果
+## [Test] テスト結果
 
 ```
 バックエンド (Rust):      201 passing ✅
@@ -260,58 +260,58 @@ cargo tauri build
 
 ---
 
-## 📚 ドキュメント
+## [Books] ドキュメント
 
-### 📖 ドキュメント索引
-- 🗂️ **[ドキュメント全体索引](docs/INDEX_ja.md)** - すべてのドキュメントへのクイックアクセス
+### [Book] ドキュメント索引
+- [Files]️ **[ドキュメント全体索引](docs/INDEX_ja.md)** - すべてのドキュメントへのクイックアクセス
 
-### 🎯 はじめに
+### [Target] はじめに
 
 #### インストール・セットアップ
-- 📦 **[インストールガイド](docs/user/ja/SETUP_GUIDE.md)** - アプリのインストール方法
+- [Package] **[インストールガイド](docs/user/ja/SETUP_GUIDE.md)** - アプリのインストール方法
 
 #### ユーザーマニュアル
-- 📖 **[ユーザーマニュアル](docs/user/ja/USER_MANUAL.md)** - 機能の使い方
+- [Book] **[ユーザーマニュアル](docs/user/ja/USER_MANUAL.md)** - 機能の使い方
 - ❓ **[FAQ（よくある質問）](docs/user/ja/FAQ.md)** - よくある質問と回答
-- 🔧 **[トラブルシューティング](docs/user/ja/TROUBLESHOOTING.md)** - 問題解決ガイド
+- [Fix] **[トラブルシューティング](docs/user/ja/TROUBLESHOOTING.md)** - 問題解決ガイド
 
 ---
 
-### 👨‍💻 開発者向け
+### [Man]‍[PC] 開発者向け
 
 #### 設計ドキュメント
-- 🏗️ **[アーキテクチャ](docs/developer/ja/design/ARCHITECTURE.md)** - システム全体の構造
-- 🔒 **[セキュリティ設計](docs/developer/ja/design/SECURITY_DESIGN.md)** - セキュリティの実装
-- 🗄️ **[データベース設計](docs/developer/ja/design/DATABASE_DESIGN.md)** - DBスキーマとER図
-- 🎨 **[UI設計](docs/developer/ja/design/UI_DESIGN.md)** - ユーザーインターフェース設計
+- [Build]️ **[アーキテクチャ](docs/developer/ja/design/ARCHITECTURE.md)** - システム全体の構造
+- [Lock] **[セキュリティ設計](docs/developer/ja/design/SECURITY_DESIGN.md)** - セキュリティの実装
+- [Cabinet]️ **[データベース設計](docs/developer/ja/design/DATABASE_DESIGN.md)** - DBスキーマとER図
+- [Art] **[UI設計](docs/developer/ja/design/UI_DESIGN.md)** - ユーザーインターフェース設計
 
 #### 開発ガイド
-- 🚀 **[開発環境セットアップ](docs/developer/ja/guides/DEVELOPMENT_SETUP.md)** - 開発環境の構築
-- 📝 **[コーディング規約](docs/developer/ja/guides/CODING_STANDARDS.md)** - コードスタイルガイド
-- 🧪 **テストドキュメント**
-  - 📖 **[テスト概要](docs/testing/ja/TEST_OVERVIEW.md)** - テスト戦略と実行方法
-  - 📘 **[バックエンドテストインデックス](docs/testing/ja/BACKEND_TEST_INDEX.md)** - Rustテスト完全一覧（201件）
-  - 📗 **[フロントエンドテストインデックス](docs/testing/ja/FRONTEND_TEST_INDEX.md)** - JavaScriptテスト完全一覧（262件以上）
+- [Rocket] **[開発環境セットアップ](docs/developer/ja/guides/DEVELOPMENT_SETUP.md)** - 開発環境の構築
+- [Note] **[コーディング規約](docs/developer/ja/guides/CODING_STANDARDS.md)** - コードスタイルガイド
+- [Test] **テストドキュメント**
+  - [Book] **[テスト概要](docs/testing/ja/TEST_OVERVIEW.md)** - テスト戦略と実行方法
+  - [BlueBook] **[バックエンドテストインデックス](docs/testing/ja/BACKEND_TEST_INDEX.md)** - Rustテスト完全一覧（201件）
+  - [GreenBook] **[フロントエンドテストインデックス](docs/testing/ja/FRONTEND_TEST_INDEX.md)** - JavaScriptテスト完全一覧（262件以上）
 
 #### API ドキュメント
-- 🔗 **[共通API](docs/developer/ja/api/API_COMMON.md)** - 認証・セッション・i18n
-- 👥 **[ユーザー管理API](docs/developer/ja/api/API_USER.md)** - ユーザーCRUD操作
-- 📁 **[費目管理API](docs/developer/ja/api/API_CATEGORY.md)** - 費目の階層管理
-- 💰 **[入出金管理API](docs/developer/ja/api/API_TRANSACTION.md)** - 取引データ管理
-- 🏦 **[口座管理API](docs/developer/ja/api/API_ACCOUNT.md)** - 口座マスタ管理
-- 🏢 **[マスタデータAPI](docs/developer/ja/api/API_MASTER_DATA.md)** - 店舗・メーカー・商品
-- 📊 **[集計API](docs/developer/ja/api/API_AGGREGATION.md)** - レポートと統計
+- [Link] **[共通API](docs/developer/ja/api/API_COMMON.md)** - 認証・セッション・i18n
+- [Users] **[ユーザー管理API](docs/developer/ja/api/API_USER.md)** - ユーザーCRUD操作
+- [Folder] **[費目管理API](docs/developer/ja/api/API_CATEGORY.md)** - 費目の階層管理
+- [Money] **[入出金管理API](docs/developer/ja/api/API_TRANSACTION.md)** - 取引データ管理
+- [Bank] **[口座管理API](docs/developer/ja/api/API_ACCOUNT.md)** - 口座マスタ管理
+- [Office] **[マスタデータAPI](docs/developer/ja/api/API_MASTER_DATA.md)** - 店舗・メーカー・商品
+- [Chart] **[集計API](docs/developer/ja/api/API_AGGREGATION.md)** - レポートと統計
 - ⚙️ **[設定API](docs/developer/ja/api/API_SETTINGS.md)** - ユーザー設定管理
 
 ---
 
-### 📋 プロジェクト情報
-- 👥 **[プロジェクト参加者](docs/etc/PROJECT_PARTICIPANTS.md)** - コントリビューター一覧
-- 📊 **[AI開発メトリクス](docs/etc/AI_DEVELOPMENT_METRICS.md)** - AI支援開発の分析
+### [List] プロジェクト情報
+- [Users] **[プロジェクト参加者](docs/etc/PROJECT_PARTICIPANTS.md)** - コントリビューター一覧
+- [Chart] **[AI開発メトリクス](docs/etc/AI_DEVELOPMENT_METRICS.md)** - AI支援開発の分析
 
 ---
 
-## 🤝 コントリビューション
+## [Handshake] コントリビューション
 
 プルリクエストを歓迎します！
 
@@ -328,13 +328,13 @@ cargo tauri build
 
 ---
 
-## 📄 ライセンス
+## [Doc] ライセンス
 
 このプロジェクトは [LICENSE](LICENSE) の下でライセンスされています。
 
 ---
 
-## 🌟 開発ロードマップ
+## [Star] 開発ロードマップ
 
 - [x] ユーザー管理機能
 - [x] 費目管理機能

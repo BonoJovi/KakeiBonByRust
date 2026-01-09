@@ -6,7 +6,7 @@ This document provides quick access to all KakeiBon project documentation.
 
 ---
 
-## 📋 Table of Contents
+## [List] Table of Contents
 
 - [Quick Start](#quick-start)
 - [User Documentation](#user-documentation)
@@ -18,7 +18,7 @@ This document provides quick access to all KakeiBon project documentation.
 
 ---
 
-## 🚀 Quick Start
+## [Rocket] Quick Start
 
 ### For Users
 - [Installation Guide](user/en/INSTALLATION_GUIDE.md) - How to install the application
@@ -31,7 +31,7 @@ This document provides quick access to all KakeiBon project documentation.
 
 ---
 
-## 👥 User Documentation
+## [Users] User Documentation
 
 ### Basic Guides
 | Document | Description |
@@ -53,7 +53,7 @@ This document provides quick access to all KakeiBon project documentation.
 
 ---
 
-## 💻 Developer Documentation
+## [PC] Developer Documentation
 
 ### Setup & Environment
 | Document | Description |
@@ -107,7 +107,7 @@ This document provides quick access to all KakeiBon project documentation.
 
 ---
 
-## 📚 API Reference
+## [Books] API Reference
 
 ### Screen-by-Screen API Documentation
 | Document | Description | Screen |
@@ -134,7 +134,7 @@ This document provides quick access to all KakeiBon project documentation.
 
 ---
 
-## 🏗️ Design Documentation
+## [Build]️ Design Documentation
 
 ### Architecture Design
 | Document | Description |
@@ -159,7 +159,7 @@ This document provides quick access to all KakeiBon project documentation.
 
 ---
 
-## 🖥️ Screen-by-Screen Quick Reference
+## [Desktop]️ Screen-by-Screen Quick Reference
 
 ### Authentication & Setup (index.html)
 - **API**: [Auth & Setup API](developer/en/api/API_AUTH.md)
@@ -209,7 +209,7 @@ This document provides quick access to all KakeiBon project documentation.
 
 ---
 
-## 🔍 Keyword Index
+## [Search] Keyword Index
 
 ### A
 - **Account**: [Account Management API](developer/en/api/API_ACCOUNT.md), [Account Management UI](developer/en/guides/ACCOUNT_MANAGEMENT_UI.md)
@@ -278,7 +278,7 @@ This document provides quick access to all KakeiBon project documentation.
 
 ---
 
-## 📖 Other Documentation
+## [Book] Other Documentation
 
 ### Project Information
 | Document | Description |
@@ -295,7 +295,7 @@ This document provides quick access to all KakeiBon project documentation.
 
 ---
 
-## 📝 Related Resources
+## [Note] Related Resources
 
 - [Root README](../README.md) - Project top page
 - [Japanese README](../README_ja.md) - Japanese navigation hub

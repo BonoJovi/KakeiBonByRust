@@ -6,9 +6,9 @@ Contributing to KakeiBon isn't just about writing code! We welcome all types of 
 
 ---
 
-## 🌟 Ways to Contribute
+## [Star] Ways to Contribute
 
-### 🌍 Translation
+### [World] Translation
 **No coding skills required**
 
 Help make KakeiBon accessible to users worldwide!
@@ -22,13 +22,13 @@ Help make KakeiBon accessible to users worldwide!
 **Currently Supported**: Japanese (ja), English (en)
 **Seeking**: Chinese (zh), Korean (ko), French (fr), German (de), Spanish (es), and more!
 
-📖 **[Translation Guide](docs/developer/en/guides/TRANSLATION_GUIDE.md)**
+[Book] **[Translation Guide](docs/developer/en/guides/TRANSLATION_GUIDE.md)**
 
 🆕 **[Submit Translation Request](https://github.com/BonoJovi/KakeiBonByRust/issues/new?template=translation.yml)**
 
 ---
 
-### 🧪 Testing
+### [Test] Testing
 **No coding skills required**
 
 Help improve KakeiBon's quality across different platforms!
@@ -45,13 +45,13 @@ Help improve KakeiBon's quality across different platforms!
 - ⚠️ **Windows**: Needs testers!
 - ⚠️ **macOS**: Needs testers!
 
-📖 **[Testing Guide](docs/developer/en/guides/TESTING_GUIDE.md)**
+[Book] **[Testing Guide](docs/developer/en/guides/TESTING_GUIDE.md)**
 
 🆕 **[Submit Testing Feedback](https://github.com/BonoJovi/KakeiBonByRust/issues/new?template=testing-feedback.yml)**
 
 ---
 
-### 💡 Feature Suggestions
+### [Idea] Feature Suggestions
 
 Have an idea to make KakeiBon better?
 
@@ -65,7 +65,7 @@ Have an idea to make KakeiBon better?
 
 ---
 
-### 📚 Documentation
+### [Books] Documentation
 
 Help make KakeiBon easier to use and understand!
 
@@ -78,7 +78,7 @@ Help make KakeiBon easier to use and understand!
 
 ---
 
-### 💻 Code Contributions
+### [PC] Code Contributions
 
 For developers who want to contribute code.
 
@@ -91,7 +91,7 @@ For developers who want to contribute code.
 
 ---
 
-## 📋 Getting Started
+## [List] Getting Started
 
 ### Before Contributing
 
@@ -106,7 +106,7 @@ For developers who want to contribute code.
 
 ---
 
-## 🐛 Bug Reports
+## [Bug] Bug Reports
 
 Found a bug? Help us fix it!
 
@@ -120,7 +120,7 @@ Found a bug? Help us fix it!
 
 ---
 
-## 🔧 Pull Request Workflow
+## [Fix] Pull Request Workflow
 
 For code and documentation contributions:
 
@@ -145,7 +145,7 @@ For code and documentation contributions:
 
 ---
 
-## 📞 Questions and Support
+## [Phone] Questions and Support
 
 Need help or have questions?
 
@@ -155,7 +155,7 @@ Need help or have questions?
 
 ---
 
-## 🌈 Community Values
+## [Rainbow] Community Values
 
 We are committed to providing a welcoming and inclusive environment for all contributors.
 
@@ -169,7 +169,7 @@ All participants are expected to follow our [Code of Conduct](CODE_OF_CONDUCT.md
 
 ---
 
-## 🙏 Thank You!
+## [Thanks] Thank You!
 
 Every contribution, no matter how small, makes KakeiBon better for everyone.
 

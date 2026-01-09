@@ -104,12 +104,12 @@ npm test login.test.js
 
 For complete test case listings, see these index documents:
 
-### 📘 [Backend Test Index](BACKEND_TEST_INDEX.md)
+### [BlueBook] [Backend Test Index](BACKEND_TEST_INDEX.md)
 - **Total Tests**: 201
 - All Rust test cases in table format
 - Includes test function name, description, file, line number
 
-### 📗 [Frontend Test Index](FRONTEND_TEST_INDEX.md)
+### [GreenBook] [Frontend Test Index](FRONTEND_TEST_INDEX.md)
 - **Total Tests**: 262+
 - All JavaScript test cases in table format
 - Includes test name, description, usage
@@ -526,10 +526,10 @@ Specify `testEnvironment: "jsdom"` in Jest config
 
 ## Related Documents
 
-- 📘 [Backend Test Index](BACKEND_TEST_INDEX.md) - Complete Rust test list
-- 📗 [Frontend Test Index](FRONTEND_TEST_INDEX.md) - Complete JavaScript test list
-- 📙 [Test Design](TEST_DESIGN.md) - Test architecture and design philosophy
-- 📕 [Test Results](TEST_RESULTS.md) - Latest test execution results and coverage
+- [BlueBook] [Backend Test Index](BACKEND_TEST_INDEX.md) - Complete Rust test list
+- [GreenBook] [Frontend Test Index](FRONTEND_TEST_INDEX.md) - Complete JavaScript test list
+- [OrangeBook] [Test Design](TEST_DESIGN.md) - Test architecture and design philosophy
+- [RedBook] [Test Results](TEST_RESULTS.md) - Latest test execution results and coverage
 
 ---
 

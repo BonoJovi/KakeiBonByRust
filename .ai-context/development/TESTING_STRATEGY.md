@@ -220,7 +220,7 @@ let too_short = "a".repeat(MIN_PASSWORD_LENGTH - 1);
 #### Unicode for Character Support Tests
 ```rust
 let japanese = "日本語パスワード16文字以上";
-let emoji = "😀🎉🔒🔑💻🚀⭐✨🌟💡🎯🏆🎁🎊🎈";
+let emoji = "[Smile][Party][Lock][Key][PC][Rocket]⭐✨[Star][Idea][Target][Trophy][Gift][Confetti][Balloon]";
 ```
 
 **Rationale**: Verify system handles multi-byte characters correctly.

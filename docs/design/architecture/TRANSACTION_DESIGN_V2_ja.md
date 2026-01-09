@@ -338,7 +338,7 @@ CREATE INDEX idx_details_user_categories ON TRANSACTIONS_DETAIL(USER_ID, CATEGOR
 
 ## 実装フェーズ
 
-### Phase 0: 口座マスタ管理 🔴 **← 現在ここ**
+### Phase 0: 口座マスタ管理 [Red] **← 現在ここ**
 - [ ] ACCOUNTSテーブル作成SQL
 - [ ] 口座管理バックエンドAPI（Rust）
   - `add_account`
