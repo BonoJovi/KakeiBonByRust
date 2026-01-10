@@ -214,24 +214,24 @@ Development is progressing smoothly, and we strive to update daily!
 > **[AI開発の生産性と品質分析を見る →](docs/etc/AI_DEVELOPMENT_METRICS.md)**
 
 <!-- STATS_START -->
-## [Chart] Repository Statistics / リポジトリ統計
+## 📊 Repository Statistics / リポジトリ統計
 
 <div align="center">
 
-### [TrendUp] Daily Traffic / 日次トラフィック
+### 📈 Daily Traffic / 日次トラフィック
 
 ![Daily Traffic Stats](docs/stats_graph_daily.png)
 
-### [Chart] Cumulative Traffic / 累積トラフィック
+### 📊 Cumulative Traffic / 累積トラフィック
 
 ![Cumulative Traffic Stats](docs/stats_graph_cumulative.png)
 
 | Metric | Count |
 |--------|-------|
-| [Eye] **Total Views** / 総閲覧数 | **163** |
-| [Package] **Total Clones** / 総クローン数 | **259** |
+| 👁️ **Total Views** / 総閲覧数 | **177** |
+| 📦 **Total Clones** / 総クローン数 | **279** |
 
-*Last Updated / 最終更新: 2026-01-09 01:38 UTC*
+*Last Updated / 最終更新: 2026-01-10 01:38 UTC*
 
 </div>
 <!-- STATS_END -->
