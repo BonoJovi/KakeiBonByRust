@@ -1,4 +1,4 @@
-# [Book] KakeiBon（家計簿）
+# [Book] KakeiBon by Rust（家計簿）
 
 <div align="center">
 
