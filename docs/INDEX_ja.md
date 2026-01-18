@@ -1,8 +1,8 @@
-# KakeiBon ドキュメント索引
+# KakeiBon by Rust ドキュメント索引
 
-**最終更新**: 2025-12-05 06:35 JST
+**最終更新**: 2026-01-18 JST
 
-このドキュメントは、KakeiBonプロジェクトのすべてのドキュメントへのクイックアクセスを提供します。
+このドキュメントは、KakeiBon by Rustプロジェクトのすべてのドキュメントへのクイックアクセスを提供します。
 
 ---
 
@@ -200,6 +200,14 @@
 - **ユーザーガイド**: [集計機能ユーザーガイド](user/ja/AGGREGATION_USER_GUIDE.md)
 - **機能**: 月次、日次、週次、年次、期間別集計
 
+### ダッシュボード（dashboard.html）
+- **API**: [集計API](developer/ja/api/API_AGGREGATION.md)
+- **ユーザーガイド**: [ユーザーマニュアル](user/ja/USER_MANUAL.md)（ダッシュボードセクション）
+- **機能**: Chart.jsによるグラフ表示
+  - 円グラフ: カテゴリ別支出内訳
+  - 棒グラフ: 月次収支比較
+  - 折れ線グラフ: 月次トレンド（収入/支出/残高）
+
 ### 設定画面（settings.html）
 - **API**: [設定API](developer/ja/api/API_SETTINGS.md)
 - **実装ガイド**: [設定管理](developer/ja/guides/SETTINGS_MANAGEMENT.md)
@@ -217,6 +225,7 @@
 ### か行
 - **開発環境**: [開発環境セットアップ](developer/ja/setup/DEVELOPMENT_SETUP.md)
 - **カテゴリ**: [費目管理API](developer/ja/api/API_CATEGORY.md), [費目管理UI](developer/ja/guides/CATEGORY_MANAGEMENT_UI.md)
+- **グラフ**: [ユーザーマニュアル](user/ja/USER_MANUAL.md)（ダッシュボードセクション）
 - **集計**: [集計API](developer/ja/api/API_AGGREGATION.md), [集計機能ユーザーガイド](user/ja/AGGREGATION_USER_GUIDE.md)
 - **口座**: [口座管理API](developer/ja/api/API_ACCOUNT.md), [口座管理UI](developer/ja/guides/ACCOUNT_MANAGEMENT_UI.md)
 
@@ -226,6 +235,7 @@
 - **セットアップ**: [セットアップガイド](user/ja/SETUP_GUIDE.md), [開発環境セットアップ](developer/ja/setup/DEVELOPMENT_SETUP.md)
 
 ### た行
+- **ダッシュボード**: [ユーザーマニュアル](user/ja/USER_MANUAL.md)（ダッシュボードセクション）
 - **多言語**: [I18N実装ガイド](developer/ja/guides/I18N_IMPLEMENTATION.md), [翻訳ガイド](developer/ja/guides/translation-guide.md)
 - **データベース**: [データベース設計](developer/ja/design/DATABASE_DESIGN.md), [データベース設定](developer/ja/guides/DATABASE_CONFIGURATION.md)
 - **店舗**: [マスタデータAPI](developer/ja/api/API_MASTER_DATA.md)（店舗セクション）
@@ -251,6 +261,7 @@
 
 ### A-Z
 - **API**: [APIリファレンス](#apiリファレンス)セクション参照
+- **Chart.js**: [ユーザーマニュアル](user/ja/USER_MANUAL.md)（ダッシュボードセクション）
 - **CRUD**: 各管理画面のAPIリファレンス参照
 - **FAQ**: [FAQ](user/ja/FAQ.md)
 - **I18N**: [I18N実装ガイド](developer/ja/guides/I18N_IMPLEMENTATION.md)
@@ -290,4 +301,4 @@
 
 ---
 
-**Last Updated**: 2025-12-05 06:35 JST
+**Last Updated**: 2026-01-18 JST
