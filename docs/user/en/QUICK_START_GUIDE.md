@@ -69,7 +69,7 @@ Accounts represent where your money is (bank, cash, credit card, etc.).
    - **Initial Balance**: Starting amount (optional)
 4. Click **"Save"**
 
-💡 **Tip**: Add at least one account before recording transactions.
+[Idea] **Tip**: Add at least one account before recording transactions.
 
 ### Step 5: Record Your First Transaction
 
@@ -100,7 +100,7 @@ If multiple people will use KakeiBon:
 4. Assign **"User"** role (not Admin)
 5. Click **"Save"**
 
-💡 Regular users can record transactions but cannot manage other users.
+[Idea] Regular users can record transactions but cannot manage other users.
 
 ### View Aggregations
 
@@ -142,22 +142,22 @@ Track which stores you frequent:
 
 ## Tips for Effective Use
 
-### 🎯 Daily Habits
+### [Target] Daily Habits
 - **Record transactions immediately** - Don't wait until end of day
 - **Use descriptive notes** - Your future self will thank you
 - **Check balance regularly** - Keep track of account accuracy
 
-### 📊 Monthly Review
+### [Chart] Monthly Review
 - **Run monthly aggregation** - See where money went
 - **Compare with previous months** - Spot trends
 - **Adjust categories** - Add/modify as needed
 
-### 🔐 Security Best Practices
+### [Key] Security Best Practices
 - **Use strong passwords** (16+ characters)
 - **Don't share admin account** - Create separate users
 - **Backup database regularly** (see below)
 
-### 💾 Backup Your Data
+### [Save] Backup Your Data
 
 Your data is stored in the `.kakeibon` directory:
 
@@ -203,14 +203,14 @@ Copy-Item "$env:USERPROFILE\backups\kakeibon_db_20251203.sqlite3" "$env:USERPROF
 Copy-Item "$env:USERPROFILE\backups\kakeibon_config_20251203.json" "$env:USERPROFILE\.kakeibon\KakeiBon.json"
 ```
 
-**💡 Tip:** The configuration file (`KakeiBon.json`) stores your preferences (language, font size). Backing it up ensures you don't lose your settings.
+**[Idea] Tip:** The configuration file (`KakeiBon.json`) stores your preferences (language, font size). Backing it up ensures you don't lose your settings.
 
 ---
 
 ## Common Questions
 
 ### Q: Can I change the language?
-**A:** Yes! Click the language menu (🌐) and select Japanese (日本語) or English.
+**A:** Yes! Click the language menu ([Globe]) and select Japanese (日本語) or English.
 
 ### Q: I forgot my password. What do I do?
 **A:** Currently, there's no password reset feature. Keep your password safe!
@@ -239,11 +239,11 @@ Copy-Item "$env:USERPROFILE\backups\kakeibon_config_20251203.json" "$env:USERPRO
 
 ---
 
-## You're All Set! 🎉
+## You're All Set! [Party]
 
 You now know the basics of KakeiBon. Start recording your transactions and watch your financial awareness grow!
 
-Happy budgeting! 💰📊
+Happy budgeting! [Money][Chart]
 
 ---
 

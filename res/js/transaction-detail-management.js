@@ -4,6 +4,7 @@ import { setupIndicators } from './indicators.js';
 import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers, adjustWindowSize } from './font-size.js';
 import { setupLanguageMenuHandlers, setupLanguageMenu, handleLogout, handleQuit } from './menu.js';
 import { HTML_FILES } from './html-files.js';
+import { ROLE_ADMIN } from './consts.js';
 import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
 import { createMenuBar } from './menu.js';
 
@@ -51,7 +52,15 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Initialize i18n
         await i18n.init();
         i18n.updateUI();
-        
+
+        // Check if user is admin - admin cannot access transaction detail management
+        if (currentUserRole === ROLE_ADMIN) {
+            console.log('Admin user detected, transaction detail management access denied');
+            alert(i18n.t('transaction.admin_access_denied') || 'Transaction management is not available for administrator accounts. Please login as a regular user.');
+            window.location.href = HTML_FILES.INDEX;
+            return;
+        }
+
         // Setup menu handlers
         setupMenuHandlers();
         

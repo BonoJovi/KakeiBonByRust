@@ -313,7 +313,7 @@ Detail List
 
 ## Implementation Phases
 
-### Phase 0: Account Master Management 🔴 **← Current**
+### Phase 0: Account Master Management [Red] **← Current**
 - [ ] ACCOUNTS table creation SQL
 - [ ] Account management backend API (Rust)
   - `add_account`

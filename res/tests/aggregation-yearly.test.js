@@ -127,12 +127,14 @@ describe('Yearly Aggregation Tests', () => {
                 calls.push({ cmd, args });
                 return [];
             };
-            
+
+            // Use a past year to avoid "future date" validation errors
+            setInputValue('#year', '2024');
             setInputValue('#year-start', '1');
             clickButton('#execute-btn');
-            
+
             await waitFor(100);
-            
+
             expect(calls[0].args.yearStartMonth).toBe(1);
         });
 
@@ -142,12 +144,14 @@ describe('Yearly Aggregation Tests', () => {
                 calls.push({ cmd, args });
                 return [];
             };
-            
+
+            // Use a past year to avoid "future date" validation errors
+            setInputValue('#year', '2024');
             setInputValue('#year-start', '4');
             clickButton('#execute-btn');
-            
+
             await waitFor(100);
-            
+
             expect(calls[0].args.yearStartMonth).toBe(4);
         });
     });

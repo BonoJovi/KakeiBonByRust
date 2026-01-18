@@ -134,7 +134,7 @@ Implementation Location: `src/services/transaction.rs`
   - Income: Green
   - Transfer: Blue
 - Memo (max 20 chars, "..." for overflow, full text on hover)
-- Action buttons (Edit✏️, Delete🗑️)
+- Action buttons (Edit✏️, Delete[Trash]️)
 
 #### Data Retrieval
 Multiple table JOINs:
