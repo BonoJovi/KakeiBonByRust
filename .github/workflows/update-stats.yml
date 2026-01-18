@@ -44,14 +44,36 @@ jobs:
         run: |
           python scripts/update_readme_stats.py
 
-      - name: Commit and push if changed
+      - name: Commit and push to dev if changed
+        id: commit_dev
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add -A
           if git diff --staged --quiet; then
             echo "No changes to commit"
+            echo "changed=false" >> $GITHUB_OUTPUT
           else
             git commit -m "chore: update repository stats [skip ci]"
             git push
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Sync stats to main branch
+        if: steps.commit_dev.outputs.changed == 'true'
+        run: |
+          # Fetch main branch
+          git fetch origin main
+          git checkout main
+
+          # Copy stats files from dev
+          git checkout dev -- stats_data.json docs/stats_graph_daily.png docs/stats_graph_cumulative.png
+
+          # Commit and push to main
+          git add stats_data.json docs/stats_graph_daily.png docs/stats_graph_cumulative.png
+          if git diff --staged --quiet; then
+            echo "No changes to sync to main"
+          else
+            git commit -m "chore: sync repository stats from dev [skip ci]"
+            git push origin main
           fi
