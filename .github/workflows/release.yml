@@ -96,16 +96,8 @@ jobs:
             target/
           key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Build release
-        run: cargo build --release --verbose
-
-      - name: Test release
-        run: cargo test --release --verbose
-
-      - name: Release build summary
-        run: |
-          echo "✅ Release build completed successfully!"
-          echo "✅ Release tests passed!"
+      - name: Run release build check
+        run: ./scripts/check-release.sh
 
   create-release:
     name: Create Release
