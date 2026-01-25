@@ -1,5 +1,7 @@
-// SQL Query Constants
-// This module centralizes all SQL queries used in the application
+//! SQL Query Constants
+//! This module centralizes all SQL queries used in the application.
+//! Some queries may be reserved for future use or referenced in documentation.
+#![allow(dead_code)]
 
 // ============================================================================
 // Authentication Service Queries

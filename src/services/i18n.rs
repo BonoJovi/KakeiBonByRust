@@ -1,7 +1,6 @@
 use sqlx::sqlite::SqlitePool;
 use std::collections::HashMap;
 use crate::consts::LANG_DEFAULT;
-use crate::sql_queries;
 
 #[derive(Debug)]
 pub enum I18nError {

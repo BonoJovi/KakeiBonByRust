@@ -1,9 +1,10 @@
 /// Common test helper functions
-/// 
+///
 /// This module provides shared test utilities used across different test modules,
 /// similar to the validation-helpers.js pattern in the JavaScript tests.
 
 #[cfg(test)]
+#[allow(dead_code)]
 pub mod validation {
     /// Test result structure for validation tests
     #[derive(Debug, PartialEq)]
@@ -93,6 +94,7 @@ pub mod validation {
 }
 
 #[cfg(test)]
+#[allow(dead_code)]
 pub mod database {
     use sqlx::sqlite::SqlitePool;
     use crate::security::hash_password;
