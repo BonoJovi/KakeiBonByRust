@@ -1,8 +1,18 @@
-# Repository Stats Scripts
+# Scripts
 
-This directory contains scripts for automatically collecting and visualizing repository statistics.
+This directory contains utility scripts for development, release, and statistics.
 
-## Scripts
+## Release Scripts
+
+### `check-release.sh`
+- **Purpose**: Verifies release build integrity before creating a release tag
+- **Usage**: `./scripts/check-release.sh`
+- **Checks**:
+  1. Release build (`cargo build --release`)
+  2. Release tests (`cargo test --release`)
+- **When to use**: Run before creating a new version tag to catch build issues early
+
+## Statistics Scripts
 
 ### `fetch_stats.py`
 - Fetches traffic statistics from GitHub API (views and clones)
