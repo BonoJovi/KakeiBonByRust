@@ -233,10 +233,6 @@ impl GroupBy {
         }
     }
 
-    /// Check if this grouping requires joining with transaction details
-    pub fn requires_details_join(&self) -> bool {
-        matches!(self, GroupBy::Product)
-    }
 }
 
 // =============================================================================
@@ -321,19 +317,22 @@ impl AggregationFilter {
         }
     }
 
-    /// Set amount filter
+    /// Set amount filter (used in tests)
+    #[allow(dead_code)]
     pub fn with_amount(mut self, amount: AmountFilter) -> Self {
         self.amount = Some(amount);
         self
     }
 
-    /// Set category filter
+    /// Set category filter (used in tests)
+    #[allow(dead_code)]
     pub fn with_category(mut self, category: CategoryFilter) -> Self {
         self.category = Some(category);
         self
     }
 
-    /// Set shop ID filter
+    /// Set shop ID filter (used in tests)
+    #[allow(dead_code)]
     pub fn with_shop(mut self, shop_id: i64) -> Self {
         self.shop_id = Some(shop_id);
         self
@@ -381,7 +380,8 @@ impl AggregationRequest {
         self
     }
 
-    /// Set result limit
+    /// Set result limit (used in tests)
+    #[allow(dead_code)]
     pub fn with_limit(mut self, limit: usize) -> Self {
         self.limit = Some(limit);
         self
@@ -1234,6 +1234,7 @@ pub fn monthly_aggregation_by_category(
 /// * `month` - Target month (1-12)
 /// * `group_by` - Aggregation axis
 /// * `amount_filter` - Amount filter
+#[allow(dead_code)]
 pub fn monthly_aggregation_by_amount(
     user_id: i64,
     year: i32,
@@ -1257,6 +1258,7 @@ pub fn monthly_aggregation_by_amount(
 /// * `group_by` - Aggregation axis
 /// * `order_by` - Sort field
 /// * `sort_order` - Sort direction
+#[allow(dead_code)]
 pub fn monthly_aggregation_sorted(
     user_id: i64,
     year: i32,
@@ -1287,6 +1289,7 @@ pub fn monthly_aggregation_sorted(
 /// * `sort_order` - Sort direction
 /// * `limit` - Optional result limit
 #[allow(clippy::too_many_arguments)]
+#[allow(dead_code)]
 pub fn monthly_aggregation_full(
     user_id: i64,
     year: i32,

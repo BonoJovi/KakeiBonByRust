@@ -143,19 +143,6 @@ pub struct TransactionHeaderWithInfo {
     pub update_dt: Option<String>,
 }
 
-/// Memo data structure
-#[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
-pub struct Memo {
-    #[sqlx(rename = "MEMO_ID")]
-    pub memo_id: i64,
-    #[sqlx(rename = "MEMO_TEXT")]
-    pub memo_text: String,
-    #[sqlx(rename = "ENTRY_DT")]
-    pub entry_dt: String,
-    #[sqlx(rename = "UPDATE_DT")]
-    pub update_dt: Option<String>,
-}
-
 /// Transaction data structure for list display (header-based)
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Transaction {

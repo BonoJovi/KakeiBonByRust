@@ -1435,7 +1435,7 @@ mod tests {
         // Add three CATEGORY3 entries
         let cat3_code1 = service.add_category3(user_id, "EXPENSE", &cat2_code, "米", "Rice").await.unwrap();
         let cat3_code2 = service.add_category3(user_id, "EXPENSE", &cat2_code, "野菜", "Vegetables").await.unwrap();
-        let cat3_code3 = service.add_category3(user_id, "EXPENSE", &cat2_code, "肉", "Meat").await.unwrap();
+        let _cat3_code3 = service.add_category3(user_id, "EXPENSE", &cat2_code, "肉", "Meat").await.unwrap();
         
         // Get initial orders
         let order1: i64 = sqlx::query_scalar(sql_queries::TEST_CATEGORY3_GET_DISPLAY_ORDER)
