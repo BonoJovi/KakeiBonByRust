@@ -6,7 +6,7 @@
 
 [![Rust](https://img.shields.io/badge/Rust-1.70+-orange.svg)](https://www.rust-lang.org/)
 [![Tauri](https://img.shields.io/badge/Tauri-v2.9.3-blue.svg)](https://tauri.app/)
-[![Tests](https://img.shields.io/badge/tests-527%20passing-brightgreen.svg)](#テスト結果)
+[![Tests](https://img.shields.io/badge/tests-800%20passing-brightgreen.svg)](#テスト結果)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 [[G][B] English Version](README_en.md) | [[Globe] Bilingual README](README.md)
@@ -24,22 +24,22 @@
 いつもKakeiBonに気を留めていただき、誠にありがとうございます。
 プロジェクト発案者のBonoJovi(Yoshihiro NAKAHARA)です。
 
-**Ver.1.0.7を正式リリースいたしました！**
+**Ver.1.1.1を正式リリースいたしました！**
 
-Ver.1.0.1からVer.1.0.7への大幅なバージョンアップでは、CI/CDパイプラインの導入により、Windows/macOS/Linux向けのマルチプラットフォーム対応とリリース自動化を実現しました。この大規模な開発基盤の整備により、プロジェクトの開発効率が劇的に向上し、今後の継続的な機能改善とリリースがスムーズに行えるようになりました。
+Ver.1.1.0ではダッシュボード機能（Chart.jsによるグラフ表示）を実装し、Ver.1.1.1ではセキュリティ・安定性の向上を行いました。依存関係の更新、未使用コードの整理、CI/CDパイプラインの改善により、より堅牢なリリースプロセスを実現しています。
 
-入出金データの入力機能が完成し、基本的な家計簿アプリケーションとしてご利用いただける状態となりました。
+入出金データの入力・集計機能が完成し、実用的な家計簿アプリケーションとしてご利用いただける状態となりました。
 安定版リリースをご利用になりたい方は、[mainブランチ](https://github.com/BonoJovi/KakeiBonByRust/tree/main)をご参照ください。
 
 現在ご覧いただいているdevブランチは開発版となり、次期バージョンの機能を開発中です。
 最新の機能をいち早く試してみたい方は、こちらのdevブランチをお使いください。
 
-今後は集計・レポート機能の実装を進めていく予定です。細々した機能も追々実装していきますので、機能拡張にご期待いただければと思います。
+今後はCSV入出力機能、財務諸表機能、アクセシビリティ対応（ARIA）などの実装を進めていく予定です。
 GitHubのissueやeメールでのメッセージも受け付けていますので、応援メッセージや将来的に実装してほしい機能など、ちょっとしたことでも良いのでご連絡いただければ幸いです。
 
 それでは、引き続きKakeiBonをご愛顧頂ますよう、お願い申し上げます。
 
-**2025-11-30 (JST) Written by Yoshihiro NAKAHARA**
+**2026-01-26 (JST) Written by Yoshihiro NAKAHARA**
 
 </div>
 
@@ -69,7 +69,7 @@ GitHubのissueやeメールでのメッセージも受け付けていますの�
 開発は順調に進んでおり、できるだけ日々更新するようにしています！
 
 **プロジェクト開始**: 2025-10-22 (JST)  
-**最終更新**: 2025-11-30 (JST)
+**最終更新**: 2026-01-26 (JST)
 
 > **[Robot] AI支援開発**  
 > 本プロジェクトのソースコードおよびドキュメントは、生成AI（GitHub Copilot、Claude）の支援により**100%生成**され、開発者による監修とレビューを経ています。これは、AI支援開発の可能性を示す事例です。
