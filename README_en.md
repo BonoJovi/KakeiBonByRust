@@ -6,7 +6,7 @@
 
 [![Rust](https://img.shields.io/badge/Rust-1.70+-orange.svg)](https://www.rust-lang.org/)
 [![Tauri](https://img.shields.io/badge/Tauri-v2.9.3-blue.svg)](https://tauri.app/)
-[![Tests](https://img.shields.io/badge/tests-527%20passing-brightgreen.svg)](#test-results)
+[![Tests](https://img.shields.io/badge/tests-800%20passing-brightgreen.svg)](#test-results)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 [🇯🇵 Japanese Version](README_ja.md) | [🌐 Bilingual README](README.md)
@@ -24,22 +24,22 @@
 Thank you for your continued interest in KakeiBon.
 I'm BonoJovi (Yoshihiro NAKAHARA), the project initiator.
 
-**We have officially released Ver.1.0.7!**
+**We have officially released Ver.1.1.1!**
 
-The major version jump from Ver.1.0.1 to Ver.1.0.7 reflects the significant impact of introducing a CI/CD pipeline, enabling multi-platform support (Windows/macOS/Linux) and automated releases. This large-scale infrastructure improvement has dramatically enhanced development efficiency and enables smooth continuous feature improvements and releases going forward.
+Ver.1.1.0 introduced dashboard functionality (graph visualization with Chart.js), and Ver.1.1.1 improves security and stability. We've updated dependencies, cleaned up unused code, and improved the CI/CD pipeline for a more robust release process.
 
-The transaction data input functionality is now complete, and KakeiBon is ready to be used as a basic household budget application.
+Transaction data input and aggregation features are now complete, making KakeiBon a practical household budget application.
 If you would like to use the stable release version, please refer to the [main branch](https://github.com/BonoJovi/KakeiBonByRust/tree/main).
 
 The dev branch you are currently viewing is the development version, where we are working on features for the next release.
 If you want to try the latest features early, please use this dev branch.
 
-We plan to proceed with implementing aggregation and reporting features next. We will continue to add various features incrementally, so please look forward to continuous enhancements.
+We plan to implement CSV import/export, financial statements, and accessibility features (ARIA) next.
 We welcome messages via GitHub issues or email, whether it's words of encouragement or suggestions for features you'd like to see in the future—any feedback is appreciated.
 
 Thank you for your continued support of KakeiBon.
 
-**2025-11-30 (JST) Written by Yoshihiro NAKAHARA**
+**2026-01-26 (JST) Written by Yoshihiro NAKAHARA**
 
 </div>
 
@@ -69,7 +69,7 @@ Thank you for your continued support of KakeiBon.
 Development is progressing smoothly, and we strive to update daily!
 
 **Project Started**: 2025-10-22 (JST)  
-**Last Updated**: 2025-11-30 (JST)
+**Last Updated**: 2026-01-26 (JST)
 
 > **🤖 AI-Assisted Development**  
 > This project's source code and documentation are **100% generated** with the assistance of generative AI (GitHub Copilot, Claude), supervised and reviewed by the developer. This demonstrates the potential of AI-assisted development.

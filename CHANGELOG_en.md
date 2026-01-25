@@ -2,6 +2,34 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.1.1] - 2026-01-26
+
+### Security & Stability
+
+- **Dependency Updates**: Updated 76 packages to latest versions
+- **Code Cleanup**: Removed dead code and resolved warnings
+- **CI/CD Improvements**: Added release build integrity check
+  - Added `test-release-build` job to workflow
+  - Added `scripts/check-release.sh` script
+
+### Tests
+
+- Backend: 201 tests
+- Frontend: 599 tests
+- Total: 800 tests
+
+---
+
+## [v1.1.0] - 2026-01-07
+
+### Added
+
+- **Dashboard Feature**: Graph visualization with Chart.js
+  - Monthly income/expense trend chart
+  - Category-wise pie chart
+
+---
+
 ## [Unreleased] - 2025-11-10
 
 ### Added
