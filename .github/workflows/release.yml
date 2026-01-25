@@ -47,33 +47,69 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: lts/*
-      
+
       - name: Cache npm dependencies
         uses: actions/cache@v3
         with:
           path: res/tests/node_modules
           key: ${{ runner.os }}-npm-test-${{ hashFiles('res/tests/package-lock.json') }}
-      
+
       - name: Install test dependencies
         working-directory: res/tests
         run: npm install
-      
+
       - name: Run JavaScript tests
         working-directory: res/tests
         run: npm test
-      
+
       - name: Test summary
         run: |
           echo "✅ All 262+ JavaScript tests passed!"
 
+  test-release-build:
+    name: Test Release Build (Import Integrity)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.0-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Cache Cargo
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build release
+        run: cargo build --release --verbose
+
+      - name: Test release
+        run: cargo test --release --verbose
+
+      - name: Release build summary
+        run: |
+          echo "✅ Release build completed successfully!"
+          echo "✅ Release tests passed!"
+
   create-release:
     name: Create Release
-    needs: [test-backend, test-frontend]
+    needs: [test-backend, test-frontend, test-release-build]
     permissions:
       contents: write
     runs-on: ubuntu-22.04
