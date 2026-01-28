@@ -1,0 +1,219 @@
+name: Version Bump
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'New version (semver format: X.Y.Z)'
+        required: true
+        type: string
+      version_description:
+        description: 'Version description (e.g., "Stable Release", "Bug Fix")'
+        required: false
+        default: ''
+        type: string
+      create_tag:
+        description: 'Create git tag (triggers release workflow)'
+        required: true
+        default: false
+        type: boolean
+
+jobs:
+  version-bump:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Validate version format
+        run: |
+          VERSION="${{ inputs.version }}"
+          if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "Error: Version must be in semver format (X.Y.Z)"
+            echo "   Provided: $VERSION"
+            exit 1
+          fi
+          echo "Version format valid: $VERSION"
+
+      - name: Checkout dev branch
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check if tag already exists
+        run: |
+          VERSION="${{ inputs.version }}"
+          if git tag -l "v$VERSION" | grep -q "v$VERSION"; then
+            echo "Error: Tag v$VERSION already exists"
+            exit 1
+          fi
+          echo "Tag v$VERSION does not exist"
+
+      - name: Delete existing draft releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Checking for draft releases..."
+          DRAFTS=$(gh release list --json tagName,isDraft --jq '.[] | select(.isDraft) | .tagName')
+          if [ -z "$DRAFTS" ]; then
+            echo "No draft releases found"
+          else
+            echo "$DRAFTS" | while read -r tag; do
+              echo "Deleting draft release: $tag"
+              gh release delete "$tag" --yes
+            done
+            echo "Draft releases cleaned up"
+          fi
+
+      - name: Get current version
+        id: current
+        run: |
+          CURRENT=$(grep -oP '^version = "\K[^"]+' Cargo.toml)
+          echo "version=$CURRENT" >> $GITHUB_OUTPUT
+          echo "Current version: $CURRENT"
+
+      - name: Update Cargo.toml
+        run: |
+          VERSION="${{ inputs.version }}"
+          sed -i "s/^version = \"[^\"]*\"/version = \"$VERSION\"/" Cargo.toml
+          echo "Updated Cargo.toml"
+          grep "^version" Cargo.toml
+
+      - name: Update tauri.conf.json
+        run: |
+          VERSION="${{ inputs.version }}"
+          jq --arg v "$VERSION" '.version = $v' tauri.conf.json > tauri.conf.json.tmp
+          mv tauri.conf.json.tmp tauri.conf.json
+          echo "Updated tauri.conf.json"
+          jq '.version' tauri.conf.json
+
+      - name: Update package.json
+        run: |
+          VERSION="${{ inputs.version }}"
+          jq --arg v "$VERSION" '.version = $v' package.json > package.json.tmp
+          mv package.json.tmp package.json
+          echo "Updated package.json"
+          jq '.version' package.json
+
+      - name: Update README.md
+        run: |
+          VERSION="${{ inputs.version }}"
+          OLD_VERSION="${{ steps.current.outputs.version }}"
+
+          # Update version badge
+          sed -i "s/Version-[0-9]*\.[0-9]*\.[0-9]*-blue/Version-$VERSION-blue/g" README.md
+
+          # Update release tag URLs
+          sed -i "s|/releases/tag/v[0-9]*\.[0-9]*\.[0-9]*|/releases/tag/v$VERSION|g" README.md
+
+          echo "Updated README.md"
+          grep -n "Version-" README.md | head -3
+
+      - name: Verify all versions match
+        run: |
+          VERSION="${{ inputs.version }}"
+
+          echo "Verifying version consistency..."
+
+          # Check Cargo.toml
+          CARGO_VER=$(grep -oP '^version = "\K[^"]+' Cargo.toml)
+          if [ "$CARGO_VER" != "$VERSION" ]; then
+            echo "Cargo.toml version mismatch: $CARGO_VER"
+            exit 1
+          fi
+
+          # Check tauri.conf.json
+          TAURI_VER=$(jq -r '.version' tauri.conf.json)
+          if [ "$TAURI_VER" != "$VERSION" ]; then
+            echo "tauri.conf.json version mismatch: $TAURI_VER"
+            exit 1
+          fi
+
+          # Check package.json
+          PKG_VER=$(jq -r '.version' package.json)
+          if [ "$PKG_VER" != "$VERSION" ]; then
+            echo "package.json version mismatch: $PKG_VER"
+            exit 1
+          fi
+
+          echo "All version files match: $VERSION"
+          echo ""
+          echo "Summary:"
+          echo "   Cargo.toml:      $CARGO_VER"
+          echo "   tauri.conf.json: $TAURI_VER"
+          echo "   package.json:    $PKG_VER"
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Commit version bump
+        run: |
+          VERSION="${{ inputs.version }}"
+          DESCRIPTION="${{ inputs.version_description }}"
+
+          git add Cargo.toml tauri.conf.json package.json README.md
+
+          # Build commit message
+          if [ -n "$DESCRIPTION" ]; then
+            COMMIT_MSG="chore(release): bump version to v$VERSION - $DESCRIPTION [skip ci]"
+          else
+            COMMIT_MSG="chore(release): bump version to v$VERSION [skip ci]"
+          fi
+
+          git commit -m "$COMMIT_MSG"
+          echo "Created commit: $COMMIT_MSG"
+
+      - name: Push to dev
+        run: |
+          git push origin dev
+          echo "Pushed to dev branch"
+
+      - name: Create and push tag
+        if: ${{ inputs.create_tag }}
+        run: |
+          VERSION="${{ inputs.version }}"
+          DESCRIPTION="${{ inputs.version_description }}"
+
+          # Build tag message
+          if [ -n "$DESCRIPTION" ]; then
+            TAG_MSG="v$VERSION - $DESCRIPTION"
+          else
+            TAG_MSG="v$VERSION"
+          fi
+
+          git tag -a "v$VERSION" -m "$TAG_MSG"
+          git push origin "v$VERSION"
+          echo "Created and pushed tag: v$VERSION"
+          echo ""
+          echo "Release workflow will be triggered automatically"
+
+      - name: Summary
+        run: |
+          VERSION="${{ inputs.version }}"
+          echo ""
+          echo "==========================================="
+          echo "  Version Bump Complete"
+          echo "==========================================="
+          echo ""
+          echo "  New version: v$VERSION"
+          echo "  Description: ${{ inputs.version_description || 'N/A' }}"
+          echo ""
+          echo "  Updated files:"
+          echo "    - Cargo.toml"
+          echo "    - tauri.conf.json"
+          echo "    - package.json"
+          echo "    - README.md"
+          echo ""
+          if [ "${{ inputs.create_tag }}" = "true" ]; then
+            echo "  Tag created: v$VERSION"
+            echo "  Release workflow triggered"
+          else
+            echo "  No tag created (dry run mode)"
+            echo "  Run again with create_tag=true to trigger release"
+          fi
+          echo ""
+          echo "==========================================="
