@@ -3,6 +3,7 @@ name: Update ai-context-shared Submodule
 on:
   repository_dispatch:
     types: [submodule-update]
+  workflow_dispatch:  # Manual trigger for initial registration
 
 permissions:
   contents: write
