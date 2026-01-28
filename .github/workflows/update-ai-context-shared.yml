@@ -15,10 +15,11 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          submodules: true
+          submodules: false
 
-      - name: Update submodule
+      - name: Initialize and update ai-context-shared only
         run: |
+          git submodule update --init .ai-context/shared
           git submodule update --remote .ai-context/shared
 
       - name: Check for changes
