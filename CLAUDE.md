@@ -18,7 +18,8 @@ This file automatically loads **minimal** project context at the start of each C
 ### Project-Specific Context
 
 **For Coding Tasks**:
-- Conventions: `@.ai-context/development/CONVENTIONS.md`
+- Conventions: `@.ai-context/development/CONVENTIONS_OVERVIEW.md`
+- Conventions (detailed): `@.ai-context/development/archive/CONVENTIONS_DETAILED.md`
 - Testing Strategy: `@.ai-context/development/TESTING_STRATEGY.md`
 
 **For Architecture Tasks**:
