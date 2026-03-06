@@ -344,6 +344,14 @@ function clearRoundingWarning() {
 }
 
 function setupEventListeners() {
+    // Back button
+    const backBtn = document.getElementById('back-btn');
+    if (backBtn) {
+        backBtn.addEventListener('click', () => {
+            window.location.href = HTML_FILES.TRANSACTION_MANAGEMENT;
+        });
+    }
+
     // Add detail button
     const addDetailBtn = document.getElementById('add-detail-btn');
     if (addDetailBtn) {
@@ -536,28 +544,43 @@ async function loadCategory3Options(category2Code) {
 async function loadTransactionHeader() {
     try {
         console.log('Loading transaction header for ID:', transactionId);
-        
-        // Get transaction header from backend
-        const header = await invoke('get_transaction_header', {
+
+        // Get transaction header with related info (account names, shop name)
+        const header = await invoke('get_transaction_header_with_info', {
             transactionId: parseInt(transactionId)
         });
-        
+
         if (!header) {
             throw new Error('Transaction header not found');
         }
-        
+
         // Store CATEGORY1_CODE and TAX_ROUNDING_TYPE for detail operations
         category1Code = header.category1_code;
         taxRoundingType = header.tax_rounding_type ?? 0; // Default to floor (0) if not set
-        
+
         // Display header information
         document.getElementById('header-transaction-date').textContent = header.transaction_date || '-';
-        document.getElementById('header-account').textContent = header.account_name || '-';
+
+        // Display account based on category1_code
+        // EXPENSE: from_account (出金元), INCOME: to_account (入金先), TRANSFER: from → to
+        let accountDisplay = '-';
+        if (header.category1_code === 'TRANSFER') {
+            const from = header.from_account_name || header.from_account_code || '-';
+            const to = header.to_account_name || header.to_account_code || '-';
+            accountDisplay = `${from} → ${to}`;
+        } else if (header.category1_code === 'INCOME') {
+            accountDisplay = header.to_account_name || header.to_account_code || '-';
+        } else {
+            // EXPENSE or other
+            accountDisplay = header.from_account_name || header.from_account_code || '-';
+        }
+        document.getElementById('header-account').textContent = accountDisplay;
+
         document.getElementById('header-shop').textContent = header.shop_name || '-';
-        document.getElementById('header-total-amount').textContent = header.amount 
-            ? `¥${header.amount.toLocaleString()}` 
+        document.getElementById('header-total-amount').textContent = header.total_amount
+            ? `¥${header.total_amount.toLocaleString()}`
             : '¥0';
-        
+
         console.log('Transaction header loaded successfully, CATEGORY1_CODE:', category1Code, 'TAX_ROUNDING_TYPE:', taxRoundingType);
     } catch (error) {
         console.error('Failed to load transaction header:', error);
@@ -728,7 +751,7 @@ async function handleDetailFormSubmit(event) {
         return;
     }
     
-    if (!category1Code || !category2Code || !category3Code) {
+    if (!category1Code) {
         showMessage('error', i18n.t('detail_mgmt.error_category_required'));
         return;
     }
@@ -744,8 +767,8 @@ async function handleDetailFormSubmit(event) {
             await invoke('update_transaction_detail', {
                 detailId: parseInt(detailId),
                 category1Code: category1Code,
-                category2Code: category2Code,
-                category3Code: category3Code,
+                category2Code: category2Code || null,
+                category3Code: category3Code || null,
                 itemName: itemName,
                 amount: amountExcludingTax,
                 amountIncludingTax: amountIncludingTax,
@@ -758,8 +781,8 @@ async function handleDetailFormSubmit(event) {
             await invoke('add_transaction_detail', {
                 transactionId: parseInt(transactionId),
                 category1Code: category1Code,
-                category2Code: category2Code,
-                category3Code: category3Code,
+                category2Code: category2Code || null,
+                category3Code: category3Code || null,
                 itemName: itemName,
                 amount: amountExcludingTax,
                 amountIncludingTax: amountIncludingTax,

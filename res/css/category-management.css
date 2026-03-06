@@ -222,6 +222,58 @@ body {
     background-color: #c0392b;
 }
 
+.btn-hide {
+    background-color: #95a5a6;
+    color: white;
+    padding: 6px 12px;
+    font-size: 1em;
+    border: 2px solid #000;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    white-space: nowrap;
+}
+
+.btn-hide:hover {
+    background-color: #7f8c8d;
+}
+
+.btn-show {
+    background-color: #27ae60;
+    color: white;
+    padding: 6px 12px;
+    font-size: 1em;
+    border: 2px solid #000;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    white-space: nowrap;
+}
+
+.btn-show:hover {
+    background-color: #229954;
+}
+
+.category-disabled .category-header {
+    background-color: #d0d0d0;
+}
+
+.disabled-name {
+    text-decoration: line-through;
+    color: #666;
+}
+
+.category-badge-hidden {
+    display: inline-block;
+    background-color: #e74c3c;
+    color: white;
+    font-size: 0.75em;
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+
 .btn-up {
     background-color: #3498db;
     color: white;

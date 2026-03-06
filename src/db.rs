@@ -96,6 +96,12 @@ impl Database {
                 .await?;
         }
 
+        // Add AMOUNT_INCLUDING_TAX column if it doesn't exist (for tables created before this column was added)
+        self.ensure_amount_including_tax_column().await?;
+
+        // Make CATEGORY2_CODE and CATEGORY3_CODE nullable if they have NOT NULL constraint
+        self.ensure_category_nullable().await?;
+
         Ok(())
     }
 
@@ -159,6 +165,78 @@ impl Database {
         sqlx::query("PRAGMA foreign_keys = ON")
             .execute(&self.pool)
             .await?;
+
+        Ok(())
+    }
+
+    /// Make CATEGORY2_CODE and CATEGORY3_CODE nullable by recreating the table
+    async fn ensure_category_nullable(&self) -> Result<(), sqlx::Error> {
+        // Check if TRANSACTIONS_DETAIL table exists
+        let table_exists: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='TRANSACTIONS_DETAIL'"
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        if table_exists == 0 {
+            return Ok(());
+        }
+
+        // Check if CATEGORY2_CODE has NOT NULL constraint
+        let is_not_null: i64 = sqlx::query_scalar(sql_queries::CHECK_CATEGORY2_NOT_NULL)
+            .fetch_one(&self.pool)
+            .await?;
+
+        if is_not_null == 0 {
+            // Already nullable
+            return Ok(());
+        }
+
+        // Recreate table with nullable CATEGORY2_CODE and CATEGORY3_CODE
+        let mut tx = self.pool.begin().await?;
+
+        sqlx::query("PRAGMA foreign_keys = OFF")
+            .execute(&mut *tx)
+            .await?;
+
+        sqlx::query(sql_queries::MIGRATE_TRANSACTIONS_DETAIL_CREATE_NEW)
+            .execute(&mut *tx)
+            .await?;
+
+        sqlx::query(sql_queries::MIGRATE_NULLABLE_CATEGORY_COPY_DATA)
+            .execute(&mut *tx)
+            .await?;
+
+        sqlx::query(sql_queries::MIGRATE_TRANSACTIONS_DETAIL_DROP_OLD)
+            .execute(&mut *tx)
+            .await?;
+
+        sqlx::query(sql_queries::MIGRATE_TRANSACTIONS_DETAIL_RENAME_NEW)
+            .execute(&mut *tx)
+            .await?;
+
+        tx.commit().await?;
+
+        sqlx::query("PRAGMA foreign_keys = ON")
+            .execute(&self.pool)
+            .await?;
+
+        Ok(())
+    }
+
+    /// Ensure AMOUNT_INCLUDING_TAX column exists in TRANSACTIONS_DETAIL table
+    async fn ensure_amount_including_tax_column(&self) -> Result<(), sqlx::Error> {
+        let has_column: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM pragma_table_info('TRANSACTIONS_DETAIL') WHERE name = 'AMOUNT_INCLUDING_TAX'"
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        if has_column == 0 {
+            sqlx::query("ALTER TABLE TRANSACTIONS_DETAIL ADD COLUMN AMOUNT_INCLUDING_TAX INTEGER")
+                .execute(&self.pool)
+                .await?;
+        }
 
         Ok(())
     }

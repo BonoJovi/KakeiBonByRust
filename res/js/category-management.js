@@ -360,7 +360,7 @@ async function loadCategories() {
         console.log('Loading categories with params:', { langCode: currentLang });
         
         // Fetch categories from backend
-        categories = await invoke('get_category_tree_with_lang', {
+        categories = await invoke('get_category_tree_all_with_lang', {
             langCode: currentLang
         });
         
@@ -453,36 +453,55 @@ function renderCategory2(cat2Tree, parent1Code, index, total) {
     const category = cat2Tree.category2;
     const isExpanded = expandedCategories.has(`cat2-${category.category2_code}`);
     const hasChildren = cat2Tree.children && cat2Tree.children.length > 0;
-    
+    const isDisabled = category.is_disabled === 1;
+
     const div = document.createElement('div');
-    div.className = 'category-item category-level-2';
+    div.className = `category-item category-level-2${isDisabled ? ' category-disabled' : ''}`;
     div.dataset.categoryCode = category.category2_code;
     div.dataset.category1Code = category.category1_code;
     div.dataset.level = '2';
-    
+
     const categoryName = category.category2_name_i18n || category.category2_name;
-    
-    div.innerHTML = `
-        <div class="category-header">
-            <span class="expand-icon ${hasChildren ? (isExpanded ? 'expanded expandable' : 'collapsed expandable') : 'empty'}" data-category-code="${category.category2_code}"></span>
-            <span class="category-name ${hasChildren ? 'expandable' : ''}">${categoryName}</span>
-            <span class="category-order">${i18n.t('category_mgmt.order')}: ${category.display_order}</span>
-            <div class="category-actions">
-                <button class="btn-icon btn-add" data-action="add-child" data-category-code="${category.category2_code}" data-category1-code="${parent1Code}" data-category2-code="${category.category2_code}" data-level="2">
-                    ${i18n.t('category_mgmt.add_sub')}
-                </button>
-                <button class="btn-icon btn-edit" data-action="edit" data-category-code="${category.category2_code}" data-category1-code="${parent1Code}" data-category2-code="${category.category2_code}" data-level="2">
-                    ${i18n.t('common.edit')}
-                </button>
-                <button class="btn-icon btn-up" data-action="move-up" data-category-code="${category.category2_code}" data-category1-code="${parent1Code}" data-category2-code="${category.category2_code}" data-level="2" ${index === 0 ? 'disabled' : ''}>
-                    ↑
-                </button>
-                <button class="btn-icon btn-down" data-action="move-down" data-category-code="${category.category2_code}" data-category1-code="${parent1Code}" data-category2-code="${category.category2_code}" data-level="2" ${index === total - 1 ? 'disabled' : ''}>
-                    ↓
-                </button>
+
+    if (isDisabled) {
+        div.innerHTML = `
+            <div class="category-header">
+                <span class="expand-icon empty"></span>
+                <span class="category-name disabled-name">${categoryName}</span>
+                <span class="category-badge-hidden">${i18n.t('category_mgmt.hidden')}</span>
+                <div class="category-actions">
+                    <button class="btn-icon btn-show" data-action="show" data-category1-code="${parent1Code}" data-category2-code="${category.category2_code}" data-level="2">
+                        ${i18n.t('common.show')}
+                    </button>
+                </div>
             </div>
-        </div>
-    `;
+        `;
+    } else {
+        div.innerHTML = `
+            <div class="category-header">
+                <span class="expand-icon ${hasChildren ? (isExpanded ? 'expanded expandable' : 'collapsed expandable') : 'empty'}" data-category-code="${category.category2_code}"></span>
+                <span class="category-name ${hasChildren ? 'expandable' : ''}">${categoryName}</span>
+                <span class="category-order">${i18n.t('category_mgmt.order')}: ${category.display_order}</span>
+                <div class="category-actions">
+                    <button class="btn-icon btn-add" data-action="add-child" data-category-code="${category.category2_code}" data-category1-code="${parent1Code}" data-category2-code="${category.category2_code}" data-level="2">
+                        ${i18n.t('category_mgmt.add_sub')}
+                    </button>
+                    <button class="btn-icon btn-edit" data-action="edit" data-category-code="${category.category2_code}" data-category1-code="${parent1Code}" data-category2-code="${category.category2_code}" data-level="2">
+                        ${i18n.t('common.edit')}
+                    </button>
+                    <button class="btn-icon btn-up" data-action="move-up" data-category-code="${category.category2_code}" data-category1-code="${parent1Code}" data-category2-code="${category.category2_code}" data-level="2" ${index === 0 ? 'disabled' : ''}>
+                        ↑
+                    </button>
+                    <button class="btn-icon btn-down" data-action="move-down" data-category-code="${category.category2_code}" data-category1-code="${parent1Code}" data-category2-code="${category.category2_code}" data-level="2" ${index === total - 1 ? 'disabled' : ''}>
+                        ↓
+                    </button>
+                    <button class="btn-icon btn-hide" data-action="hide" data-category-code="${category.category2_code}" data-category1-code="${parent1Code}" data-category2-code="${category.category2_code}" data-level="2" data-has-children="${hasChildren}">
+                        ${i18n.t('common.hide')}
+                    </button>
+                </div>
+            </div>
+        `;
+    }
     
     // Add event listeners
     const expandIcon = div.querySelector('.expand-icon');
@@ -498,54 +517,74 @@ function renderCategory2(cat2Tree, parent1Code, index, total) {
     
     addActionListeners(div);
     
-    // Render children
-    if (hasChildren) {
+    // Render children (skip for disabled categories)
+    if (hasChildren && !isDisabled) {
         const childrenDiv = document.createElement('div');
         childrenDiv.className = `category-children ${isExpanded ? '' : 'collapsed'}`;
         childrenDiv.id = `cat2-${category.category2_code}-children`;
-        
+
         cat2Tree.children.forEach((cat3, idx) => {
             const childElement = renderCategory3(cat3, parent1Code, category.category2_code, idx, cat2Tree.children.length);
             childrenDiv.appendChild(childElement);
         });
-        
+
         div.appendChild(childrenDiv);
     }
-    
+
     return div;
 }
 
 function renderCategory3(category, parent1Code, parent2Code, index, total) {
+    const isDisabled = category.is_disabled === 1;
+
     const div = document.createElement('div');
-    div.className = 'category-item category-level-3';
+    div.className = `category-item category-level-3${isDisabled ? ' category-disabled' : ''}`;
     div.dataset.categoryCode = category.category3_code;
     div.dataset.category1Code = parent1Code;
     div.dataset.category2Code = parent2Code;
     div.dataset.level = '3';
-    
+
     const categoryName = category.category3_name_i18n || category.category3_name;
-    
-    div.innerHTML = `
-        <div class="category-header">
-            <span class="expand-icon empty"></span>
-            <span class="category-name">${categoryName}</span>
-            <span class="category-order">${i18n.t('category_mgmt.order')}: ${category.display_order}</span>
-            <div class="category-actions">
-                <button class="btn-icon btn-edit" data-action="edit" data-category-code="${category.category3_code}" data-category1-code="${parent1Code}" data-category2-code="${parent2Code}" data-category3-code="${category.category3_code}" data-level="3">
-                    ${i18n.t('common.edit')}
-                </button>
-                <button class="btn-icon btn-up" data-action="move-up" data-category-code="${category.category3_code}" data-category1-code="${parent1Code}" data-category2-code="${parent2Code}" data-category3-code="${category.category3_code}" data-level="3" ${index === 0 ? 'disabled' : ''}>
-                    ↑
-                </button>
-                <button class="btn-icon btn-down" data-action="move-down" data-category-code="${category.category3_code}" data-category1-code="${parent1Code}" data-category2-code="${parent2Code}" data-category3-code="${category.category3_code}" data-level="3" ${index === total - 1 ? 'disabled' : ''}>
-                    ↓
-                </button>
+
+    if (isDisabled) {
+        div.innerHTML = `
+            <div class="category-header">
+                <span class="expand-icon empty"></span>
+                <span class="category-name disabled-name">${categoryName}</span>
+                <span class="category-badge-hidden">${i18n.t('category_mgmt.hidden')}</span>
+                <div class="category-actions">
+                    <button class="btn-icon btn-show" data-action="show" data-category1-code="${parent1Code}" data-category2-code="${parent2Code}" data-category3-code="${category.category3_code}" data-level="3">
+                        ${i18n.t('common.show')}
+                    </button>
+                </div>
             </div>
-        </div>
-    `;
-    
+        `;
+    } else {
+        div.innerHTML = `
+            <div class="category-header">
+                <span class="expand-icon empty"></span>
+                <span class="category-name">${categoryName}</span>
+                <span class="category-order">${i18n.t('category_mgmt.order')}: ${category.display_order}</span>
+                <div class="category-actions">
+                    <button class="btn-icon btn-edit" data-action="edit" data-category-code="${category.category3_code}" data-category1-code="${parent1Code}" data-category2-code="${parent2Code}" data-category3-code="${category.category3_code}" data-level="3">
+                        ${i18n.t('common.edit')}
+                    </button>
+                    <button class="btn-icon btn-up" data-action="move-up" data-category-code="${category.category3_code}" data-category1-code="${parent1Code}" data-category2-code="${parent2Code}" data-category3-code="${category.category3_code}" data-level="3" ${index === 0 ? 'disabled' : ''}>
+                        ↑
+                    </button>
+                    <button class="btn-icon btn-down" data-action="move-down" data-category-code="${category.category3_code}" data-category1-code="${parent1Code}" data-category2-code="${parent2Code}" data-category3-code="${category.category3_code}" data-level="3" ${index === total - 1 ? 'disabled' : ''}>
+                        ↓
+                    </button>
+                    <button class="btn-icon btn-hide" data-action="hide" data-category-code="${category.category3_code}" data-category1-code="${parent1Code}" data-category2-code="${parent2Code}" data-category3-code="${category.category3_code}" data-level="3">
+                        ${i18n.t('common.hide')}
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
     addActionListeners(div);
-    
+
     return div;
 }
 
@@ -575,6 +614,12 @@ function addActionListeners(element) {
                     break;
                 case 'move-down':
                     await moveCategoryDown(categoryCode, category1Code, category2Code, level);
+                    break;
+                case 'hide':
+                    await hideCategory(category1Code, category2Code, category3Code, level, btn.dataset.hasChildren === 'true');
+                    break;
+                case 'show':
+                    await showCategory(category1Code, category2Code, category3Code, level);
                     break;
             }
         });
@@ -880,6 +925,66 @@ async function moveCategoryDown(categoryCode, category1Code, category2Code, leve
         if (button) {
             button.disabled = false;
         }
+    }
+}
+
+async function hideCategory(category1Code, category2Code, category3Code, level, hasChildren) {
+    // Show confirmation dialog
+    let confirmMessage;
+    if (level === LEVEL_CATEGORY2 && hasChildren) {
+        confirmMessage = i18n.t('category_mgmt.hide_confirm_with_children') ||
+            'Are you sure you want to hide this category? All sub-categories will also be hidden.';
+    } else {
+        confirmMessage = i18n.t('category_mgmt.hide_confirm') ||
+            'Are you sure you want to hide this category? It will no longer appear in selection lists.';
+    }
+
+    if (!confirm(confirmMessage)) {
+        return;
+    }
+
+    try {
+        if (level === LEVEL_CATEGORY2) {
+            await invoke('disable_category2', {
+                category1Code: category1Code,
+                category2Code: category2Code
+            });
+        } else if (level === LEVEL_CATEGORY3) {
+            await invoke('disable_category3', {
+                category1Code: category1Code,
+                category2Code: category2Code,
+                category3Code: category3Code
+            });
+        }
+
+        // Reload categories to reflect changes
+        await loadCategories();
+    } catch (error) {
+        console.error('Failed to hide category:', error);
+        alert('Failed to hide category: ' + error);
+    }
+}
+
+async function showCategory(category1Code, category2Code, category3Code, level) {
+    try {
+        if (level === LEVEL_CATEGORY2) {
+            await invoke('enable_category2', {
+                category1Code: category1Code,
+                category2Code: category2Code
+            });
+        } else if (level === LEVEL_CATEGORY3) {
+            await invoke('enable_category3', {
+                category1Code: category1Code,
+                category2Code: category2Code,
+                category3Code: category3Code
+            });
+        }
+
+        // Reload categories to reflect changes
+        await loadCategories();
+    } catch (error) {
+        console.error('Failed to show category:', error);
+        alert('Failed to show category: ' + error);
     }
 }
 

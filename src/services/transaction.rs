@@ -61,9 +61,9 @@ pub struct TransactionDetail {
     #[sqlx(rename = "CATEGORY1_CODE")]
     pub category1_code: String,
     #[sqlx(rename = "CATEGORY2_CODE")]
-    pub category2_code: String,
+    pub category2_code: Option<String>,
     #[sqlx(rename = "CATEGORY3_CODE")]
-    pub category3_code: String,
+    pub category3_code: Option<String>,
     #[sqlx(rename = "ITEM_NAME")]
     pub item_name: String,
     #[sqlx(rename = "AMOUNT")]
@@ -87,8 +87,8 @@ pub struct TransactionDetail {
 pub struct SaveTransactionDetailRequest {
     pub detail_id: Option<i64>,
     pub category1_code: String,
-    pub category2_code: String,
-    pub category3_code: String,
+    pub category2_code: Option<String>,
+    pub category3_code: Option<String>,
     pub item_name: String,
     pub amount: i64,
     pub tax_rate: i32,
@@ -104,8 +104,8 @@ pub struct TransactionDetailWithInfo {
     pub transaction_id: i64,
     pub user_id: i64,
     pub category1_code: String,
-    pub category2_code: String,
-    pub category3_code: String,
+    pub category2_code: Option<String>,
+    pub category3_code: Option<String>,
     pub category1_name: Option<String>,
     pub category2_name: Option<String>,
     pub category3_name: Option<String>,
@@ -1226,7 +1226,69 @@ mod tests {
             .await
             .unwrap();
 
+        // Create CATEGORY2 table
+        sqlx::query(sql_queries::TEST_TRANSACTION_CREATE_CATEGORY2_TABLE)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        // Insert test category2
+        sqlx::query(sql_queries::TEST_TRANSACTION_INSERT_CATEGORY2)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        // Create CATEGORY3 table
+        sqlx::query(sql_queries::TEST_TRANSACTION_CREATE_CATEGORY3_TABLE)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        // Insert test category3
+        sqlx::query(sql_queries::TEST_TRANSACTION_INSERT_CATEGORY3)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        // Create TRANSACTIONS_DETAIL table
+        sqlx::query(sql_queries::TEST_TRANSACTION_CREATE_DETAIL_TABLE)
+            .execute(&pool)
+            .await
+            .unwrap();
+
         pool
+    }
+
+    /// Helper: create a transaction header and return its ID
+    async fn create_test_header(service: &TransactionService) -> i64 {
+        let request = SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "EXPENSE".to_string(),
+            from_account_code: "CASH".to_string(),
+            to_account_code: "BANK".to_string(),
+            transaction_date: "2024-01-01 10:00:00".to_string(),
+            total_amount: 10000,
+            tax_rounding_type: consts::TAX_ROUND_DOWN,
+            tax_included_type: consts::TAX_EXCLUDED,
+            memo: None,
+        };
+        service.save_transaction_header(2, request).await.unwrap()
+    }
+
+    /// Helper: create a basic detail request
+    fn basic_detail_request() -> SaveTransactionDetailRequest {
+        SaveTransactionDetailRequest {
+            detail_id: None,
+            category1_code: "EXPENSE".to_string(),
+            category2_code: Some("FOOD".to_string()),
+            category3_code: Some("GROCERY".to_string()),
+            item_name: "Rice".to_string(),
+            amount: 500,
+            tax_rate: 8,
+            tax_amount: 40,
+            amount_including_tax: Some(540),
+            memo: None,
+        }
     }
 
     #[tokio::test]
@@ -1363,6 +1425,930 @@ mod tests {
         // Test that our constants match expected values
         assert_eq!(consts::TAX_INCLUDED, 0, "TAX_INCLUDED should be 0");
         assert_eq!(consts::TAX_EXCLUDED, 1, "TAX_EXCLUDED should be 1");
+    }
+
+    // ========================================================================
+    // Transaction Detail Tests
+    // ========================================================================
+
+    #[tokio::test]
+    async fn test_add_transaction_detail() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        let request = basic_detail_request();
+        let result = service.add_transaction_detail(2, transaction_id, request).await;
+        assert!(result.is_ok(), "add_transaction_detail failed: {:?}", result.err());
+
+        let detail_id = result.unwrap();
+        assert!(detail_id > 0);
+    }
+
+    #[tokio::test]
+    async fn test_add_transaction_detail_with_amount_including_tax() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        let request = SaveTransactionDetailRequest {
+            detail_id: None,
+            category1_code: "EXPENSE".to_string(),
+            category2_code: Some("FOOD".to_string()),
+            category3_code: Some("GROCERY".to_string()),
+            item_name: "Bread".to_string(),
+            amount: 200,
+            tax_rate: 8,
+            tax_amount: 16,
+            amount_including_tax: Some(216),
+            memo: Some("Test memo".to_string()),
+        };
+        let detail_id = service.add_transaction_detail(2, transaction_id, request).await.unwrap();
+
+        // Verify via get_transaction_details
+        let details = service.get_transaction_details(2, transaction_id).await.unwrap();
+        assert_eq!(details.len(), 1);
+        assert_eq!(details[0].detail_id, detail_id);
+        assert_eq!(details[0].item_name, "Bread");
+        assert_eq!(details[0].amount, 200);
+        assert_eq!(details[0].tax_amount, 16);
+        assert_eq!(details[0].tax_rate, 8);
+        assert_eq!(details[0].amount_including_tax, Some(216));
+        assert_eq!(details[0].memo_text, Some("Test memo".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_add_transaction_detail_without_amount_including_tax() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        let request = SaveTransactionDetailRequest {
+            detail_id: None,
+            category1_code: "EXPENSE".to_string(),
+            category2_code: Some("FOOD".to_string()),
+            category3_code: Some("GROCERY".to_string()),
+            item_name: "Water".to_string(),
+            amount: 100,
+            tax_rate: 0,
+            tax_amount: 0,
+            amount_including_tax: None,
+            memo: None,
+        };
+        let detail_id = service.add_transaction_detail(2, transaction_id, request).await.unwrap();
+
+        let details = service.get_transaction_details(2, transaction_id).await.unwrap();
+        assert_eq!(details.len(), 1);
+        assert_eq!(details[0].detail_id, detail_id);
+        assert_eq!(details[0].amount_including_tax, None);
+        assert_eq!(details[0].memo_text, None);
+    }
+
+    #[tokio::test]
+    async fn test_add_multiple_details() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        let request1 = SaveTransactionDetailRequest {
+            item_name: "Item A".to_string(),
+            amount: 100,
+            ..basic_detail_request()
+        };
+        let request2 = SaveTransactionDetailRequest {
+            item_name: "Item B".to_string(),
+            amount: 200,
+            ..basic_detail_request()
+        };
+
+        service.add_transaction_detail(2, transaction_id, request1).await.unwrap();
+        service.add_transaction_detail(2, transaction_id, request2).await.unwrap();
+
+        let details = service.get_transaction_details(2, transaction_id).await.unwrap();
+        assert_eq!(details.len(), 2);
+        assert_eq!(details[0].item_name, "Item A");
+        assert_eq!(details[1].item_name, "Item B");
+    }
+
+    #[tokio::test]
+    async fn test_update_transaction_detail() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        let request = basic_detail_request();
+        let detail_id = service.add_transaction_detail(2, transaction_id, request).await.unwrap();
+
+        // Update the detail
+        let update_request = SaveTransactionDetailRequest {
+            detail_id: Some(detail_id),
+            category1_code: "EXPENSE".to_string(),
+            category2_code: Some("FOOD".to_string()),
+            category3_code: Some("GROCERY".to_string()),
+            item_name: "Updated Rice".to_string(),
+            amount: 600,
+            tax_rate: 10,
+            tax_amount: 60,
+            amount_including_tax: Some(660),
+            memo: Some("Updated memo".to_string()),
+        };
+        let result = service.update_transaction_detail(2, detail_id, update_request).await;
+        assert!(result.is_ok(), "update_transaction_detail failed: {:?}", result.err());
+
+        // Verify updated values
+        let details = service.get_transaction_details(2, transaction_id).await.unwrap();
+        assert_eq!(details.len(), 1);
+        assert_eq!(details[0].item_name, "Updated Rice");
+        assert_eq!(details[0].amount, 600);
+        assert_eq!(details[0].tax_rate, 10);
+        assert_eq!(details[0].tax_amount, 60);
+        assert_eq!(details[0].amount_including_tax, Some(660));
+        assert_eq!(details[0].memo_text, Some("Updated memo".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_delete_transaction_detail() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        let request = basic_detail_request();
+        let detail_id = service.add_transaction_detail(2, transaction_id, request).await.unwrap();
+
+        // Verify it exists
+        let details = service.get_transaction_details(2, transaction_id).await.unwrap();
+        assert_eq!(details.len(), 1);
+
+        // Delete
+        let result = service.delete_transaction_detail(2, detail_id).await;
+        assert!(result.is_ok(), "delete_transaction_detail failed: {:?}", result.err());
+
+        // Verify it's gone
+        let details = service.get_transaction_details(2, transaction_id).await.unwrap();
+        assert_eq!(details.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_delete_transaction_detail_with_memo() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        let request = SaveTransactionDetailRequest {
+            memo: Some("Memo to delete".to_string()),
+            ..basic_detail_request()
+        };
+        let detail_id = service.add_transaction_detail(2, transaction_id, request).await.unwrap();
+
+        // Delete (should also delete the memo)
+        service.delete_transaction_detail(2, detail_id).await.unwrap();
+
+        let details = service.get_transaction_details(2, transaction_id).await.unwrap();
+        assert_eq!(details.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_delete_nonexistent_detail() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+
+        let result = service.delete_transaction_detail(2, 99999).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_update_nonexistent_detail() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+
+        let request = basic_detail_request();
+        let result = service.update_transaction_detail(2, 99999, request).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_detail_validation_empty_item_name() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        let request = SaveTransactionDetailRequest {
+            item_name: "".to_string(),
+            ..basic_detail_request()
+        };
+        let result = service.add_transaction_detail(2, transaction_id, request).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_detail_validation_negative_amount() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        let request = SaveTransactionDetailRequest {
+            amount: -1,
+            ..basic_detail_request()
+        };
+        let result = service.add_transaction_detail(2, transaction_id, request).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_detail_validation_invalid_tax_rate() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        let request = SaveTransactionDetailRequest {
+            tax_rate: 101,
+            ..basic_detail_request()
+        };
+        let result = service.add_transaction_detail(2, transaction_id, request).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_detail_validation_negative_tax_amount() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        let request = SaveTransactionDetailRequest {
+            tax_amount: -1,
+            ..basic_detail_request()
+        };
+        let result = service.add_transaction_detail(2, transaction_id, request).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_detail_validation_item_name_too_long() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        let request = SaveTransactionDetailRequest {
+            item_name: "A".repeat(201),
+            ..basic_detail_request()
+        };
+        let result = service.add_transaction_detail(2, transaction_id, request).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_detail_validation_memo_too_long() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        let request = SaveTransactionDetailRequest {
+            memo: Some("A".repeat(1001)),
+            ..basic_detail_request()
+        };
+        let result = service.add_transaction_detail(2, transaction_id, request).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_get_details_empty_transaction() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        let details = service.get_transaction_details(2, transaction_id).await.unwrap();
+        assert_eq!(details.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_detail_user_isolation() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        let request = basic_detail_request();
+        let detail_id = service.add_transaction_detail(2, transaction_id, request).await.unwrap();
+
+        // Different user (user_id=999) should not see the detail
+        let details = service.get_transaction_details(999, transaction_id).await.unwrap();
+        assert_eq!(details.len(), 0);
+
+        // Different user should not be able to update
+        let update_request = basic_detail_request();
+        let result = service.update_transaction_detail(999, detail_id, update_request).await;
+        assert!(result.is_err());
+
+        // Different user should not be able to delete
+        let result = service.delete_transaction_detail(999, detail_id).await;
+        assert!(result.is_err());
+    }
+
+    // ========================================================================
+    // Transaction Detail - Boundary Value Tests
+    // ========================================================================
+
+    #[tokio::test]
+    async fn test_detail_amount_zero() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        let request = SaveTransactionDetailRequest {
+            amount: 0,
+            tax_amount: 0,
+            amount_including_tax: Some(0),
+            ..basic_detail_request()
+        };
+        let result = service.add_transaction_detail(2, transaction_id, request).await;
+        assert!(result.is_ok(), "amount=0 should be valid");
+    }
+
+    #[tokio::test]
+    async fn test_detail_amount_max() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        let request = SaveTransactionDetailRequest {
+            amount: 999_999_999,
+            ..basic_detail_request()
+        };
+        let result = service.add_transaction_detail(2, transaction_id, request).await;
+        assert!(result.is_ok(), "amount=999_999_999 should be valid");
+    }
+
+    #[tokio::test]
+    async fn test_detail_amount_over_max() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        let request = SaveTransactionDetailRequest {
+            amount: 1_000_000_000,
+            ..basic_detail_request()
+        };
+        let result = service.add_transaction_detail(2, transaction_id, request).await;
+        assert!(result.is_err(), "amount=1_000_000_000 should be invalid");
+    }
+
+    #[tokio::test]
+    async fn test_detail_tax_rate_negative() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        let request = SaveTransactionDetailRequest {
+            tax_rate: -1,
+            ..basic_detail_request()
+        };
+        let result = service.add_transaction_detail(2, transaction_id, request).await;
+        assert!(result.is_err(), "tax_rate=-1 should be invalid");
+    }
+
+    #[tokio::test]
+    async fn test_detail_tax_rate_boundary_values() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        // tax_rate=0 should be valid
+        let request = SaveTransactionDetailRequest {
+            tax_rate: 0,
+            ..basic_detail_request()
+        };
+        assert!(service.add_transaction_detail(2, transaction_id, request).await.is_ok());
+
+        // tax_rate=100 should be valid
+        let request = SaveTransactionDetailRequest {
+            tax_rate: 100,
+            ..basic_detail_request()
+        };
+        assert!(service.add_transaction_detail(2, transaction_id, request).await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_add_detail_without_category2_category3() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        let request = SaveTransactionDetailRequest {
+            detail_id: None,
+            category1_code: "EXPENSE".to_string(),
+            category2_code: None,
+            category3_code: None,
+            item_name: "Miscellaneous".to_string(),
+            amount: 300,
+            tax_rate: 0,
+            tax_amount: 0,
+            amount_including_tax: None,
+            memo: None,
+        };
+        let detail_id = service.add_transaction_detail(2, transaction_id, request).await.unwrap();
+
+        let details = service.get_transaction_details(2, transaction_id).await.unwrap();
+        assert_eq!(details.len(), 1);
+        assert_eq!(details[0].detail_id, detail_id);
+        assert_eq!(details[0].category1_code, "EXPENSE");
+        assert_eq!(details[0].category2_code, None);
+        assert_eq!(details[0].category3_code, None);
+        assert_eq!(details[0].item_name, "Miscellaneous");
+        assert_eq!(details[0].amount, 300);
+    }
+
+    #[tokio::test]
+    async fn test_add_detail_with_category2_only() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        let request = SaveTransactionDetailRequest {
+            detail_id: None,
+            category1_code: "EXPENSE".to_string(),
+            category2_code: Some("FOOD".to_string()),
+            category3_code: None,
+            item_name: "Lunch".to_string(),
+            amount: 800,
+            tax_rate: 10,
+            tax_amount: 80,
+            amount_including_tax: Some(880),
+            memo: None,
+        };
+        let detail_id = service.add_transaction_detail(2, transaction_id, request).await.unwrap();
+
+        let details = service.get_transaction_details(2, transaction_id).await.unwrap();
+        assert_eq!(details.len(), 1);
+        assert_eq!(details[0].detail_id, detail_id);
+        assert_eq!(details[0].category2_code, Some("FOOD".to_string()));
+        assert_eq!(details[0].category3_code, None);
+    }
+
+    #[tokio::test]
+    async fn test_detail_item_name_whitespace_only() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        let request = SaveTransactionDetailRequest {
+            item_name: "   ".to_string(),
+            ..basic_detail_request()
+        };
+        let result = service.add_transaction_detail(2, transaction_id, request).await;
+        assert!(result.is_err(), "whitespace-only item_name should be invalid");
+    }
+
+    #[tokio::test]
+    async fn test_detail_item_name_exactly_200_chars() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        let request = SaveTransactionDetailRequest {
+            item_name: "A".repeat(200),
+            ..basic_detail_request()
+        };
+        let result = service.add_transaction_detail(2, transaction_id, request).await;
+        assert!(result.is_ok(), "item_name of exactly 200 chars should be valid");
+    }
+
+    #[tokio::test]
+    async fn test_detail_memo_empty_string() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        let request = SaveTransactionDetailRequest {
+            memo: Some("".to_string()),
+            ..basic_detail_request()
+        };
+        let detail_id = service.add_transaction_detail(2, transaction_id, request).await.unwrap();
+
+        let details = service.get_transaction_details(2, transaction_id).await.unwrap();
+        assert_eq!(details.len(), 1);
+        assert_eq!(details[0].detail_id, detail_id);
+        assert_eq!(details[0].memo_text, None, "empty string memo should result in no memo");
+    }
+
+    #[tokio::test]
+    async fn test_detail_memo_exactly_1000_chars() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        let request = SaveTransactionDetailRequest {
+            memo: Some("A".repeat(1000)),
+            ..basic_detail_request()
+        };
+        let result = service.add_transaction_detail(2, transaction_id, request).await;
+        assert!(result.is_ok(), "memo of exactly 1000 chars should be valid");
+    }
+
+    // ========================================================================
+    // Transaction Detail - Update Memo Patterns
+    // ========================================================================
+
+    #[tokio::test]
+    async fn test_update_detail_add_memo() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        // Create detail without memo
+        let request = basic_detail_request();
+        let detail_id = service.add_transaction_detail(2, transaction_id, request).await.unwrap();
+
+        // Update to add memo
+        let update = SaveTransactionDetailRequest {
+            detail_id: Some(detail_id),
+            memo: Some("New memo".to_string()),
+            ..basic_detail_request()
+        };
+        service.update_transaction_detail(2, detail_id, update).await.unwrap();
+
+        let details = service.get_transaction_details(2, transaction_id).await.unwrap();
+        assert_eq!(details[0].memo_text, Some("New memo".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_update_detail_change_memo() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        // Create detail with memo
+        let request = SaveTransactionDetailRequest {
+            memo: Some("Original".to_string()),
+            ..basic_detail_request()
+        };
+        let detail_id = service.add_transaction_detail(2, transaction_id, request).await.unwrap();
+
+        // Update memo text
+        let update = SaveTransactionDetailRequest {
+            detail_id: Some(detail_id),
+            memo: Some("Changed".to_string()),
+            ..basic_detail_request()
+        };
+        service.update_transaction_detail(2, detail_id, update).await.unwrap();
+
+        let details = service.get_transaction_details(2, transaction_id).await.unwrap();
+        assert_eq!(details[0].memo_text, Some("Changed".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_update_detail_remove_memo() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        // Create detail with memo
+        let request = SaveTransactionDetailRequest {
+            memo: Some("To be removed".to_string()),
+            ..basic_detail_request()
+        };
+        let detail_id = service.add_transaction_detail(2, transaction_id, request).await.unwrap();
+
+        // Update with empty memo to remove
+        let update = SaveTransactionDetailRequest {
+            detail_id: Some(detail_id),
+            memo: Some("".to_string()),
+            ..basic_detail_request()
+        };
+        service.update_transaction_detail(2, detail_id, update).await.unwrap();
+
+        let details = service.get_transaction_details(2, transaction_id).await.unwrap();
+        assert_eq!(details[0].memo_text, None);
+    }
+
+    #[tokio::test]
+    async fn test_update_detail_keep_memo_with_none() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        // Create detail with memo
+        let request = SaveTransactionDetailRequest {
+            memo: Some("Keep this".to_string()),
+            ..basic_detail_request()
+        };
+        let detail_id = service.add_transaction_detail(2, transaction_id, request).await.unwrap();
+
+        // Update with memo=None (should keep existing memo)
+        let update = SaveTransactionDetailRequest {
+            detail_id: Some(detail_id),
+            item_name: "Updated name".to_string(),
+            memo: None,
+            ..basic_detail_request()
+        };
+        service.update_transaction_detail(2, detail_id, update).await.unwrap();
+
+        let details = service.get_transaction_details(2, transaction_id).await.unwrap();
+        assert_eq!(details[0].item_name, "Updated name");
+        assert_eq!(details[0].memo_text, Some("Keep this".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_update_detail_validation_empty_item_name() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        let request = basic_detail_request();
+        let detail_id = service.add_transaction_detail(2, transaction_id, request).await.unwrap();
+
+        let update = SaveTransactionDetailRequest {
+            detail_id: Some(detail_id),
+            item_name: "".to_string(),
+            ..basic_detail_request()
+        };
+        let result = service.update_transaction_detail(2, detail_id, update).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_update_detail_validation_negative_amount() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        let request = basic_detail_request();
+        let detail_id = service.add_transaction_detail(2, transaction_id, request).await.unwrap();
+
+        let update = SaveTransactionDetailRequest {
+            detail_id: Some(detail_id),
+            amount: -1,
+            ..basic_detail_request()
+        };
+        let result = service.update_transaction_detail(2, detail_id, update).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_update_detail_validation_memo_too_long() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        let request = basic_detail_request();
+        let detail_id = service.add_transaction_detail(2, transaction_id, request).await.unwrap();
+
+        let update = SaveTransactionDetailRequest {
+            detail_id: Some(detail_id),
+            memo: Some("A".repeat(1001)),
+            ..basic_detail_request()
+        };
+        let result = service.update_transaction_detail(2, detail_id, update).await;
+        assert!(result.is_err());
+    }
+
+    // ========================================================================
+    // Transaction Header - Validation Tests (previously missing)
+    // ========================================================================
+
+    #[tokio::test]
+    async fn test_save_header_invalid_date_format() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+
+        let request = SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "EXPENSE".to_string(),
+            from_account_code: "CASH".to_string(),
+            to_account_code: "BANK".to_string(),
+            transaction_date: "2024-01-01".to_string(), // Missing time part
+            total_amount: 1000,
+            tax_rounding_type: consts::TAX_ROUND_DOWN,
+            tax_included_type: consts::TAX_EXCLUDED,
+            memo: None,
+        };
+        let result = service.save_transaction_header(2, request).await;
+        assert!(result.is_err(), "short date format should be rejected");
+    }
+
+    #[tokio::test]
+    async fn test_save_header_negative_amount() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+
+        let request = SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "EXPENSE".to_string(),
+            from_account_code: "CASH".to_string(),
+            to_account_code: "BANK".to_string(),
+            transaction_date: "2024-01-01 10:00:00".to_string(),
+            total_amount: -1,
+            tax_rounding_type: consts::TAX_ROUND_DOWN,
+            tax_included_type: consts::TAX_EXCLUDED,
+            memo: None,
+        };
+        let result = service.save_transaction_header(2, request).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_save_header_amount_over_max() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+
+        let request = SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "EXPENSE".to_string(),
+            from_account_code: "CASH".to_string(),
+            to_account_code: "BANK".to_string(),
+            transaction_date: "2024-01-01 10:00:00".to_string(),
+            total_amount: 1_000_000_000,
+            tax_rounding_type: consts::TAX_ROUND_DOWN,
+            tax_included_type: consts::TAX_EXCLUDED,
+            memo: None,
+        };
+        let result = service.save_transaction_header(2, request).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_save_header_amount_zero() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+
+        let request = SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "EXPENSE".to_string(),
+            from_account_code: "CASH".to_string(),
+            to_account_code: "BANK".to_string(),
+            transaction_date: "2024-01-01 10:00:00".to_string(),
+            total_amount: 0,
+            tax_rounding_type: consts::TAX_ROUND_DOWN,
+            tax_included_type: consts::TAX_EXCLUDED,
+            memo: None,
+        };
+        let result = service.save_transaction_header(2, request).await;
+        assert!(result.is_ok(), "amount=0 should be valid");
+    }
+
+    #[tokio::test]
+    async fn test_save_header_invalid_tax_rounding_type() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+
+        let request = SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "EXPENSE".to_string(),
+            from_account_code: "CASH".to_string(),
+            to_account_code: "BANK".to_string(),
+            transaction_date: "2024-01-01 10:00:00".to_string(),
+            total_amount: 1000,
+            tax_rounding_type: 99,
+            tax_included_type: consts::TAX_EXCLUDED,
+            memo: None,
+        };
+        let result = service.save_transaction_header(2, request).await;
+        assert!(result.is_err(), "invalid tax_rounding_type should be rejected");
+    }
+
+    #[tokio::test]
+    async fn test_save_header_memo_too_long() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+
+        let request = SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "EXPENSE".to_string(),
+            from_account_code: "CASH".to_string(),
+            to_account_code: "BANK".to_string(),
+            transaction_date: "2024-01-01 10:00:00".to_string(),
+            total_amount: 1000,
+            tax_rounding_type: consts::TAX_ROUND_DOWN,
+            tax_included_type: consts::TAX_EXCLUDED,
+            memo: Some("A".repeat(1001)),
+        };
+        let result = service.save_transaction_header(2, request).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_save_header_empty_memo() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+
+        let request = SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "EXPENSE".to_string(),
+            from_account_code: "CASH".to_string(),
+            to_account_code: "BANK".to_string(),
+            transaction_date: "2024-01-01 10:00:00".to_string(),
+            total_amount: 1000,
+            tax_rounding_type: consts::TAX_ROUND_DOWN,
+            tax_included_type: consts::TAX_EXCLUDED,
+            memo: Some("".to_string()),
+        };
+        let result = service.save_transaction_header(2, request).await;
+        assert!(result.is_ok(), "empty memo should be treated as no memo");
+    }
+
+    #[tokio::test]
+    async fn test_save_header_with_memo() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+
+        let request = SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "EXPENSE".to_string(),
+            from_account_code: "CASH".to_string(),
+            to_account_code: "BANK".to_string(),
+            transaction_date: "2024-01-01 10:00:00".to_string(),
+            total_amount: 5000,
+            tax_rounding_type: consts::TAX_ROUND_DOWN,
+            tax_included_type: consts::TAX_EXCLUDED,
+            memo: Some("Header memo".to_string()),
+        };
+        let transaction_id = service.save_transaction_header(2, request).await.unwrap();
+
+        let (header, memo_text) = service.get_transaction_header_with_memo(2, transaction_id).await.unwrap();
+        assert!(header.memo_id.is_some());
+        assert_eq!(memo_text, Some("Header memo".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_save_header_all_tax_rounding_types() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+
+        for rounding_type in [consts::TAX_ROUND_DOWN, consts::TAX_ROUND_HALF_UP, consts::TAX_ROUND_UP] {
+            let request = SaveTransactionRequest {
+                shop_id: None,
+                category1_code: "EXPENSE".to_string(),
+                from_account_code: "CASH".to_string(),
+                to_account_code: "BANK".to_string(),
+                transaction_date: "2024-01-01 10:00:00".to_string(),
+                total_amount: 1000,
+                tax_rounding_type: rounding_type,
+                tax_included_type: consts::TAX_EXCLUDED,
+                memo: None,
+            };
+            let result = service.save_transaction_header(2, request).await;
+            assert!(result.is_ok(), "tax_rounding_type={} should be valid", rounding_type);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_update_header_nonexistent() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+
+        let request = SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "EXPENSE".to_string(),
+            from_account_code: "CASH".to_string(),
+            to_account_code: "BANK".to_string(),
+            transaction_date: "2024-01-01 10:00:00".to_string(),
+            total_amount: 1000,
+            tax_rounding_type: consts::TAX_ROUND_DOWN,
+            tax_included_type: consts::TAX_EXCLUDED,
+            memo: None,
+        };
+        let result = service.update_transaction_header(2, 99999, request).await;
+        assert!(result.is_err(), "updating nonexistent header should fail");
+    }
+
+    #[tokio::test]
+    async fn test_update_header_invalid_date() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        let request = SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "EXPENSE".to_string(),
+            from_account_code: "CASH".to_string(),
+            to_account_code: "BANK".to_string(),
+            transaction_date: "bad-date".to_string(),
+            total_amount: 1000,
+            tax_rounding_type: consts::TAX_ROUND_DOWN,
+            tax_included_type: consts::TAX_EXCLUDED,
+            memo: None,
+        };
+        let result = service.update_transaction_header(2, transaction_id, request).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_update_header_invalid_tax_rounding() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        let request = SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "EXPENSE".to_string(),
+            from_account_code: "CASH".to_string(),
+            to_account_code: "BANK".to_string(),
+            transaction_date: "2024-01-01 10:00:00".to_string(),
+            total_amount: 1000,
+            tax_rounding_type: 5,
+            tax_included_type: consts::TAX_EXCLUDED,
+            memo: None,
+        };
+        let result = service.update_transaction_header(2, transaction_id, request).await;
+        assert!(result.is_err());
     }
 }
 
