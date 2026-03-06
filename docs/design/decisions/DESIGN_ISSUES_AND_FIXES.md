@@ -6,7 +6,7 @@
 
 ---
 
-## 📋 Executive Summary
+## [List] Executive Summary
 
 KakeiBonByRustアプリケーションの設計を徹底的に検証した結果、**1つの重大な論理的矛盾**と**2つの軽微な懸念事項**が発見されました。
 
@@ -20,7 +20,7 @@ KakeiBonByRustアプリケーションの設計を徹底的に検証した結果
 
 ---
 
-## 🔴 Issue #1: セッション管理の不使用 (重大)
+## [Red] Issue #1: セッション管理の不使用 (重大)
 
 ### 問題の詳細
 
@@ -87,7 +87,7 @@ async fn get_transaction_header(
 
 ---
 
-## 🔧 Issue #1: 修正方針
+## [Fix] Issue #1: 修正方針
 
 ### ステップ1: ヘルパー関数の作成
 
@@ -337,7 +337,7 @@ sqlx::query(sql_queries::AUTH_INSERT_USER)
 
 ---
 
-## 🔧 Issue #2: 修正方針
+## [Fix] Issue #2: 修正方針
 
 ### オプション1: 最小限の修正 (推奨)
 
@@ -499,7 +499,7 @@ src/consts.rs:pub const ROLE_VISIT: i64 = 999;
 
 ---
 
-## 🔧 Issue #3: 修正方針
+## [Fix] Issue #3: 修正方針
 
 ### オプション1: コメント付きで保持 (推奨)
 
@@ -575,9 +575,9 @@ pub const ROLE_USER: i64 = 1;
 
 ---
 
-## 📊 優先度付き実装計画
+## [Chart] 優先度付き実装計画
 
-### 🔴 Phase 1: 即時対応 (必須)
+### [Red] Phase 1: 即時対応 (必須)
 
 **目標**: セッション管理の統合
 
@@ -592,7 +592,7 @@ pub const ROLE_USER: i64 = 1;
 
 ---
 
-### 🟡 Phase 2: 計画的対応 (推奨)
+### [Yellow] Phase 2: 計画的対応 (推奨)
 
 **目標**: 管理者ユーザーの柔軟化
 
@@ -606,7 +606,7 @@ pub const ROLE_USER: i64 = 1;
 
 ---
 
-### 🟢 Phase 3: オプション (任意)
+### [Green] Phase 3: オプション (任意)
 
 **目標**: コードの明確化
 
@@ -619,7 +619,7 @@ pub const ROLE_USER: i64 = 1;
 
 ---
 
-## 🧪 テスト計画
+## [Test] テスト計画
 
 ### Unit Tests
 
@@ -650,7 +650,7 @@ mod session_tests {
 
 ---
 
-## 📝 実装チェックリスト
+## [Note] 実装チェックリスト
 
 実装時に使用するチェックリスト:
 
@@ -686,7 +686,7 @@ mod session_tests {
 
 ---
 
-## 🎯 完了後の期待される状態
+## [Target] 完了後の期待される状態
 
 ### セキュリティ
 - ✅ 全てのトランザクション操作が認証必須
@@ -705,7 +705,7 @@ mod session_tests {
 
 ---
 
-## 📚 参考情報
+## [Books] 参考情報
 
 ### 関連ファイル
 

@@ -6,7 +6,7 @@
 
 ---
 
-## 📋 Table of Contents
+## [List] Table of Contents
 
 - [Overview](#overview)
 - [Getting Started](#getting-started)

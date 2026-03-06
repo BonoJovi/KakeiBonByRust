@@ -1,10 +1,9 @@
 # I18N Resource Management Guide
 
-## Overview
-
-This document provides guidelines for managing internationalization (i18n) resources in the KakeiBon project to avoid common pitfalls and ensure consistency.
-
-**Last Updated**: 2025-11-12 JST
+**Last Updated**: 2025-12-11 03:48 JST  
+**Purpose**: Guidelines for managing internationalization (i18n) resources in the KakeiBon project  
+**Keywords**: i18n, internationalization, 国際化, localization, ローカライゼーション, translation, 翻訳, resource management, リソース管理, resource ID, リソースID, bilingual, バイリンガル, Japanese, 日本語, English, 英語, translation resources, 翻訳リソース, SQL insert, SQL挿入, resource conflict, リソース競合, INSERT OR IGNORE, maximum ID, 最大ID, dbaccess.sql, insert_translation_resources.sql, language support, 言語サポート  
+**Related**: @core/QUICK_REFERENCE.md, @development/CONVENTIONS.md, @architecture/PROJECT_STRUCTURE.md
 
 ---
 

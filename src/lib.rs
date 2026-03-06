@@ -825,6 +825,46 @@ async fn get_category_tree_with_lang(
 }
 
 #[tauri::command]
+async fn get_category_tree_all_with_lang(
+    lang_code: String,
+    state: tauri::State<'_, AppState>
+) -> Result<serde_json::Value, String> {
+    let user_id = get_session_user_id(&state)?;
+    let category = state.category.lock().await;
+
+    category.get_category_tree_all(user_id, &lang_code)
+        .await
+        .map_err(|e| format!("Failed to get category tree: {}", e))
+}
+
+#[tauri::command]
+async fn enable_category2(
+    category1_code: String,
+    category2_code: String,
+    state: tauri::State<'_, AppState>
+) -> Result<(), String> {
+    let user_id = get_session_user_id(&state)?;
+    let category = state.category.lock().await;
+    category.enable_category2(user_id, &category1_code, &category2_code)
+        .await
+        .map_err(|e| format!("Failed to enable category2: {}", e))
+}
+
+#[tauri::command]
+async fn enable_category3(
+    category1_code: String,
+    category2_code: String,
+    category3_code: String,
+    state: tauri::State<'_, AppState>
+) -> Result<(), String> {
+    let user_id = get_session_user_id(&state)?;
+    let category = state.category.lock().await;
+    category.enable_category3(user_id, &category1_code, &category2_code, &category3_code)
+        .await
+        .map_err(|e| format!("Failed to enable category3: {}", e))
+}
+
+#[tauri::command]
 async fn add_category2(
     category1_code: String,
     name_ja: String,
@@ -965,6 +1005,33 @@ async fn move_category3_down(
     category.move_category3_down(user_id, &category1_code, &category2_code, &category3_code)
         .await
         .map_err(|e| format!("Failed to move category3 down: {}", e))
+}
+
+#[tauri::command]
+async fn disable_category2(
+    category1_code: String,
+    category2_code: String,
+    state: tauri::State<'_, AppState>
+) -> Result<(), String> {
+    let user_id = get_session_user_id(&state)?;
+    let category = state.category.lock().await;
+    category.disable_category2(user_id, &category1_code, &category2_code)
+        .await
+        .map_err(|e| format!("Failed to disable category2: {}", e))
+}
+
+#[tauri::command]
+async fn disable_category3(
+    category1_code: String,
+    category2_code: String,
+    category3_code: String,
+    state: tauri::State<'_, AppState>
+) -> Result<(), String> {
+    let user_id = get_session_user_id(&state)?;
+    let category = state.category.lock().await;
+    category.disable_category3(user_id, &category1_code, &category2_code, &category3_code)
+        .await
+        .map_err(|e| format!("Failed to disable category3: {}", e))
 }
 
 // ============================================================================
@@ -1423,6 +1490,7 @@ async fn get_transaction_header(
         "to_account_code": header.to_account_code,
         "total_amount": header.total_amount,
         "tax_rounding_type": header.tax_rounding_type,
+        "tax_included_type": header.tax_included_type,
         "memo_id": header.memo_id,
         "is_disabled": header.is_disabled,
         "entry_dt": header.entry_dt,
@@ -1520,8 +1588,8 @@ async fn get_transaction_details(
 async fn add_transaction_detail(
     transaction_id: i64,
     category1_code: String,
-    category2_code: String,
-    category3_code: String,
+    category2_code: Option<String>,
+    category3_code: Option<String>,
     item_name: String,
     amount: i64,
     tax_rate: i32,
@@ -1555,8 +1623,8 @@ async fn add_transaction_detail(
 async fn update_transaction_detail(
     detail_id: i64,
     category1_code: String,
-    category2_code: String,
-    category3_code: String,
+    category2_code: Option<String>,
+    category3_code: Option<String>,
     item_name: String,
     amount: i64,
     tax_rate: i32,
@@ -1921,6 +1989,9 @@ pub fn run() {
             get_font_size,
             adjust_window_size,
             get_category_tree_with_lang,
+            get_category_tree_all_with_lang,
+            enable_category2,
+            enable_category3,
             add_category2,
             add_category3,
             get_category2_for_edit,
@@ -1931,6 +2002,8 @@ pub fn run() {
             move_category2_down,
             move_category3_up,
             move_category3_down,
+            disable_category2,
+            disable_category3,
             add_transaction,
             get_transaction,
             get_transactions,

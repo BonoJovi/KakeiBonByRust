@@ -1,7 +1,9 @@
 # AI Context: Coding Conventions
 
-**Purpose**: Coding standards and patterns for AI assistants to follow.
-**Last Updated**: 2025-11-09
+**Last Updated**: 2025-12-11 03:48 JST  
+**Purpose**: Coding standards and patterns for AI assistants to follow  
+**Keywords**: coding conventions, コーディング規約, coding standards, コーディング標準, code style, コードスタイル, Rust conventions, Rust規約, JavaScript conventions, JavaScript規約, naming conventions, 命名規則, snake_case, PascalCase, camelCase, DRY, consistency, 一貫性, type safety, 型安全, error handling, エラーハンドリング, validation rules, バリデーション規則, git commit, commit message, コミットメッセージ, conventional commits, file modification, ファイル編集, surgical edits, 外科的編集, no full rewrite, 全体書き換え禁止  
+**Related**: @core/DESIGN_PHILOSOPHY.md, @development/METHODOLOGY.md, @development/TESTING_STRATEGY.md, @architecture/PROJECT_STRUCTURE.md
 
 ---
 

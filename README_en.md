@@ -1,4 +1,4 @@
-# 📖 KakeiBon (Household Budget App)
+# [Book] KakeiBon (Household Budget App)
 
 <div align="center">
 
@@ -9,13 +9,13 @@
 [![Tests](https://img.shields.io/badge/tests-800%20passing-brightgreen.svg)](#test-results)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-[🇯🇵 Japanese Version](README_ja.md) | [🌐 Bilingual README](README.md)
+[[J][P] Japanese Version](README_ja.md) | [[Globe] Bilingual README](README.md)
 
 </div>
 
 ---
 
-## 💌 Message from Developer
+## [Love] Message from Developer
 
 <div style="border: 3px solid #4a90e2; padding: 20px; margin: 20px 0; background-color: #f8f9fa; font-size: 1.1em;">
 
@@ -45,54 +45,54 @@ Thank you for your continued support of KakeiBon.
 
 ---
 
-## 📑 Table of Contents
+## [Bookmark] Table of Contents
 
-- [🚧 Development Status](#-development-status)
-- [📊 Repository Statistics](#-repository-statistics)
-- [📚 Legacy Version](#-legacy-version)
+- [[WIP] Development Status](#-development-status)
+- [[Chart] Repository Statistics](#-repository-statistics)
+- [[Books] Legacy Version](#-legacy-version)
 - [✨ Key Features](#-key-features)
-- [🚀 Current Features](#-current-features)
-- [💻 Technology Stack](#-technology-stack)
-- [📦 Installation](#-installation)
-- [🧪 Test Results](#-test-results)
-- [📚 Documentation](#-documentation)
-- [🤝 Contributing](#-contributing)
-- [📄 License](#-license)
-- [🌟 Development Roadmap](#-development-roadmap)
+- [[Rocket] Current Features](#-current-features)
+- [[PC] Technology Stack](#-technology-stack)
+- [[Package] Installation](#-installation)
+- [[Test] Test Results](#-test-results)
+- [[Books] Documentation](#-documentation)
+- [[Handshake] Contributing](#-contributing)
+- [[Doc] License](#-license)
+- [[Star] Development Roadmap](#-development-roadmap)
 
 ---
 
-## 🚧 Development Status
+## [WIP] Development Status
 
-**🔥 Actively Under Development**
+**[Fire] Actively Under Development**
 
 Development is progressing smoothly, and we strive to update daily!
 
 **Project Started**: 2025-10-22 (JST)  
 **Last Updated**: 2026-01-26 (JST)
 
-> **🤖 AI-Assisted Development**  
+> **[Robot] AI-Assisted Development**  
 > This project's source code and documentation are **100% generated** with the assistance of generative AI (GitHub Copilot, Claude), supervised and reviewed by the developer. This demonstrates the potential of AI-assisted development.
 > 
-> 📊 **[See AI Development Metrics & Quality Analysis →](docs/etc/AI_DEVELOPMENT_METRICS.md)**
+> [Chart] **[See AI Development Metrics & Quality Analysis →](docs/etc/AI_DEVELOPMENT_METRICS.md)**
 
 <!-- STATS_START -->
-## 📊 Repository Statistics
+## [Chart] Repository Statistics
 
 <div align="center">
 
-### 📈 Daily Traffic
+### [TrendUp] Daily Traffic
 
 ![Daily Traffic Stats](docs/stats_graph_daily.png)
 
-### 📊 Cumulative Traffic
+### [Chart] Cumulative Traffic
 
 ![Cumulative Traffic Stats](docs/stats_graph_cumulative.png)
 
 | Metric | Count |
 |--------|-------|
-| 👁️ **Total Views** | **660** |
-| 📦 **Total Clones** | **214** |
+| [Eye]️ **Total Views** | **660** |
+| [Package] **Total Clones** | **214** |
 
 *Last Updated: 2025-11-30 12:09 UTC*
 
@@ -101,54 +101,54 @@ Development is progressing smoothly, and we strive to update daily!
 
 ---
 
-## 📚 Legacy Version
+## [Books] Legacy Version
 
 **Looking for the stable Lazarus/Free Pascal version?**
 
-👉 **[KakeiBon (Original)](https://github.com/BonoJovi/KakeiBon)** - Ready to use now!
+[Point] **[KakeiBon (Original)](https://github.com/BonoJovi/KakeiBon)** - Ready to use now!
 
 The original KakeiBon is a **fully functional household budget app** ready to use right now!
 
 **Key Differences:**
 - ✅ **Stable & Production-Ready**
-- 📦 **Pre-built Binaries Available** ([Releases](https://github.com/BonoJovi/KakeiBon/releases/))
-- 🇯🇵 **Japanese Interface Only**
-- 🖥️ **Linux & Windows Support**
-- 🔤 **Large Fonts & Accessibility**
+- [Package] **Pre-built Binaries Available** ([Releases](https://github.com/BonoJovi/KakeiBon/releases/))
+- [J][P] **Japanese Interface Only**
+- [Desktop]️ **Linux & Windows Support**
+- [Text] **Large Fonts & Accessibility**
 
 **Why Rust Version?**
 
 This Rust rewrite offers:
 - ⚡ **Better Performance**
-- 🔒 **Enhanced Security** (Argon2 + AES-256-GCM)
-- 🌐 **Full Multilingual Support**
-- 🎨 **Modern Architecture**
-- 🔮 **Future Expandability**
+- [Lock] **Enhanced Security** (Argon2 + AES-256-GCM)
+- [Globe] **Full Multilingual Support**
+- [Art] **Modern Architecture**
+- [Crystal] **Future Expandability**
 
-💡 **Try both and choose what works best for you!**
+[Idea] **Try both and choose what works best for you!**
 
 ---
 
 ## ✨ Key Features
 
-### 🎨 NOT Vibe Coding
+### [Art] NOT Vibe Coding
 Built with **proper planning and documentation first**, not vibes
 
-### 👤 Clear User-First Policy
+### [User] Clear User-First Policy
 Every feature is designed with **explicit user needs and usability** in mind
 
-### 🔤 Large, Easy-to-Read Text
+### [Text] Large, Easy-to-Read Text
 Designed with high visibility in mind - comfortable for long-term use
 
-### 🏗️ Enterprise-Grade Architecture
+### [Build]️ Enterprise-Grade Architecture
 **Session-Based Authentication** throughout all 52 API functions
 
-- 🔐 **Secure Session Management**
-- 👥 **User Isolation**
+- [Key] **Secure Session Management**
+- [Users] **User Isolation**
 - ✅ **Zero Hardcoded User IDs**
-- 🧪 **527 Tests (100% Pass)**
+- [Test] **527 Tests (100% Pass)**
 
-### 🎯 Intuitive User Interface
+### [Target] Intuitive User Interface
 Simple and clear UI that anyone can master quickly
 
 ### ♿ Accessibility Support
@@ -156,36 +156,36 @@ Simple and clear UI that anyone can master quickly
 - **Keyboard Navigation**: Fully supported
 - **Focus Indicators**: Clear visual feedback
 
-### 🌐 Multilingual Support
+### [Globe] Multilingual Support
 Switch between Japanese and English seamlessly
 
-### 🔒 Strong Security
+### [Lock] Strong Security
 - Argon2id password hashing
 - AES-256-GCM data encryption
 - Role-based access control
 
 ---
 
-## 🚀 Current Features
+## [Rocket] Current Features
 
 | Feature | Description | Status |
 |---------|-------------|--------|
-| 🔐 **Session Management** | In-memory session state management | ✅ Complete |
-| 💰 **Category Management** | Hierarchical category system (Major/Middle/Minor) | ✅ Complete |
-| 👥 **User Management** | Multi-user support (Admin/General) | ✅ Complete |
-| 🏦 **Account Management** | Account master data management | ✅ Complete |
-| 🏪 **Shop Management** | Shop master data management | ✅ Complete |
-| 🏭 **Manufacturer Management** | Manufacturer master data with IS_DISABLED feature | ✅ Complete |
-| 📦 **Product Management** | Product master data with manufacturer linkage | ✅ Complete |
-| 🌍 **Multilingual** | Dynamic language switching (JP/EN) - 992 resources | ✅ Complete |
-| 🔧 **Customization** | Font size, language preferences | ✅ Complete |
-| 📝 **Transaction Management** | Header-level CRUD, filters, pagination | ✅ Complete |
-| 🧾 **Transaction Details** | CRUD operations with smart tax calculation, automatic rounding detection | ✅ Complete |
-| 📊 **Reports** | Monthly/annual summaries, graphs | 🚧 In Progress |
+| [Key] **Session Management** | In-memory session state management | ✅ Complete |
+| [Money] **Category Management** | Hierarchical category system (Major/Middle/Minor) | ✅ Complete |
+| [Users] **User Management** | Multi-user support (Admin/General) | ✅ Complete |
+| [Bank] **Account Management** | Account master data management | ✅ Complete |
+| [Shop] **Shop Management** | Shop master data management | ✅ Complete |
+| [Factory] **Manufacturer Management** | Manufacturer master data with IS_DISABLED feature | ✅ Complete |
+| [Package] **Product Management** | Product master data with manufacturer linkage | ✅ Complete |
+| [World] **Multilingual** | Dynamic language switching (JP/EN) - 992 resources | ✅ Complete |
+| [Fix] **Customization** | Font size, language preferences | ✅ Complete |
+| [Note] **Transaction Management** | Header-level CRUD, filters, pagination | ✅ Complete |
+| [Receipt] **Transaction Details** | CRUD operations with smart tax calculation, automatic rounding detection | ✅ Complete |
+| [Chart] **Reports** | Monthly/annual summaries, graphs | [WIP] In Progress |
 
 ---
 
-## 💻 Technology Stack
+## [PC] Technology Stack
 
 | Category | Technology | Details |
 |----------|------------|---------|
@@ -199,7 +199,7 @@ Switch between Japanese and English seamlessly
 
 ---
 
-## 📦 Installation
+## [Package] Installation
 
 ### Prerequisites
 - Rust 1.70+ (Install via [rustup](https://rustup.rs/))
@@ -230,7 +230,7 @@ cargo tauri build
 
 ---
 
-## 🧪 Test Results
+## [Test] Test Results
 
 ```
 Backend (Rust):       201 passing ✅
@@ -260,57 +260,57 @@ See [Test Overview](docs/testing/en/TEST_OVERVIEW.md) for details
 
 ---
 
-## 📚 Documentation
+## [Books] Documentation
 
-### 📖 Documentation Index
-- 🗂️ **[Complete Documentation Index](docs/INDEX_en.md)** - Quick access to all documentation
+### [Book] Documentation Index
+- [Files]️ **[Complete Documentation Index](docs/INDEX_en.md)** - Quick access to all documentation
 
-### 🎯 Getting Started
+### [Target] Getting Started
 
 #### Installation & Setup
-- 📦 **[Setup Guide](docs/user/en/SETUP_GUIDE.md)** - How to install the app
+- [Package] **[Setup Guide](docs/user/en/SETUP_GUIDE.md)** - How to install the app
 
 #### User Manual
-- 📖 **[User Manual](docs/user/en/USER_MANUAL_en.md)** - How to use features
-- 🔧 **[Troubleshooting](docs/user/en/TROUBLESHOOTING.md)** - Problem resolution guide
+- [Book] **[User Manual](docs/user/en/USER_MANUAL_en.md)** - How to use features
+- [Fix] **[Troubleshooting](docs/user/en/TROUBLESHOOTING.md)** - Problem resolution guide
 
 ---
 
-### 👨‍💻 For Developers
+### [Man]‍[PC] For Developers
 
 #### Design Documents
-- 🏗️ **[Architecture](docs/developer/en/design/ARCHITECTURE.md)** - System architecture overview
-- 🔒 **[Security Design](docs/developer/en/design/SECURITY_DESIGN.md)** - Security implementation
-- 🗄️ **[Database Design](docs/developer/en/design/DATABASE_DESIGN.md)** - DB schema and ER diagrams
-- 🎨 **[UI Design](docs/developer/en/design/UI_DESIGN.md)** - User interface design
+- [Build]️ **[Architecture](docs/developer/en/design/ARCHITECTURE.md)** - System architecture overview
+- [Lock] **[Security Design](docs/developer/en/design/SECURITY_DESIGN.md)** - Security implementation
+- [Cabinet]️ **[Database Design](docs/developer/en/design/DATABASE_DESIGN.md)** - DB schema and ER diagrams
+- [Art] **[UI Design](docs/developer/en/design/UI_DESIGN.md)** - User interface design
 
 #### Development Guides
-- 🚀 **[Development Setup](docs/developer/en/guides/DEVELOPMENT_SETUP.md)** - Setting up dev environment
-- 📝 **[Coding Standards](docs/developer/en/guides/CODING_STANDARDS.md)** - Code style guide
-- 🧪 **Testing Documentation**
-  - 📖 **[Test Overview](docs/testing/en/TEST_OVERVIEW.md)** - Test strategy and execution guide
-  - 📘 **[Backend Test Index](docs/testing/en/BACKEND_TEST_INDEX.md)** - Complete Rust test list (201 tests)
-  - 📗 **[Frontend Test Index](docs/testing/en/FRONTEND_TEST_INDEX.md)** - Complete JavaScript test list (262+ tests)
+- [Rocket] **[Development Setup](docs/developer/en/guides/DEVELOPMENT_SETUP.md)** - Setting up dev environment
+- [Note] **[Coding Standards](docs/developer/en/guides/CODING_STANDARDS.md)** - Code style guide
+- [Test] **Testing Documentation**
+  - [Book] **[Test Overview](docs/testing/en/TEST_OVERVIEW.md)** - Test strategy and execution guide
+  - [BlueBook] **[Backend Test Index](docs/testing/en/BACKEND_TEST_INDEX.md)** - Complete Rust test list (201 tests)
+  - [GreenBook] **[Frontend Test Index](docs/testing/en/FRONTEND_TEST_INDEX.md)** - Complete JavaScript test list (262+ tests)
 
 #### API Documentation
-- 🔗 **[Common API](docs/developer/en/api/API_COMMON.md)** - Auth, session, i18n
-- 👥 **[User Management API](docs/developer/en/api/API_USER.md)** - User CRUD operations
-- 📁 **[Category Management API](docs/developer/en/api/API_CATEGORY.md)** - Hierarchical category management
-- 💰 **[Transaction Management API](docs/developer/en/api/API_TRANSACTION.md)** - Transaction data management
-- 🏦 **[Account Management API](docs/developer/en/api/API_ACCOUNT.md)** - Account master management
-- 🏢 **[Master Data API](docs/developer/en/api/API_MASTER_DATA.md)** - Shops, manufacturers, products
-- 📊 **[Aggregation API](docs/developer/en/api/API_AGGREGATION.md)** - Reports and statistics
+- [Link] **[Common API](docs/developer/en/api/API_COMMON.md)** - Auth, session, i18n
+- [Users] **[User Management API](docs/developer/en/api/API_USER.md)** - User CRUD operations
+- [Folder] **[Category Management API](docs/developer/en/api/API_CATEGORY.md)** - Hierarchical category management
+- [Money] **[Transaction Management API](docs/developer/en/api/API_TRANSACTION.md)** - Transaction data management
+- [Bank] **[Account Management API](docs/developer/en/api/API_ACCOUNT.md)** - Account master management
+- [Office] **[Master Data API](docs/developer/en/api/API_MASTER_DATA.md)** - Shops, manufacturers, products
+- [Chart] **[Aggregation API](docs/developer/en/api/API_AGGREGATION.md)** - Reports and statistics
 - ⚙️ **[Settings API](docs/developer/en/api/API_SETTINGS.md)** - User settings management
 
 ---
 
-### 📋 Project Information
-- 👥 **[Project Participants](docs/etc/PROJECT_PARTICIPANTS.md)** - Contributors list
-- 📊 **[AI Development Metrics](docs/etc/AI_DEVELOPMENT_METRICS.md)** - AI-assisted development analysis
+### [List] Project Information
+- [Users] **[Project Participants](docs/etc/PROJECT_PARTICIPANTS.md)** - Contributors list
+- [Chart] **[AI Development Metrics](docs/etc/AI_DEVELOPMENT_METRICS.md)** - AI-assisted development analysis
 
 ---
 
-## 🤝 Contributing
+## [Handshake] Contributing
 
 Contributions are welcome!
 
@@ -327,13 +327,13 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for details
 
 ---
 
-## 📄 License
+## [Doc] License
 
 This project is licensed under the terms in the [LICENSE](LICENSE) file.
 
 ---
 
-## 🌟 Development Roadmap
+## [Star] Development Roadmap
 
 - [x] User management
 - [x] Category management

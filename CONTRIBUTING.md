@@ -8,9 +8,9 @@ KakeiBonへの貢献は、コードを書くことだけではありません！
 
 ---
 
-## 🌟 Ways to Contribute / 貢献方法
+## [Star] Ways to Contribute / 貢献方法
 
-### 🌍 Translation (翻訳者募集中！)
+### [World] Translation (翻訳者募集中！)
 **No coding skills required / プログラミング不要**
 
 Help make KakeiBon accessible to users worldwide!
@@ -25,13 +25,13 @@ KakeiBonを世界中のユーザーに届けるお手伝いをしてください
 **Currently Supported**: Japanese (ja), English (en)
 **Seeking**: Chinese (zh), Korean (ko), French (fr), German (de), Spanish (es), and more!
 
-📖 **[Translation Guide](docs/developer/en/guides/TRANSLATION_GUIDE.md)** | **[翻訳ガイド](docs/developer/ja/guides/TRANSLATION_GUIDE.md)**
+[Book] **[Translation Guide](docs/developer/en/guides/TRANSLATION_GUIDE.md)** | **[翻訳ガイド](docs/developer/ja/guides/TRANSLATION_GUIDE.md)**
 
 🆕 **[Submit Translation Request](https://github.com/BonoJovi/KakeiBonByRust/issues/new?template=translation.yml)**
 
 ---
 
-### 🧪 Testing (テスター募集中！)
+### [Test] Testing (テスター募集中！)
 **No coding skills required / プログラミング不要**
 
 Help improve KakeiBon's quality across different platforms!
@@ -49,15 +49,15 @@ Help improve KakeiBon's quality across different platforms!
 - ⚠️ **Windows**: Needs testers!
 - ⚠️ **macOS**: Needs testers!
 
-📖 **[Test Overview](docs/testing/en/TEST_OVERVIEW.md)** | **[テスト概要](docs/testing/ja/TEST_OVERVIEW.md)**
-📘 **[Backend Test Index](docs/testing/en/BACKEND_TEST_INDEX.md)** | **[バックエンドテストインデックス](docs/testing/ja/BACKEND_TEST_INDEX.md)**
-📗 **[Frontend Test Index](docs/testing/en/FRONTEND_TEST_INDEX.md)** | **[フロントエンドテストインデックス](docs/testing/ja/FRONTEND_TEST_INDEX.md)**
+[Book] **[Test Overview](docs/testing/en/TEST_OVERVIEW.md)** | **[テスト概要](docs/testing/ja/TEST_OVERVIEW.md)**
+[BlueBook] **[Backend Test Index](docs/testing/en/BACKEND_TEST_INDEX.md)** | **[バックエンドテストインデックス](docs/testing/ja/BACKEND_TEST_INDEX.md)**
+[GreenBook] **[Frontend Test Index](docs/testing/en/FRONTEND_TEST_INDEX.md)** | **[フロントエンドテストインデックス](docs/testing/ja/FRONTEND_TEST_INDEX.md)**
 
 🆕 **[Submit Testing Feedback](https://github.com/BonoJovi/KakeiBonByRust/issues/new?template=testing-feedback.yml)**
 
 ---
 
-### 💡 Feature Suggestions / 機能提案
+### [Idea] Feature Suggestions / 機能提案
 
 Have an idea to make KakeiBon better?
 KakeiBonをより良くするアイデアはありますか？
@@ -72,7 +72,7 @@ KakeiBonをより良くするアイデアはありますか？
 
 ---
 
-### 📚 Documentation / ドキュメント
+### [Books] Documentation / ドキュメント
 
 Help make KakeiBon easier to use and understand!
 KakeiBonをより使いやすく、分かりやすくするお手伝いをしてください！
@@ -86,7 +86,7 @@ KakeiBonをより使いやすく、分かりやすくするお手伝いをして
 
 ---
 
-### 💻 Code Contributions / コード貢献
+### [PC] Code Contributions / コード貢献
 
 For developers who want to contribute code.
 コードで貢献したい開発者の方へ。
@@ -100,7 +100,7 @@ For developers who want to contribute code.
 
 ---
 
-## 📋 Getting Started / はじめに
+## [List] Getting Started / はじめに
 
 ### Before Contributing / 貢献する前に
 
@@ -115,7 +115,7 @@ For developers who want to contribute code.
 
 ---
 
-## 🐛 Bug Reports / バグレポート
+## [Bug] Bug Reports / バグレポート
 
 Found a bug? Help us fix it!
 バグを見つけましたか？修正にご協力ください！
@@ -130,7 +130,7 @@ Found a bug? Help us fix it!
 
 ---
 
-## 🔧 Pull Request Workflow / プルリクエストの流れ
+## [Fix] Pull Request Workflow / プルリクエストの流れ
 
 For code and documentation contributions:
 コードやドキュメントの貢献をする場合：
@@ -159,7 +159,7 @@ For code and documentation contributions:
 
 ---
 
-## 📞 Questions and Support / 質問とサポート
+## [Phone] Questions and Support / 質問とサポート
 
 Need help or have questions?
 ヘルプが必要ですか？質問はありますか？
@@ -170,7 +170,7 @@ Need help or have questions?
 
 ---
 
-## 🌈 Community Values / コミュニティの価値観
+## [Rainbow] Community Values / コミュニティの価値観
 
 We are committed to providing a welcoming and inclusive environment for all contributors.
 全ての貢献者に対して、歓迎的で包括的な環境を提供することをお約束します。
@@ -186,7 +186,7 @@ All participants are expected to follow our [Code of Conduct](CODE_OF_CONDUCT.md
 
 ---
 
-## 🙏 Thank You! / ありがとうございます！
+## [Thanks] Thank You! / ありがとうございます！
 
 Every contribution, no matter how small, makes KakeiBon better for everyone.
 どんなに小さな貢献でも、KakeiBonをみんなにとってより良いものにします。

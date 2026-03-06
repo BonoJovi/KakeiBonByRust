@@ -57,7 +57,10 @@
 
         <div id="main-content">
             <div class="detail-management-container">
-                <h1 data-i18n="detail_mgmt.title">Transaction Detail Management</h1>
+                <div class="page-header">
+                    <h1 data-i18n="detail_mgmt.title">Transaction Detail Management</h1>
+                    <button class="btn btn-secondary" id="back-btn" data-i18n="common.back">← Back</button>
+                </div>
                 
                 <!-- Transaction Header Info -->
                 <div class="transaction-header-info">
@@ -134,7 +137,7 @@
                     <div class="form-group">
                         <label for="category2-code" data-i18n="common.category2">Medium Category:</label>
                         <div class="input-wrapper">
-                            <select id="category2-code" name="category2-code" required>
+                            <select id="category2-code" name="category2-code">
                                 <option value="" data-i18n="common.select">Select</option>
                             </select>
                         </div>
@@ -143,7 +146,7 @@
                     <div class="form-group">
                         <label for="category3-code" data-i18n="common.category3">Minor Category:</label>
                         <div class="input-wrapper">
-                            <select id="category3-code" name="category3-code" required>
+                            <select id="category3-code" name="category3-code">
                                 <option value="" data-i18n="common.select">Select</option>
                             </select>
                         </div>

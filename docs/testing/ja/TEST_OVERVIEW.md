@@ -144,12 +144,12 @@ npm test login.test.js
 
 テストケースの完全な一覧は、以下のインデックスドキュメントを参照してください：
 
-### 📘 [バックエンドテストインデックス](BACKEND_TEST_INDEX.md)
+### [BlueBook] [バックエンドテストインデックス](BACKEND_TEST_INDEX.md)
 - **総テスト数**: 201件
 - Rustで実装されたすべてのテストケースを表形式で網羅
 - テスト関数名、説明、ファイル名、行番号を含む
 
-### 📗 [フロントエンドテストインデックス](FRONTEND_TEST_INDEX.md)
+### [GreenBook] [フロントエンドテストインデックス](FRONTEND_TEST_INDEX.md)
 - **総テスト数**: 262件以上
 - JavaScriptで実装されたすべてのテストケースを表形式で網羅
 - テスト名、説明、使用箇所を含む
@@ -574,10 +574,10 @@ Jest設定で`testEnvironment: "jsdom"`を指定
 
 ## 関連ドキュメント
 
-- 📘 [バックエンドテストインデックス](BACKEND_TEST_INDEX.md) - Rustテスト完全一覧
-- 📗 [フロントエンドテストインデックス](FRONTEND_TEST_INDEX.md) - JavaScriptテスト完全一覧
-- 📙 [テスト設計](TEST_DESIGN.md) - テストアーキテクチャと設計思想
-- 📕 [テスト結果](TEST_RESULTS.md) - 最新のテスト実行結果とカバレッジ
+- [BlueBook] [バックエンドテストインデックス](BACKEND_TEST_INDEX.md) - Rustテスト完全一覧
+- [GreenBook] [フロントエンドテストインデックス](FRONTEND_TEST_INDEX.md) - JavaScriptテスト完全一覧
+- [OrangeBook] [テスト設計](TEST_DESIGN.md) - テストアーキテクチャと設計思想
+- [RedBook] [テスト結果](TEST_RESULTS.md) - 最新のテスト実行結果とカバレッジ
 
 ---
 

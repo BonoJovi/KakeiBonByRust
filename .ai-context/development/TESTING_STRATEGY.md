@@ -1,7 +1,9 @@
 # KakeiBon - Testing Strategy
 
-**Last Updated**: 2025-12-03 04:44 JST  
-**Purpose**: Comprehensive testing approach for KakeiBon
+**Last Updated**: 2025-12-11 03:48 JST  
+**Purpose**: Comprehensive testing approach for KakeiBon  
+**Keywords**: testing strategy, テスト戦略, test coverage, テストカバレッジ, unit tests, ユニットテスト, integration tests, 統合テスト, TDD, test-driven development, テスト駆動開発, cargo test, Rust tests, Rustテスト, frontend tests, フロントエンドテスト, backend tests, バックエンドテスト, test helpers, テストヘルパー, test organization, テスト構成, AAA pattern, Arrange-Act-Assert, mock data, モックデータ, test database, テストデータベース, validation tests, バリデーションテスト, quality assurance, QA, 品質保証  
+**Related**: @development/CONVENTIONS.md, @core/DESIGN_PHILOSOPHY.md, @architecture/PROJECT_STRUCTURE.md, @development/METHODOLOGY.md
 
 ---
 
@@ -218,7 +220,7 @@ let too_short = "a".repeat(MIN_PASSWORD_LENGTH - 1);
 #### Unicode for Character Support Tests
 ```rust
 let japanese = "日本語パスワード16文字以上";
-let emoji = "😀🎉🔒🔑💻🚀⭐✨🌟💡🎯🏆🎁🎊🎈";
+let emoji = "[Smile][Party][Lock][Key][PC][Rocket]⭐✨[Star][Idea][Target][Trophy][Gift][Confetti][Balloon]";
 ```
 
 **Rationale**: Verify system handles multi-byte characters correctly.

@@ -216,7 +216,114 @@ impl CategoryService {
         
         Ok(json!(categories))
     }
-    
+
+    /// Get category tree including disabled items (for management screen)
+    pub async fn get_category_tree_all(&self, user_id: i64, lang_code: &str) -> Result<serde_json::Value, CategoryError> {
+        use serde_json::json;
+
+        let cat1_rows = sqlx::query(sql_queries::CATEGORY1_TREE)
+            .bind(lang_code)
+            .bind(user_id)
+            .fetch_all(&self.pool)
+            .await?;
+
+        let mut categories = Vec::new();
+
+        for row in cat1_rows {
+            let cat1_code: String = row.get("CATEGORY1_CODE");
+            let cat1_name: String = row.get("name");
+            let cat1_order: i64 = row.get("DISPLAY_ORDER");
+
+            let cat2_rows = sqlx::query(sql_queries::CATEGORY2_TREE_ALL)
+                .bind(lang_code)
+                .bind(user_id)
+                .bind(&cat1_code)
+                .fetch_all(&self.pool)
+                .await?;
+
+            let mut cat2_list = Vec::new();
+
+            for cat2_row in cat2_rows {
+                let cat2_code: String = cat2_row.get("CATEGORY2_CODE");
+                let cat2_name: String = cat2_row.get("name");
+                let cat2_order: i64 = cat2_row.get("DISPLAY_ORDER");
+                let cat2_disabled: i64 = cat2_row.get("IS_DISABLED");
+
+                let cat3_rows = sqlx::query(sql_queries::CATEGORY3_TREE_ALL)
+                    .bind(lang_code)
+                    .bind(user_id)
+                    .bind(&cat1_code)
+                    .bind(&cat2_code)
+                    .fetch_all(&self.pool)
+                    .await?;
+
+                let cat3_list: Vec<_> = cat3_rows.iter().map(|row| {
+                    json!({
+                        "category3_code": row.get::<String, _>("CATEGORY3_CODE"),
+                        "category3_name_i18n": row.get::<String, _>("name"),
+                        "display_order": row.get::<i64, _>("DISPLAY_ORDER"),
+                        "is_disabled": row.get::<i64, _>("IS_DISABLED")
+                    })
+                }).collect();
+
+                cat2_list.push(json!({
+                    "category2": {
+                        "category2_code": cat2_code,
+                        "category2_name_i18n": cat2_name,
+                        "display_order": cat2_order,
+                        "is_disabled": cat2_disabled
+                    },
+                    "children": cat3_list
+                }));
+            }
+
+            categories.push(json!({
+                "category1": {
+                    "category1_code": cat1_code,
+                    "category1_name_i18n": cat1_name,
+                    "display_order": cat1_order
+                },
+                "children": cat2_list
+            }));
+        }
+
+        Ok(json!(categories))
+    }
+
+    /// Re-enable a disabled CATEGORY2 and its child CATEGORY3 entries
+    pub async fn enable_category2(
+        &self,
+        user_id: i64,
+        category1_code: &str,
+        category2_code: &str,
+    ) -> Result<(), CategoryError> {
+        sqlx::query(sql_queries::CATEGORY2_ENABLE)
+            .bind(user_id)
+            .bind(category1_code)
+            .bind(category2_code)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
+    /// Re-enable a disabled CATEGORY3
+    pub async fn enable_category3(
+        &self,
+        user_id: i64,
+        category1_code: &str,
+        category2_code: &str,
+        category3_code: &str,
+    ) -> Result<(), CategoryError> {
+        sqlx::query(sql_queries::CATEGORY3_ENABLE)
+            .bind(user_id)
+            .bind(category1_code)
+            .bind(category2_code)
+            .bind(category3_code)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
     /// Add a new category2 (middle category)
     pub async fn add_category2(
         &self,
@@ -917,7 +1024,55 @@ impl CategoryService {
             
             tx.commit().await?;
         }
-        
+
+        Ok(())
+    }
+
+    /// Disable (hide) a CATEGORY2 and its child CATEGORY3 entries
+    pub async fn disable_category2(
+        &self,
+        user_id: i64,
+        category1_code: &str,
+        category2_code: &str,
+    ) -> Result<(), CategoryError> {
+        let mut tx = self.pool.begin().await?;
+
+        // Disable all child CATEGORY3 entries
+        sqlx::query(sql_queries::CATEGORY3_DISABLE_BY_CATEGORY2)
+            .bind(user_id)
+            .bind(category1_code)
+            .bind(category2_code)
+            .execute(&mut *tx)
+            .await?;
+
+        // Disable the CATEGORY2 itself
+        sqlx::query(sql_queries::CATEGORY2_DELETE_LOGICAL)
+            .bind(user_id)
+            .bind(category1_code)
+            .bind(category2_code)
+            .execute(&mut *tx)
+            .await?;
+
+        tx.commit().await?;
+        Ok(())
+    }
+
+    /// Disable (hide) a CATEGORY3
+    pub async fn disable_category3(
+        &self,
+        user_id: i64,
+        category1_code: &str,
+        category2_code: &str,
+        category3_code: &str,
+    ) -> Result<(), CategoryError> {
+        sqlx::query(sql_queries::CATEGORY3_DELETE_LOGICAL)
+            .bind(user_id)
+            .bind(category1_code)
+            .bind(category2_code)
+            .bind(category3_code)
+            .execute(&self.pool)
+            .await?;
+
         Ok(())
     }
 }

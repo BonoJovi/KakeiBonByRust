@@ -1,7 +1,9 @@
 # AI Context: KakeiBon Project Structure
 
-**Purpose**: This document helps AI assistants quickly understand the project structure without reading every file.
-**Last Updated**: 2025-11-30 23:34 JST
+**Last Updated**: 2025-12-11 03:48 JST  
+**Purpose**: This document helps AI assistants quickly understand the project structure without reading every file  
+**Keywords**: project structure, プロジェクト構造, directory structure, ディレクトリ構造, module organization, モジュール構成, file organization, ファイル構成, Rust modules, Rustモジュール, src directory, srcディレクトリ, res directory, resディレクトリ, frontend, フロントエンド, backend, バックエンド, Tauri, services, サービス, components, コンポーネント, locales, ロケール, i18n, tests, テスト, architecture, アーキテクチャ, codebase, コードベース  
+**Related**: @architecture/TAURI_DEVELOPMENT.md, @core/QUICK_REFERENCE.md, @development/CONVENTIONS.md, @development/TESTING_STRATEGY.md
 
 ---
 
