@@ -10,6 +10,7 @@
 [![Tauri](https://img.shields.io/badge/Tauri-v2.9.3-blue.svg)](https://tauri.app/)
 [![Tests](https://img.shields.io/badge/tests-800%20passing-brightgreen.svg)](#test-results--テスト結果)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/bonojovi)
 
 [[J][P] 日本語詳細](README_ja.md) | [[G][B] English Details](README_en.md)
 
@@ -227,10 +228,10 @@ Development is progressing smoothly, and we strive to update daily!
 
 | Metric | Count |
 |--------|-------|
-| 👁️ **Total Views** / 総閲覧数 | **3** |
-| 📦 **Total Clones** / 総クローン数 | **444** |
+| 👁️ **Total Views** / 総閲覧数 | **12** |
+| 📦 **Total Clones** / 総クローン数 | **387** |
 
-*Last Updated / 最終更新: 2026-03-06 01:41 UTC*
+*Last Updated / 最終更新: 2026-04-04 01:41 UTC*
 
 </div>
 <!-- STATS_END -->
@@ -522,5 +523,7 @@ This project is licensed under the terms in the [LICENSE](LICENSE) file.
 **Made with ❤️ and Rust**
 
 [Report Bug / バグ報告](https://github.com/BonoJovi/KakeiBonByRust/issues) · [Request Feature / 機能リクエスト](https://github.com/BonoJovi/KakeiBonByRust/issues)
+
+[![Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/bonojovi)
 
 </div>
