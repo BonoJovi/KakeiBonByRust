@@ -3,7 +3,7 @@ use aes_gcm::{
     Aes256Gcm,
 };
 use base64::{engine::general_purpose, Engine as _};
-use rand::Rng;
+use rand;
 
 #[derive(Debug)]
 pub enum CryptoError {
@@ -51,8 +51,7 @@ impl Crypto {
     /// * `Err(CryptoError)` - If encryption fails
     pub fn encrypt(&self, plaintext: &str) -> Result<String, CryptoError> {
         // Generate random 96-bit nonce
-        let mut rng = rand::thread_rng();
-        let nonce_bytes: [u8; 12] = rng.gen();
+        let nonce_bytes: [u8; 12] = rand::random();
         let nonce = nonce_bytes.into();
 
         // Encrypt
