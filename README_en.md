@@ -24,9 +24,9 @@
 Thank you for your continued interest in KakeiBon.
 I'm BonoJovi (Yoshihiro NAKAHARA), the project initiator.
 
-**We have officially released Ver.1.1.1!**
+**We have officially released Ver.1.1.2!**
 
-Ver.1.1.0 introduced dashboard functionality (graph visualization with Chart.js), and Ver.1.1.1 improves security and stability. We've updated dependencies, cleaned up unused code, and improved the CI/CD pipeline for a more robust release process.
+Ver.1.1.2 addresses a Dependabot Alert by upgrading the rand crate from v0.8 to v0.9 (GHSA-cq8v-f236-94qc). We continue to improve security proactively.
 
 Transaction data input and aggregation features are now complete, making KakeiBon a practical household budget application.
 If you would like to use the stable release version, please refer to the [main branch](https://github.com/BonoJovi/KakeiBonByRust/tree/main).

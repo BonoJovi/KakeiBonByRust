@@ -5,7 +5,7 @@
 > **A Modern Household Budget App with Focus on Readability and Usability**  
 > **見やすさと使いやすさを追求した、モダンな家計簿アプリケーション**
 
-[![Version](https://img.shields.io/badge/Version-1.1.1-blue)](https://github.com/BonoJovi/KakeiBonByRust/releases/tag/v1.1.1)
+[![Version](https://img.shields.io/badge/Version-1.1.2-blue)](https://github.com/BonoJovi/KakeiBonByRust/releases/tag/v1.1.2)
 [![Rust](https://img.shields.io/badge/Rust-1.70+-orange.svg)](https://www.rust-lang.org/)
 [![Tauri](https://img.shields.io/badge/Tauri-v2.9.3-blue.svg)](https://tauri.app/)
 [![Tests](https://img.shields.io/badge/tests-800%20passing-brightgreen.svg)](#test-results--テスト結果)
@@ -27,9 +27,9 @@
 いつもKakeiBonに気を留めていただき、誠にありがとうございます。
 プロジェクト発案者のBonoJovi(Yoshihiro NAKAHARA)です。
 
-**Ver.1.1.1を正式リリースいたしました！**
+**Ver.1.1.2を正式リリースいたしました！**
 
-Ver.1.1.0ではChart.jsを活用したダッシュボード機能を追加し、Ver.1.1.1ではセキュリティ・安定性の向上を行いました。依存関係の更新（76パッケージ）、未使用コードの整理、CI/CDパイプラインの改善（リリースビルド完全性チェック）により、より堅牢なリリースプロセスを実現しています。
+Ver.1.1.2では、Dependabot Alertに対応し、randクレートをv0.8からv0.9にアップグレードしました（GHSA-cq8v-f236-94qc）。セキュリティを継続的に改善しています。
 
 入出金データの入力・集計機能が完成し、実用的な家計簿アプリケーションとしてご利用いただける状態となりました。
 安定版リリースをご利用になりたい方は、[mainブランチ](https://github.com/BonoJovi/KakeiBonByRust/tree/main)をご参照ください。

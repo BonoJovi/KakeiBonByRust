@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.1.2] - 2026-04-16
+
+### Security
+
+- **Upgrade rand crate**: v0.8 → v0.9 (GHSA-cq8v-f236-94qc)
+  - Addresses Dependabot Alert #13
+  - API migration: `thread_rng().gen()` → `rand::random()`
+
+---
+
 ## [v1.1.1] - 2026-01-26
 
 ### Security & Stability
