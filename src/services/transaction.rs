@@ -29,6 +29,8 @@ pub struct TransactionHeader {
     pub memo_id: Option<i64>,
     #[sqlx(rename = "IS_DISABLED")]
     pub is_disabled: i64,
+    #[sqlx(rename = "IS_SCHEDULED")]
+    pub is_scheduled: i64,
     #[sqlx(rename = "ENTRY_DT")]
     pub entry_dt: String,
     #[sqlx(rename = "UPDATE_DT")]
@@ -47,6 +49,7 @@ pub struct SaveTransactionRequest {
     pub tax_rounding_type: i64,
     pub tax_included_type: i64,
     pub memo: Option<String>,
+    pub is_scheduled: Option<i64>,
 }
 
 /// Transaction detail data structure
@@ -139,6 +142,7 @@ pub struct TransactionHeaderWithInfo {
     pub memo_id: Option<i64>,
     pub memo_text: Option<String>,
     pub is_disabled: i64,
+    pub is_scheduled: i64,
     pub entry_dt: String,
     pub update_dt: Option<String>,
 }
@@ -164,6 +168,8 @@ pub struct Transaction {
     pub tax_rounding_type: i64,
     #[sqlx(rename = "MEMO_ID")]
     pub memo_id: Option<i64>,
+    #[sqlx(rename = "IS_SCHEDULED")]
+    pub is_scheduled: i64,
     #[sqlx(rename = "CATEGORY1_NAME")]
     pub category1_name: Option<String>,
     #[sqlx(rename = "FROM_ACCOUNT_NAME")]
@@ -280,6 +286,7 @@ impl TransactionService {
             .bind(request.tax_rounding_type)
             .bind(request.tax_included_type)
             .bind(memo_id)
+            .bind(request.is_scheduled.unwrap_or(0))
             .execute(&self.pool)
             .await?;
 
@@ -406,10 +413,11 @@ impl TransactionService {
                 tax_included_type: row.get(9),
                 memo_id: row.get(10),
                 is_disabled: row.get(11),
-                entry_dt: row.get(12),
-                update_dt: row.get(13),
+                is_scheduled: row.get(12),
+                entry_dt: row.get(13),
+                update_dt: row.get(14),
             };
-            let memo_text: Option<String> = row.get(14);
+            let memo_text: Option<String> = row.get(15);
             Ok((header, memo_text))
         } else {
             Err(TransactionError::NotFound)
@@ -512,12 +520,18 @@ impl TransactionService {
         min_amount: Option<i64>,
         max_amount: Option<i64>,
         keyword: Option<&str>,
+        include_scheduled: bool,
         page: i64,
         per_page: i64,
     ) -> Result<TransactionListResponse, TransactionError> {
         // Build WHERE clauses (with table alias 't.')
         let mut where_clauses = vec!["t.USER_ID = ?".to_string()];
         let mut params: Vec<String> = vec![user_id.to_string()];
+
+        // Exclude scheduled transactions by default
+        if !include_scheduled {
+            where_clauses.push("t.IS_SCHEDULED = 0".to_string());
+        }
 
         if let Some(start) = start_date {
             where_clauses.push("t.TRANSACTION_DATE >= ?".to_string());
@@ -651,6 +665,25 @@ impl TransactionService {
         let result = sqlx::query(sql_queries::TRANSACTION_DELETE)
             .bind(user_id)
             .bind(transaction_id)
+            .execute(&self.pool)
+            .await?;
+
+        if result.rows_affected() == 0 {
+            return Err(TransactionError::NotFound);
+        }
+
+        Ok(())
+    }
+
+    /// Confirm a scheduled transaction (set IS_SCHEDULED from 1 to 0)
+    pub async fn confirm_scheduled_transaction(
+        &self,
+        user_id: i64,
+        transaction_id: i64,
+    ) -> Result<(), TransactionError> {
+        let result = sqlx::query(sql_queries::TRANSACTION_HEADER_CONFIRM_SCHEDULED)
+            .bind(transaction_id)
+            .bind(user_id)
             .execute(&self.pool)
             .await?;
 
@@ -871,6 +904,7 @@ impl TransactionService {
                 memo_id: row.get("MEMO_ID"),
                 memo_text: row.get("MEMO_TEXT"),
                 is_disabled: row.get("IS_DISABLED"),
+                is_scheduled: row.get("IS_SCHEDULED"),
                 entry_dt: row.get("ENTRY_DT"),
                 update_dt: row.get("UPDATE_DT"),
             }),
@@ -1271,6 +1305,7 @@ mod tests {
             tax_rounding_type: consts::TAX_ROUND_DOWN,
             tax_included_type: consts::TAX_EXCLUDED,
             memo: None,
+            is_scheduled: None,
         };
         service.save_transaction_header(2, request).await.unwrap()
     }
@@ -1306,6 +1341,7 @@ mod tests {
             tax_rounding_type: consts::TAX_ROUND_HALF_UP,
             tax_included_type: consts::TAX_EXCLUDED,
             memo: Some("Test transaction".to_string()),
+            is_scheduled: None,
         };
 
         let result = service.save_transaction_header(2, request).await;
@@ -1338,6 +1374,7 @@ mod tests {
             tax_rounding_type: consts::TAX_ROUND_DOWN,
             tax_included_type: consts::TAX_INCLUDED,
             memo: Some("Tax included transaction".to_string()),
+            is_scheduled: None,
         };
 
         let result = service.save_transaction_header(2, request).await;
@@ -1370,6 +1407,7 @@ mod tests {
             tax_rounding_type: consts::TAX_ROUND_HALF_UP,
             tax_included_type: consts::TAX_EXCLUDED,
             memo: None,
+            is_scheduled: None,
         };
 
         let transaction_id = service.save_transaction_header(2, initial_request).await.unwrap();
@@ -1385,6 +1423,7 @@ mod tests {
             tax_rounding_type: consts::TAX_ROUND_HALF_UP,
             tax_included_type: consts::TAX_INCLUDED,
             memo: None,
+            is_scheduled: None,
         };
 
         let update_result = service.update_transaction_header(2, transaction_id, update_request).await;
@@ -1412,6 +1451,7 @@ mod tests {
             tax_rounding_type: consts::TAX_ROUND_HALF_UP,
             tax_included_type: consts::TAX_EXCLUDED, // Explicitly set default
             memo: None,
+            is_scheduled: None,
         };
 
         let transaction_id = service.save_transaction_header(2, request).await.unwrap();
@@ -2119,6 +2159,7 @@ mod tests {
             tax_rounding_type: consts::TAX_ROUND_DOWN,
             tax_included_type: consts::TAX_EXCLUDED,
             memo: None,
+            is_scheduled: None,
         };
         let result = service.save_transaction_header(2, request).await;
         assert!(result.is_err(), "short date format should be rejected");
@@ -2139,6 +2180,7 @@ mod tests {
             tax_rounding_type: consts::TAX_ROUND_DOWN,
             tax_included_type: consts::TAX_EXCLUDED,
             memo: None,
+            is_scheduled: None,
         };
         let result = service.save_transaction_header(2, request).await;
         assert!(result.is_err());
@@ -2159,6 +2201,7 @@ mod tests {
             tax_rounding_type: consts::TAX_ROUND_DOWN,
             tax_included_type: consts::TAX_EXCLUDED,
             memo: None,
+            is_scheduled: None,
         };
         let result = service.save_transaction_header(2, request).await;
         assert!(result.is_err());
@@ -2179,6 +2222,7 @@ mod tests {
             tax_rounding_type: consts::TAX_ROUND_DOWN,
             tax_included_type: consts::TAX_EXCLUDED,
             memo: None,
+            is_scheduled: None,
         };
         let result = service.save_transaction_header(2, request).await;
         assert!(result.is_ok(), "amount=0 should be valid");
@@ -2199,6 +2243,7 @@ mod tests {
             tax_rounding_type: 99,
             tax_included_type: consts::TAX_EXCLUDED,
             memo: None,
+            is_scheduled: None,
         };
         let result = service.save_transaction_header(2, request).await;
         assert!(result.is_err(), "invalid tax_rounding_type should be rejected");
@@ -2219,6 +2264,7 @@ mod tests {
             tax_rounding_type: consts::TAX_ROUND_DOWN,
             tax_included_type: consts::TAX_EXCLUDED,
             memo: Some("A".repeat(1001)),
+            is_scheduled: None,
         };
         let result = service.save_transaction_header(2, request).await;
         assert!(result.is_err());
@@ -2239,6 +2285,7 @@ mod tests {
             tax_rounding_type: consts::TAX_ROUND_DOWN,
             tax_included_type: consts::TAX_EXCLUDED,
             memo: Some("".to_string()),
+            is_scheduled: None,
         };
         let result = service.save_transaction_header(2, request).await;
         assert!(result.is_ok(), "empty memo should be treated as no memo");
@@ -2259,6 +2306,7 @@ mod tests {
             tax_rounding_type: consts::TAX_ROUND_DOWN,
             tax_included_type: consts::TAX_EXCLUDED,
             memo: Some("Header memo".to_string()),
+            is_scheduled: None,
         };
         let transaction_id = service.save_transaction_header(2, request).await.unwrap();
 
@@ -2283,6 +2331,7 @@ mod tests {
                 tax_rounding_type: rounding_type,
                 tax_included_type: consts::TAX_EXCLUDED,
                 memo: None,
+                is_scheduled: None,
             };
             let result = service.save_transaction_header(2, request).await;
             assert!(result.is_ok(), "tax_rounding_type={} should be valid", rounding_type);
@@ -2304,6 +2353,7 @@ mod tests {
             tax_rounding_type: consts::TAX_ROUND_DOWN,
             tax_included_type: consts::TAX_EXCLUDED,
             memo: None,
+            is_scheduled: None,
         };
         let result = service.update_transaction_header(2, 99999, request).await;
         assert!(result.is_err(), "updating nonexistent header should fail");
@@ -2325,6 +2375,7 @@ mod tests {
             tax_rounding_type: consts::TAX_ROUND_DOWN,
             tax_included_type: consts::TAX_EXCLUDED,
             memo: None,
+            is_scheduled: None,
         };
         let result = service.update_transaction_header(2, transaction_id, request).await;
         assert!(result.is_err());
@@ -2346,9 +2397,149 @@ mod tests {
             tax_rounding_type: 5,
             tax_included_type: consts::TAX_EXCLUDED,
             memo: None,
+            is_scheduled: None,
         };
         let result = service.update_transaction_header(2, transaction_id, request).await;
         assert!(result.is_err());
+    }
+
+    // ========================================================================
+    // IS_SCHEDULED Tests
+    // ========================================================================
+
+    #[tokio::test]
+    async fn test_save_scheduled_transaction() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+
+        let request = SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "EXPENSE".to_string(),
+            from_account_code: "CASH".to_string(),
+            to_account_code: "BANK".to_string(),
+            transaction_date: "2024-02-01 10:00:00".to_string(),
+            total_amount: 5000,
+            tax_rounding_type: consts::TAX_ROUND_DOWN,
+            tax_included_type: consts::TAX_EXCLUDED,
+            memo: None,
+            is_scheduled: Some(1),
+        };
+        let transaction_id = service.save_transaction_header(2, request).await.unwrap();
+
+        let header = service.get_transaction_header(2, transaction_id).await.unwrap();
+        assert_eq!(header.is_scheduled, 1);
+    }
+
+    #[tokio::test]
+    async fn test_save_default_not_scheduled() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+
+        let request = SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "EXPENSE".to_string(),
+            from_account_code: "CASH".to_string(),
+            to_account_code: "BANK".to_string(),
+            transaction_date: "2024-02-01 10:00:00".to_string(),
+            total_amount: 5000,
+            tax_rounding_type: consts::TAX_ROUND_DOWN,
+            tax_included_type: consts::TAX_EXCLUDED,
+            memo: None,
+            is_scheduled: None,
+        };
+        let transaction_id = service.save_transaction_header(2, request).await.unwrap();
+
+        let header = service.get_transaction_header(2, transaction_id).await.unwrap();
+        assert_eq!(header.is_scheduled, 0);
+    }
+
+    #[tokio::test]
+    async fn test_confirm_scheduled_transaction() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+
+        // Create a scheduled transaction
+        let request = SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "EXPENSE".to_string(),
+            from_account_code: "CASH".to_string(),
+            to_account_code: "BANK".to_string(),
+            transaction_date: "2024-02-01 10:00:00".to_string(),
+            total_amount: 5000,
+            tax_rounding_type: consts::TAX_ROUND_DOWN,
+            tax_included_type: consts::TAX_EXCLUDED,
+            memo: None,
+            is_scheduled: Some(1),
+        };
+        let transaction_id = service.save_transaction_header(2, request).await.unwrap();
+
+        // Confirm it
+        service.confirm_scheduled_transaction(2, transaction_id).await.unwrap();
+
+        // Verify it's now actual
+        let header = service.get_transaction_header(2, transaction_id).await.unwrap();
+        assert_eq!(header.is_scheduled, 0);
+    }
+
+    #[tokio::test]
+    async fn test_confirm_already_actual_transaction_fails() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+
+        // Create a normal (actual) transaction
+        let transaction_id = create_test_header(&service).await;
+
+        // Trying to confirm should fail (it's already actual, IS_SCHEDULED = 0)
+        let result = service.confirm_scheduled_transaction(2, transaction_id).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_get_transactions_excludes_scheduled_by_default() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+
+        // Create an actual transaction
+        let request_actual = SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "EXPENSE".to_string(),
+            from_account_code: "CASH".to_string(),
+            to_account_code: "BANK".to_string(),
+            transaction_date: "2024-02-01 10:00:00".to_string(),
+            total_amount: 1000,
+            tax_rounding_type: consts::TAX_ROUND_DOWN,
+            tax_included_type: consts::TAX_EXCLUDED,
+            memo: None,
+            is_scheduled: None,
+        };
+        service.save_transaction_header(2, request_actual).await.unwrap();
+
+        // Create a scheduled transaction
+        let request_scheduled = SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "EXPENSE".to_string(),
+            from_account_code: "CASH".to_string(),
+            to_account_code: "BANK".to_string(),
+            transaction_date: "2024-02-02 10:00:00".to_string(),
+            total_amount: 2000,
+            tax_rounding_type: consts::TAX_ROUND_DOWN,
+            tax_included_type: consts::TAX_EXCLUDED,
+            memo: None,
+            is_scheduled: Some(1),
+        };
+        service.save_transaction_header(2, request_scheduled).await.unwrap();
+
+        // Default: exclude scheduled
+        let result = service.get_transactions(
+            2, None, None, None, None, None, None, None, None, false, 1, 50
+        ).await.unwrap();
+        assert_eq!(result.total_count, 1);
+
+        // Include scheduled
+        let result = service.get_transactions(
+            2, None, None, None, None, None, None, None, None, true, 1, 50
+        ).await.unwrap();
+        assert_eq!(result.total_count, 2);
     }
 }
 

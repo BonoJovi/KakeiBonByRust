@@ -31,4 +31,6 @@ VALUES
 (911, 'common.is_disabled', 'en', 'Disabled', 'common', 'Disabled checkbox label', datetime('now')),
 (912, 'common.is_disabled', 'ja', '非表示', 'common', '非表示チェックボックスラベル', datetime('now')),
 (1099, 'common.apply', 'en', 'Apply', 'common', 'Apply button', datetime('now')),
-(1100, 'common.apply', 'ja', '適用', 'common', '適用ボタン', datetime('now'));
+(1100, 'common.apply', 'ja', '適用', 'common', '適用ボタン', datetime('now')),
+(2079, 'common.not_authenticated', 'en', 'Not authenticated. Please login.', 'common', 'Not authenticated error message', datetime('now')),
+(2080, 'common.not_authenticated', 'ja', '認証されていません。ログインしてください。', 'common', '未認証エラーメッセージ', datetime('now'));

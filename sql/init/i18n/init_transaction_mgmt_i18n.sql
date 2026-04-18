@@ -103,4 +103,22 @@ VALUES
 
 -- Access control
 (1127, 'transaction.admin_access_denied', 'en', 'Transaction management is not available for administrator accounts. Please login as a regular user.', 'transaction_mgmt', 'Admin access denied message', datetime('now')),
-(1128, 'transaction.admin_access_denied', 'ja', '入出金管理は管理者アカウントでは利用できません。一般ユーザーでログインしてください。', 'transaction_mgmt', '管理者アクセス拒否メッセージ', datetime('now'));
+(1128, 'transaction.admin_access_denied', 'ja', '入出金管理は管理者アカウントでは利用できません。一般ユーザーでログインしてください。', 'transaction_mgmt', '管理者アクセス拒否メッセージ', datetime('now')),
+
+-- Scheduled transaction (予定入出金)
+(2053, 'transaction_mgmt.is_scheduled', 'en', 'Scheduled Transaction', 'transaction_mgmt', 'Scheduled transaction checkbox label', datetime('now')),
+(2054, 'transaction_mgmt.is_scheduled', 'ja', '予定取引', 'transaction_mgmt', '予定取引チェックボックスラベル', datetime('now')),
+(2055, 'transaction_mgmt.is_scheduled_desc', 'en', 'Mark as planned/scheduled', 'transaction_mgmt', 'Scheduled transaction description', datetime('now')),
+(2056, 'transaction_mgmt.is_scheduled_desc', 'ja', '予定入出金として登録', 'transaction_mgmt', '予定取引の説明', datetime('now')),
+(2057, 'transaction_mgmt.include_scheduled', 'en', 'Include Scheduled', 'transaction_mgmt', 'Include scheduled filter label', datetime('now')),
+(2058, 'transaction_mgmt.include_scheduled', 'ja', '予定を含む', 'transaction_mgmt', '予定を含むフィルターラベル', datetime('now')),
+(2059, 'transaction_mgmt.include_scheduled_desc', 'en', 'Show scheduled transactions', 'transaction_mgmt', 'Include scheduled filter description', datetime('now')),
+(2060, 'transaction_mgmt.include_scheduled_desc', 'ja', '予定入出金を表示', 'transaction_mgmt', '予定を含むフィルターの説明', datetime('now')),
+(2061, 'transaction_mgmt.scheduled_label', 'en', 'Scheduled', 'transaction_mgmt', 'Scheduled badge label', datetime('now')),
+(2062, 'transaction_mgmt.scheduled_label', 'ja', '予定', 'transaction_mgmt', '予定バッジラベル', datetime('now')),
+(2063, 'transaction_mgmt.confirm_scheduled', 'en', 'Mark this scheduled transaction as actual?', 'transaction_mgmt', 'Confirm scheduled transaction dialog', datetime('now')),
+(2064, 'transaction_mgmt.confirm_scheduled', 'ja', 'この予定入出金を確定しますか？', 'transaction_mgmt', '予定確定ダイアログ', datetime('now')),
+(2065, 'transaction_mgmt.confirm_btn', 'en', 'Confirm', 'transaction_mgmt', 'Confirm button label', datetime('now')),
+(2066, 'transaction_mgmt.confirm_btn', 'ja', '確定', 'transaction_mgmt', '確定ボタンラベル', datetime('now')),
+(2067, 'transaction_mgmt.confirm_error', 'en', 'Failed to confirm scheduled transaction', 'transaction_mgmt', 'Confirm error message', datetime('now')),
+(2068, 'transaction_mgmt.confirm_error', 'ja', '予定入出金の確定に失敗しました', 'transaction_mgmt', '確定エラーメッセージ', datetime('now'));

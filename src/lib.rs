@@ -1087,6 +1087,7 @@ async fn get_transactions(
     min_amount: Option<i64>,
     max_amount: Option<i64>,
     keyword: Option<String>,
+    include_scheduled: Option<bool>,
     page: i64,
     per_page: i64,
     state: tauri::State<'_, AppState>
@@ -1103,6 +1104,7 @@ async fn get_transactions(
         min_amount,
         max_amount,
         keyword.as_deref(),
+        include_scheduled.unwrap_or(false),
         page,
         per_page,
     )
@@ -1446,6 +1448,7 @@ async fn save_transaction_header(
     tax_rounding_type: i64,
     tax_included_type: i64,
     memo: Option<String>,
+    is_scheduled: Option<i64>,
     state: tauri::State<'_, AppState>
 ) -> Result<i64, String> {
     let user_id = get_session_user_id(&state)?;
@@ -1461,6 +1464,7 @@ async fn save_transaction_header(
         tax_rounding_type,
         tax_included_type,
         memo,
+        is_scheduled,
     };
 
     transaction.save_transaction_header(user_id, request).await
@@ -1493,6 +1497,7 @@ async fn get_transaction_header(
         "tax_included_type": header.tax_included_type,
         "memo_id": header.memo_id,
         "is_disabled": header.is_disabled,
+        "is_scheduled": header.is_scheduled,
         "entry_dt": header.entry_dt,
         "update_dt": header.update_dt,
         "memo": memo_text
@@ -1531,10 +1536,10 @@ async fn update_transaction_header(
     tax_rounding_type: i64,
     tax_included_type: i64,
     memo: Option<String>,
+    is_scheduled: Option<i64>,
     state: tauri::State<'_, AppState>
 ) -> Result<(), String> {
     let transaction = state.transaction.lock().await;
-    // Get user_id from session
     // Get user_id from session
     let user_id = get_session_user_id(&state)?;
 
@@ -1548,9 +1553,21 @@ async fn update_transaction_header(
         tax_rounding_type,
         tax_included_type,
         memo,
+        is_scheduled,
     };
 
     transaction.update_transaction_header(user_id, transaction_id, request).await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn confirm_scheduled_transaction(
+    transaction_id: i64,
+    state: tauri::State<'_, AppState>
+) -> Result<(), String> {
+    let user_id = get_session_user_id(&state)?;
+    let transaction = state.transaction.lock().await;
+    transaction.confirm_scheduled_transaction(user_id, transaction_id).await
         .map_err(|e| e.to_string())
 }
 
@@ -1694,6 +1711,7 @@ async fn get_monthly_aggregation(
     year: i32,
     month: u32,
     group_by: String,
+    include_scheduled: Option<bool>,
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::aggregation::AggregationResult>, String> {
     let user_id = get_session_user_id(&state)?;
@@ -1711,6 +1729,7 @@ async fn get_monthly_aggregation(
         month,
         group_by_enum,
         &lang,
+        include_scheduled.unwrap_or(false),
     )
     .await
 }
@@ -1719,6 +1738,7 @@ async fn get_monthly_aggregation(
 async fn get_daily_aggregation(
     date: String, // Format: "YYYY-MM-DD"
     group_by: String,
+    include_scheduled: Option<bool>,
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::aggregation::AggregationResult>, String> {
     let user_id = get_session_user_id(&state)?;
@@ -1728,7 +1748,7 @@ async fn get_daily_aggregation(
         .unwrap_or_else(|_| LANG_DEFAULT.to_string());
 
     let group_by_enum = parse_group_by(&group_by)?;
-    
+
     // Parse date string
     let date = chrono::NaiveDate::parse_from_str(&date, "%Y-%m-%d")
         .map_err(|e| format!("Invalid date format: {}", e))?;
@@ -1739,6 +1759,7 @@ async fn get_daily_aggregation(
         date,
         group_by_enum,
         &lang,
+        include_scheduled.unwrap_or(false),
     )
     .await
 }
@@ -1748,6 +1769,7 @@ async fn get_period_aggregation(
     start_date: String, // Format: "YYYY-MM-DD"
     end_date: String, // Format: "YYYY-MM-DD"
     group_by: String,
+    include_scheduled: Option<bool>,
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::aggregation::AggregationResult>, String> {
     let user_id = get_session_user_id(&state)?;
@@ -1757,7 +1779,7 @@ async fn get_period_aggregation(
         .unwrap_or_else(|_| LANG_DEFAULT.to_string());
 
     let group_by_enum = parse_group_by(&group_by)?;
-    
+
     // Parse dates
     let start = chrono::NaiveDate::parse_from_str(&start_date, "%Y-%m-%d")
         .map_err(|e| format!("Invalid start date format: {}", e))?;
@@ -1771,6 +1793,7 @@ async fn get_period_aggregation(
         end,
         group_by_enum,
         &lang,
+        include_scheduled.unwrap_or(false),
     )
     .await
 }
@@ -1781,6 +1804,7 @@ async fn get_weekly_aggregation(
     week: u32,
     week_start: String, // "sunday" or "monday"
     group_by: String,
+    include_scheduled: Option<bool>,
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::aggregation::AggregationResult>, String> {
     let user_id = get_session_user_id(&state)?;
@@ -1790,7 +1814,7 @@ async fn get_weekly_aggregation(
         .unwrap_or_else(|_| LANG_DEFAULT.to_string());
 
     let group_by_enum = parse_group_by(&group_by)?;
-    
+
     // Parse week_start
     let week_start_enum = match week_start.as_str() {
         "sunday" => services::aggregation::WeekStart::Sunday,
@@ -1806,6 +1830,7 @@ async fn get_weekly_aggregation(
         week_start_enum,
         group_by_enum,
         &lang,
+        include_scheduled.unwrap_or(false),
     )
     .await
 }
@@ -1815,6 +1840,7 @@ async fn get_weekly_aggregation_by_date(
     reference_date: String, // Format: "YYYY-MM-DD"
     week_start: String, // "sunday" or "monday"
     group_by: String,
+    include_scheduled: Option<bool>,
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::aggregation::AggregationResult>, String> {
     let user_id = get_session_user_id(&state)?;
@@ -1824,11 +1850,11 @@ async fn get_weekly_aggregation_by_date(
         .unwrap_or_else(|_| LANG_DEFAULT.to_string());
 
     let group_by_enum = parse_group_by(&group_by)?;
-    
+
     // Parse reference date
     let date = chrono::NaiveDate::parse_from_str(&reference_date, "%Y-%m-%d")
         .map_err(|e| format!("Invalid date format: {}", e))?;
-    
+
     // Parse week_start
     let week_start_enum = match week_start.as_str() {
         "sunday" => services::aggregation::WeekStart::Sunday,
@@ -1843,6 +1869,7 @@ async fn get_weekly_aggregation_by_date(
         week_start_enum,
         group_by_enum,
         &lang,
+        include_scheduled.unwrap_or(false),
     )
     .await
 }
@@ -1852,6 +1879,7 @@ async fn get_yearly_aggregation(
     year: i32,
     year_start: String, // "january" or "april"
     group_by: String,
+    include_scheduled: Option<bool>,
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::aggregation::AggregationResult>, String> {
     let user_id = get_session_user_id(&state)?;
@@ -1861,7 +1889,7 @@ async fn get_yearly_aggregation(
         .unwrap_or_else(|_| LANG_DEFAULT.to_string());
 
     let group_by_enum = parse_group_by(&group_by)?;
-    
+
     // Parse year_start
     let year_start_enum = match year_start.as_str() {
         "january" => services::aggregation::YearStart::January,
@@ -1876,6 +1904,7 @@ async fn get_yearly_aggregation(
         year_start_enum,
         group_by_enum,
         &lang,
+        include_scheduled.unwrap_or(false),
     )
     .await
 }
@@ -1888,6 +1917,7 @@ async fn get_monthly_aggregation_by_category(
     category1_code: String,
     category2_code: Option<String>,
     category3_code: Option<String>,
+    include_scheduled: Option<bool>,
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::aggregation::AggregationResult>, String> {
     let user_id = get_session_user_id(&state)?;
@@ -1929,6 +1959,7 @@ async fn get_monthly_aggregation_by_category(
         group_by_enum,
         category_filter,
         &lang,
+        include_scheduled.unwrap_or(false),
     )
     .await
 }
@@ -2030,6 +2061,7 @@ pub fn run() {
             get_transaction_header,
             select_transaction_headers,
             update_transaction_header,
+            confirm_scheduled_transaction,
             get_transaction_header_with_info,
             get_transaction_details,
             add_transaction_detail,

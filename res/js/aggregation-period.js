@@ -115,7 +115,7 @@ function setupMenuHandlers() {
 async function executeAggregation() {
     const user = await getCurrentSessionUser();
     if (!user) {
-        showMessage('error', 'Not authenticated');
+        showMessage('error', i18n.t('common.not_authenticated') || 'Not authenticated');
         return;
     }
 
@@ -149,10 +149,12 @@ async function executeAggregation() {
     try {
         console.log(`Executing period aggregation: user_id=${user.user_id}, start=${startDateStr}, end=${endDateStr}, group_by=${groupBy}`);
 
+        const includeScheduled = document.getElementById('filter-include-scheduled').checked;
         const results = await invoke('get_period_aggregation', {
             startDate: startDateStr,
             endDate: endDateStr,
-            groupBy: groupBy
+            groupBy: groupBy,
+            includeScheduled: includeScheduled
         });
 
         console.log('Aggregation results:', results);
@@ -166,7 +168,7 @@ async function executeAggregation() {
 
     } catch (error) {
         console.error('Aggregation error:', error);
-        showMessage('error', error.toString());
+        showMessage('error', AggCommon.translateAggregationError(error));
         clearResults();
     } finally {
         resultsContainer.classList.remove('loading');

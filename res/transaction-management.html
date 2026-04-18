@@ -126,6 +126,14 @@
                         </div>
                     </div>
 
+                    <div class="filter-row">
+                        <div class="filter-group">
+                            <label data-i18n="transaction_mgmt.include_scheduled">Include Scheduled:</label>
+                            <input type="checkbox" id="filter-include-scheduled" />
+                            <span data-i18n="transaction_mgmt.include_scheduled_desc">Show scheduled transactions</span>
+                        </div>
+                    </div>
+
                     <div class="filter-actions">
                         <button class="btn btn-secondary" id="clear-filter-btn" data-i18n="transaction_mgmt.clear_filter">Clear</button>
                         <button class="btn btn-primary" id="apply-filter-btn" data-i18n="transaction_mgmt.apply_filter">Apply</button>
@@ -234,6 +242,12 @@
                         <div class="form-group">
                             <label for="transaction-memo" data-i18n="transaction_mgmt.memo">Memo:</label>
                             <textarea id="transaction-memo" rows="3"></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="is-scheduled" data-i18n="transaction_mgmt.is_scheduled">Scheduled Transaction:</label>
+                            <input type="checkbox" id="is-scheduled" />
+                            <span data-i18n="transaction_mgmt.is_scheduled_desc">Mark as planned/scheduled</span>
                         </div>
 
                         <div class="form-group">

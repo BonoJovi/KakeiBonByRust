@@ -301,6 +301,14 @@ body {
     color: #e74c3c;
 }
 
+/* Week range hint */
+.week-range-hint {
+    font-size: 0.85em;
+    color: #555;
+    padding: 2px 0 4px 0;
+    min-height: 1.2em;
+}
+
 /* Empty state */
 .empty-state {
     text-align: center;

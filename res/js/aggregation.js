@@ -4,6 +4,7 @@ import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontS
 import { HTML_FILES } from './html-files.js';
 import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
 import { createMenuBar } from './menu.js';
+import * as AggCommon from './aggregation-common.js';
 
 console.log('aggregation.js loaded');
 
@@ -126,7 +127,7 @@ function setupEventHandlers() {
 async function executeAggregation() {
     const user = await getCurrentSessionUser();
     if (!user) {
-        showMessage('error', 'User not authenticated');
+        showMessage('error', i18n.t('common.not_authenticated') || 'Not authenticated');
         return;
     }
 
@@ -163,10 +164,12 @@ async function executeAggregation() {
     try {
         console.log(`Executing aggregation: user_id=${user.user_id}, year=${year}, month=${month}, group_by=${groupBy}`);
 
+        const includeScheduled = document.getElementById('filter-include-scheduled').checked;
         const results = await invoke('get_monthly_aggregation', {
             year: year,
             month: month,
-            groupBy: groupBy
+            groupBy: groupBy,
+            includeScheduled: includeScheduled
         });
 
         console.log('Aggregation results:', results);
@@ -178,7 +181,7 @@ async function executeAggregation() {
 
     } catch (error) {
         console.error('Aggregation error:', error);
-        showMessage('error', error.toString());
+        showMessage('error', AggCommon.translateAggregationError(error));
         clearResults();
     } finally {
         resultsContainer.classList.remove('loading');
@@ -211,12 +214,16 @@ function displayResults(results) {
     // Display each result
     results.forEach(result => {
         const tr = document.createElement('tr');
+        const amountClass = result.total_amount >= 0 ? 'amount-positive' : 'amount-negative';
+        const amountPrefix = result.total_amount >= 0 ? '+' : '';
+        const avgClass = result.avg_amount >= 0 ? 'amount-positive' : 'amount-negative';
+        const avgPrefix = result.avg_amount >= 0 ? '+' : '';
 
         tr.innerHTML = `
             <td>${escapeHtml(result.group_name)}</td>
-            <td class="amount">${formatAmount(result.total_amount)}</td>
+            <td class="amount ${amountClass}">${amountPrefix}${formatAmount(result.total_amount)}</td>
             <td class="amount">${result.count.toLocaleString()}</td>
-            <td class="amount">${formatAmount(result.avg_amount)}</td>
+            <td class="amount ${avgClass}">${avgPrefix}${formatAmount(result.avg_amount)}</td>
         `;
 
         tbody.appendChild(tr);
@@ -227,14 +234,16 @@ function displayResults(results) {
 
     // Calculate overall average
     const avgAmount = totalCount > 0 ? Math.round(totalAmount / totalCount) : 0;
+    const totalAmountClass = totalAmount >= 0 ? 'amount-positive' : 'amount-negative';
+    const totalAvgClass = avgAmount >= 0 ? 'amount-positive' : 'amount-negative';
 
     // Display totals in footer
     const footerTr = document.createElement('tr');
     footerTr.innerHTML = `
         <td>${i18n.t('aggregation.total') || 'Total'}</td>
-        <td class="amount">${formatAmount(totalAmount)}</td>
+        <td class="amount ${totalAmountClass}">${totalAmount >= 0 ? '+' : ''}${formatAmount(totalAmount)}</td>
         <td class="amount">${totalCount.toLocaleString()}</td>
-        <td class="amount">${formatAmount(avgAmount)}</td>
+        <td class="amount ${totalAvgClass}">${avgAmount >= 0 ? '+' : ''}${formatAmount(avgAmount)}</td>
     `;
     tfoot.appendChild(footerTr);
 }
