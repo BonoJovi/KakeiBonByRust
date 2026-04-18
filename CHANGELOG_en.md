@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.0] - 2026-04-19
+
+### New Features
+
+- **Scheduled Transactions (IS_SCHEDULED)**: Add "scheduled" flag to transactions
+  - Register scheduled transactions and confirm (convert scheduled → actual)
+  - Visual distinction in list view (background color, badge)
+  - Excluded by default, toggle checkbox to include
+- **Aggregation Scheduled Filter**: All 5 aggregation types (monthly/daily/weekly/period/yearly)
+- **Remove Future Date Restriction**: Allow aggregation of future-dated scheduled transactions
+- **Weekly Aggregation Week Range Display**: Real-time target week range shown on date selection
+- **Aggregation Amount Coloring**: Income (green) and expense (red) visual distinction
+
+### Internationalization
+
+- Aggregation error messages i18n (from English-only to bilingual Japanese/English)
+- Added 34 bilingual i18n resource entries for scheduled transaction features
+
+### Tests
+
+- Backend: 248 tests
+- Frontend: 216 tests
+
+---
+
 ## [v1.1.2] - 2026-04-16
 
 ### Security
