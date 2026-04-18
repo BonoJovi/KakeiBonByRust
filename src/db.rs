@@ -102,6 +102,9 @@ impl Database {
         // Make CATEGORY2_CODE and CATEGORY3_CODE nullable if they have NOT NULL constraint
         self.ensure_category_nullable().await?;
 
+        // Add IS_SCHEDULED column if it doesn't exist (for tables created before this column was added)
+        self.ensure_is_scheduled_column().await?;
+
         Ok(())
     }
 
@@ -220,6 +223,23 @@ impl Database {
         sqlx::query("PRAGMA foreign_keys = ON")
             .execute(&self.pool)
             .await?;
+
+        Ok(())
+    }
+
+    /// Ensure IS_SCHEDULED column exists in TRANSACTIONS_HEADER table
+    async fn ensure_is_scheduled_column(&self) -> Result<(), sqlx::Error> {
+        let has_column: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM pragma_table_info('TRANSACTIONS_HEADER') WHERE name = 'IS_SCHEDULED'"
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        if has_column == 0 {
+            sqlx::query("ALTER TABLE TRANSACTIONS_HEADER ADD COLUMN IS_SCHEDULED INTEGER DEFAULT 0")
+                .execute(&self.pool)
+                .await?;
+        }
 
         Ok(())
     }

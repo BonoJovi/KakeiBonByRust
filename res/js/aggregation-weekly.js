@@ -51,10 +51,12 @@ document.addEventListener('DOMContentLoaded', async function() {
 
 function initializeFilterDefaults() {
     const dateInput = document.getElementById('reference-date');
-    
+
     // Set today's date
     const today = AggCommon.getCurrentDate();
     dateInput.value = AggCommon.formatDate(today);
+
+    updateWeekRangeDisplay();
 }
 
 function setupEventHandlers() {
@@ -83,6 +85,59 @@ function setupEventHandlers() {
     dateInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') executeAggregation();
     });
+    dateInput.addEventListener('change', updateWeekRangeDisplay);
+
+    const weekStartSelect = document.getElementById('week-start');
+    weekStartSelect.addEventListener('change', updateWeekRangeDisplay);
+}
+
+function updateWeekRangeDisplay() {
+    const display = document.getElementById('week-range-display');
+    if (!display) return;
+
+    const dateStr = document.getElementById('reference-date').value;
+    const weekStart = document.getElementById('week-start').value;
+
+    if (!dateStr) {
+        display.textContent = '';
+        return;
+    }
+
+    const refDate = new Date(dateStr + 'T00:00:00');
+    const dayOfWeek = refDate.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+
+    // Calculate days back to the start of the week
+    let startOffset;
+    if (weekStart === 'monday') {
+        // Monday=0, Tue=1, ..., Sun=6
+        startOffset = (dayOfWeek + 6) % 7;
+    } else {
+        // Sunday=0, Mon=1, ..., Sat=6
+        startOffset = dayOfWeek;
+    }
+
+    const startDate = new Date(refDate);
+    startDate.setDate(refDate.getDate() - startOffset);
+    const endDate = new Date(startDate);
+    endDate.setDate(startDate.getDate() + 6);
+
+    const dayNames = {
+        en: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+        ja: ['日', '月', '火', '水', '木', '金', '土']
+    };
+    const lang = i18n.getCurrentLanguage ? i18n.getCurrentLanguage() : 'en';
+    const names = dayNames[lang] || dayNames['en'];
+
+    const fmt = (d) => {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const dn = names[d.getDay()];
+        return `${y}/${m}/${day}(${dn})`;
+    };
+
+    const label = i18n.t('aggregation.week_range_label') || 'Target week';
+    display.textContent = `${label}: ${fmt(startDate)} ~ ${fmt(endDate)}`;
 }
 
 function setupMenuHandlers() {
@@ -106,7 +161,7 @@ function setupMenuHandlers() {
 async function executeAggregation() {
     const user = await getCurrentSessionUser();
     if (!user) {
-        showMessage('error', 'Not authenticated');
+        showMessage('error', i18n.t('common.not_authenticated') || 'Not authenticated');
         return;
     }
 
@@ -131,10 +186,12 @@ async function executeAggregation() {
     try {
         console.log(`Executing weekly aggregation: user_id=${user.user_id}, reference_date=${dateStr}, week_start=${weekStart}, group_by=${groupBy}`);
 
+        const includeScheduled = document.getElementById('filter-include-scheduled').checked;
         const results = await invoke('get_weekly_aggregation_by_date', {
             referenceDate: dateStr,
             weekStart: weekStart,
-            groupBy: groupBy
+            groupBy: groupBy,
+            includeScheduled: includeScheduled
         });
 
         console.log('Aggregation results:', results);
@@ -148,7 +205,7 @@ async function executeAggregation() {
 
     } catch (error) {
         console.error('Aggregation error:', error);
-        showMessage('error', error.toString());
+        showMessage('error', AggCommon.translateAggregationError(error));
         clearResults();
     } finally {
         resultsContainer.classList.remove('loading');

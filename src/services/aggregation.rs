@@ -304,6 +304,8 @@ pub struct AggregationFilter {
     pub category: Option<CategoryFilter>,
     /// Shop ID filter (optional)
     pub shop_id: Option<i64>,
+    /// Include scheduled transactions (default: false = exclude scheduled)
+    pub include_scheduled: bool,
 }
 
 impl AggregationFilter {
@@ -314,7 +316,15 @@ impl AggregationFilter {
             amount: None,
             category: None,
             shop_id: None,
+            include_scheduled: false,
         }
+    }
+
+    /// Set include_scheduled filter
+    #[allow(dead_code)]
+    pub fn with_include_scheduled(mut self, include_scheduled: bool) -> Self {
+        self.include_scheduled = include_scheduled;
+        self
     }
 
     /// Set amount filter (used in tests)
@@ -453,9 +463,11 @@ pub async fn execute_monthly_aggregation(
     month: u32,
     group_by: GroupBy,
     lang: &str,
+    include_scheduled: bool,
 ) -> Result<Vec<AggregationResult>, String> {
-    let request = monthly_aggregation(user_id, year, month, group_by)
+    let mut request = monthly_aggregation(user_id, year, month, group_by)
         .map_err(|e| e.to_string())?;
+    request.filter.include_scheduled = include_scheduled;
 
     execute_aggregation(pool, &request, lang).await
 }
@@ -467,9 +479,11 @@ pub async fn execute_daily_aggregation(
     date: NaiveDate,
     group_by: GroupBy,
     lang: &str,
+    include_scheduled: bool,
 ) -> Result<Vec<AggregationResult>, String> {
-    let request = daily_aggregation(user_id, date, group_by)
+    let mut request = daily_aggregation(user_id, date, group_by)
         .map_err(|e| e.to_string())?;
+    request.filter.include_scheduled = include_scheduled;
 
     execute_aggregation(pool, &request, lang).await
 }
@@ -482,9 +496,11 @@ pub async fn execute_period_aggregation(
     end_date: NaiveDate,
     group_by: GroupBy,
     lang: &str,
+    include_scheduled: bool,
 ) -> Result<Vec<AggregationResult>, String> {
-    let request = period_aggregation(user_id, start_date, end_date, group_by)
+    let mut request = period_aggregation(user_id, start_date, end_date, group_by)
         .map_err(|e| e.to_string())?;
+    request.filter.include_scheduled = include_scheduled;
 
     execute_aggregation(pool, &request, lang).await
 }
@@ -498,9 +514,11 @@ pub async fn execute_weekly_aggregation(
     week_start: WeekStart,
     group_by: GroupBy,
     lang: &str,
+    include_scheduled: bool,
 ) -> Result<Vec<AggregationResult>, String> {
-    let request = weekly_aggregation(user_id, year, week, week_start, group_by)
+    let mut request = weekly_aggregation(user_id, year, week, week_start, group_by)
         .map_err(|e| e.to_string())?;
+    request.filter.include_scheduled = include_scheduled;
 
     execute_aggregation(pool, &request, lang).await
 }
@@ -513,9 +531,11 @@ pub async fn execute_weekly_aggregation_by_date(
     week_start: WeekStart,
     group_by: GroupBy,
     lang: &str,
+    include_scheduled: bool,
 ) -> Result<Vec<AggregationResult>, String> {
-    let request = weekly_aggregation_by_date(user_id, reference_date, week_start, group_by)
+    let mut request = weekly_aggregation_by_date(user_id, reference_date, week_start, group_by)
         .map_err(|e| e.to_string())?;
+    request.filter.include_scheduled = include_scheduled;
 
     execute_aggregation(pool, &request, lang).await
 }
@@ -528,9 +548,11 @@ pub async fn execute_yearly_aggregation(
     year_start: YearStart,
     group_by: GroupBy,
     lang: &str,
+    include_scheduled: bool,
 ) -> Result<Vec<AggregationResult>, String> {
-    let request = yearly_aggregation(user_id, year, year_start, group_by)
+    let mut request = yearly_aggregation(user_id, year, year_start, group_by)
         .map_err(|e| e.to_string())?;
+    request.filter.include_scheduled = include_scheduled;
 
     execute_aggregation(pool, &request, lang).await
 }
@@ -544,9 +566,11 @@ pub async fn execute_monthly_aggregation_by_category(
     group_by: GroupBy,
     category_filter: CategoryFilter,
     lang: &str,
+    include_scheduled: bool,
 ) -> Result<Vec<AggregationResult>, String> {
-    let request = monthly_aggregation_by_category(user_id, year, month, group_by, category_filter)
+    let mut request = monthly_aggregation_by_category(user_id, year, month, group_by, category_filter)
         .map_err(|e| e.to_string())?;
+    request.filter.include_scheduled = include_scheduled;
 
     execute_aggregation(pool, &request, lang).await
 }
@@ -563,6 +587,11 @@ pub fn build_where_clause(user_id: i64, filter: &AggregationFilter) -> String {
         // Exclude TRANSFER from category-based aggregations (always results in 0)
         "th.CATEGORY1_CODE != 'TRANSFER'".to_string(),
     ];
+
+    // Exclude scheduled transactions by default
+    if !filter.include_scheduled {
+        conditions.push("th.IS_SCHEDULED = 0".to_string());
+    }
 
     // Add amount filter if present
     if let Some(ref amount) = filter.amount {
@@ -652,8 +681,11 @@ fn build_account_aggregation_query(request: &AggregationRequest) -> String {
     let order_field = request.order_by.to_order_by_field();
     let sort_order = request.sort_order.to_sql();
 
-    // Build additional filter conditions (amount, shop, etc.)
+    // Build additional filter conditions (amount, shop, scheduled, etc.)
     let mut additional_conditions = Vec::new();
+    if !request.filter.include_scheduled {
+        additional_conditions.push("th.IS_SCHEDULED = 0".to_string());
+    }
     if let Some(ref amount) = request.filter.amount {
         if amount.has_condition() {
             additional_conditions.push(amount.to_sql());
@@ -785,8 +817,6 @@ pub enum AggregationError {
     InvalidYear(i32),
     /// Invalid month (must be between 1 and 12)
     InvalidMonth(u32),
-    /// Date is in the future
-    FutureDate { year: i32, month: u32 },
     /// Invalid date range (start > end)
     InvalidDateRange { start: NaiveDate, end: NaiveDate },
     /// Invalid day for the given month
@@ -801,9 +831,6 @@ impl std::fmt::Display for AggregationError {
             }
             AggregationError::InvalidMonth(month) => {
                 write!(f, "Invalid month: {}. Month must be between 1 and 12.", month)
-            }
-            AggregationError::FutureDate { year, month } => {
-                write!(f, "Future date not allowed: {}-{:02}", year, month)
             }
             AggregationError::InvalidDateRange { start, end } => {
                 write!(f, "Invalid date range: {} to {}. Start date must be before end date.", start, end)
@@ -848,18 +875,6 @@ fn validate_month(month: u32) -> Result<(), AggregationError> {
     Ok(())
 }
 
-/// Check if the given year/month is not in the future
-fn validate_not_future(year: i32, month: u32) -> Result<(), AggregationError> {
-    let today = chrono::Local::now().date_naive();
-    let target_first_day = NaiveDate::from_ymd_opt(year, month, 1)
-        .ok_or(AggregationError::InvalidMonth(month))?;
-
-    if target_first_day > today {
-        return Err(AggregationError::FutureDate { year, month });
-    }
-    Ok(())
-}
-
 /// Monthly aggregation request builder
 ///
 /// Creates an aggregation request for a specific month with:
@@ -891,7 +906,6 @@ pub fn monthly_aggregation(
     // Validate inputs
     validate_year(year)?;
     validate_month(month)?;
-    validate_not_future(year, month)?;
 
     // Calculate date range for the month
     let first_day = NaiveDate::from_ymd_opt(year, month, 1)
@@ -927,16 +941,6 @@ pub fn daily_aggregation(
     date: NaiveDate,
     group_by: GroupBy,
 ) -> Result<AggregationRequest, AggregationError> {
-    let today = chrono::Local::now().date_naive();
-    
-    // Validate not future
-    if date > today {
-        return Err(AggregationError::FutureDate { 
-            year: date.year(), 
-            month: date.month() 
-        });
-    }
-    
     // Create filter for exact date
     let filter = AggregationFilter::new(DateFilter::Exact(date));
     
@@ -983,22 +987,14 @@ pub fn period_aggregation(
             end: end_date 
         });
     }
-    
-    let today = chrono::Local::now().date_naive();
-    if start_date > today {
-        return Err(AggregationError::FutureDate { 
-            year: start_date.year(), 
-            month: start_date.month() 
-        });
-    }
-    
+
     // Create filter with date range
     let filter = AggregationFilter::new(DateFilter::Between(start_date, end_date));
-    
+
     // Create request with default sort (amount descending)
     let request = AggregationRequest::new(user_id, filter, group_by)
         .with_sort(OrderField::Amount, SortOrder::Desc);
-    
+
     Ok(request)
 }
 
@@ -1032,21 +1028,13 @@ pub fn weekly_aggregation(
     // Calculate week range
     let (start_date, end_date) = calculate_week_range(year, week, week_start)?;
     
-    let today = chrono::Local::now().date_naive();
-    if start_date > today {
-        return Err(AggregationError::FutureDate { 
-            year: start_date.year(), 
-            month: start_date.month() 
-        });
-    }
-    
     // Create filter for week range
     let filter = AggregationFilter::new(DateFilter::Between(start_date, end_date));
-    
+
     // Create request with default sort (amount descending)
     let request = AggregationRequest::new(user_id, filter, group_by)
         .with_sort(OrderField::Amount, SortOrder::Desc);
-    
+
     Ok(request)
 }
 
@@ -1111,14 +1099,6 @@ pub fn weekly_aggregation_by_date(
 ) -> Result<AggregationRequest, AggregationError> {
     use chrono::Weekday;
     
-    let today = chrono::Local::now().date_naive();
-    if reference_date > today {
-        return Err(AggregationError::FutureDate { 
-            year: reference_date.year(), 
-            month: reference_date.month() 
-        });
-    }
-    
     // Calculate the start of the week containing reference_date
     let target_weekday = match week_start {
         WeekStart::Sunday => Weekday::Sun,
@@ -1182,14 +1162,6 @@ pub fn yearly_aggregation(
             (start, end)
         }
     };
-    
-    let today = chrono::Local::now().date_naive();
-    if start_date > today {
-        return Err(AggregationError::FutureDate { 
-            year: start_date.year(), 
-            month: start_date.month() 
-        });
-    }
     
     // Create filter for year range
     let filter = AggregationFilter::new(DateFilter::Between(start_date, end_date));
@@ -1490,48 +1462,6 @@ mod tests {
     }
 
     #[test]
-    fn test_validate_not_future_past() {
-        // Test with a past date (should always pass)
-        assert!(validate_not_future(2020, 1).is_ok());
-    }
-
-    #[test]
-    fn test_validate_not_future_future() {
-        // Test with a future date (should fail)
-        let result = validate_not_future(2099, 12);
-        assert!(matches!(result, Err(AggregationError::FutureDate { .. })));
-    }
-
-    #[test]
-    fn test_validate_not_future_current_month() {
-        // Current month should pass
-        let today = chrono::Local::now().date_naive();
-        let result = validate_not_future(today.year(), today.month());
-        assert!(result.is_ok());
-    }
-
-    #[test]
-    fn test_validate_not_future_next_month() {
-        // Next month should fail
-        let today = chrono::Local::now().date_naive();
-        let (next_year, next_month) = if today.month() == 12 {
-            (today.year() + 1, 1)
-        } else {
-            (today.year(), today.month() + 1)
-        };
-        let result = validate_not_future(next_year, next_month);
-        assert!(matches!(result, Err(AggregationError::FutureDate { .. })));
-    }
-
-    #[test]
-    fn test_validate_not_future_next_year() {
-        // Next year same month should fail
-        let today = chrono::Local::now().date_naive();
-        let result = validate_not_future(today.year() + 1, today.month());
-        assert!(matches!(result, Err(AggregationError::FutureDate { .. })));
-    }
-
-    #[test]
     fn test_monthly_aggregation_success() {
         // Use a past date that's always valid
         let result = monthly_aggregation(1, 2024, 6, GroupBy::Category1);
@@ -1566,38 +1496,10 @@ mod tests {
     }
 
     #[test]
-    fn test_monthly_aggregation_future_date() {
+    fn test_monthly_aggregation_future_date_allowed() {
+        // Future dates should now be allowed (for scheduled transactions)
         let result = monthly_aggregation(1, 2099, 1, GroupBy::Category1);
-        assert!(matches!(result, Err(AggregationError::FutureDate { .. })));
-    }
-
-    #[test]
-    fn test_monthly_aggregation_current_month() {
-        // Current month should pass
-        let today = chrono::Local::now().date_naive();
-        let result = monthly_aggregation(1, today.year(), today.month(), GroupBy::Category1);
         assert!(result.is_ok());
-    }
-
-    #[test]
-    fn test_monthly_aggregation_next_month() {
-        // Next month should fail
-        let today = chrono::Local::now().date_naive();
-        let (next_year, next_month) = if today.month() == 12 {
-            (today.year() + 1, 1)
-        } else {
-            (today.year(), today.month() + 1)
-        };
-        let result = monthly_aggregation(1, next_year, next_month, GroupBy::Category1);
-        assert!(matches!(result, Err(AggregationError::FutureDate { .. })));
-    }
-
-    #[test]
-    fn test_monthly_aggregation_next_year() {
-        // Next year same month should fail
-        let today = chrono::Local::now().date_naive();
-        let result = monthly_aggregation(1, today.year() + 1, today.month(), GroupBy::Category1);
-        assert!(matches!(result, Err(AggregationError::FutureDate { .. })));
     }
 
     #[test]
@@ -1679,5 +1581,54 @@ mod tests {
         assert!(sql.contains("2024-11-01"));
         assert!(sql.contains("2024-11-30"));
         assert!(sql.contains("BETWEEN"));
+    }
+
+    #[test]
+    fn test_weekly_by_date_monday_start_range() {
+        // 2026-04-19 is Sunday, Monday-start week = 2026-04-13(Mon) ~ 2026-04-19(Sun)
+        let date = NaiveDate::from_ymd_opt(2026, 4, 19).unwrap();
+        let request = weekly_aggregation_by_date(1, date, WeekStart::Monday, GroupBy::Category1).unwrap();
+        let sql = build_query(&request, "ja");
+
+        assert!(sql.contains("2026-04-13"), "SQL should contain start date 2026-04-13: {}", sql);
+        assert!(sql.contains("2026-04-19"), "SQL should contain end date 2026-04-19: {}", sql);
+
+        // 2026-04-20 is Monday, so it starts a new week: 2026-04-20(Mon) ~ 2026-04-26(Sun)
+        let date2 = NaiveDate::from_ymd_opt(2026, 4, 20).unwrap();
+        let request2 = weekly_aggregation_by_date(1, date2, WeekStart::Monday, GroupBy::Category1).unwrap();
+        let sql2 = build_query(&request2, "ja");
+
+        assert!(sql2.contains("2026-04-20"), "SQL should contain start date 2026-04-20: {}", sql2);
+        assert!(sql2.contains("2026-04-26"), "SQL should contain end date 2026-04-26: {}", sql2);
+    }
+
+    #[test]
+    fn test_weekly_by_date_include_scheduled_sql() {
+        let date = NaiveDate::from_ymd_opt(2026, 4, 19).unwrap();
+        let mut request = weekly_aggregation_by_date(1, date, WeekStart::Monday, GroupBy::Category1).unwrap();
+
+        // Default: exclude scheduled
+        let sql_default = build_query(&request, "ja");
+        assert!(sql_default.contains("IS_SCHEDULED = 0"), "Default should exclude scheduled: {}", sql_default);
+
+        // Include scheduled
+        request.filter.include_scheduled = true;
+        let sql_include = build_query(&request, "ja");
+        assert!(!sql_include.contains("IS_SCHEDULED"), "Include scheduled should not filter: {}", sql_include);
+    }
+
+    #[test]
+    fn test_weekly_by_date_account_include_scheduled_sql() {
+        let date = NaiveDate::from_ymd_opt(2026, 4, 19).unwrap();
+        let mut request = weekly_aggregation_by_date(1, date, WeekStart::Monday, GroupBy::Account).unwrap();
+
+        // Default: exclude scheduled
+        let sql_default = build_query(&request, "ja");
+        assert!(sql_default.contains("IS_SCHEDULED = 0"), "Account default should exclude scheduled: {}", sql_default);
+
+        // Include scheduled
+        request.filter.include_scheduled = true;
+        let sql_include = build_query(&request, "ja");
+        assert!(!sql_include.contains("IS_SCHEDULED"), "Account include scheduled should not filter: {}", sql_include);
     }
 }

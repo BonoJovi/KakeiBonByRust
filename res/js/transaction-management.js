@@ -25,7 +25,8 @@ let currentFilters = {
     category3Code: null,
     minAmount: null,
     maxAmount: null,
-    keyword: null
+    keyword: null,
+    includeScheduled: false
 };
 
 document.addEventListener('DOMContentLoaded', async function() {
@@ -322,6 +323,7 @@ async function loadTransactions() {
             minAmount: currentFilters.minAmount,
             maxAmount: currentFilters.maxAmount,
             keyword: currentFilters.keyword,
+            includeScheduled: currentFilters.includeScheduled,
             page: currentPage,
             perPage: perPage
         });
@@ -358,18 +360,31 @@ function renderTransactions(transactions) {
 function createTransactionItem(transaction) {
     const item = document.createElement('div');
     item.className = 'transaction-item';
-    
+
+    // Scheduled transaction visual differentiation
+    if (transaction.is_scheduled === 1) {
+        item.classList.add('scheduled');
+    }
+
     // Create content wrapper (for non-button content)
     const contentWrapper = document.createElement('div');
     contentWrapper.className = 'transaction-content';
-    
+
     // Date (format: YYYY-MM-DD HH:MM:SS -> YYYY-MM-DD HH:MM)
     const dateDiv = document.createElement('div');
     dateDiv.className = 'transaction-date';
     const dateTime = transaction.transaction_date.substring(0, 16); // YYYY-MM-DD HH:MM
     dateDiv.textContent = dateTime;
+    // Add scheduled badge after date
+    if (transaction.is_scheduled === 1) {
+        const badge = document.createElement('span');
+        badge.className = 'scheduled-badge';
+        badge.textContent = i18n.t('transaction_mgmt.scheduled_label') || 'Scheduled';
+        badge.setAttribute('data-i18n', 'transaction_mgmt.scheduled_label');
+        dateDiv.appendChild(badge);
+    }
     contentWrapper.appendChild(dateDiv);
-    
+
     // Category (only category1)
     const categoryDiv = document.createElement('div');
     categoryDiv.className = 'transaction-category';
@@ -413,6 +428,16 @@ function createTransactionItem(transaction) {
     const actionsDiv = document.createElement('div');
     actionsDiv.className = 'transaction-actions';
     
+    // Confirm button for scheduled transactions
+    if (transaction.is_scheduled === 1) {
+        const confirmBtn = document.createElement('button');
+        confirmBtn.className = 'btn-confirm';
+        confirmBtn.textContent = i18n.t('transaction_mgmt.confirm_btn') || 'Confirm';
+        confirmBtn.setAttribute('data-i18n', 'transaction_mgmt.confirm_btn');
+        confirmBtn.addEventListener('click', () => confirmScheduledTransaction(transaction.transaction_id));
+        actionsDiv.appendChild(confirmBtn);
+    }
+
     const editBtn = document.createElement('button');
     editBtn.className = 'btn btn-secondary';
     editBtn.textContent = i18n.t('common.edit');
@@ -470,7 +495,8 @@ async function applyFilters() {
     currentFilters.minAmount = minAmountInput ? parseInt(minAmountInput) : null;
     currentFilters.maxAmount = maxAmountInput ? parseInt(maxAmountInput) : null;
     currentFilters.keyword = document.getElementById('filter-keyword').value || null;
-    
+    currentFilters.includeScheduled = document.getElementById('filter-include-scheduled').checked;
+
     currentPage = 1; // Reset to first page
     
     // Close filter panel
@@ -489,7 +515,8 @@ async function clearFilters() {
     document.getElementById('filter-min-amount').value = '';
     document.getElementById('filter-max-amount').value = '';
     document.getElementById('filter-keyword').value = '';
-    
+    document.getElementById('filter-include-scheduled').checked = false;
+
     currentFilters = {
         startDate: null,
         endDate: null,
@@ -498,7 +525,8 @@ async function clearFilters() {
         category3Code: null,
         minAmount: null,
         maxAmount: null,
-        keyword: null
+        keyword: null,
+        includeScheduled: false
     };
     
     currentPage = 1;
@@ -507,6 +535,19 @@ async function clearFilters() {
 
 async function editTransaction(transactionId) {
     await openTransactionModal(transactionId);
+}
+
+async function confirmScheduledTransaction(transactionId) {
+    const confirmMessage = i18n.t('transaction_mgmt.confirm_scheduled') || 'Mark this scheduled transaction as actual?';
+    if (!confirm(confirmMessage)) return;
+    try {
+        await invoke('confirm_scheduled_transaction', { transactionId });
+        await loadTransactions();
+    } catch (error) {
+        console.error('Failed to confirm scheduled transaction:', error);
+        const errorMessage = i18n.t('transaction_mgmt.confirm_error') || 'Failed to confirm scheduled transaction';
+        alert(errorMessage + ': ' + error);
+    }
 }
 
 async function deleteTransaction(transactionId) {
@@ -851,6 +892,7 @@ async function handleTransactionSubmit(event) {
     const taxRoundingValue = parseInt(document.getElementById('tax-rounding').value);
     const taxIncludedTypeValue = parseInt(document.getElementById('tax-included-type').value);
     const memoText = document.getElementById('transaction-memo').value.trim() || null;
+    const isScheduled = document.getElementById('is-scheduled').checked ? 1 : 0;
 
     // Convert datetime-local format (YYYY-MM-DDTHH:mm) to SQLite DATETIME format (YYYY-MM-DD HH:MM:SS)
     const transactionDate = transactionDateInput.replace('T', ' ') + ':00';
@@ -883,7 +925,8 @@ async function handleTransactionSubmit(event) {
                 totalAmount,
                 taxRoundingType,
                 taxIncludedType,
-                memo: memoText
+                memo: memoText,
+                isScheduled: isScheduled
             });
         } else {
             // Create new transaction
@@ -896,7 +939,8 @@ async function handleTransactionSubmit(event) {
                 totalAmount,
                 taxRoundingType,
                 taxIncludedType,
-                memo: memoText
+                memo: memoText,
+                isScheduled: isScheduled
             });
         }
         
@@ -932,6 +976,7 @@ async function loadTransactionData(transactionId) {
         document.getElementById('tax-rounding').value = transaction.tax_rounding_type || 0;
         document.getElementById('tax-included-type').value = transaction.tax_included_type !== undefined ? transaction.tax_included_type : 1;
         document.getElementById('transaction-memo').value = transaction.memo || '';
+        document.getElementById('is-scheduled').checked = transaction.is_scheduled === 1;
 
         // Trigger category1 change to update account visibility
         handleCategory1Change({ target: document.getElementById('category1') });

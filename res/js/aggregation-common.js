@@ -58,7 +58,13 @@ export function renderResults(results, tbody, tfoot) {
         // Average amount
         const avgCell = document.createElement('td');
         avgCell.className = 'amount';
-        avgCell.textContent = formatAmount(result.avg_amount);
+        if (result.avg_amount >= 0) {
+            avgCell.classList.add('amount-positive');
+            avgCell.textContent = `+${formatAmount(result.avg_amount)}`;
+        } else {
+            avgCell.classList.add('amount-negative');
+            avgCell.textContent = formatAmount(result.avg_amount);
+        }
         row.appendChild(avgCell);
         
         tbody.appendChild(row);
@@ -77,7 +83,9 @@ export function renderResults(results, tbody, tfoot) {
             ${totalAmount >= 0 ? '+' : ''}${formatAmount(totalAmount)}
         </td>
         <td>${totalCount}</td>
-        <td class="amount">${formatAmount(avgAmount)}</td>
+        <td class="amount ${avgAmount >= 0 ? 'amount-positive' : 'amount-negative'}">
+            ${avgAmount >= 0 ? '+' : ''}${formatAmount(avgAmount)}
+        </td>
     `;
     tfoot.appendChild(totalRow);
     
@@ -180,4 +188,19 @@ export function getWeekNumber(date) {
  */
 export function parseGroupBy(groupBy) {
     return groupBy;
+}
+
+/**
+ * Translate backend aggregation error messages to i18n messages
+ * @param {Error|string} error - Error from backend
+ * @returns {string} Translated error message
+ */
+export function translateAggregationError(error) {
+    const errorStr = error.toString();
+    if (errorStr.includes('Invalid year')) return i18n.t('aggregation.error_invalid_year') || errorStr;
+    if (errorStr.includes('Invalid month')) return i18n.t('aggregation.error_invalid_month') || errorStr;
+    if (errorStr.includes('Invalid date range')) return i18n.t('aggregation.error_invalid_date_range') || errorStr;
+    if (errorStr.includes('Invalid day')) return i18n.t('aggregation.error_invalid_day') || errorStr;
+    if (errorStr.includes('Invalid date format')) return i18n.t('aggregation.error_invalid_date_format') || errorStr;
+    return errorStr;
 }
