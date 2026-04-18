@@ -1,17 +1,17 @@
 # KakeiBon - Quick Reference
 
 **Last Updated**: 2026-04-16 JST
-**Version**: v1.1.2
+**Version**: v1.2.0
 **Status**: Released (Maintenance & Enhancement)
 **Purpose**: Fast lookup for current project status, version, tech stack, and key decisions
-**Keywords**: quick reference, クイックリファレンス, current status, 現在の状態, version, バージョン, v1.1.2, release, リリース, tech stack, 技術スタック, Tauri, Rust, SQLite, features, 機能, user management, ユーザー管理, authentication, 認証, encryption, 暗号化, AES-256-GCM, Argon2, i18n, internationalization, 国際化, bilingual, バイリンガル, Japanese, English, 日本語, 英語, project status, プロジェクトステータス, development phase, 開発フェーズ  
+**Keywords**: quick reference, クイックリファレンス, current status, 現在の状態, version, バージョン, v1.2.0, release, リリース, tech stack, 技術スタック, Tauri, Rust, SQLite, features, 機能, user management, ユーザー管理, authentication, 認証, encryption, 暗号化, AES-256-GCM, Argon2, i18n, internationalization, 国際化, bilingual, バイリンガル, Japanese, English, 日本語, 英語, project status, プロジェクトステータス, development phase, 開発フェーズ  
 **Related**: @core/DESIGN_PHILOSOPHY.md, @development/CONVENTIONS.md, @development/TESTING_STRATEGY.md, @architecture/PROJECT_STRUCTURE.md
 
 ---
 
 ## Current Status
 
-- **Version**: v1.1.2 (Stable)
+- **Version**: v1.2.0 (Stable)
 - **Platform**: Desktop (Tauri - Windows, macOS, Linux)
 - **Branch**: `dev` (next version development)
 - **Tests**: 800 tests (201 Rust backend + 599 JavaScript frontend)
