@@ -5,7 +5,7 @@
 > **A Modern Household Budget App with Focus on Readability and Usability**  
 > **見やすさと使いやすさを追求した、モダンな家計簿アプリケーション**
 
-[![Version](https://img.shields.io/badge/Version-1.2.0-blue)](https://github.com/BonoJovi/KakeiBonByRust/releases/tag/v1.2.0)
+[![Version](https://img.shields.io/badge/Version-1.2.1-blue)](https://github.com/BonoJovi/KakeiBonByRust/releases/tag/v1.2.1)
 [![Rust](https://img.shields.io/badge/Rust-1.70+-orange.svg)](https://www.rust-lang.org/)
 [![Tauri](https://img.shields.io/badge/Tauri-v2.9.3-blue.svg)](https://tauri.app/)
 [![Tests](https://img.shields.io/badge/tests-800%20passing-brightgreen.svg)](#test-results--テスト結果)
@@ -27,9 +27,9 @@
 いつもKakeiBonに気を留めていただき、誠にありがとうございます。
 プロジェクト発案者のBonoJovi(Yoshihiro NAKAHARA)です。
 
-**Ver.1.2.0を正式リリースいたしました！**
+**Ver.1.2.1を正式リリースいたしました！**
 
-Ver.1.2.0では、予定入出金（IS_SCHEDULED）機能を追加しました。入出金データに「予定」フラグを設定でき、予定と実績を視覚的に区別して管理できます。全5種の集計機能にも予定入出金フィルターを追加し、集計エラーメッセージのi18n化も実施しました。
+Ver.1.2.1では、口座管理画面でNONE口座（内部用）の誤編集を防止する修正と、明細追加モーダルのフォーカス改善を行いました。
 
 入出金データの入力・集計機能が完成し、実用的な家計簿アプリケーションとしてご利用いただける状態となりました。
 安定版リリースをご利用になりたい方は、[mainブランチ](https://github.com/BonoJovi/KakeiBonByRust/tree/main)をご参照ください。
@@ -228,10 +228,10 @@ Development is progressing smoothly, and we strive to update daily!
 
 | Metric | Count |
 |--------|-------|
-| 👁️ **Total Views** / 総閲覧数 | **66** |
-| 📦 **Total Clones** / 総クローン数 | **610** |
+| 👁️ **Total Views** / 総閲覧数 | **116** |
+| 📦 **Total Clones** / 総クローン数 | **1,078** |
 
-*Last Updated / 最終更新: 2026-04-18 01:42 UTC*
+*Last Updated / 最終更新: 2026-04-24 01:42 UTC*
 
 </div>
 <!-- STATS_END -->

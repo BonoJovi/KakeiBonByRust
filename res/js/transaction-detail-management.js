@@ -722,6 +722,9 @@ async function openDetailModal(detail = null) {
     }
     
     modal.classList.remove('hidden');
+
+    // Focus on item name input after modal opens (preventScroll to avoid modal shifting)
+    setTimeout(() => document.getElementById('item-name')?.focus({ preventScroll: true }), 0);
 }
 
 function closeDetailModal() {

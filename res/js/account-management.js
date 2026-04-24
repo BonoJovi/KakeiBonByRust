@@ -180,10 +180,13 @@ async function loadAccounts() {
     try {
         accounts = await invoke('get_accounts', {});
         
-        if (accounts.length === 0) {
+        // Filter out NONE account (internal use only, not user-editable)
+        const displayAccounts = accounts.filter(a => a.account_code !== 'NONE');
+
+        if (displayAccounts.length === 0) {
             tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #999;">${i18n.t('account_mgmt.no_accounts')}</td></tr>`;
         } else {
-            accounts.forEach(account => {
+            displayAccounts.forEach(account => {
                 const row = createAccountRow(account);
                 tbody.appendChild(row);
             });

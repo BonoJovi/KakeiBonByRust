@@ -24,9 +24,9 @@
 Thank you for your continued interest in KakeiBon.
 I'm BonoJovi (Yoshihiro NAKAHARA), the project initiator.
 
-**We have officially released Ver.1.2.0!**
+**We have officially released Ver.1.2.1!**
 
-Ver.1.2.0 adds scheduled transaction (IS_SCHEDULED) support. You can mark transactions as "scheduled" and visually distinguish planned from actual entries. All 5 aggregation views now include a scheduled transaction filter, and aggregation error messages have been internationalized.
+Ver.1.2.1 fixes the NONE account (internal use) being editable in account management, and improves focus behavior on the add detail modal.
 
 Transaction data input and aggregation features are now complete, making KakeiBon a practical household budget application.
 If you would like to use the stable release version, please refer to the [main branch](https://github.com/BonoJovi/KakeiBonByRust/tree/main).
