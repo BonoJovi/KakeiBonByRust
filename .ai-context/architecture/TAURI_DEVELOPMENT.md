@@ -1,60 +1,10 @@
-# Tauri開発環境について
+# Tauri Development Notes
 
-**Last Updated**: 2025-12-11 03:48 JST  
-**Purpose**: Important Tauri-specific development guidelines and constraints  
-**Keywords**: Tauri, Tauriアプリ, desktop application, デスクトップアプリケーション, development mode, 開発モード, cargo tauri dev, hot reload, ホットリロード, no browser reload, ブラウザリロード不可, app restart, アプリ再起動, WebView, developer tools, 開発者ツール, debugging, デバッグ, frontend changes, フロントエンド変更, backend changes, バックエンド変更, Rust recompile, Rust再コンパイル, limitations, 制限事項  
-**Related**: @architecture/PROJECT_STRUCTURE.md, @core/QUICK_REFERENCE.md, @development/CONVENTIONS.md
+## Key Points
 
-## 重要な注意事項
-
-### アプリの種類
-- **KakeiBonはTauriアプリです**（デスクトップアプリケーション）
-- ブラウザベースのWebアプリケーションではありません
-
-### 開発モードでの動作
-- 開発モード（`cargo tauri dev`）で実行中の場合：
-  - **ブラウザのリロード（F5/Ctrl+R）はできません**
-  - **アドレスバーは存在しません**
-  - フロントエンドの変更を反映するには、**アプリを再起動する必要があります**
-
-### フロントエンドの変更を反映する方法
-1. **開発モードで実行中の場合**：
-   - アプリを終了（ウィンドウを閉じる）
-   - ターミナルで`Ctrl+C`でプロセスを停止
-   - 再度`cargo tauri dev`で起動
-
-2. **ホットリロードが効かない場合**：
-   - Tauriの開発モードでも、一部の変更（特にJavaScriptの構造的な変更）は再起動が必要
-   - Rustのバックエンドコードの変更は、通常自動的に再コンパイルされます
-
-### デバッグ方法
-- **ブラウザの開発者ツール**：
-  - Tauriアプリでも開発者ツールは使用可能（右クリック→「検証」または`F12`）
-  - ただし、リロード機能は使用できません
-  - コンソールログは確認可能
-
-- **Rustのログ**：
-  - ターミナルに出力されます
-  - `cargo tauri dev`実行中のターミナルを確認
-
-### 実装時の注意点
-- フロントエンド（JavaScript）の変更を実装した場合：
-  - **必ず「アプリを再起動してください」とユーザーに伝える**
-  - 「ブラウザをリロードしてください」とは言わない
-  - 変更内容を説明する際は、この点を明確にする
-
-### テスト方法
-- フロントエンドの変更をテストする場合：
-  1. 変更を保存
-  2. アプリを再起動（`cargo tauri dev`を再実行）
-  3. 動作を確認
-
-- バックエンド（Rust）の変更をテストする場合：
-  1. 変更を保存
-  2. `cargo check`または`cargo build`でコンパイルエラーがないか確認
-  3. アプリを再起動（開発モードの場合、自動的に再コンパイルされることが多い）
-
----
-
-**Last Updated**: 2024-11-09
-
+- KakeiBon is a **Tauri desktop app**, not a browser web app
+- No browser reload (F5/Ctrl+R) — tell user to **restart the app**
+- Frontend changes require app restart: close window → Ctrl+C → `cargo tauri dev`
+- Rust backend changes auto-recompile in dev mode
+- DevTools available (F12/right-click→Inspect) but reload button doesn't work
+- Rust logs appear in the terminal running `cargo tauri dev`

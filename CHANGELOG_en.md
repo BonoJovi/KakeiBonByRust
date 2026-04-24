@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.1] - 2026-04-24
+
+### Fixes
+
+- **Account Management**: Hide NONE account (internal "unspecified" account) from the list
+  - Prevents users from accidentally editing the NONE account
+- **Detail Management**: Improve focus behavior on add detail modal
+  - Auto-focus on item name field when modal opens
+  - Prevent scroll position shift (`preventScroll` support)
+
+---
+
 ## [v1.2.0] - 2026-04-19
 
 ### New Features
