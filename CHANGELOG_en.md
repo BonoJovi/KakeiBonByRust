@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.2] - 2026-04-30
+
+### Fixes
+
+- **Transaction List Filters**: Fix CATEGORY2/CATEGORY3 filters being silently ignored, causing every row of the parent CATEGORY1 to be returned
+  - The `category2_code` / `category3_code` arguments to `get_transactions` were discarded via `let _ = ...`
+  - Wired into the WHERE clause via EXISTS subqueries so header row counts stay stable (no DISTINCT needed)
+  - Empty strings are now treated as "no filter" to match the frontend's unselected state
+  - Added a regression test covering CATEGORY2-only, CATEGORY3 narrowing, and the empty-string passthrough
+
+### CI / Security
+
+- **GitHub Actions Workflow**: Declare minimal permissions (`contents: read`) on `feature-branch-test.yml`
+- **Test Coverage Artifacts**: Remove `res/tests/coverage/` files that had been accidentally committed (already listed in `.gitignore`)
+- **Code Scanning Baseline**: Triaged the 26 open alerts (dismissed false positives, fixed legitimate finding)
+- **Dependabot Alert Triage**: Dismissed GHSA-cq8v-f236-94qc (rand transitive dep via tauri build deps) as `tolerable_risk`
+
+### Documentation
+
+- Compacted session-loaded context files (CLAUDE.md / `.github/copilot-instructions.md`)
+- Added tax calculation refactor plan as design doc for the upcoming v2.0.0
+- Added project-level slash commands (`/i18n-add`, `/release`)
+- Fixed script name typo in release docs (`pre-release-check.sh` → `check-release.sh`)
+
+---
+
 ## [v1.2.1] - 2026-04-24
 
 ### Fixes

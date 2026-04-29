@@ -22,7 +22,7 @@ Before tagging, update ALL three to the same version:
 2. `package.json` — release name
 3. `tauri.conf.json` — asset filenames
 
-Then: `./scripts/pre-release-check.sh` → commit → merge to main → push main → tag → push tag
+Then: `./scripts/check-release.sh` → commit → merge to main → push main → tag → push tag
 
 ## Naming
 

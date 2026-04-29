@@ -5,7 +5,7 @@
 > **A Modern Household Budget App with Focus on Readability and Usability**  
 > **見やすさと使いやすさを追求した、モダンな家計簿アプリケーション**
 
-[![Version](https://img.shields.io/badge/Version-1.2.1-blue)](https://github.com/BonoJovi/KakeiBonByRust/releases/tag/v1.2.1)
+[![Version](https://img.shields.io/badge/Version-1.2.2-blue)](https://github.com/BonoJovi/KakeiBonByRust/releases/tag/v1.2.2)
 [![Rust](https://img.shields.io/badge/Rust-1.70+-orange.svg)](https://www.rust-lang.org/)
 [![Tauri](https://img.shields.io/badge/Tauri-v2.9.3-blue.svg)](https://tauri.app/)
 [![Tests](https://img.shields.io/badge/tests-800%20passing-brightgreen.svg)](#test-results--テスト結果)
@@ -27,9 +27,9 @@
 いつもKakeiBonに気を留めていただき、誠にありがとうございます。
 プロジェクト発案者のBonoJovi(Yoshihiro NAKAHARA)です。
 
-**Ver.1.2.1を正式リリースいたしました！**
+**Ver.1.2.2を正式リリースいたしました！**
 
-Ver.1.2.1では、口座管理画面でNONE口座（内部用）の誤編集を防止する修正と、明細追加モーダルのフォーカス改善を行いました。
+Ver.1.2.2では、明細一覧画面で中分類・小分類によるフィルタが効かず、親カテゴリの全件が返されてしまう不具合を修正しました。
 
 入出金データの入力・集計機能が完成し、実用的な家計簿アプリケーションとしてご利用いただける状態となりました。
 安定版リリースをご利用になりたい方は、[mainブランチ](https://github.com/BonoJovi/KakeiBonByRust/tree/main)をご参照ください。

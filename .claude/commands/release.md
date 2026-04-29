@@ -28,7 +28,7 @@ grep -h "version" Cargo.toml tauri.conf.json package.json | head -3
 **コミット前に必ず実行すること。スキップ禁止。**
 
 ```bash
-./scripts/pre-release-check.sh
+./scripts/check-release.sh
 ```
 
 This verifies version consistency, build, and tests. **All checks must pass before proceeding.**

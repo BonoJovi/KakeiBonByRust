@@ -2,6 +2,32 @@
 
 このファイルには、プロジェクトのすべての重要な変更が記録されます。
 
+## [v1.2.2] - 2026-04-30
+
+### 修正
+
+- **明細一覧画面のフィルタ**: 中分類（CATEGORY2_CODE）・小分類（CATEGORY3_CODE）によるフィルタが効かず、親カテゴリの全件が返されてしまう不具合を修正
+  - `get_transactions` 関数で引数が `let _ = ...` で破棄されていたバグ
+  - `EXISTS` サブクエリでヘッダー行数を維持しつつフィルタを適用
+  - 空文字列は「フィルタなし」として扱う仕様に統一
+  - 回帰防止用のテストを追加
+
+### CI / セキュリティ
+
+- **GitHub Actions ワークフロー**: `feature-branch-test.yml` に最小権限（`contents: read`）を明示
+- **テストカバレッジ成果物の整理**: `res/tests/coverage/` 配下の自動生成ファイルがリポジトリに紛れ込んでいたため除去
+- **Code Scanning ベースライン整備**: 既存アラート 26 件を判定・整理（誤検知の dismiss と本物の修正）
+- **Dependabot アラート整理**: GHSA-cq8v-f236-94qc（rand 間接依存）を `tolerable_risk` で dismiss
+
+### ドキュメント
+
+- セッション初期コンテキスト（CLAUDE.md / `.github/copilot-instructions.md`）を圧縮
+- 税計算ロジックリファクタプランを追加（v2.0.0 へ向けた設計文書）
+- プロジェクト固有スラッシュコマンド `/i18n-add` と `/release` を追加
+- リリース手順書のスクリプト名誤記を修正（`pre-release-check.sh` → `check-release.sh`）
+
+---
+
 ## [v1.2.1] - 2026-04-24
 
 ### 修正
