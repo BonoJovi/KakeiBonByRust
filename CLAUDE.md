@@ -1,66 +1,45 @@
 # KakeiBon Project Context
 
-This file automatically loads **minimal** project context at the start of each Claude Code session.
+## Project
 
-**Token Optimization**: Only essential information is loaded by default. Load additional contexts as needed using `@` references.
+- **Type**: Tauri v2 desktop app (Rust backend + Vanilla JS frontend + SQLite)
+- **Purpose**: Household budget app (家計簿) with bilingual support (JP/EN)
+- **Version**: v1.2.0
+- **Branch**: `dev` for development, `main` for releases
 
----
+## Essential Rules
 
-## Always Load (Essential Context Only)
+1. **All code changes on `dev` branch** — merge to `main` for releases only
+2. **Bilingual**: All user-facing text via i18n (never hardcode strings)
+3. **i18n RESOURCE_ID**: Always check MAX ID before adding — `INSERT OR IGNORE` silently skips duplicates (use `/i18n-add`)
+4. **Release**: Update 3 version files (Cargo.toml, tauri.conf.json, package.json) + run `check-release.sh` (use `/release`)
+5. **SQL**: All queries in `src/sql_queries.rs`, prepared statements only
+6. **No `unwrap()` in production Rust** — always use `Result<T, E>`
+7. **ES Modules**: Include `.js` extension in imports
+8. **Commit messages**: English, conventional format `type(scope): description`
+9. **Tauri app**: Tell user to "restart app" not "reload browser"
+10. **Password**: Min 16 chars, validated in both frontend and backend
 
-### Essential Information - Current Status & Critical Rules
-@.ai-context/core/QUICK_REFERENCE.md
+## Key Constants
 
----
-
-## Load When Needed (On-Demand Contexts)
-
-### Project-Specific Context
-
-**For Coding Tasks**:
-- Conventions: `@.ai-context/development/CONVENTIONS_OVERVIEW.md`
-- Conventions (detailed): `@.ai-context/development/archive/CONVENTIONS_DETAILED.md`
-- Testing Strategy: `@.ai-context/development/TESTING_STRATEGY.md`
-
-**For Architecture Tasks**:
-- Project Structure: `@.ai-context/architecture/PROJECT_STRUCTURE.md`
-- Tauri Integration: `@.ai-context/architecture/TAURI_DEVELOPMENT.md`
-
-**For Workflow Tasks**:
-- i18n Management: `@.ai-context/workflows/I18N_MANAGEMENT.md`
-
-### Shared Context (via submodule)
-
-**For Understanding Methodology** (rarely needed):
-- AI Collaboration: `@.ai-context/shared/methodology/AI_COLLABORATION.md`
-- Design Philosophy: `@.ai-context/shared/methodology/DESIGN_PHILOSOPHY.md`
-- Scale & Architecture: `@.ai-context/shared/methodology/SCALE_ARCHITECTURE.md`
-
-**Common Workflows**:
-- Documentation Creation: `@.ai-context/shared/workflows/DOCUMENTATION_CREATION.md`
-- GitHub Projects: `@.ai-context/shared/workflows/GITHUB_PROJECTS.md`
-
-**Developer Profile** (for career/context reference):
-- `@.ai-context/shared/developer/YOSHIHIRO_NAKAHARA_PROFILE.md`
-
-**Analytics** (SEO tracking across all projects):
-- `@.ai-context/shared/analytics/SEO_Keywords_Tracking.md`
-
-**Insights** (optional reading):
-- `@.ai-context/shared/insights/` - Various architectural and development insights
-
----
-
-## Submodule Management
-
-The `shared/` directory is a Git submodule pointing to:
-https://github.com/BonoJovi/ai-context-shared
-
-**Update shared context**:
-```bash
-git submodule update --remote
+```
+ROLE_ADMIN = 0, ROLE_USER = 1, MIN_PASSWORD_LENGTH = 16
+DB: ~/.kakeibon/KakeiBonDB.sqlite3
 ```
 
----
+## Commands
 
-**Performance Note**: This configuration loads minimal context at session startup. Load other contexts only when needed.
+```bash
+cargo tauri dev          # Development
+cargo test               # Backend tests
+cd res && npm test       # Frontend tests
+./scripts/check-release.sh  # Pre-release verification
+```
+
+## On-Demand Context
+
+Load with `@` when needed:
+- Architecture: `@.ai-context/architecture/PROJECT_STRUCTURE.md`
+- Conventions (detailed): `@.ai-context/development/archive/CONVENTIONS_DETAILED.md`
+- Testing: `@.ai-context/development/TESTING_STRATEGY.md`
+- i18n details: `@.ai-context/workflows/I18N_MANAGEMENT.md`

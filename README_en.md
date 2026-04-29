@@ -24,9 +24,9 @@
 Thank you for your continued interest in KakeiBon.
 I'm BonoJovi (Yoshihiro NAKAHARA), the project initiator.
 
-**We have officially released Ver.1.2.1!**
+**We have officially released Ver.1.2.2!**
 
-Ver.1.2.1 fixes the NONE account (internal use) being editable in account management, and improves focus behavior on the add detail modal.
+Ver.1.2.2 fixes a bug where filtering the transaction list by sub-category (CATEGORY2) or leaf category (CATEGORY3) was silently ignored, returning every row of the parent category.
 
 Transaction data input and aggregation features are now complete, making KakeiBon a practical household budget application.
 If you would like to use the stable release version, please refer to the [main branch](https://github.com/BonoJovi/KakeiBonByRust/tree/main).

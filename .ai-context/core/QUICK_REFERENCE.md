@@ -1,7 +1,7 @@
 # KakeiBon - Quick Reference
 
-**Version**: v1.2.1 | **Status**: Released
-**Last Updated**: 2026-04-24 JST
+**Version**: v1.2.2 | **Status**: Released
+**Last Updated**: 2026-04-30 JST
 
 ## Tech Stack
 
