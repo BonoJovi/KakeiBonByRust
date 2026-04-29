@@ -544,14 +544,39 @@ impl TransactionService {
         }
 
         if let Some(cat1) = category1_code {
-            where_clauses.push("t.CATEGORY1_CODE = ?".to_string());
-            params.push(cat1.to_string());
+            if !cat1.is_empty() {
+                where_clauses.push("t.CATEGORY1_CODE = ?".to_string());
+                params.push(cat1.to_string());
+            }
         }
 
-        // Note: CATEGORY2_CODE and CATEGORY3_CODE are in TRANSACTIONS_DETAIL, not in HEADER
-        // These filters are not implemented for header-only queries
-        let _ = category2_code; // Suppress unused warning
-        let _ = category3_code; // Suppress unused warning
+        // CATEGORY2_CODE / CATEGORY3_CODE live on TRANSACTIONS_DETAIL, so filter
+        // via EXISTS to keep the header row count stable (no DISTINCT needed).
+        if let Some(cat2) = category2_code {
+            if !cat2.is_empty() {
+                where_clauses.push(
+                    "EXISTS (SELECT 1 FROM TRANSACTIONS_DETAIL td \
+                     WHERE td.USER_ID = t.USER_ID \
+                       AND td.TRANSACTION_ID = t.TRANSACTION_ID \
+                       AND td.CATEGORY2_CODE = ?)"
+                        .to_string(),
+                );
+                params.push(cat2.to_string());
+            }
+        }
+
+        if let Some(cat3) = category3_code {
+            if !cat3.is_empty() {
+                where_clauses.push(
+                    "EXISTS (SELECT 1 FROM TRANSACTIONS_DETAIL td \
+                     WHERE td.USER_ID = t.USER_ID \
+                       AND td.TRANSACTION_ID = t.TRANSACTION_ID \
+                       AND td.CATEGORY3_CODE = ?)"
+                        .to_string(),
+                );
+                params.push(cat3.to_string());
+            }
+        }
 
         if let Some(min) = min_amount {
             where_clauses.push("t.TOTAL_AMOUNT >= ?".to_string());
@@ -2492,6 +2517,112 @@ mod tests {
         // Trying to confirm should fail (it's already actual, IS_SCHEDULED = 0)
         let result = service.confirm_scheduled_transaction(2, transaction_id).await;
         assert!(result.is_err());
+    }
+
+    /// Regression test: filtering by category2_code/category3_code used to be
+    /// silently ignored (the placeholder discarded the value via `let _ = ...`).
+    /// As a result the list page returned every row of the parent category1.
+    #[tokio::test]
+    async fn test_get_transactions_filters_by_category2_and_category3() {
+        let pool = setup_test_db().await;
+
+        // Add a second CATEGORY2/CATEGORY3 so we can split detail rows across them.
+        sqlx::query(
+            "INSERT INTO CATEGORY2 (USER_ID, CATEGORY1_CODE, CATEGORY2_CODE, DISPLAY_ORDER, CATEGORY2_NAME) \
+             VALUES (2, 'EXPENSE', 'OTHER', 2, 'その他')",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::query(
+            "INSERT INTO CATEGORY3 (USER_ID, CATEGORY1_CODE, CATEGORY2_CODE, CATEGORY3_CODE, DISPLAY_ORDER, CATEGORY3_NAME) \
+             VALUES (2, 'EXPENSE', 'OTHER', 'MISC', 1, 'その他雑費')",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let service = TransactionService::new(pool);
+
+        // Header A: a single FOOD/GROCERY detail line.
+        let header_a = create_test_header(&service).await;
+        service
+            .add_transaction_detail(2, header_a, basic_detail_request())
+            .await
+            .unwrap();
+
+        // Header B: a single OTHER/MISC detail line (same CATEGORY1 = EXPENSE).
+        let header_b = create_test_header(&service).await;
+        service
+            .add_transaction_detail(
+                2,
+                header_b,
+                SaveTransactionDetailRequest {
+                    detail_id: None,
+                    category1_code: "EXPENSE".to_string(),
+                    category2_code: Some("OTHER".to_string()),
+                    category3_code: Some("MISC".to_string()),
+                    item_name: "Misc".to_string(),
+                    amount: 200,
+                    tax_rate: 8,
+                    tax_amount: 16,
+                    amount_including_tax: Some(216),
+                    memo: None,
+                },
+            )
+            .await
+            .unwrap();
+
+        // No filter: both transactions returned.
+        let all = service
+            .get_transactions(2, None, None, None, None, None, None, None, None, false, 1, 50)
+            .await
+            .unwrap();
+        assert_eq!(all.total_count, 2);
+
+        // CATEGORY2 = FOOD: only header A.
+        let food = service
+            .get_transactions(2, None, None, Some("EXPENSE"), Some("FOOD"), None, None, None, None, false, 1, 50)
+            .await
+            .unwrap();
+        assert_eq!(food.total_count, 1);
+        assert_eq!(food.transactions[0].transaction_id, header_a);
+
+        // CATEGORY2 = OTHER: only header B.
+        let other = service
+            .get_transactions(2, None, None, Some("EXPENSE"), Some("OTHER"), None, None, None, None, false, 1, 50)
+            .await
+            .unwrap();
+        assert_eq!(other.total_count, 1);
+        assert_eq!(other.transactions[0].transaction_id, header_b);
+
+        // CATEGORY3 = GROCERY: only header A.
+        let grocery = service
+            .get_transactions(
+                2,
+                None,
+                None,
+                Some("EXPENSE"),
+                Some("FOOD"),
+                Some("GROCERY"),
+                None,
+                None,
+                None,
+                false,
+                1,
+                50,
+            )
+            .await
+            .unwrap();
+        assert_eq!(grocery.total_count, 1);
+        assert_eq!(grocery.transactions[0].transaction_id, header_a);
+
+        // Empty-string filter must be treated as "no filter".
+        let empty = service
+            .get_transactions(2, None, None, Some(""), Some(""), Some(""), None, None, None, false, 1, 50)
+            .await
+            .unwrap();
+        assert_eq!(empty.total_count, 2);
     }
 
     #[tokio::test]
