@@ -76,6 +76,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // Setup event handlers
     setupEventHandlers();
+    setupMaintenanceHandlers();
 
     // Adjust window size
     await adjustWindowSize();
@@ -847,5 +848,103 @@ async function changeLanguage(lang) {
         await loadDashboardData();
     } catch (error) {
         console.error('Failed to change language:', error);
+    }
+}
+
+// =============================================================================
+// Data Maintenance: bulk-recalculate header totals + one-click rollback
+// =============================================================================
+
+// Holds the backup path returned by the most recent recalc, so the rollback
+// button knows which file to point `restore_totals_from_backup` at without
+// asking the user to remember it.
+let lastRecalcBackupPath = null;
+
+function setupMaintenanceHandlers() {
+    const recalcBtn = document.getElementById('recalc-totals-btn');
+    const rollbackBtn = document.getElementById('rollback-totals-btn');
+    if (!recalcBtn || !rollbackBtn) return;
+
+    recalcBtn.addEventListener('click', handleRecalcAllTotals);
+    rollbackBtn.addEventListener('click', handleRollbackTotals);
+}
+
+function showMaintenanceMessage(type, text) {
+    const div = document.getElementById('maintenance-message');
+    if (!div) return;
+    div.className = `message ${type}`;
+    div.textContent = text;
+}
+
+async function handleRecalcAllTotals() {
+    if (!confirm(i18n.t('maintenance.recalc_confirm').replace(/\\n/g, '\n'))) {
+        return;
+    }
+
+    const recalcBtn = document.getElementById('recalc-totals-btn');
+    recalcBtn.disabled = true;
+    showMaintenanceMessage('info', i18n.t('maintenance.recalc_in_progress'));
+
+    try {
+        const summary = await invoke('recalculate_all_transaction_totals');
+        lastRecalcBackupPath = summary.backup_path;
+
+        // Reveal the rollback button so the user can undo this in one click
+        // if anything looks wrong, without having to find the backup file
+        // themselves on disk.
+        document.getElementById('rollback-totals-btn').classList.remove('hidden');
+
+        const msg = i18n.t('maintenance.recalc_success')
+            .replace('{0}', summary.updated)
+            .replace('{1}', summary.skipped)
+            .replace('{2}', summary.total_headers);
+        showMaintenanceMessage('success', msg);
+
+        // Charts may have used the old totals — refresh them.
+        await loadDashboardData();
+    } catch (error) {
+        console.error('Recalc failed:', error);
+        showMaintenanceMessage(
+            'error',
+            `${i18n.t('maintenance.recalc_error')}: ${error.message || error}`
+        );
+    } finally {
+        recalcBtn.disabled = false;
+    }
+}
+
+async function handleRollbackTotals() {
+    if (!lastRecalcBackupPath) {
+        showMaintenanceMessage('error', i18n.t('maintenance.rollback_no_backup'));
+        return;
+    }
+    if (!confirm(i18n.t('maintenance.rollback_confirm').replace(/\\n/g, '\n'))) {
+        return;
+    }
+
+    const rollbackBtn = document.getElementById('rollback-totals-btn');
+    rollbackBtn.disabled = true;
+    showMaintenanceMessage('info', i18n.t('maintenance.rollback_in_progress'));
+
+    try {
+        const summary = await invoke('restore_totals_from_backup', {
+            backupPath: lastRecalcBackupPath
+        });
+        const msg = i18n.t('maintenance.rollback_success').replace('{0}', summary.restored);
+        showMaintenanceMessage('success', msg);
+
+        // Hide the rollback button now that it has been used.
+        rollbackBtn.classList.add('hidden');
+        lastRecalcBackupPath = null;
+
+        await loadDashboardData();
+    } catch (error) {
+        console.error('Rollback failed:', error);
+        showMaintenanceMessage(
+            'error',
+            `${i18n.t('maintenance.rollback_error')}: ${error.message || error}`
+        );
+    } finally {
+        rollbackBtn.disabled = false;
     }
 }
