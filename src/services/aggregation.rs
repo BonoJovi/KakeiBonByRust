@@ -616,19 +616,37 @@ pub fn build_where_clause(user_id: i64, filter: &AggregationFilter) -> String {
 }
 
 /// Build complete aggregation SQL query
+/// Dispatch to the appropriate query builder based on the grouping.
+///
+/// - `Account` uses a UNION ALL shape because EXPENSE/INCOME/TRANSFER each
+///   touch a different account column. Handled by `build_account_aggregation_query`.
+/// - `Category2`, `Category3`, and `Product` group by a column that lives on
+///   `TRANSACTIONS_DETAIL`, so the query has to walk the detail rows. These go
+///   through `build_detail_query`, which protects against the row-multiplication
+///   that comes from joining detail and naively summing `th.TOTAL_AMOUNT`.
+/// - Everything else (`Category1`, `Shop`, `Date`) groups on header columns and
+///   never joins detail, so the simpler `build_header_query` shape is correct.
 pub fn build_query(request: &AggregationRequest, lang: &str) -> String {
-    // Special handling for Account grouping which requires UNION ALL
-    if matches!(request.group_by, GroupBy::Account) {
-        return build_account_aggregation_query(request);
+    match request.group_by {
+        GroupBy::Account => build_account_aggregation_query(request),
+        GroupBy::Category2 | GroupBy::Category3 | GroupBy::Product => {
+            build_detail_query(request, lang)
+        }
+        GroupBy::Category1 | GroupBy::Shop | GroupBy::Date => {
+            build_header_query(request, lang)
+        }
     }
+}
 
+/// Build the aggregation query for header-level groupings (`Category1`, `Shop`,
+/// `Date`). Sums `th.TOTAL_AMOUNT` directly because no detail join takes place.
+fn build_header_query(request: &AggregationRequest, lang: &str) -> String {
     let select_clause = request.group_by.to_select_clause();
     let group_by_clause = request.group_by.to_group_by_clause();
     let where_clause = build_where_clause(request.user_id, &request.filter);
     let order_field = request.order_by.to_order_by_field();
     let sort_order = request.sort_order.to_sql();
 
-    // Build JOIN clauses based on group_by
     let joins = build_join_clauses(&request.group_by, request.user_id, lang);
 
     let mut sql = format!(
@@ -636,7 +654,7 @@ pub fn build_query(request: &AggregationRequest, lang: &str) -> String {
 SELECT
     {},
     SUM(
-        CASE 
+        CASE
             WHEN th.CATEGORY1_CODE = 'EXPENSE' THEN -th.TOTAL_AMOUNT
             WHEN th.CATEGORY1_CODE = 'INCOME' THEN th.TOTAL_AMOUNT
             WHEN th.CATEGORY1_CODE = 'TRANSFER' THEN 0
@@ -645,7 +663,7 @@ SELECT
     ) as total_amount,
     COUNT(*) as count,
     CAST(AVG(
-        CASE 
+        CASE
             WHEN th.CATEGORY1_CODE = 'EXPENSE' THEN -th.TOTAL_AMOUNT
             WHEN th.CATEGORY1_CODE = 'INCOME' THEN th.TOTAL_AMOUNT
             WHEN th.CATEGORY1_CODE = 'TRANSFER' THEN 0
@@ -661,12 +679,164 @@ ORDER BY {} {}
         select_clause, joins, where_clause, group_by_clause, order_field, sort_order
     );
 
-    // Add LIMIT if specified
     if let Some(limit) = request.limit {
         sql.push_str(&format!("LIMIT {}", limit));
     }
 
     sql
+}
+
+/// Build the aggregation query for detail-level groupings (`Category2`,
+/// `Category3`, `Product`).
+///
+/// The query has three layers, each with a distinct responsibility:
+///
+/// 1. **Innermost** — for every `(transaction × group_key × tax_rate ×
+///    rounding_type)` combination, sums the pre-tax amounts that need a tax
+///    calculation (`pretax_sum`) separately from the amounts that are already
+///    integer-final (`already_included_sum`). The split lets us avoid the
+///    "one rounding per detail row" error accumulation that the previous
+///    `SUM(th.TOTAL_AMOUNT)` shape produced when it was joined to detail.
+/// 2. **Middle** — applies the transaction's `TAX_ROUNDING_TYPE` exactly once
+///    per `(transaction, group, tax_rate)` slice: the pre-tax sum is grossed
+///    up by `(100 + tax_rate)/100` and rounded according to the chosen mode,
+///    then added to the already-included sum, then signed by `CATEGORY1_CODE`.
+///    The output is an integer `signed_amount` per slice.
+/// 3. **Outer** — groups the integer slices by `(group_key, group_name)` and
+///    sums them. No further rounding happens here, so cross-transaction
+///    aggregation is exact.
+///
+/// The amount classification follows the rule we agreed on with the data:
+/// a row counts as "already tax-included" when `TAX_RATE = 0` (gross-up has no
+/// effect anyway) **or** `AMOUNT = AMOUNT_INCLUDING_TAX` (the user entered a
+/// tax-included receipt verbatim). Everything else is treated as pre-tax.
+fn build_detail_query(request: &AggregationRequest, lang: &str) -> String {
+    let where_clause = build_where_clause(request.user_id, &request.filter);
+    let order_field = request.order_by.to_order_by_field();
+    let sort_order = request.sort_order.to_sql();
+    let (group_key_expr, group_name_expr, joins) =
+        build_detail_group_pieces(&request.group_by, lang);
+
+    let mut sql = format!(
+        r#"
+SELECT
+    sub.group_key,
+    sub.group_name,
+    SUM(sub.signed_amount) AS total_amount,
+    COUNT(DISTINCT sub.txn_id) AS count,
+    CAST(AVG(sub.signed_amount) AS INTEGER) AS avg_amount
+FROM (
+    SELECT
+        agg.txn_id,
+        agg.group_key,
+        agg.group_name,
+        CASE agg.cat1
+            WHEN 'EXPENSE' THEN -1
+            WHEN 'TRANSFER' THEN 0
+            ELSE 1
+        END
+        * (
+            agg.already_included_sum
+            + CASE agg.rounding_type
+                WHEN 0 THEN CAST(agg.pretax_sum * (100 + agg.tax_rate) / 100 AS INTEGER)
+                WHEN 1 THEN CAST(ROUND(agg.pretax_sum * (100.0 + agg.tax_rate) / 100.0) AS INTEGER)
+                WHEN 2 THEN -CAST(-agg.pretax_sum * (100 + agg.tax_rate) / 100 AS INTEGER)
+                ELSE CAST(agg.pretax_sum * (100 + agg.tax_rate) / 100 AS INTEGER)
+            END
+        ) AS signed_amount
+    FROM (
+        SELECT
+            th.TRANSACTION_ID AS txn_id,
+            {gk} AS group_key,
+            {gn} AS group_name,
+            th.CATEGORY1_CODE AS cat1,
+            td.TAX_RATE AS tax_rate,
+            th.TAX_ROUNDING_TYPE AS rounding_type,
+            SUM(CASE
+                WHEN td.TAX_RATE = 0 OR td.AMOUNT = td.AMOUNT_INCLUDING_TAX
+                THEN td.AMOUNT ELSE 0
+            END) AS already_included_sum,
+            SUM(CASE
+                WHEN td.TAX_RATE > 0 AND td.AMOUNT < td.AMOUNT_INCLUDING_TAX
+                THEN td.AMOUNT ELSE 0
+            END) AS pretax_sum
+        FROM TRANSACTIONS_HEADER th
+        INNER JOIN TRANSACTIONS_DETAIL td
+            ON th.USER_ID = td.USER_ID AND th.TRANSACTION_ID = td.TRANSACTION_ID
+        {joins}
+        WHERE {where_clause}
+        GROUP BY th.TRANSACTION_ID, {gk}, {gn}, td.TAX_RATE, th.TAX_ROUNDING_TYPE, th.CATEGORY1_CODE
+    ) agg
+) sub
+GROUP BY sub.group_key, sub.group_name
+ORDER BY {order_field} {sort_order}
+"#,
+        gk = group_key_expr,
+        gn = group_name_expr,
+        joins = joins,
+        where_clause = where_clause,
+        order_field = order_field,
+        sort_order = sort_order,
+    );
+
+    if let Some(limit) = request.limit {
+        sql.push_str(&format!("LIMIT {}", limit));
+    }
+
+    sql
+}
+
+/// Resolve the per-grouping pieces that the detail-level subquery needs:
+/// the SQL expression that produces the group key, the expression for the
+/// human-readable name, and the JOIN clauses for the ancillary tables that
+/// feed the name expression.
+///
+/// Only called from `build_detail_query`; panicking on non-detail variants is
+/// a deliberate signal that the dispatcher in `build_query` is wrong, not a
+/// runtime failure mode users could ever hit.
+fn build_detail_group_pieces(group_by: &GroupBy, lang: &str) -> (String, String, String) {
+    match group_by {
+        GroupBy::Category2 => (
+            "td.CATEGORY1_CODE || '/' || td.CATEGORY2_CODE".to_string(),
+            "COALESCE(c2i.CATEGORY2_NAME_I18N, c2.CATEGORY2_NAME)".to_string(),
+            format!(
+                "LEFT JOIN CATEGORY2 c2 ON td.USER_ID = c2.USER_ID \
+                 AND td.CATEGORY1_CODE = c2.CATEGORY1_CODE \
+                 AND td.CATEGORY2_CODE = c2.CATEGORY2_CODE\n\
+                 LEFT JOIN CATEGORY2_I18N c2i ON c2.USER_ID = c2i.USER_ID \
+                 AND c2.CATEGORY1_CODE = c2i.CATEGORY1_CODE \
+                 AND c2.CATEGORY2_CODE = c2i.CATEGORY2_CODE \
+                 AND c2i.LANG_CODE = '{}'",
+                lang
+            ),
+        ),
+        GroupBy::Category3 => (
+            "td.CATEGORY1_CODE || '/' || td.CATEGORY2_CODE || '/' || td.CATEGORY3_CODE"
+                .to_string(),
+            "COALESCE(c3i.CATEGORY3_NAME_I18N, c3.CATEGORY3_NAME)".to_string(),
+            format!(
+                "LEFT JOIN CATEGORY3 c3 ON td.USER_ID = c3.USER_ID \
+                 AND td.CATEGORY1_CODE = c3.CATEGORY1_CODE \
+                 AND td.CATEGORY2_CODE = c3.CATEGORY2_CODE \
+                 AND td.CATEGORY3_CODE = c3.CATEGORY3_CODE\n\
+                 LEFT JOIN CATEGORY3_I18N c3i ON c3.USER_ID = c3i.USER_ID \
+                 AND c3.CATEGORY1_CODE = c3i.CATEGORY1_CODE \
+                 AND c3.CATEGORY2_CODE = c3i.CATEGORY2_CODE \
+                 AND c3.CATEGORY3_CODE = c3i.CATEGORY3_CODE \
+                 AND c3i.LANG_CODE = '{}'",
+                lang
+            ),
+        ),
+        GroupBy::Product => (
+            "CAST(COALESCE(td.PRODUCT_ID, 0) AS TEXT)".to_string(),
+            "COALESCE(p.PRODUCT_NAME, '指定なし')".to_string(),
+            "LEFT JOIN PRODUCTS p ON td.USER_ID = p.USER_ID AND td.PRODUCT_ID = p.PRODUCT_ID"
+                .to_string(),
+        ),
+        _ => unreachable!(
+            "build_detail_group_pieces is only valid for Category2/Category3/Product"
+        ),
+    }
 }
 
 /// Build account aggregation query using UNION ALL approach
@@ -1412,6 +1582,152 @@ mod tests {
     }
 
     // =========================================================================
+    // SQL shape tests for build_query dispatcher (per GroupBy)
+    //
+    // These tests guard the structural pieces of the generated SQL that
+    // matter for correctness. They are *not* exhaustive — full behaviour is
+    // covered by the integration tests in Step 5 — but they fail fast when a
+    // refactor accidentally drops the subquery wrapping, the per-tax-rate
+    // GROUP BY, or the rounding switch.
+    // =========================================================================
+
+    #[test]
+    fn test_build_query_category1_uses_header_shape() {
+        let date = NaiveDate::from_ymd_opt(2025, 1, 1).unwrap();
+        let filter = AggregationFilter::new(DateFilter::From(date));
+        let request = AggregationRequest::new(1, filter, GroupBy::Category1);
+
+        let sql = build_query(&request, "ja");
+
+        // Header-level: no subquery wrapping, no rounding switch, no detail join.
+        assert!(
+            !sql.contains("CASE agg.rounding_type"),
+            "Category1 must not use the detail rounding switch: {}",
+            sql
+        );
+        assert!(
+            !sql.contains("INNER JOIN TRANSACTIONS_DETAIL"),
+            "Category1 must not join TRANSACTIONS_DETAIL: {}",
+            sql
+        );
+        assert!(
+            sql.contains("SUM(") && sql.contains("th.TOTAL_AMOUNT"),
+            "Category1 should still aggregate th.TOTAL_AMOUNT directly: {}",
+            sql
+        );
+        assert!(
+            sql.contains("GROUP BY th.CATEGORY1_CODE"),
+            "Category1 must group on th.CATEGORY1_CODE: {}",
+            sql
+        );
+    }
+
+    #[test]
+    fn test_build_query_category2_uses_subquery_shape() {
+        let date = NaiveDate::from_ymd_opt(2025, 1, 1).unwrap();
+        let filter = AggregationFilter::new(DateFilter::From(date));
+        let request = AggregationRequest::new(1, filter, GroupBy::Category2);
+
+        let sql = build_query(&request, "ja");
+
+        // Outer layer
+        assert!(
+            sql.contains("SUM(sub.signed_amount)"),
+            "outer SUM must read from sub.signed_amount: {}",
+            sql
+        );
+        assert!(
+            sql.contains("COUNT(DISTINCT sub.txn_id)"),
+            "count must be COUNT(DISTINCT txn_id), not row count: {}",
+            sql
+        );
+        assert!(
+            sql.contains("GROUP BY sub.group_key, sub.group_name"),
+            "outer GROUP BY must be (group_key, group_name): {}",
+            sql
+        );
+
+        // Middle layer (rounding switch on transaction's TAX_ROUNDING_TYPE)
+        assert!(
+            sql.contains("CASE agg.rounding_type"),
+            "middle layer must switch on rounding_type: {}",
+            sql
+        );
+
+        // Inner layer
+        assert!(
+            sql.contains("td.CATEGORY1_CODE || '/' || td.CATEGORY2_CODE"),
+            "Category2 group key expression missing: {}",
+            sql
+        );
+        assert!(
+            sql.contains("INNER JOIN TRANSACTIONS_DETAIL td"),
+            "inner FROM must join TRANSACTIONS_DETAIL: {}",
+            sql
+        );
+        assert!(
+            sql.contains("AMOUNT_INCLUDING_TAX"),
+            "inner classification must inspect AMOUNT_INCLUDING_TAX: {}",
+            sql
+        );
+        assert!(
+            sql.contains("td.TAX_RATE")
+                && sql.contains("th.TAX_ROUNDING_TYPE")
+                && sql.contains("th.TRANSACTION_ID"),
+            "inner GROUP BY must include txn / tax_rate / rounding_type: {}",
+            sql
+        );
+    }
+
+    #[test]
+    fn test_build_query_category3_extends_group_key() {
+        let date = NaiveDate::from_ymd_opt(2025, 1, 1).unwrap();
+        let filter = AggregationFilter::new(DateFilter::From(date));
+        let request = AggregationRequest::new(1, filter, GroupBy::Category3);
+
+        let sql = build_query(&request, "ja");
+
+        assert!(
+            sql.contains(
+                "td.CATEGORY1_CODE || '/' || td.CATEGORY2_CODE || '/' || td.CATEGORY3_CODE"
+            ),
+            "Category3 group key must walk down to CATEGORY3_CODE: {}",
+            sql
+        );
+        assert!(
+            sql.contains("LEFT JOIN CATEGORY3 c3"),
+            "Category3 must join CATEGORY3: {}",
+            sql
+        );
+        // Same subquery contract as Category2.
+        assert!(sql.contains("SUM(sub.signed_amount)"));
+        assert!(sql.contains("COUNT(DISTINCT sub.txn_id)"));
+    }
+
+    #[test]
+    fn test_build_query_product_uses_product_id_grouping() {
+        let date = NaiveDate::from_ymd_opt(2025, 1, 1).unwrap();
+        let filter = AggregationFilter::new(DateFilter::From(date));
+        let request = AggregationRequest::new(1, filter, GroupBy::Product);
+
+        let sql = build_query(&request, "ja");
+
+        assert!(
+            sql.contains("CAST(COALESCE(td.PRODUCT_ID, 0) AS TEXT)"),
+            "Product group key must be derived from td.PRODUCT_ID: {}",
+            sql
+        );
+        assert!(
+            sql.contains("LEFT JOIN PRODUCTS p"),
+            "Product must join PRODUCTS: {}",
+            sql
+        );
+        // Same subquery contract.
+        assert!(sql.contains("SUM(sub.signed_amount)"));
+        assert!(sql.contains("COUNT(DISTINCT sub.txn_id)"));
+    }
+
+    // =========================================================================
     // Wrapper Function Tests
     // =========================================================================
 
@@ -1630,5 +1946,259 @@ mod tests {
         request.filter.include_scheduled = true;
         let sql_include = build_query(&request, "ja");
         assert!(!sql_include.contains("IS_SCHEDULED"), "Account include scheduled should not filter: {}", sql_include);
+    }
+
+    // =========================================================================
+    // Integration tests for build_detail_query
+    //
+    // These run the SQL produced by build_query against an in-memory SQLite
+    // database with hand-crafted detail data, and assert that the aggregated
+    // amounts match what the new "sum-then-tax-then-round" rule prescribes.
+    // The old per-detail-rounding shape and the row-multiplication bug both
+    // produce different values, so each test pins down a specific failure
+    // mode that v1.x had.
+    // =========================================================================
+
+    /// Set up a minimal in-memory SQLite with just the tables the aggregation
+    /// query needs, plus a single user and a couple of CATEGORY2 rows. Each
+    /// integration test inserts the transactions and details it actually
+    /// cares about on top of this baseline.
+    async fn setup_aggregation_test_db() -> sqlx::SqlitePool {
+        let pool = sqlx::SqlitePool::connect(":memory:").await.unwrap();
+
+        let create_stmts = [
+            "CREATE TABLE USERS (
+                USER_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+                NAME TEXT NOT NULL UNIQUE,
+                PAW TEXT NOT NULL,
+                ROLE INTEGER NOT NULL,
+                ENTRY_DT TEXT NOT NULL
+            )",
+            "CREATE TABLE CATEGORY1 (
+                USER_ID INTEGER NOT NULL,
+                CATEGORY1_CODE TEXT NOT NULL,
+                CATEGORY1_NAME TEXT,
+                DISPLAY_ORDER INTEGER,
+                PRIMARY KEY (USER_ID, CATEGORY1_CODE)
+            )",
+            "CREATE TABLE CATEGORY2 (
+                USER_ID INTEGER NOT NULL,
+                CATEGORY1_CODE TEXT NOT NULL,
+                CATEGORY2_CODE TEXT NOT NULL,
+                DISPLAY_ORDER INTEGER,
+                CATEGORY2_NAME TEXT,
+                PRIMARY KEY (USER_ID, CATEGORY1_CODE, CATEGORY2_CODE)
+            )",
+            "CREATE TABLE CATEGORY2_I18N (
+                USER_ID INTEGER NOT NULL,
+                CATEGORY1_CODE TEXT NOT NULL,
+                CATEGORY2_CODE TEXT NOT NULL,
+                LANG_CODE TEXT NOT NULL,
+                CATEGORY2_NAME_I18N TEXT,
+                PRIMARY KEY (USER_ID, CATEGORY1_CODE, CATEGORY2_CODE, LANG_CODE)
+            )",
+            "CREATE TABLE TRANSACTIONS_HEADER (
+                USER_ID INTEGER NOT NULL,
+                TRANSACTION_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+                SHOP_ID INTEGER,
+                CATEGORY1_CODE TEXT NOT NULL,
+                FROM_ACCOUNT_CODE TEXT,
+                TO_ACCOUNT_CODE TEXT,
+                TRANSACTION_DATE TEXT NOT NULL,
+                TOTAL_AMOUNT INTEGER NOT NULL,
+                TAX_ROUNDING_TYPE INTEGER,
+                TAX_INCLUDED_TYPE INTEGER NOT NULL DEFAULT 1,
+                IS_SCHEDULED INTEGER NOT NULL DEFAULT 0
+            )",
+            "CREATE TABLE TRANSACTIONS_DETAIL (
+                USER_ID INTEGER NOT NULL,
+                TRANSACTION_ID INTEGER NOT NULL,
+                DETAIL_ID INTEGER NOT NULL,
+                CATEGORY1_CODE TEXT NOT NULL,
+                CATEGORY2_CODE TEXT,
+                CATEGORY3_CODE TEXT,
+                PRODUCT_ID INTEGER,
+                ITEM_NAME TEXT,
+                AMOUNT INTEGER NOT NULL,
+                TAX_RATE INTEGER DEFAULT 8,
+                TAX_AMOUNT INTEGER DEFAULT 0,
+                AMOUNT_INCLUDING_TAX INTEGER,
+                MEMO TEXT,
+                PRIMARY KEY (USER_ID, TRANSACTION_ID, DETAIL_ID)
+            )",
+        ];
+
+        for stmt in create_stmts {
+            sqlx::query(stmt).execute(&pool).await.unwrap();
+        }
+
+        sqlx::query(
+            "INSERT INTO USERS (USER_ID, NAME, PAW, ROLE, ENTRY_DT) \
+             VALUES (1, 'tester', 'x', 1, '2024-01-01')",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::query(
+            "INSERT INTO CATEGORY1 (USER_ID, CATEGORY1_CODE, CATEGORY1_NAME, DISPLAY_ORDER) \
+             VALUES (1, 'EXPENSE', '支出', 1)",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::query(
+            "INSERT INTO CATEGORY2 (USER_ID, CATEGORY1_CODE, CATEGORY2_CODE, DISPLAY_ORDER, CATEGORY2_NAME) \
+             VALUES (1, 'EXPENSE', 'FOOD', 1, '食費')",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        pool
+    }
+
+    /// Insert one EXPENSE header that matches the test date range.
+    async fn insert_test_header(
+        pool: &sqlx::SqlitePool,
+        user_id: i64,
+        rounding_type: i64,
+        tax_included_type: i64,
+        total_amount: i64,
+    ) -> i64 {
+        let row = sqlx::query(
+            "INSERT INTO TRANSACTIONS_HEADER \
+             (USER_ID, CATEGORY1_CODE, FROM_ACCOUNT_CODE, TO_ACCOUNT_CODE, TRANSACTION_DATE, \
+              TOTAL_AMOUNT, TAX_ROUNDING_TYPE, TAX_INCLUDED_TYPE, IS_SCHEDULED) \
+             VALUES (?, 'EXPENSE', 'CASH', 'BANK', '2024-06-15', ?, ?, ?, 0) \
+             RETURNING TRANSACTION_ID",
+        )
+        .bind(user_id)
+        .bind(total_amount)
+        .bind(rounding_type)
+        .bind(tax_included_type)
+        .fetch_one(pool)
+        .await
+        .unwrap();
+        use sqlx::Row;
+        row.get::<i64, _>("TRANSACTION_ID")
+    }
+
+    async fn insert_detail(
+        pool: &sqlx::SqlitePool,
+        user_id: i64,
+        txn_id: i64,
+        detail_id: i64,
+        category2: &str,
+        amount: i64,
+        tax_rate: i64,
+        amount_including_tax: Option<i64>,
+    ) {
+        sqlx::query(
+            "INSERT INTO TRANSACTIONS_DETAIL \
+             (USER_ID, TRANSACTION_ID, DETAIL_ID, CATEGORY1_CODE, CATEGORY2_CODE, \
+              ITEM_NAME, AMOUNT, TAX_RATE, AMOUNT_INCLUDING_TAX) \
+             VALUES (?, ?, ?, 'EXPENSE', ?, 'item', ?, ?, ?)",
+        )
+        .bind(user_id)
+        .bind(txn_id)
+        .bind(detail_id)
+        .bind(category2)
+        .bind(amount)
+        .bind(tax_rate)
+        .bind(amount_including_tax)
+        .execute(pool)
+        .await
+        .unwrap();
+    }
+
+    fn june_2024_request(group_by: GroupBy) -> AggregationRequest {
+        let from = NaiveDate::from_ymd_opt(2024, 6, 1).unwrap();
+        let to = NaiveDate::from_ymd_opt(2024, 6, 30).unwrap();
+        AggregationRequest::new(1, AggregationFilter::new(DateFilter::Between(from, to)), group_by)
+    }
+
+    /// Pre-condition for the row-multiplication regression: a single
+    /// transaction with N details on the same Category2 must collapse to one
+    /// aggregated row whose amount is computed once. The previous shape would
+    /// produce `th.TOTAL_AMOUNT * N` because the INNER JOIN on
+    /// TRANSACTIONS_DETAIL multiplied the header rows.
+    #[tokio::test]
+    async fn test_detail_query_no_row_multiplication() {
+        let pool = setup_aggregation_test_db().await;
+
+        // One EXPENSE header (TOTAL_AMOUNT is irrelevant to the new shape but
+        // we set it to a misleading value to make sure we are NOT reading it).
+        let txn = insert_test_header(&pool, 1, /*round_down*/ 0, /*tax_excluded*/ 1, 9999).await;
+        // Two details on FOOD: 500 + 300 (pre-tax), 8%, tax-excluded input.
+        insert_detail(&pool, 1, txn, 1, "FOOD", 500, 8, Some(540)).await;
+        insert_detail(&pool, 1, txn, 2, "FOOD", 300, 8, Some(324)).await;
+
+        let request = june_2024_request(GroupBy::Category2);
+        let sql = build_query(&request, "ja");
+
+        let results: Vec<AggregationResult> =
+            sqlx::query_as(&sql).fetch_all(&pool).await.unwrap();
+
+        assert_eq!(results.len(), 1, "expected one FOOD row, got {:?}", results);
+        let row = &results[0];
+        assert_eq!(row.group_key, "EXPENSE/FOOD");
+        // (500 + 300) × 1.08 = 864 → EXPENSE so signed = -864.
+        assert_eq!(
+            row.total_amount, -864,
+            "unexpected total_amount; row-multiplication regression?"
+        );
+        // count is COUNT(DISTINCT txn_id), so 1 transaction → 1.
+        assert_eq!(row.count, 1, "count must be transaction count, not detail rows");
+    }
+
+    /// Same Category2, two details, same tax rate: `floor((999+999) × 1.08) =
+    /// 2157`. Per-detail rounding would give `floor(999 × 1.08) × 2 = 2156`.
+    /// The 1-yen difference is the accumulated rounding error that prompted
+    /// this whole refactor.
+    #[tokio::test]
+    async fn test_detail_query_no_per_detail_rounding_accumulation() {
+        let pool = setup_aggregation_test_db().await;
+
+        let txn = insert_test_header(&pool, 1, 0, 1, 0).await;
+        insert_detail(&pool, 1, txn, 1, "FOOD", 999, 8, Some(1078)).await;
+        insert_detail(&pool, 1, txn, 2, "FOOD", 999, 8, Some(1078)).await;
+
+        let request = june_2024_request(GroupBy::Category2);
+        let sql = build_query(&request, "ja");
+        let results: Vec<AggregationResult> =
+            sqlx::query_as(&sql).fetch_all(&pool).await.unwrap();
+
+        assert_eq!(results.len(), 1);
+        // Per-detail rounding (the v1.x behaviour) would give -2156.
+        // The new shape rounds once over the per-rate sum, giving -2157.
+        assert_eq!(
+            results[0].total_amount, -2157,
+            "rounding must happen on the per-(txn,group,rate) sum, not per detail"
+        );
+    }
+
+    /// AMOUNT == AMOUNT_INCLUDING_TAX with TAX_RATE > 0 means the user typed
+    /// in a tax-included receipt verbatim. The new query has to recognise
+    /// this and pass the value through untouched, instead of grossing it up
+    /// a second time with `× (100 + tax_rate) / 100`.
+    #[tokio::test]
+    async fn test_detail_query_passes_tax_included_input_through() {
+        let pool = setup_aggregation_test_db().await;
+
+        let txn = insert_test_header(&pool, 1, 0, /*tax_included*/ 0, 0).await;
+        // 216 円, both columns equal → already tax-included.
+        insert_detail(&pool, 1, txn, 1, "FOOD", 216, 8, Some(216)).await;
+
+        let request = june_2024_request(GroupBy::Category2);
+        let sql = build_query(&request, "ja");
+        let results: Vec<AggregationResult> =
+            sqlx::query_as(&sql).fetch_all(&pool).await.unwrap();
+
+        assert_eq!(results.len(), 1);
+        // If we mistakenly grossed this up, we'd get -233 (= -floor(216 × 1.08)).
+        assert_eq!(
+            results[0].total_amount, -216,
+            "tax-included input must not be grossed up a second time"
+        );
     }
 }
