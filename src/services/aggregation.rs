@@ -738,10 +738,23 @@ FROM (
         * (
             agg.already_included_sum
             + CASE agg.rounding_type
-                WHEN 0 THEN CAST(agg.pretax_sum * (100 + agg.tax_rate) / 100 AS INTEGER)
+                -- floor: integer division on positive integers truncates
+                -- towards zero, which equals floor when the operands are
+                -- positive (which they are: pretax_sum and (100 + rate)
+                -- are both non-negative).
+                WHEN 0 THEN agg.pretax_sum * (100 + agg.tax_rate) / 100
+                -- half-away-from-zero: lift to REAL via 100.0 / 100.0 so
+                -- ROUND() can see the fractional part.
                 WHEN 1 THEN CAST(ROUND(agg.pretax_sum * (100.0 + agg.tax_rate) / 100.0) AS INTEGER)
-                WHEN 2 THEN -CAST(-agg.pretax_sum * (100 + agg.tax_rate) / 100 AS INTEGER)
-                ELSE CAST(agg.pretax_sum * (100 + agg.tax_rate) / 100 AS INTEGER)
+                -- ceil for positive integers: (n + 99) / 100 with integer
+                -- division. The historical `-CAST(-n / 100 AS INTEGER)`
+                -- idiom looks plausible but is wrong here — SQLite's
+                -- integer division truncates towards zero, which on the
+                -- negated operand acts as ceil, so the double-negation
+                -- collapses back to floor and shaves off the very 1-yen
+                -- that ceil was supposed to add. Mirrors the Rust port.
+                WHEN 2 THEN (agg.pretax_sum * (100 + agg.tax_rate) + 99) / 100
+                ELSE agg.pretax_sum * (100 + agg.tax_rate) / 100
             END
         ) AS signed_amount
     FROM (
@@ -2174,6 +2187,40 @@ mod tests {
         assert_eq!(
             results[0].total_amount, -2157,
             "rounding must happen on the per-(txn,group,rate) sum, not per detail"
+        );
+    }
+
+    /// Regression test for the ceil rounding bug: a 16,654-yen pre-tax row
+    /// at 10% with TAX_ROUND_UP must round up to 18,320, not 18,319.
+    ///
+    /// The original `-CAST(-n / 100 AS INTEGER)` SQL idiom looked like ceil
+    /// but actually equalled floor on positive integers, because SQLite's
+    /// integer division truncates towards zero. The 1-yen difference
+    /// surfaced in real data when reconciling the 教養 (entertainment)
+    /// category total: dashboard returned 44,150 instead of the correct
+    /// 44,151 because exactly one of its five transactions used ceil
+    /// rounding and got short-changed by 1 yen.
+    #[tokio::test]
+    async fn test_detail_query_ceil_rounds_up_correctly() {
+        let pool = setup_aggregation_test_db().await;
+
+        // Single header, ceil rounding, one detail at 16,654 / 10%.
+        // 16,654 × 1.10 = 18,319.4 → ceil → 18,320.
+        let txn = insert_test_header(&pool, 1, /*ceil*/ 2, /*tax_excluded*/ 1, 0).await;
+        insert_detail(&pool, 1, txn, 1, "FOOD", 16654, 10, Some(18320)).await;
+
+        let request = june_2024_request(GroupBy::Category2);
+        let sql = build_query(&request, "ja");
+        let results: Vec<AggregationResult> =
+            sqlx::query_as(&sql).fetch_all(&pool).await.unwrap();
+
+        assert_eq!(results.len(), 1);
+        // EXPENSE → signed = -18,320. The pre-fix shape produced -18,319.
+        assert_eq!(
+            results[0].total_amount, -18320,
+            "ceil mode must round up; got {} (the v1.x integer-divide-then-negate idiom \
+             returned 18319 here, one yen short)",
+            results[0].total_amount
         );
     }
 
