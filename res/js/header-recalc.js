@@ -44,20 +44,17 @@ export async function applyHeaderRecalculationPrompt(transactionId, currentTotal
         .replace('{0}', `¥${currentTotal.toLocaleString()}`)
         .replace('{1}', `¥${recommended.toLocaleString()}`);
     if (!confirm(message)) {
-        console.log('[header-recalc] User declined the overwrite');
         return { applied: false, recommended };
     }
 
-    console.log('[header-recalc] Persisting new total:', recommended, 'for txn', transactionId);
     try {
         await invoke('update_transaction_header_total', {
             transactionId: parseInt(transactionId),
             totalAmount: recommended
         });
-        console.log('[header-recalc] update_transaction_header_total succeeded');
         return { applied: true, recommended };
     } catch (error) {
-        console.error('[header-recalc] Failed to update header total:', error);
+        console.error('Failed to update header total:', error);
         return { applied: false, recommended };
     }
 }
