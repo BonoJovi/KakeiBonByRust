@@ -1165,6 +1165,21 @@ async fn get_account_templates(
     services::account::get_account_templates(db.pool()).await
 }
 
+/// Compute the running balance of every active account for the current
+/// session user, summed across all actualised transactions up to (and
+/// including) `as_of_date`. Used by the dashboard's "Account Balances"
+/// panel to give the user a number they can reconcile chart totals
+/// against.
+#[tauri::command]
+async fn get_account_balances_as_of(
+    as_of_date: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<Vec<services::account::AccountBalance>, String> {
+    let user_id = get_session_user_id(&state)?;
+    let db = state.db.lock().await;
+    services::account::get_account_balances_as_of(db.pool(), user_id, &as_of_date).await
+}
+
 #[tauri::command]
 async fn get_accounts(
     state: tauri::State<'_, AppState>
@@ -2118,6 +2133,7 @@ pub fn run() {
             delete_transaction,
             get_account_templates,
             get_accounts,
+            get_account_balances_as_of,
             add_account,
             update_account,
             delete_account,

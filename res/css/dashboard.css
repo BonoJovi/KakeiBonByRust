@@ -387,3 +387,75 @@ body {
         padding: 20px;
     }
 }
+
+/* ===========================================================================
+ * Account Balances panel — sits above the charts on the dashboard so the
+ * user can reconcile chart totals against per-account ledger balances.
+ * =========================================================================== */
+
+.account-balances {
+    background: var(--card-bg, #fff);
+    border: 1px solid var(--border-color, #ddd);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+}
+
+.account-balances h2 {
+    margin: 0 0 8px;
+    font-size: 1.2em;
+}
+
+.account-balances-meta {
+    color: var(--secondary-text, #666);
+    font-size: 0.95em;
+    margin-bottom: 12px;
+}
+
+.account-balances-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.account-balances-table th,
+.account-balances-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border-color, #eee);
+    text-align: left;
+}
+
+.account-balances-table th.balance-col,
+.account-balances-table td.balance-col {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.account-balances-table .balance-positive {
+    color: #1565c0;
+}
+
+.account-balances-table .balance-negative {
+    color: #c62828;
+}
+
+.account-balances-empty {
+    text-align: center;
+    color: var(--secondary-text, #666);
+    padding: 16px;
+}
+
+/* Maintenance changelog textarea — reuses the maintenance section but adds
+ * a few rules of its own so the readonly textarea reads well at the
+ * accessibility-friendly font sizes the rest of the app uses. */
+.maintenance-changelog {
+    margin-top: 12px;
+}
+
+.maintenance-changelog-textarea {
+    width: 100%;
+    font-family: monospace;
+    font-size: 0.95em;
+    padding: 8px;
+    box-sizing: border-box;
+    resize: vertical;
+}

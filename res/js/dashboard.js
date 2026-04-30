@@ -179,6 +179,13 @@ async function loadDashboardData() {
     clearMessage();
 
     try {
+        // Refresh the per-account balance snapshot in parallel with the
+        // chart data. The user reads them side-by-side to reconcile chart
+        // totals against ledger balances.
+        loadAccountBalancesAsOf(year, month).catch((err) => {
+            console.error('Failed to load account balances:', err);
+        });
+
         // Load data in parallel
         const [categoryData, monthlyTrendData] = await Promise.all([
             invoke('get_monthly_aggregation', {
@@ -1007,4 +1014,70 @@ async function handleRollbackTotals() {
     } finally {
         rollbackBtn.disabled = false;
     }
+}
+
+// =============================================================================
+// Account Balances panel (above the charts, follows the year/month filter)
+// =============================================================================
+
+/**
+ * Load the per-account balance snapshot for the end of the given month and
+ * render it into the table. The "as of" date displayed to the user is the
+ * last day of `month`, computed locally so it stays meaningful for past
+ * months that are not the current one.
+ */
+async function loadAccountBalancesAsOf(year, month) {
+    // JS Date trick: day=0 of month+1 == last day of month. month is 1-indexed
+    // here, so passing it directly to the constructor (which is 0-indexed)
+    // gives "the next month", and day=0 rolls back one day.
+    const lastDay = new Date(year, month, 0).getDate();
+    const asOf = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+
+    const asOfDateEl = document.getElementById('account-balances-as-of-date');
+    const tbody = document.getElementById('account-balances-tbody');
+    if (!asOfDateEl || !tbody) return;
+
+    asOfDateEl.textContent = asOf;
+    tbody.innerHTML = `<tr><td colspan="2" class="account-balances-empty">${
+        i18n.t('dashboard.balances_loading') || 'Loading...'
+    }</td></tr>`;
+
+    let balances;
+    try {
+        balances = await invoke('get_account_balances_as_of', { asOfDate: asOf });
+    } catch (error) {
+        tbody.innerHTML = `<tr><td colspan="2" class="account-balances-empty">${
+            i18n.t('dashboard.balances_error') || 'Failed to load balances'
+        }: ${error.message || error}</td></tr>`;
+        return;
+    }
+
+    if (!balances || balances.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="2" class="account-balances-empty">${
+            i18n.t('dashboard.balances_empty') || 'No accounts'
+        }</td></tr>`;
+        return;
+    }
+
+    // Filter out the synthetic NONE account — it carries no real balance and
+    // would only confuse the reconciliation view.
+    const visible = balances.filter((b) => b.account_code !== 'NONE');
+
+    tbody.innerHTML = visible
+        .map((b) => {
+            const cls = b.balance < 0 ? 'balance-negative' : 'balance-positive';
+            return `<tr>
+                <td>${escapeHtml(b.account_name)}</td>
+                <td class="balance-col ${cls}">¥${b.balance.toLocaleString()}</td>
+            </tr>`;
+        })
+        .join('');
+}
+
+// Tiny HTML escaper used by the balances table. Names come from user-typed
+// account labels, so we render them safely instead of inserting raw HTML.
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text == null ? '' : String(text);
+    return div.innerHTML;
 }

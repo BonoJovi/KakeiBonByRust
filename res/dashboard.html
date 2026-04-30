@@ -77,6 +77,26 @@
                     </div>
                 </div>
 
+                <!-- Account Balances Section: as-of-month-end snapshot per account -->
+                <section id="account-balances-section" class="account-balances">
+                    <h2 data-i18n="dashboard.account_balances">Account Balances</h2>
+                    <div class="account-balances-meta">
+                        <span data-i18n="dashboard.balances_as_of">As of:</span>
+                        <span id="account-balances-as-of-date">-</span>
+                    </div>
+                    <table class="account-balances-table">
+                        <thead>
+                            <tr>
+                                <th data-i18n="dashboard.account_name">Account</th>
+                                <th class="balance-col" data-i18n="dashboard.balance">Balance</th>
+                            </tr>
+                        </thead>
+                        <tbody id="account-balances-tbody">
+                            <tr><td colspan="2" class="account-balances-empty" data-i18n="dashboard.balances_loading">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </section>
+
                 <!-- Charts Grid -->
                 <div class="dashboard-grid">
                     <!-- Pie Chart: Expense by Category -->
