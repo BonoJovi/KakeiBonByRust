@@ -1330,7 +1330,7 @@ impl TransactionService {
         new_total: i64,
     ) -> Result<(), TransactionError> {
         eprintln!(
-            "[update_transaction_header_total] user_id={} transaction_id={} new_total={}",
+            "[update_transaction_header_total] ENTER user_id={} transaction_id={} new_total={}",
             user_id, transaction_id, new_total
         );
 
@@ -1340,6 +1340,22 @@ impl TransactionService {
             ));
         }
 
+        // Read the current value before the UPDATE so we can log what we are
+        // overwriting. Useful for catching cases where some other code path
+        // races to write a stale value over this one.
+        let before: i64 = sqlx::query_scalar(
+            "SELECT TOTAL_AMOUNT FROM TRANSACTIONS_HEADER WHERE TRANSACTION_ID = ? AND USER_ID = ?",
+        )
+        .bind(transaction_id)
+        .bind(user_id)
+        .fetch_one(&self.pool)
+        .await
+        .unwrap_or(-1);
+        eprintln!(
+            "[update_transaction_header_total] before UPDATE: TOTAL_AMOUNT={}",
+            before
+        );
+
         let result = sqlx::query(sql_queries::TRANSACTION_HEADER_UPDATE_TOTAL_ONLY)
             .bind(new_total)
             .bind(transaction_id)
@@ -1348,8 +1364,22 @@ impl TransactionService {
             .await?;
 
         eprintln!(
-            "[update_transaction_header_total] rows_affected={}",
+            "[update_transaction_header_total] UPDATE rows_affected={}",
             result.rows_affected()
+        );
+
+        // And read it back to confirm the write actually committed.
+        let after: i64 = sqlx::query_scalar(
+            "SELECT TOTAL_AMOUNT FROM TRANSACTIONS_HEADER WHERE TRANSACTION_ID = ? AND USER_ID = ?",
+        )
+        .bind(transaction_id)
+        .bind(user_id)
+        .fetch_one(&self.pool)
+        .await
+        .unwrap_or(-1);
+        eprintln!(
+            "[update_transaction_header_total] after UPDATE: TOTAL_AMOUNT={}",
+            after
         );
 
         if result.rows_affected() == 0 {
