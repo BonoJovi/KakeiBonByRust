@@ -8,6 +8,7 @@ import { TAX_ROUND_DOWN, TAX_ROUND_HALF_UP, TAX_ROUND_UP, ROLE_ADMIN, ROLE_USER 
 import { Modal } from './modal.js';
 import { getCurrentSessionUser, isSessionAuthenticated, setSessionSourceScreen, getSessionModalState, setSessionModalState, clearSessionModalState } from './session.js';
 import { createMenuBar } from './menu.js';
+import { applyHeaderRecalculationPrompt } from './header-recalc.js';
 
 let currentUserId = null;
 let currentUserRole = null;
@@ -928,6 +929,13 @@ async function handleTransactionSubmit(event) {
                 memo: memoText,
                 isScheduled: isScheduled
             });
+
+            // After saving, the user might have changed the rounding type, the
+            // tax-included type, or even the total itself. Any of those can put
+            // the header out of sync with the details. Re-run the same prompt
+            // the detail-edit flow uses; the user gets to confirm before we
+            // overwrite the value they just typed.
+            await applyHeaderRecalculationPrompt(editingTransactionId, totalAmount);
         } else {
             // Create new transaction
             await invoke('save_transaction_header', {
