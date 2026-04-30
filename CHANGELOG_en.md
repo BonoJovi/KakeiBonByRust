@@ -2,6 +2,39 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v2.0.0] - 2026-05-01
+
+Major release with a complete overhaul of the tax calculation logic. The previous approach (compute-then-round per detail line, then aggregate) accumulated rounding errors, occasionally causing aggregated totals to disagree with the receipt's actual amount (the trigger was a 107-yen discrepancy in April's food aggregation). The formula has been unified to: *within a single transaction* — `SUM(net) → tax calc → round per header's TAX_ROUNDING_TYPE → sum across rates*; *across transactions* — `SUM` the already-rounded integer values without further rounding.
+
+### Breaking Changes
+
+- **`AMOUNT` semantics**: Transaction detail `AMOUNT` is now treated as the net (tax-exclusive) value. `AMOUNT_INCLUDING_TAX` is retained both in the UI and DB as a derived tax-inclusive presentation value
+- **Aggregation query rewrite** (commit `dc720521`): Detail-level subquery that decides tax-inclusive/exclusive and aggregates header-rounded values. Eliminates the double-counting bug and the accumulated rounding error
+
+### New Features
+
+- **Auto-recalculation of header `TOTAL_AMOUNT`** (commits `984987d5` `d600a2a4`): After editing details or the header, a prompt asks whether to overwrite with the auto-calculated value (OK) or keep the manual value (Cancel)
+- **Real-time preview on tax setting change** (commit `31cadb09`): Switching tax method (exclusive/inclusive/rounding) in the header edit modal updates the total field instantly (frontend JS pure function with Jest tests)
+- **Bulk recalculate + one-click rollback** (commits `83d90e78` `f7d61a13`): New "Data Maintenance" section on the dashboard. Backs up the DB file before running, so any unwanted outcome can be reverted with one click
+- **Pattern-match recalc** (commit `b6cbab91`): Treats user-entered `TOTAL_AMOUNT` as authoritative, brute-forces 4 patterns (exclusive floor / half-up / ceil + inclusive) and corrects `TAX_ROUNDING_TYPE` / `TAX_INCLUDED_TYPE` when one matches; only overwrites `TOTAL_AMOUNT` when no pattern matches. Shows a detailed change log
+- **Per-account balance snapshot** (commit `f888c8bc`): Per-account balance panel above the dashboard charts, useful for reconciling against source data
+
+### Fixes
+
+- **Ceil rounding lost 1 yen** (commit `7bd04550`): The `CAST(-x/100 AS INTEGER)` idiom in SQLite was actually floor (trunc-toward-zero), not ceil. Rewritten as `(x + 99) / 100`. Rust and JS implementations were correct from the start; only the SQL path was affected
+- **Pin SQLite ATTACH / UPDATE / DETACH to a single connection** (commit `7d844f7c`): Fixes a bug where the bulk recalc held the attached schema on a different connection, causing DETACH to report NOT FOUND
+- **Dashboard column scrollable** (commit `6e27e3f2`): The dashboard column now scrolls when content exceeds the viewport
+
+### Developer Experience / Maintenance
+
+- **Bump `@tauri-apps/cli` to ^2.11.0** (commit `d354b689`)
+
+### Versioning
+
+The change to `AMOUNT` semantics is an API-level breaking change, hence the MAJOR bump to v2.0.0. There is no database schema migration, so existing users can update without manual data migration. Aggregated values may differ from before; this is the rounding-error fix at work, and the new values match the receipt amounts.
+
+---
+
 ## [v1.2.2] - 2026-04-30
 
 ### Fixes
