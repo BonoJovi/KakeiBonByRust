@@ -33,6 +33,19 @@ pub struct Account {
     pub update_dt: Option<String>,
 }
 
+/// Result row for `get_account_balances_as_of`. One row per active account,
+/// representing the running balance after every actualised transaction up to
+/// and including the given as-of date. Used by the dashboard so the user can
+/// reconcile the chart totals against per-account ledgers.
+#[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
+#[sqlx(rename_all = "SCREAMING_SNAKE_CASE")]
+pub struct AccountBalance {
+    pub account_code: String,
+    pub account_name: String,
+    pub balance: i64,
+    pub display_order: i64,
+}
+
 #[derive(Debug, Deserialize, Clone)]
 pub struct AddAccountRequest {
     pub account_code: String,
@@ -84,6 +97,67 @@ pub async fn get_accounts(pool: &SqlitePool, user_id: i64) -> Result<Vec<Account
     .map_err(|e| format!("Failed to get accounts: {}", e))?;
 
     Ok(accounts)
+}
+
+/// Compute the running balance of every active account for `user_id`,
+/// counted up to and including `as_of_date` (`YYYY-MM-DD`). Each balance
+/// starts from the account's `INITIAL_BALANCE` and applies actualised
+/// transactions only (`IS_SCHEDULED = 0`):
+///
+///   + INCOME  with TO_ACCOUNT  matching the account
+///   - EXPENSE with FROM_ACCOUNT matching the account
+///   + TRANSFER with TO_ACCOUNT  matching the account
+///   - TRANSFER with FROM_ACCOUNT matching the account
+///
+/// The single-pass CASE keeps each transaction visible to both the source
+/// and destination accounts of a TRANSFER, with the sign flipped per side.
+/// Disabled accounts are excluded.
+pub async fn get_account_balances_as_of(
+    pool: &SqlitePool,
+    user_id: i64,
+    as_of_date: &str,
+) -> Result<Vec<AccountBalance>, String> {
+    let balances = sqlx::query_as::<_, AccountBalance>(
+        r#"
+        SELECT
+            a.ACCOUNT_CODE,
+            a.ACCOUNT_NAME,
+            a.INITIAL_BALANCE
+                + COALESCE(SUM(CASE
+                    WHEN th.CATEGORY1_CODE = 'INCOME'
+                         AND th.TO_ACCOUNT_CODE = a.ACCOUNT_CODE
+                        THEN th.TOTAL_AMOUNT
+                    WHEN th.CATEGORY1_CODE = 'EXPENSE'
+                         AND th.FROM_ACCOUNT_CODE = a.ACCOUNT_CODE
+                        THEN -th.TOTAL_AMOUNT
+                    WHEN th.CATEGORY1_CODE = 'TRANSFER'
+                         AND th.TO_ACCOUNT_CODE = a.ACCOUNT_CODE
+                        THEN th.TOTAL_AMOUNT
+                    WHEN th.CATEGORY1_CODE = 'TRANSFER'
+                         AND th.FROM_ACCOUNT_CODE = a.ACCOUNT_CODE
+                        THEN -th.TOTAL_AMOUNT
+                    ELSE 0
+                END), 0) AS BALANCE,
+            a.DISPLAY_ORDER
+        FROM ACCOUNTS a
+        LEFT JOIN TRANSACTIONS_HEADER th
+            ON th.USER_ID = a.USER_ID
+           AND th.IS_SCHEDULED = 0
+           AND DATE(th.TRANSACTION_DATE) <= DATE(?)
+           AND ( th.FROM_ACCOUNT_CODE = a.ACCOUNT_CODE
+              OR th.TO_ACCOUNT_CODE   = a.ACCOUNT_CODE )
+        WHERE a.USER_ID = ? AND a.IS_DISABLED = 0
+        GROUP BY a.ACCOUNT_CODE, a.ACCOUNT_NAME, a.INITIAL_BALANCE, a.DISPLAY_ORDER
+        ORDER BY a.DISPLAY_ORDER
+        "#,
+    )
+    .bind(as_of_date)
+    .bind(user_id)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| format!("Failed to compute account balances: {}", e))?;
+
+    Ok(balances)
 }
 
 /// Get all accounts (for admin users)

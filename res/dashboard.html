@@ -77,6 +77,26 @@
                     </div>
                 </div>
 
+                <!-- Account Balances Section: as-of-month-end snapshot per account -->
+                <section id="account-balances-section" class="account-balances">
+                    <h2 data-i18n="dashboard.account_balances">Account Balances</h2>
+                    <div class="account-balances-meta">
+                        <span data-i18n="dashboard.balances_as_of">As of:</span>
+                        <span id="account-balances-as-of-date">-</span>
+                    </div>
+                    <table class="account-balances-table">
+                        <thead>
+                            <tr>
+                                <th data-i18n="dashboard.account_name">Account</th>
+                                <th class="balance-col" data-i18n="dashboard.balance">Balance</th>
+                            </tr>
+                        </thead>
+                        <tbody id="account-balances-tbody">
+                            <tr><td colspan="2" class="account-balances-empty" data-i18n="dashboard.balances_loading">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </section>
+
                 <!-- Charts Grid -->
                 <div class="dashboard-grid">
                     <!-- Pie Chart: Expense by Category -->
@@ -108,6 +128,32 @@
                 </div>
 
                 <div id="dashboard-message" class="message"></div>
+
+                <!-- Data Maintenance Section: header total recalculation + rollback -->
+                <section id="maintenance-section" class="maintenance-section">
+                    <h2 data-i18n="maintenance.title">Data Maintenance</h2>
+                    <p class="maintenance-description" data-i18n="maintenance.recalc_description">
+                        Recalculate every transaction's header total from its details. A backup is taken automatically before the change.
+                    </p>
+                    <div class="maintenance-actions">
+                        <button type="button" id="recalc-totals-btn" class="btn-primary maintenance-btn" data-i18n="maintenance.recalc_button">
+                            Recalculate All Header Totals
+                        </button>
+                        <button type="button" id="rollback-totals-btn" class="btn-secondary maintenance-btn hidden" data-i18n="maintenance.rollback_button">
+                            Roll Back to Pre-Recalc Backup
+                        </button>
+                    </div>
+                    <div id="maintenance-message" class="message"></div>
+                    <details id="maintenance-changelog-details" class="maintenance-changelog hidden">
+                        <summary data-i18n="maintenance.changelog_summary">View change log</summary>
+                        <textarea
+                            id="maintenance-changelog"
+                            class="maintenance-changelog-textarea"
+                            readonly
+                            rows="12"
+                            aria-label="Change log"></textarea>
+                    </details>
+                </section>
             </div>
         </div>
 

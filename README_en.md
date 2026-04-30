@@ -24,22 +24,31 @@
 Thank you for your continued interest in KakeiBon.
 I'm BonoJovi (Yoshihiro NAKAHARA), the project initiator.
 
-**We have officially released Ver.1.2.2!**
+**We have officially released Ver.2.0.0!**
 
-Ver.1.2.2 fixes a bug where filtering the transaction list by sub-category (CATEGORY2) or leaf category (CATEGORY3) was silently ignored, returning every row of the parent category.
+Ver.2.0.0 is a major release with a complete overhaul of the tax calculation logic. The previous approach (compute-then-round per detail line, then aggregate) accumulated rounding errors, occasionally causing aggregated totals to disagree with receipt amounts. The formula has been unified to: *within a single transaction* — `SUM(net) → tax calc → round per the header's rounding mode → sum across rates`; *across transactions* — `SUM` the already-rounded integer values without further rounding.
 
-Transaction data input and aggregation features are now complete, making KakeiBon a practical household budget application.
+Key changes include:
+- Aggregation queries fully rewritten (eliminates the double-counting bug and accumulated rounding error)
+- Auto-recalculation of header totals with a confirmation prompt
+- Real-time preview of the total field on tax setting change
+- New "Data Maintenance" section on the dashboard (bulk recalc + one-click rollback)
+- Pattern-match recalc (treats user-entered totals as authoritative and corrects the tax method)
+- Per-account balance snapshot (for reconciling against source data)
+
+Because `AMOUNT` semantics now fixes the value as the net (tax-exclusive) amount — an API-level breaking change — the major version has been bumped to v2.0.0. There is no database schema migration, so existing users can update without manual data migration.
+
 If you would like to use the stable release version, please refer to the [main branch](https://github.com/BonoJovi/KakeiBonByRust/tree/main).
 
 The dev branch you are currently viewing is the development version, where we are working on features for the next release.
 If you want to try the latest features early, please use this dev branch.
 
-We plan to implement CSV import/export, financial statements, and accessibility features (ARIA) next.
-We welcome messages via GitHub issues or email, whether it's words of encouragement or suggestions for features you'd like to see in the future—any feedback is appreciated.
+In Ver.2.1.0 we plan to introduce *recurring scheduled transactions* — register one rule (yearly / monthly / weekly / daily intervals) to auto-expand scheduled income & expenses across a date range. Ver.2.2.0 will reuse that recurrence logic to add *aggregation cycle start day customization* (align the monthly cycle with payday or pension transfer dates).
+We welcome messages via GitHub issues or email, whether it's words of encouragement or suggestions for features you'd like to see in the future — any feedback is appreciated.
 
 Thank you for your continued support of KakeiBon.
 
-**2026-01-26 (JST) Written by Yoshihiro NAKAHARA**
+**2026-05-01 (JST) Written by Yoshihiro NAKAHARA**
 
 </div>
 
