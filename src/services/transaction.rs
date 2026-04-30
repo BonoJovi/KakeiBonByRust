@@ -218,6 +218,31 @@ impl From<sqlx::Error> for TransactionError {
     }
 }
 
+/// Result of `recalculate_all_transaction_totals`. The frontend uses this to
+/// tell the user how much work was actually done and where the safety-net
+/// backup ended up, so they can roll back later from a single button click.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RecalcSummary {
+    /// Number of headers the recalc walked.
+    pub total_headers: i64,
+    /// Headers whose `TOTAL_AMOUNT` differed from the recalculated value
+    /// and were therefore overwritten.
+    pub updated: i64,
+    /// Headers that were already in sync; left untouched.
+    pub skipped: i64,
+    /// Absolute path of the file backup taken before the recalculation
+    /// started. Returned to the frontend so the rollback flow can pass it
+    /// straight back to `restore_totals_from_backup`.
+    pub backup_path: String,
+}
+
+/// Result of `restore_totals_from_backup`. Reports how many header rows
+/// actually had their `TOTAL_AMOUNT` reverted to the backup value.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RestoreSummary {
+    pub restored: i64,
+}
+
 /// Per-detail input for `calculate_recommended_total`.
 ///
 /// Mirrors the columns the calculation reads from `TRANSACTIONS_DETAIL`. The
@@ -1318,6 +1343,173 @@ impl TransactionService {
             .collect();
 
         Ok(calculate_recommended_total(&details, rounding_type))
+    }
+
+    /// Recompute every transaction header's `TOTAL_AMOUNT` for `user_id`
+    /// from the current details, and persist the result. Wraps the whole
+    /// pass in a single SQL transaction so a failure mid-flight rolls back
+    /// every change. A timestamped copy of the DB file is taken first
+    /// (after a WAL checkpoint) so the user can roll the data back even
+    /// after the transaction commits — see `restore_totals_from_backup`.
+    pub async fn recalculate_all_transaction_totals(
+        &self,
+        user_id: i64,
+    ) -> Result<RecalcSummary, TransactionError> {
+        // Force the WAL log into the main DB file before we copy it; otherwise
+        // the backup would miss any writes that have not been checkpointed yet.
+        sqlx::query("PRAGMA wal_checkpoint(FULL)")
+            .execute(&self.pool)
+            .await?;
+
+        // Build a timestamped backup path next to the live DB and copy.
+        let main_path = crate::db::get_db_path();
+        let dir = main_path.parent().ok_or_else(|| {
+            TransactionError::DatabaseError("DB path has no parent directory".to_string())
+        })?;
+        let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S");
+        let backup_path = dir.join(format!(
+            "KakeiBonDB.sqlite3.backup_before_recalc_{}",
+            timestamp
+        ));
+        std::fs::copy(&main_path, &backup_path).map_err(|e| {
+            TransactionError::DatabaseError(format!(
+                "Failed to copy DB to backup path {:?}: {}",
+                backup_path, e
+            ))
+        })?;
+
+        let mut tx = self.pool.begin().await?;
+
+        // Load every header for this user up front. Holding them in memory
+        // keeps the hot loop below from interleaving SELECT cursors with
+        // UPDATE statements on the same transaction.
+        let header_rows = sqlx::query(
+            "SELECT TRANSACTION_ID, TAX_ROUNDING_TYPE, TOTAL_AMOUNT \
+             FROM TRANSACTIONS_HEADER WHERE USER_ID = ?",
+        )
+        .bind(user_id)
+        .fetch_all(&mut *tx)
+        .await?;
+
+        let total_headers = header_rows.len() as i64;
+        let mut updated = 0i64;
+        let mut skipped = 0i64;
+
+        for header_row in header_rows {
+            let txn_id: i64 = header_row.get("TRANSACTION_ID");
+            let rounding_type: i64 = header_row.get("TAX_ROUNDING_TYPE");
+            let current_total: i64 = header_row.get("TOTAL_AMOUNT");
+
+            let detail_rows = sqlx::query(sql_queries::TRANSACTION_DETAIL_GET_FOR_RECALC)
+                .bind(txn_id)
+                .bind(user_id)
+                .fetch_all(&mut *tx)
+                .await?;
+
+            let details: Vec<DetailForRecalc> = detail_rows
+                .iter()
+                .map(|r| DetailForRecalc {
+                    amount: r.get("AMOUNT"),
+                    amount_including_tax: r.get("AMOUNT_INCLUDING_TAX"),
+                    tax_rate: r.get("TAX_RATE"),
+                })
+                .collect();
+
+            let recommended = calculate_recommended_total(&details, rounding_type);
+
+            if recommended != current_total {
+                sqlx::query(sql_queries::TRANSACTION_HEADER_UPDATE_TOTAL_ONLY)
+                    .bind(recommended)
+                    .bind(txn_id)
+                    .bind(user_id)
+                    .execute(&mut *tx)
+                    .await?;
+                updated += 1;
+            } else {
+                skipped += 1;
+            }
+        }
+
+        tx.commit().await?;
+
+        Ok(RecalcSummary {
+            total_headers,
+            updated,
+            skipped,
+            backup_path: backup_path.to_string_lossy().to_string(),
+        })
+    }
+
+    /// Restore the `TOTAL_AMOUNT` column on every header for `user_id` from a
+    /// backup file produced by `recalculate_all_transaction_totals`. We
+    /// deliberately touch *only* `TOTAL_AMOUNT` — leaving details, memos and
+    /// the rest of the schema untouched — so a rollback cannot accidentally
+    /// erase any data the user has entered since the recalculation ran.
+    pub async fn restore_totals_from_backup(
+        &self,
+        user_id: i64,
+        backup_path: &str,
+    ) -> Result<RestoreSummary, TransactionError> {
+        let backup = std::path::Path::new(backup_path);
+        if !backup.exists() {
+            return Err(TransactionError::ValidationError(format!(
+                "Backup file does not exist: {}",
+                backup_path
+            )));
+        }
+        // Only allow paths that live in the same directory as the live DB.
+        // Stops a hostile caller from passing an arbitrary file path that
+        // ATTACH would happily open.
+        let main_dir = crate::db::get_db_path()
+            .parent()
+            .map(|p| p.to_path_buf())
+            .ok_or_else(|| {
+                TransactionError::DatabaseError("DB path has no parent directory".to_string())
+            })?;
+        let backup_dir = backup.parent().map(|p| p.to_path_buf()).ok_or_else(|| {
+            TransactionError::ValidationError("Backup path has no parent directory".to_string())
+        })?;
+        if backup_dir != main_dir {
+            return Err(TransactionError::ValidationError(format!(
+                "Backup must live in the kakeibon DB directory ({:?})",
+                main_dir
+            )));
+        }
+
+        // ATTACH and run a single UPDATE that copies TOTAL_AMOUNT row-by-row.
+        // The WHERE EXISTS guard skips rows that the backup does not know
+        // about (e.g. a header inserted *after* the backup was taken).
+        let attach_sql = format!(
+            "ATTACH DATABASE '{}' AS recalc_backup",
+            backup_path.replace('\'', "''")
+        );
+        sqlx::query(&attach_sql).execute(&self.pool).await?;
+
+        let result = sqlx::query(
+            "UPDATE TRANSACTIONS_HEADER \
+             SET TOTAL_AMOUNT = ( \
+                 SELECT b.TOTAL_AMOUNT FROM recalc_backup.TRANSACTIONS_HEADER b \
+                 WHERE b.TRANSACTION_ID = TRANSACTIONS_HEADER.TRANSACTION_ID \
+                   AND b.USER_ID = TRANSACTIONS_HEADER.USER_ID \
+             ), UPDATE_DT = datetime('now') \
+             WHERE USER_ID = ? \
+               AND EXISTS ( \
+                   SELECT 1 FROM recalc_backup.TRANSACTIONS_HEADER b \
+                   WHERE b.TRANSACTION_ID = TRANSACTIONS_HEADER.TRANSACTION_ID \
+                     AND b.USER_ID = TRANSACTIONS_HEADER.USER_ID \
+               )",
+        )
+        .bind(user_id)
+        .execute(&self.pool)
+        .await?;
+
+        let restored = result.rows_affected() as i64;
+
+        sqlx::query("DETACH DATABASE recalc_backup")
+            .execute(&self.pool)
+            .await?;
+
+        Ok(RestoreSummary { restored })
     }
 
     /// Set `TOTAL_AMOUNT` on a transaction header without touching any other

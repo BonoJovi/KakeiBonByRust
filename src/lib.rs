@@ -1721,6 +1721,45 @@ async fn update_transaction_header_total(
         .map_err(|e| e.to_string())
 }
 
+/// Walk every transaction header for the current user, recompute its
+/// `TOTAL_AMOUNT` from the latest details, and persist the result. A file
+/// backup of the live DB is taken first so the frontend can offer a one-
+/// click rollback via `restore_totals_from_backup` without the user having
+/// to find the backup in the filesystem themselves.
+#[tauri::command]
+async fn recalculate_all_transaction_totals(
+    state: tauri::State<'_, AppState>,
+) -> Result<services::transaction::RecalcSummary, String> {
+    let transaction = state.transaction.lock().await;
+    let user_id = get_session_user_id(&state)?;
+
+    transaction
+        .recalculate_all_transaction_totals(user_id)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// Roll back the `TOTAL_AMOUNT` column of every header for the current user
+/// to the values stored in `backup_path`. Used immediately after
+/// `recalculate_all_transaction_totals` if the user changes their mind, or
+/// later if anomalies surface. The command only ever touches `TOTAL_AMOUNT`
+/// — details, memos, audit fields and the rest of the schema are
+/// untouched, so a rollback cannot delete data the user has typed in
+/// since the recalculation.
+#[tauri::command]
+async fn restore_totals_from_backup(
+    backup_path: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<services::transaction::RestoreSummary, String> {
+    let transaction = state.transaction.lock().await;
+    let user_id = get_session_user_id(&state)?;
+
+    transaction
+        .restore_totals_from_backup(user_id, &backup_path)
+        .await
+        .map_err(|e| e.to_string())
+}
+
 // =============================================================================
 // Aggregation Commands
 // =============================================================================
@@ -2106,6 +2145,8 @@ pub fn run() {
             delete_transaction_detail,
             compute_recommended_transaction_total,
             update_transaction_header_total,
+            recalculate_all_transaction_totals,
+            restore_totals_from_backup,
             get_monthly_aggregation,
             get_daily_aggregation,
             get_period_aggregation,
