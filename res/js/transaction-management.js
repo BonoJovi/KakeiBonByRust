@@ -9,6 +9,7 @@ import { Modal } from './modal.js';
 import { getCurrentSessionUser, isSessionAuthenticated, setSessionSourceScreen, getSessionModalState, setSessionModalState, clearSessionModalState } from './session.js';
 import { createMenuBar } from './menu.js';
 import { applyHeaderRecalculationPrompt } from './header-recalc.js';
+import { calculateRecommendedTotal } from './tax-calc.js';
 
 let currentUserId = null;
 let currentUserRole = null;
@@ -648,6 +649,30 @@ function initializeTransactionModal() {
 
     // Category1 change handler - control account field visibility
     category1Select.addEventListener('change', handleCategory1Change);
+
+    // Real-time recalculation of TOTAL_AMOUNT when the tax rounding mode or
+    // tax-included flag is changed on an existing transaction. Lets the user
+    // see what the header total would be under the new setting before they
+    // hit Save (after which the same applyHeaderRecalculationPrompt fires
+    // in case the cached value disagreed with the newly-saved one). For new
+    // transactions there are no details to base the calculation on yet, so
+    // the listener is a no-op until editingTransactionId is set.
+    const handleTaxSettingChange = async () => {
+        if (!editingTransactionId) return;
+        try {
+            const details = await invoke('get_transaction_details', {
+                transactionId: editingTransactionId
+            });
+            if (!details || details.length === 0) return;
+            const rounding = parseInt(document.getElementById('tax-rounding').value, 10);
+            const recommended = calculateRecommendedTotal(details, rounding);
+            document.getElementById('total-amount').value = recommended;
+        } catch (error) {
+            console.error('Failed to recompute total preview:', error);
+        }
+    };
+    document.getElementById('tax-rounding').addEventListener('change', handleTaxSettingChange);
+    document.getElementById('tax-included-type').addEventListener('change', handleTaxSettingChange);
 
     // Manage shops button handler
     const manageShopsBtn = document.getElementById('manage-shops-btn');
