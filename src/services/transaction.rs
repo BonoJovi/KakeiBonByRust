@@ -1329,6 +1329,11 @@ impl TransactionService {
         transaction_id: i64,
         new_total: i64,
     ) -> Result<(), TransactionError> {
+        eprintln!(
+            "[update_transaction_header_total] user_id={} transaction_id={} new_total={}",
+            user_id, transaction_id, new_total
+        );
+
         if new_total < 0 || new_total > 999_999_999 {
             return Err(TransactionError::ValidationError(
                 "Amount must be between 0 and 999,999,999".to_string(),
@@ -1341,6 +1346,11 @@ impl TransactionService {
             .bind(user_id)
             .execute(&self.pool)
             .await?;
+
+        eprintln!(
+            "[update_transaction_header_total] rows_affected={}",
+            result.rows_affected()
+        );
 
         if result.rows_affected() == 0 {
             return Err(TransactionError::NotFound);
