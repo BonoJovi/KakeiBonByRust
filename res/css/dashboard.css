@@ -12,7 +12,11 @@ body {
     margin: 0;
     box-sizing: border-box;
     height: calc(100vh - 60px);
-    overflow: hidden;
+    /* Was `overflow: hidden`. The dashboard now stacks an account-balances
+     * panel + the chart grid + a maintenance section vertically, which can
+     * easily exceed the viewport at large font sizes. Allow the main column
+     * to scroll instead of clipping the bottom-most section silently. */
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
 }
@@ -22,10 +26,14 @@ body {
     margin: 0 auto;
     padding: 20px;
     width: 100%;
-    height: 100%;
+    /* Was `height: 100%`. Letting the container size to its content (with a
+     * min-height of one viewport so short-content layouts still fill the
+     * window) is what allows #main-content's overflow-y: auto to actually
+     * see the overflow it needs to scroll. */
+    min-height: 100%;
+    box-sizing: border-box;
     display: flex;
     flex-direction: column;
-    box-sizing: border-box;
 }
 
 .dashboard-container h1 {
@@ -166,9 +174,9 @@ body {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 20px;
-    flex: 1;
-    overflow: auto;
-    min-height: 0;
+    /* Charts take their natural height (driven by .chart-card's min-height).
+     * The whole dashboard column scrolls via #main-content now, so the grid
+     * no longer needs its own internal scrollbar. */
 }
 
 /* Chart Cards */
@@ -386,4 +394,76 @@ body {
         width: 95%;
         padding: 20px;
     }
+}
+
+/* ===========================================================================
+ * Account Balances panel — sits above the charts on the dashboard so the
+ * user can reconcile chart totals against per-account ledger balances.
+ * =========================================================================== */
+
+.account-balances {
+    background: var(--card-bg, #fff);
+    border: 1px solid var(--border-color, #ddd);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+}
+
+.account-balances h2 {
+    margin: 0 0 8px;
+    font-size: 1.2em;
+}
+
+.account-balances-meta {
+    color: var(--secondary-text, #666);
+    font-size: 0.95em;
+    margin-bottom: 12px;
+}
+
+.account-balances-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.account-balances-table th,
+.account-balances-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border-color, #eee);
+    text-align: left;
+}
+
+.account-balances-table th.balance-col,
+.account-balances-table td.balance-col {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.account-balances-table .balance-positive {
+    color: #1565c0;
+}
+
+.account-balances-table .balance-negative {
+    color: #c62828;
+}
+
+.account-balances-empty {
+    text-align: center;
+    color: var(--secondary-text, #666);
+    padding: 16px;
+}
+
+/* Maintenance changelog textarea — reuses the maintenance section but adds
+ * a few rules of its own so the readonly textarea reads well at the
+ * accessibility-friendly font sizes the rest of the app uses. */
+.maintenance-changelog {
+    margin-top: 12px;
+}
+
+.maintenance-changelog-textarea {
+    width: 100%;
+    font-family: monospace;
+    font-size: 0.95em;
+    padding: 8px;
+    box-sizing: border-box;
+    resize: vertical;
 }

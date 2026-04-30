@@ -1165,6 +1165,21 @@ async fn get_account_templates(
     services::account::get_account_templates(db.pool()).await
 }
 
+/// Compute the running balance of every active account for the current
+/// session user, summed across all actualised transactions up to (and
+/// including) `as_of_date`. Used by the dashboard's "Account Balances"
+/// panel to give the user a number they can reconcile chart totals
+/// against.
+#[tauri::command]
+async fn get_account_balances_as_of(
+    as_of_date: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<Vec<services::account::AccountBalance>, String> {
+    let user_id = get_session_user_id(&state)?;
+    let db = state.db.lock().await;
+    services::account::get_account_balances_as_of(db.pool(), user_id, &as_of_date).await
+}
+
 #[tauri::command]
 async fn get_accounts(
     state: tauri::State<'_, AppState>
@@ -1684,6 +1699,82 @@ async fn delete_transaction_detail(
         .map_err(|e| e.to_string())
 }
 
+/// Compute the TOTAL_AMOUNT a transaction header *should* have based on its
+/// current details and saved tax rounding setting. The frontend uses this
+/// after a detail edit (or a tax-setting change) to decide whether to prompt
+/// the user before overwriting the cached header total.
+#[tauri::command]
+async fn compute_recommended_transaction_total(
+    transaction_id: i64,
+    state: tauri::State<'_, AppState>,
+) -> Result<i64, String> {
+    let transaction = state.transaction.lock().await;
+    let user_id = get_session_user_id(&state)?;
+
+    transaction
+        .compute_recommended_total(user_id, transaction_id)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// Overwrite a transaction header's TOTAL_AMOUNT without touching other
+/// fields. The frontend calls this once the user confirms a recalculation
+/// prompt; passing the user-decided value (rather than recomputing on the
+/// backend) keeps the prompt's displayed value as the source of truth.
+#[tauri::command]
+async fn update_transaction_header_total(
+    transaction_id: i64,
+    total_amount: i64,
+    state: tauri::State<'_, AppState>,
+) -> Result<(), String> {
+    let transaction = state.transaction.lock().await;
+    let user_id = get_session_user_id(&state)?;
+
+    transaction
+        .update_transaction_header_total(user_id, transaction_id, total_amount)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// Walk every transaction header for the current user, recompute its
+/// `TOTAL_AMOUNT` from the latest details, and persist the result. A file
+/// backup of the live DB is taken first so the frontend can offer a one-
+/// click rollback via `restore_totals_from_backup` without the user having
+/// to find the backup in the filesystem themselves.
+#[tauri::command]
+async fn recalculate_all_transaction_totals(
+    state: tauri::State<'_, AppState>,
+) -> Result<services::transaction::RecalcSummary, String> {
+    let transaction = state.transaction.lock().await;
+    let user_id = get_session_user_id(&state)?;
+
+    transaction
+        .recalculate_all_transaction_totals(user_id)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// Roll back the `TOTAL_AMOUNT` column of every header for the current user
+/// to the values stored in `backup_path`. Used immediately after
+/// `recalculate_all_transaction_totals` if the user changes their mind, or
+/// later if anomalies surface. The command only ever touches `TOTAL_AMOUNT`
+/// — details, memos, audit fields and the rest of the schema are
+/// untouched, so a rollback cannot delete data the user has typed in
+/// since the recalculation.
+#[tauri::command]
+async fn restore_totals_from_backup(
+    backup_path: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<services::transaction::RestoreSummary, String> {
+    let transaction = state.transaction.lock().await;
+    let user_id = get_session_user_id(&state)?;
+
+    transaction
+        .restore_totals_from_backup(user_id, &backup_path)
+        .await
+        .map_err(|e| e.to_string())
+}
+
 // =============================================================================
 // Aggregation Commands
 // =============================================================================
@@ -2042,6 +2133,7 @@ pub fn run() {
             delete_transaction,
             get_account_templates,
             get_accounts,
+            get_account_balances_as_of,
             add_account,
             update_account,
             delete_account,
@@ -2067,6 +2159,10 @@ pub fn run() {
             add_transaction_detail,
             update_transaction_detail,
             delete_transaction_detail,
+            compute_recommended_transaction_total,
+            update_transaction_header_total,
+            recalculate_all_transaction_totals,
+            restore_totals_from_backup,
             get_monthly_aggregation,
             get_daily_aggregation,
             get_period_aggregation,

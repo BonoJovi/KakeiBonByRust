@@ -1,0 +1,5 @@
+{
+  "type": "module",
+  "private": true,
+  "comment": "Marks res/js/ as ES module land for Node.js (Jest with --experimental-vm-modules). The Tauri runtime already loads these as ESM via the WebView; this file only matters for tests that import application modules directly."
+}

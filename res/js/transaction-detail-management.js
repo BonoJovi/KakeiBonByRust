@@ -7,6 +7,7 @@ import { HTML_FILES } from './html-files.js';
 import { ROLE_ADMIN } from './consts.js';
 import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
 import { createMenuBar } from './menu.js';
+import { applyHeaderRecalculationPrompt } from './header-recalc.js';
 
 let currentUserId = null;
 let currentUserRole = null;
@@ -14,6 +15,7 @@ let transactionId = null;
 let category1Code = null; // Store CATEGORY1_CODE from transaction header
 let lastTaxInputField = null; // Track which amount field was last edited: 'excluding' or 'including'
 let taxRoundingType = 0; // Store TAX_ROUNDING_TYPE from transaction header (0: floor, 1: half-up, 2: ceil)
+let currentHeaderTotal = 0; // Cached TOTAL_AMOUNT from the loaded header; used to detect drift after a detail edit
 
 document.addEventListener('DOMContentLoaded', async function() {
     
@@ -557,6 +559,7 @@ async function loadTransactionHeader() {
         // Store CATEGORY1_CODE and TAX_ROUNDING_TYPE for detail operations
         category1Code = header.category1_code;
         taxRoundingType = header.tax_rounding_type ?? 0; // Default to floor (0) if not set
+        currentHeaderTotal = header.total_amount ?? 0; // Track for drift detection on detail edits
 
         // Display header information
         document.getElementById('header-transaction-date').textContent = header.transaction_date || '-';
@@ -794,7 +797,15 @@ async function handleDetailFormSubmit(event) {
                 memo: memo || null
             });
         }
-        
+
+        // Reconcile cached header total with the new detail set. Prompts the
+        // user if a drift was introduced; either way, the subsequent
+        // loadTransactionHeader() refreshes the display.
+        const recalcResult = await applyHeaderRecalculationPrompt(transactionId, currentHeaderTotal);
+        if (recalcResult.applied && recalcResult.recommended !== null) {
+            currentHeaderTotal = recalcResult.recommended;
+        }
+
         closeDetailModal();
         showMessage('success', i18n.t('detail_mgmt.save_success'));
         await loadDetails();
@@ -887,7 +898,14 @@ async function handleDeleteConfirm() {
         await invoke('delete_transaction_detail', {
             detailId: parseInt(detailId)
         });
-        
+
+        // Same recalculation handshake the save flow uses — a delete can also
+        // change the recommended header total.
+        const recalcResult = await applyHeaderRecalculationPrompt(transactionId, currentHeaderTotal);
+        if (recalcResult.applied && recalcResult.recommended !== null) {
+            currentHeaderTotal = recalcResult.recommended;
+        }
+
         closeDeleteModal();
         showMessage('success', i18n.t('detail_mgmt.delete_success'));
         await loadDetails();
