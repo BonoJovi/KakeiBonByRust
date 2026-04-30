@@ -1624,14 +1624,18 @@ impl TransactionService {
             )));
         }
 
-        // ATTACH and run a single UPDATE that copies TOTAL_AMOUNT row-by-row.
-        // The WHERE EXISTS guard skips rows that the backup does not know
-        // about (e.g. a header inserted *after* the backup was taken).
+        // ATTACH/UPDATE/DETACH must all run on the *same* SQLite connection
+        // — `recalc_backup` only exists on the connection that ATTACHed it.
+        // A pool-level `execute` would hand each statement out on a possibly
+        // different connection, so we explicitly acquire one and pin every
+        // statement to it.
+        let mut conn = self.pool.acquire().await?;
+
         let attach_sql = format!(
             "ATTACH DATABASE '{}' AS recalc_backup",
             backup_path.replace('\'', "''")
         );
-        sqlx::query(&attach_sql).execute(&self.pool).await?;
+        sqlx::query(&attach_sql).execute(&mut *conn).await?;
 
         let result = sqlx::query(
             "UPDATE TRANSACTIONS_HEADER \
@@ -1648,13 +1652,13 @@ impl TransactionService {
                )",
         )
         .bind(user_id)
-        .execute(&self.pool)
+        .execute(&mut *conn)
         .await?;
 
         let restored = result.rows_affected() as i64;
 
         sqlx::query("DETACH DATABASE recalc_backup")
-            .execute(&self.pool)
+            .execute(&mut *conn)
             .await?;
 
         Ok(RestoreSummary { restored })
