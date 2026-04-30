@@ -12,7 +12,11 @@ body {
     margin: 0;
     box-sizing: border-box;
     height: calc(100vh - 60px);
-    overflow: hidden;
+    /* Was `overflow: hidden`. The dashboard now stacks an account-balances
+     * panel + the chart grid + a maintenance section vertically, which can
+     * easily exceed the viewport at large font sizes. Allow the main column
+     * to scroll instead of clipping the bottom-most section silently. */
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
 }
@@ -22,10 +26,14 @@ body {
     margin: 0 auto;
     padding: 20px;
     width: 100%;
-    height: 100%;
+    /* Was `height: 100%`. Letting the container size to its content (with a
+     * min-height of one viewport so short-content layouts still fill the
+     * window) is what allows #main-content's overflow-y: auto to actually
+     * see the overflow it needs to scroll. */
+    min-height: 100%;
+    box-sizing: border-box;
     display: flex;
     flex-direction: column;
-    box-sizing: border-box;
 }
 
 .dashboard-container h1 {
@@ -166,9 +174,9 @@ body {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 20px;
-    flex: 1;
-    overflow: auto;
-    min-height: 0;
+    /* Charts take their natural height (driven by .chart-card's min-height).
+     * The whole dashboard column scrolls via #main-content now, so the grid
+     * no longer needs its own internal scrollbar. */
 }
 
 /* Chart Cards */
