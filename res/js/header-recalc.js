@@ -35,21 +35,29 @@ export async function applyHeaderRecalculationPrompt(transactionId, currentTotal
         return { applied: true, recommended };
     }
 
+    // The i18n resource stores `\n` as the literal two characters (backslash
+    // + n) because SQLite single-quoted strings do not interpret backslash
+    // escapes. Convert them to real newlines here so confirm() renders the
+    // line breaks the prompt was designed for.
     const message = i18n.t('detail_mgmt.header_recalc_confirm')
+        .replace(/\\n/g, '\n')
         .replace('{0}', `¥${currentTotal.toLocaleString()}`)
         .replace('{1}', `¥${recommended.toLocaleString()}`);
     if (!confirm(message)) {
+        console.log('[header-recalc] User declined the overwrite');
         return { applied: false, recommended };
     }
 
+    console.log('[header-recalc] Persisting new total:', recommended, 'for txn', transactionId);
     try {
         await invoke('update_transaction_header_total', {
             transactionId: parseInt(transactionId),
             totalAmount: recommended
         });
+        console.log('[header-recalc] update_transaction_header_total succeeded');
         return { applied: true, recommended };
     } catch (error) {
-        console.error('Failed to update header total:', error);
+        console.error('[header-recalc] Failed to update header total:', error);
         return { applied: false, recommended };
     }
 }
