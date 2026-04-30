@@ -1684,6 +1684,43 @@ async fn delete_transaction_detail(
         .map_err(|e| e.to_string())
 }
 
+/// Compute the TOTAL_AMOUNT a transaction header *should* have based on its
+/// current details and saved tax rounding setting. The frontend uses this
+/// after a detail edit (or a tax-setting change) to decide whether to prompt
+/// the user before overwriting the cached header total.
+#[tauri::command]
+async fn compute_recommended_transaction_total(
+    transaction_id: i64,
+    state: tauri::State<'_, AppState>,
+) -> Result<i64, String> {
+    let transaction = state.transaction.lock().await;
+    let user_id = get_session_user_id(&state)?;
+
+    transaction
+        .compute_recommended_total(user_id, transaction_id)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// Overwrite a transaction header's TOTAL_AMOUNT without touching other
+/// fields. The frontend calls this once the user confirms a recalculation
+/// prompt; passing the user-decided value (rather than recomputing on the
+/// backend) keeps the prompt's displayed value as the source of truth.
+#[tauri::command]
+async fn update_transaction_header_total(
+    transaction_id: i64,
+    total_amount: i64,
+    state: tauri::State<'_, AppState>,
+) -> Result<(), String> {
+    let transaction = state.transaction.lock().await;
+    let user_id = get_session_user_id(&state)?;
+
+    transaction
+        .update_transaction_header_total(user_id, transaction_id, total_amount)
+        .await
+        .map_err(|e| e.to_string())
+}
+
 // =============================================================================
 // Aggregation Commands
 // =============================================================================
@@ -2067,6 +2104,8 @@ pub fn run() {
             add_transaction_detail,
             update_transaction_detail,
             delete_transaction_detail,
+            compute_recommended_transaction_total,
+            update_transaction_header_total,
             get_monthly_aggregation,
             get_daily_aggregation,
             get_period_aggregation,

@@ -942,6 +942,24 @@ SET SHOP_ID = ?, TRANSACTION_DATE = ?, CATEGORY1_CODE = ?, FROM_ACCOUNT_CODE = ?
 WHERE TRANSACTION_ID = ? AND USER_ID = ?
 "#;
 
+/// Read just the columns needed to recompute a transaction's TOTAL_AMOUNT
+/// from its details. Used by the auto-recalculation path; does not need to
+/// hydrate the full TransactionHeader struct.
+pub const TRANSACTION_HEADER_GET_ROUNDING_TYPE: &str = r#"
+SELECT TAX_ROUNDING_TYPE
+FROM TRANSACTIONS_HEADER
+WHERE TRANSACTION_ID = ? AND USER_ID = ?
+"#;
+
+/// Update only TOTAL_AMOUNT (and the audit timestamp). Used when the header
+/// total is recalculated from details after a detail edit, without touching
+/// any of the other header fields the user just edited.
+pub const TRANSACTION_HEADER_UPDATE_TOTAL_ONLY: &str = r#"
+UPDATE TRANSACTIONS_HEADER
+SET TOTAL_AMOUNT = ?, UPDATE_DT = datetime('now')
+WHERE TRANSACTION_ID = ? AND USER_ID = ?
+"#;
+
 pub const TRANSACTION_HEADER_DELETE: &str = r#"
 DELETE FROM TRANSACTIONS_HEADER
 WHERE TRANSACTION_ID = ? AND USER_ID = ?
@@ -965,11 +983,20 @@ INSERT INTO TRANSACTIONS_DETAIL (
 "#;
 
 pub const TRANSACTION_DETAIL_GET_BY_HEADER: &str = r#"
-SELECT DETAIL_ID, TRANSACTION_ID, CATEGORY2_CODE, CATEGORY3_CODE, 
+SELECT DETAIL_ID, TRANSACTION_ID, CATEGORY2_CODE, CATEGORY3_CODE,
        ITEM_NAME, AMOUNT, TAX_AMOUNT, TAX_RATE, MEMO_ID, ENTRY_DT, UPDATE_DT
 FROM TRANSACTIONS_DETAIL
 WHERE TRANSACTION_ID = ?
 ORDER BY DETAIL_ID
+"#;
+
+/// Read the minimal set of columns that drive `calculate_recommended_total`:
+/// pre-tax AMOUNT, the optional tax-included counterpart, and the per-detail
+/// tax rate. Scoped by USER_ID so callers can rely on session isolation.
+pub const TRANSACTION_DETAIL_GET_FOR_RECALC: &str = r#"
+SELECT AMOUNT, AMOUNT_INCLUDING_TAX, TAX_RATE
+FROM TRANSACTIONS_DETAIL
+WHERE TRANSACTION_ID = ? AND USER_ID = ?
 "#;
 
 pub const TRANSACTION_DETAIL_UPDATE: &str = r#"

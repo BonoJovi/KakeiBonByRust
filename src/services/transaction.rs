@@ -218,6 +218,77 @@ impl From<sqlx::Error> for TransactionError {
     }
 }
 
+/// Per-detail input for `calculate_recommended_total`.
+///
+/// Mirrors the columns the calculation reads from `TRANSACTIONS_DETAIL`. The
+/// struct is kept deliberately tiny — it holds *only* the fields that drive
+/// the tax classification and gross-up — so the calculation function can be
+/// exercised from unit tests without faking out a full detail row.
+#[derive(Debug, Clone, Copy)]
+pub struct DetailForRecalc {
+    pub amount: i64,
+    pub amount_including_tax: Option<i64>,
+    pub tax_rate: i64,
+}
+
+/// Compute the recommended `TOTAL_AMOUNT` for a transaction header from its
+/// detail rows and the header's `TAX_ROUNDING_TYPE`.
+///
+/// The shape mirrors `build_detail_query` in `services::aggregation`, so the
+/// header total a saved transaction carries always matches what the
+/// dashboard would re-derive by walking the details:
+///
+/// 1. Each detail is classified as either *already tax-included* (when
+///    `TAX_RATE = 0` or `AMOUNT == AMOUNT_INCLUDING_TAX`) or *needs gross-up*.
+/// 2. For each tax rate present, the pre-tax amounts are summed before the
+///    gross-up factor is applied — never the other way around — and the
+///    rounding rule is applied exactly once per `(rate, rounding_type)` slice
+///    to avoid the per-detail rounding error that v1.x carried.
+/// 3. The integer slices are summed to produce the header total.
+///
+/// `tax_rounding_type` follows the existing constants:
+/// - `0` → floor (`TAX_ROUND_DOWN`)
+/// - `1` → half-away-from-zero (`TAX_ROUND_HALF_UP`)
+/// - `2` → ceil (`TAX_ROUND_UP`)
+/// Anything else falls back to floor, matching the SQL `ELSE` arm.
+pub fn calculate_recommended_total(
+    details: &[DetailForRecalc],
+    tax_rounding_type: i64,
+) -> i64 {
+    use std::collections::HashMap;
+
+    // (already_included_sum, pretax_sum) keyed by tax_rate
+    let mut by_rate: HashMap<i64, (i64, i64)> = HashMap::new();
+
+    for d in details {
+        let is_already_included = d.tax_rate == 0
+            || d.amount_including_tax.map_or(false, |inc| inc == d.amount);
+
+        let entry = by_rate.entry(d.tax_rate).or_insert((0, 0));
+        if is_already_included {
+            entry.0 += d.amount;
+        } else {
+            entry.1 += d.amount;
+        }
+    }
+
+    let mut total: i64 = 0;
+    for (rate, (already, pretax)) in by_rate {
+        // pretax * (100 + rate) is the un-rounded grossed amount in 1/100ths
+        // of a yen; rounding it back to whole yen depends on the chosen mode.
+        let grossed = pretax * (100 + rate);
+        let pretax_grossed = match tax_rounding_type {
+            consts::TAX_ROUND_DOWN => grossed / 100,            // floor (positive only)
+            consts::TAX_ROUND_HALF_UP => (grossed + 50) / 100,  // half-away-from-zero, positive
+            consts::TAX_ROUND_UP => (grossed + 99) / 100,       // ceil, positive
+            _ => grossed / 100,
+        };
+        total += already + pretax_grossed;
+    }
+
+    total
+}
+
 impl TransactionService {
     pub fn new(pool: SqlitePool) -> Self {
         Self { pool }
@@ -1213,6 +1284,70 @@ impl TransactionService {
 
         Ok(())
     }
+
+    /// Compute what `TOTAL_AMOUNT` should be for a transaction header given
+    /// its current details and saved `TAX_ROUNDING_TYPE`. The frontend calls
+    /// this after a detail edit to find out whether the header total it has
+    /// cached is still correct, and prompts the user before overwriting it.
+    pub async fn compute_recommended_total(
+        &self,
+        user_id: i64,
+        transaction_id: i64,
+    ) -> Result<i64, TransactionError> {
+        let header_row = sqlx::query(sql_queries::TRANSACTION_HEADER_GET_ROUNDING_TYPE)
+            .bind(transaction_id)
+            .bind(user_id)
+            .fetch_optional(&self.pool)
+            .await?
+            .ok_or(TransactionError::NotFound)?;
+        let rounding_type: i64 = header_row.get("TAX_ROUNDING_TYPE");
+
+        let detail_rows = sqlx::query(sql_queries::TRANSACTION_DETAIL_GET_FOR_RECALC)
+            .bind(transaction_id)
+            .bind(user_id)
+            .fetch_all(&self.pool)
+            .await?;
+
+        let details: Vec<DetailForRecalc> = detail_rows
+            .iter()
+            .map(|r| DetailForRecalc {
+                amount: r.get("AMOUNT"),
+                amount_including_tax: r.get("AMOUNT_INCLUDING_TAX"),
+                tax_rate: r.get("TAX_RATE"),
+            })
+            .collect();
+
+        Ok(calculate_recommended_total(&details, rounding_type))
+    }
+
+    /// Set `TOTAL_AMOUNT` on a transaction header without touching any other
+    /// field. The frontend reaches for this after the user confirms the
+    /// "header total drifted from details" prompt.
+    pub async fn update_transaction_header_total(
+        &self,
+        user_id: i64,
+        transaction_id: i64,
+        new_total: i64,
+    ) -> Result<(), TransactionError> {
+        if new_total < 0 || new_total > 999_999_999 {
+            return Err(TransactionError::ValidationError(
+                "Amount must be between 0 and 999,999,999".to_string(),
+            ));
+        }
+
+        let result = sqlx::query(sql_queries::TRANSACTION_HEADER_UPDATE_TOTAL_ONLY)
+            .bind(new_total)
+            .bind(transaction_id)
+            .bind(user_id)
+            .execute(&self.pool)
+            .await?;
+
+        if result.rows_affected() == 0 {
+            return Err(TransactionError::NotFound);
+        }
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -1220,6 +1355,125 @@ mod tests {
     use super::*;
     use sqlx::SqlitePool;
     use crate::{consts, sql_queries};
+
+    // =========================================================================
+    // calculate_recommended_total — pure function tests
+    //
+    // These cover the contract that the new auto-recalculation flow rests on:
+    // the per-tax-rate sum is grossed up and rounded *once*, the per-detail
+    // tax-included classification is honoured, and each rounding mode picks
+    // the right edge case.
+    // =========================================================================
+
+    fn detail(amount: i64, including: Option<i64>, rate: i64) -> DetailForRecalc {
+        DetailForRecalc {
+            amount,
+            amount_including_tax: including,
+            tax_rate: rate,
+        }
+    }
+
+    #[test]
+    fn test_calculate_recommended_total_single_pretax_floor() {
+        // 1000 yen pre-tax, 8% rate, floor mode → floor(1000 × 1.08) = 1080.
+        let details = vec![detail(1000, Some(1080), 8)];
+        assert_eq!(
+            calculate_recommended_total(&details, consts::TAX_ROUND_DOWN),
+            1080
+        );
+    }
+
+    #[test]
+    fn test_calculate_recommended_total_per_rate_sum_avoids_accumulation() {
+        // Two 999-yen pre-tax details at 8%: per-detail rounding would give
+        // floor(999 × 1.08) × 2 = 2156. Per-rate sum gives floor((999+999) × 1.08)
+        // = floor(2157.84) = 2157. The 1-yen difference is exactly the bug
+        // this whole refactor exists to fix.
+        let details = vec![detail(999, Some(1078), 8), detail(999, Some(1078), 8)];
+        assert_eq!(
+            calculate_recommended_total(&details, consts::TAX_ROUND_DOWN),
+            2157
+        );
+    }
+
+    #[test]
+    fn test_calculate_recommended_total_mixed_tax_rates() {
+        // 8% and 10% bucket independently: 1000 × 1.08 + 2000 × 1.10 = 1080 + 2200.
+        let details = vec![detail(1000, Some(1080), 8), detail(2000, Some(2200), 10)];
+        assert_eq!(
+            calculate_recommended_total(&details, consts::TAX_ROUND_DOWN),
+            3280
+        );
+    }
+
+    #[test]
+    fn test_calculate_recommended_total_tax_included_detail_passes_through() {
+        // amount == amount_including_tax with non-zero rate is tax-included
+        // input — we must NOT gross it up a second time.
+        let details = vec![detail(216, Some(216), 8)];
+        assert_eq!(
+            calculate_recommended_total(&details, consts::TAX_ROUND_DOWN),
+            216
+        );
+    }
+
+    #[test]
+    fn test_calculate_recommended_total_tax_rate_zero_passes_through() {
+        // tax_rate=0 → no gross-up, even when amount_including_tax happens to
+        // disagree (which would be data corruption but should not blow up here).
+        let details = vec![detail(500, Some(500), 0), detail(100, None, 0)];
+        assert_eq!(
+            calculate_recommended_total(&details, consts::TAX_ROUND_DOWN),
+            600
+        );
+    }
+
+    #[test]
+    fn test_calculate_recommended_total_half_up_rounding() {
+        // 999 × 1.08 = 1078.92 → half-up → 1079.
+        let details = vec![detail(999, None, 8)];
+        assert_eq!(
+            calculate_recommended_total(&details, consts::TAX_ROUND_HALF_UP),
+            1079
+        );
+    }
+
+    #[test]
+    fn test_calculate_recommended_total_ceil_rounding() {
+        // 999 × 1.08 = 1078.92 → ceil → 1079. Also test exact value: 1000 × 1.08 = 1080
+        // (no fractional part) → ceil → 1080.
+        let details = vec![detail(999, None, 8)];
+        assert_eq!(
+            calculate_recommended_total(&details, consts::TAX_ROUND_UP),
+            1079
+        );
+        let exact = vec![detail(1000, None, 8)];
+        assert_eq!(
+            calculate_recommended_total(&exact, consts::TAX_ROUND_UP),
+            1080
+        );
+    }
+
+    #[test]
+    fn test_calculate_recommended_total_mixed_included_and_pretax_same_rate() {
+        // Within one tax rate, an already-tax-included detail (300) sits next
+        // to a pre-tax detail (1000). The pre-tax bucket grosses up to 1080,
+        // the tax-included bucket passes through, total = 1380.
+        let details = vec![detail(1000, Some(1080), 8), detail(300, Some(300), 8)];
+        assert_eq!(
+            calculate_recommended_total(&details, consts::TAX_ROUND_DOWN),
+            1380
+        );
+    }
+
+    #[test]
+    fn test_calculate_recommended_total_empty_returns_zero() {
+        let details: Vec<DetailForRecalc> = vec![];
+        assert_eq!(
+            calculate_recommended_total(&details, consts::TAX_ROUND_DOWN),
+            0
+        );
+    }
 
     async fn setup_test_db() -> SqlitePool {
         // Create in-memory database
