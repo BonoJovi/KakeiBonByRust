@@ -876,6 +876,63 @@ function showMaintenanceMessage(type, text) {
     div.textContent = text;
 }
 
+// Map rounding/included codes to short human-readable labels for the change
+// log textarea. Inlined here (rather than via i18n resources) because the
+// labels appear only in this one place and live with the rest of the
+// maintenance UI logic.
+function roundingLabel(value) {
+    const isJa = i18n.getCurrentLanguage && i18n.getCurrentLanguage() === 'ja';
+    const map = isJa
+        ? { 0: '切捨', 1: '四捨五入', 2: '切上' }
+        : { 0: 'Down', 1: 'Half-up', 2: 'Up' };
+    return map[value] ?? `?(${value})`;
+}
+
+function includedLabel(value) {
+    const isJa = i18n.getCurrentLanguage && i18n.getCurrentLanguage() === 'ja';
+    // 0 = TAX_INCLUDED (税込), 1 = TAX_EXCLUDED (税抜)
+    const map = isJa
+        ? { 0: '税込', 1: '税抜' }
+        : { 0: 'Incl', 1: 'Excl' };
+    return map[value] ?? `?(${value})`;
+}
+
+function formatChangeEntry(entry) {
+    const detailsSummary = entry.detail_amounts && entry.detail_amounts.length > 0
+        ? `[${entry.detail_amounts.join(', ')}]`
+        : '[no details]';
+    const totalLine = entry.total_amount_before === entry.total_amount_after
+        ? `total: ¥${entry.total_amount_before.toLocaleString()} (kept)`
+        : `total: ¥${entry.total_amount_before.toLocaleString()} → ¥${entry.total_amount_after.toLocaleString()}`;
+    const roundingLine = entry.tax_rounding_type_before === entry.tax_rounding_type_after
+        ? `rounding: ${roundingLabel(entry.tax_rounding_type_before)} (kept)`
+        : `rounding: ${roundingLabel(entry.tax_rounding_type_before)} → ${roundingLabel(entry.tax_rounding_type_after)}`;
+    const includedLine = entry.tax_included_type_before === entry.tax_included_type_after
+        ? `included: ${includedLabel(entry.tax_included_type_before)} (kept)`
+        : `included: ${includedLabel(entry.tax_included_type_before)} → ${includedLabel(entry.tax_included_type_after)}`;
+
+    return `[${entry.transaction_date}] ${entry.change_type}\n`
+        + `  amounts: ${detailsSummary}\n`
+        + `  ${totalLine}\n`
+        + `  ${roundingLine}\n`
+        + `  ${includedLine}`;
+}
+
+function renderChangelog(changes) {
+    const details = document.getElementById('maintenance-changelog-details');
+    const textarea = document.getElementById('maintenance-changelog');
+    if (!details || !textarea) return;
+
+    if (!changes || changes.length === 0) {
+        details.classList.add('hidden');
+        textarea.value = '';
+        return;
+    }
+
+    textarea.value = changes.map(formatChangeEntry).join('\n\n');
+    details.classList.remove('hidden');
+}
+
 async function handleRecalcAllTotals() {
     if (!confirm(i18n.t('maintenance.recalc_confirm').replace(/\\n/g, '\n'))) {
         return;
@@ -895,10 +952,13 @@ async function handleRecalcAllTotals() {
         document.getElementById('rollback-totals-btn').classList.remove('hidden');
 
         const msg = i18n.t('maintenance.recalc_success')
-            .replace('{0}', summary.updated)
-            .replace('{1}', summary.skipped)
-            .replace('{2}', summary.total_headers);
+            .replace('{0}', summary.settings_corrected)
+            .replace('{1}', summary.total_overwritten)
+            .replace('{2}', summary.skipped)
+            .replace('{3}', summary.total_headers);
         showMaintenanceMessage('success', msg);
+
+        renderChangelog(summary.changes);
 
         // Charts may have used the old totals — refresh them.
         await loadDashboardData();

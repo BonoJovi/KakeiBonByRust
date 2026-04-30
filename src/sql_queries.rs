@@ -960,6 +960,16 @@ SET TOTAL_AMOUNT = ?, UPDATE_DT = datetime('now')
 WHERE TRANSACTION_ID = ? AND USER_ID = ?
 "#;
 
+/// Update only the tax-rounding and tax-included-type columns. Used by the
+/// bulk recalc flow when a different (rounding, included) pattern matches the
+/// user-entered TOTAL_AMOUNT — we adopt the matching pattern so future
+/// recalculations stay in agreement, but we leave TOTAL_AMOUNT alone.
+pub const TRANSACTION_HEADER_UPDATE_TAX_SETTINGS_ONLY: &str = r#"
+UPDATE TRANSACTIONS_HEADER
+SET TAX_ROUNDING_TYPE = ?, TAX_INCLUDED_TYPE = ?, UPDATE_DT = datetime('now')
+WHERE TRANSACTION_ID = ? AND USER_ID = ?
+"#;
+
 pub const TRANSACTION_HEADER_DELETE: &str = r#"
 DELETE FROM TRANSACTIONS_HEADER
 WHERE TRANSACTION_ID = ? AND USER_ID = ?

@@ -225,15 +225,48 @@ impl From<sqlx::Error> for TransactionError {
 pub struct RecalcSummary {
     /// Number of headers the recalc walked.
     pub total_headers: i64,
-    /// Headers whose `TOTAL_AMOUNT` differed from the recalculated value
-    /// and were therefore overwritten.
-    pub updated: i64,
-    /// Headers that were already in sync; left untouched.
+    /// Headers whose `TAX_ROUNDING_TYPE` / `TAX_INCLUDED_TYPE` were corrected
+    /// to a pattern that matched the existing `TOTAL_AMOUNT`. The total is
+    /// preserved verbatim because the user-entered value is the source of
+    /// truth for these legacy rows.
+    pub settings_corrected: i64,
+    /// Headers where no pattern matched the existing `TOTAL_AMOUNT`, so the
+    /// total was overwritten with the value computed from the existing
+    /// rounding/included settings.
+    pub total_overwritten: i64,
+    /// Headers that already match: existing settings produce the existing
+    /// total. No write happened.
     pub skipped: i64,
     /// Absolute path of the file backup taken before the recalculation
     /// started. Returned to the frontend so the rollback flow can pass it
     /// straight back to `restore_totals_from_backup`.
     pub backup_path: String,
+    /// Per-header change log, ordered by `TRANSACTION_DATE`. Headers with
+    /// no change are omitted; the user only ever sees rows that actually
+    /// moved.
+    pub changes: Vec<RecalcChangeEntry>,
+}
+
+/// One row of the change log returned by `recalculate_all_transaction_totals`.
+///
+/// `TRANSACTION_ID` is intentionally absent: it does not appear anywhere in
+/// the regular UI, so identifying a row by `(TRANSACTION_DATE, TOTAL_AMOUNT)`
+/// — with the per-detail amounts as a tiebreaker when those collide — is
+/// what the user can actually map back to a transaction they recognise.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RecalcChangeEntry {
+    pub transaction_date: String,
+    /// Per-detail `AMOUNT` values, in DETAIL_ID order. Acts as the tiebreaker
+    /// when (date, total) alone does not uniquely identify a header.
+    pub detail_amounts: Vec<i64>,
+    pub total_amount_before: i64,
+    pub total_amount_after: i64,
+    pub tax_rounding_type_before: i64,
+    pub tax_rounding_type_after: i64,
+    pub tax_included_type_before: i64,
+    pub tax_included_type_after: i64,
+    /// One of "settings_corrected" | "total_overwritten".
+    pub change_type: String,
 }
 
 /// Result of `restore_totals_from_backup`. Reports how many header rows
@@ -312,6 +345,59 @@ pub fn calculate_recommended_total(
     }
 
     total
+}
+
+/// Compute the header total under an explicit `(tax_rounding, tax_included)`
+/// pair. The "tax-included" branch takes the SUM verbatim — no gross-up, no
+/// rounding — because in that mode the user has declared the per-detail
+/// AMOUNT values are already inclusive of tax. The "tax-excluded" branch
+/// delegates to `calculate_recommended_total`, which still honours the
+/// per-detail `AMOUNT == AMOUNT_INCLUDING_TAX` short-circuit so a single
+/// already-included row inside an otherwise-excluded ledger does not get
+/// grossed up a second time.
+pub fn calculate_recommended_total_with_settings(
+    details: &[DetailForRecalc],
+    tax_rounding_type: i64,
+    tax_included_type: i64,
+) -> i64 {
+    if tax_included_type == consts::TAX_INCLUDED {
+        details.iter().map(|d| d.amount).sum()
+    } else {
+        calculate_recommended_total(details, tax_rounding_type)
+    }
+}
+
+/// Find the first `(tax_rounding_type, tax_included_type)` pattern that
+/// reproduces `target_total` from `details`. Returns `None` when no pattern
+/// fits, in which case the bulk-recalc flow falls back to overwriting the
+/// total with whatever the existing settings produce.
+///
+/// Patterns are tried in priority order:
+///
+///   1. tax-excluded + floor       (TAX_ROUND_DOWN)
+///   2. tax-excluded + half-up     (TAX_ROUND_HALF_UP)
+///   3. tax-excluded + ceil        (TAX_ROUND_UP)
+///   4. tax-included               (the rounding column is irrelevant in
+///      this mode because no rounding ever happens; we report it back as
+///      `TAX_ROUND_DOWN` so the caller has a stable value to write)
+///
+/// The order matches what shopkeepers actually do in the wild — most use
+/// floor or half-up, ceil is rare — so the "first match wins" rule lands
+/// on the most plausible setting when several match (which happens often
+/// for receipts whose total has no fractional part to round).
+fn find_matching_pattern(details: &[DetailForRecalc], target_total: i64) -> Option<(i64, i64)> {
+    const PATTERNS: [(i64, i64); 4] = [
+        (consts::TAX_ROUND_DOWN, consts::TAX_EXCLUDED),
+        (consts::TAX_ROUND_HALF_UP, consts::TAX_EXCLUDED),
+        (consts::TAX_ROUND_UP, consts::TAX_EXCLUDED),
+        (consts::TAX_ROUND_DOWN, consts::TAX_INCLUDED),
+    ];
+    for (rounding, included) in PATTERNS {
+        if calculate_recommended_total_with_settings(details, rounding, included) == target_total {
+            return Some((rounding, included));
+        }
+    }
+    None
 }
 
 impl TransactionService {
@@ -1384,21 +1470,26 @@ impl TransactionService {
         // keeps the hot loop below from interleaving SELECT cursors with
         // UPDATE statements on the same transaction.
         let header_rows = sqlx::query(
-            "SELECT TRANSACTION_ID, TAX_ROUNDING_TYPE, TOTAL_AMOUNT \
-             FROM TRANSACTIONS_HEADER WHERE USER_ID = ?",
+            "SELECT TRANSACTION_ID, TRANSACTION_DATE, TAX_ROUNDING_TYPE, TAX_INCLUDED_TYPE, TOTAL_AMOUNT \
+             FROM TRANSACTIONS_HEADER WHERE USER_ID = ? \
+             ORDER BY TRANSACTION_DATE, TRANSACTION_ID",
         )
         .bind(user_id)
         .fetch_all(&mut *tx)
         .await?;
 
         let total_headers = header_rows.len() as i64;
-        let mut updated = 0i64;
+        let mut settings_corrected = 0i64;
+        let mut total_overwritten = 0i64;
         let mut skipped = 0i64;
+        let mut changes: Vec<RecalcChangeEntry> = Vec::new();
 
         for header_row in header_rows {
             let txn_id: i64 = header_row.get("TRANSACTION_ID");
-            let rounding_type: i64 = header_row.get("TAX_ROUNDING_TYPE");
-            let current_total: i64 = header_row.get("TOTAL_AMOUNT");
+            let txn_date: String = header_row.get("TRANSACTION_DATE");
+            let rounding_before: i64 = header_row.get("TAX_ROUNDING_TYPE");
+            let included_before: i64 = header_row.get("TAX_INCLUDED_TYPE");
+            let total_before: i64 = header_row.get("TOTAL_AMOUNT");
 
             let detail_rows = sqlx::query(sql_queries::TRANSACTION_DETAIL_GET_FOR_RECALC)
                 .bind(txn_id)
@@ -1414,19 +1505,74 @@ impl TransactionService {
                     tax_rate: r.get("TAX_RATE"),
                 })
                 .collect();
+            let detail_amounts: Vec<i64> = details.iter().map(|d| d.amount).collect();
 
-            let recommended = calculate_recommended_total(&details, rounding_type);
-
-            if recommended != current_total {
-                sqlx::query(sql_queries::TRANSACTION_HEADER_UPDATE_TOTAL_ONLY)
-                    .bind(recommended)
-                    .bind(txn_id)
-                    .bind(user_id)
-                    .execute(&mut *tx)
-                    .await?;
-                updated += 1;
-            } else {
-                skipped += 1;
+            // First, prefer to keep the user-entered TOTAL_AMOUNT verbatim by
+            // searching for a (rounding, included) pattern that reproduces it.
+            // If we find one, the only correction we need to make is to the
+            // header's tax setting columns. If we do not, we fall back to
+            // overwriting TOTAL_AMOUNT with what the *existing* settings
+            // produce, since the user's entry is then internally inconsistent
+            // with the details and we have no signal to prefer it.
+            match find_matching_pattern(&details, total_before) {
+                Some((rounding_after, included_after))
+                    if rounding_after == rounding_before
+                        && included_after == included_before =>
+                {
+                    skipped += 1;
+                }
+                Some((rounding_after, included_after)) => {
+                    sqlx::query(sql_queries::TRANSACTION_HEADER_UPDATE_TAX_SETTINGS_ONLY)
+                        .bind(rounding_after)
+                        .bind(included_after)
+                        .bind(txn_id)
+                        .bind(user_id)
+                        .execute(&mut *tx)
+                        .await?;
+                    settings_corrected += 1;
+                    changes.push(RecalcChangeEntry {
+                        transaction_date: txn_date.clone(),
+                        detail_amounts: detail_amounts.clone(),
+                        total_amount_before: total_before,
+                        total_amount_after: total_before,
+                        tax_rounding_type_before: rounding_before,
+                        tax_rounding_type_after: rounding_after,
+                        tax_included_type_before: included_before,
+                        tax_included_type_after: included_after,
+                        change_type: "settings_corrected".to_string(),
+                    });
+                }
+                None => {
+                    let total_after = calculate_recommended_total_with_settings(
+                        &details,
+                        rounding_before,
+                        included_before,
+                    );
+                    if total_after == total_before {
+                        // No pattern matched and the existing settings still
+                        // happen to land on the existing total. Nothing to do.
+                        skipped += 1;
+                    } else {
+                        sqlx::query(sql_queries::TRANSACTION_HEADER_UPDATE_TOTAL_ONLY)
+                            .bind(total_after)
+                            .bind(txn_id)
+                            .bind(user_id)
+                            .execute(&mut *tx)
+                            .await?;
+                        total_overwritten += 1;
+                        changes.push(RecalcChangeEntry {
+                            transaction_date: txn_date.clone(),
+                            detail_amounts: detail_amounts.clone(),
+                            total_amount_before: total_before,
+                            total_amount_after: total_after,
+                            tax_rounding_type_before: rounding_before,
+                            tax_rounding_type_after: rounding_before,
+                            tax_included_type_before: included_before,
+                            tax_included_type_after: included_before,
+                            change_type: "total_overwritten".to_string(),
+                        });
+                    }
+                }
             }
         }
 
@@ -1434,9 +1580,11 @@ impl TransactionService {
 
         Ok(RecalcSummary {
             total_headers,
-            updated,
+            settings_corrected,
+            total_overwritten,
             skipped,
             backup_path: backup_path.to_string_lossy().to_string(),
+            changes,
         })
     }
 
