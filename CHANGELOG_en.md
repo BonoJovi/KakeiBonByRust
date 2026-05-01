@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v2.0.1] - 2026-05-01
+
+Patch release fixing i18n bugs and a flaky test discovered after v2.0.0.
+
+### Fixes
+
+- **Flaky settings test resolved** (#23, PR #27): `settings::tests::test_save_and_reload` failed in roughly 1 of 5 release runs under parallel execution. Root cause: `env::set_var("HOME", ...)` is process-wide, and the temp directory path was shared across tests, so one test's cleanup wiped another's data. Added `tempfile` to dev-dependencies, introduced `SettingsManager::with_path()`, and rewrote each test to own a private `TempDir`. Verified by 5 consecutive `cargo test --release` runs all passing 266/266
+- **EN mode: Font Size submenu remained in Japanese** (#25, PR #28): After switching the UI to English, the Font Size submenu items (Small / Medium / Large / Custom) stayed in Japanese. Added `setupFontSizeMenu()` redraw to `handleLanguageChange()` in `menu.js`. The submenu is built via `textContent` (no `data-i18n` attribute), so `i18n.updateUI()` couldn't reach it
+- **Font Size redraw extended to 8 more screens** (#31, PR #32): #25 only patched `menu.js`, but the dashboard, each management screen, and the aggregation screens have their own `handleLanguageChange` / `changeLanguage` functions with the same omission. Added `await setupFontSizeMenu();` to all 8
+- **Language menu display unified across screens** (#26, PR #29): The 9 screens displayed Language menu items in three different patterns (`English / 日本語` mix, `English / Japanese` localized, `en / ja` raw code). Changed the backend `get_language_names` to read each `lang.name.{code}` resource in its own locale (native-script display, matching GitHub and Wikipedia's language switchers), and fixed two frontend bugs: `category-management.js` was reading the `Vec<(String,String)>` response as an object, and `aggregation.js` was applying `Object.entries` to a tuple array
+
+### Documentation
+
+- Added Screenshots section to README (dashboard / edit transaction / edit detail / user management — 4 images)
+
+### Developer Experience / Maintenance
+
+- Added `tempfile` to dev-dependencies (for isolated test environments)
+
+### Known Issues
+
+- The 9-file duplication of `setupLanguageMenu` / `handleLanguageChange` is the underlying technical debt that allowed the #25 / #26 / #31 drifts in the first place. **Issue #30** tracks the consolidation refactor; this patch release intentionally kept the scope to individual file fixes
+
+---
+
 ## [v2.0.0] - 2026-05-01
 
 Major release with a complete overhaul of the tax calculation logic. The previous approach (compute-then-round per detail line, then aggregate) accumulated rounding errors, occasionally causing aggregated totals to disagree with the receipt's actual amount (the trigger was a 107-yen discrepancy in April's food aggregation). The formula has been unified to: *within a single transaction* — `SUM(net) → tax calc → round per header's TAX_ROUNDING_TYPE → sum across rates*; *across transactions* — `SUM` the already-rounded integer values without further rounding.

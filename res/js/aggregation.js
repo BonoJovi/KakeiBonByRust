@@ -299,18 +299,21 @@ function closeAllDropdowns() {
 
 async function setupLanguageMenu() {
     try {
-        const languages = await invoke('get_language_names');
+        // get_language_names returns Vec<(String, String)>, so destructure each
+        // tuple directly with `for ... of`. Object.entries() on this array would
+        // produce ["0", ["en", "English"]] pairs and break the rendering.
+        const languageNames = await invoke('get_language_names');
         const languageMenu = document.querySelector('.language-dropdown');
         if (!languageMenu) return;
 
         languageMenu.innerHTML = '';
 
-        for (const [code, name] of Object.entries(languages)) {
+        for (const [langCode, langName] of languageNames) {
             const item = document.createElement('a');
             item.href = '#';
             item.className = 'dropdown-item';
-            item.dataset.lang = code;
-            item.textContent = name;
+            item.dataset.lang = langCode;
+            item.textContent = langName;
             languageMenu.appendChild(item);
         }
 
@@ -340,6 +343,9 @@ function setupLanguageMenuHandlers() {
             await invoke('set_language', { language: lang });
             await i18n.init();
             i18n.updateUI();
+            // Font Size submenu items are built via textContent (no data-i18n),
+            // so an explicit redraw is needed after language change.
+            await setupFontSizeMenu();
 
             // Update active state
             languageMenu.querySelectorAll('.dropdown-item').forEach(el => {
