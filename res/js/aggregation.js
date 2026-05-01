@@ -343,6 +343,9 @@ function setupLanguageMenuHandlers() {
             await invoke('set_language', { language: lang });
             await i18n.init();
             i18n.updateUI();
+            // Font Size submenu items are built via textContent (no data-i18n),
+            // so an explicit redraw is needed after language change.
+            await setupFontSizeMenu();
 
             // Update active state
             languageMenu.querySelectorAll('.dropdown-item').forEach(el => {

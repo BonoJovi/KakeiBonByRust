@@ -462,6 +462,9 @@ async function handleLanguageChange(langCode) {
     try {
         await i18n.setLanguage(langCode);
         await setupLanguageMenu();
+        // Font Size submenu items are built via textContent (no data-i18n),
+        // so an explicit redraw is needed after language change.
+        await setupFontSizeMenu();
         await loadAccounts();
     } catch (error) {
         console.error('Failed to change language:', error);
