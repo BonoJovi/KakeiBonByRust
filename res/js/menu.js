@@ -558,10 +558,13 @@ async function handleLanguageChange(langCode) {
     try {
         console.log('Changing language to:', langCode);
         await i18n.setLanguage(langCode);
-        
-        // Reload language menu items to update display names and selection
+
+        // Reload menus whose items are generated dynamically.
+        // i18n.updateUI() only refreshes elements with data-i18n attributes,
+        // so menus built via textContent (Language, Font Size) need an explicit redraw.
         await setupLanguageMenu();
-        
+        await setupFontSizeMenu();
+
         console.log('Language changed successfully');
     } catch (error) {
         console.error('Failed to change language:', error);
