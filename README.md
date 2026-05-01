@@ -95,6 +95,29 @@ Thank you for your continued support of KakeiBon.
 
 ---
 
+## 📸 Screenshots / スクリーンショット
+
+<table>
+<tr>
+<td align="center"><b>Dashboard / ダッシュボード</b></td>
+<td align="center"><b>Edit Transaction / 入出金編集</b></td>
+</tr>
+<tr>
+<td><img src="docs/screenshots/01-dashboard.png" alt="Dashboard" width="500"></td>
+<td><img src="docs/screenshots/02-edit-transaction.png" alt="Edit Transaction" width="500"></td>
+</tr>
+<tr>
+<td align="center"><b>Edit Detail / 明細編集</b></td>
+<td align="center"><b>User Management / ユーザー管理</b></td>
+</tr>
+<tr>
+<td><img src="docs/screenshots/03-edit-detail.png" alt="Edit Detail" width="500"></td>
+<td><img src="docs/screenshots/04-user-management.png" alt="User Management" width="500"></td>
+</tr>
+</table>
+
+---
+
 ## [Handshake] Join Our Community / コミュニティに参加
 
 **Help make KakeiBon accessible to users worldwide!**
