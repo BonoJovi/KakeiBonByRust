@@ -845,6 +845,9 @@ async function changeLanguage(lang) {
     try {
         await i18n.setLanguage(lang);
         await setupLanguageMenu();
+        // Font Size submenu items are built via textContent (no data-i18n),
+        // so an explicit redraw is needed after language change.
+        await setupFontSizeMenu();
 
         // Reload dashboard data with new language
         await loadDashboardData();
