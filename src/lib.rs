@@ -705,26 +705,25 @@ async fn get_language_names(
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<(String, String)>, String> {
     let i18n = state.i18n.lock().await;
-    let settings = state.settings.lock().await;
-    
-    let current_lang = settings.get_string("language")
-        .unwrap_or_else(|_| LANG_DEFAULT.to_string());
-    
+
     let lang_codes = i18n.get_available_languages()
         .await
         .map_err(|e| format!("Failed to get available languages: {}", e))?;
-    
+
+    // Each language is shown in its OWN locale (native name), so the menu
+    // reads the same regardless of the currently-selected UI language.
+    // Same convention as GitHub's language switcher and Wikipedia's interlanguage links.
     let mut language_names = Vec::new();
     for lang_code in lang_codes {
         let key = format!("lang.name.{}", lang_code);
-        if let Ok(name) = i18n.get(&key, &current_lang).await {
+        if let Ok(name) = i18n.get(&key, &lang_code).await {
             language_names.push((lang_code, name));
         }
     }
-    
+
     // Sort by language code to maintain consistent order
     language_names.sort_by(|a, b| a.0.cmp(&b.0));
-    
+
     Ok(language_names)
 }
 

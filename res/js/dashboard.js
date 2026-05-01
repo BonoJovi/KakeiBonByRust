@@ -767,35 +767,30 @@ async function setupLanguageMenu() {
     if (!languageDropdown) return;
 
     try {
-        // Fixed language labels (not localized, so users can always understand)
-        const languages = [
-            { code: 'en', label: 'English' },
-            { code: 'ja', label: '日本語' }
-        ];
-
-        // Get current language
+        // Fetch language names from backend. Each entry is shown in its own
+        // native script (English / 日本語 / ...) regardless of the current UI
+        // language, so users can always recognize the language they want.
+        const languageNames = await invoke('get_language_names');
         const currentLang = i18n.getCurrentLanguage();
 
-        // Clear existing items
         languageDropdown.innerHTML = '';
 
-        // Add language items with individual click handlers
-        for (const lang of languages) {
+        for (const [langCode, langName] of languageNames) {
             const item = document.createElement('div');
             item.className = 'dropdown-item';
-            item.textContent = lang.label;
-            item.dataset.langCode = lang.code;
+            item.textContent = langName;
+            item.dataset.langCode = langCode;
 
             // Mark current language with active class
-            if (lang.code === currentLang) {
+            if (langCode === currentLang) {
                 item.classList.add('active');
             }
 
             // Add click handler for this language item
             item.addEventListener('click', async function(e) {
                 e.stopPropagation();
-                console.log('Language selected:', lang.code);
-                await changeLanguage(lang.code);
+                console.log('Language selected:', langCode);
+                await changeLanguage(langCode);
                 languageDropdown.classList.remove('show');
             });
 

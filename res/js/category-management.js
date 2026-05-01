@@ -273,33 +273,35 @@ function setupLanguageMenuHandlers() {
 
 async function setupLanguageMenu() {
     try {
-        const languages = await invoke('get_available_languages');
+        // Fetch language names from backend. Each entry is shown in its own
+        // native script (English / 日本語 / ...) regardless of the current UI
+        // language, so users can always recognize the language they want.
+        const languageNames = await invoke('get_language_names');
         const currentLang = i18n.currentLanguage;
-        const languageNames = await invoke('get_language_names', { languages });
-        
+
         const languageDropdown = document.getElementById('language-dropdown');
         if (!languageDropdown) {
             return;
         }
-        
+
         languageDropdown.innerHTML = '';
-        
-        for (const lang of languages) {
+
+        for (const [langCode, langName] of languageNames) {
             const item = document.createElement('div');
             item.className = 'dropdown-item';
-            item.textContent = languageNames[lang] || lang;
-            item.dataset.langCode = lang;
-            
-            if (lang === currentLang) {
+            item.textContent = langName;
+            item.dataset.langCode = langCode;
+
+            if (langCode === currentLang) {
                 item.classList.add('active');
             }
-            
+
             item.addEventListener('click', async function(e) {
                 e.stopPropagation();
-                await handleLanguageChange(lang);
+                await handleLanguageChange(langCode);
                 languageDropdown.classList.remove('show');
             });
-            
+
             languageDropdown.appendChild(item);
         }
     } catch (error) {
