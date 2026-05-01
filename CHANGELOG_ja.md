@@ -2,6 +2,31 @@
 
 このファイルには、プロジェクトのすべての重要な変更が記録されます。
 
+## [v2.0.1] - 2026-05-01
+
+v2.0.0 リリース後に発見された i18n 関連バグ・テスト基盤の不具合を修正したパッチリリース。
+
+### 修正
+
+- **設定テストのフラキー解消** (#23, PR #27): `settings::tests::test_save_and_reload` が並列実行時に約 5 回に 1 回失敗していた問題を修正。`env::set_var("HOME", ...)` がプロセス全体で共有されており、別テストの cleanup で同一の temp ディレクトリが消されていたのが原因。`tempfile` クレートを dev-dependencies に追加し、`SettingsManager::with_path()` を新設、各テストが独立した `TempDir` を持つ構造に書き換えた。`cargo test --release` 5 連続実行で 266/266 pass を確認
+- **EN モードで Font Size メニューが日本語のまま** (#25, PR #28): 言語切替後にトップメニューの Font Size サブ項目（Small/Medium/Large/Custom 相当）が翻訳されない問題を修正。`menu.js` の `handleLanguageChange()` に `setupFontSizeMenu()` の再描画呼び出しを追加。Font Size メニュー項目は `data-i18n` 属性なしで動的生成されているため `i18n.updateUI()` の対象外だった
+- **Font Size メニュー再描画漏れを 8 画面に展開** (#31, PR #32): #25 では `menu.js` のみ修正されていたが、ダッシュボード・各管理画面・集計画面など 8 画面にも独自の `handleLanguageChange` / `changeLanguage` 関数があり、同じ漏れが残っていた。各画面に 1 行ずつ `await setupFontSizeMenu();` を追加
+- **Language メニューの表示が画面ごとに不統一** (#26, PR #29): 9 画面のうち 3 つの異なる表示パターンが混在していた問題（`English / 日本語` mix、`English / Japanese` localized、`en / ja` raw code）。バックエンド `get_language_names` を「言語コード自身のロケール」で resource 引きするネイティブ表記モードに変更し、フロント 4 ファイル（menu.js, dashboard.js, category-management.js, aggregation.js）のハードコード/バグを修正。GitHub や Wikipedia と同じ言語切替慣習に統一。`category-management.js` は `Vec<(String,String)>` をオブジェクトとして読んでいた実装ミスがあり、`aggregation.js` はタプル配列に対して `Object.entries` を使っていた
+
+### ドキュメント
+
+- README に Screenshots セクションを追加（ダッシュボード・入出金編集・明細編集・ユーザー管理の 4 枚）
+
+### 開発体験 / メンテナンス
+
+- `tempfile` を dev-dependencies に追加（テスト独立化のため）
+
+### 既知の課題
+
+- 9 ファイルで `setupLanguageMenu` / `handleLanguageChange` が独立に実装されている duplication が、今回の #25 / #26 / #31 のドリフトの根本原因。**#30** で共通モジュール化のリファクタとして起票済み。今回はパッチスコープ重視で個別修正に留めた
+
+---
+
 ## [v2.0.0] - 2026-05-01
 
 税計算ロジックの全面刷新を含むメジャーリリース。明細単位で税計算→丸めを行ってから集計していた従来方式では、丸め誤差が累積して集計値がレシートの実額と一致しないケースがあった（4月の食費集計で 107 円差が判明したのが発端）。本リリースで、計算式を「1 取引内では税率ごとに SUM(税抜) → 税計算 → ヘッダーの TAX_ROUNDING_TYPE で丸め → 税率合算」「取引をまたぐ集計では既に整数化された値をそのまま SUM、追加丸めしない」に統一した。

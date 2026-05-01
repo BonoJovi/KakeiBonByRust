@@ -46,16 +46,19 @@ pub struct SettingsManager {
 }
 
 impl SettingsManager {
-    /// Create a new SettingsManager instance
+    /// Create a new SettingsManager instance using the default settings path
+    /// derived from the user's home directory.
     pub fn new() -> Result<Self, SettingsError> {
-        let settings_path = Self::get_settings_path();
-        
-        // Ensure directory exists
+        Self::with_path(Self::get_settings_path())
+    }
+
+    /// Create a new SettingsManager bound to a specific settings file path.
+    /// Used by `new()` and by tests that need an isolated settings file.
+    pub(crate) fn with_path(settings_path: PathBuf) -> Result<Self, SettingsError> {
         if let Some(parent) = settings_path.parent() {
             fs::create_dir_all(parent)?;
         }
-        
-        // Load or create settings file
+
         let settings = if settings_path.exists() {
             Self::load_from_file(&settings_path)?
         } else {
@@ -63,19 +66,19 @@ impl SettingsManager {
             Self::save_to_file(&settings_path, &default_settings)?;
             default_settings
         };
-        
+
         Ok(Self {
             settings_path,
             settings,
         })
     }
-    
-    /// Get the settings file path
+
+    /// Get the default settings file path
     fn get_settings_path() -> PathBuf {
         let home = std::env::var("HOME")
             .or_else(|_| std::env::var("USERPROFILE"))
             .unwrap_or_else(|_| ".".to_string());
-        
+
         PathBuf::from(home)
             .join(".kakeibon")
             .join("KakeiBon.json")
@@ -172,160 +175,127 @@ impl SettingsManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::env;
-    
-    fn setup_test_env() -> PathBuf {
-        let temp_dir = env::temp_dir().join(format!("kakeibon_test_{}", std::process::id()));
-        env::set_var("HOME", temp_dir.to_str().unwrap());
-        temp_dir
+    use tempfile::TempDir;
+
+    fn make_test_path() -> (PathBuf, TempDir) {
+        let temp_dir = TempDir::new().expect("create temp_dir");
+        let path = temp_dir.path().join(".kakeibon").join("KakeiBon.json");
+        (path, temp_dir)
     }
-    
-    fn cleanup_test_env(temp_dir: &PathBuf) {
-        let _ = fs::remove_dir_all(temp_dir);
-    }
-    
+
     #[test]
     fn test_settings_manager_creation() {
-        let temp_dir = setup_test_env();
-        
-        let manager = SettingsManager::new().unwrap();
+        let (path, _temp) = make_test_path();
+        let manager = SettingsManager::with_path(path).unwrap();
         assert!(manager.settings_path.exists());
-        
-        cleanup_test_env(&temp_dir);
     }
-    
+
     #[test]
     fn test_get_and_set_string() {
-        let temp_dir = setup_test_env();
-        
-        let mut manager = SettingsManager::new().unwrap();
-        
-        // Set a string value
+        let (path, _temp) = make_test_path();
+        let mut manager = SettingsManager::with_path(path).unwrap();
+
         manager.set("username", "test_user").unwrap();
-        
-        // Get the value back
         let username = manager.get_string("username").unwrap();
         assert_eq!(username, "test_user");
-        
-        cleanup_test_env(&temp_dir);
     }
-    
+
     #[test]
     fn test_get_and_set_int() {
-        let temp_dir = setup_test_env();
-        
-        let mut manager = SettingsManager::new().unwrap();
-        
+        let (path, _temp) = make_test_path();
+        let mut manager = SettingsManager::with_path(path).unwrap();
+
         manager.set("age", 25).unwrap();
         let age = manager.get_int("age").unwrap();
         assert_eq!(age, 25);
-        
-        cleanup_test_env(&temp_dir);
     }
-    
+
     #[test]
     fn test_get_and_set_bool() {
-        let temp_dir = setup_test_env();
-        
-        let mut manager = SettingsManager::new().unwrap();
-        
+        let (path, _temp) = make_test_path();
+        let mut manager = SettingsManager::with_path(path).unwrap();
+
         manager.set("enabled", true).unwrap();
         let enabled = manager.get_bool("enabled").unwrap();
         assert!(enabled);
-        
-        cleanup_test_env(&temp_dir);
     }
-    
+
     #[test]
     fn test_save_and_reload() {
-        let temp_dir = setup_test_env();
-        
+        let (path, _temp) = make_test_path();
+
         {
-            let mut manager = SettingsManager::new().unwrap();
+            let mut manager = SettingsManager::with_path(path.clone()).unwrap();
             manager.set("theme", "dark").unwrap();
             manager.save().unwrap();
         } // manager is dropped here
-        
-        // Create a new manager instance (simulates app restart)
-        let manager2 = SettingsManager::new().unwrap();
+
+        // Re-open the same settings file (simulates app restart)
+        let manager2 = SettingsManager::with_path(path).unwrap();
         let theme = manager2.get_string("theme").unwrap();
         assert_eq!(theme, "dark");
-        
-        cleanup_test_env(&temp_dir);
     }
-    
+
     #[test]
     fn test_remove_entry() {
-        let temp_dir = setup_test_env();
-        
-        let mut manager = SettingsManager::new().unwrap();
+        let (path, _temp) = make_test_path();
+        let mut manager = SettingsManager::with_path(path).unwrap();
         manager.set("temp_key", "temp_value").unwrap();
-        
+
         assert!(manager.contains_key("temp_key"));
-        
+
         manager.remove("temp_key");
         assert!(!manager.contains_key("temp_key"));
-        
-        cleanup_test_env(&temp_dir);
     }
-    
+
     #[test]
     fn test_entry_not_found() {
-        let temp_dir = setup_test_env();
-        
-        let manager = SettingsManager::new().unwrap();
+        let (path, _temp) = make_test_path();
+        let manager = SettingsManager::with_path(path).unwrap();
         let result = manager.get_string("nonexistent");
-        
+
         assert!(result.is_err());
         match result {
             Err(SettingsError::EntryNotFound(key)) => assert_eq!(key, "nonexistent"),
             _ => panic!("Expected EntryNotFound error"),
         }
-        
-        cleanup_test_env(&temp_dir);
     }
-    
+
     #[test]
     fn test_complex_type() {
-        let temp_dir = setup_test_env();
-        
         #[derive(Serialize, Deserialize, PartialEq, Debug)]
         struct WindowSettings {
             width: i32,
             height: i32,
             maximized: bool,
         }
-        
-        let mut manager = SettingsManager::new().unwrap();
+
+        let (path, _temp) = make_test_path();
+        let mut manager = SettingsManager::with_path(path).unwrap();
         let window_settings = WindowSettings {
             width: 1920,
             height: 1080,
             maximized: false,
         };
-        
+
         manager.set("window", &window_settings).unwrap();
         let loaded: WindowSettings = manager.get_as("window").unwrap();
-        
+
         assert_eq!(loaded, window_settings);
-        
-        cleanup_test_env(&temp_dir);
     }
-    
+
     #[test]
     fn test_keys_list() {
-        let temp_dir = setup_test_env();
-        
-        let mut manager = SettingsManager::new().unwrap();
+        let (path, _temp) = make_test_path();
+        let mut manager = SettingsManager::with_path(path).unwrap();
         manager.set("key1", "value1").unwrap();
         manager.set("key2", "value2").unwrap();
         manager.set("key3", "value3").unwrap();
-        
+
         let keys = manager.keys();
         assert_eq!(keys.len(), 3);
         assert!(keys.contains(&"key1".to_string()));
         assert!(keys.contains(&"key2".to_string()));
         assert!(keys.contains(&"key3".to_string()));
-        
-        cleanup_test_env(&temp_dir);
     }
 }

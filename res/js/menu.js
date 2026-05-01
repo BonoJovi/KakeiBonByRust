@@ -508,41 +508,34 @@ function setupLanguageMenuHandlers() {
 
 async function setupLanguageMenu() {
     try {
-        // Fixed language labels (not localized, so users can always understand)
-        const languages = [
-            { code: 'en', label: 'English' },
-            { code: 'ja', label: '日本語' }
-        ];
-
-        // Get current language
+        // Fetch language names from backend. Each entry is shown in its own
+        // native script (English / 日本語 / ...) regardless of the current UI
+        // language, so users can always recognize the language they want.
+        const languageNames = await invoke('get_language_names');
         const currentLang = i18n.getCurrentLanguage();
 
-        // Get dropdown container
         const languageDropdown = document.getElementById('language-dropdown');
-
         if (!languageDropdown) {
             console.error('Language dropdown not found');
             return;
         }
 
-        // Clear existing items only (not event listeners on parent)
         languageDropdown.innerHTML = '';
 
-        // Add language items with fixed labels
-        for (const lang of languages) {
+        for (const [langCode, langName] of languageNames) {
             const item = document.createElement('div');
             item.className = 'dropdown-item';
-            item.textContent = lang.label;
-            item.dataset.langCode = lang.code;
+            item.textContent = langName;
+            item.dataset.langCode = langCode;
 
             // Mark current language with active class (shows filled circle)
-            if (lang.code === currentLang) {
+            if (langCode === currentLang) {
                 item.classList.add('active');
             }
 
             item.addEventListener('click', async function(e) {
                 e.stopPropagation();
-                await handleLanguageChange(lang.code);
+                await handleLanguageChange(langCode);
                 languageDropdown.classList.remove('show');
             });
 
@@ -558,10 +551,13 @@ async function handleLanguageChange(langCode) {
     try {
         console.log('Changing language to:', langCode);
         await i18n.setLanguage(langCode);
-        
-        // Reload language menu items to update display names and selection
+
+        // Reload menus whose items are generated dynamically.
+        // i18n.updateUI() only refreshes elements with data-i18n attributes,
+        // so menus built via textContent (Language, Font Size) need an explicit redraw.
         await setupLanguageMenu();
-        
+        await setupFontSizeMenu();
+
         console.log('Language changed successfully');
     } catch (error) {
         console.error('Failed to change language:', error);
