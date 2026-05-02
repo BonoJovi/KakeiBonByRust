@@ -18,6 +18,7 @@ mod services {
     pub mod product;
     pub mod session;
     pub mod aggregation;
+    pub mod recurring;
 }
 
 #[cfg(test)]
