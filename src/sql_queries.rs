@@ -783,8 +783,6 @@ CREATE TABLE IF NOT EXISTS TRANSACTIONS_HEADER (
     MEMO_ID INTEGER,
     IS_DISABLED INTEGER DEFAULT 0,
     IS_SCHEDULED INTEGER DEFAULT 0,
-    GROUP_HEAD INTEGER,
-    NEXT_TRANSACTION_ID INTEGER,
     RULE_ID INTEGER,
     ENTRY_DT DATETIME NOT NULL DEFAULT (datetime('now', 'localtime')),
     UPDATE_DT DATETIME,
@@ -891,6 +889,8 @@ FROM TRANSACTIONS_DETAIL
 // Holds the cycle definition + HEADER template fields for one recurring rule.
 // MONTH_DAY_RULE_TYPE distinguishes the four MonthlyDayRule variants and
 // supersedes the older IS_END_OF_MONTH flag (which lacked DayOfMonthOrEnd).
+// Group membership of generated occurrences is established by the RULE_ID
+// foreign key on each TRANSACTIONS_HEADER row (no linked-list bookkeeping).
 pub const CREATE_RECURRING_RULES_TABLE: &str = r#"
 CREATE TABLE IF NOT EXISTS RECURRING_RULES (
     RULE_ID INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -915,7 +915,6 @@ CREATE TABLE IF NOT EXISTS RECURRING_RULES (
     TAX_ROUNDING_TYPE INTEGER DEFAULT 0,
     TAX_INCLUDED_TYPE INTEGER DEFAULT 1 NOT NULL,
     MEMO_ID INTEGER,
-    FIRST_TRANSACTION_ID INTEGER,
     IS_DISABLED INTEGER DEFAULT 0,
     ENTRY_DT DATETIME NOT NULL DEFAULT (datetime('now', 'localtime')),
     UPDATE_DT DATETIME,
@@ -999,16 +998,9 @@ INSERT INTO RECURRING_RULE_DETAILS (
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 "#;
 
-pub const RECURRING_RULES_UPDATE_FIRST_TRANSACTION_ID: &str = r#"
-UPDATE RECURRING_RULES
-SET FIRST_TRANSACTION_ID = ?, UPDATE_DT = datetime('now', 'localtime')
-WHERE RULE_ID = ? AND USER_ID = ?
-"#;
-
 // HEADER insert for a generated occurrence: IS_SCHEDULED is fixed to 1 here so
 // callers cannot accidentally write a non-scheduled row through this path.
-// GROUP_HEAD and NEXT_TRANSACTION_ID are patched after insert (the values
-// depend on neighbours that may not exist yet at insert time).
+// RULE_ID is the only group identifier — no linked-list bookkeeping.
 pub const TRANSACTIONS_HEADER_INSERT_FOR_RECURRING: &str = r#"
 INSERT INTO TRANSACTIONS_HEADER (
     USER_ID, SHOP_ID, TRANSACTION_DATE, CATEGORY1_CODE,
@@ -1016,24 +1008,6 @@ INSERT INTO TRANSACTIONS_HEADER (
     TOTAL_AMOUNT, TAX_ROUNDING_TYPE, TAX_INCLUDED_TYPE, MEMO_ID,
     IS_SCHEDULED, RULE_ID, ENTRY_DT
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, datetime('now', 'localtime'))
-"#;
-
-pub const TRANSACTIONS_HEADER_UPDATE_GROUP_HEAD_SELF: &str = r#"
-UPDATE TRANSACTIONS_HEADER
-SET GROUP_HEAD = TRANSACTION_ID
-WHERE TRANSACTION_ID = ? AND USER_ID = ?
-"#;
-
-pub const TRANSACTIONS_HEADER_UPDATE_GROUP_HEAD: &str = r#"
-UPDATE TRANSACTIONS_HEADER
-SET GROUP_HEAD = ?
-WHERE TRANSACTION_ID = ? AND USER_ID = ?
-"#;
-
-pub const TRANSACTIONS_HEADER_UPDATE_NEXT_TRANSACTION_ID: &str = r#"
-UPDATE TRANSACTIONS_HEADER
-SET NEXT_TRANSACTION_ID = ?
-WHERE TRANSACTION_ID = ? AND USER_ID = ?
 "#;
 
 // ============================================================================

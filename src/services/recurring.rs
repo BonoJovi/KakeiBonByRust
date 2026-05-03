@@ -668,14 +668,12 @@ impl RecurringService {
     }
 
     /// Save a recurring rule and generate the matching IS_SCHEDULED=1 occurrences
-    /// in a single transaction. Returns the new RULE_ID, the number of occurrences
-    /// generated, and the first generated TRANSACTION_ID (if any).
-    ///
-    /// The HEADER linked-list invariants are established here:
-    /// - first row's GROUP_HEAD references itself (via UPDATE after insert)
-    /// - subsequent rows' GROUP_HEAD = first row's TRANSACTION_ID
-    /// - each row's NEXT_TRANSACTION_ID is patched once the next row is known
-    /// - RECURRING_RULES.FIRST_TRANSACTION_ID is patched once the first row exists
+    /// in a single transaction. Each generated TRANSACTIONS_HEADER row carries
+    /// the new RULE_ID — that is the only marker tying occurrences back to the
+    /// rule, so confirming or deleting individual rows leaves the rest untouched.
+    /// Returns the new RULE_ID, the number of occurrences generated, and the
+    /// first generated TRANSACTION_ID (if any) for callers that want to surface
+    /// it in a result message.
     pub async fn create_rule_with_instances(
         &self,
         user_id: i64,
@@ -805,7 +803,6 @@ impl RecurringService {
             .await?;
 
         let mut first_id: Option<i64> = None;
-        let mut prev_id: Option<i64> = None;
 
         for date in &dates {
             let datetime_str = format!("{} 00:00:00", date.format("%Y-%m-%d"));
@@ -825,37 +822,9 @@ impl RecurringService {
                     .execute(&mut *tx)
                     .await?;
             let header_id = header_result.last_insert_rowid();
-
-            // GROUP_HEAD: first row → self; subsequent rows → first_id
-            match first_id {
-                None => {
-                    sqlx::query(sql_queries::TRANSACTIONS_HEADER_UPDATE_GROUP_HEAD_SELF)
-                        .bind(header_id)
-                        .bind(user_id)
-                        .execute(&mut *tx)
-                        .await?;
-                    first_id = Some(header_id);
-                }
-                Some(first) => {
-                    sqlx::query(sql_queries::TRANSACTIONS_HEADER_UPDATE_GROUP_HEAD)
-                        .bind(first)
-                        .bind(header_id)
-                        .bind(user_id)
-                        .execute(&mut *tx)
-                        .await?;
-                }
+            if first_id.is_none() {
+                first_id = Some(header_id);
             }
-
-            // Patch previous's NEXT_TRANSACTION_ID = current
-            if let Some(prev) = prev_id {
-                sqlx::query(sql_queries::TRANSACTIONS_HEADER_UPDATE_NEXT_TRANSACTION_ID)
-                    .bind(header_id)
-                    .bind(prev)
-                    .bind(user_id)
-                    .execute(&mut *tx)
-                    .await?;
-            }
-            prev_id = Some(header_id);
 
             sqlx::query(sql_queries::TRANSACTION_DETAIL_INSERT_FULL)
                 .bind(header_id)
@@ -869,15 +838,6 @@ impl RecurringService {
                 .bind(request.detail.tax_rate)
                 .bind(request.detail.amount_including_tax)
                 .bind(detail_memo_id)
-                .execute(&mut *tx)
-                .await?;
-        }
-
-        if let Some(first) = first_id {
-            sqlx::query(sql_queries::RECURRING_RULES_UPDATE_FIRST_TRANSACTION_ID)
-                .bind(first)
-                .bind(rule_id)
-                .bind(user_id)
                 .execute(&mut *tx)
                 .await?;
         }

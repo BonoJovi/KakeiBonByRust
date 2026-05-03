@@ -245,53 +245,62 @@ impl Database {
     }
 
     /// Run migrations for v2.1.0 recurring scheduled transactions feature.
-    /// - Adds GROUP_HEAD/NEXT_TRANSACTION_ID/RULE_ID to TRANSACTIONS_HEADER
-    /// - Backfills GROUP_HEAD = TRANSACTION_ID for existing scheduled rows so
-    ///   the new "single node = self-reference" invariant holds across the table
+    /// - Adds RULE_ID to TRANSACTIONS_HEADER (group membership for occurrences
+    ///   generated from a recurring rule; NULL means a one-off entry)
+    /// - Drops the obsolete linked-list columns GROUP_HEAD/NEXT_TRANSACTION_ID
+    ///   from TRANSACTIONS_HEADER and FIRST_TRANSACTION_ID from RECURRING_RULES
+    ///   if a previous unreleased build of this branch added them
     /// - Adds HOLIDAY_LOCALE/WEEK_START_DAY to USERS
     /// - Creates RECURRING_RULES, RECURRING_RULE_DETAILS, HOLIDAYS_STANDARD,
     ///   HOLIDAYS_USER_CUSTOM tables
     pub async fn migrate_recurring(&self) -> Result<(), sqlx::Error> {
-        self.ensure_header_recurring_columns().await?;
-        self.backfill_group_head_for_existing_scheduled().await?;
+        self.ensure_header_rule_id_column().await?;
         self.ensure_users_recurring_columns().await?;
         self.create_recurring_tables().await?;
+        self.drop_obsolete_linked_list_columns().await?;
         Ok(())
     }
 
-    /// Add GROUP_HEAD, NEXT_TRANSACTION_ID, RULE_ID to TRANSACTIONS_HEADER if absent.
-    async fn ensure_header_recurring_columns(&self) -> Result<(), sqlx::Error> {
-        for (name, ddl) in [
-            ("GROUP_HEAD",          "ALTER TABLE TRANSACTIONS_HEADER ADD COLUMN GROUP_HEAD INTEGER"),
-            ("NEXT_TRANSACTION_ID", "ALTER TABLE TRANSACTIONS_HEADER ADD COLUMN NEXT_TRANSACTION_ID INTEGER"),
-            ("RULE_ID",             "ALTER TABLE TRANSACTIONS_HEADER ADD COLUMN RULE_ID INTEGER"),
-        ] {
-            let has_column: i64 = sqlx::query_scalar(
-                "SELECT COUNT(*) FROM pragma_table_info('TRANSACTIONS_HEADER') WHERE name = ?"
-            )
-            .bind(name)
-            .fetch_one(&self.pool)
-            .await?;
+    /// Add RULE_ID to TRANSACTIONS_HEADER if absent. NULL = one-off entry.
+    async fn ensure_header_rule_id_column(&self) -> Result<(), sqlx::Error> {
+        let has_column: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM pragma_table_info('TRANSACTIONS_HEADER') WHERE name = 'RULE_ID'"
+        )
+        .fetch_one(&self.pool)
+        .await?;
 
-            if has_column == 0 {
-                sqlx::query(ddl).execute(&self.pool).await?;
-            }
+        if has_column == 0 {
+            sqlx::query("ALTER TABLE TRANSACTIONS_HEADER ADD COLUMN RULE_ID INTEGER")
+                .execute(&self.pool)
+                .await?;
         }
         Ok(())
     }
 
-    /// Pre-existing single scheduled rows must satisfy the new invariant
-    /// `single node => GROUP_HEAD = TRANSACTION_ID`. The list query
-    /// `WHERE IS_SCHEDULED = 1 AND GROUP_HEAD = TRANSACTION_ID` would otherwise
-    /// silently drop them.
-    async fn backfill_group_head_for_existing_scheduled(&self) -> Result<(), sqlx::Error> {
-        sqlx::query(
-            "UPDATE TRANSACTIONS_HEADER \
-             SET GROUP_HEAD = TRANSACTION_ID \
-             WHERE IS_SCHEDULED = 1 AND GROUP_HEAD IS NULL"
-        )
-        .execute(&self.pool)
-        .await?;
+    /// Drop GROUP_HEAD/NEXT_TRANSACTION_ID and RECURRING_RULES.FIRST_TRANSACTION_ID
+    /// if a prior in-development build of dev-v2-recurring already added them.
+    /// Released schemas never had these, so this no-ops for production users
+    /// upgrading from v2.0.x. SQLite's DROP COLUMN was added in 3.35 (2021-03);
+    /// our toolchain comfortably exceeds that.
+    async fn drop_obsolete_linked_list_columns(&self) -> Result<(), sqlx::Error> {
+        for (table, column) in [
+            ("TRANSACTIONS_HEADER", "GROUP_HEAD"),
+            ("TRANSACTIONS_HEADER", "NEXT_TRANSACTION_ID"),
+            ("RECURRING_RULES",     "FIRST_TRANSACTION_ID"),
+        ] {
+            let has_column: i64 = sqlx::query_scalar(
+                "SELECT COUNT(*) FROM pragma_table_info(?) WHERE name = ?"
+            )
+            .bind(table)
+            .bind(column)
+            .fetch_one(&self.pool)
+            .await?;
+
+            if has_column == 1 {
+                let ddl = format!("ALTER TABLE {} DROP COLUMN {}", table, column);
+                sqlx::query(&ddl).execute(&self.pool).await?;
+            }
+        }
         Ok(())
     }
 

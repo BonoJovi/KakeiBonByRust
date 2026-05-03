@@ -789,6 +789,8 @@ CREATE INDEX IF NOT EXISTS idx_transactions_detail_categories ON TRANSACTIONS_DE
 -- ============================================================================
 
 -- SQL_30000010: Create RECURRING_RULES table (cycle definition + HEADER template)
+-- Group membership of generated occurrences is established by the RULE_ID
+-- foreign key on each TRANSACTIONS_HEADER row (no linked-list bookkeeping).
 CREATE TABLE IF NOT EXISTS RECURRING_RULES (
     RULE_ID INTEGER PRIMARY KEY AUTOINCREMENT,
     USER_ID INTEGER NOT NULL,
@@ -812,7 +814,6 @@ CREATE TABLE IF NOT EXISTS RECURRING_RULES (
     TAX_ROUNDING_TYPE INTEGER DEFAULT 0,
     TAX_INCLUDED_TYPE INTEGER DEFAULT 1 NOT NULL,
     MEMO_ID INTEGER,
-    FIRST_TRANSACTION_ID INTEGER,
     IS_DISABLED INTEGER DEFAULT 0,
     ENTRY_DT DATETIME NOT NULL DEFAULT (datetime('now', 'localtime')),
     UPDATE_DT DATETIME,
@@ -864,12 +865,10 @@ CREATE TABLE IF NOT EXISTS HOLIDAYS_USER_CUSTOM (
 
 -- Create indexes for recurring rules
 CREATE INDEX IF NOT EXISTS idx_recurring_rules_user ON RECURRING_RULES(USER_ID, IS_DISABLED);
-CREATE INDEX IF NOT EXISTS idx_recurring_rules_first_tx ON RECURRING_RULES(FIRST_TRANSACTION_ID);
 CREATE INDEX IF NOT EXISTS idx_holidays_standard_locale_date ON HOLIDAYS_STANDARD(LOCALE, HOLIDAY_DATE);
 CREATE INDEX IF NOT EXISTS idx_holidays_user_custom_user_date ON HOLIDAYS_USER_CUSTOM(USER_ID, HOLIDAY_DATE);
 
--- Indexes on the new HEADER columns (for group-head representative queries and rule-grouped lookups)
-CREATE INDEX IF NOT EXISTS idx_transactions_header_group_head ON TRANSACTIONS_HEADER(GROUP_HEAD);
+-- Group-by-rule lookups: pull every occurrence for a given RULE_ID quickly.
 CREATE INDEX IF NOT EXISTS idx_transactions_header_rule ON TRANSACTIONS_HEADER(RULE_ID);
 
 -- ============================================================================
