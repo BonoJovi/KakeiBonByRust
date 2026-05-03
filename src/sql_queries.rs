@@ -974,6 +974,69 @@ CREATE TABLE IF NOT EXISTS HOLIDAYS_USER_CUSTOM (
 "#;
 
 // ============================================================================
+// Recurring Scheduled Transactions Queries (v2.1.0)
+// ============================================================================
+
+// Bind order matches the create_rule_with_instances() service. FIRST_TRANSACTION_ID
+// stays NULL on insert and is patched after the first instance is generated.
+pub const RECURRING_RULES_INSERT: &str = r#"
+INSERT INTO RECURRING_RULES (
+    USER_ID, RULE_NAME,
+    PERIOD_UNIT, PERIOD_INTERVAL,
+    ANCHOR_DATE, DAY_OF_WEEK, MONTH_DAY_RULE_TYPE,
+    DAY_OF_MONTH, WEEK_OF_MONTH, MONTH_OF_YEAR,
+    HOLIDAY_SHIFT_TYPE,
+    START_DATE, END_DATE,
+    SHOP_ID, CATEGORY1_CODE, FROM_ACCOUNT_CODE, TO_ACCOUNT_CODE,
+    TOTAL_AMOUNT, TAX_ROUNDING_TYPE, TAX_INCLUDED_TYPE, MEMO_ID
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+"#;
+
+pub const RECURRING_RULE_DETAILS_INSERT: &str = r#"
+INSERT INTO RECURRING_RULE_DETAILS (
+    RULE_ID, USER_ID, CATEGORY1_CODE, CATEGORY2_CODE, CATEGORY3_CODE,
+    ITEM_NAME, AMOUNT, TAX_AMOUNT, TAX_RATE, AMOUNT_INCLUDING_TAX, MEMO_ID
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+"#;
+
+pub const RECURRING_RULES_UPDATE_FIRST_TRANSACTION_ID: &str = r#"
+UPDATE RECURRING_RULES
+SET FIRST_TRANSACTION_ID = ?, UPDATE_DT = datetime('now', 'localtime')
+WHERE RULE_ID = ? AND USER_ID = ?
+"#;
+
+// HEADER insert for a generated occurrence: IS_SCHEDULED is fixed to 1 here so
+// callers cannot accidentally write a non-scheduled row through this path.
+// GROUP_HEAD and NEXT_TRANSACTION_ID are patched after insert (the values
+// depend on neighbours that may not exist yet at insert time).
+pub const TRANSACTIONS_HEADER_INSERT_FOR_RECURRING: &str = r#"
+INSERT INTO TRANSACTIONS_HEADER (
+    USER_ID, SHOP_ID, TRANSACTION_DATE, CATEGORY1_CODE,
+    FROM_ACCOUNT_CODE, TO_ACCOUNT_CODE,
+    TOTAL_AMOUNT, TAX_ROUNDING_TYPE, TAX_INCLUDED_TYPE, MEMO_ID,
+    IS_SCHEDULED, RULE_ID, ENTRY_DT
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, datetime('now', 'localtime'))
+"#;
+
+pub const TRANSACTIONS_HEADER_UPDATE_GROUP_HEAD_SELF: &str = r#"
+UPDATE TRANSACTIONS_HEADER
+SET GROUP_HEAD = TRANSACTION_ID
+WHERE TRANSACTION_ID = ? AND USER_ID = ?
+"#;
+
+pub const TRANSACTIONS_HEADER_UPDATE_GROUP_HEAD: &str = r#"
+UPDATE TRANSACTIONS_HEADER
+SET GROUP_HEAD = ?
+WHERE TRANSACTION_ID = ? AND USER_ID = ?
+"#;
+
+pub const TRANSACTIONS_HEADER_UPDATE_NEXT_TRANSACTION_ID: &str = r#"
+UPDATE TRANSACTIONS_HEADER
+SET NEXT_TRANSACTION_ID = ?
+WHERE TRANSACTION_ID = ? AND USER_ID = ?
+"#;
+
+// ============================================================================
 // Unspecified Master Data Insertion
 // ============================================================================
 

@@ -1,8 +1,12 @@
-//! 繰り返し予定入出金（v2.1.0）の周期計算。純粋関数として切り出し、
-//! DB / Tauri コマンド層から独立してテスト可能にする。
+//! 繰り返し予定入出金（v2.1.0）の周期計算と DB アクセス。
+//! 周期計算は純粋関数として切り出し、DB / Tauri コマンド層から独立してテスト可能にしている。
 
 use chrono::{Datelike, Days, Months, NaiveDate, Weekday};
+use serde::{Deserialize, Serialize};
+use sqlx::SqlitePool;
 use std::collections::HashSet;
+
+use crate::sql_queries;
 
 /// 周期と起点を一体で表現する。`unit` と「いつ発生するか」のアンカー情報を
 /// バリアントごとに固定することで、不正な組み合わせ（例: Day なのに DayOfMonth が
@@ -577,6 +581,372 @@ fn columns_to_monthly_rule(cols: &CycleColumns) -> Result<MonthlyDayRule, String
             Ok(MonthlyDayRule::NthWeekday { week, weekday })
         }
         other => Err(format!("invalid MONTH_DAY_RULE_TYPE: {}", other)),
+    }
+}
+
+// ============================================================================
+// RecurringService — DB アクセス層 (v2.1.0)
+// ============================================================================
+
+#[derive(Debug)]
+pub enum RecurringError {
+    Database(sqlx::Error),
+    Validation(String),
+}
+
+impl std::fmt::Display for RecurringError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RecurringError::Database(e) => write!(f, "Database error: {}", e),
+            RecurringError::Validation(msg) => write!(f, "Validation error: {}", msg),
+        }
+    }
+}
+
+impl From<sqlx::Error> for RecurringError {
+    fn from(err: sqlx::Error) -> Self {
+        RecurringError::Database(err)
+    }
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct SaveRecurringRuleRequest {
+    pub rule_name: Option<String>,
+    // Cycle definition (matches CycleColumns 1:1)
+    pub period_unit: String,
+    pub period_interval: u32,
+    pub anchor_date: Option<String>,
+    pub day_of_week: Option<u32>,
+    pub month_day_rule_type: Option<String>,
+    pub day_of_month: Option<u32>,
+    pub week_of_month: Option<u32>,
+    pub month_of_year: Option<u32>,
+    pub holiday_shift_type: i32,
+    // Period (YYYY-MM-DD)
+    pub start_date: String,
+    pub end_date: String,
+    // HEADER template
+    pub shop_id: Option<i64>,
+    pub category1_code: String,
+    pub from_account_code: String,
+    pub to_account_code: String,
+    pub total_amount: i64,
+    pub tax_rounding_type: i64,
+    pub tax_included_type: i64,
+    pub header_memo: Option<String>,
+    // DETAIL template (1:1)
+    pub detail: SaveRecurringRuleDetailRequest,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct SaveRecurringRuleDetailRequest {
+    pub category1_code: String,
+    pub category2_code: Option<String>,
+    pub category3_code: Option<String>,
+    pub item_name: String,
+    pub amount: i64,
+    pub tax_amount: i64,
+    pub tax_rate: i32,
+    pub amount_including_tax: Option<i64>,
+    pub detail_memo: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct CreateRecurringRuleResult {
+    pub rule_id: i64,
+    pub generated_count: usize,
+    pub first_transaction_id: Option<i64>,
+}
+
+pub struct RecurringService {
+    pool: SqlitePool,
+}
+
+impl RecurringService {
+    pub fn new(pool: SqlitePool) -> Self {
+        Self { pool }
+    }
+
+    /// Save a recurring rule and generate the matching IS_SCHEDULED=1 occurrences
+    /// in a single transaction. Returns the new RULE_ID, the number of occurrences
+    /// generated, and the first generated TRANSACTION_ID (if any).
+    ///
+    /// The HEADER linked-list invariants are established here:
+    /// - first row's GROUP_HEAD references itself (via UPDATE after insert)
+    /// - subsequent rows' GROUP_HEAD = first row's TRANSACTION_ID
+    /// - each row's NEXT_TRANSACTION_ID is patched once the next row is known
+    /// - RECURRING_RULES.FIRST_TRANSACTION_ID is patched once the first row exists
+    pub async fn create_rule_with_instances(
+        &self,
+        user_id: i64,
+        request: SaveRecurringRuleRequest,
+    ) -> Result<CreateRecurringRuleResult, RecurringError> {
+        // ----- Parse + validate inputs -----
+        let start = NaiveDate::parse_from_str(&request.start_date, "%Y-%m-%d")
+            .map_err(|_| RecurringError::Validation(
+                format!("Invalid start_date: {}", request.start_date)
+            ))?;
+        let end = NaiveDate::parse_from_str(&request.end_date, "%Y-%m-%d")
+            .map_err(|_| RecurringError::Validation(
+                format!("Invalid end_date: {}", request.end_date)
+            ))?;
+        if start > end {
+            return Err(RecurringError::Validation(
+                "start_date must be on or before end_date".to_string(),
+            ));
+        }
+        if request.total_amount < 0 || request.total_amount > 999_999_999 {
+            return Err(RecurringError::Validation(
+                "TOTAL_AMOUNT must be between 0 and 999,999,999".to_string(),
+            ));
+        }
+        if request.detail.item_name.trim().is_empty() {
+            return Err(RecurringError::Validation(
+                "DETAIL.item_name must not be empty".to_string(),
+            ));
+        }
+
+        let anchor_date = match &request.anchor_date {
+            Some(s) => Some(
+                NaiveDate::parse_from_str(s, "%Y-%m-%d").map_err(|_| {
+                    RecurringError::Validation(format!("Invalid anchor_date: {}", s))
+                })?,
+            ),
+            None => None,
+        };
+        let columns = CycleColumns {
+            period_unit: request.period_unit.clone(),
+            period_interval: request.period_interval,
+            anchor_date,
+            day_of_week: request.day_of_week,
+            month_day_rule_type: request.month_day_rule_type.clone(),
+            day_of_month: request.day_of_month,
+            week_of_month: request.week_of_month,
+            month_of_year: request.month_of_year,
+            holiday_shift_type: request.holiday_shift_type,
+        };
+        let spec = columns_to_cyclic_spec(&columns).map_err(RecurringError::Validation)?;
+
+        // ----- Fetch holidays (only when shift may apply) -----
+        let holidays = if matches!(spec.holiday_shift, HolidayShift::None) {
+            HashSet::new()
+        } else {
+            self.fetch_holidays_for(user_id, start, end).await?
+        };
+
+        let dates = generate_dates(&spec, start, end, &holidays);
+
+        // ----- Persist rule + instances atomically -----
+        let mut tx = self.pool.begin().await?;
+
+        let header_memo_id = match &request.header_memo {
+            Some(text) if !text.trim().is_empty() => {
+                let r = sqlx::query(sql_queries::MEMO_INSERT)
+                    .bind(user_id)
+                    .bind(text)
+                    .execute(&mut *tx)
+                    .await?;
+                Some(r.last_insert_rowid())
+            }
+            _ => None,
+        };
+
+        let detail_memo_id = match &request.detail.detail_memo {
+            Some(text) if !text.trim().is_empty() => {
+                let r = sqlx::query(sql_queries::MEMO_INSERT)
+                    .bind(user_id)
+                    .bind(text)
+                    .execute(&mut *tx)
+                    .await?;
+                Some(r.last_insert_rowid())
+            }
+            _ => None,
+        };
+
+        let rule_result = sqlx::query(sql_queries::RECURRING_RULES_INSERT)
+            .bind(user_id)
+            .bind(&request.rule_name)
+            .bind(&columns.period_unit)
+            .bind(columns.period_interval as i64)
+            .bind(columns.anchor_date.map(|d| d.format("%Y-%m-%d").to_string()))
+            .bind(columns.day_of_week.map(|v| v as i64))
+            .bind(&columns.month_day_rule_type)
+            .bind(columns.day_of_month.map(|v| v as i64))
+            .bind(columns.week_of_month.map(|v| v as i64))
+            .bind(columns.month_of_year.map(|v| v as i64))
+            .bind(columns.holiday_shift_type)
+            .bind(start.format("%Y-%m-%d").to_string())
+            .bind(end.format("%Y-%m-%d").to_string())
+            .bind(request.shop_id)
+            .bind(&request.category1_code)
+            .bind(&request.from_account_code)
+            .bind(&request.to_account_code)
+            .bind(request.total_amount)
+            .bind(request.tax_rounding_type)
+            .bind(request.tax_included_type)
+            .bind(header_memo_id)
+            .execute(&mut *tx)
+            .await?;
+        let rule_id = rule_result.last_insert_rowid();
+
+        sqlx::query(sql_queries::RECURRING_RULE_DETAILS_INSERT)
+            .bind(rule_id)
+            .bind(user_id)
+            .bind(&request.detail.category1_code)
+            .bind(&request.detail.category2_code)
+            .bind(&request.detail.category3_code)
+            .bind(&request.detail.item_name)
+            .bind(request.detail.amount)
+            .bind(request.detail.tax_amount)
+            .bind(request.detail.tax_rate)
+            .bind(request.detail.amount_including_tax)
+            .bind(detail_memo_id)
+            .execute(&mut *tx)
+            .await?;
+
+        let mut first_id: Option<i64> = None;
+        let mut prev_id: Option<i64> = None;
+
+        for date in &dates {
+            let datetime_str = format!("{} 00:00:00", date.format("%Y-%m-%d"));
+            let header_result =
+                sqlx::query(sql_queries::TRANSACTIONS_HEADER_INSERT_FOR_RECURRING)
+                    .bind(user_id)
+                    .bind(request.shop_id)
+                    .bind(&datetime_str)
+                    .bind(&request.category1_code)
+                    .bind(&request.from_account_code)
+                    .bind(&request.to_account_code)
+                    .bind(request.total_amount)
+                    .bind(request.tax_rounding_type)
+                    .bind(request.tax_included_type)
+                    .bind(header_memo_id)
+                    .bind(rule_id)
+                    .execute(&mut *tx)
+                    .await?;
+            let header_id = header_result.last_insert_rowid();
+
+            // GROUP_HEAD: first row → self; subsequent rows → first_id
+            match first_id {
+                None => {
+                    sqlx::query(sql_queries::TRANSACTIONS_HEADER_UPDATE_GROUP_HEAD_SELF)
+                        .bind(header_id)
+                        .bind(user_id)
+                        .execute(&mut *tx)
+                        .await?;
+                    first_id = Some(header_id);
+                }
+                Some(first) => {
+                    sqlx::query(sql_queries::TRANSACTIONS_HEADER_UPDATE_GROUP_HEAD)
+                        .bind(first)
+                        .bind(header_id)
+                        .bind(user_id)
+                        .execute(&mut *tx)
+                        .await?;
+                }
+            }
+
+            // Patch previous's NEXT_TRANSACTION_ID = current
+            if let Some(prev) = prev_id {
+                sqlx::query(sql_queries::TRANSACTIONS_HEADER_UPDATE_NEXT_TRANSACTION_ID)
+                    .bind(header_id)
+                    .bind(prev)
+                    .bind(user_id)
+                    .execute(&mut *tx)
+                    .await?;
+            }
+            prev_id = Some(header_id);
+
+            sqlx::query(sql_queries::TRANSACTION_DETAIL_INSERT_FULL)
+                .bind(header_id)
+                .bind(user_id)
+                .bind(&request.detail.category1_code)
+                .bind(&request.detail.category2_code)
+                .bind(&request.detail.category3_code)
+                .bind(&request.detail.item_name)
+                .bind(request.detail.amount)
+                .bind(request.detail.tax_amount)
+                .bind(request.detail.tax_rate)
+                .bind(request.detail.amount_including_tax)
+                .bind(detail_memo_id)
+                .execute(&mut *tx)
+                .await?;
+        }
+
+        if let Some(first) = first_id {
+            sqlx::query(sql_queries::RECURRING_RULES_UPDATE_FIRST_TRANSACTION_ID)
+                .bind(first)
+                .bind(rule_id)
+                .bind(user_id)
+                .execute(&mut *tx)
+                .await?;
+        }
+
+        tx.commit().await?;
+
+        Ok(CreateRecurringRuleResult {
+            rule_id,
+            generated_count: dates.len(),
+            first_transaction_id: first_id,
+        })
+    }
+
+    /// Fetch holidays applicable to this user within a window slightly wider than
+    /// [start, end] — HolidayShift::Prev/Next can land outside the rule's period
+    /// (e.g. Jan 1 holiday shifted back to Dec 31 of the previous year), so we
+    /// pad ±14 days to cover any plausible chain of consecutive non-business days.
+    async fn fetch_holidays_for(
+        &self,
+        user_id: i64,
+        start: NaiveDate,
+        end: NaiveDate,
+    ) -> Result<HashSet<NaiveDate>, RecurringError> {
+        let locale: String = sqlx::query_scalar(
+            "SELECT COALESCE(HOLIDAY_LOCALE, 'JP') FROM USERS WHERE USER_ID = ?",
+        )
+        .bind(user_id)
+        .fetch_one(&self.pool)
+        .await?;
+
+        let widen = Days::new(14);
+        let widened_start = start.checked_sub_days(widen).unwrap_or(start);
+        let widened_end = end.checked_add_days(widen).unwrap_or(end);
+        let ws = widened_start.format("%Y-%m-%d").to_string();
+        let we = widened_end.format("%Y-%m-%d").to_string();
+
+        let mut holidays = HashSet::new();
+
+        let std_rows: Vec<String> = sqlx::query_scalar(
+            "SELECT HOLIDAY_DATE FROM HOLIDAYS_STANDARD \
+             WHERE LOCALE = ? AND HOLIDAY_DATE BETWEEN ? AND ?",
+        )
+        .bind(&locale)
+        .bind(&ws)
+        .bind(&we)
+        .fetch_all(&self.pool)
+        .await?;
+        for d_str in std_rows {
+            if let Ok(d) = NaiveDate::parse_from_str(&d_str, "%Y-%m-%d") {
+                holidays.insert(d);
+            }
+        }
+
+        let custom_rows: Vec<String> = sqlx::query_scalar(
+            "SELECT HOLIDAY_DATE FROM HOLIDAYS_USER_CUSTOM \
+             WHERE USER_ID = ? AND HOLIDAY_DATE BETWEEN ? AND ?",
+        )
+        .bind(user_id)
+        .bind(&ws)
+        .bind(&we)
+        .fetch_all(&self.pool)
+        .await?;
+        for d_str in custom_rows {
+            if let Ok(d) = NaiveDate::parse_from_str(&d_str, "%Y-%m-%d") {
+                holidays.insert(d);
+            }
+        }
+
+        Ok(holidays)
     }
 }
 
