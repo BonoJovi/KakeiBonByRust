@@ -31,3 +31,20 @@ pub const TAX_ROUND_UP: i64 = 2;
 pub const TAX_INCLUDED: i64 = 0;  // 内税 - tax is included in prices
 #[allow(dead_code)]
 pub const TAX_EXCLUDED: i64 = 1;  // 外税 - tax is calculated separately
+
+// Recurring scheduled transactions (v2.1.0) — HOLIDAY_SHIFT_TYPE column values
+pub const HOLIDAY_SHIFT_NONE: i32 = 0;
+pub const HOLIDAY_SHIFT_PREV: i32 = 1;
+pub const HOLIDAY_SHIFT_NEXT: i32 = 2;
+
+// Recurring scheduled transactions — PERIOD_UNIT column values
+pub const PERIOD_UNIT_DAY: &str = "DAY";
+pub const PERIOD_UNIT_WEEK: &str = "WEEK";
+pub const PERIOD_UNIT_MONTH: &str = "MONTH";
+pub const PERIOD_UNIT_YEAR: &str = "YEAR";
+
+// Recurring scheduled transactions — MONTH_DAY_RULE_TYPE column values
+pub const MONTH_DAY_RULE_TYPE_DAY: &str = "DAY";
+pub const MONTH_DAY_RULE_TYPE_DAY_OR_END: &str = "DAY_OR_END";
+pub const MONTH_DAY_RULE_TYPE_END: &str = "END";
+pub const MONTH_DAY_RULE_TYPE_NTH_WEEKDAY: &str = "NTH_WEEKDAY";

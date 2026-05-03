@@ -332,6 +332,254 @@ fn generate_yearly(
     out
 }
 
+// ============================================================================
+// DB row ↔ CyclicSpec 変換層
+// ============================================================================
+
+/// RECURRING_RULES の周期関連カラムと HOLIDAY_SHIFT_TYPE をまとめた中間表現。
+/// SQLx のクエリ層と純粋関数 (CyclicSpec) を繋ぐ橋渡し。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CycleColumns {
+    pub period_unit: String,
+    pub period_interval: u32,
+    pub anchor_date: Option<NaiveDate>,
+    /// ISO 8601 番号: 1=Mon, 2=Tue, ..., 7=Sun。
+    /// UI 層で WEEK_START_DAY を考慮した表示順に並べ替える前提（DB は曜日そのもの）。
+    pub day_of_week: Option<u32>,
+    pub month_day_rule_type: Option<String>,
+    pub day_of_month: Option<u32>,
+    pub week_of_month: Option<u32>,
+    pub month_of_year: Option<u32>,
+    pub holiday_shift_type: i32,
+}
+
+fn weekday_to_iso(w: Weekday) -> u32 {
+    w.number_from_monday()
+}
+
+fn iso_to_weekday(n: u32) -> Option<Weekday> {
+    match n {
+        1 => Some(Weekday::Mon),
+        2 => Some(Weekday::Tue),
+        3 => Some(Weekday::Wed),
+        4 => Some(Weekday::Thu),
+        5 => Some(Weekday::Fri),
+        6 => Some(Weekday::Sat),
+        7 => Some(Weekday::Sun),
+        _ => None,
+    }
+}
+
+/// CyclicSpec を DB 行用カラムに変換する純粋関数。
+pub fn cyclic_spec_to_columns(spec: &CyclicSpec) -> CycleColumns {
+    use crate::consts::{
+        HOLIDAY_SHIFT_NEXT, HOLIDAY_SHIFT_NONE, HOLIDAY_SHIFT_PREV, PERIOD_UNIT_DAY,
+        PERIOD_UNIT_MONTH, PERIOD_UNIT_WEEK, PERIOD_UNIT_YEAR,
+    };
+
+    let holiday_shift_type = match spec.holiday_shift {
+        HolidayShift::None => HOLIDAY_SHIFT_NONE,
+        HolidayShift::Prev => HOLIDAY_SHIFT_PREV,
+        HolidayShift::Next => HOLIDAY_SHIFT_NEXT,
+    };
+
+    match &spec.cycle {
+        Cycle::Daily { interval, anchor } => CycleColumns {
+            period_unit: PERIOD_UNIT_DAY.to_string(),
+            period_interval: *interval,
+            anchor_date: Some(*anchor),
+            day_of_week: None,
+            month_day_rule_type: None,
+            day_of_month: None,
+            week_of_month: None,
+            month_of_year: None,
+            holiday_shift_type,
+        },
+        Cycle::Weekly { interval, weekday } => CycleColumns {
+            period_unit: PERIOD_UNIT_WEEK.to_string(),
+            period_interval: *interval,
+            anchor_date: None,
+            day_of_week: Some(weekday_to_iso(*weekday)),
+            month_day_rule_type: None,
+            day_of_month: None,
+            week_of_month: None,
+            month_of_year: None,
+            holiday_shift_type,
+        },
+        Cycle::Monthly { interval, day_rule } => {
+            let (rule_type, day, week, dow) = monthly_rule_to_columns(day_rule);
+            CycleColumns {
+                period_unit: PERIOD_UNIT_MONTH.to_string(),
+                period_interval: *interval,
+                anchor_date: None,
+                day_of_week: dow,
+                month_day_rule_type: Some(rule_type.to_string()),
+                day_of_month: day,
+                week_of_month: week,
+                month_of_year: None,
+                holiday_shift_type,
+            }
+        }
+        Cycle::Yearly { interval, month, day_rule } => {
+            let (rule_type, day, week, dow) = monthly_rule_to_columns(day_rule);
+            CycleColumns {
+                period_unit: PERIOD_UNIT_YEAR.to_string(),
+                period_interval: *interval,
+                anchor_date: None,
+                day_of_week: dow,
+                month_day_rule_type: Some(rule_type.to_string()),
+                day_of_month: day,
+                week_of_month: week,
+                month_of_year: Some(*month),
+                holiday_shift_type,
+            }
+        }
+    }
+}
+
+fn monthly_rule_to_columns(
+    rule: &MonthlyDayRule,
+) -> (&'static str, Option<u32>, Option<u32>, Option<u32>) {
+    use crate::consts::{
+        MONTH_DAY_RULE_TYPE_DAY, MONTH_DAY_RULE_TYPE_DAY_OR_END, MONTH_DAY_RULE_TYPE_END,
+        MONTH_DAY_RULE_TYPE_NTH_WEEKDAY,
+    };
+    match *rule {
+        MonthlyDayRule::DayOfMonth { day } => {
+            (MONTH_DAY_RULE_TYPE_DAY, Some(day), None, None)
+        }
+        MonthlyDayRule::DayOfMonthOrEnd { day } => {
+            (MONTH_DAY_RULE_TYPE_DAY_OR_END, Some(day), None, None)
+        }
+        MonthlyDayRule::EndOfMonth => (MONTH_DAY_RULE_TYPE_END, None, None, None),
+        MonthlyDayRule::NthWeekday { week, weekday } => (
+            MONTH_DAY_RULE_TYPE_NTH_WEEKDAY,
+            None,
+            Some(week),
+            Some(weekday_to_iso(weekday)),
+        ),
+    }
+}
+
+/// CycleColumns から CyclicSpec を構築する純粋関数。値域・必須項目を検証する。
+pub fn columns_to_cyclic_spec(cols: &CycleColumns) -> Result<CyclicSpec, String> {
+    use crate::consts::{
+        HOLIDAY_SHIFT_NEXT, HOLIDAY_SHIFT_NONE, HOLIDAY_SHIFT_PREV, PERIOD_UNIT_DAY,
+        PERIOD_UNIT_MONTH, PERIOD_UNIT_WEEK, PERIOD_UNIT_YEAR,
+    };
+
+    let holiday_shift = match cols.holiday_shift_type {
+        HOLIDAY_SHIFT_NONE => HolidayShift::None,
+        HOLIDAY_SHIFT_PREV => HolidayShift::Prev,
+        HOLIDAY_SHIFT_NEXT => HolidayShift::Next,
+        v => return Err(format!("invalid HOLIDAY_SHIFT_TYPE: {}", v)),
+    };
+
+    if cols.period_interval < 1 {
+        return Err(format!(
+            "PERIOD_INTERVAL must be >= 1, got {}",
+            cols.period_interval
+        ));
+    }
+
+    let cycle = match cols.period_unit.as_str() {
+        PERIOD_UNIT_DAY => {
+            let anchor = cols
+                .anchor_date
+                .ok_or_else(|| "PERIOD_UNIT='DAY' requires ANCHOR_DATE".to_string())?;
+            Cycle::Daily {
+                interval: cols.period_interval,
+                anchor,
+            }
+        }
+        PERIOD_UNIT_WEEK => {
+            let dow = cols
+                .day_of_week
+                .ok_or_else(|| "PERIOD_UNIT='WEEK' requires DAY_OF_WEEK".to_string())?;
+            let weekday = iso_to_weekday(dow)
+                .ok_or_else(|| format!("invalid DAY_OF_WEEK (must be 1..=7, got {})", dow))?;
+            Cycle::Weekly {
+                interval: cols.period_interval,
+                weekday,
+            }
+        }
+        PERIOD_UNIT_MONTH => {
+            let day_rule = columns_to_monthly_rule(cols)?;
+            Cycle::Monthly {
+                interval: cols.period_interval,
+                day_rule,
+            }
+        }
+        PERIOD_UNIT_YEAR => {
+            let month = cols
+                .month_of_year
+                .ok_or_else(|| "PERIOD_UNIT='YEAR' requires MONTH_OF_YEAR".to_string())?;
+            if !(1..=12).contains(&month) {
+                return Err(format!("MONTH_OF_YEAR must be 1..=12, got {}", month));
+            }
+            let day_rule = columns_to_monthly_rule(cols)?;
+            Cycle::Yearly {
+                interval: cols.period_interval,
+                month,
+                day_rule,
+            }
+        }
+        other => return Err(format!("invalid PERIOD_UNIT: {}", other)),
+    };
+
+    Ok(CyclicSpec {
+        cycle,
+        holiday_shift,
+    })
+}
+
+fn columns_to_monthly_rule(cols: &CycleColumns) -> Result<MonthlyDayRule, String> {
+    use crate::consts::{
+        MONTH_DAY_RULE_TYPE_DAY, MONTH_DAY_RULE_TYPE_DAY_OR_END, MONTH_DAY_RULE_TYPE_END,
+        MONTH_DAY_RULE_TYPE_NTH_WEEKDAY,
+    };
+    let rule_type = cols
+        .month_day_rule_type
+        .as_deref()
+        .ok_or_else(|| "Monthly/Yearly cycles require MONTH_DAY_RULE_TYPE".to_string())?;
+    match rule_type {
+        MONTH_DAY_RULE_TYPE_DAY => {
+            let day = cols
+                .day_of_month
+                .ok_or_else(|| "MONTH_DAY_RULE_TYPE='DAY' requires DAY_OF_MONTH".to_string())?;
+            if !(1..=31).contains(&day) {
+                return Err(format!("DAY_OF_MONTH must be 1..=31, got {}", day));
+            }
+            Ok(MonthlyDayRule::DayOfMonth { day })
+        }
+        MONTH_DAY_RULE_TYPE_DAY_OR_END => {
+            let day = cols
+                .day_of_month
+                .ok_or_else(|| "MONTH_DAY_RULE_TYPE='DAY_OR_END' requires DAY_OF_MONTH".to_string())?;
+            if !(1..=31).contains(&day) {
+                return Err(format!("DAY_OF_MONTH must be 1..=31, got {}", day));
+            }
+            Ok(MonthlyDayRule::DayOfMonthOrEnd { day })
+        }
+        MONTH_DAY_RULE_TYPE_END => Ok(MonthlyDayRule::EndOfMonth),
+        MONTH_DAY_RULE_TYPE_NTH_WEEKDAY => {
+            let week = cols
+                .week_of_month
+                .ok_or_else(|| "MONTH_DAY_RULE_TYPE='NTH_WEEKDAY' requires WEEK_OF_MONTH".to_string())?;
+            if !(1..=5).contains(&week) {
+                return Err(format!("WEEK_OF_MONTH must be 1..=5, got {}", week));
+            }
+            let dow = cols
+                .day_of_week
+                .ok_or_else(|| "MONTH_DAY_RULE_TYPE='NTH_WEEKDAY' requires DAY_OF_WEEK".to_string())?;
+            let weekday = iso_to_weekday(dow)
+                .ok_or_else(|| format!("invalid DAY_OF_WEEK (must be 1..=7, got {})", dow))?;
+            Ok(MonthlyDayRule::NthWeekday { week, weekday })
+        }
+        other => Err(format!("invalid MONTH_DAY_RULE_TYPE: {}", other)),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -897,5 +1145,182 @@ mod tests {
             &no_holidays(),
         );
         assert!(result.is_empty());
+    }
+
+    // ========================================================================
+    // CyclicSpec ↔ CycleColumns ラウンドトリップ
+    // ========================================================================
+
+    fn roundtrip(spec: CyclicSpec) {
+        let cols = cyclic_spec_to_columns(&spec);
+        let back = columns_to_cyclic_spec(&cols).expect("roundtrip should succeed");
+        assert_eq!(back, spec, "roundtrip mismatch via columns: {:?}", cols);
+    }
+
+    #[test]
+    fn roundtrip_daily() {
+        roundtrip(CyclicSpec {
+            cycle: Cycle::Daily { interval: 7, anchor: d(2026, 5, 1) },
+            holiday_shift: HolidayShift::None,
+        });
+    }
+
+    #[test]
+    fn roundtrip_weekly_each_weekday() {
+        for &wd in &[
+            Weekday::Mon, Weekday::Tue, Weekday::Wed, Weekday::Thu,
+            Weekday::Fri, Weekday::Sat, Weekday::Sun,
+        ] {
+            roundtrip(CyclicSpec {
+                cycle: Cycle::Weekly { interval: 2, weekday: wd },
+                holiday_shift: HolidayShift::Prev,
+            });
+        }
+    }
+
+    #[test]
+    fn roundtrip_monthly_day_of_month() {
+        roundtrip(CyclicSpec {
+            cycle: Cycle::Monthly {
+                interval: 1,
+                day_rule: MonthlyDayRule::DayOfMonth { day: 25 },
+            },
+            holiday_shift: HolidayShift::Next,
+        });
+    }
+
+    #[test]
+    fn roundtrip_monthly_day_or_end() {
+        roundtrip(CyclicSpec {
+            cycle: Cycle::Monthly {
+                interval: 1,
+                day_rule: MonthlyDayRule::DayOfMonthOrEnd { day: 31 },
+            },
+            holiday_shift: HolidayShift::None,
+        });
+    }
+
+    #[test]
+    fn roundtrip_monthly_end_of_month() {
+        roundtrip(CyclicSpec {
+            cycle: Cycle::Monthly {
+                interval: 2,
+                day_rule: MonthlyDayRule::EndOfMonth,
+            },
+            holiday_shift: HolidayShift::None,
+        });
+    }
+
+    #[test]
+    fn roundtrip_monthly_nth_weekday() {
+        roundtrip(CyclicSpec {
+            cycle: Cycle::Monthly {
+                interval: 1,
+                day_rule: MonthlyDayRule::NthWeekday { week: 4, weekday: Weekday::Thu },
+            },
+            holiday_shift: HolidayShift::None,
+        });
+    }
+
+    #[test]
+    fn roundtrip_yearly_day_of_month() {
+        roundtrip(CyclicSpec {
+            cycle: Cycle::Yearly {
+                interval: 1,
+                month: 4,
+                day_rule: MonthlyDayRule::DayOfMonth { day: 1 },
+            },
+            holiday_shift: HolidayShift::Next,
+        });
+    }
+
+    #[test]
+    fn roundtrip_yearly_nth_weekday() {
+        roundtrip(CyclicSpec {
+            cycle: Cycle::Yearly {
+                interval: 1,
+                month: 11,
+                day_rule: MonthlyDayRule::NthWeekday { week: 5, weekday: Weekday::Fri },
+            },
+            holiday_shift: HolidayShift::Prev,
+        });
+    }
+
+    // ========================================================================
+    // 失敗ケース（不正な DB row → CyclicSpec の検証）
+    // ========================================================================
+
+    fn cols_minimal_daily() -> CycleColumns {
+        cyclic_spec_to_columns(&CyclicSpec {
+            cycle: Cycle::Daily { interval: 1, anchor: d(2026, 1, 1) },
+            holiday_shift: HolidayShift::None,
+        })
+    }
+
+    #[test]
+    fn err_invalid_holiday_shift_type() {
+        let mut cols = cols_minimal_daily();
+        cols.holiday_shift_type = 99;
+        assert!(columns_to_cyclic_spec(&cols).is_err());
+    }
+
+    #[test]
+    fn err_daily_without_anchor() {
+        let mut cols = cols_minimal_daily();
+        cols.anchor_date = None;
+        assert!(columns_to_cyclic_spec(&cols).is_err());
+    }
+
+    #[test]
+    fn err_weekly_invalid_dow() {
+        let mut cols = cyclic_spec_to_columns(&CyclicSpec {
+            cycle: Cycle::Weekly { interval: 1, weekday: Weekday::Mon },
+            holiday_shift: HolidayShift::None,
+        });
+        cols.day_of_week = Some(0);
+        assert!(columns_to_cyclic_spec(&cols).is_err());
+        cols.day_of_week = Some(8);
+        assert!(columns_to_cyclic_spec(&cols).is_err());
+    }
+
+    #[test]
+    fn err_monthly_missing_rule_type() {
+        let mut cols = cyclic_spec_to_columns(&CyclicSpec {
+            cycle: Cycle::Monthly { interval: 1, day_rule: MonthlyDayRule::DayOfMonth { day: 10 } },
+            holiday_shift: HolidayShift::None,
+        });
+        cols.month_day_rule_type = None;
+        assert!(columns_to_cyclic_spec(&cols).is_err());
+    }
+
+    #[test]
+    fn err_yearly_invalid_month() {
+        let mut cols = cyclic_spec_to_columns(&CyclicSpec {
+            cycle: Cycle::Yearly {
+                interval: 1, month: 6,
+                day_rule: MonthlyDayRule::DayOfMonth { day: 1 },
+            },
+            holiday_shift: HolidayShift::None,
+        });
+        cols.month_of_year = Some(13);
+        assert!(columns_to_cyclic_spec(&cols).is_err());
+    }
+
+    #[test]
+    fn err_invalid_period_unit() {
+        let mut cols = cols_minimal_daily();
+        cols.period_unit = "WEIRD".to_string();
+        assert!(columns_to_cyclic_spec(&cols).is_err());
+    }
+
+    #[test]
+    fn iso_weekday_mapping() {
+        // ISO 8601: Mon=1, Tue=2, ..., Sun=7
+        assert_eq!(weekday_to_iso(Weekday::Mon), 1);
+        assert_eq!(weekday_to_iso(Weekday::Sun), 7);
+        assert_eq!(iso_to_weekday(1), Some(Weekday::Mon));
+        assert_eq!(iso_to_weekday(7), Some(Weekday::Sun));
+        assert_eq!(iso_to_weekday(0), None);
+        assert_eq!(iso_to_weekday(8), None);
     }
 }

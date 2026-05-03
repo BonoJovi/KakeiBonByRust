@@ -2192,6 +2192,10 @@ pub fn run() {
                 database.migrate_transactions().await
                     .expect("Failed to migrate transaction tables");
 
+                // Run v2.1.0 recurring scheduled transactions migrations
+                database.migrate_recurring().await
+                    .expect("Failed to migrate recurring tables");
+
                 let auth_service = AuthService::new(database.pool().clone());
                 let user_mgmt_service = UserManagementService::new(database.pool().clone());
                 let encryption_service = EncryptionService::new(database.pool().clone());

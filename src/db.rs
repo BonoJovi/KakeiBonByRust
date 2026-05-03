@@ -244,6 +244,94 @@ impl Database {
         Ok(())
     }
 
+    /// Run migrations for v2.1.0 recurring scheduled transactions feature.
+    /// - Adds GROUP_HEAD/NEXT_TRANSACTION_ID/RULE_ID to TRANSACTIONS_HEADER
+    /// - Backfills GROUP_HEAD = TRANSACTION_ID for existing scheduled rows so
+    ///   the new "single node = self-reference" invariant holds across the table
+    /// - Adds HOLIDAY_LOCALE/WEEK_START_DAY to USERS
+    /// - Creates RECURRING_RULES, RECURRING_RULE_DETAILS, HOLIDAYS_STANDARD,
+    ///   HOLIDAYS_USER_CUSTOM tables
+    pub async fn migrate_recurring(&self) -> Result<(), sqlx::Error> {
+        self.ensure_header_recurring_columns().await?;
+        self.backfill_group_head_for_existing_scheduled().await?;
+        self.ensure_users_recurring_columns().await?;
+        self.create_recurring_tables().await?;
+        Ok(())
+    }
+
+    /// Add GROUP_HEAD, NEXT_TRANSACTION_ID, RULE_ID to TRANSACTIONS_HEADER if absent.
+    async fn ensure_header_recurring_columns(&self) -> Result<(), sqlx::Error> {
+        for (name, ddl) in [
+            ("GROUP_HEAD",          "ALTER TABLE TRANSACTIONS_HEADER ADD COLUMN GROUP_HEAD INTEGER"),
+            ("NEXT_TRANSACTION_ID", "ALTER TABLE TRANSACTIONS_HEADER ADD COLUMN NEXT_TRANSACTION_ID INTEGER"),
+            ("RULE_ID",             "ALTER TABLE TRANSACTIONS_HEADER ADD COLUMN RULE_ID INTEGER"),
+        ] {
+            let has_column: i64 = sqlx::query_scalar(
+                "SELECT COUNT(*) FROM pragma_table_info('TRANSACTIONS_HEADER') WHERE name = ?"
+            )
+            .bind(name)
+            .fetch_one(&self.pool)
+            .await?;
+
+            if has_column == 0 {
+                sqlx::query(ddl).execute(&self.pool).await?;
+            }
+        }
+        Ok(())
+    }
+
+    /// Pre-existing single scheduled rows must satisfy the new invariant
+    /// `single node => GROUP_HEAD = TRANSACTION_ID`. The list query
+    /// `WHERE IS_SCHEDULED = 1 AND GROUP_HEAD = TRANSACTION_ID` would otherwise
+    /// silently drop them.
+    async fn backfill_group_head_for_existing_scheduled(&self) -> Result<(), sqlx::Error> {
+        sqlx::query(
+            "UPDATE TRANSACTIONS_HEADER \
+             SET GROUP_HEAD = TRANSACTION_ID \
+             WHERE IS_SCHEDULED = 1 AND GROUP_HEAD IS NULL"
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    /// Add HOLIDAY_LOCALE, WEEK_START_DAY to USERS if absent.
+    async fn ensure_users_recurring_columns(&self) -> Result<(), sqlx::Error> {
+        for (name, ddl) in [
+            ("HOLIDAY_LOCALE", "ALTER TABLE USERS ADD COLUMN HOLIDAY_LOCALE TEXT DEFAULT 'JP'"),
+            ("WEEK_START_DAY", "ALTER TABLE USERS ADD COLUMN WEEK_START_DAY INTEGER DEFAULT 1"),
+        ] {
+            let has_column: i64 = sqlx::query_scalar(
+                "SELECT COUNT(*) FROM pragma_table_info('USERS') WHERE name = ?"
+            )
+            .bind(name)
+            .fetch_one(&self.pool)
+            .await?;
+
+            if has_column == 0 {
+                sqlx::query(ddl).execute(&self.pool).await?;
+            }
+        }
+        Ok(())
+    }
+
+    /// Create new tables for v2.1.0 (idempotent via IF NOT EXISTS).
+    async fn create_recurring_tables(&self) -> Result<(), sqlx::Error> {
+        sqlx::query(sql_queries::CREATE_RECURRING_RULES_TABLE)
+            .execute(&self.pool)
+            .await?;
+        sqlx::query(sql_queries::CREATE_RECURRING_RULE_DETAILS_TABLE)
+            .execute(&self.pool)
+            .await?;
+        sqlx::query(sql_queries::CREATE_HOLIDAYS_STANDARD_TABLE)
+            .execute(&self.pool)
+            .await?;
+        sqlx::query(sql_queries::CREATE_HOLIDAYS_USER_CUSTOM_TABLE)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
     /// Ensure AMOUNT_INCLUDING_TAX column exists in TRANSACTIONS_DETAIL table
     async fn ensure_amount_including_tax_column(&self) -> Result<(), sqlx::Error> {
         let has_column: i64 = sqlx::query_scalar(
