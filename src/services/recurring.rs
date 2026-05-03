@@ -73,19 +73,22 @@ pub struct CyclicSpec {
 /// 周期仕様と期間（START_DATE, END_DATE; 両端含む）から発生日を列挙する。
 /// 起点（anchor / day_rule）は cycle 側に閉じ込め、`start..=end` は期間フィルタ専用。
 /// 祝日は呼び出し側が用意し、純粋関数として保つ。
+///
+/// holiday_shift が None 以外の場合、生成された日付に休日シフトを適用する。
+/// シフト先が start..end の範囲外（例：1/1 → 12/31）になっても採用する
+/// （カレンダー上の挙動を尊重）。シフト後にソートのみ行い、重複は除去しない
+/// （同日に複数発生は意味のある情報として保持）。
 pub fn generate_dates(
     spec: &CyclicSpec,
     start: NaiveDate,
     end: NaiveDate,
     holidays: &HashSet<NaiveDate>,
 ) -> Vec<NaiveDate> {
-    let _ = holidays; // Task #5 で使用
-
     if start > end {
         return Vec::new();
     }
 
-    match &spec.cycle {
+    let base = match &spec.cycle {
         Cycle::Daily { interval, anchor } => {
             debug_assert!(*interval >= 1, "interval must be >= 1");
             generate_daily(*interval, *anchor, start, end)
@@ -102,6 +105,53 @@ pub fn generate_dates(
             debug_assert!(*interval >= 1, "interval must be >= 1");
             debug_assert!(*month >= 1 && *month <= 12, "month must be 1..=12");
             generate_yearly(*interval, *month, day_rule, start, end)
+        }
+    };
+
+    if matches!(spec.holiday_shift, HolidayShift::None) {
+        return base;
+    }
+    let mut shifted: Vec<NaiveDate> = base
+        .into_iter()
+        .map(|d| shift_for_holidays(d, spec.holiday_shift, holidays))
+        .collect();
+    shifted.sort();
+    shifted
+}
+
+/// 土日 + 祝日テーブルに含まれる日を非平日とみなす。
+fn is_non_business_day(d: NaiveDate, holidays: &HashSet<NaiveDate>) -> bool {
+    matches!(d.weekday(), Weekday::Sat | Weekday::Sun) || holidays.contains(&d)
+}
+
+/// 休日シフト。指定方向に「平日にぶつかるまで」進める／遡る。
+/// シフト結果が start..end の範囲外になっても採用する（呼び出し側で集約せず、
+/// カレンダー上の挙動をそのまま返す）。
+fn shift_for_holidays(
+    d: NaiveDate,
+    shift: HolidayShift,
+    holidays: &HashSet<NaiveDate>,
+) -> NaiveDate {
+    let mut current = d;
+    match shift {
+        HolidayShift::None => current,
+        HolidayShift::Prev => {
+            while is_non_business_day(current, holidays) {
+                match current.checked_sub_days(Days::new(1)) {
+                    Some(prev) => current = prev,
+                    None => break,
+                }
+            }
+            current
+        }
+        HolidayShift::Next => {
+            while is_non_business_day(current, holidays) {
+                match current.checked_add_days(Days::new(1)) {
+                    Some(next) => current = next,
+                    None => break,
+                }
+            }
+            current
         }
     }
 }
@@ -754,6 +804,87 @@ mod tests {
                 d(2028, 2, 29),
             ]
         );
+    }
+
+    fn spec_monthly_dom_with_shift(interval: u32, day: u32, shift: HolidayShift) -> CyclicSpec {
+        CyclicSpec {
+            cycle: Cycle::Monthly {
+                interval,
+                day_rule: MonthlyDayRule::DayOfMonth { day },
+            },
+            holiday_shift: shift,
+        }
+    }
+
+    /// S❶ HolidayShift::None なら祝日が指定されていても無視（既存挙動の保証）。
+    #[test]
+    fn case_s1_shift_none_ignores_holidays() {
+        let mut holidays = HashSet::new();
+        holidays.insert(d(2026, 1, 15));
+        let result = generate_dates(
+            &spec_monthly_dom_with_shift(1, 15, HolidayShift::None),
+            d(2026, 1, 1),
+            d(2026, 1, 31),
+            &holidays,
+        );
+        assert_eq!(result, vec![d(2026, 1, 15)]);
+    }
+
+    /// S❷ Prev：土曜の指定日 → 直前の金曜にシフト。
+    #[test]
+    fn case_s2_prev_saturday_to_friday() {
+        // 2026-01-10 は土曜（2026-01-01 が木曜）
+        let result = generate_dates(
+            &spec_monthly_dom_with_shift(1, 10, HolidayShift::Prev),
+            d(2026, 1, 1),
+            d(2026, 1, 31),
+            &no_holidays(),
+        );
+        assert_eq!(result, vec![d(2026, 1, 9)]);
+    }
+
+    /// S❸ Next：土曜の指定日 → 日曜をスキップして月曜へ（再帰ループ確認）。
+    #[test]
+    fn case_s3_next_saturday_to_monday_skips_sunday() {
+        let result = generate_dates(
+            &spec_monthly_dom_with_shift(1, 10, HolidayShift::Next),
+            d(2026, 1, 1),
+            d(2026, 1, 31),
+            &no_holidays(),
+        );
+        assert_eq!(result, vec![d(2026, 1, 12)]);
+    }
+
+    /// S❹ Prev：祝日 + 土日の連続休日を超えて遡る（案A 確認）。
+    #[test]
+    fn case_s4_prev_chained_holidays() {
+        // 2026-01-15(Thu) と 2026-01-14(Wed) を祝日にして、Prev で 1/13(Tue) まで遡らせる
+        let mut holidays = HashSet::new();
+        holidays.insert(d(2026, 1, 14));
+        holidays.insert(d(2026, 1, 15));
+        let result = generate_dates(
+            &spec_monthly_dom_with_shift(1, 15, HolidayShift::Prev),
+            d(2026, 1, 1),
+            d(2026, 1, 31),
+            &holidays,
+        );
+        assert_eq!(result, vec![d(2026, 1, 13)]);
+    }
+
+    /// S❺ Prev：1/1 が祝日 → 前年末にシフト（案I：範囲外でも採用）。
+    #[test]
+    fn case_s5_prev_falls_outside_range() {
+        // 2026-01-01(Thu) を祝日として、Prev で 2025-12-31(Wed) にシフト
+        let mut holidays = HashSet::new();
+        holidays.insert(d(2026, 1, 1));
+        let result = generate_dates(
+            &spec_monthly_dom_with_shift(1, 1, HolidayShift::Prev),
+            d(2026, 1, 1),
+            d(2026, 1, 31),
+            &holidays,
+        );
+        // 2/1 は無いことに注意（end=2026-01-31）。1/1 → 12/31 の 1 件だけ
+        assert_eq!(result, vec![d(2025, 12, 31)]);
     }
 
     /// 入力境界：start > end は空。
