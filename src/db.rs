@@ -30,7 +30,16 @@ impl Database {
         sqlx::query(sql_queries::DB_PRAGMA_WAL)
             .execute(&pool)
             .await?;
-        
+
+        // SQLite ships with foreign_keys = OFF by default. Without this PRAGMA
+        // every ON DELETE CASCADE / SET NULL we declared (RECURRING_RULES <→
+        // RECURRING_RULE_DETAILS, TRANSACTIONS_HEADER <→ TRANSACTIONS_DETAIL,
+        // TRANSACTIONS_HEADER.RULE_ID → RECURRING_RULES on new DBs, etc.) would
+        // be silently ignored and we'd leak orphaned rows on every delete.
+        sqlx::query("PRAGMA foreign_keys = ON")
+            .execute(&pool)
+            .await?;
+
         Ok(Database { pool })
     }
     

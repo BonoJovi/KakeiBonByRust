@@ -1010,6 +1010,52 @@ INSERT INTO TRANSACTIONS_HEADER (
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, datetime('now', 'localtime'))
 "#;
 
+// Cascade-delete path for a recurring rule: drop every generated HEADER first
+// (their DETAILs cascade via the existing FK). Caller still has to DELETE the
+// RECURRING_RULES row afterwards (which cascades RECURRING_RULE_DETAILS).
+pub const TRANSACTIONS_HEADER_DELETE_BY_RULE: &str = r#"
+DELETE FROM TRANSACTIONS_HEADER
+WHERE RULE_ID = ? AND USER_ID = ?
+"#;
+
+// Detach-mode path: orphan generated HEADERs from the rule before the rule
+// goes away. Used when the user wants to remove the rule template but keep
+// the already-generated occurrences as standalone scheduled transactions.
+// On new DBs the FK ON DELETE SET NULL would do this automatically; we run
+// it explicitly so older DBs (created before the FK existed) behave the same.
+pub const TRANSACTIONS_HEADER_DETACH_FROM_RULE: &str = r#"
+UPDATE TRANSACTIONS_HEADER
+SET RULE_ID = NULL
+WHERE RULE_ID = ? AND USER_ID = ?
+"#;
+
+pub const RECURRING_RULES_DELETE: &str = r#"
+DELETE FROM RECURRING_RULES
+WHERE RULE_ID = ? AND USER_ID = ?
+"#;
+
+// List active recurring rules for a user, with the number of occurrences
+// each one has currently materialized in TRANSACTIONS_HEADER. The LEFT JOIN
+// keeps rules that have not generated any rows yet (count = 0).
+pub const RECURRING_RULES_LIST_BY_USER: &str = r#"
+SELECT
+    r.RULE_ID,
+    r.RULE_NAME,
+    r.PERIOD_UNIT,
+    r.PERIOD_INTERVAL,
+    r.START_DATE,
+    r.END_DATE,
+    r.TOTAL_AMOUNT,
+    r.HOLIDAY_SHIFT_TYPE,
+    COUNT(h.TRANSACTION_ID) AS OCCURRENCE_COUNT
+FROM RECURRING_RULES r
+LEFT JOIN TRANSACTIONS_HEADER h
+    ON h.RULE_ID = r.RULE_ID AND h.IS_SCHEDULED = 1
+WHERE r.USER_ID = ? AND COALESCE(r.IS_DISABLED, 0) = 0
+GROUP BY r.RULE_ID
+ORDER BY r.RULE_ID DESC
+"#;
+
 // ============================================================================
 // Unspecified Master Data Insertion
 // ============================================================================

@@ -658,6 +658,19 @@ pub struct CreateRecurringRuleResult {
     pub first_transaction_id: Option<i64>,
 }
 
+#[derive(Debug, Serialize)]
+pub struct RecurringRuleSummary {
+    pub rule_id: i64,
+    pub rule_name: Option<String>,
+    pub period_unit: String,
+    pub period_interval: i64,
+    pub start_date: String,
+    pub end_date: String,
+    pub total_amount: i64,
+    pub holiday_shift_type: i32,
+    pub occurrence_count: i64,
+}
+
 pub struct RecurringService {
     pool: SqlitePool,
 }
@@ -849,6 +862,83 @@ impl RecurringService {
             generated_count: dates.len(),
             first_transaction_id: first_id,
         })
+    }
+
+    /// List all active recurring rules for a user, with each rule's currently
+    /// materialized occurrence count. Used by the rule list UI to show what
+    /// the user has registered and how many TRANSACTIONS_HEADER rows each
+    /// rule currently owns.
+    pub async fn list_rules(
+        &self,
+        user_id: i64,
+    ) -> Result<Vec<RecurringRuleSummary>, RecurringError> {
+        use sqlx::Row;
+
+        let rows = sqlx::query(sql_queries::RECURRING_RULES_LIST_BY_USER)
+            .bind(user_id)
+            .fetch_all(&self.pool)
+            .await?;
+
+        let summaries = rows
+            .into_iter()
+            .map(|row| RecurringRuleSummary {
+                rule_id: row.get::<i64, _>("RULE_ID"),
+                rule_name: row.get::<Option<String>, _>("RULE_NAME"),
+                period_unit: row.get::<String, _>("PERIOD_UNIT"),
+                period_interval: row.get::<i64, _>("PERIOD_INTERVAL"),
+                start_date: row.get::<String, _>("START_DATE"),
+                end_date: row.get::<String, _>("END_DATE"),
+                total_amount: row.get::<i64, _>("TOTAL_AMOUNT"),
+                holiday_shift_type: row.get::<i32, _>("HOLIDAY_SHIFT_TYPE"),
+                occurrence_count: row.get::<i64, _>("OCCURRENCE_COUNT"),
+            })
+            .collect();
+
+        Ok(summaries)
+    }
+
+    /// Delete a recurring rule. The user picks one of two semantics in the UI:
+    ///
+    /// - `cascade = true`  → also drop every generated TRANSACTIONS_HEADER (and
+    ///   their DETAILs via the existing FK) that points at this rule. Use when
+    ///   the user is throwing the whole template away including its history.
+    /// - `cascade = false` → keep the generated occurrences as standalone
+    ///   scheduled transactions; only their `RULE_ID` is cleared so they no
+    ///   longer reference the now-deleted rule.
+    ///
+    /// Either way the rule itself and its `RECURRING_RULE_DETAILS` row go away
+    /// (the latter via `ON DELETE CASCADE`). All steps run inside one
+    /// transaction so a partial failure leaves nothing dangling.
+    pub async fn delete_rule(
+        &self,
+        user_id: i64,
+        rule_id: i64,
+        cascade: bool,
+    ) -> Result<(), RecurringError> {
+        let mut tx = self.pool.begin().await?;
+
+        if cascade {
+            sqlx::query(sql_queries::TRANSACTIONS_HEADER_DELETE_BY_RULE)
+                .bind(rule_id)
+                .bind(user_id)
+                .execute(&mut *tx)
+                .await?;
+        } else {
+            sqlx::query(sql_queries::TRANSACTIONS_HEADER_DETACH_FROM_RULE)
+                .bind(rule_id)
+                .bind(user_id)
+                .execute(&mut *tx)
+                .await?;
+        }
+
+        sqlx::query(sql_queries::RECURRING_RULES_DELETE)
+            .bind(rule_id)
+            .bind(user_id)
+            .execute(&mut *tx)
+            .await?;
+
+        tx.commit().await?;
+        Ok(())
     }
 
     /// Fetch holidays applicable to this user within a window slightly wider than

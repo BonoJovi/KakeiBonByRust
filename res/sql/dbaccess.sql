@@ -725,6 +725,13 @@ CREATE TABLE IF NOT EXISTS MEMOS (
 );
 
 -- SQL_30000002: Create TRANSACTIONS_HEADER table
+-- IS_SCHEDULED is added by migrate_recurring's ALTER for backward compat with
+-- v1.x DBs that predate the column; new DBs go through that same path so the
+-- column ends up identical either way.
+-- RULE_ID is included here with a FOREIGN KEY ... ON DELETE SET NULL so new
+-- DBs get the constraint declaratively. Pre-existing DBs keep the column added
+-- via ALTER (no FK), and integrity is maintained at the application layer in
+-- RecurringService::delete_rule (detach mode UPDATEs RULE_ID = NULL explicitly).
 CREATE TABLE IF NOT EXISTS TRANSACTIONS_HEADER (
     TRANSACTION_ID INTEGER PRIMARY KEY AUTOINCREMENT,
     USER_ID INTEGER NOT NULL,
@@ -738,13 +745,15 @@ CREATE TABLE IF NOT EXISTS TRANSACTIONS_HEADER (
     TAX_INCLUDED_TYPE INTEGER DEFAULT 1 NOT NULL,
     MEMO_ID INTEGER,
     IS_DISABLED INTEGER DEFAULT 0,
+    RULE_ID INTEGER,
     ENTRY_DT DATETIME NOT NULL DEFAULT (datetime('now')),
     UPDATE_DT DATETIME,
     FOREIGN KEY (USER_ID) REFERENCES USERS(USER_ID) ON DELETE CASCADE,
     FOREIGN KEY (USER_ID, CATEGORY1_CODE) REFERENCES CATEGORY1(USER_ID, CATEGORY1_CODE),
     FOREIGN KEY (USER_ID, FROM_ACCOUNT_CODE) REFERENCES ACCOUNTS(USER_ID, ACCOUNT_CODE),
     FOREIGN KEY (USER_ID, TO_ACCOUNT_CODE) REFERENCES ACCOUNTS(USER_ID, ACCOUNT_CODE),
-    FOREIGN KEY (MEMO_ID) REFERENCES MEMOS(MEMO_ID)
+    FOREIGN KEY (MEMO_ID) REFERENCES MEMOS(MEMO_ID),
+    FOREIGN KEY (RULE_ID) REFERENCES RECURRING_RULES(RULE_ID) ON DELETE SET NULL
 );
 
 -- SQL_30000003: Create TRANSACTIONS_DETAIL table
@@ -1598,6 +1607,38 @@ INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESO
 INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2222, 'recurring_rule.holiday_shift_prev', 'ja', '前倒し（給料日想定）', 'recurring_rule', '土日祝シフト:直前の平日', datetime('now'));
 INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2223, 'recurring_rule.holiday_shift_next', 'en', 'Next business day (debit)', 'recurring_rule', 'Holiday shift: roll forward to the next business day', datetime('now'));
 INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2224, 'recurring_rule.holiday_shift_next', 'ja', '後倒し（引落想定）', 'recurring_rule', '土日祝シフト:直後の平日', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2225, 'recurring_rule.section_existing_rules', 'en', 'Existing rules', 'recurring_rule', 'Rule list section heading', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2226, 'recurring_rule.section_existing_rules', 'ja', '登録済みルール', 'recurring_rule', 'ルール一覧セクション見出し', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2227, 'recurring_rule.col_rule_name', 'en', 'Name', 'recurring_rule', 'Rule list column: name', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2228, 'recurring_rule.col_rule_name', 'ja', '名称', 'recurring_rule', 'ルール一覧カラム:名称', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2229, 'recurring_rule.col_period', 'en', 'Cycle', 'recurring_rule', 'Rule list column: cycle', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2230, 'recurring_rule.col_period', 'ja', '周期', 'recurring_rule', 'ルール一覧カラム:周期', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2231, 'recurring_rule.col_period_range', 'en', 'Period', 'recurring_rule', 'Rule list column: start–end', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2232, 'recurring_rule.col_period_range', 'ja', '期間', 'recurring_rule', 'ルール一覧カラム:開始-終了', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2233, 'recurring_rule.col_amount', 'en', 'Amount', 'recurring_rule', 'Rule list column: amount', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2234, 'recurring_rule.col_amount', 'ja', '金額', 'recurring_rule', 'ルール一覧カラム:金額', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2235, 'recurring_rule.col_occurrences', 'en', 'Count', 'recurring_rule', 'Rule list column: occurrence count', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2236, 'recurring_rule.col_occurrences', 'ja', '件数', 'recurring_rule', 'ルール一覧カラム:生成件数', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2237, 'recurring_rule.col_actions', 'en', 'Actions', 'recurring_rule', 'Rule list column: actions', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2238, 'recurring_rule.col_actions', 'ja', '操作', 'recurring_rule', 'ルール一覧カラム:操作', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2239, 'recurring_rule.delete', 'en', 'Delete', 'recurring_rule', 'Delete row button', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2240, 'recurring_rule.delete', 'ja', '削除', 'recurring_rule', '行削除ボタン', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2241, 'recurring_rule.no_rules', 'en', 'No rules registered yet.', 'recurring_rule', 'Empty state for the rule list', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2242, 'recurring_rule.no_rules', 'ja', '登録済みルールはまだありません。', 'recurring_rule', 'ルール一覧の空状態', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2243, 'recurring_rule.delete_confirm_title', 'en', 'Delete rule', 'recurring_rule', 'Delete confirm modal title', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2244, 'recurring_rule.delete_confirm_title', 'ja', 'ルール削除', 'recurring_rule', 'ルール削除確認モーダルタイトル', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2245, 'recurring_rule.delete_confirm_message', 'en', 'Delete rule "{0}"? It currently has {1} generated occurrence(s).', 'recurring_rule', 'Delete confirm body. {0}=name, {1}=count', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2246, 'recurring_rule.delete_confirm_message', 'ja', 'ルール「{0}」を削除しますか？関連する予定取引が {1} 件あります。', 'recurring_rule', '削除確認本文。{0}=名称、{1}=件数', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2247, 'recurring_rule.delete_only_rule', 'en', 'Delete rule only
+(keep transactions)', 'recurring_rule', 'Detach-mode button: keep generated occurrences', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2248, 'recurring_rule.delete_only_rule', 'ja', 'ルールのみ削除
+（予定取引は残す）', 'recurring_rule', '分離モードボタン:生成済み予定は残す', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2249, 'recurring_rule.delete_rule_and_data', 'en', 'Delete rule + transactions', 'recurring_rule', 'Cascade-mode button: also drop occurrences', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2250, 'recurring_rule.delete_rule_and_data', 'ja', 'ルールと予定取引を削除', 'recurring_rule', 'カスケードモードボタン:予定も削除', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2251, 'recurring_rule.delete_success', 'en', 'Rule #{0} deleted.', 'recurring_rule', 'Successful delete message', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2252, 'recurring_rule.delete_success', 'ja', 'ルール #{0} を削除しました。', 'recurring_rule', '削除成功メッセージ', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2253, 'recurring_rule.delete_failed', 'en', 'Failed to delete rule:', 'recurring_rule', 'Delete failure prefix', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2254, 'recurring_rule.delete_failed', 'ja', 'ルール削除に失敗しました：', 'recurring_rule', '削除失敗メッセージのプレフィックス', datetime('now'));
 
 -- v2.1.0: Japanese statutory holidays for 2026–2028 (transcribed manually).
 -- A future enhancement may pull these from the jpholiday crate at startup so

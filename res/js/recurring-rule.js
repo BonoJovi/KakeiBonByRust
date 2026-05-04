@@ -10,6 +10,7 @@ console.log('=== RECURRING-RULE.JS LOADED ===');
 
 let currentUserId = null;
 let categoryTree = [];
+let pendingDeleteRule = null; // { rule_id, occurrence_count, name } awaiting modal choice
 
 document.addEventListener('DOMContentLoaded', async () => {
     createMenuBar('management');
@@ -45,6 +46,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         setupCategoryChainHandlers();
         setupFormSubmit();
         setupResetButton();
+        setupDeleteModal();
+        await loadRules();
 
         // Default start_date to today, end_date to one year out
         const today = new Date();
@@ -265,6 +268,7 @@ function setupFormSubmit() {
                 .replace('{0}', result.rule_id)
                 .replace('{1}', result.generated_count);
             showResult('success', msg);
+            await loadRules();
         } catch (err) {
             console.error('create_recurring_rule failed:', err);
             const prefix = i18n.t('recurring_rule.create_failed') || 'Failed to create rule:';
@@ -278,6 +282,125 @@ function setupResetButton() {
         document.getElementById('recurring-rule-form').reset();
         hideResult();
     });
+}
+
+// ----- Rule list -----
+
+async function loadRules() {
+    try {
+        const rules = await invoke('list_recurring_rules', {});
+        renderRules(rules);
+    } catch (err) {
+        console.error('list_recurring_rules failed:', err);
+    }
+}
+
+function renderRules(rules) {
+    const tbody = document.getElementById('rules-tbody');
+    const emptyMsg = document.getElementById('no-rules-message');
+    const table = document.getElementById('rules-table');
+    tbody.innerHTML = '';
+
+    if (!rules || rules.length === 0) {
+        table.classList.add('hidden');
+        emptyMsg.classList.remove('hidden');
+        return;
+    }
+    table.classList.remove('hidden');
+    emptyMsg.classList.add('hidden');
+
+    rules.forEach((r) => {
+        const tr = document.createElement('tr');
+
+        const tdName = document.createElement('td');
+        tdName.textContent = r.rule_name || `#${r.rule_id}`;
+        tr.appendChild(tdName);
+
+        const tdCycle = document.createElement('td');
+        tdCycle.textContent = formatCycle(r.period_unit, r.period_interval, r.holiday_shift_type);
+        tr.appendChild(tdCycle);
+
+        const tdRange = document.createElement('td');
+        tdRange.textContent = `${r.start_date} 〜 ${r.end_date}`;
+        tr.appendChild(tdRange);
+
+        const tdAmount = document.createElement('td');
+        tdAmount.className = 'col-amount';
+        tdAmount.textContent = r.total_amount.toLocaleString();
+        tr.appendChild(tdAmount);
+
+        const tdCount = document.createElement('td');
+        tdCount.className = 'col-count';
+        tdCount.textContent = r.occurrence_count;
+        tr.appendChild(tdCount);
+
+        const tdActions = document.createElement('td');
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.className = 'btn-danger';
+        delBtn.textContent = i18n.t('recurring_rule.delete') || 'Delete';
+        delBtn.addEventListener('click', () => openDeleteModal(r));
+        tdActions.appendChild(delBtn);
+        tr.appendChild(tdActions);
+
+        tbody.appendChild(tr);
+    });
+}
+
+function formatCycle(unit, interval, shiftType) {
+    const unitLabel = {
+        DAY: i18n.t('recurring_rule.cycle_daily') || 'Daily',
+        WEEK: 'Weekly',
+        MONTH: i18n.t('recurring_rule.cycle_monthly') || 'Monthly',
+        YEAR: 'Yearly',
+    }[unit] || unit;
+    const shiftLabel = [
+        i18n.t('recurring_rule.holiday_shift_none') || 'no shift',
+        i18n.t('recurring_rule.holiday_shift_prev') || 'prev BD',
+        i18n.t('recurring_rule.holiday_shift_next') || 'next BD',
+    ][shiftType] || '';
+    return `${unitLabel} × ${interval} (${shiftLabel})`;
+}
+
+// ----- Delete modal -----
+
+function setupDeleteModal() {
+    document.getElementById('delete-cancel-btn').addEventListener('click', closeDeleteModal);
+    document.getElementById('delete-modal-close').addEventListener('click', closeDeleteModal);
+    document.getElementById('delete-detach-btn').addEventListener('click', () => deleteRule(false));
+    document.getElementById('delete-cascade-btn').addEventListener('click', () => deleteRule(true));
+}
+
+function openDeleteModal(rule) {
+    pendingDeleteRule = rule;
+    const tmpl = i18n.t('recurring_rule.delete_confirm_message')
+        || 'Delete rule "{0}"? It currently has {1} generated occurrence(s).';
+    const name = rule.rule_name || `#${rule.rule_id}`;
+    document.getElementById('delete-modal-message').textContent = tmpl
+        .replace('{0}', name)
+        .replace('{1}', rule.occurrence_count);
+    document.getElementById('delete-rule-modal').classList.remove('hidden');
+}
+
+function closeDeleteModal() {
+    pendingDeleteRule = null;
+    document.getElementById('delete-rule-modal').classList.add('hidden');
+}
+
+async function deleteRule(cascade) {
+    if (!pendingDeleteRule) return;
+    const ruleId = pendingDeleteRule.rule_id;
+    closeDeleteModal();
+    try {
+        await invoke('delete_recurring_rule', { ruleId, cascade });
+        const tmpl = i18n.t('recurring_rule.delete_success') || 'Rule #{0} deleted.';
+        showResult('success', tmpl.replace('{0}', ruleId));
+        await loadRules();
+    } catch (err) {
+        console.error('delete_recurring_rule failed:', err);
+        const prefix = i18n.t('recurring_rule.delete_failed') || 'Failed to delete rule:';
+        showResult('error', `${prefix} ${err}`);
+    }
 }
 
 // ----- Result helpers -----

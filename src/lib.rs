@@ -2074,6 +2074,38 @@ async fn create_recurring_rule(
         .map_err(|e| e.to_string())
 }
 
+/// Delete a recurring rule. `cascade = true` also removes every
+/// IS_SCHEDULED=1 occurrence the rule had generated; `cascade = false`
+/// keeps those occurrences but clears their `RULE_ID` reference.
+#[tauri::command]
+async fn delete_recurring_rule(
+    rule_id: i64,
+    cascade: bool,
+    state: tauri::State<'_, AppState>,
+) -> Result<(), String> {
+    let user_id = get_session_user_id(&state)?;
+    let recurring = state.recurring.lock().await;
+    recurring
+        .delete_rule(user_id, rule_id, cascade)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// List the recurring rules the current user has registered.
+/// Each summary includes the count of currently-materialized occurrences,
+/// so the UI can show "delete this rule and its N transactions" prompts.
+#[tauri::command]
+async fn list_recurring_rules(
+    state: tauri::State<'_, AppState>,
+) -> Result<Vec<services::recurring::RecurringRuleSummary>, String> {
+    let user_id = get_session_user_id(&state)?;
+    let recurring = state.recurring.lock().await;
+    recurring
+        .list_rules(user_id)
+        .await
+        .map_err(|e| e.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -2189,7 +2221,9 @@ pub fn run() {
             get_weekly_aggregation_by_date,
             get_yearly_aggregation,
             get_monthly_aggregation_by_category,
-            create_recurring_rule
+            create_recurring_rule,
+            delete_recurring_rule,
+            list_recurring_rules
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {

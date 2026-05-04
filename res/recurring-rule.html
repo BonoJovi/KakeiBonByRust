@@ -34,6 +34,15 @@
             .result-box.success { background: #e6f4ea; color: #1e6e34; }
             .result-box.error { background: #fce8e6; color: #a3261b; }
             .hidden { display: none; }
+            .rules-table { width: 100%; border-collapse: collapse; }
+            .rules-table th, .rules-table td { padding: 0.4rem 0.6rem; border-bottom: 1px solid #ddd; text-align: left; font-size: 0.95em; }
+            .rules-table th { background: #f4f4f4; }
+            .rules-table .col-amount, .rules-table .col-count { text-align: right; }
+            .modal-footer { display: flex; gap: 0.5rem; justify-content: flex-end; padding-top: 0.75rem; flex-wrap: nowrap; }
+            .modal-footer button { white-space: pre-line; text-align: center; }
+            #delete-rule-modal .modal-content { min-width: 560px; max-width: 720px; }
+            .btn-danger { background: #c0392b; color: #fff; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer; }
+            .btn-danger:hover { background: #a93226; }
         </style>
     </head>
     <body>
@@ -42,6 +51,25 @@
         <div id="main-content">
             <div class="recurring-rule-container">
                 <h1 data-i18n="recurring_rule.title">Recurring Rule</h1>
+
+                <!-- Existing rules -->
+                <div class="form-section">
+                    <h3 data-i18n="recurring_rule.section_existing_rules">Existing rules</h3>
+                    <table class="rules-table" id="rules-table">
+                        <thead>
+                            <tr>
+                                <th data-i18n="recurring_rule.col_rule_name">Name</th>
+                                <th data-i18n="recurring_rule.col_period">Cycle</th>
+                                <th data-i18n="recurring_rule.col_period_range">Period</th>
+                                <th class="col-amount" data-i18n="recurring_rule.col_amount">Amount</th>
+                                <th class="col-count" data-i18n="recurring_rule.col_occurrences">Count</th>
+                                <th data-i18n="recurring_rule.col_actions">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rules-tbody"></tbody>
+                    </table>
+                    <div id="no-rules-message" class="hidden" data-i18n="recurring_rule.no_rules">No rules registered yet.</div>
+                </div>
 
                 <form id="recurring-rule-form">
                     <!-- Section 1: Cycle -->
@@ -250,6 +278,24 @@
                 </form>
 
                 <div id="result-box" class="result-box hidden"></div>
+            </div>
+        </div>
+
+        <!-- Delete-rule confirmation modal -->
+        <div id="delete-rule-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 data-i18n="recurring_rule.delete_confirm_title">Delete rule</h2>
+                    <button class="close-btn" id="delete-modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p id="delete-modal-message"></p>
+                </div>
+                <div class="modal-footer">
+                    <button id="delete-cancel-btn" type="button" class="btn-secondary" data-i18n="common.cancel">Cancel</button>
+                    <button id="delete-detach-btn" type="button" class="btn-secondary" data-i18n="recurring_rule.delete_only_rule">Delete rule only (keep transactions)</button>
+                    <button id="delete-cascade-btn" type="button" class="btn-danger" data-i18n="recurring_rule.delete_rule_and_data">Delete rule + transactions</button>
+                </div>
             </div>
         </div>
 
