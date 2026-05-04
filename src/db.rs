@@ -262,6 +262,8 @@ impl Database {
     }
 
     /// Add RULE_ID to TRANSACTIONS_HEADER if absent. NULL = one-off entry.
+    /// The matching index is created here too, because dbaccess.sql runs
+    /// before the migration and would fail to reference RULE_ID.
     async fn ensure_header_rule_id_column(&self) -> Result<(), sqlx::Error> {
         let has_column: i64 = sqlx::query_scalar(
             "SELECT COUNT(*) FROM pragma_table_info('TRANSACTIONS_HEADER') WHERE name = 'RULE_ID'"
@@ -274,6 +276,13 @@ impl Database {
                 .execute(&self.pool)
                 .await?;
         }
+
+        sqlx::query(
+            "CREATE INDEX IF NOT EXISTS idx_transactions_header_rule ON TRANSACTIONS_HEADER(RULE_ID)"
+        )
+        .execute(&self.pool)
+        .await?;
+
         Ok(())
     }
 
