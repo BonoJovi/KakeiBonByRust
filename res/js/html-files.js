@@ -11,6 +11,7 @@ export const HTML_FILES = {
     PRODUCT_MANAGEMENT: 'product-management.html',
     TRANSACTION_MANAGEMENT: 'transaction-management.html',
     TRANSACTION_DETAIL_MANAGEMENT: 'transaction-detail-management.html',
+    RECURRING_RULE: 'recurring-rule.html',
     AGGREGATION: 'aggregation.html',
     AGGREGATION_DAILY: 'aggregation-daily.html',
     AGGREGATION_WEEKLY: 'aggregation-weekly.html',

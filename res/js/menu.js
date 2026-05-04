@@ -61,6 +61,7 @@ export function createMenuBar(pageType = 'management') {
                     </div>
                 </div>
                 <div class="dropdown-item" data-i18n="menu.transaction_management">Transaction Management</div>
+                <div class="dropdown-item" data-i18n="menu.recurring_rule">Recurring Rule</div>
                 <div class="dropdown-item has-submenu">
                     <span data-i18n="menu.reports">Reports</span>
                     <div class="submenu">
@@ -350,7 +351,17 @@ document.addEventListener('DOMContentLoaded', async function() {
                 adminDropdown.classList.remove('show');
             });
         }
-        
+
+        // Recurring Rule (v2.1.0)
+        const recurringRuleItem = adminDropdown.querySelector('.dropdown-item:not(.has-submenu)[data-i18n="menu.recurring_rule"]');
+        if (recurringRuleItem) {
+            recurringRuleItem.addEventListener('click', function(e) {
+                console.log('Recurring Rule item clicked');
+                window.location.href = HTML_FILES.RECURRING_RULE;
+                adminDropdown.classList.remove('show');
+            });
+        }
+
         // Reports submenu items
         const reportsSubmenu = adminDropdown.querySelector('.has-submenu:last-child .submenu');
         if (reportsSubmenu) {

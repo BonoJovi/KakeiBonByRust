@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Recurring Rule - KakeiBon</title>
+        <link rel="stylesheet" href="css/menu.css" />
+        <link rel="stylesheet" href="css/indicators.css" />
+        <link rel="stylesheet" href="css/shop-management.css" />
+        <script type="importmap">
+        {
+            "imports": {
+                "@tauri-apps/api/core": "https://esm.sh/@tauri-apps/api@2/core"
+            }
+        }
+        </script>
+        <style>
+            /* Override shop-management.css's body overflow:hidden — this page
+               is a tall single-column form that must scroll vertically */
+            body { overflow: auto !important; height: auto !important; }
+            #main-content { height: auto !important; overflow: visible !important; min-height: calc(100vh - 60px); }
+            .recurring-rule-container { max-width: 880px; margin: 0 auto; padding: 1rem; }
+            .recurring-rule-container h1 { margin-bottom: 1rem; }
+            .form-section { border: 1px solid var(--color-border, #ccc); border-radius: 6px; padding: 1rem 1.25rem; margin-bottom: 1rem; }
+            .form-section h3 { margin: 0 0 0.75rem 0; font-size: 1.05rem; }
+            .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem 1rem; }
+            .form-row .form-group.full { grid-column: 1 / -1; }
+            .cycle-radios { display: flex; gap: 1.5rem; align-items: center; }
+            .cycle-radios label { font-weight: normal; }
+            .conditional { display: none; }
+            .conditional.visible { display: block; }
+            .form-actions-row { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1rem; }
+            .result-box { margin-top: 1rem; padding: 0.75rem 1rem; border-radius: 6px; }
+            .result-box.success { background: #e6f4ea; color: #1e6e34; }
+            .result-box.error { background: #fce8e6; color: #a3261b; }
+            .hidden { display: none; }
+            .rules-table { width: 100%; border-collapse: collapse; }
+            .rules-table th, .rules-table td { padding: 0.4rem 0.6rem; border-bottom: 1px solid #ddd; text-align: left; font-size: 0.95em; }
+            .rules-table th { background: #f4f4f4; }
+            .rules-table .col-amount, .rules-table .col-count { text-align: right; }
+            .modal-footer { display: flex; gap: 0.5rem; justify-content: flex-end; padding-top: 0.75rem; flex-wrap: nowrap; }
+            .modal-footer button { white-space: pre-line; text-align: center; }
+            #delete-rule-modal .modal-content { min-width: 560px; max-width: 720px; }
+            .btn-danger { background: #c0392b; color: #fff; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer; }
+            .btn-danger:hover { background: #a93226; }
+        </style>
+    </head>
+    <body>
+        <div id="menu-bar"></div>
+
+        <div id="main-content">
+            <div class="recurring-rule-container">
+                <h1 data-i18n="recurring_rule.title">Recurring Rule</h1>
+
+                <!-- Existing rules -->
+                <div class="form-section">
+                    <h3 data-i18n="recurring_rule.section_existing_rules">Existing rules</h3>
+                    <table class="rules-table" id="rules-table">
+                        <thead>
+                            <tr>
+                                <th data-i18n="recurring_rule.col_rule_name">Name</th>
+                                <th data-i18n="recurring_rule.col_period">Cycle</th>
+                                <th data-i18n="recurring_rule.col_period_range">Period</th>
+                                <th class="col-amount" data-i18n="recurring_rule.col_amount">Amount</th>
+                                <th class="col-count" data-i18n="recurring_rule.col_occurrences">Count</th>
+                                <th data-i18n="recurring_rule.col_actions">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rules-tbody"></tbody>
+                    </table>
+                    <div id="no-rules-message" class="hidden" data-i18n="recurring_rule.no_rules">No rules registered yet.</div>
+                </div>
+
+                <form id="recurring-rule-form">
+                    <!-- Section 1: Cycle -->
+                    <div class="form-section">
+                        <h3 data-i18n="recurring_rule.section_cycle">Cycle</h3>
+
+                        <div class="form-group full">
+                            <label for="rule-name" data-i18n="recurring_rule.rule_name">Rule name (optional):</label>
+                            <div class="input-wrapper">
+                                <input type="text" id="rule-name" maxlength="200" />
+                            </div>
+                        </div>
+
+                        <div class="form-group full">
+                            <label data-i18n="recurring_rule.cycle_kind">Cycle kind:</label>
+                            <div class="cycle-radios">
+                                <label><input type="radio" name="cycle-kind" value="DAY" checked /> <span data-i18n="recurring_rule.cycle_daily">Daily</span></label>
+                                <label><input type="radio" name="cycle-kind" value="MONTH" /> <span data-i18n="recurring_rule.cycle_monthly">Monthly</span></label>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="period-interval" data-i18n="recurring_rule.interval">Interval:</label>
+                                <div class="input-wrapper">
+                                    <input type="number" id="period-interval" min="1" max="999" value="1" required />
+                                </div>
+                            </div>
+
+                            <div class="form-group conditional visible" id="anchor-date-group">
+                                <label for="anchor-date" data-i18n="recurring_rule.anchor_date">Anchor date:</label>
+                                <div class="input-wrapper">
+                                    <input type="date" id="anchor-date" />
+                                </div>
+                            </div>
+
+                            <div class="form-group full conditional" id="monthly-mode-group">
+                                <label data-i18n="recurring_rule.monthly_mode">Monthly day rule:</label>
+                                <div class="cycle-radios">
+                                    <label><input type="radio" name="monthly-mode" value="DAY" checked /> <span data-i18n="recurring_rule.monthly_mode_day_of_month">Day of month</span></label>
+                                    <label><input type="radio" name="monthly-mode" value="NTH_WEEKDAY" /> <span data-i18n="recurring_rule.monthly_mode_nth_weekday">Nth weekday</span></label>
+                                </div>
+                            </div>
+
+                            <div class="form-group conditional" id="day-of-month-group">
+                                <label for="day-of-month" data-i18n="recurring_rule.day_of_month">Day of month (1–31):</label>
+                                <div class="input-wrapper">
+                                    <input type="number" id="day-of-month" min="1" max="31" />
+                                </div>
+                            </div>
+
+                            <div class="form-group conditional" id="week-of-month-group">
+                                <label for="week-of-month" data-i18n="recurring_rule.week_of_month">Week of month:</label>
+                                <div class="input-wrapper">
+                                    <select id="week-of-month">
+                                        <option value="1" data-i18n="recurring_rule.week_1">1st</option>
+                                        <option value="2" data-i18n="recurring_rule.week_2">2nd</option>
+                                        <option value="3" data-i18n="recurring_rule.week_3">3rd</option>
+                                        <option value="4" data-i18n="recurring_rule.week_4">4th</option>
+                                        <option value="5" data-i18n="recurring_rule.week_last">Last</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-group conditional" id="day-of-week-group">
+                                <label for="day-of-week" data-i18n="recurring_rule.day_of_week">Day of week:</label>
+                                <div class="input-wrapper">
+                                    <select id="day-of-week">
+                                        <option value="1" data-i18n="recurring_rule.weekday_mon">Mon</option>
+                                        <option value="2" data-i18n="recurring_rule.weekday_tue">Tue</option>
+                                        <option value="3" data-i18n="recurring_rule.weekday_wed">Wed</option>
+                                        <option value="4" data-i18n="recurring_rule.weekday_thu">Thu</option>
+                                        <option value="5" data-i18n="recurring_rule.weekday_fri">Fri</option>
+                                        <option value="6" data-i18n="recurring_rule.weekday_sat">Sat</option>
+                                        <option value="7" data-i18n="recurring_rule.weekday_sun">Sun</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="start-date" data-i18n="recurring_rule.start_date">Start date:</label>
+                                <div class="input-wrapper">
+                                    <input type="date" id="start-date" required />
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="end-date" data-i18n="recurring_rule.end_date">End date:</label>
+                                <div class="input-wrapper">
+                                    <input type="date" id="end-date" required />
+                                </div>
+                            </div>
+
+                            <div class="form-group full">
+                                <label for="holiday-shift-type" data-i18n="recurring_rule.holiday_shift">Holiday shift:</label>
+                                <div class="input-wrapper">
+                                    <select id="holiday-shift-type">
+                                        <option value="0" data-i18n="recurring_rule.holiday_shift_none">No shift</option>
+                                        <option value="1" data-i18n="recurring_rule.holiday_shift_prev">Previous business day (payday)</option>
+                                        <option value="2" data-i18n="recurring_rule.holiday_shift_next">Next business day (debit)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 2: HEADER template -->
+                    <div class="form-section">
+                        <h3 data-i18n="recurring_rule.section_header">Header template</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="shop" data-i18n="recurring_rule.shop">Shop:</label>
+                                <div class="input-wrapper">
+                                    <select id="shop"></select>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="category1" data-i18n="recurring_rule.category1">Category 1:</label>
+                                <div class="input-wrapper">
+                                    <select id="category1" required></select>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="from-account" data-i18n="recurring_rule.from_account">From account:</label>
+                                <div class="input-wrapper">
+                                    <select id="from-account" required></select>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="to-account" data-i18n="recurring_rule.to_account">To account:</label>
+                                <div class="input-wrapper">
+                                    <select id="to-account" required></select>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="total-amount" data-i18n="recurring_rule.total_amount">Total amount:</label>
+                                <div class="input-wrapper">
+                                    <input type="number" id="total-amount" min="0" max="999999999" value="0" required />
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="tax-rounding-type" data-i18n="recurring_rule.tax_rounding">Tax rounding:</label>
+                                <div class="input-wrapper">
+                                    <select id="tax-rounding-type">
+                                        <option value="0" data-i18n="common.tax_round_down">Round down</option>
+                                        <option value="1" data-i18n="common.tax_round_half_up">Half up</option>
+                                        <option value="2" data-i18n="common.tax_round_up">Round up</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="tax-included-type" data-i18n="recurring_rule.tax_included">Tax type:</label>
+                                <div class="input-wrapper">
+                                    <select id="tax-included-type">
+                                        <option value="1" data-i18n="common.tax_excluded">Tax-excluded</option>
+                                        <option value="0" data-i18n="common.tax_included">Tax-included</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-group full">
+                                <label for="header-memo" data-i18n="recurring_rule.header_memo">Header memo:</label>
+                                <div class="input-wrapper">
+                                    <textarea id="header-memo" rows="2" maxlength="1000"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 3: DETAIL template -->
+                    <div class="form-section">
+                        <h3 data-i18n="recurring_rule.section_detail">Detail template</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="category2" data-i18n="recurring_rule.category2">Category 2:</label>
+                                <div class="input-wrapper">
+                                    <select id="category2"></select>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="category3" data-i18n="recurring_rule.category3">Category 3:</label>
+                                <div class="input-wrapper">
+                                    <select id="category3"></select>
+                                </div>
+                            </div>
+
+                            <div class="form-group full">
+                                <label for="item-name" data-i18n="recurring_rule.item_name">Item name:</label>
+                                <div class="input-wrapper">
+                                    <input type="text" id="item-name" maxlength="200" required />
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="amount" data-i18n="recurring_rule.amount">Amount:</label>
+                                <div class="input-wrapper">
+                                    <input type="number" id="amount" min="0" max="999999999" value="0" required />
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="tax-rate" data-i18n="recurring_rule.tax_rate">Tax rate (%):</label>
+                                <div class="input-wrapper">
+                                    <input type="number" id="tax-rate" min="0" max="100" value="10" required />
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="tax-amount" data-i18n="recurring_rule.tax_amount">Tax amount:</label>
+                                <div class="input-wrapper">
+                                    <input type="number" id="tax-amount" min="0" max="999999999" value="0" />
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="amount-including-tax" data-i18n="recurring_rule.amount_including_tax">Amount (incl. tax):</label>
+                                <div class="input-wrapper">
+                                    <input type="number" id="amount-including-tax" min="0" max="999999999" />
+                                </div>
+                            </div>
+
+                            <div class="form-group full">
+                                <label for="detail-memo" data-i18n="recurring_rule.detail_memo">Detail memo:</label>
+                                <div class="input-wrapper">
+                                    <textarea id="detail-memo" rows="2" maxlength="1000"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-actions-row">
+                        <button type="button" id="reset-btn" class="btn-secondary" data-i18n="common.reset">Reset</button>
+                        <button type="submit" class="btn-primary" data-i18n="recurring_rule.create">Create rule</button>
+                    </div>
+                </form>
+
+                <div id="result-box" class="result-box hidden"></div>
+            </div>
+        </div>
+
+        <!-- Delete-rule confirmation modal -->
+        <div id="delete-rule-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 data-i18n="recurring_rule.delete_confirm_title">Delete rule</h2>
+                    <button class="close-btn" id="delete-modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p id="delete-modal-message"></p>
+                </div>
+                <div class="modal-footer">
+                    <button id="delete-cancel-btn" type="button" class="btn-secondary" data-i18n="common.cancel">Cancel</button>
+                    <button id="delete-detach-btn" type="button" class="btn-secondary" data-i18n="recurring_rule.delete_only_rule">Delete rule only (keep transactions)</button>
+                    <button id="delete-cascade-btn" type="button" class="btn-danger" data-i18n="recurring_rule.delete_rule_and_data">Delete rule + transactions</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Font Size Modal -->
+        <div id="font-size-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 data-i18n="font_size.modal_title">Font Size Settings</h2>
+                    <button class="close-btn" id="font-size-modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="font-size-preset" data-i18n="font_size.preset">Preset:</label>
+                        <div class="input-wrapper">
+                            <select id="font-size-preset">
+                                <option value="small" data-i18n="font_size.small">小</option>
+                                <option value="medium" data-i18n="font_size.medium" selected>中</option>
+                                <option value="large" data-i18n="font_size.large">大</option>
+                                <option value="custom" data-i18n="font_size.custom">カスタム</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="font-size-percent" data-i18n="font_size.percentage">Percentage:</label>
+                        <div class="input-with-spinner">
+                            <input type="number" id="font-size-percent" min="50" max="200" step="5" value="100" />
+                            <div class="spinner-buttons">
+                                <button type="button" class="spinner-btn spinner-down">◀</button>
+                                <button type="button" class="spinner-btn spinner-up">▶</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" id="font-size-cancel" data-i18n="common.cancel">キャンセル</button>
+                    <button type="button" class="btn-primary" id="font-size-apply" data-i18n="common.apply">変更</button>
+                </div>
+            </div>
+        </div>
+
+        <script type="module" src="js/i18n.js"></script>
+        <script type="module" src="js/modal.js"></script>
+        <script type="module" src="js/recurring-rule.js"></script>
+    </body>
+</html>
