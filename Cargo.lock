@@ -125,6 +125,7 @@ dependencies = [
  "base64 0.22.1",
  "chrono",
  "glib 0.20.12",
+ "jpholiday",
  "log",
  "rand 0.9.4",
  "serde",
@@ -2129,6 +2130,16 @@ checksum = "38c0b942f458fe50cdac086d2f946512305e5631e720728f2a61aabcd47a6264"
 dependencies = [
  "quote",
  "syn 2.0.117",
+]
+
+[[package]]
+name = "jpholiday"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "719e26397fba737884466edb9e2f147b358899953f324005fa1ed1de30c89bdf"
+dependencies = [
+ "chrono",
+ "dyn-clone",
 ]
 
 [[package]]

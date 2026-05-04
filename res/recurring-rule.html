@@ -106,10 +106,46 @@
                                 </div>
                             </div>
 
+                            <div class="form-group full conditional" id="monthly-mode-group">
+                                <label data-i18n="recurring_rule.monthly_mode">Monthly day rule:</label>
+                                <div class="cycle-radios">
+                                    <label><input type="radio" name="monthly-mode" value="DAY" checked /> <span data-i18n="recurring_rule.monthly_mode_day_of_month">Day of month</span></label>
+                                    <label><input type="radio" name="monthly-mode" value="NTH_WEEKDAY" /> <span data-i18n="recurring_rule.monthly_mode_nth_weekday">Nth weekday</span></label>
+                                </div>
+                            </div>
+
                             <div class="form-group conditional" id="day-of-month-group">
                                 <label for="day-of-month" data-i18n="recurring_rule.day_of_month">Day of month (1–31):</label>
                                 <div class="input-wrapper">
                                     <input type="number" id="day-of-month" min="1" max="31" />
+                                </div>
+                            </div>
+
+                            <div class="form-group conditional" id="week-of-month-group">
+                                <label for="week-of-month" data-i18n="recurring_rule.week_of_month">Week of month:</label>
+                                <div class="input-wrapper">
+                                    <select id="week-of-month">
+                                        <option value="1" data-i18n="recurring_rule.week_1">1st</option>
+                                        <option value="2" data-i18n="recurring_rule.week_2">2nd</option>
+                                        <option value="3" data-i18n="recurring_rule.week_3">3rd</option>
+                                        <option value="4" data-i18n="recurring_rule.week_4">4th</option>
+                                        <option value="5" data-i18n="recurring_rule.week_last">Last</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-group conditional" id="day-of-week-group">
+                                <label for="day-of-week" data-i18n="recurring_rule.day_of_week">Day of week:</label>
+                                <div class="input-wrapper">
+                                    <select id="day-of-week">
+                                        <option value="1" data-i18n="recurring_rule.weekday_mon">Mon</option>
+                                        <option value="2" data-i18n="recurring_rule.weekday_tue">Tue</option>
+                                        <option value="3" data-i18n="recurring_rule.weekday_wed">Wed</option>
+                                        <option value="4" data-i18n="recurring_rule.weekday_thu">Thu</option>
+                                        <option value="5" data-i18n="recurring_rule.weekday_fri">Fri</option>
+                                        <option value="6" data-i18n="recurring_rule.weekday_sat">Sat</option>
+                                        <option value="7" data-i18n="recurring_rule.weekday_sun">Sun</option>
+                                    </select>
                                 </div>
                             </div>
 

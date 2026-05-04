@@ -124,18 +124,27 @@ async function loadShops() {
 // ----- Cycle kind: show/hide anchor vs day-of-month -----
 
 function setupCycleKindToggle() {
-    const radios = document.querySelectorAll('input[name="cycle-kind"]');
-    radios.forEach((r) =>
-        r.addEventListener('change', () => {
-            const kind = document.querySelector('input[name="cycle-kind"]:checked').value;
-            document
-                .getElementById('anchor-date-group')
-                .classList.toggle('visible', kind === 'DAY');
-            document
-                .getElementById('day-of-month-group')
-                .classList.toggle('visible', kind === 'MONTH');
-        })
-    );
+    const cycleRadios = document.querySelectorAll('input[name="cycle-kind"]');
+    const monthlyModeRadios = document.querySelectorAll('input[name="monthly-mode"]');
+    cycleRadios.forEach((r) => r.addEventListener('change', updateCycleVisibility));
+    monthlyModeRadios.forEach((r) => r.addEventListener('change', updateCycleVisibility));
+    updateCycleVisibility();
+}
+
+function updateCycleVisibility() {
+    const kind = document.querySelector('input[name="cycle-kind"]:checked').value;
+    const monthlyMode =
+        document.querySelector('input[name="monthly-mode"]:checked')?.value || 'DAY';
+    const isDay = kind === 'DAY';
+    const isMonth = kind === 'MONTH';
+    const isMonthDay = isMonth && monthlyMode === 'DAY';
+    const isMonthNth = isMonth && monthlyMode === 'NTH_WEEKDAY';
+
+    document.getElementById('anchor-date-group').classList.toggle('visible', isDay);
+    document.getElementById('monthly-mode-group').classList.toggle('visible', isMonth);
+    document.getElementById('day-of-month-group').classList.toggle('visible', isMonthDay);
+    document.getElementById('week-of-month-group').classList.toggle('visible', isMonthNth);
+    document.getElementById('day-of-week-group').classList.toggle('visible', isMonthNth);
 }
 
 // ----- Category 1 → 2 → 3 dependent dropdowns -----
@@ -203,20 +212,34 @@ function setupFormSubmit() {
         hideResult();
 
         const cycleKind = document.querySelector('input[name="cycle-kind"]:checked').value;
+        const monthlyMode =
+            document.querySelector('input[name="monthly-mode"]:checked')?.value || 'DAY';
         const periodInterval = parseInt(document.getElementById('period-interval').value, 10);
+
+        let monthDayRuleType = null;
+        let dayOfMonth = null;
+        let weekOfMonth = null;
+        let dayOfWeek = null;
+        if (cycleKind === 'MONTH') {
+            if (monthlyMode === 'DAY') {
+                monthDayRuleType = 'DAY';
+                dayOfMonth = parseInt(document.getElementById('day-of-month').value, 10);
+            } else if (monthlyMode === 'NTH_WEEKDAY') {
+                monthDayRuleType = 'NTH_WEEKDAY';
+                weekOfMonth = parseInt(document.getElementById('week-of-month').value, 10);
+                dayOfWeek = parseInt(document.getElementById('day-of-week').value, 10);
+            }
+        }
 
         const request = {
             rule_name: stringOrNull(document.getElementById('rule-name').value),
             period_unit: cycleKind,
             period_interval: periodInterval,
             anchor_date: cycleKind === 'DAY' ? document.getElementById('anchor-date').value : null,
-            day_of_week: null,
-            month_day_rule_type: cycleKind === 'MONTH' ? 'DAY' : null,
-            day_of_month:
-                cycleKind === 'MONTH'
-                    ? parseInt(document.getElementById('day-of-month').value, 10)
-                    : null,
-            week_of_month: null,
+            day_of_week: dayOfWeek,
+            month_day_rule_type: monthDayRuleType,
+            day_of_month: dayOfMonth,
+            week_of_month: weekOfMonth,
             month_of_year: null,
             holiday_shift_type: parseInt(document.getElementById('holiday-shift-type').value, 10),
 
@@ -256,8 +279,14 @@ function setupFormSubmit() {
             showResult('error', i18n.t('recurring_rule.err_item_name_required') || 'Item name is required.');
             return;
         }
-        if (cycleKind === 'MONTH' && (!request.day_of_month || request.day_of_month < 1 || request.day_of_month > 31)) {
+        if (cycleKind === 'MONTH' && monthlyMode === 'DAY' &&
+            (!request.day_of_month || request.day_of_month < 1 || request.day_of_month > 31)) {
             showResult('error', i18n.t('recurring_rule.err_day_of_month_invalid') || 'Day of month must be 1–31.');
+            return;
+        }
+        if (cycleKind === 'MONTH' && monthlyMode === 'NTH_WEEKDAY' &&
+            (!request.week_of_month || !request.day_of_week)) {
+            showResult('error', i18n.t('recurring_rule.err_nth_weekday_invalid') || 'Week and weekday must be selected.');
             return;
         }
 
