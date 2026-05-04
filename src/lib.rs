@@ -18,6 +18,7 @@ mod services {
     pub mod product;
     pub mod session;
     pub mod aggregation;
+    pub mod recurring;
 }
 
 #[cfg(test)]
@@ -39,6 +40,7 @@ use services::encryption::EncryptionService;
 use services::i18n::I18nService;
 use services::category::CategoryService;
 use services::transaction::TransactionService;
+use services::recurring::RecurringService;
 use services::session::SessionState;
 use settings::SettingsManager;
 use validation::{validate_password, validate_password_confirmation};
@@ -53,6 +55,7 @@ pub struct AppState {
     pub i18n: Arc<Mutex<I18nService>>,
     pub category: Arc<Mutex<CategoryService>>,
     pub transaction: Arc<Mutex<TransactionService>>,
+    pub recurring: Arc<Mutex<RecurringService>>,
     pub session: Arc<SessionState>,
 }
 
@@ -2054,6 +2057,55 @@ async fn get_monthly_aggregation_by_category(
     .await
 }
 
+// =============================================================================
+// Recurring Scheduled Transactions Commands (v2.1.0)
+// =============================================================================
+
+#[tauri::command]
+async fn create_recurring_rule(
+    request: services::recurring::SaveRecurringRuleRequest,
+    state: tauri::State<'_, AppState>,
+) -> Result<services::recurring::CreateRecurringRuleResult, String> {
+    let user_id = get_session_user_id(&state)?;
+    let recurring = state.recurring.lock().await;
+    recurring
+        .create_rule_with_instances(user_id, request)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// Delete a recurring rule. `cascade = true` also removes every
+/// IS_SCHEDULED=1 occurrence the rule had generated; `cascade = false`
+/// keeps those occurrences but clears their `RULE_ID` reference.
+#[tauri::command]
+async fn delete_recurring_rule(
+    rule_id: i64,
+    cascade: bool,
+    state: tauri::State<'_, AppState>,
+) -> Result<(), String> {
+    let user_id = get_session_user_id(&state)?;
+    let recurring = state.recurring.lock().await;
+    recurring
+        .delete_rule(user_id, rule_id, cascade)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// List the recurring rules the current user has registered.
+/// Each summary includes the count of currently-materialized occurrences,
+/// so the UI can show "delete this rule and its N transactions" prompts.
+#[tauri::command]
+async fn list_recurring_rules(
+    state: tauri::State<'_, AppState>,
+) -> Result<Vec<services::recurring::RecurringRuleSummary>, String> {
+    let user_id = get_session_user_id(&state)?;
+    let recurring = state.recurring.lock().await;
+    recurring
+        .list_rules(user_id)
+        .await
+        .map_err(|e| e.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -2168,7 +2220,10 @@ pub fn run() {
             get_weekly_aggregation,
             get_weekly_aggregation_by_date,
             get_yearly_aggregation,
-            get_monthly_aggregation_by_category
+            get_monthly_aggregation_by_category,
+            create_recurring_rule,
+            delete_recurring_rule,
+            list_recurring_rules
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {
@@ -2181,7 +2236,7 @@ pub fn run() {
 
             // Initialize database
             let rt = tokio::runtime::Runtime::new().unwrap();
-            let (db, auth, user_mgmt, encryption, settings, i18n, category, transaction) = rt.block_on(async {
+            let (db, auth, user_mgmt, encryption, settings, i18n, category, transaction, recurring) = rt.block_on(async {
                 let database = Database::new().await
                     .expect("Failed to connect to database");
                 database.initialize().await
@@ -2191,6 +2246,10 @@ pub fn run() {
                 database.migrate_transactions().await
                     .expect("Failed to migrate transaction tables");
 
+                // Run v2.1.0 recurring scheduled transactions migrations
+                database.migrate_recurring().await
+                    .expect("Failed to migrate recurring tables");
+
                 let auth_service = AuthService::new(database.pool().clone());
                 let user_mgmt_service = UserManagementService::new(database.pool().clone());
                 let encryption_service = EncryptionService::new(database.pool().clone());
@@ -2199,8 +2258,9 @@ pub fn run() {
                 let i18n_service = I18nService::new(database.pool().clone());
                 let category_service = CategoryService::new(database.pool().clone());
                 let transaction_service = TransactionService::new(database.pool().clone());
-                
-                (database, auth_service, user_mgmt_service, encryption_service, settings_manager, i18n_service, category_service, transaction_service)
+                let recurring_service = RecurringService::new(database.pool().clone());
+
+                (database, auth_service, user_mgmt_service, encryption_service, settings_manager, i18n_service, category_service, transaction_service, recurring_service)
             });
 
             app.manage(AppState {
@@ -2212,6 +2272,7 @@ pub fn run() {
                 i18n: Arc::new(Mutex::new(i18n)),
                 category: Arc::new(Mutex::new(category)),
                 transaction: Arc::new(Mutex::new(transaction)),
+                recurring: Arc::new(Mutex::new(recurring)),
                 session: Arc::new(SessionState::new()),
             });
 

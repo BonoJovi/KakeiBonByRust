@@ -2,6 +2,44 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v2.1.0] - 2026-05-04
+
+Minor release adding recurring scheduled transactions. Monthly salary, utility bills, subscriptions, and similar recurring payments can now be registered once as a rule and then bulk-generated as scheduled transactions across the desired period.
+
+### Features
+
+- **Recurring rules**: The new `Admin > Recurring Rule` screen lets you register a cycle, period, and template (amount, category, accounts, memo) as a single rule. Saving the rule bulk-generates one `IS_SCHEDULED=1` transaction per occurrence in the period. The template (rule) and the materialized data (generated transactions) are deliberately treated as independent: the rule can be deleted while keeping the transactions as standalone scheduled entries
+- **Cycles available from the v2.1.0 UI**: daily (every N days, anchored on a date) / monthly (every N months, fixed day of month) / monthly (every N months, Nth weekday). Weekly, yearly, and the end-of-month variants are fully supported by the backend pure functions and converter, but their UI inputs ship in v2.1.x
+- **Nth weekday of month**: lets you specify rules like "every 4th Thursday." This is the differentiator competitors such as Zaim do not support, and one of the original motivations for KakeiBon. Selecting the 5th week is treated as "the last occurrence in that month"
+- **Holiday shift**: when a generated date lands on a Saturday, Sunday, or Japanese national holiday, you can roll it back to the previous business day (payday convention) or forward to the next business day (debit convention). Consecutive holidays such as Golden Week and year-end are walked through until a real business day is reached
+- **Auto-seeded Japanese holiday master**: added the `jpholiday` crate and seeded `HOLIDAYS_STANDARD` on every startup with a 16-year window (current year -5 / +10) via `INSERT OR IGNORE`. Future years and law changes flow in without a code change
+- **Rule list UI**: shows registered rules with their occurrence counts and a delete button each
+- **Two delete modes**: "delete rule only (keep generated transactions as standalone scheduled entries)" and "delete rule + all generated transactions" — chosen explicitly in a confirmation modal
+
+### Fixes / improvements
+
+- **`PRAGMA foreign_keys = ON` enabled on production connections**: KakeiBon's SQLite connection was previously left at SQLite's default (OFF), so every declared `ON DELETE CASCADE` / `SET NULL` in the schema was being silently ignored. Discovered and fixed while implementing the delete flow. Existing CASCADEs (e.g. `TRANSACTIONS_DETAIL`) now actually take effect
+- **Migration for existing single scheduled transactions**: scheduled transactions registered under v2.0.x are automatically handled — their `RULE_ID` stays NULL, identifying them as "not rule-derived, just a one-off scheduled entry"
+
+### Schema changes
+
+- `TRANSACTIONS_HEADER`: added `RULE_ID INTEGER` (declared as FK ON DELETE SET NULL on fresh DBs; pre-existing DBs rely on application-layer integrity)
+- `USERS`: added `HOLIDAY_LOCALE TEXT DEFAULT 'JP'`, `WEEK_START_DAY INTEGER DEFAULT 1`
+- New tables: `RECURRING_RULES`, `RECURRING_RULE_DETAILS` (1:1 with `RULE_ID UNIQUE`), `HOLIDAYS_STANDARD`, `HOLIDAYS_USER_CUSTOM`
+
+### Tests
+
+- 45 new cases in `services::recurring` (30 pure-function date generation + 8 converter roundtrips + 6 validation errors + 1 ISO weekday mapping)
+
+### Coming in v2.1.x / v2.2.0
+
+- UI inputs for weekly, yearly, and end-of-month variants (backend already supports them)
+- Rule editing (currently covered by "delete and re-create")
+- Week start day setting UI (paired with the weekly UI)
+- User-defined holiday UI (HOLIDAYS_USER_CUSTOM)
+
+---
+
 ## [v2.0.1] - 2026-05-01
 
 Patch release fixing i18n bugs and a flaky test discovered after v2.0.0.

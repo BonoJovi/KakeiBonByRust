@@ -710,7 +710,13 @@ impl TransactionService {
         let mut where_clauses = vec!["t.USER_ID = ?".to_string()];
         let mut params: Vec<String> = vec![user_id.to_string()];
 
-        // Exclude scheduled transactions by default
+        // Exclude scheduled transactions by default. When the user opts in,
+        // every IS_SCHEDULED row is shown, including each occurrence of a
+        // recurring rule — the date filter (TRANSACTION_DATE BETWEEN ...)
+        // is what scopes the visible window. Group membership of recurring
+        // occurrences is preserved through RULE_ID, not through any
+        // representative-row trick that would have to be maintained on
+        // every confirm/delete.
         if !include_scheduled {
             where_clauses.push("t.IS_SCHEDULED = 0".to_string());
         }

@@ -783,6 +783,7 @@ CREATE TABLE IF NOT EXISTS TRANSACTIONS_HEADER (
     MEMO_ID INTEGER,
     IS_DISABLED INTEGER DEFAULT 0,
     IS_SCHEDULED INTEGER DEFAULT 0,
+    RULE_ID INTEGER,
     ENTRY_DT DATETIME NOT NULL DEFAULT (datetime('now', 'localtime')),
     UPDATE_DT DATETIME,
     FOREIGN KEY (USER_ID) REFERENCES USERS(USER_ID) ON DELETE CASCADE,
@@ -879,6 +880,180 @@ SELECT
     DETAIL_ID, TRANSACTION_ID, USER_ID, CATEGORY1_CODE, CATEGORY2_CODE, CATEGORY3_CODE,
     ITEM_NAME, AMOUNT, TAX_AMOUNT, TAX_RATE, AMOUNT_INCLUDING_TAX, MEMO_ID, ENTRY_DT, UPDATE_DT
 FROM TRANSACTIONS_DETAIL
+"#;
+
+// ============================================================================
+// Recurring Scheduled Transactions Tables (v2.1.0)
+// ============================================================================
+
+// Holds the cycle definition + HEADER template fields for one recurring rule.
+// MONTH_DAY_RULE_TYPE distinguishes the four MonthlyDayRule variants and
+// supersedes the older IS_END_OF_MONTH flag (which lacked DayOfMonthOrEnd).
+// Group membership of generated occurrences is established by the RULE_ID
+// foreign key on each TRANSACTIONS_HEADER row (no linked-list bookkeeping).
+pub const CREATE_RECURRING_RULES_TABLE: &str = r#"
+CREATE TABLE IF NOT EXISTS RECURRING_RULES (
+    RULE_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    USER_ID INTEGER NOT NULL,
+    RULE_NAME TEXT,
+    PERIOD_UNIT TEXT NOT NULL,
+    PERIOD_INTERVAL INTEGER NOT NULL,
+    ANCHOR_DATE DATE,
+    DAY_OF_WEEK INTEGER,
+    MONTH_DAY_RULE_TYPE TEXT,
+    DAY_OF_MONTH INTEGER,
+    WEEK_OF_MONTH INTEGER,
+    MONTH_OF_YEAR INTEGER,
+    HOLIDAY_SHIFT_TYPE INTEGER DEFAULT 0,
+    START_DATE DATE NOT NULL,
+    END_DATE DATE NOT NULL,
+    SHOP_ID INTEGER,
+    CATEGORY1_CODE VARCHAR(50) NOT NULL,
+    FROM_ACCOUNT_CODE VARCHAR(50) NOT NULL,
+    TO_ACCOUNT_CODE VARCHAR(50) NOT NULL,
+    TOTAL_AMOUNT INTEGER NOT NULL,
+    TAX_ROUNDING_TYPE INTEGER DEFAULT 0,
+    TAX_INCLUDED_TYPE INTEGER DEFAULT 1 NOT NULL,
+    MEMO_ID INTEGER,
+    IS_DISABLED INTEGER DEFAULT 0,
+    ENTRY_DT DATETIME NOT NULL DEFAULT (datetime('now', 'localtime')),
+    UPDATE_DT DATETIME,
+    FOREIGN KEY (USER_ID) REFERENCES USERS(USER_ID) ON DELETE CASCADE,
+    FOREIGN KEY (USER_ID, CATEGORY1_CODE) REFERENCES CATEGORY1(USER_ID, CATEGORY1_CODE),
+    FOREIGN KEY (USER_ID, FROM_ACCOUNT_CODE) REFERENCES ACCOUNTS(USER_ID, ACCOUNT_CODE),
+    FOREIGN KEY (USER_ID, TO_ACCOUNT_CODE) REFERENCES ACCOUNTS(USER_ID, ACCOUNT_CODE)
+)
+"#;
+
+// 1:1 with RECURRING_RULES enforced by RULE_ID UNIQUE (DB-level prong of the
+// triple defense; frontend + backend validation are the other two).
+pub const CREATE_RECURRING_RULE_DETAILS_TABLE: &str = r#"
+CREATE TABLE IF NOT EXISTS RECURRING_RULE_DETAILS (
+    RULE_DETAIL_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    RULE_ID INTEGER NOT NULL UNIQUE,
+    USER_ID INTEGER NOT NULL,
+    CATEGORY1_CODE VARCHAR(50) NOT NULL,
+    CATEGORY2_CODE VARCHAR(50),
+    CATEGORY3_CODE VARCHAR(50),
+    ITEM_NAME TEXT NOT NULL,
+    AMOUNT INTEGER NOT NULL,
+    TAX_AMOUNT INTEGER DEFAULT 0,
+    TAX_RATE INTEGER DEFAULT 8,
+    AMOUNT_INCLUDING_TAX INTEGER,
+    MEMO_ID INTEGER,
+    ENTRY_DT DATETIME NOT NULL DEFAULT (datetime('now')),
+    UPDATE_DT DATETIME,
+    FOREIGN KEY (RULE_ID) REFERENCES RECURRING_RULES(RULE_ID) ON DELETE CASCADE,
+    FOREIGN KEY (MEMO_ID) REFERENCES MEMOS(MEMO_ID),
+    CHECK (ITEM_NAME != '')
+)
+"#;
+
+// System-defined holidays (e.g. transcribed from the jpholiday crate).
+pub const CREATE_HOLIDAYS_STANDARD_TABLE: &str = r#"
+CREATE TABLE IF NOT EXISTS HOLIDAYS_STANDARD (
+    STANDARD_HOLIDAY_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    LOCALE TEXT NOT NULL,
+    HOLIDAY_DATE DATE NOT NULL,
+    HOLIDAY_NAME TEXT NOT NULL,
+    UNIQUE (LOCALE, HOLIDAY_DATE)
+)
+"#;
+
+// User-added holidays (company holidays, personal days off, etc).
+pub const CREATE_HOLIDAYS_USER_CUSTOM_TABLE: &str = r#"
+CREATE TABLE IF NOT EXISTS HOLIDAYS_USER_CUSTOM (
+    USER_HOLIDAY_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    USER_ID INTEGER NOT NULL,
+    HOLIDAY_DATE DATE NOT NULL,
+    HOLIDAY_NAME TEXT NOT NULL,
+    FOREIGN KEY (USER_ID) REFERENCES USERS(USER_ID) ON DELETE CASCADE,
+    UNIQUE (USER_ID, HOLIDAY_DATE)
+)
+"#;
+
+// ============================================================================
+// Recurring Scheduled Transactions Queries (v2.1.0)
+// ============================================================================
+
+// Bind order matches the create_rule_with_instances() service. FIRST_TRANSACTION_ID
+// stays NULL on insert and is patched after the first instance is generated.
+pub const RECURRING_RULES_INSERT: &str = r#"
+INSERT INTO RECURRING_RULES (
+    USER_ID, RULE_NAME,
+    PERIOD_UNIT, PERIOD_INTERVAL,
+    ANCHOR_DATE, DAY_OF_WEEK, MONTH_DAY_RULE_TYPE,
+    DAY_OF_MONTH, WEEK_OF_MONTH, MONTH_OF_YEAR,
+    HOLIDAY_SHIFT_TYPE,
+    START_DATE, END_DATE,
+    SHOP_ID, CATEGORY1_CODE, FROM_ACCOUNT_CODE, TO_ACCOUNT_CODE,
+    TOTAL_AMOUNT, TAX_ROUNDING_TYPE, TAX_INCLUDED_TYPE, MEMO_ID
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+"#;
+
+pub const RECURRING_RULE_DETAILS_INSERT: &str = r#"
+INSERT INTO RECURRING_RULE_DETAILS (
+    RULE_ID, USER_ID, CATEGORY1_CODE, CATEGORY2_CODE, CATEGORY3_CODE,
+    ITEM_NAME, AMOUNT, TAX_AMOUNT, TAX_RATE, AMOUNT_INCLUDING_TAX, MEMO_ID
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+"#;
+
+// HEADER insert for a generated occurrence: IS_SCHEDULED is fixed to 1 here so
+// callers cannot accidentally write a non-scheduled row through this path.
+// RULE_ID is the only group identifier — no linked-list bookkeeping.
+pub const TRANSACTIONS_HEADER_INSERT_FOR_RECURRING: &str = r#"
+INSERT INTO TRANSACTIONS_HEADER (
+    USER_ID, SHOP_ID, TRANSACTION_DATE, CATEGORY1_CODE,
+    FROM_ACCOUNT_CODE, TO_ACCOUNT_CODE,
+    TOTAL_AMOUNT, TAX_ROUNDING_TYPE, TAX_INCLUDED_TYPE, MEMO_ID,
+    IS_SCHEDULED, RULE_ID, ENTRY_DT
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, datetime('now', 'localtime'))
+"#;
+
+// Cascade-delete path for a recurring rule: drop every generated HEADER first
+// (their DETAILs cascade via the existing FK). Caller still has to DELETE the
+// RECURRING_RULES row afterwards (which cascades RECURRING_RULE_DETAILS).
+pub const TRANSACTIONS_HEADER_DELETE_BY_RULE: &str = r#"
+DELETE FROM TRANSACTIONS_HEADER
+WHERE RULE_ID = ? AND USER_ID = ?
+"#;
+
+// Detach-mode path: orphan generated HEADERs from the rule before the rule
+// goes away. Used when the user wants to remove the rule template but keep
+// the already-generated occurrences as standalone scheduled transactions.
+// On new DBs the FK ON DELETE SET NULL would do this automatically; we run
+// it explicitly so older DBs (created before the FK existed) behave the same.
+pub const TRANSACTIONS_HEADER_DETACH_FROM_RULE: &str = r#"
+UPDATE TRANSACTIONS_HEADER
+SET RULE_ID = NULL
+WHERE RULE_ID = ? AND USER_ID = ?
+"#;
+
+pub const RECURRING_RULES_DELETE: &str = r#"
+DELETE FROM RECURRING_RULES
+WHERE RULE_ID = ? AND USER_ID = ?
+"#;
+
+// List active recurring rules for a user, with the number of occurrences
+// each one has currently materialized in TRANSACTIONS_HEADER. The LEFT JOIN
+// keeps rules that have not generated any rows yet (count = 0).
+pub const RECURRING_RULES_LIST_BY_USER: &str = r#"
+SELECT
+    r.RULE_ID,
+    r.RULE_NAME,
+    r.PERIOD_UNIT,
+    r.PERIOD_INTERVAL,
+    r.START_DATE,
+    r.END_DATE,
+    r.TOTAL_AMOUNT,
+    r.HOLIDAY_SHIFT_TYPE,
+    COUNT(h.TRANSACTION_ID) AS OCCURRENCE_COUNT
+FROM RECURRING_RULES r
+LEFT JOIN TRANSACTIONS_HEADER h
+    ON h.RULE_ID = r.RULE_ID AND h.IS_SCHEDULED = 1
+WHERE r.USER_ID = ? AND COALESCE(r.IS_DISABLED, 0) = 0
+GROUP BY r.RULE_ID
+ORDER BY r.RULE_ID DESC
 "#;
 
 // ============================================================================

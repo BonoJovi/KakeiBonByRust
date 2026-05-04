@@ -6,7 +6,7 @@
 
 [![Rust](https://img.shields.io/badge/Rust-1.70+-orange.svg)](https://www.rust-lang.org/)
 [![Tauri](https://img.shields.io/badge/Tauri-v2.9.3-blue.svg)](https://tauri.app/)
-[![Tests](https://img.shields.io/badge/tests-800%20passing-brightgreen.svg)](#test-results)
+[![Tests](https://img.shields.io/badge/tests-845%20passing-brightgreen.svg)](#test-results)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 [[J][P] Japanese Version](README_ja.md) | [[Globe] Bilingual README](README.md)
@@ -24,31 +24,32 @@
 Thank you for your continued interest in KakeiBon.
 I'm BonoJovi (Yoshihiro NAKAHARA), the project initiator.
 
-**We have officially released Ver.2.0.0!**
+**We have officially released Ver.2.1.0!**
 
-Ver.2.0.0 is a major release with a complete overhaul of the tax calculation logic. The previous approach (compute-then-round per detail line, then aggregate) accumulated rounding errors, occasionally causing aggregated totals to disagree with receipt amounts. The formula has been unified to: *within a single transaction* — `SUM(net) → tax calc → round per the header's rounding mode → sum across rates`; *across transactions* — `SUM` the already-rounded integer values without further rounding.
+Ver.2.1.0 is a minor release that lets you register monthly salary, utility bills, subscriptions, and other recurring transactions as a single rule, then bulk-generate the matching scheduled transactions across the rule's period. As a core feature that fits naturally with the monthly rhythm of household budgeting, it also supports the holiday-shift conventions used for payday (roll back) and direct debits (roll forward).
 
-Key changes include:
-- Aggregation queries fully rewritten (eliminates the double-counting bug and accumulated rounding error)
-- Auto-recalculation of header totals with a confirmation prompt
-- Real-time preview of the total field on tax setting change
-- New "Data Maintenance" section on the dashboard (bulk recalc + one-click rollback)
-- Pattern-match recalc (treats user-entered totals as authoritative and corrects the tax method)
-- Per-account balance snapshot (for reconciling against source data)
+Key new features:
 
-Because `AMOUNT` semantics now fixes the value as the net (tax-exclusive) amount — an API-level breaking change — the major version has been bumped to v2.0.0. There is no database schema migration, so existing users can update without manual data migration.
+- **Recurring scheduled transaction rules**: register a cycle, period, and template (amount, category, accounts, memo) once, and the matching scheduled transactions are bulk-inserted for the entire period
+- **Cycles available from the v2.1.0 UI**: daily (every N days, anchored on a date) / monthly (every N months, fixed day of month) / monthly (every N months, **Nth weekday**). Weekly, yearly, and the end-of-month variants are supported by the backend; their UI inputs ship in v2.1.x
+- **Nth weekday of month**: lets you specify rules like "every 4th Thursday." This is the differentiator competitors such as Zaim do not support, and one of the original motivations for KakeiBon
+- **Holiday shift**: when a generated date lands on a Saturday, Sunday, or Japanese national holiday, you can roll back to the previous business day (payday convention) or forward to the next business day (direct-debit convention). Consecutive holidays are walked through until a real business day is reached
+- **Auto-seeded Japanese holiday master**: uses the jpholiday crate to populate a 16-year window (current year -5 / +10) at every startup
+- **Rule list + delete (two modes)**: see your registered rules; on delete, choose between "delete rule only (keep generated transactions as standalone scheduled entries)" and "delete rule + all generated transactions"
+
+This release adds a `RULE_ID` column to `TRANSACTIONS_HEADER` and several new tables, but there is no destructive change to existing data — startup migrations handle everything automatically.
 
 If you would like to use the stable release version, please refer to the [main branch](https://github.com/BonoJovi/KakeiBonByRust/tree/main).
 
 The dev branch you are currently viewing is the development version, where we are working on features for the next release.
 If you want to try the latest features early, please use this dev branch.
 
-In Ver.2.1.0 we plan to introduce *recurring scheduled transactions* — register one rule (yearly / monthly / weekly / daily intervals) to auto-expand scheduled income & expenses across a date range. Ver.2.2.0 will reuse that recurrence logic to add *aggregation cycle start day customization* (align the monthly cycle with payday or pension transfer dates).
+Looking ahead, Ver.2.2.0 will reuse the recurrence logic from Ver.2.1.0 to add *aggregation cycle start day customization* (align the monthly cycle with payday or pension transfer dates). Ver.2.1.x is planned to add the weekly / yearly UI, rule editing, and the user-defined holiday UI.
 We welcome messages via GitHub issues or email, whether it's words of encouragement or suggestions for features you'd like to see in the future — any feedback is appreciated.
 
 Thank you for your continued support of KakeiBon.
 
-**2026-05-01 (JST) Written by Yoshihiro NAKAHARA**
+**2026-05-04 (JST) Written by Yoshihiro NAKAHARA**
 
 </div>
 
