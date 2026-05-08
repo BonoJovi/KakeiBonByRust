@@ -21,7 +21,7 @@ tauri-build = { version = "2.5.2", features = [] }
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
-tauri = { version = "2.9.3", features = [] }
+tauri = { version = "2.11.1", features = [] }
 tauri-plugin-log = "2.7.1"
 sqlx = { version = "0.8.6", features = ["runtime-tokio", "sqlite"] }
 tokio = { version = "1", features = ["full"] }
