@@ -36,7 +36,7 @@ jobs:
           echo "Version format valid: $VERSION"
 
       - name: Checkout dev branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: dev
           fetch-depth: 0
