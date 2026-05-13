@@ -5,9 +5,9 @@
 > **A Modern Household Budget App with Focus on Readability and Usability**  
 > **見やすさと使いやすさを追求した、モダンな家計簿アプリケーション**
 
-[![Version](https://img.shields.io/badge/Version-2.1.0-blue)](https://github.com/BonoJovi/KakeiBonByRust/releases/tag/v2.1.0)
+[![Version](https://img.shields.io/badge/Version-2.1.1-blue)](https://github.com/BonoJovi/KakeiBonByRust/releases/tag/v2.1.1)
 [![Rust](https://img.shields.io/badge/Rust-1.70+-orange.svg)](https://www.rust-lang.org/)
-[![Tauri](https://img.shields.io/badge/Tauri-v2.9.3-blue.svg)](https://tauri.app/)
+[![Tauri](https://img.shields.io/badge/Tauri-v2.11.1-blue.svg)](https://tauri.app/)
 [![Tests](https://img.shields.io/badge/tests-845%20passing-brightgreen.svg)](#test-results--テスト結果)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/bonojovi)

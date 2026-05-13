@@ -1,13 +1,13 @@
 # KakeiBon - Quick Reference
 
-**Version**: v2.1.0 | **Status**: Released
-**Last Updated**: 2026-05-04 JST
+**Version**: v2.1.1 | **Status**: Released
+**Last Updated**: 2026-05-14 JST
 
 ## Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
-| Framework | Tauri v2.9.3 |
+| Framework | Tauri v2.11.1 |
 | Backend | Rust 1.77.2+ |
 | Frontend | Vanilla JS/HTML/CSS (ES6+) |
 | Database | SQLite (sqlx 0.8.6) |
