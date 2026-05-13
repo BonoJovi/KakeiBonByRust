@@ -1,6 +1,6 @@
 # KakeiBon Code & Documentation Line Count History
 
-**Last updated:** 2026-05-05
+**Last updated:** 2026-05-14
 **Maintained by:** [count_lines.sh](../../count_lines.sh) + git tag history
 
 ---
@@ -64,6 +64,7 @@ Measured by checking out each tag via `git worktree` and running the latest `cou
 | v2.0.0 | 2026-04-30 | 17,156 | 10,359 | 3,628 | 6,683 | 6,787 | 4,216 | 44,454 | 44,613 | 48,670 | 93,283 |
 | v2.0.1 | 2026-05-01 | 17,125 | 10,379 | 3,628 | 6,683 | 6,787 | 4,289 | 44,454 | 44,602 | 48,743 | 93,345 |
 | v2.1.0 | 2026-05-04 | 19,277 | 10,851 | 4,007 | 6,683 | 7,049 | 4,367 | 44,454 | 47,867 | 48,821 | 96,688 |
+| v2.1.1 | 2026-05-13 | 19,277 | 10,851 | 4,007 | 6,683 | 7,049 | 4,429 | 44,629 | 47,867 | 49,058 | 96,925 |
 
 **Note on dates:** v1.0.0 = 2025-11-21 (initial release). Tag UTC dates for v1.2.2 onward are confirmed via `gh release view`. Mid-v1 tags are placed chronologically; precise dates can be retrieved via `git log <tag> -1 --format=%aI`.
 
@@ -99,6 +100,15 @@ At v1.0.0 there was no `docs/` directory and only `README.md` (2 lines) at root.
 - Documentation total が初めて Code total を抜く（48,821 > 47,867）
 - 詳細は [CHANGELOG_ja.md](../../CHANGELOG_ja.md) / [CHANGELOG_en.md](../../CHANGELOG_en.md)
 
+### v2.1.1: errata + セキュリティ対応 / Errata + security response
+
+- **コード変更ゼロ**のリリース（Tauri 2.11.1 バンプは `Cargo.toml`/`Cargo.lock`、CI 更新は `.github/workflows/` で、いずれも本ドキュメントの計測対象外）
+- ドキュメントのみ +237 行：MD-root +62（README に Errata / Disclosure セクション新設）、`docs/` +175（本ドキュメント `CODE_LINE_HISTORY.md` 自体の追加）
+- Tauri 2.11.1（GHSA-7gmj-67g7-phm9）への迅速対応 + v1.0.0 行数訂正の正式公開
+- 詳細は [CHANGELOG_ja.md](../../CHANGELOG_ja.md) / [CHANGELOG_en.md](../../CHANGELOG_en.md)
+
+A documentation-only release. Code total unchanged because the Tauri 2.11.1 bump (security fix for GHSA-7gmj-67g7-phm9) lives in `Cargo.toml`/`Cargo.lock` and CI updates in `.github/workflows/`, none of which are measured by `count_lines.sh`. The +237 documentation lines consist of the README Errata/Disclosure section (+62) and this `CODE_LINE_HISTORY.md` document itself (+175).
+
 ---
 
 ## 過去に公開された誤った数値の訂正記録 / Errata for past published figures
@@ -121,8 +131,8 @@ In several past documents, articles, and LinkedIn posts, KakeiBon's scale was st
 | v1.0.0 時点の Grand total | 35,000 lines | **10,396 lines** |
 | v1.0.2 時点の Code total | — | 38,562 lines |
 | v1.0.2 時点の Grand total | — | 84,341 lines |
-| v2.1.0 時点の Code total | — | 47,867 lines |
-| v2.1.0 時点の Grand total | — | 96,688 lines |
+| v2.1.1 時点の Code total | — | 47,867 lines |
+| v2.1.1 時点の Grand total | — | 96,925 lines |
 
 ### 「35,000 行」の出所推定 / Likely origin of the 35,000 figure
 
