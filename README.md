@@ -5,9 +5,9 @@
 > **A Modern Household Budget App with Focus on Readability and Usability**  
 > **見やすさと使いやすさを追求した、モダンな家計簿アプリケーション**
 
-[![Version](https://img.shields.io/badge/Version-2.1.0-blue)](https://github.com/BonoJovi/KakeiBonByRust/releases/tag/v2.1.0)
+[![Version](https://img.shields.io/badge/Version-2.1.1-blue)](https://github.com/BonoJovi/KakeiBonByRust/releases/tag/v2.1.1)
 [![Rust](https://img.shields.io/badge/Rust-1.70+-orange.svg)](https://www.rust-lang.org/)
-[![Tauri](https://img.shields.io/badge/Tauri-v2.9.3-blue.svg)](https://tauri.app/)
+[![Tauri](https://img.shields.io/badge/Tauri-v2.11.1-blue.svg)](https://tauri.app/)
 [![Tests](https://img.shields.io/badge/tests-845%20passing-brightgreen.svg)](#test-results--テスト結果)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/bonojovi)
@@ -93,6 +93,42 @@ Thank you for your continued support of KakeiBon.
 **2026-05-04 (JST) Written by Yoshihiro NAKAHARA**
 
 </div>
+
+---
+
+## ⚠️ Errata / 訂正のお知らせ
+
+過去に外部公開したコンテンツ（記事・LinkedIn 投稿・社内ドキュメント等）で、KakeiBon の規模を **「v1.0.0 リリース時 35,000 行」** と表記した箇所がありますが、これは **誤り** です。
+
+v1.0.0 時点の実数（[`count_lines.sh`](count_lines.sh) で計測、2026-05-05 確認）：
+
+- **Code total: 10,394 行** / Grand total: 10,396 行
+
+「35,000 行」は v1.0.2 時点の Code total（38,562 行）に近く、**v1.0.0 時点の規模と認識していた数値が、実際には v1.0.2 時点のものだった可能性が高い**です。同じ誤りに基づく派生数値（「11.67 倍生産性」「35,000 行 ÷ 1ヶ月」など）も同様に正しくありません。
+
+全タグの正確な行数履歴は **[`docs/etc/CODE_LINE_HISTORY.md`](docs/etc/CODE_LINE_HISTORY.md)** を一次情報源としてください。
+
+### 開示 / Disclosure
+
+この誤認の発生について、可能性として **発信者（中原 祥博 / BonoJovi）の統合失調症由来の認知の歪み（誤認）** が関与した可能性があります。発信者は統合失調症の診断を受けて通院中であり（[Message from Developer](#love-message-from-developer--開発者からのメッセージ) でも触れている通り）、思い込みや認識のずれが数値の誤計上につながった可能性は否定できません。
+
+今後は数値を引用する際、必ず `count_lines.sh` と `CODE_LINE_HISTORY.md` で再計測を行います。本訂正をもって、過去の公開数値に対する正規の修正記録とします。
+
+---
+
+Some past externally-published content (articles, LinkedIn posts, internal docs) stated KakeiBon's size as **"35,000 lines at the v1.0.0 release"** — this figure is **incorrect**.
+
+Actual v1.0.0 figures (measured via [`count_lines.sh`](count_lines.sh) on 2026-05-05):
+
+- **Code total: 10,394 lines** / Grand total: 10,396 lines
+
+The "35,000" figure is closest to the v1.0.2 code total (38,562 lines), suggesting it was a v1.0.2-era number that was misattributed to v1.0.0. Derived claims (e.g. "11.67× productivity", "35,000 lines / month") are wrong for the same reason.
+
+The canonical per-tag history is in **[`docs/etc/CODE_LINE_HISTORY.md`](docs/etc/CODE_LINE_HISTORY.md)**.
+
+### Disclosure
+
+The author (Yoshihiro NAKAHARA / BonoJovi), who is openly diagnosed with schizophrenia and currently undergoing treatment (as also referenced in the Developer Message above), acknowledges that **cognitive distortions associated with the condition may have contributed to this misattribution**. Going forward, all cited figures will be re-measured against `count_lines.sh` and `CODE_LINE_HISTORY.md` before publication. This errata serves as the canonical correction record for any prior published numbers.
 
 ---
 
@@ -269,10 +305,10 @@ Development is progressing smoothly, and we strive to update daily!
 
 | Metric | Count |
 |--------|-------|
-| 👁️ **Total Views** / 総閲覧数 | **85** |
-| 📦 **Total Clones** / 総クローン数 | **1,833** |
+| 👁️ **Total Views** / 総閲覧数 | **143** |
+| 📦 **Total Clones** / 総クローン数 | **1,541** |
 
-*Last Updated / 最終更新: 2026-05-04 01:43 UTC*
+*Last Updated / 最終更新: 2026-05-13 19:17 UTC*
 
 </div>
 <!-- STATS_END -->

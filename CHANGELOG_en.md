@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v2.1.1] - 2026-05-14
+
+Patch release picking up an upstream Tauri security fix.
+
+### Fixes
+
+- **Upgraded Tauri 2.9.3 → 2.11.1**: addresses GHSA-7gmj-67g7-phm9 (CVSS Medium). The advisory describes an Origin Confusion issue that allowed remote pages to invoke local-only IPC commands. Affected range: Tauri `>= 2.0.0, <= 2.11.0`. KakeiBon ships as a fully-offline desktop app and does not load external content, so practical exposure is limited, but the patch is applied promptly to keep defense in depth intact
+
+### CI / internal
+
+- Updated GitHub Actions ahead of the Node.js 20 runtime deprecation (forced Node 24 on 2026-06-02, removed from runners on 2026-09-16): `actions/checkout` / `actions/setup-node` / `actions/cache` to v5, `actions/setup-python` to v6
+- Verified the Tauri Windows build on `windows-2025-vs2026` ahead of the `windows-latest` migration to Visual Studio 2026 (rollout 2026-06-08 to 2026-06-15). No code changes required
+
 ## [v2.1.0] - 2026-05-04
 
 Minor release adding recurring scheduled transactions. Monthly salary, utility bills, subscriptions, and similar recurring payments can now be registered once as a rule and then bulk-generated as scheduled transactions across the desired period.
