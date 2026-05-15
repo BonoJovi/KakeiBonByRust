@@ -1676,3 +1676,8 @@ INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESO
 INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2289, 'recurring_rule.err_nth_weekday_invalid', 'en', 'Week and weekday must be selected.', 'recurring_rule', 'Validation error: NthWeekday inputs incomplete', datetime('now'));
 INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2290, 'recurring_rule.err_nth_weekday_invalid', 'ja', '第何週と曜日を選択してください。', 'recurring_rule', '検証エラー:第N週曜日入力不足', datetime('now'));
 
+-- Shared bounded-field validation message (issue #37 Phase 1 foundation).
+-- Placeholders: {field}, {max}, {actual}. Consumers replace before display.
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2291, 'validation.max_length', 'en', '{field} must be {max} characters or fewer (currently {actual}).', 'validation', 'Generic message for any text field exceeding its max length', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2292, 'validation.max_length', 'ja', '{field}は{max}文字以内で入力してください（現在{actual}文字）。', 'validation', '文字数上限超過時の汎用メッセージ', datetime('now'));
+
