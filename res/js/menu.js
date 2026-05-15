@@ -466,6 +466,7 @@ async function checkSetupNeeded() {
             adminSetup.classList.add('hidden');
             loginForm.classList.remove('hidden');
             appContent.classList.add('hidden');
+            document.getElementById('username')?.focus();
         }
     } catch (error) {
         console.error('Failed to check setup status:', error);
@@ -616,6 +617,7 @@ async function handleAdminSetup(e) {
         setTimeout(() => {
             document.getElementById('admin-setup').classList.add('hidden');
             document.getElementById('login-form').classList.remove('hidden');
+            document.getElementById('username')?.focus();
         }, 2000);
         
     } catch (error) {
@@ -755,6 +757,7 @@ async function handleLogout() {
         document.getElementById('login-message').textContent = '';
         loginForm.classList.remove('hidden');
         appContent.classList.add('hidden');
+        document.getElementById('username').focus();
     } else {
         // Management page - redirect to index
         window.location.href = HTML_FILES.INDEX;
