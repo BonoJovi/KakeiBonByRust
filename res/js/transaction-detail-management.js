@@ -578,6 +578,13 @@ async function openDetailModal(detail = null) {
     
     modal.classList.remove('hidden');
 
+    // Reset modal content scroll so the form header is visible on every open.
+    // .modal-content has `overflow-y: auto`, and `.hidden` only toggles
+    // display:none — the inner scrollTop survives close/re-open, which made
+    // the 2nd+ open inherit the previous scroll position.
+    const modalContent = modal.querySelector('.modal-content');
+    if (modalContent) modalContent.scrollTop = 0;
+
     // Focus on item name input after modal opens (preventScroll to avoid modal shifting)
     setTimeout(() => document.getElementById('item-name')?.focus({ preventScroll: true }), 0);
 }
