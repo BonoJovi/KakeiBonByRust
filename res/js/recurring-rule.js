@@ -5,6 +5,7 @@ import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontS
 import { setupIndicators } from './indicators.js';
 import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
 import { createMenuBar, setupLanguageMenu, setupLanguageMenuHandlers } from './menu.js';
+import { setupTaxCalculationListeners } from './detail-tax-calc.js';
 
 console.log('=== RECURRING-RULE.JS LOADED ===');
 
@@ -44,6 +45,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         setupCycleKindToggle();
         setupCategoryChainHandlers();
+        setupDetailTaxCalculation();
         setupFormSubmit();
         setupResetButton();
         setupDeleteModal();
@@ -204,6 +206,25 @@ function setupCategoryChainHandlers() {
     });
 }
 
+// ----- Detail tax auto-calculation (shared module) -----
+
+function setupDetailTaxCalculation() {
+    const taxRate = document.getElementById('tax-rate');
+    const amountExcludingTax = document.getElementById('amount-excluding-tax');
+    const amountIncludingTax = document.getElementById('amount-including-tax');
+    const taxAmount = document.getElementById('tax-amount');
+    if (!taxRate || !amountExcludingTax || !amountIncludingTax || !taxAmount) {
+        return;
+    }
+    setupTaxCalculationListeners(
+        { taxRate, amountExcludingTax, amountIncludingTax, taxAmount },
+        {
+            getRoundingType: () =>
+                parseInt(document.getElementById('tax-rounding-type').value, 10) || 0,
+        }
+    );
+}
+
 // ----- Form submit -----
 
 function setupFormSubmit() {
@@ -260,7 +281,7 @@ function setupFormSubmit() {
                 category2_code: stringOrNull(document.getElementById('category2').value),
                 category3_code: stringOrNull(document.getElementById('category3').value),
                 item_name: document.getElementById('item-name').value,
-                amount: parseInt(document.getElementById('amount').value, 10) || 0,
+                amount: parseInt(document.getElementById('amount-excluding-tax').value, 10) || 0,
                 tax_amount: parseInt(document.getElementById('tax-amount').value, 10) || 0,
                 tax_rate: parseInt(document.getElementById('tax-rate').value, 10) || 0,
                 amount_including_tax: intOrNull(

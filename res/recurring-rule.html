@@ -230,8 +230,8 @@
                                 <label for="tax-included-type" data-i18n="recurring_rule.tax_included">Tax type:</label>
                                 <div class="input-wrapper">
                                     <select id="tax-included-type">
-                                        <option value="1" data-i18n="common.tax_excluded">Tax-excluded</option>
-                                        <option value="0" data-i18n="common.tax_included">Tax-included</option>
+                                        <option value="0" data-i18n="transaction_mgmt.tax_included">Tax Included</option>
+                                        <option value="1" data-i18n="transaction_mgmt.tax_excluded" selected>Tax Excluded</option>
                                     </select>
                                 </div>
                             </div>
@@ -271,30 +271,34 @@
                             </div>
 
                             <div class="form-group">
-                                <label for="amount" data-i18n="recurring_rule.amount">Amount:</label>
+                                <label for="tax-rate" data-i18n="detail_mgmt.tax_rate">Tax Rate (%):</label>
                                 <div class="input-wrapper">
-                                    <input type="number" id="amount" min="0" max="999999999" value="0" required />
+                                    <select id="tax-rate" name="tax-rate">
+                                        <option value="0">0%</option>
+                                        <option value="8">8%</option>
+                                        <option value="10" selected>10%</option>
+                                    </select>
                                 </div>
                             </div>
 
                             <div class="form-group">
-                                <label for="tax-rate" data-i18n="recurring_rule.tax_rate">Tax rate (%):</label>
+                                <label for="amount-excluding-tax" data-i18n="detail_mgmt.amount_excluding_tax">Amount (Excl. Tax):</label>
                                 <div class="input-wrapper">
-                                    <input type="number" id="tax-rate" min="0" max="100" value="10" required />
+                                    <input type="number" id="amount-excluding-tax" min="0" max="999999999" required />
                                 </div>
                             </div>
 
                             <div class="form-group">
-                                <label for="tax-amount" data-i18n="recurring_rule.tax_amount">Tax amount:</label>
-                                <div class="input-wrapper">
-                                    <input type="number" id="tax-amount" min="0" max="999999999" value="0" />
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="amount-including-tax" data-i18n="recurring_rule.amount_including_tax">Amount (incl. tax):</label>
+                                <label for="amount-including-tax" data-i18n="detail_mgmt.amount_including_tax">Amount (Incl. Tax):</label>
                                 <div class="input-wrapper">
                                     <input type="number" id="amount-including-tax" min="0" max="999999999" />
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="tax-amount" data-i18n="detail_mgmt.tax_amount">Tax Amount:</label>
+                                <div class="input-wrapper">
+                                    <input type="number" id="tax-amount" min="0" max="999999999" readonly />
                                 </div>
                             </div>
 
