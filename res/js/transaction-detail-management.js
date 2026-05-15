@@ -8,12 +8,12 @@ import { ROLE_ADMIN } from './consts.js';
 import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
 import { createMenuBar } from './menu.js';
 import { applyHeaderRecalculationPrompt } from './header-recalc.js';
+import { setupTaxCalculationListeners } from './detail-tax-calc.js';
 
 let currentUserId = null;
 let currentUserRole = null;
 let transactionId = null;
 let category1Code = null; // Store CATEGORY1_CODE from transaction header
-let lastTaxInputField = null; // Track which amount field was last edited: 'excluding' or 'including'
 let taxRoundingType = 0; // Store TAX_ROUNDING_TYPE from transaction header (0: floor, 1: half-up, 2: ceil)
 let currentHeaderTotal = 0; // Cached TOTAL_AMOUNT from the loaded header; used to detect drift after a detail edit
 
@@ -137,173 +137,25 @@ function setupMenuHandlers() {
 }
 
 /**
- * Setup tax calculation listeners for automatic calculation
- * between tax-excluded and tax-included amounts
+ * Wire up tax-calculation listeners using the shared module.
  */
-function setupTaxCalculationListeners() {
+function installTaxCalculationListeners() {
     const taxRate = document.getElementById('tax-rate');
     const amountExcludingTax = document.getElementById('amount-excluding-tax');
     const amountIncludingTax = document.getElementById('amount-including-tax');
     const taxAmount = document.getElementById('tax-amount');
-    
     if (!taxRate || !amountExcludingTax || !amountIncludingTax || !taxAmount) {
         return;
     }
-    
-    // Calculate tax-included amount when tax-excluded amount is entered
-    amountExcludingTax.addEventListener('input', () => {
-        calculateFromExcludingTax(
-            amountExcludingTax,
-            taxRate,
-            taxAmount,
-            amountIncludingTax
-        );
-    });
-    
-    // Calculate tax-excluded amount when tax-included amount is entered
-    amountIncludingTax.addEventListener('input', () => {
-        calculateFromIncludingTax(
-            amountIncludingTax,
-            taxRate,
-            taxAmount,
-            amountExcludingTax
-        );
-    });
-    
-    // Recalculate when tax rate changes
-    taxRate.addEventListener('change', () => {
-        // Recalculate based on which field was last edited
-        if (lastTaxInputField === 'including' && amountIncludingTax.value) {
-            // User last edited tax-included amount, so recalculate tax-excluded
-            calculateFromIncludingTax(
-                amountIncludingTax,
-                taxRate,
-                taxAmount,
-                amountExcludingTax
-            );
-        } else if (lastTaxInputField === 'excluding' && amountExcludingTax.value) {
-            // User last edited tax-excluded amount, so recalculate tax-included
-            calculateFromExcludingTax(
-                amountExcludingTax,
-                taxRate,
-                taxAmount,
-                amountIncludingTax
-            );
-        } else if (amountExcludingTax.value) {
-            // Default to tax-excluded if no flag is set
-            calculateFromExcludingTax(
-                amountExcludingTax,
-                taxRate,
-                taxAmount,
-                amountIncludingTax
-            );
-        } else if (amountIncludingTax.value) {
-            // Fall back to tax-included
-            calculateFromIncludingTax(
-                amountIncludingTax,
-                taxRate,
-                taxAmount,
-                amountExcludingTax
-            );
+    setupTaxCalculationListeners(
+        { taxRate, amountExcludingTax, amountIncludingTax, taxAmount },
+        {
+            getRoundingType: () => taxRoundingType,
+            onRoundingDiscrepancy: ({ userInput, calculated }) =>
+                showRoundingWarning(userInput, calculated),
+            onCalculationCleared: clearRoundingWarning,
         }
-    });
-}
-
-/**
- * Apply rounding based on tax rounding type
- * @param {number} value - Value to round
- * @param {number} roundingType - 0: floor, 1: half-up, 2: ceil
- * @returns {number} Rounded value
- */
-function applyTaxRounding(value, roundingType = 0) {
-    switch (roundingType) {
-        case 0: // Round down (切り捨て)
-            return Math.floor(value);
-        case 1: // Round half-up (四捨五入)
-            return Math.round(value);
-        case 2: // Round up (切り上げ)
-            return Math.ceil(value);
-        default:
-            return Math.floor(value);
-    }
-}
-
-/**
- * Calculate tax-included amount from tax-excluded amount
- * @param {HTMLInputElement} excludingTaxInput - Tax-excluded amount input
- * @param {HTMLSelectElement} taxRateSelect - Tax rate select
- * @param {HTMLInputElement} taxAmountInput - Tax amount input (readonly)
- * @param {HTMLInputElement} includingTaxInput - Tax-included amount input
- */
-function calculateFromExcludingTax(excludingTaxInput, taxRateSelect, taxAmountInput, includingTaxInput) {
-    const excluded = parseFloat(excludingTaxInput.value) || 0;
-    const rate = parseFloat(taxRateSelect.value) || 0;
-    
-    // Clear any previous warning (user is now entering tax-excluded amount)
-    clearRoundingWarning();
-    
-    // Mark that tax-excluded amount was last edited
-    lastTaxInputField = 'excluding';
-    
-    // Calculate tax amount using the configured rounding type
-    const tax = applyTaxRounding(excluded * rate / 100, taxRoundingType);
-    
-    // Calculate including tax amount
-    const included = excluded + tax;
-    
-    // Update fields
-    taxAmountInput.value = tax;
-    includingTaxInput.value = included || '';
-}
-
-/**
- * Calculate tax-excluded amount from tax-included amount
- * @param {HTMLInputElement} includingTaxInput - Tax-included amount input
- * @param {HTMLSelectElement} taxRateSelect - Tax rate select
- * @param {HTMLInputElement} taxAmountInput - Tax amount input (readonly)
- * @param {HTMLInputElement} excludingTaxInput - Tax-excluded amount input
- */
-function calculateFromIncludingTax(includingTaxInput, taxRateSelect, taxAmountInput, excludingTaxInput) {
-    const included = parseFloat(includingTaxInput.value) || 0;
-    const rate = parseFloat(taxRateSelect.value) || 0;
-    
-    // Clear any previous warning
-    clearRoundingWarning();
-    
-    // Mark that tax-included amount was last edited
-    lastTaxInputField = 'including';
-    
-    if (!included) {
-        excludingTaxInput.value = '';
-        taxAmountInput.value = 0;
-        return;
-    }
-    
-    if (rate === 0) {
-        // No tax
-        excludingTaxInput.value = included || '';
-        taxAmountInput.value = 0;
-        return;
-    }
-    
-    // Calculate tax-excluded amount using the configured rounding type
-    const excluded = applyTaxRounding(included / (1 + rate / 100), taxRoundingType);
-    
-    // Calculate tax amount
-    const tax = included - excluded;
-    
-    // Verify by reverse calculation
-    const taxReverse = applyTaxRounding(excluded * rate / 100, taxRoundingType);
-    const includedReverse = excluded + taxReverse;
-    
-    // Check if there's a rounding discrepancy
-    if (includedReverse !== included) {
-        showRoundingWarning(included, includedReverse);
-    }
-    
-    // Update fields
-    taxAmountInput.value = tax;
-    excludingTaxInput.value = excluded || '';
+    );
 }
 
 /**
@@ -429,8 +281,8 @@ function setupEventListeners() {
         }
     });
     
-    // Tax calculation listeners
-    setupTaxCalculationListeners();
+    // Tax calculation listeners (shared module)
+    installTaxCalculationListeners();
     
     // Category2 change listener
     const category2Select = document.getElementById('category2-code');
