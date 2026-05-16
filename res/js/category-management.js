@@ -7,6 +7,7 @@ import { HTML_FILES } from './html-files.js';
 import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
 import { createMenuBar } from './menu.js';
 import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
+import { showToast } from './toast.js';
 import { MAX_I18N_NAME_LEN } from './consts.js';
 
 // Category level constants
@@ -790,7 +791,10 @@ async function handleCategory2Save(formData) {
 
     // If one is empty, copy from the other
     if (!nameJa && !nameEn) {
-        alert(i18n.t('error.category_name_required'));
+        // Inline display on both name fields — tree view makes toast
+        // ambiguous about which row triggered the error.
+        showValidationError(nameJaField, i18n.t('error.category_name_required'));
+        showValidationError(nameEnField, i18n.t('error.category_name_required'));
         throw new Error('Name is required');
     }
     if (!nameJa) nameJa = nameEn;
@@ -858,9 +862,9 @@ async function handleCategory2Save(formData) {
             const match = errStr.match(/Category name '(.+)' already exists/);
             const duplicateName = match ? match[1] : '';
             const errorMsg = i18n.t('error.category_duplicate_name').replace('{0}', duplicateName);
-            alert(errorMsg);
+            showToast(errorMsg, { variant: 'warning' });
         } else {
-            alert(i18n.t('error.category_save_failed') + ': ' + error);
+            showToast(i18n.t('error.category_save_failed') + ': ' + error, { variant: 'error' });
         }
         throw error; // Re-throw to prevent modal from closing
     } finally {
@@ -886,7 +890,10 @@ async function handleCategory3Save(formData) {
 
     // If one is empty, copy from the other
     if (!nameJa && !nameEn) {
-        alert(i18n.t('error.category_name_required'));
+        // Inline display on both name fields — tree view makes toast
+        // ambiguous about which row triggered the error.
+        showValidationError(nameJaField, i18n.t('error.category_name_required'));
+        showValidationError(nameEnField, i18n.t('error.category_name_required'));
         throw new Error('Name is required');
     }
     if (!nameJa) nameJa = nameEn;
@@ -956,9 +963,9 @@ async function handleCategory3Save(formData) {
             const match = errStr.match(/Category name '(.+)' already exists/);
             const duplicateName = match ? match[1] : '';
             const errorMsg = i18n.t('error.category_duplicate_name').replace('{0}', duplicateName);
-            alert(errorMsg);
+            showToast(errorMsg, { variant: 'warning' });
         } else {
-            alert(i18n.t('error.category_save_failed') + ': ' + error);
+            showToast(i18n.t('error.category_save_failed') + ': ' + error, { variant: 'error' });
         }
         throw error; // Re-throw to prevent modal from closing
     } finally {
@@ -996,7 +1003,7 @@ async function moveCategoryUp(categoryCode, category1Code, category2Code, level)
         scrollToCategory(categoryCode, level);
     } catch (error) {
         console.error('Failed to move category up:', error);
-        alert(i18n.t('error.category_move_failed') + ': ' + error);
+        showToast(i18n.t('error.category_move_failed') + ': ' + error, { variant: 'error' });
         
         // Re-enable button on error
         if (button) {
@@ -1033,7 +1040,7 @@ async function moveCategoryDown(categoryCode, category1Code, category2Code, leve
         scrollToCategory(categoryCode, level);
     } catch (error) {
         console.error('Failed to move category down:', error);
-        alert(i18n.t('error.category_move_failed') + ': ' + error);
+        showToast(i18n.t('error.category_move_failed') + ': ' + error, { variant: 'error' });
         
         // Re-enable button on error
         if (button) {
@@ -1075,7 +1082,7 @@ async function hideCategory(category1Code, category2Code, category3Code, level, 
         await loadCategories();
     } catch (error) {
         console.error('Failed to hide category:', error);
-        alert('Failed to hide category: ' + error);
+        showToast(i18n.t('category_mgmt.failed_to_hide') + ': ' + error, { variant: 'error' });
     }
 }
 
@@ -1098,7 +1105,7 @@ async function showCategory(category1Code, category2Code, category3Code, level) 
         await loadCategories();
     } catch (error) {
         console.error('Failed to show category:', error);
-        alert('Failed to show category: ' + error);
+        showToast(i18n.t('category_mgmt.failed_to_show') + ': ' + error, { variant: 'error' });
     }
 }
 

@@ -8,6 +8,7 @@ import { setupIndicators } from './indicators.js';
 import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
 import { createMenuBar } from './menu.js';
 import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
+import { showToast } from './toast.js';
 
 console.log('=== ACCOUNT-MANAGEMENT.JS LOADED - ALL imports enabled ===');
 console.log('invoke:', typeof invoke);
@@ -75,7 +76,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         await adjustWindowSize();
     } catch (error) {
         console.error('Initialization error:', error);
-        alert('Failed to initialize: ' + error);
+        showToast(i18n.t('account_mgmt.failed_to_initialize') + ': ' + error, { variant: 'error' });
     }
 });
 
@@ -156,7 +157,7 @@ async function loadTemplates() {
         populateTemplateDropdown();
     } catch (error) {
         console.error('Failed to load templates:', error);
-        alert('Failed to load templates: ' + error);
+        showToast(i18n.t('account_mgmt.failed_to_load_templates') + ': ' + error, { variant: 'error' });
     }
 }
 
@@ -311,7 +312,7 @@ async function saveAccount() {
                 initialBalance: initialBalance,
                 displayOrder: displayOrder
             });
-            alert(i18n.t('common.success') || 'Account updated successfully')
+            showToast(i18n.t('account_mgmt.update_success'), { variant: 'success' });
         } else {
             // Add new account
             await invoke('add_account', {
@@ -320,7 +321,7 @@ async function saveAccount() {
                 templateCode: templateCode,
                 initialBalance: initialBalance
             });
-            alert(i18n.t('common.success') || 'Account added successfully')
+            showToast(i18n.t('account_mgmt.add_success'), { variant: 'success' });
         }
 
         accountModal.close();
@@ -339,7 +340,7 @@ async function saveAccount() {
                 actual: [...accountName].length,
             }));
         } else {
-            alert('Failed to save account: ' + error);
+            showToast(i18n.t('account_mgmt.failed_to_save') + ': ' + error, { variant: 'error' });
         }
     }
 }
@@ -357,11 +358,11 @@ async function deleteAccount(accountCode, accountName) {
         await invoke('delete_account', { 
             accountCode: accountCode 
         });
-        alert(i18n.t('common.success') || 'Account deleted successfully')
+        showToast(i18n.t('account_mgmt.delete_success'), { variant: 'success' });
         await loadAccounts();
     } catch (error) {
         console.error('Failed to delete account:', error);
-        alert('Failed to delete account: ' + error);
+        showToast(i18n.t('account_mgmt.failed_to_delete') + ': ' + error, { variant: 'error' });
     }
 }
 
