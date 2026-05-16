@@ -6,6 +6,8 @@ import { setupIndicators } from './indicators.js';
 import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
 import { createMenuBar, setupLanguageMenu, setupLanguageMenuHandlers } from './menu.js';
 import { setupTaxCalculationListeners } from './detail-tax-calc.js';
+import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
+import { MAX_RULE_NAME_LEN, MAX_ITEM_NAME_LEN, MAX_MEMO_LEN } from './consts.js';
 
 console.log('=== RECURRING-RULE.JS LOADED ===');
 
@@ -46,6 +48,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         setupCycleKindToggle();
         setupCategoryChainHandlers();
         setupDetailTaxCalculation();
+        setupBoundedFieldCounters();
         setupFormSubmit();
         setupResetButton();
         setupDeleteModal();
@@ -311,6 +314,39 @@ function setupFormSubmit() {
             return;
         }
 
+        // Bounded-field max-length checks (mirror Rust defense in
+        // src/services/recurring.rs::create_rule_with_instances).
+        const ruleNameInput = document.getElementById('rule-name');
+        const headerMemoInput = document.getElementById('header-memo');
+        const itemNameInput = document.getElementById('item-name');
+        const detailMemoInput = document.getElementById('detail-memo');
+        clearValidationError(ruleNameInput);
+        clearValidationError(headerMemoInput);
+        clearValidationError(itemNameInput);
+        clearValidationError(detailMemoInput);
+
+        const ruleName = request.rule_name || '';
+        const headerMemo = request.header_memo || '';
+        const itemName = request.detail.item_name;
+        const detailMemo = request.detail.detail_memo || '';
+
+        if ([...ruleName].length > MAX_RULE_NAME_LEN) {
+            showMaxLengthError(ruleNameInput, i18n.t('recurring_rule.rule_name'), MAX_RULE_NAME_LEN);
+            return;
+        }
+        if ([...itemName].length > MAX_ITEM_NAME_LEN) {
+            showMaxLengthError(itemNameInput, i18n.t('recurring_rule.item_name'), MAX_ITEM_NAME_LEN);
+            return;
+        }
+        if ([...headerMemo].length > MAX_MEMO_LEN) {
+            showMaxLengthError(headerMemoInput, i18n.t('recurring_rule.header_memo'), MAX_MEMO_LEN);
+            return;
+        }
+        if ([...detailMemo].length > MAX_MEMO_LEN) {
+            showMaxLengthError(detailMemoInput, i18n.t('recurring_rule.detail_memo'), MAX_MEMO_LEN);
+            return;
+        }
+
         try {
             const result = await invoke('create_recurring_rule', { request });
             const tmpl = i18n.t('recurring_rule.create_success') || 'Created rule #{0} with {1} occurrences.';
@@ -321,6 +357,26 @@ function setupFormSubmit() {
             await loadRules();
         } catch (err) {
             console.error('create_recurring_rule failed:', err);
+
+            // Map Rust bounded-field errors back to inline validation messages.
+            const errStr = String(err);
+            const map = [
+                ['Rule name must be', ruleNameInput, 'recurring_rule.rule_name', MAX_RULE_NAME_LEN, ruleName],
+                ['Item name must be', itemNameInput, 'recurring_rule.item_name', MAX_ITEM_NAME_LEN, itemName],
+                ['Header memo must be', headerMemoInput, 'recurring_rule.header_memo', MAX_MEMO_LEN, headerMemo],
+                ['Detail memo must be', detailMemoInput, 'recurring_rule.detail_memo', MAX_MEMO_LEN, detailMemo],
+            ];
+            for (const [needle, input, fieldKey, max, value] of map) {
+                if (input && errStr.includes(needle)) {
+                    showValidationError(input, i18n.t('validation.max_length', {
+                        field: i18n.t(fieldKey),
+                        max,
+                        actual: [...value].length,
+                    }));
+                    return;
+                }
+            }
+
             const prefix = i18n.t('recurring_rule.create_failed') || 'Failed to create rule:';
             showResult('error', `${prefix} ${err}`);
         }
@@ -331,7 +387,39 @@ function setupResetButton() {
     document.getElementById('reset-btn').addEventListener('click', () => {
         document.getElementById('recurring-rule-form').reset();
         hideResult();
+        // form.reset() does not fire 'input', so refresh counters manually.
+        ['rule-name', 'header-memo', 'item-name', 'detail-memo'].forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) {
+                clearValidationError(el);
+                el.dispatchEvent(new Event('input'));
+            }
+        });
     });
+}
+
+function setupBoundedFieldCounters() {
+    const ruleName = document.getElementById('rule-name');
+    const headerMemo = document.getElementById('header-memo');
+    const itemName = document.getElementById('item-name');
+    const detailMemo = document.getElementById('detail-memo');
+
+    if (ruleName) {
+        attachCharCounter(ruleName, MAX_RULE_NAME_LEN);
+        ruleName.addEventListener('input', () => clearValidationError(ruleName));
+    }
+    if (headerMemo) {
+        attachCharCounter(headerMemo, MAX_MEMO_LEN);
+        headerMemo.addEventListener('input', () => clearValidationError(headerMemo));
+    }
+    if (itemName) {
+        attachCharCounter(itemName, MAX_ITEM_NAME_LEN);
+        itemName.addEventListener('input', () => clearValidationError(itemName));
+    }
+    if (detailMemo) {
+        attachCharCounter(detailMemo, MAX_MEMO_LEN);
+        detailMemo.addEventListener('input', () => clearValidationError(detailMemo));
+    }
 }
 
 // ----- Rule list -----

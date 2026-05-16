@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 use std::collections::HashSet;
 
-use crate::sql_queries;
+use crate::{sql_queries, consts};
 
 /// 周期と起点を一体で表現する。`unit` と「いつ発生するか」のアンカー情報を
 /// バリアントごとに固定することで、不正な組み合わせ（例: Day なのに DayOfMonth が
@@ -715,6 +715,38 @@ impl RecurringService {
             return Err(RecurringError::Validation(
                 "DETAIL.item_name must not be empty".to_string(),
             ));
+        }
+
+        // Bounded-field length checks (Issue #37 Phase 2-3, character count).
+        if let Some(rule_name) = &request.rule_name {
+            if rule_name.chars().count() > consts::MAX_RULE_NAME_LEN {
+                return Err(RecurringError::Validation(format!(
+                    "Rule name must be {} characters or less",
+                    consts::MAX_RULE_NAME_LEN
+                )));
+            }
+        }
+        if request.detail.item_name.chars().count() > consts::MAX_ITEM_NAME_LEN {
+            return Err(RecurringError::Validation(format!(
+                "Item name must be {} characters or less",
+                consts::MAX_ITEM_NAME_LEN
+            )));
+        }
+        if let Some(memo) = &request.header_memo {
+            if memo.chars().count() > consts::MAX_MEMO_LEN {
+                return Err(RecurringError::Validation(format!(
+                    "Header memo must be {} characters or less",
+                    consts::MAX_MEMO_LEN
+                )));
+            }
+        }
+        if let Some(memo) = &request.detail.detail_memo {
+            if memo.chars().count() > consts::MAX_MEMO_LEN {
+                return Err(RecurringError::Validation(format!(
+                    "Detail memo must be {} characters or less",
+                    consts::MAX_MEMO_LEN
+                )));
+            }
         }
 
         let anchor_date = match &request.anchor_date {
@@ -1742,5 +1774,101 @@ mod tests {
         assert_eq!(iso_to_weekday(7), Some(Weekday::Sun));
         assert_eq!(iso_to_weekday(0), None);
         assert_eq!(iso_to_weekday(8), None);
+    }
+
+    // Issue #37 Phase 2-3 — bounded-field length checks must count
+    // characters (not bytes). The validation runs before any DB I/O, so
+    // we exercise it against an empty in-memory pool.
+
+    fn minimal_request() -> SaveRecurringRuleRequest {
+        SaveRecurringRuleRequest {
+            rule_name: None,
+            period_unit: "DAY".to_string(),
+            period_interval: 1,
+            anchor_date: Some("2026-01-01".to_string()),
+            day_of_week: None,
+            month_day_rule_type: None,
+            day_of_month: None,
+            week_of_month: None,
+            month_of_year: None,
+            holiday_shift_type: 0,
+            start_date: "2026-01-01".to_string(),
+            end_date: "2026-01-01".to_string(),
+            shop_id: None,
+            category1_code: "EXPENSE".to_string(),
+            from_account_code: "BANK".to_string(),
+            to_account_code: "OUT".to_string(),
+            total_amount: 100,
+            tax_rounding_type: 0,
+            tax_included_type: 1,
+            header_memo: None,
+            detail: SaveRecurringRuleDetailRequest {
+                category1_code: "EXPENSE".to_string(),
+                category2_code: None,
+                category3_code: None,
+                item_name: "test".to_string(),
+                amount: 100,
+                tax_amount: 0,
+                tax_rate: 0,
+                amount_including_tax: Some(100),
+                detail_memo: None,
+            },
+        }
+    }
+
+    async fn empty_pool() -> SqlitePool {
+        SqlitePool::connect(":memory:").await.unwrap()
+    }
+
+    #[tokio::test]
+    async fn test_create_rule_rejects_over_max_chars_of_multibyte_rule_name() {
+        let service = RecurringService::new(empty_pool().await);
+
+        let mut request = minimal_request();
+        request.rule_name = Some("あ".repeat(consts::MAX_RULE_NAME_LEN + 1));
+
+        let err = service.create_rule_with_instances(2, request).await.unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains(&consts::MAX_RULE_NAME_LEN.to_string()),
+            "error should reference the limit: {}", msg);
+    }
+
+    #[tokio::test]
+    async fn test_create_rule_rejects_over_max_chars_of_multibyte_item_name() {
+        let service = RecurringService::new(empty_pool().await);
+
+        let mut request = minimal_request();
+        request.detail.item_name = "あ".repeat(consts::MAX_ITEM_NAME_LEN + 1);
+
+        let err = service.create_rule_with_instances(2, request).await.unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains(&consts::MAX_ITEM_NAME_LEN.to_string()),
+            "error should reference the limit: {}", msg);
+    }
+
+    #[tokio::test]
+    async fn test_create_rule_rejects_over_max_chars_of_multibyte_header_memo() {
+        let service = RecurringService::new(empty_pool().await);
+
+        let mut request = minimal_request();
+        request.header_memo = Some("メ".repeat(consts::MAX_MEMO_LEN + 1));
+
+        let err = service.create_rule_with_instances(2, request).await.unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains(&consts::MAX_MEMO_LEN.to_string()),
+            "error should reference the limit: {}", msg);
+    }
+
+    #[tokio::test]
+    async fn test_create_rule_rejects_over_max_chars_of_multibyte_detail_memo() {
+        let service = RecurringService::new(empty_pool().await);
+
+        let mut request = minimal_request();
+        request.detail.detail_memo = Some("メ".repeat(consts::MAX_MEMO_LEN + 1));
+
+        let err = service.create_rule_with_instances(2, request).await.unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains(&consts::MAX_MEMO_LEN.to_string()),
+            "error should reference the limit: {}", msg);
     }
 }

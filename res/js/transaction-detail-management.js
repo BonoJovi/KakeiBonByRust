@@ -4,11 +4,12 @@ import { setupIndicators } from './indicators.js';
 import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers, adjustWindowSize } from './font-size.js';
 import { setupLanguageMenuHandlers, setupLanguageMenu, handleLogout, handleQuit } from './menu.js';
 import { HTML_FILES } from './html-files.js';
-import { ROLE_ADMIN } from './consts.js';
+import { ROLE_ADMIN, MAX_ITEM_NAME_LEN, MAX_MEMO_LEN } from './consts.js';
 import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
 import { createMenuBar } from './menu.js';
 import { applyHeaderRecalculationPrompt } from './header-recalc.js';
 import { setupTaxCalculationListeners } from './detail-tax-calc.js';
+import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
 
 let currentUserId = null;
 let currentUserRole = null;
@@ -283,6 +284,14 @@ function setupEventListeners() {
     
     // Tax calculation listeners (shared module)
     installTaxCalculationListeners();
+
+    // Live-clear validation errors as the user edits + character counters
+    const itemNameInput = document.getElementById('item-name');
+    const memoInput = document.getElementById('memo');
+    itemNameInput?.addEventListener('input', () => clearValidationError(itemNameInput));
+    memoInput?.addEventListener('input', () => clearValidationError(memoInput));
+    if (itemNameInput) attachCharCounter(itemNameInput, MAX_ITEM_NAME_LEN);
+    if (memoInput) attachCharCounter(memoInput, MAX_MEMO_LEN);
     
     // Category2 change listener
     const category2Select = document.getElementById('category2-code');
@@ -585,6 +594,15 @@ async function openDetailModal(detail = null) {
     const modalContent = modal.querySelector('.modal-content');
     if (modalContent) modalContent.scrollTop = 0;
 
+    // Clear validation errors and refresh char counters after programmatic
+    // value changes (form.reset() / direct .value assignments do not fire 'input').
+    const itemNameInput = document.getElementById('item-name');
+    const memoInput = document.getElementById('memo');
+    clearValidationError(itemNameInput);
+    clearValidationError(memoInput);
+    itemNameInput?.dispatchEvent(new Event('input'));
+    memoInput?.dispatchEvent(new Event('input'));
+
     // Focus on item name input after modal opens (preventScroll to avoid modal shifting)
     setTimeout(() => document.getElementById('item-name')?.focus({ preventScroll: true }), 0);
 }
@@ -598,9 +616,11 @@ function closeDetailModal() {
 
 async function handleDetailFormSubmit(event) {
     event.preventDefault();
-    
+
     const detailId = document.getElementById('detail-id').value;
-    const itemName = document.getElementById('item-name').value.trim();
+    const itemNameInput = document.getElementById('item-name');
+    const memoInput = document.getElementById('memo');
+    const itemName = itemNameInput.value.trim();
     const category1Code = document.getElementById('category1-code').value;
     const category2Code = document.getElementById('category2-code').value;
     const category3Code = document.getElementById('category3-code').value;
@@ -608,19 +628,32 @@ async function handleDetailFormSubmit(event) {
     const amountIncludingTax = parseInt(document.getElementById('amount-including-tax').value) || 0;
     const taxRate = parseInt(document.getElementById('tax-rate').value) || 0;
     const taxAmount = parseInt(document.getElementById('tax-amount').value) || 0;
-    const memo = document.getElementById('memo').value.trim();
-    
+    const memo = memoInput.value.trim();
+
+    clearValidationError(itemNameInput);
+    clearValidationError(memoInput);
+
     // Validation
     if (!itemName) {
-        showMessage('error', i18n.t('detail_mgmt.error_item_name_required'));
+        showValidationError(itemNameInput, i18n.t('detail_mgmt.error_item_name_required'));
         return;
     }
-    
+
+    // Validation — max length (mirrors Rust defense in src/services/transaction.rs)
+    if ([...itemName].length > MAX_ITEM_NAME_LEN) {
+        showMaxLengthError(itemNameInput, i18n.t('detail_mgmt.item_name'), MAX_ITEM_NAME_LEN);
+        return;
+    }
+    if (memo && [...memo].length > MAX_MEMO_LEN) {
+        showMaxLengthError(memoInput, i18n.t('detail_mgmt.memo'), MAX_MEMO_LEN);
+        return;
+    }
+
     if (!category1Code) {
         showMessage('error', i18n.t('detail_mgmt.error_category_required'));
         return;
     }
-    
+
     if (amountExcludingTax < 0 || amountIncludingTax < 0) {
         showMessage('error', i18n.t('detail_mgmt.error_invalid_amount'));
         return;
@@ -672,6 +705,27 @@ async function handleDetailFormSubmit(event) {
         
     } catch (error) {
         console.error('Failed to save detail:', error);
+
+        // Map backend error messages to i18n resources / localized text.
+        // Rust defense line for bounded fields (src/services/transaction.rs).
+        const errorMessage = error.toString();
+        if (errorMessage.includes('Item name must be')) {
+            showValidationError(itemNameInput, i18n.t('validation.max_length', {
+                field: i18n.t('detail_mgmt.item_name'),
+                max: MAX_ITEM_NAME_LEN,
+                actual: [...itemName].length,
+            }));
+            return;
+        }
+        if (errorMessage.includes('Memo must be')) {
+            showValidationError(memoInput, i18n.t('validation.max_length', {
+                field: i18n.t('detail_mgmt.memo'),
+                max: MAX_MEMO_LEN,
+                actual: [...memo].length,
+            }));
+            return;
+        }
+
         showMessage('error', `${i18n.t('detail_mgmt.save_error')}: ${error.message}`);
     }
 }
