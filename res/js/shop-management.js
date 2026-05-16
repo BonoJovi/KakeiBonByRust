@@ -7,6 +7,7 @@ import { setupIndicators } from './indicators.js';
 import { getCurrentSessionUser, isSessionAuthenticated, getSessionSourceScreen, clearSessionSourceScreen } from './session.js';
 import { createMenuBar } from './menu.js';
 import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
+import { showToast } from './toast.js';
 import { MAX_NAME_LEN, MAX_MEMO_LEN } from './consts.js';
 
 console.log('=== SHOP-MANAGEMENT.JS LOADED ===');
@@ -74,7 +75,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         await adjustWindowSize();
     } catch (error) {
         console.error('Initialization error:', error);
-        alert(i18n.t('shop_mgmt.failed_to_initialize') + ': ' + error);
+        showToast(i18n.t('shop_mgmt.failed_to_initialize') + ': ' + error, { variant: 'error' });
     }
 });
 
@@ -362,7 +363,7 @@ async function deleteShop(shopId) {
         await loadShops();
     } catch (error) {
         console.error('Failed to delete shop:', error);
-        alert(i18n.t('shop_mgmt.failed_to_delete') + ': ' + error);
+        showToast(i18n.t('shop_mgmt.failed_to_delete') + ': ' + error, { variant: 'error' });
     }
 }
 
