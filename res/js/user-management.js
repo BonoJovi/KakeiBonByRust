@@ -1,12 +1,13 @@
 import { invoke } from '@tauri-apps/api/core';
 import i18n from './i18n.js';
-import { ROLE_ADMIN, ROLE_USER } from './consts.js';
+import { ROLE_ADMIN, ROLE_USER, MAX_NAME_LEN } from './consts.js';
 import { setupIndicators } from './indicators.js';
 import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers, adjustWindowSize } from './font-size.js';
 import { HTML_FILES } from './html-files.js';
 import { Modal } from './modal.js';
 import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
 import { createMenuBar } from './menu.js';
+import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
 
 let currentUsers = [];
 let editingUserId = null;
@@ -76,6 +77,9 @@ document.addEventListener('DOMContentLoaded', async function() {
 });
 
 function initModals() {
+    // Wire bounded-field counter + live error clearing for the username input.
+    setupUsernameCounter();
+
     // Initialize User Modal
     userModal = new Modal('user-modal', {
         formId: 'user-form',
@@ -87,7 +91,8 @@ function initModals() {
             const passwordConfirmGroup = document.getElementById('password-confirm-group');
             const passwordInput = document.getElementById('password');
             const passwordConfirmInput = document.getElementById('password-confirm');
-            
+            const usernameInput = document.getElementById('username');
+
             if (mode === 'add') {
                 title.textContent = i18n.t('user_mgmt.add_user');
                 passwordGroup.style.display = 'block';
@@ -95,6 +100,7 @@ function initModals() {
                 passwordInput.required = true;
                 passwordConfirmInput.required = true;
                 editingUserId = null;
+                usernameInput.value = '';
             } else if (mode === 'edit') {
                 title.textContent = i18n.t('user_mgmt.edit_user');
                 passwordGroup.style.display = 'none';
@@ -102,10 +108,14 @@ function initModals() {
                 passwordInput.required = false;
                 passwordConfirmInput.required = false;
                 editingUserId = data.userId;
-                
+
                 // Set form values
-                document.getElementById('username').value = data.username;
+                usernameInput.value = data.username;
             }
+
+            // Clear validation errors and refresh counter after programmatic value changes.
+            clearValidationError(usernameInput);
+            usernameInput.dispatchEvent(new Event('input'));
         },
         onSave: async (formData) => {
             await handleUserSave();
@@ -124,6 +134,13 @@ function initModals() {
             await handleUserDelete(formData.userId);
         }
     });
+}
+
+function setupUsernameCounter() {
+    const usernameInput = document.getElementById('username');
+    if (!usernameInput) return;
+    attachCharCounter(usernameInput, MAX_NAME_LEN);
+    usernameInput.addEventListener('input', () => clearValidationError(usernameInput));
 }
 
 
@@ -407,30 +424,51 @@ function closeUserModal() {
 }
 
 async function handleUserSave() {
-    const username = document.getElementById('username').value.trim();
+    const usernameInput = document.getElementById('username');
+    const username = usernameInput.value.trim();
     const password = document.getElementById('password').value;
     const passwordConfirm = document.getElementById('password-confirm').value;
-    
+
+    clearValidationError(usernameInput);
+
+    // Validation — max length (mirrors Rust defense in src/services/user_management.rs)
+    if ([...username].length > MAX_NAME_LEN) {
+        showMaxLengthError(usernameInput, i18n.t('user_mgmt.username'), MAX_NAME_LEN);
+        throw new Error('Validation error: username too long');
+    }
+
     if (password && password !== passwordConfirm) {
         showMessage('form-message', i18n.t('error.password_mismatch'), 'error');
         throw new Error('Password mismatch');
     }
-    
+
     if (password && password.length < 16) {
         showMessage('form-message', i18n.t('error.password_too_short'), 'error');
         throw new Error('Password too short');
     }
-    
+
     try {
         if (editingUserId) {
             await updateUser(editingUserId, username, password || null);
         } else {
             await createUser(username, password);
         }
-        
+
         await loadUsers();
     } catch (error) {
         console.error('Failed to save user:', error);
+
+        // Defense-line trip from Rust: bounded-field max length.
+        const errStr = String(error);
+        if (errStr.includes('Username must be')) {
+            showValidationError(usernameInput, i18n.t('validation.max_length', {
+                field: i18n.t('user_mgmt.username'),
+                max: MAX_NAME_LEN,
+                actual: [...username].length,
+            }));
+            throw error;
+        }
+
         showMessage('form-message', i18n.t('error.save_user_failed') + ': ' + error, 'error');
         throw error;
     }

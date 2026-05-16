@@ -1,11 +1,12 @@
 use sqlx::sqlite::SqlitePool;
 use sqlx::Row;
-use crate::sql_queries;
+use crate::{sql_queries, consts};
 
 #[derive(Debug)]
 pub enum CategoryError {
     DatabaseError(sqlx::Error),
     DuplicateName(String),
+    Validation(String),
 }
 
 impl std::fmt::Display for CategoryError {
@@ -13,6 +14,7 @@ impl std::fmt::Display for CategoryError {
         match self {
             CategoryError::DatabaseError(e) => write!(f, "Database error: {}", e),
             CategoryError::DuplicateName(name) => write!(f, "Category name '{}' already exists", name),
+            CategoryError::Validation(msg) => write!(f, "{}", msg),
         }
     }
 }
@@ -23,6 +25,20 @@ impl From<sqlx::Error> for CategoryError {
     fn from(err: sqlx::Error) -> Self {
         CategoryError::DatabaseError(err)
     }
+}
+
+/// Issue #37 Phase 2-3 — bounded-field length guard for category i18n
+/// name columns (`CATEGORY*_I18N.*_NAME_I18N`). Counts characters, not
+/// bytes, so Japanese input is not implicitly clipped to ~85 chars.
+fn validate_i18n_name_length(name: &str, label: &str) -> Result<(), CategoryError> {
+    if name.chars().count() > consts::MAX_I18N_NAME_LEN {
+        return Err(CategoryError::Validation(format!(
+            "{} must be {} characters or less",
+            label,
+            consts::MAX_I18N_NAME_LEN
+        )));
+    }
+    Ok(())
 }
 
 pub struct CategoryService {
@@ -332,6 +348,9 @@ impl CategoryService {
         category2_name_ja: &str,
         category2_name_en: &str,
     ) -> Result<String, CategoryError> {
+        validate_i18n_name_length(category2_name_ja, "Japanese name")?;
+        validate_i18n_name_length(category2_name_en, "English name")?;
+
         // Check for duplicate Japanese name
         let count_ja: i64 = sqlx::query_scalar(sql_queries::CATEGORY2_CHECK_DUPLICATE_NAME)
             .bind(user_id)
@@ -448,6 +467,9 @@ impl CategoryService {
         category3_name_ja: &str,
         category3_name_en: &str,
     ) -> Result<String, CategoryError> {
+        validate_i18n_name_length(category3_name_ja, "Japanese name")?;
+        validate_i18n_name_length(category3_name_en, "English name")?;
+
         // Check for duplicate Japanese name
         let count_ja: i64 = sqlx::query_scalar(sql_queries::CATEGORY3_CHECK_DUPLICATE_NAME)
             .bind(user_id)
@@ -618,6 +640,9 @@ impl CategoryService {
         name_ja: &str,
         name_en: &str,
     ) -> Result<(), CategoryError> {
+        validate_i18n_name_length(name_ja, "Japanese name")?;
+        validate_i18n_name_length(name_en, "English name")?;
+
         // Check for duplicate Japanese name (excluding current category)
         let count_ja: i64 = sqlx::query_scalar(sql_queries::CATEGORY2_CHECK_DUPLICATE_NAME_EXCLUDING)
             .bind(user_id)
@@ -707,6 +732,9 @@ impl CategoryService {
         name_ja: &str,
         name_en: &str,
     ) -> Result<(), CategoryError> {
+        validate_i18n_name_length(name_ja, "Japanese name")?;
+        validate_i18n_name_length(name_en, "English name")?;
+
         // Check for duplicate Japanese name (excluding current category)
         let count_ja: i64 = sqlx::query_scalar(sql_queries::CATEGORY3_CHECK_DUPLICATE_NAME_EXCLUDING)
             .bind(user_id)
@@ -1802,5 +1830,134 @@ mod tests {
         assert_eq!(cat3_edit.code, cat3_code);
         assert_eq!(cat3_edit.name_ja, "米");
         assert_eq!(cat3_edit.name_en, "Rice");
+    }
+
+    // Issue #37 Phase 2-3 — bounded-field length checks must count
+    // characters (not bytes). CATEGORY*_I18N.*_NAME_I18N is VARCHAR(256).
+
+    #[tokio::test]
+    async fn test_add_category2_accepts_max_chars_of_multibyte_name() {
+        let pool = setup_test_db().await;
+        let service = CategoryService::new(pool.clone());
+        let user_id = 2;
+        setup_category1(&pool, user_id).await;
+
+        let result = service.add_category2(
+            user_id,
+            "EXPENSE",
+            &"あ".repeat(consts::MAX_I18N_NAME_LEN),
+            &"a".repeat(consts::MAX_I18N_NAME_LEN),
+        ).await;
+        assert!(result.is_ok(), "expected MAX_I18N_NAME_LEN multibyte chars to be accepted: {:?}", result.err());
+    }
+
+    #[tokio::test]
+    async fn test_add_category2_rejects_over_max_chars_of_multibyte_ja_name() {
+        let pool = setup_test_db().await;
+        let service = CategoryService::new(pool.clone());
+        let user_id = 2;
+        setup_category1(&pool, user_id).await;
+
+        let result = service.add_category2(
+            user_id,
+            "EXPENSE",
+            &"あ".repeat(consts::MAX_I18N_NAME_LEN + 1),
+            "Food",
+        ).await;
+        let err = result.unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains(&consts::MAX_I18N_NAME_LEN.to_string()),
+            "error should reference the limit: {}", msg);
+    }
+
+    #[tokio::test]
+    async fn test_add_category2_rejects_over_max_chars_of_en_name() {
+        let pool = setup_test_db().await;
+        let service = CategoryService::new(pool.clone());
+        let user_id = 2;
+        setup_category1(&pool, user_id).await;
+
+        let result = service.add_category2(
+            user_id,
+            "EXPENSE",
+            "食費",
+            &"a".repeat(consts::MAX_I18N_NAME_LEN + 1),
+        ).await;
+        let err = result.unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains(&consts::MAX_I18N_NAME_LEN.to_string()),
+            "error should reference the limit: {}", msg);
+    }
+
+    #[tokio::test]
+    async fn test_add_category3_rejects_over_max_chars_of_multibyte_ja_name() {
+        let pool = setup_test_db().await;
+        let service = CategoryService::new(pool.clone());
+        let user_id = 2;
+        setup_category1(&pool, user_id).await;
+
+        let cat2_code = service.add_category2(user_id, "EXPENSE", "食費", "Food")
+            .await.unwrap();
+
+        let result = service.add_category3(
+            user_id,
+            "EXPENSE",
+            &cat2_code,
+            &"あ".repeat(consts::MAX_I18N_NAME_LEN + 1),
+            "Rice",
+        ).await;
+        let err = result.unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains(&consts::MAX_I18N_NAME_LEN.to_string()),
+            "error should reference the limit: {}", msg);
+    }
+
+    #[tokio::test]
+    async fn test_update_category2_i18n_rejects_over_max_chars() {
+        let pool = setup_test_db().await;
+        let service = CategoryService::new(pool.clone());
+        let user_id = 2;
+        setup_category1(&pool, user_id).await;
+
+        let cat2_code = service.add_category2(user_id, "EXPENSE", "食費", "Food")
+            .await.unwrap();
+
+        let result = service.update_category2_i18n(
+            user_id,
+            "EXPENSE",
+            &cat2_code,
+            &"あ".repeat(consts::MAX_I18N_NAME_LEN + 1),
+            "Food",
+        ).await;
+        let err = result.unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains(&consts::MAX_I18N_NAME_LEN.to_string()),
+            "error should reference the limit: {}", msg);
+    }
+
+    #[tokio::test]
+    async fn test_update_category3_i18n_rejects_over_max_chars() {
+        let pool = setup_test_db().await;
+        let service = CategoryService::new(pool.clone());
+        let user_id = 2;
+        setup_category1(&pool, user_id).await;
+
+        let cat2_code = service.add_category2(user_id, "EXPENSE", "食費", "Food")
+            .await.unwrap();
+        let cat3_code = service.add_category3(user_id, "EXPENSE", &cat2_code, "米", "Rice")
+            .await.unwrap();
+
+        let result = service.update_category3_i18n(
+            user_id,
+            "EXPENSE",
+            &cat2_code,
+            &cat3_code,
+            "米",
+            &"a".repeat(consts::MAX_I18N_NAME_LEN + 1),
+        ).await;
+        let err = result.unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains(&consts::MAX_I18N_NAME_LEN.to_string()),
+            "error should reference the limit: {}", msg);
     }
 }

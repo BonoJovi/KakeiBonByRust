@@ -4,12 +4,13 @@ import { setupIndicators } from './indicators.js';
 import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers, adjustWindowSize } from './font-size.js';
 import { setupLanguageMenuHandlers, setupLanguageMenu, handleLogout, handleQuit } from './menu.js';
 import { HTML_FILES } from './html-files.js';
-import { TAX_ROUND_DOWN, TAX_ROUND_HALF_UP, TAX_ROUND_UP, ROLE_ADMIN, ROLE_USER } from './consts.js';
+import { TAX_ROUND_DOWN, TAX_ROUND_HALF_UP, TAX_ROUND_UP, ROLE_ADMIN, ROLE_USER, MAX_MEMO_LEN } from './consts.js';
 import { Modal } from './modal.js';
 import { getCurrentSessionUser, isSessionAuthenticated, setSessionSourceScreen, getSessionModalState, setSessionModalState, clearSessionModalState } from './session.js';
 import { createMenuBar } from './menu.js';
 import { applyHeaderRecalculationPrompt } from './header-recalc.js';
 import { calculateRecommendedTotal } from './tax-calc.js';
+import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
 
 let currentUserId = null;
 let currentUserRole = null;
@@ -182,12 +183,17 @@ function setupEventListeners() {
     // Add transaction button
     const addTransactionBtn = document.getElementById('add-transaction-btn');
     addTransactionBtn.addEventListener('click', openTransactionModal);
-    
+
     // Initialize transaction modal with common Modal class
     initializeTransactionModal();
-    
+
     // Setup spinner buttons for amount range filters
     setupAmountSpinners();
+
+    // Live-clear validation errors as the user edits + character counter
+    const memoInput = document.getElementById('transaction-memo');
+    memoInput?.addEventListener('input', () => clearValidationError(memoInput));
+    if (memoInput) attachCharCounter(memoInput, MAX_MEMO_LEN);
 }
 
 function setupAmountSpinners() {
@@ -638,6 +644,13 @@ function initializeTransactionModal() {
             if (mode === 'edit' && data.transactionId && typeof data.transactionId === 'number') {
                 await loadTransactionData(data.transactionId);
             }
+
+            // Clear validation error and refresh char counter after
+            // programmatic value changes (form.reset() / loadTransactionData
+            // do not fire 'input').
+            const memoInput = document.getElementById('transaction-memo');
+            clearValidationError(memoInput);
+            memoInput?.dispatchEvent(new Event('input'));
         },
         onSave: async (formData) => {
             await handleTransactionSubmit(new Event('submit'));
@@ -907,7 +920,7 @@ function handleCategory1Change(event) {
 
 async function handleTransactionSubmit(event) {
     event.preventDefault();
-    
+
     const transactionDateInput = document.getElementById('transaction-date').value;
     const shopIdValue = document.getElementById('shop').value;
     const shopId = shopIdValue ? parseInt(shopIdValue) : null;
@@ -917,8 +930,17 @@ async function handleTransactionSubmit(event) {
     const totalAmount = parseInt(document.getElementById('total-amount').value);
     const taxRoundingValue = parseInt(document.getElementById('tax-rounding').value);
     const taxIncludedTypeValue = parseInt(document.getElementById('tax-included-type').value);
-    const memoText = document.getElementById('transaction-memo').value.trim() || null;
+    const memoInput = document.getElementById('transaction-memo');
+    const memoRaw = memoInput.value.trim();
+    const memoText = memoRaw || null;
     const isScheduled = document.getElementById('is-scheduled').checked ? 1 : 0;
+
+    // Validation — max memo length (mirrors Rust defense in src/services/transaction.rs)
+    clearValidationError(memoInput);
+    if (memoRaw && [...memoRaw].length > MAX_MEMO_LEN) {
+        showMaxLengthError(memoInput, i18n.t('transaction_mgmt.memo'), MAX_MEMO_LEN);
+        throw new Error('Validation error: memo too long');
+    }
 
     // Convert datetime-local format (YYYY-MM-DDTHH:mm) to SQLite DATETIME format (YYYY-MM-DD HH:MM:SS)
     const transactionDate = transactionDateInput.replace('T', ' ') + ':00';
@@ -983,6 +1005,19 @@ async function handleTransactionSubmit(event) {
         
     } catch (error) {
         console.error('Failed to save transaction:', error);
+
+        // Map backend error messages to i18n resources / localized text.
+        // Rust defense line for bounded fields (src/services/transaction.rs).
+        const errorMessage = error.toString();
+        if (errorMessage.includes('Memo must be')) {
+            showValidationError(memoInput, i18n.t('validation.max_length', {
+                field: i18n.t('transaction_mgmt.memo'),
+                max: MAX_MEMO_LEN,
+                actual: [...memoRaw].length,
+            }));
+            throw error;
+        }
+
         alert('Failed to save transaction: ' + error);
     }
 }
