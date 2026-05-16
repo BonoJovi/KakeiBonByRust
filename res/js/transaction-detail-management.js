@@ -59,6 +59,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Check if user is admin - admin cannot access transaction detail management
         if (currentUserRole === ROLE_ADMIN) {
             console.log('Admin user detected, transaction detail management access denied');
+            // alert() is intentional here: see Issue #50 comment on
+            // navigation-bound access-denied notices.
             alert(i18n.t('transaction.admin_access_denied') || 'Transaction management is not available for administrator accounts. Please login as a regular user.');
             window.location.href = HTML_FILES.INDEX;
             return;
