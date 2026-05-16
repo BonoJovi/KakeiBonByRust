@@ -438,9 +438,9 @@ impl TransactionService {
         // Save memo if provided
         let memo_id = if let Some(text) = &request.memo {
             if !text.trim().is_empty() {
-                if text.len() > 1000 {
+                if text.chars().count() > consts::MAX_MEMO_LEN {
                     return Err(TransactionError::ValidationError(
-                        "Memo must be 1000 characters or less".to_string(),
+                        format!("Memo must be {} characters or less", consts::MAX_MEMO_LEN),
                     ));
                 }
                 let result = sqlx::query(sql_queries::MEMO_INSERT)
@@ -519,9 +519,9 @@ impl TransactionService {
         // Save memo if provided
         let memo_id = if let Some(text) = memo_text {
             if !text.trim().is_empty() {
-                if text.len() > 1000 {
+                if text.chars().count() > consts::MAX_MEMO_LEN {
                     return Err(TransactionError::ValidationError(
-                        "Memo must be 1000 characters or less".to_string(),
+                        format!("Memo must be {} characters or less", consts::MAX_MEMO_LEN),
                     ));
                 }
                 let result = sqlx::query(sql_queries::MEMO_INSERT)
@@ -639,7 +639,7 @@ impl TransactionService {
                     "Description cannot be empty or whitespace only".to_string(),
                 ));
             }
-            if desc.len() > 500 {
+            if desc.chars().count() > 500 {
                 return Err(TransactionError::ValidationError(
                     "Description must be 500 characters or less".to_string(),
                 ));
@@ -653,9 +653,9 @@ impl TransactionService {
                     "Memo cannot be empty or whitespace only".to_string(),
                 ));
             }
-            if m.len() > 1000 {
+            if m.chars().count() > consts::MAX_MEMO_LEN {
                 return Err(TransactionError::ValidationError(
-                    "Memo must be 1000 characters or less".to_string(),
+                    format!("Memo must be {} characters or less", consts::MAX_MEMO_LEN),
                 ));
             }
         }
@@ -925,9 +925,9 @@ impl TransactionService {
         }
 
         // Validate memo length
-        if memo_text.len() > 1000 {
+        if memo_text.chars().count() > consts::MAX_MEMO_LEN {
             return Err(TransactionError::ValidationError(
-                "Memo must be 1000 characters or less".to_string(),
+                format!("Memo must be {} characters or less", consts::MAX_MEMO_LEN),
             ));
         }
 
@@ -969,9 +969,9 @@ impl TransactionService {
         }
 
         // Validate memo length
-        if memo_text.len() > 1000 {
+        if memo_text.chars().count() > consts::MAX_MEMO_LEN {
             return Err(TransactionError::ValidationError(
-                "Memo must be 1000 characters or less".to_string(),
+                format!("Memo must be {} characters or less", consts::MAX_MEMO_LEN),
             ));
         }
 
@@ -1178,9 +1178,9 @@ impl TransactionService {
             ));
         }
 
-        if request.item_name.len() > 200 {
+        if request.item_name.chars().count() > consts::MAX_ITEM_NAME_LEN {
             return Err(TransactionError::ValidationError(
-                "Item name must be 200 characters or less".to_string(),
+                format!("Item name must be {} characters or less", consts::MAX_ITEM_NAME_LEN),
             ));
         }
 
@@ -1208,9 +1208,9 @@ impl TransactionService {
         // Save memo if provided
         let memo_id = if let Some(text) = &request.memo {
             if !text.trim().is_empty() {
-                if text.len() > 1000 {
+                if text.chars().count() > consts::MAX_MEMO_LEN {
                     return Err(TransactionError::ValidationError(
-                        "Memo must be 1000 characters or less".to_string(),
+                        format!("Memo must be {} characters or less", consts::MAX_MEMO_LEN),
                     ));
                 }
                 let result = sqlx::query(sql_queries::MEMO_INSERT)
@@ -1259,9 +1259,9 @@ impl TransactionService {
             ));
         }
 
-        if request.item_name.len() > 200 {
+        if request.item_name.chars().count() > consts::MAX_ITEM_NAME_LEN {
             return Err(TransactionError::ValidationError(
-                "Item name must be 200 characters or less".to_string(),
+                format!("Item name must be {} characters or less", consts::MAX_ITEM_NAME_LEN),
             ));
         }
 
@@ -1300,9 +1300,9 @@ impl TransactionService {
         // Handle memo update
         let memo_id = if let Some(text) = &request.memo {
             if !text.trim().is_empty() {
-                if text.len() > 1000 {
+                if text.chars().count() > consts::MAX_MEMO_LEN {
                     return Err(TransactionError::ValidationError(
-                        "Memo must be 1000 characters or less".to_string(),
+                        format!("Memo must be {} characters or less", consts::MAX_MEMO_LEN),
                     ));
                 }
                 
@@ -3275,6 +3275,81 @@ mod tests {
             2, None, None, None, None, None, None, None, None, true, 1, 50
         ).await.unwrap();
         assert_eq!(result.total_count, 2);
+    }
+
+    // Issue #37 — bounded-field length checks must count characters, not bytes.
+    // Japanese characters are 3 bytes in UTF-8; the previous `.len()` check
+    // capped Japanese input at ~MAX/3 characters even though the message said
+    // "MAX characters or less".
+
+    #[tokio::test]
+    async fn test_item_name_accepts_max_chars_of_multibyte_input() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        // 200 Japanese characters = 600 bytes — would have been rejected by
+        // the old byte-based check, must pass the new character-based check.
+        let item_name: String = "あ".repeat(consts::MAX_ITEM_NAME_LEN);
+        let mut request = basic_detail_request();
+        request.item_name = item_name;
+
+        let result = service.add_transaction_detail(2, transaction_id, request).await;
+        assert!(result.is_ok(), "expected MAX_ITEM_NAME_LEN multibyte chars to be accepted: {:?}", result.err());
+    }
+
+    #[tokio::test]
+    async fn test_item_name_rejects_over_max_chars_of_multibyte_input() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        let item_name: String = "あ".repeat(consts::MAX_ITEM_NAME_LEN + 1);
+        let mut request = basic_detail_request();
+        request.item_name = item_name;
+
+        let err = service.add_transaction_detail(2, transaction_id, request).await.unwrap_err();
+        match err {
+            TransactionError::ValidationError(msg) => {
+                assert!(msg.contains(&consts::MAX_ITEM_NAME_LEN.to_string()),
+                    "error message should reference the limit: {}", msg);
+            }
+            other => panic!("expected ValidationError, got {:?}", other),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_memo_accepts_max_chars_of_multibyte_input() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        let memo: String = "あ".repeat(consts::MAX_MEMO_LEN);
+        let mut request = basic_detail_request();
+        request.memo = Some(memo);
+
+        let result = service.add_transaction_detail(2, transaction_id, request).await;
+        assert!(result.is_ok(), "expected MAX_MEMO_LEN multibyte chars to be accepted: {:?}", result.err());
+    }
+
+    #[tokio::test]
+    async fn test_memo_rejects_over_max_chars_of_multibyte_input() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        let memo: String = "あ".repeat(consts::MAX_MEMO_LEN + 1);
+        let mut request = basic_detail_request();
+        request.memo = Some(memo);
+
+        let err = service.add_transaction_detail(2, transaction_id, request).await.unwrap_err();
+        match err {
+            TransactionError::ValidationError(msg) => {
+                assert!(msg.contains(&consts::MAX_MEMO_LEN.to_string()),
+                    "error message should reference the limit: {}", msg);
+            }
+            other => panic!("expected ValidationError, got {:?}", other),
+        }
     }
 }
 
