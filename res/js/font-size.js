@@ -2,6 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 import i18n from './i18n.js';
 import { FONT_SIZE_OPTIONS, FONT_SIZE_SMALL, FONT_SIZE_MEDIUM, FONT_SIZE_LARGE, FONT_SIZE_CUSTOM } from './consts.js';
 import { Modal } from './modal.js';
+import { showToast } from './toast.js';
 
 let resizeInProgress = false;
 let fontSizeModal;
@@ -126,7 +127,7 @@ async function handleFontSizeChange(sizeCode) {
         console.log('Font size changed successfully');
     } catch (error) {
         console.error('Failed to change font size:', error);
-        alert(i18n.t('error.font_size_change_failed') + ': ' + error);
+        showToast(i18n.t('error.font_size_change_failed') + ': ' + error, { variant: 'error' });
     }
 }
 
@@ -388,7 +389,7 @@ export function setupFontSizeModalHandlers() {
                 fontSizeModal.close();
             } catch (error) {
                 console.error('Failed to apply font size:', error);
-                alert(i18n.t('error.font_size_apply_failed') + ': ' + error);
+                showToast(i18n.t('error.font_size_apply_failed') + ': ' + error, { variant: 'error' });
             }
         });
     }
