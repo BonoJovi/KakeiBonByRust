@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use sqlx::{SqlitePool, FromRow};
-use crate::sql_queries;
+use crate::{sql_queries, consts};
 
 /// Normalize account code to uppercase
 fn normalize_account_code(code: &str) -> String {
@@ -235,10 +235,15 @@ pub async fn add_account(
 ) -> Result<String, String> {
     // Normalize account code to uppercase
     request.account_code = normalize_account_code(&request.account_code);
-    
+
     // Validate account code
     if request.account_code.is_empty() {
         return Err("Account code cannot be empty".to_string());
+    }
+
+    // Validate account name length
+    if request.account_name.chars().count() > consts::MAX_NAME_LEN {
+        return Err(format!("Account name must be {} characters or less", consts::MAX_NAME_LEN));
     }
 
     // Check for duplicate code (only active accounts)
@@ -272,7 +277,12 @@ pub async fn update_account(
 ) -> Result<String, String> {
     // Normalize account code to uppercase
     request.account_code = normalize_account_code(&request.account_code);
-    
+
+    // Validate account name length
+    if request.account_name.chars().count() > consts::MAX_NAME_LEN {
+        return Err(format!("Account name must be {} characters or less", consts::MAX_NAME_LEN));
+    }
+
     // Check if account exists
     get_account_by_code(pool, user_id, &request.account_code)
         .await?
@@ -478,5 +488,84 @@ mod tests {
         let result = add_account(&pool, 2, request).await;
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("already exists"));
+    }
+
+    // Issue #37 Phase 2-3 — bounded-field length checks must count
+    // characters (not bytes). Japanese is 3 bytes per char in UTF-8.
+
+    #[tokio::test]
+    async fn test_add_account_accepts_max_chars_of_multibyte_name() {
+        let pool = setup_test_db().await;
+
+        let request = AddAccountRequest {
+            account_code: "TEST".to_string(),
+            account_name: "あ".repeat(consts::MAX_NAME_LEN),
+            template_code: "BANK".to_string(),
+            initial_balance: 0,
+        };
+        let result = add_account(&pool, 2, request).await;
+        assert!(result.is_ok(), "expected MAX_NAME_LEN multibyte chars to be accepted: {:?}", result.err());
+    }
+
+    #[tokio::test]
+    async fn test_add_account_rejects_over_max_chars_of_multibyte_name() {
+        let pool = setup_test_db().await;
+
+        let request = AddAccountRequest {
+            account_code: "TEST".to_string(),
+            account_name: "あ".repeat(consts::MAX_NAME_LEN + 1),
+            template_code: "BANK".to_string(),
+            initial_balance: 0,
+        };
+        let err = add_account(&pool, 2, request).await.unwrap_err();
+        assert!(err.contains(&consts::MAX_NAME_LEN.to_string()),
+            "error should reference the limit: {}", err);
+    }
+
+    #[tokio::test]
+    async fn test_update_account_accepts_max_chars_of_multibyte_name() {
+        let pool = setup_test_db().await;
+
+        let add_request = AddAccountRequest {
+            account_code: "TEST".to_string(),
+            account_name: "Test".to_string(),
+            template_code: "BANK".to_string(),
+            initial_balance: 0,
+        };
+        add_account(&pool, 2, add_request).await.unwrap();
+
+        let update_request = UpdateAccountRequest {
+            account_code: "TEST".to_string(),
+            account_name: "あ".repeat(consts::MAX_NAME_LEN),
+            template_code: "BANK".to_string(),
+            initial_balance: 0,
+            display_order: 1,
+        };
+        let result = update_account(&pool, 2, update_request).await;
+        assert!(result.is_ok(), "expected MAX_NAME_LEN multibyte chars to be accepted: {:?}", result.err());
+    }
+
+    #[tokio::test]
+    async fn test_update_account_rejects_over_max_chars_of_multibyte_name() {
+        let pool = setup_test_db().await;
+
+        let add_request = AddAccountRequest {
+            account_code: "TEST".to_string(),
+            account_name: "Test".to_string(),
+            template_code: "BANK".to_string(),
+            initial_balance: 0,
+        };
+        add_account(&pool, 2, add_request).await.unwrap();
+
+        let update_request = UpdateAccountRequest {
+            account_code: "TEST".to_string(),
+            account_name: "あ".repeat(consts::MAX_NAME_LEN + 1),
+            template_code: "BANK".to_string(),
+            initial_balance: 0,
+            display_order: 1,
+        };
+        let err = update_account(&pool, 2, update_request).await.unwrap_err();
+        assert!(err.contains(&consts::MAX_NAME_LEN.to_string()),
+            "error should reference the limit: {}", err);
     }
 }

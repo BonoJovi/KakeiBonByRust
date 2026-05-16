@@ -6,6 +6,8 @@ import { Modal } from './modal.js';
 import { setupIndicators } from './indicators.js';
 import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
 import { createMenuBar } from './menu.js';
+import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
+import { MAX_NAME_LEN, MAX_MEMO_LEN } from './consts.js';
 
 console.log('=== MANUFACTURER-MANAGEMENT.JS LOADED ===');
 
@@ -85,10 +87,14 @@ function initManufacturerModal() {
         onOpen: (mode, data) => {
             const modalTitle = document.getElementById('modal-title');
             const form = document.getElementById('manufacturer-form');
+            const manufacturerNameInput = document.getElementById('manufacturer-name');
+            const manufacturerMemoInput = document.getElementById('manufacturer-memo');
 
             // Clear form and errors
             form.reset();
             clearErrors();
+            clearValidationError(manufacturerNameInput);
+            clearValidationError(manufacturerMemoInput);
 
             if (mode === 'add') {
                 modalTitle.setAttribute('data-i18n', 'manufacturer_mgmt.add');
@@ -100,12 +106,17 @@ function initManufacturerModal() {
                 modalTitle.textContent = i18n.t('manufacturer_mgmt.edit');
 
                 // Populate form
-                document.getElementById('manufacturer-name').value = data.manufacturer_name;
-                document.getElementById('manufacturer-memo').value = data.memo || '';
+                manufacturerNameInput.value = data.manufacturer_name;
+                manufacturerMemoInput.value = data.memo || '';
                 document.getElementById('manufacturer-is-disabled').checked = data.is_disabled === 1;
 
                 editingManufacturerId = data.manufacturer_id;
             }
+
+            // Refresh character counters after programmatic value changes
+            // (form.reset() / direct .value assignments do not fire 'input').
+            manufacturerNameInput?.dispatchEvent(new Event('input'));
+            manufacturerMemoInput?.dispatchEvent(new Event('input'));
         },
         onSave: async (formData) => {
             await saveManufacturer();
@@ -151,6 +162,16 @@ function setupEventListeners() {
         updateToggleButton();
         loadManufacturers();
     });
+
+    // Live-clear validation errors as the user edits
+    const manufacturerNameInput = document.getElementById('manufacturer-name');
+    const manufacturerMemoInput = document.getElementById('manufacturer-memo');
+    manufacturerNameInput?.addEventListener('input', () => clearValidationError(manufacturerNameInput));
+    manufacturerMemoInput?.addEventListener('input', () => clearValidationError(manufacturerMemoInput));
+
+    // Live character counters (kept in sync with backend chars().count())
+    if (manufacturerNameInput) attachCharCounter(manufacturerNameInput, MAX_NAME_LEN);
+    if (manufacturerMemoInput) attachCharCounter(manufacturerMemoInput, MAX_MEMO_LEN);
 }
 
 function openModal(mode, data = null) {
@@ -277,17 +298,31 @@ function renderManufacturers() {
 }
 
 async function saveManufacturer() {
-    const manufacturerName = document.getElementById('manufacturer-name').value.trim();
-    const memo = document.getElementById('manufacturer-memo').value.trim();
+    const manufacturerNameInput = document.getElementById('manufacturer-name');
+    const manufacturerMemoInput = document.getElementById('manufacturer-memo');
+    const manufacturerName = manufacturerNameInput.value.trim();
+    const memo = manufacturerMemoInput.value.trim();
     const isDisabled = document.getElementById('manufacturer-is-disabled').checked ? 1 : 0;
 
     // Clear previous errors
     clearErrors();
+    clearValidationError(manufacturerNameInput);
+    clearValidationError(manufacturerMemoInput);
 
-    // Validation
+    // Validation — empty name
     if (!manufacturerName) {
-        document.getElementById('manufacturer-name-error').textContent = i18n.t('manufacturer_mgmt.empty_name');
+        showValidationError(manufacturerNameInput, i18n.t('manufacturer_mgmt.empty_name'));
         throw new Error('Validation error: empty manufacturer name');
+    }
+
+    // Validation — max length (mirrors Rust defense in src/services/manufacturer.rs)
+    if ([...manufacturerName].length > MAX_NAME_LEN) {
+        showMaxLengthError(manufacturerNameInput, i18n.t('manufacturer_mgmt.name'), MAX_NAME_LEN);
+        throw new Error('Validation error: manufacturer name too long');
+    }
+    if (memo && [...memo].length > MAX_MEMO_LEN) {
+        showMaxLengthError(manufacturerMemoInput, i18n.t('manufacturer_mgmt.memo'), MAX_MEMO_LEN);
+        throw new Error('Validation error: memo too long');
     }
 
     try {
@@ -317,20 +352,36 @@ async function saveManufacturer() {
     } catch (error) {
         console.error('Failed to save manufacturer:', error);
 
-        // Map backend error messages to i18n resources
+        // Map backend error messages to i18n resources / localized text
         const errorMessage = error.toString();
-        let displayMessage;
+        let nameMessage = null;
+        let memoMessage = null;
 
         if (errorMessage.includes('already exists')) {
-            displayMessage = i18n.t('manufacturer_mgmt.duplicate_error');
+            nameMessage = i18n.t('manufacturer_mgmt.duplicate_error');
+        } else if (errorMessage.includes('Manufacturer name must be')) {
+            // Defense-line trip: frontend max-length check should have caught
+            // this, so use the same i18n message for parity.
+            nameMessage = i18n.t('validation.max_length', {
+                field: i18n.t('manufacturer_mgmt.name'),
+                max: MAX_NAME_LEN,
+                actual: [...manufacturerName].length,
+            });
+        } else if (errorMessage.includes('Memo must be')) {
+            memoMessage = i18n.t('validation.max_length', {
+                field: i18n.t('manufacturer_mgmt.memo'),
+                max: MAX_MEMO_LEN,
+                actual: [...memo].length,
+            });
         } else if (errorMessage.includes('cannot be empty')) {
-            displayMessage = i18n.t('manufacturer_mgmt.empty_name');
+            nameMessage = i18n.t('manufacturer_mgmt.empty_name');
         } else {
-            // Fallback to original error message
-            displayMessage = errorMessage;
+            // Fallback to original error message on the name field
+            nameMessage = errorMessage;
         }
 
-        document.getElementById('manufacturer-name-error').textContent = displayMessage;
+        if (nameMessage) showValidationError(manufacturerNameInput, nameMessage);
+        if (memoMessage) showValidationError(manufacturerMemoInput, memoMessage);
 
         // Re-throw error to prevent modal from closing
         throw error;

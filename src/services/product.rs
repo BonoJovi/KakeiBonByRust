@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use sqlx::{SqlitePool, FromRow};
-use crate::sql_queries;
+use crate::{sql_queries, consts};
 
 #[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
 #[sqlx(rename_all = "SCREAMING_SNAKE_CASE")]
@@ -124,6 +124,16 @@ pub async fn add_product(
     if request.product_name.trim().is_empty() {
         return Err("Product name cannot be empty".to_string());
     }
+    if request.product_name.chars().count() > consts::MAX_NAME_LEN {
+        return Err(format!("Product name must be {} characters or less", consts::MAX_NAME_LEN));
+    }
+
+    // Validate memo length
+    if let Some(memo) = &request.memo {
+        if memo.chars().count() > consts::MAX_MEMO_LEN {
+            return Err(format!("Memo must be {} characters or less", consts::MAX_MEMO_LEN));
+        }
+    }
 
     // Check for duplicate product name
     if check_duplicate_for_add(pool, user_id, &request.product_name).await? {
@@ -161,6 +171,16 @@ pub async fn update_product(
     // Validate product name
     if request.product_name.trim().is_empty() {
         return Err("Product name cannot be empty".to_string());
+    }
+    if request.product_name.chars().count() > consts::MAX_NAME_LEN {
+        return Err(format!("Product name must be {} characters or less", consts::MAX_NAME_LEN));
+    }
+
+    // Validate memo length
+    if let Some(memo) = &request.memo {
+        if memo.chars().count() > consts::MAX_MEMO_LEN {
+            return Err(format!("Memo must be {} characters or less", consts::MAX_MEMO_LEN));
+        }
     }
 
     // Check if product exists
@@ -437,5 +457,118 @@ mod tests {
         assert_eq!(products.len(), 1);
         // Due to LEFT JOIN, manufacturer_name should be None when manufacturer is disabled
         // (The actual manufacturer_id in PRODUCTS table remains, but manufacturer is not shown in list)
+    }
+
+    // Issue #37 Phase 2-3 — bounded-field length checks must count
+    // characters (not bytes). Japanese is 3 bytes per char in UTF-8.
+
+    #[tokio::test]
+    async fn test_add_product_accepts_max_chars_of_multibyte_name() {
+        let pool = setup_test_db().await;
+
+        let request = AddProductRequest {
+            product_name: "あ".repeat(consts::MAX_NAME_LEN),
+            manufacturer_id: None,
+            memo: None,
+            is_disabled: None,
+        };
+        let result = add_product(&pool, 2, request).await;
+        assert!(result.is_ok(), "expected MAX_NAME_LEN multibyte chars to be accepted: {:?}", result.err());
+    }
+
+    #[tokio::test]
+    async fn test_add_product_rejects_over_max_chars_of_multibyte_name() {
+        let pool = setup_test_db().await;
+
+        let request = AddProductRequest {
+            product_name: "あ".repeat(consts::MAX_NAME_LEN + 1),
+            manufacturer_id: None,
+            memo: None,
+            is_disabled: None,
+        };
+        let err = add_product(&pool, 2, request).await.unwrap_err();
+        assert!(err.contains(&consts::MAX_NAME_LEN.to_string()),
+            "error should reference the limit: {}", err);
+    }
+
+    #[tokio::test]
+    async fn test_add_product_accepts_max_chars_of_multibyte_memo() {
+        let pool = setup_test_db().await;
+
+        let request = AddProductRequest {
+            product_name: "商品".to_string(),
+            manufacturer_id: None,
+            memo: Some("メ".repeat(consts::MAX_MEMO_LEN)),
+            is_disabled: None,
+        };
+        let result = add_product(&pool, 2, request).await;
+        assert!(result.is_ok(), "expected MAX_MEMO_LEN multibyte chars to be accepted: {:?}", result.err());
+    }
+
+    #[tokio::test]
+    async fn test_add_product_rejects_over_max_chars_of_multibyte_memo() {
+        let pool = setup_test_db().await;
+
+        let request = AddProductRequest {
+            product_name: "商品".to_string(),
+            manufacturer_id: None,
+            memo: Some("メ".repeat(consts::MAX_MEMO_LEN + 1)),
+            is_disabled: None,
+        };
+        let err = add_product(&pool, 2, request).await.unwrap_err();
+        assert!(err.contains(&consts::MAX_MEMO_LEN.to_string()),
+            "error should reference the limit: {}", err);
+    }
+
+    #[tokio::test]
+    async fn test_update_product_rejects_over_max_chars_of_multibyte_name() {
+        let pool = setup_test_db().await;
+
+        let add_request = AddProductRequest {
+            product_name: "商品".to_string(),
+            manufacturer_id: None,
+            memo: None,
+            is_disabled: None,
+        };
+        add_product(&pool, 2, add_request).await.unwrap();
+        let products = get_products(&pool, 2, false).await.unwrap();
+        let product_id = products[0].product_id;
+
+        let update_request = UpdateProductRequest {
+            product_name: "あ".repeat(consts::MAX_NAME_LEN + 1),
+            manufacturer_id: None,
+            memo: None,
+            display_order: 1,
+            is_disabled: 0,
+        };
+        let err = update_product(&pool, 2, product_id, update_request).await.unwrap_err();
+        assert!(err.contains(&consts::MAX_NAME_LEN.to_string()),
+            "error should reference the limit: {}", err);
+    }
+
+    #[tokio::test]
+    async fn test_update_product_rejects_over_max_chars_of_multibyte_memo() {
+        let pool = setup_test_db().await;
+
+        let add_request = AddProductRequest {
+            product_name: "商品".to_string(),
+            manufacturer_id: None,
+            memo: None,
+            is_disabled: None,
+        };
+        add_product(&pool, 2, add_request).await.unwrap();
+        let products = get_products(&pool, 2, false).await.unwrap();
+        let product_id = products[0].product_id;
+
+        let update_request = UpdateProductRequest {
+            product_name: "商品".to_string(),
+            manufacturer_id: None,
+            memo: Some("メ".repeat(consts::MAX_MEMO_LEN + 1)),
+            display_order: 1,
+            is_disabled: 0,
+        };
+        let err = update_product(&pool, 2, product_id, update_request).await.unwrap_err();
+        assert!(err.contains(&consts::MAX_MEMO_LEN.to_string()),
+            "error should reference the limit: {}", err);
     }
 }
