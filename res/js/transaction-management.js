@@ -11,6 +11,7 @@ import { createMenuBar } from './menu.js';
 import { applyHeaderRecalculationPrompt } from './header-recalc.js';
 import { calculateRecommendedTotal } from './tax-calc.js';
 import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
+import { showToast } from './toast.js';
 
 let currentUserId = null;
 let currentUserRole = null;
@@ -63,6 +64,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Check if user is admin - admin cannot access transaction management
         if (currentUserRole === ROLE_ADMIN) {
             console.log('Admin user detected, transaction management access denied');
+            // alert() is intentional here: navigation-bound access-denied
+            // notice (see Issue #50 rule). Blocking alert guarantees the
+            // message is seen before window.location.href tears down the page.
             alert(i18n.t('transaction.admin_access_denied') || 'Transaction management is not available for administrator accounts. Please login as a regular user.');
             window.location.href = HTML_FILES.INDEX;
             return;
@@ -553,8 +557,7 @@ async function confirmScheduledTransaction(transactionId) {
         await loadTransactions();
     } catch (error) {
         console.error('Failed to confirm scheduled transaction:', error);
-        const errorMessage = i18n.t('transaction_mgmt.confirm_error') || 'Failed to confirm scheduled transaction';
-        alert(errorMessage + ': ' + error);
+        showToast(i18n.t('transaction_mgmt.confirm_error') + ': ' + error, { variant: 'error' });
     }
 }
 
@@ -577,7 +580,7 @@ async function deleteTransaction(transactionId) {
         
     } catch (error) {
         console.error('Failed to delete transaction:', error);
-        alert(i18n.t('transaction_mgmt.delete_error') || 'Failed to delete transaction: ' + error);
+        showToast(i18n.t('transaction_mgmt.delete_error') + ': ' + error, { variant: 'error' });
     }
 }
 
@@ -709,7 +712,7 @@ function initializeTransactionModal() {
                 window.location.href = `${HTML_FILES.TRANSACTION_DETAIL_MANAGEMENT}?transaction_id=${editingTransactionId}`;
             } else {
                 // New transaction - need to save first
-                alert(i18n.t('transaction_mgmt.save_before_details') || 'Please save the transaction first before managing details.');
+                showToast(i18n.t('transaction_mgmt.save_before_details'), { variant: 'warning' });
             }
         });
     }
@@ -1018,7 +1021,7 @@ async function handleTransactionSubmit(event) {
             throw error;
         }
 
-        alert('Failed to save transaction: ' + error);
+        showToast(i18n.t('transaction_mgmt.failed_to_save') + ': ' + error, { variant: 'error' });
     }
 }
 
@@ -1054,7 +1057,7 @@ async function loadTransactionData(transactionId) {
         
     } catch (error) {
         console.error('Failed to load transaction:', error);
-        alert('Failed to load transaction: ' + error);
+        showToast(i18n.t('transaction_mgmt.failed_to_load') + ': ' + error, { variant: 'error' });
     }
 }
 
