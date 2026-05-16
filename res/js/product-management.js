@@ -6,6 +6,8 @@ import { Modal } from './modal.js';
 import { setupIndicators } from './indicators.js';
 import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
 import { createMenuBar } from './menu.js';
+import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
+import { MAX_NAME_LEN, MAX_MEMO_LEN } from './consts.js';
 
 console.log('=== PRODUCT-MANAGEMENT.JS LOADED ===');
 
@@ -87,10 +89,14 @@ function initProductModal() {
         onOpen: (mode, data) => {
             const modalTitle = document.getElementById('modal-title');
             const form = document.getElementById('product-form');
+            const productNameInput = document.getElementById('product-name');
+            const productMemoInput = document.getElementById('product-memo');
 
             // Clear form and errors
             form.reset();
             clearErrors();
+            clearValidationError(productNameInput);
+            clearValidationError(productMemoInput);
             populateManufacturerDropdown();
 
             if (mode === 'add') {
@@ -103,13 +109,18 @@ function initProductModal() {
                 modalTitle.textContent = i18n.t('product_mgmt.edit');
 
                 // Populate form
-                document.getElementById('product-name').value = data.product_name;
+                productNameInput.value = data.product_name;
                 document.getElementById('product-manufacturer').value = data.manufacturer_id || '';
-                document.getElementById('product-memo').value = data.memo || '';
+                productMemoInput.value = data.memo || '';
                 document.getElementById('product-is-disabled').checked = data.is_disabled === 1;
 
                 editingProductId = data.product_id;
             }
+
+            // Refresh character counters after programmatic value changes
+            // (form.reset() / direct .value assignments do not fire 'input').
+            productNameInput?.dispatchEvent(new Event('input'));
+            productMemoInput?.dispatchEvent(new Event('input'));
         },
         onSave: async (formData) => {
             await saveProduct();
@@ -155,6 +166,16 @@ function setupEventListeners() {
         updateToggleButton();
         loadProducts();
     });
+
+    // Live-clear validation errors as the user edits
+    const productNameInput = document.getElementById('product-name');
+    const productMemoInput = document.getElementById('product-memo');
+    productNameInput?.addEventListener('input', () => clearValidationError(productNameInput));
+    productMemoInput?.addEventListener('input', () => clearValidationError(productMemoInput));
+
+    // Live character counters (kept in sync with backend chars().count())
+    if (productNameInput) attachCharCounter(productNameInput, MAX_NAME_LEN);
+    if (productMemoInput) attachCharCounter(productMemoInput, MAX_MEMO_LEN);
 }
 
 function openModal(mode, data = null) {
@@ -324,19 +345,33 @@ function renderProducts() {
 }
 
 async function saveProduct() {
-    const productName = document.getElementById('product-name').value.trim();
+    const productNameInput = document.getElementById('product-name');
+    const productMemoInput = document.getElementById('product-memo');
+    const productName = productNameInput.value.trim();
     const manufacturerIdValue = document.getElementById('product-manufacturer').value;
     const manufacturerId = manufacturerIdValue ? parseInt(manufacturerIdValue) : null;
-    const memo = document.getElementById('product-memo').value.trim();
+    const memo = productMemoInput.value.trim();
     const isDisabled = document.getElementById('product-is-disabled').checked ? 1 : 0;
 
     // Clear previous errors
     clearErrors();
+    clearValidationError(productNameInput);
+    clearValidationError(productMemoInput);
 
-    // Validation
+    // Validation — empty name
     if (!productName) {
-        document.getElementById('product-name-error').textContent = i18n.t('product_mgmt.empty_name');
+        showValidationError(productNameInput, i18n.t('product_mgmt.empty_name'));
         throw new Error('Validation error: empty product name');
+    }
+
+    // Validation — max length (mirrors Rust defense in src/services/product.rs)
+    if ([...productName].length > MAX_NAME_LEN) {
+        showMaxLengthError(productNameInput, i18n.t('product_mgmt.name'), MAX_NAME_LEN);
+        throw new Error('Validation error: product name too long');
+    }
+    if (memo && [...memo].length > MAX_MEMO_LEN) {
+        showMaxLengthError(productMemoInput, i18n.t('product_mgmt.memo'), MAX_MEMO_LEN);
+        throw new Error('Validation error: memo too long');
     }
 
     try {
@@ -368,20 +403,36 @@ async function saveProduct() {
     } catch (error) {
         console.error('Failed to save product:', error);
 
-        // Map backend error messages to i18n resources
+        // Map backend error messages to i18n resources / localized text
         const errorMessage = error.toString();
-        let displayMessage;
+        let nameMessage = null;
+        let memoMessage = null;
 
         if (errorMessage.includes('already exists')) {
-            displayMessage = i18n.t('product_mgmt.duplicate_error');
+            nameMessage = i18n.t('product_mgmt.duplicate_error');
+        } else if (errorMessage.includes('Product name must be')) {
+            // Defense-line trip: frontend max-length check should have caught
+            // this, so use the same i18n message for parity.
+            nameMessage = i18n.t('validation.max_length', {
+                field: i18n.t('product_mgmt.name'),
+                max: MAX_NAME_LEN,
+                actual: [...productName].length,
+            });
+        } else if (errorMessage.includes('Memo must be')) {
+            memoMessage = i18n.t('validation.max_length', {
+                field: i18n.t('product_mgmt.memo'),
+                max: MAX_MEMO_LEN,
+                actual: [...memo].length,
+            });
         } else if (errorMessage.includes('cannot be empty')) {
-            displayMessage = i18n.t('product_mgmt.empty_name');
+            nameMessage = i18n.t('product_mgmt.empty_name');
         } else {
-            // Fallback to original error message
-            displayMessage = errorMessage;
+            // Fallback to original error message on the name field
+            nameMessage = errorMessage;
         }
 
-        document.getElementById('product-name-error').textContent = displayMessage;
+        if (nameMessage) showValidationError(productNameInput, nameMessage);
+        if (memoMessage) showValidationError(productMemoInput, memoMessage);
 
         // Re-throw error to prevent modal from closing
         throw error;

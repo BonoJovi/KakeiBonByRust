@@ -2,11 +2,12 @@ import { invoke } from '@tauri-apps/api/core';
 import { HTML_FILES } from './html-files.js';
 import i18n from './i18n.js';
 import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers, adjustWindowSize } from './font-size.js';
-import { ROLE_ADMIN, ROLE_USER } from './consts.js';
+import { ROLE_ADMIN, ROLE_USER, MAX_NAME_LEN } from './consts.js';
 import { Modal } from './modal.js';
 import { setupIndicators } from './indicators.js';
 import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
 import { createMenuBar } from './menu.js';
+import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
 
 console.log('=== ACCOUNT-MANAGEMENT.JS LOADED - ALL imports enabled ===');
 console.log('invoke:', typeof invoke);
@@ -87,32 +88,38 @@ function initAccountModal() {
             const modalTitle = document.getElementById('modal-title');
             const form = document.getElementById('account-form');
             const accountCodeInput = document.getElementById('account-code');
-            
+            const accountNameInput = document.getElementById('account-name');
+
             // Clear form and errors
             form.reset();
             clearErrors();
-            
+            clearValidationError(accountNameInput);
+
             if (mode === 'add') {
                 modalTitle.setAttribute('data-i18n', 'account_mgmt.modal_title_add');
                 modalTitle.textContent = i18n.t('account_mgmt.modal_title_add');
                 accountCodeInput.removeAttribute('readonly');
                 editingAccountCode = null;
-                
+
                 // Focus on account code input after modal opens
                 setTimeout(() => accountCodeInput.focus(), 0);
             } else if (mode === 'edit') {
                 modalTitle.setAttribute('data-i18n', 'account_mgmt.modal_title_edit');
                 modalTitle.textContent = i18n.t('account_mgmt.modal_title_edit');
-                
+
                 // Populate form
                 accountCodeInput.value = data.account_code;
                 accountCodeInput.setAttribute('readonly', 'true');
-                document.getElementById('account-name').value = data.account_name;
+                accountNameInput.value = data.account_name;
                 document.getElementById('template-code').value = data.template_code;
                 document.getElementById('initial-balance').value = data.initial_balance;
-                
+
                 editingAccountCode = data.account_code;
             }
+
+            // Refresh character counter after programmatic value changes
+            // (form.reset() / direct .value assignments do not fire 'input').
+            accountNameInput?.dispatchEvent(new Event('input'));
         },
         onSave: async (formData) => {
             await saveAccount();
@@ -133,6 +140,13 @@ function setupEventListeners() {
     document.getElementById('account-code').addEventListener('input', (e) => {
         e.target.value = e.target.value.toUpperCase();
     });
+
+    // Live-clear validation errors as the user edits
+    const accountNameInput = document.getElementById('account-name');
+    accountNameInput?.addEventListener('input', () => clearValidationError(accountNameInput));
+
+    // Live character counter (kept in sync with backend chars().count())
+    if (accountNameInput) attachCharCounter(accountNameInput, MAX_NAME_LEN);
 }
 
 // Load account templates
@@ -252,9 +266,12 @@ async function saveAccount() {
     clearErrors();
 
     const accountCode = document.getElementById('account-code').value.trim();
-    const accountName = document.getElementById('account-name').value.trim();
+    const accountNameInput = document.getElementById('account-name');
+    const accountName = accountNameInput.value.trim();
     const templateCode = document.getElementById('template-code').value;
     const initialBalance = parseInt(document.getElementById('initial-balance').value);
+
+    clearValidationError(accountNameInput);
 
     // Validation
     if (!accountCode) {
@@ -263,7 +280,13 @@ async function saveAccount() {
     }
 
     if (!accountName) {
-        showError('account-name-error', 'Account name is required');
+        showValidationError(accountNameInput, 'Account name is required');
+        return;
+    }
+
+    // Validation — max length (mirrors Rust defense in src/services/account.rs)
+    if ([...accountName].length > MAX_NAME_LEN) {
+        showMaxLengthError(accountNameInput, i18n.t('account_mgmt.account_name'), MAX_NAME_LEN);
         return;
     }
 
@@ -304,7 +327,20 @@ async function saveAccount() {
         await loadAccounts();
     } catch (error) {
         console.error('Failed to save account:', error);
-        alert('Failed to save account: ' + error);
+
+        // Map backend error messages to i18n resources / localized text
+        const errorMessage = error.toString();
+        if (errorMessage.includes('Account name must be')) {
+            // Defense-line trip: frontend max-length check should have caught
+            // this, so use the same i18n message for parity.
+            showValidationError(accountNameInput, i18n.t('validation.max_length', {
+                field: i18n.t('account_mgmt.account_name'),
+                max: MAX_NAME_LEN,
+                actual: [...accountName].length,
+            }));
+        } else {
+            alert('Failed to save account: ' + error);
+        }
     }
 }
 
