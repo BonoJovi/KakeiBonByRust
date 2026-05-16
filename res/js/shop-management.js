@@ -6,7 +6,7 @@ import { Modal } from './modal.js';
 import { setupIndicators } from './indicators.js';
 import { getCurrentSessionUser, isSessionAuthenticated, getSessionSourceScreen, clearSessionSourceScreen } from './session.js';
 import { createMenuBar } from './menu.js';
-import { showValidationError, clearValidationError, showMaxLengthError } from './validation-display.js';
+import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
 import { MAX_NAME_LEN, MAX_MEMO_LEN } from './consts.js';
 
 console.log('=== SHOP-MANAGEMENT.JS LOADED ===');
@@ -90,8 +90,10 @@ function initShopModal() {
             // Clear form and errors
             form.reset();
             clearErrors();
-            clearValidationError(document.getElementById('shop-name'));
-            clearValidationError(document.getElementById('shop-memo'));
+            const shopNameEl = document.getElementById('shop-name');
+            const shopMemoEl = document.getElementById('shop-memo');
+            clearValidationError(shopNameEl);
+            clearValidationError(shopMemoEl);
 
             if (mode === 'add') {
                 modalTitle.setAttribute('data-i18n', 'shop_mgmt.modal_title_add');
@@ -102,11 +104,16 @@ function initShopModal() {
                 modalTitle.textContent = i18n.t('shop_mgmt.modal_title_edit');
 
                 // Populate form
-                document.getElementById('shop-name').value = data.shop_name;
-                document.getElementById('shop-memo').value = data.memo || '';
+                shopNameEl.value = data.shop_name;
+                shopMemoEl.value = data.memo || '';
 
                 editingShopId = data.shop_id;
             }
+
+            // Refresh character counters after programmatic value changes
+            // (form.reset() / direct .value assignments do not fire 'input').
+            shopNameEl?.dispatchEvent(new Event('input'));
+            shopMemoEl?.dispatchEvent(new Event('input'));
         },
         onSave: async (formData) => {
             await saveShop();
@@ -151,6 +158,10 @@ function setupEventListeners() {
     const memoInput = document.getElementById('shop-memo');
     shopNameInput?.addEventListener('input', () => clearValidationError(shopNameInput));
     memoInput?.addEventListener('input', () => clearValidationError(memoInput));
+
+    // Live character counters (kept in sync with backend chars().count())
+    if (shopNameInput) attachCharCounter(shopNameInput, MAX_NAME_LEN);
+    if (memoInput) attachCharCounter(memoInput, MAX_MEMO_LEN);
 }
 
 function openModal(mode, data = null) {

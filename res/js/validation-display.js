@@ -15,6 +15,8 @@ import i18n from './i18n.js';
 
 const ERROR_CLASS = 'validation-error';
 const ERROR_STYLE = 'color:#c0392b;font-size:12px;margin-top:4px;line-height:1.3;';
+const COUNTER_CLASS = 'char-counter';
+const COUNTER_STYLE = 'color:#888;font-size:11px;margin-top:2px;text-align:right;line-height:1.3;';
 
 /**
  * Show or update the inline error message for `inputEl`.
@@ -70,9 +72,67 @@ export function showMaxLengthError(inputEl, fieldLabel, max, actual) {
     showValidationError(inputEl, message);
 }
 
+/**
+ * Attach a live character counter ("actual / max") to a bounded-length
+ * input/textarea. Updates on every `input` event. Counts Unicode code
+ * points via `[...str].length` so the displayed count matches the
+ * backend's `chars().count()` validation (surrogate pairs count as one).
+ *
+ * Idempotent: calling twice on the same element reuses the existing
+ * counter and replaces the listener.
+ *
+ * @param {HTMLElement} inputEl - <input> or <textarea> element
+ * @param {number} max - limit in characters (same value as backend bound)
+ * @returns {() => void} detach — removes the listener and counter element
+ */
+export function attachCharCounter(inputEl, max) {
+    if (!inputEl) return () => {};
+
+    let counterEl = findCounterElement(inputEl);
+    if (!counterEl) {
+        counterEl = document.createElement('div');
+        counterEl.className = COUNTER_CLASS;
+        counterEl.style.cssText = COUNTER_STYLE;
+        inputEl.insertAdjacentElement('afterend', counterEl);
+    }
+
+    // Replace any prior listener attached by an earlier call.
+    if (inputEl.__charCounterHandler) {
+        inputEl.removeEventListener('input', inputEl.__charCounterHandler);
+    }
+
+    const update = () => {
+        const count = [...(inputEl.value || '')].length;
+        counterEl.textContent = `${count} / ${max}`;
+    };
+    inputEl.__charCounterHandler = update;
+    inputEl.addEventListener('input', update);
+    update();
+
+    return () => {
+        inputEl.removeEventListener('input', update);
+        if (inputEl.__charCounterHandler === update) {
+            delete inputEl.__charCounterHandler;
+        }
+        counterEl.remove();
+    };
+}
+
 function findErrorElement(inputEl) {
-    const next = inputEl.nextElementSibling;
-    return next && next.classList && next.classList.contains(ERROR_CLASS)
-        ? next
-        : null;
+    return findSiblingByClass(inputEl, ERROR_CLASS);
+}
+
+function findCounterElement(inputEl) {
+    return findSiblingByClass(inputEl, COUNTER_CLASS);
+}
+
+function findSiblingByClass(inputEl, className) {
+    let sibling = inputEl.nextElementSibling;
+    while (sibling) {
+        if (sibling.classList && sibling.classList.contains(className)) {
+            return sibling;
+        }
+        sibling = sibling.nextElementSibling;
+    }
+    return null;
 }
