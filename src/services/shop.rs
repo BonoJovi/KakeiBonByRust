@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use sqlx::{SqlitePool, FromRow};
-use crate::sql_queries;
+use crate::{sql_queries, consts};
 
 #[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
 #[sqlx(rename_all = "SCREAMING_SNAKE_CASE")]
@@ -114,6 +114,16 @@ pub async fn add_shop(
     if request.shop_name.trim().is_empty() {
         return Err("Shop name cannot be empty".to_string());
     }
+    if request.shop_name.chars().count() > consts::MAX_NAME_LEN {
+        return Err(format!("Shop name must be {} characters or less", consts::MAX_NAME_LEN));
+    }
+
+    // Validate memo length
+    if let Some(memo) = &request.memo {
+        if memo.chars().count() > consts::MAX_MEMO_LEN {
+            return Err(format!("Memo must be {} characters or less", consts::MAX_MEMO_LEN));
+        }
+    }
 
     // Check for duplicate shop name
     if check_duplicate_for_add(pool, user_id, &request.shop_name).await? {
@@ -146,6 +156,16 @@ pub async fn update_shop(
     // Validate shop name
     if request.shop_name.trim().is_empty() {
         return Err("Shop name cannot be empty".to_string());
+    }
+    if request.shop_name.chars().count() > consts::MAX_NAME_LEN {
+        return Err(format!("Shop name must be {} characters or less", consts::MAX_NAME_LEN));
+    }
+
+    // Validate memo length
+    if let Some(memo) = &request.memo {
+        if memo.chars().count() > consts::MAX_MEMO_LEN {
+            return Err(format!("Memo must be {} characters or less", consts::MAX_MEMO_LEN));
+        }
     }
 
     // Check if shop exists
@@ -390,5 +410,102 @@ mod tests {
         // Verify memo was updated
         let shop = get_shop_by_id(&pool, 2, shop_id).await.unwrap().unwrap();
         assert_eq!(shop.memo, Some("新しいメモ".to_string()));
+    }
+
+    // Issue #37 Phase 2-2 — bounded-field length checks must count
+    // characters (not bytes). Japanese is 3 bytes per char in UTF-8.
+
+    #[tokio::test]
+    async fn test_add_shop_accepts_max_chars_of_multibyte_name() {
+        let pool = setup_test_db().await;
+
+        let request = AddShopRequest {
+            shop_name: "あ".repeat(consts::MAX_NAME_LEN),
+            memo: None,
+        };
+        let result = add_shop(&pool, 2, request).await;
+        assert!(result.is_ok(), "expected MAX_NAME_LEN multibyte chars to be accepted: {:?}", result.err());
+    }
+
+    #[tokio::test]
+    async fn test_add_shop_rejects_over_max_chars_of_multibyte_name() {
+        let pool = setup_test_db().await;
+
+        let request = AddShopRequest {
+            shop_name: "あ".repeat(consts::MAX_NAME_LEN + 1),
+            memo: None,
+        };
+        let err = add_shop(&pool, 2, request).await.unwrap_err();
+        assert!(err.contains(&consts::MAX_NAME_LEN.to_string()),
+            "error should reference the limit: {}", err);
+    }
+
+    #[tokio::test]
+    async fn test_add_shop_accepts_max_chars_of_multibyte_memo() {
+        let pool = setup_test_db().await;
+
+        let request = AddShopRequest {
+            shop_name: "店".to_string(),
+            memo: Some("メ".repeat(consts::MAX_MEMO_LEN)),
+        };
+        let result = add_shop(&pool, 2, request).await;
+        assert!(result.is_ok(), "expected MAX_MEMO_LEN multibyte chars to be accepted: {:?}", result.err());
+    }
+
+    #[tokio::test]
+    async fn test_add_shop_rejects_over_max_chars_of_multibyte_memo() {
+        let pool = setup_test_db().await;
+
+        let request = AddShopRequest {
+            shop_name: "店".to_string(),
+            memo: Some("メ".repeat(consts::MAX_MEMO_LEN + 1)),
+        };
+        let err = add_shop(&pool, 2, request).await.unwrap_err();
+        assert!(err.contains(&consts::MAX_MEMO_LEN.to_string()),
+            "error should reference the limit: {}", err);
+    }
+
+    #[tokio::test]
+    async fn test_update_shop_rejects_over_max_chars_of_multibyte_name() {
+        let pool = setup_test_db().await;
+
+        let add_request = AddShopRequest {
+            shop_name: "店".to_string(),
+            memo: None,
+        };
+        add_shop(&pool, 2, add_request).await.unwrap();
+        let shops = get_shops(&pool, 2).await.unwrap();
+        let shop_id = shops[0].shop_id;
+
+        let update_request = UpdateShopRequest {
+            shop_name: "あ".repeat(consts::MAX_NAME_LEN + 1),
+            memo: None,
+            display_order: 1,
+        };
+        let err = update_shop(&pool, 2, shop_id, update_request).await.unwrap_err();
+        assert!(err.contains(&consts::MAX_NAME_LEN.to_string()),
+            "error should reference the limit: {}", err);
+    }
+
+    #[tokio::test]
+    async fn test_update_shop_rejects_over_max_chars_of_multibyte_memo() {
+        let pool = setup_test_db().await;
+
+        let add_request = AddShopRequest {
+            shop_name: "店".to_string(),
+            memo: None,
+        };
+        add_shop(&pool, 2, add_request).await.unwrap();
+        let shops = get_shops(&pool, 2).await.unwrap();
+        let shop_id = shops[0].shop_id;
+
+        let update_request = UpdateShopRequest {
+            shop_name: "店".to_string(),
+            memo: Some("メ".repeat(consts::MAX_MEMO_LEN + 1)),
+            display_order: 1,
+        };
+        let err = update_shop(&pool, 2, shop_id, update_request).await.unwrap_err();
+        assert!(err.contains(&consts::MAX_MEMO_LEN.to_string()),
+            "error should reference the limit: {}", err);
     }
 }

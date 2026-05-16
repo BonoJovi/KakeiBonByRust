@@ -6,6 +6,8 @@ import { Modal } from './modal.js';
 import { setupIndicators } from './indicators.js';
 import { getCurrentSessionUser, isSessionAuthenticated, getSessionSourceScreen, clearSessionSourceScreen } from './session.js';
 import { createMenuBar } from './menu.js';
+import { showValidationError, clearValidationError, showMaxLengthError } from './validation-display.js';
+import { MAX_NAME_LEN, MAX_MEMO_LEN } from './consts.js';
 
 console.log('=== SHOP-MANAGEMENT.JS LOADED ===');
 
@@ -88,6 +90,8 @@ function initShopModal() {
             // Clear form and errors
             form.reset();
             clearErrors();
+            clearValidationError(document.getElementById('shop-name'));
+            clearValidationError(document.getElementById('shop-memo'));
 
             if (mode === 'add') {
                 modalTitle.setAttribute('data-i18n', 'shop_mgmt.modal_title_add');
@@ -141,6 +145,12 @@ function setupEventListeners() {
     document.getElementById('add-shop-btn').addEventListener('click', () => {
         openModal('add');
     });
+
+    // Live-clear validation errors as the user edits
+    const shopNameInput = document.getElementById('shop-name');
+    const memoInput = document.getElementById('shop-memo');
+    shopNameInput?.addEventListener('input', () => clearValidationError(shopNameInput));
+    memoInput?.addEventListener('input', () => clearValidationError(memoInput));
 }
 
 function openModal(mode, data = null) {
@@ -237,16 +247,30 @@ function renderShops() {
 }
 
 async function saveShop() {
-    const shopName = document.getElementById('shop-name').value.trim();
-    const memo = document.getElementById('shop-memo').value.trim();
+    const shopNameInput = document.getElementById('shop-name');
+    const memoInput = document.getElementById('shop-memo');
+    const shopName = shopNameInput.value.trim();
+    const memo = memoInput.value.trim();
 
     // Clear previous errors
     clearErrors();
+    clearValidationError(shopNameInput);
+    clearValidationError(memoInput);
 
-    // Validation
+    // Validation — empty name
     if (!shopName) {
-        document.getElementById('shop-name-error').textContent = i18n.t('shop_mgmt.empty_name');
+        showValidationError(shopNameInput, i18n.t('shop_mgmt.empty_name'));
         throw new Error('Validation error: empty shop name');
+    }
+
+    // Validation — max length (mirrors Rust defense in src/services/shop.rs)
+    if ([...shopName].length > MAX_NAME_LEN) {
+        showMaxLengthError(shopNameInput, i18n.t('shop_mgmt.shop_name'), MAX_NAME_LEN);
+        throw new Error('Validation error: shop name too long');
+    }
+    if (memo && [...memo].length > MAX_MEMO_LEN) {
+        showMaxLengthError(memoInput, i18n.t('shop_mgmt.memo'), MAX_MEMO_LEN);
+        throw new Error('Validation error: memo too long');
     }
 
     try {
@@ -282,20 +306,36 @@ async function saveShop() {
     } catch (error) {
         console.error('Failed to save shop:', error);
 
-        // Map backend error messages to i18n resources
+        // Map backend error messages to i18n resources / localized text
         const errorMessage = error.toString();
-        let displayMessage;
+        let nameMessage = null;
+        let memoMessage = null;
 
         if (errorMessage.includes('already exists')) {
-            displayMessage = i18n.t('shop_mgmt.duplicate_error');
+            nameMessage = i18n.t('shop_mgmt.duplicate_error');
+        } else if (errorMessage.includes('Shop name must be')) {
+            // Defense-line trip: frontend max-length check should have caught
+            // this, so use the same i18n message for parity.
+            nameMessage = i18n.t('validation.max_length', {
+                field: i18n.t('shop_mgmt.shop_name'),
+                max: MAX_NAME_LEN,
+                actual: [...shopName].length,
+            });
+        } else if (errorMessage.includes('Memo must be')) {
+            memoMessage = i18n.t('validation.max_length', {
+                field: i18n.t('shop_mgmt.memo'),
+                max: MAX_MEMO_LEN,
+                actual: [...memo].length,
+            });
         } else if (errorMessage.includes('cannot be empty')) {
-            displayMessage = i18n.t('shop_mgmt.empty_name');
+            nameMessage = i18n.t('shop_mgmt.empty_name');
         } else {
-            // Fallback to original error message
-            displayMessage = errorMessage;
+            // Fallback to original error message on the name field
+            nameMessage = errorMessage;
         }
 
-        document.getElementById('shop-name-error').textContent = displayMessage;
+        if (nameMessage) showValidationError(shopNameInput, nameMessage);
+        if (memoMessage) showValidationError(memoInput, memoMessage);
 
         // Re-throw error to prevent modal from closing
         throw error;
