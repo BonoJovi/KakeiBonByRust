@@ -36,3 +36,11 @@ VALUES
 (692, 'category_mgmt.no_categories', 'ja', 'カテゴリがありません', 'category_mgmt', 'カテゴリなしメッセージ', datetime('now')),
 (721, 'category_mgmt.error_load_category', 'en', 'Failed to load category data', 'category_mgmt', 'Category data load error', datetime('now')),
 (722, 'category_mgmt.error_load_category', 'ja', '費目データの読み込みに失敗しました', 'category_mgmt', '費目データ読み込みエラー', datetime('now'));
+
+-- Issue #50 follow-up: i18n keys for alert→toast migration. Code
+-- adoption is in a separate PR; this is the data-side prerequisite.
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES
+(2319, 'category_mgmt.failed_to_hide', 'en', 'Failed to hide category', 'category_mgmt', 'Hide error message', datetime('now')),
+(2320, 'category_mgmt.failed_to_hide', 'ja', '費目の非表示化に失敗しました', 'category_mgmt', '非表示化エラーメッセージ', datetime('now')),
+(2321, 'category_mgmt.failed_to_show', 'en', 'Failed to show category', 'category_mgmt', 'Show error message', datetime('now')),
+(2322, 'category_mgmt.failed_to_show', 'ja', '費目の表示化に失敗しました', 'category_mgmt', '表示化エラーメッセージ', datetime('now'));

@@ -34,3 +34,21 @@ VALUES
 (816, 'account_mgmt.delete_confirm', 'ja', 'この口座を削除してもよろしいですか？', 'account_mgmt', '口座削除確認メッセージ', datetime('now')),
 (817, 'account_mgmt.select_template', 'en', '- Select Template -', 'account_mgmt', 'Template select placeholder', datetime('now')),
 (818, 'account_mgmt.select_template', 'ja', '- テンプレートを選択 -', 'account_mgmt', 'テンプレート選択プレースホルダー', datetime('now'));
+
+-- Issue #50 follow-up: i18n keys for alert→toast migration. Code
+-- adoption is in a separate PR; this is the data-side prerequisite.
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES
+(2301, 'account_mgmt.failed_to_initialize', 'en', 'Failed to initialize', 'account_mgmt', 'Initialization error message', datetime('now')),
+(2302, 'account_mgmt.failed_to_initialize', 'ja', '初期化に失敗しました', 'account_mgmt', '初期化エラーメッセージ', datetime('now')),
+(2303, 'account_mgmt.failed_to_load_templates', 'en', 'Failed to load templates', 'account_mgmt', 'Template load error', datetime('now')),
+(2304, 'account_mgmt.failed_to_load_templates', 'ja', 'テンプレートの読み込みに失敗しました', 'account_mgmt', 'テンプレート読み込みエラー', datetime('now')),
+(2305, 'account_mgmt.failed_to_save', 'en', 'Failed to save account', 'account_mgmt', 'Save error message', datetime('now')),
+(2306, 'account_mgmt.failed_to_save', 'ja', '口座の保存に失敗しました', 'account_mgmt', '保存エラーメッセージ', datetime('now')),
+(2307, 'account_mgmt.failed_to_delete', 'en', 'Failed to delete account', 'account_mgmt', 'Delete error message', datetime('now')),
+(2308, 'account_mgmt.failed_to_delete', 'ja', '口座の削除に失敗しました', 'account_mgmt', '削除エラーメッセージ', datetime('now')),
+(2309, 'account_mgmt.update_success', 'en', 'Account updated successfully', 'account_mgmt', 'Update success message', datetime('now')),
+(2310, 'account_mgmt.update_success', 'ja', '口座を更新しました', 'account_mgmt', '更新成功メッセージ', datetime('now')),
+(2311, 'account_mgmt.add_success', 'en', 'Account added successfully', 'account_mgmt', 'Add success message', datetime('now')),
+(2312, 'account_mgmt.add_success', 'ja', '口座を追加しました', 'account_mgmt', '追加成功メッセージ', datetime('now')),
+(2313, 'account_mgmt.delete_success', 'en', 'Account deleted successfully', 'account_mgmt', 'Delete success message', datetime('now')),
+(2314, 'account_mgmt.delete_success', 'ja', '口座を削除しました', 'account_mgmt', '削除成功メッセージ', datetime('now'));

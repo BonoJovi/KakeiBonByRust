@@ -122,3 +122,11 @@ VALUES
 (2066, 'transaction_mgmt.confirm_btn', 'ja', '確定', 'transaction_mgmt', '確定ボタンラベル', datetime('now')),
 (2067, 'transaction_mgmt.confirm_error', 'en', 'Failed to confirm scheduled transaction', 'transaction_mgmt', 'Confirm error message', datetime('now')),
 (2068, 'transaction_mgmt.confirm_error', 'ja', '予定入出金の確定に失敗しました', 'transaction_mgmt', '確定エラーメッセージ', datetime('now'));
+
+-- Issue #50 follow-up: i18n keys for alert→toast migration. Code
+-- adoption is in a separate PR; this is the data-side prerequisite.
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES
+(2315, 'transaction_mgmt.failed_to_save', 'en', 'Failed to save transaction', 'transaction_mgmt', 'Save error message', datetime('now')),
+(2316, 'transaction_mgmt.failed_to_save', 'ja', '入出金の保存に失敗しました', 'transaction_mgmt', '保存エラーメッセージ', datetime('now')),
+(2317, 'transaction_mgmt.failed_to_load', 'en', 'Failed to load transaction', 'transaction_mgmt', 'Load error message', datetime('now')),
+(2318, 'transaction_mgmt.failed_to_load', 'ja', '入出金の読み込みに失敗しました', 'transaction_mgmt', '読み込みエラーメッセージ', datetime('now'));
