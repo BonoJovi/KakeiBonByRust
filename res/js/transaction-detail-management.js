@@ -10,7 +10,6 @@ import { createMenuBar } from './menu.js';
 import { applyHeaderRecalculationPrompt } from './header-recalc.js';
 import { setupTaxCalculationListeners } from './detail-tax-calc.js';
 import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
-import { showToast } from './toast.js';
 
 let currentUserId = null;
 let currentUserRole = null;
@@ -60,7 +59,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Check if user is admin - admin cannot access transaction detail management
         if (currentUserRole === ROLE_ADMIN) {
             console.log('Admin user detected, transaction detail management access denied');
-            showToast(i18n.t('transaction.admin_access_denied') || 'Transaction management is not available for administrator accounts. Please login as a regular user.', { variant: 'info' });
+            // alert() is intentional here: see Issue #50 comment on
+            // navigation-bound access-denied notices.
+            alert(i18n.t('transaction.admin_access_denied') || 'Transaction management is not available for administrator accounts. Please login as a regular user.');
             window.location.href = HTML_FILES.INDEX;
             return;
         }

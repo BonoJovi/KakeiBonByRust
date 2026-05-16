@@ -5,7 +5,6 @@ import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontS
 import { HTML_FILES } from './html-files.js';
 import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
 import { createMenuBar } from './menu.js';
-import { showToast } from './toast.js';
 
 console.log('dashboard.js loaded');
 
@@ -54,7 +53,11 @@ document.addEventListener('DOMContentLoaded', async function() {
     const ROLE_ADMIN = 0;
     if (user.role === ROLE_ADMIN) {
         console.log('Admin user detected, dashboard access denied');
-        showToast(i18n.t('dashboard.admin_access_denied') || 'Dashboard is not available for administrator accounts. Please login as a regular user.', { variant: 'info' });
+        // alert() is intentional here: this is a navigation-bound access-denied
+        // notice. The blocking modal guarantees the message is seen before the
+        // window.location.href below tears down the page. A non-blocking toast
+        // would be removed with the DOM mid-render. See Issue #50 comment.
+        alert(i18n.t('dashboard.admin_access_denied') || 'Dashboard is not available for administrator accounts. Please login as a regular user.');
         window.location.href = HTML_FILES.INDEX;
         return;
     }
