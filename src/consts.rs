@@ -48,3 +48,13 @@ pub const MONTH_DAY_RULE_TYPE_DAY: &str = "DAY";
 pub const MONTH_DAY_RULE_TYPE_DAY_OR_END: &str = "DAY_OR_END";
 pub const MONTH_DAY_RULE_TYPE_END: &str = "END";
 pub const MONTH_DAY_RULE_TYPE_NTH_WEEKDAY: &str = "NTH_WEEKDAY";
+
+// Bounded-field length limits (in characters, not bytes).
+// Paired with `validation.max_length` i18n key for the user-facing message.
+pub const MAX_NAME_LEN: usize = 128;          // USERS.NAME, CATEGORY*_NAME, ACCOUNTS.ACCOUNT_NAME, SHOPS/MANUFACTURERS/PRODUCTS names
+#[allow(dead_code)]
+pub const MAX_I18N_NAME_LEN: usize = 256;     // CATEGORY*_I18N.*_NAME_I18N
+pub const MAX_ITEM_NAME_LEN: usize = 200;     // TRANSACTIONS_DETAIL.ITEM_NAME, RECURRING_RULE_DETAILS.ITEM_NAME
+#[allow(dead_code)]
+pub const MAX_RULE_NAME_LEN: usize = 200;     // RECURRING_RULES.RULE_NAME
+pub const MAX_MEMO_LEN: usize = 1000;         // MEMOS.MEMO_TEXT (used by transactions and recurring rules)

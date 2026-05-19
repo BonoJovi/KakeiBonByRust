@@ -6,6 +6,9 @@ import { Modal } from './modal.js';
 import { HTML_FILES } from './html-files.js';
 import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
 import { createMenuBar } from './menu.js';
+import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
+import { showToast } from './toast.js';
+import { MAX_I18N_NAME_LEN } from './consts.js';
 
 // Category level constants
 const LEVEL_CATEGORY1 = 1;
@@ -101,6 +104,11 @@ document.addEventListener('DOMContentLoaded', async function() {
 });
 
 function initModals() {
+    // Wire bounded-field counters + live error clearing for all 6 i18n name
+    // inputs (cat1/cat2/cat3 × ja/en). Counters survive multiple modal
+    // open/close cycles thanks to attachCharCounter's idempotent guard.
+    setupCategoryNameCounters();
+
     // Initialize Category2 Modal
     category2Modal = new Modal('category2-modal', {
         formId: 'category2-form',
@@ -112,22 +120,31 @@ function initModals() {
             const parentNameField = document.getElementById('category2-parent-name');
             const nameJaField = document.getElementById('category2-name-ja');
             const nameEnField = document.getElementById('category2-name-en');
-            
+
             // Set title
-            title.textContent = mode === 'add' ? 
-                i18n.t('category_mgmt.add_category2') : 
+            title.textContent = mode === 'add' ?
+                i18n.t('category_mgmt.add_category2') :
                 i18n.t('category_mgmt.edit_category2');
-            
+
             // Find parent category name
             const parentCategory = categories.find(cat => cat.category1.category1_code === data.category1Code);
             const parentName = parentCategory ? parentCategory.category1.category1_name_i18n : data.category1Code;
             parentNameField.value = parentName;
-            
+
             // Set values for edit mode
             if (mode === 'edit') {
                 nameJaField.value = data.nameJa || '';
                 nameEnField.value = data.nameEn || '';
+            } else {
+                nameJaField.value = '';
+                nameEnField.value = '';
             }
+
+            // Clear validation errors and refresh counters after programmatic value changes.
+            clearValidationError(nameJaField);
+            clearValidationError(nameEnField);
+            nameJaField.dispatchEvent(new Event('input'));
+            nameEnField.dispatchEvent(new Event('input'));
         },
         onSave: async (formData) => {
             await handleCategory2Save(formData);
@@ -145,12 +162,12 @@ function initModals() {
             const parentNameField = document.getElementById('category3-parent-name');
             const nameJaField = document.getElementById('category3-name-ja');
             const nameEnField = document.getElementById('category3-name-en');
-            
+
             // Set title
-            title.textContent = mode === 'add' ? 
-                i18n.t('category_mgmt.add_category3') : 
+            title.textContent = mode === 'add' ?
+                i18n.t('category_mgmt.add_category3') :
                 i18n.t('category_mgmt.edit_category3');
-            
+
             // Find parent category name
             let parentName = data.category2Code;
             const parentCategory1 = categories.find(cat => cat.category1.category1_code === data.category1Code);
@@ -161,17 +178,40 @@ function initModals() {
                 }
             }
             parentNameField.value = parentName;
-            
+
             // Set values for edit mode
             if (mode === 'edit') {
                 nameJaField.value = data.nameJa || '';
                 nameEnField.value = data.nameEn || '';
+            } else {
+                nameJaField.value = '';
+                nameEnField.value = '';
             }
+
+            // Clear validation errors and refresh counters after programmatic value changes.
+            clearValidationError(nameJaField);
+            clearValidationError(nameEnField);
+            nameJaField.dispatchEvent(new Event('input'));
+            nameEnField.dispatchEvent(new Event('input'));
         },
         onSave: async (formData) => {
             await handleCategory3Save(formData);
         }
     });
+}
+
+function setupCategoryNameCounters() {
+    const ids = [
+        'category1-name-ja', 'category1-name-en',
+        'category2-name-ja', 'category2-name-en',
+        'category3-name-ja', 'category3-name-en',
+    ];
+    for (const id of ids) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        attachCharCounter(el, MAX_I18N_NAME_LEN);
+        el.addEventListener('input', () => clearValidationError(el));
+    }
 }
 
 
@@ -740,17 +780,35 @@ async function handleCategory2Save(formData) {
     const mode = formData.mode;
     const category1Code = formData.category1Code;
     const category2Code = formData.category2Code;
-    
-    let nameJa = document.getElementById('category2-name-ja').value.trim();
-    let nameEn = document.getElementById('category2-name-en').value.trim();
-    
+
+    const nameJaField = document.getElementById('category2-name-ja');
+    const nameEnField = document.getElementById('category2-name-en');
+    let nameJa = nameJaField.value.trim();
+    let nameEn = nameEnField.value.trim();
+
+    clearValidationError(nameJaField);
+    clearValidationError(nameEnField);
+
     // If one is empty, copy from the other
     if (!nameJa && !nameEn) {
-        alert(i18n.t('error.category_name_required'));
+        // Inline display on both name fields — tree view makes toast
+        // ambiguous about which row triggered the error.
+        showValidationError(nameJaField, i18n.t('error.category_name_required'));
+        showValidationError(nameEnField, i18n.t('error.category_name_required'));
         throw new Error('Name is required');
     }
     if (!nameJa) nameJa = nameEn;
     if (!nameEn) nameEn = nameJa;
+
+    // Bounded-field max-length checks (mirror Rust defense in src/services/category.rs).
+    if ([...nameJa].length > MAX_I18N_NAME_LEN) {
+        showMaxLengthError(nameJaField, i18n.t('category_mgmt.name_ja'), MAX_I18N_NAME_LEN);
+        throw new Error('Validation error: category name (ja) too long');
+    }
+    if ([...nameEn].length > MAX_I18N_NAME_LEN) {
+        showMaxLengthError(nameEnField, i18n.t('category_mgmt.name_en'), MAX_I18N_NAME_LEN);
+        throw new Error('Validation error: category name (en) too long');
+    }
     
     // Disable save button and show loading state
     const saveButton = document.querySelector('#category2-modal .btn-primary');
@@ -778,15 +836,35 @@ async function handleCategory2Save(formData) {
         await loadCategories();
     } catch (error) {
         console.error('Failed to save category2:', error);
-        
+
+        const errStr = String(error);
+
+        // Defense-line trip from Rust: bounded-field max length.
+        if (errStr.includes('Japanese name must be')) {
+            showValidationError(nameJaField, i18n.t('validation.max_length', {
+                field: i18n.t('category_mgmt.name_ja'),
+                max: MAX_I18N_NAME_LEN,
+                actual: [...nameJa].length,
+            }));
+            throw error;
+        }
+        if (errStr.includes('English name must be')) {
+            showValidationError(nameEnField, i18n.t('validation.max_length', {
+                field: i18n.t('category_mgmt.name_en'),
+                max: MAX_I18N_NAME_LEN,
+                actual: [...nameEn].length,
+            }));
+            throw error;
+        }
+
         // Check if it's a duplicate name error
-        if (error.includes('already exists')) {
-            const match = error.match(/Category name '(.+)' already exists/);
+        if (errStr.includes('already exists')) {
+            const match = errStr.match(/Category name '(.+)' already exists/);
             const duplicateName = match ? match[1] : '';
             const errorMsg = i18n.t('error.category_duplicate_name').replace('{0}', duplicateName);
-            alert(errorMsg);
+            showToast(errorMsg, { variant: 'warning' });
         } else {
-            alert(i18n.t('error.category_save_failed') + ': ' + error);
+            showToast(i18n.t('error.category_save_failed') + ': ' + error, { variant: 'error' });
         }
         throw error; // Re-throw to prevent modal from closing
     } finally {
@@ -801,17 +879,35 @@ async function handleCategory3Save(formData) {
     const category1Code = formData.category1Code;
     const category2Code = formData.category2Code;
     const category3Code = formData.category3Code;
-    
-    let nameJa = document.getElementById('category3-name-ja').value.trim();
-    let nameEn = document.getElementById('category3-name-en').value.trim();
-    
+
+    const nameJaField = document.getElementById('category3-name-ja');
+    const nameEnField = document.getElementById('category3-name-en');
+    let nameJa = nameJaField.value.trim();
+    let nameEn = nameEnField.value.trim();
+
+    clearValidationError(nameJaField);
+    clearValidationError(nameEnField);
+
     // If one is empty, copy from the other
     if (!nameJa && !nameEn) {
-        alert(i18n.t('error.category_name_required'));
+        // Inline display on both name fields — tree view makes toast
+        // ambiguous about which row triggered the error.
+        showValidationError(nameJaField, i18n.t('error.category_name_required'));
+        showValidationError(nameEnField, i18n.t('error.category_name_required'));
         throw new Error('Name is required');
     }
     if (!nameJa) nameJa = nameEn;
     if (!nameEn) nameEn = nameJa;
+
+    // Bounded-field max-length checks (mirror Rust defense in src/services/category.rs).
+    if ([...nameJa].length > MAX_I18N_NAME_LEN) {
+        showMaxLengthError(nameJaField, i18n.t('category_mgmt.name_ja'), MAX_I18N_NAME_LEN);
+        throw new Error('Validation error: category name (ja) too long');
+    }
+    if ([...nameEn].length > MAX_I18N_NAME_LEN) {
+        showMaxLengthError(nameEnField, i18n.t('category_mgmt.name_en'), MAX_I18N_NAME_LEN);
+        throw new Error('Validation error: category name (en) too long');
+    }
     
     // Disable save button and show loading state
     const saveButton = document.querySelector('#category3-modal .btn-primary');
@@ -841,15 +937,35 @@ async function handleCategory3Save(formData) {
         await loadCategories();
     } catch (error) {
         console.error('Failed to save category3:', error);
-        
+
+        const errStr = String(error);
+
+        // Defense-line trip from Rust: bounded-field max length.
+        if (errStr.includes('Japanese name must be')) {
+            showValidationError(nameJaField, i18n.t('validation.max_length', {
+                field: i18n.t('category_mgmt.name_ja'),
+                max: MAX_I18N_NAME_LEN,
+                actual: [...nameJa].length,
+            }));
+            throw error;
+        }
+        if (errStr.includes('English name must be')) {
+            showValidationError(nameEnField, i18n.t('validation.max_length', {
+                field: i18n.t('category_mgmt.name_en'),
+                max: MAX_I18N_NAME_LEN,
+                actual: [...nameEn].length,
+            }));
+            throw error;
+        }
+
         // Check if it's a duplicate name error
-        if (error.includes('already exists')) {
-            const match = error.match(/Category name '(.+)' already exists/);
+        if (errStr.includes('already exists')) {
+            const match = errStr.match(/Category name '(.+)' already exists/);
             const duplicateName = match ? match[1] : '';
             const errorMsg = i18n.t('error.category_duplicate_name').replace('{0}', duplicateName);
-            alert(errorMsg);
+            showToast(errorMsg, { variant: 'warning' });
         } else {
-            alert(i18n.t('error.category_save_failed') + ': ' + error);
+            showToast(i18n.t('error.category_save_failed') + ': ' + error, { variant: 'error' });
         }
         throw error; // Re-throw to prevent modal from closing
     } finally {
@@ -887,7 +1003,7 @@ async function moveCategoryUp(categoryCode, category1Code, category2Code, level)
         scrollToCategory(categoryCode, level);
     } catch (error) {
         console.error('Failed to move category up:', error);
-        alert(i18n.t('error.category_move_failed') + ': ' + error);
+        showToast(i18n.t('error.category_move_failed') + ': ' + error, { variant: 'error' });
         
         // Re-enable button on error
         if (button) {
@@ -924,7 +1040,7 @@ async function moveCategoryDown(categoryCode, category1Code, category2Code, leve
         scrollToCategory(categoryCode, level);
     } catch (error) {
         console.error('Failed to move category down:', error);
-        alert(i18n.t('error.category_move_failed') + ': ' + error);
+        showToast(i18n.t('error.category_move_failed') + ': ' + error, { variant: 'error' });
         
         // Re-enable button on error
         if (button) {
@@ -966,7 +1082,7 @@ async function hideCategory(category1Code, category2Code, category3Code, level, 
         await loadCategories();
     } catch (error) {
         console.error('Failed to hide category:', error);
-        alert('Failed to hide category: ' + error);
+        showToast(i18n.t('category_mgmt.failed_to_hide') + ': ' + error, { variant: 'error' });
     }
 }
 
@@ -989,7 +1105,7 @@ async function showCategory(category1Code, category2Code, category3Code, level) 
         await loadCategories();
     } catch (error) {
         console.error('Failed to show category:', error);
-        alert('Failed to show category: ' + error);
+        showToast(i18n.t('category_mgmt.failed_to_show') + ': ' + error, { variant: 'error' });
     }
 }
 

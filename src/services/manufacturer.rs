@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use sqlx::{SqlitePool, FromRow};
-use crate::sql_queries;
+use crate::{sql_queries, consts};
 
 #[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
 #[sqlx(rename_all = "SCREAMING_SNAKE_CASE")]
@@ -120,6 +120,16 @@ pub async fn add_manufacturer(
     if request.manufacturer_name.trim().is_empty() {
         return Err("Manufacturer name cannot be empty".to_string());
     }
+    if request.manufacturer_name.chars().count() > consts::MAX_NAME_LEN {
+        return Err(format!("Manufacturer name must be {} characters or less", consts::MAX_NAME_LEN));
+    }
+
+    // Validate memo length
+    if let Some(memo) = &request.memo {
+        if memo.chars().count() > consts::MAX_MEMO_LEN {
+            return Err(format!("Memo must be {} characters or less", consts::MAX_MEMO_LEN));
+        }
+    }
 
     // Check for duplicate manufacturer name
     if check_duplicate_for_add(pool, user_id, &request.manufacturer_name).await? {
@@ -156,6 +166,16 @@ pub async fn update_manufacturer(
     // Validate manufacturer name
     if request.manufacturer_name.trim().is_empty() {
         return Err("Manufacturer name cannot be empty".to_string());
+    }
+    if request.manufacturer_name.chars().count() > consts::MAX_NAME_LEN {
+        return Err(format!("Manufacturer name must be {} characters or less", consts::MAX_NAME_LEN));
+    }
+
+    // Validate memo length
+    if let Some(memo) = &request.memo {
+        if memo.chars().count() > consts::MAX_MEMO_LEN {
+            return Err(format!("Memo must be {} characters or less", consts::MAX_MEMO_LEN));
+        }
     }
 
     // Check if manufacturer exists
@@ -415,4 +435,108 @@ mod tests {
         assert_eq!(manufacturer.memo, Some("新しいメモ".to_string()));
     }
 
+    // Issue #37 Phase 2-3 — bounded-field length checks must count
+    // characters (not bytes). Japanese is 3 bytes per char in UTF-8.
+
+    #[tokio::test]
+    async fn test_add_manufacturer_accepts_max_chars_of_multibyte_name() {
+        let pool = setup_test_db().await;
+
+        let request = AddManufacturerRequest {
+            manufacturer_name: "あ".repeat(consts::MAX_NAME_LEN),
+            memo: None,
+            is_disabled: None,
+        };
+        let result = add_manufacturer(&pool, 2, request).await;
+        assert!(result.is_ok(), "expected MAX_NAME_LEN multibyte chars to be accepted: {:?}", result.err());
+    }
+
+    #[tokio::test]
+    async fn test_add_manufacturer_rejects_over_max_chars_of_multibyte_name() {
+        let pool = setup_test_db().await;
+
+        let request = AddManufacturerRequest {
+            manufacturer_name: "あ".repeat(consts::MAX_NAME_LEN + 1),
+            memo: None,
+            is_disabled: None,
+        };
+        let err = add_manufacturer(&pool, 2, request).await.unwrap_err();
+        assert!(err.contains(&consts::MAX_NAME_LEN.to_string()),
+            "error should reference the limit: {}", err);
+    }
+
+    #[tokio::test]
+    async fn test_add_manufacturer_accepts_max_chars_of_multibyte_memo() {
+        let pool = setup_test_db().await;
+
+        let request = AddManufacturerRequest {
+            manufacturer_name: "メーカー".to_string(),
+            memo: Some("メ".repeat(consts::MAX_MEMO_LEN)),
+            is_disabled: None,
+        };
+        let result = add_manufacturer(&pool, 2, request).await;
+        assert!(result.is_ok(), "expected MAX_MEMO_LEN multibyte chars to be accepted: {:?}", result.err());
+    }
+
+    #[tokio::test]
+    async fn test_add_manufacturer_rejects_over_max_chars_of_multibyte_memo() {
+        let pool = setup_test_db().await;
+
+        let request = AddManufacturerRequest {
+            manufacturer_name: "メーカー".to_string(),
+            memo: Some("メ".repeat(consts::MAX_MEMO_LEN + 1)),
+            is_disabled: None,
+        };
+        let err = add_manufacturer(&pool, 2, request).await.unwrap_err();
+        assert!(err.contains(&consts::MAX_MEMO_LEN.to_string()),
+            "error should reference the limit: {}", err);
+    }
+
+    #[tokio::test]
+    async fn test_update_manufacturer_rejects_over_max_chars_of_multibyte_name() {
+        let pool = setup_test_db().await;
+
+        let add_request = AddManufacturerRequest {
+            manufacturer_name: "メーカー".to_string(),
+            memo: None,
+            is_disabled: None,
+        };
+        add_manufacturer(&pool, 2, add_request).await.unwrap();
+        let manufacturers = get_manufacturers(&pool, 2, false).await.unwrap();
+        let manufacturer_id = manufacturers[0].manufacturer_id;
+
+        let update_request = UpdateManufacturerRequest {
+            manufacturer_name: "あ".repeat(consts::MAX_NAME_LEN + 1),
+            memo: None,
+            display_order: 1,
+            is_disabled: 0,
+        };
+        let err = update_manufacturer(&pool, 2, manufacturer_id, update_request).await.unwrap_err();
+        assert!(err.contains(&consts::MAX_NAME_LEN.to_string()),
+            "error should reference the limit: {}", err);
+    }
+
+    #[tokio::test]
+    async fn test_update_manufacturer_rejects_over_max_chars_of_multibyte_memo() {
+        let pool = setup_test_db().await;
+
+        let add_request = AddManufacturerRequest {
+            manufacturer_name: "メーカー".to_string(),
+            memo: None,
+            is_disabled: None,
+        };
+        add_manufacturer(&pool, 2, add_request).await.unwrap();
+        let manufacturers = get_manufacturers(&pool, 2, false).await.unwrap();
+        let manufacturer_id = manufacturers[0].manufacturer_id;
+
+        let update_request = UpdateManufacturerRequest {
+            manufacturer_name: "メーカー".to_string(),
+            memo: Some("メ".repeat(consts::MAX_MEMO_LEN + 1)),
+            display_order: 1,
+            is_disabled: 0,
+        };
+        let err = update_manufacturer(&pool, 2, manufacturer_id, update_request).await.unwrap_err();
+        assert!(err.contains(&consts::MAX_MEMO_LEN.to_string()),
+            "error should reference the limit: {}", err);
+    }
 }

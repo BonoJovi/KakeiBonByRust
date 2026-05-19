@@ -5,8 +5,8 @@
 > **A Modern Household Budget App with Focus on Readability and Usability**
 
 [![Rust](https://img.shields.io/badge/Rust-1.70+-orange.svg)](https://www.rust-lang.org/)
-[![Tauri](https://img.shields.io/badge/Tauri-v2.9.3-blue.svg)](https://tauri.app/)
-[![Tests](https://img.shields.io/badge/tests-845%20passing-brightgreen.svg)](#test-results)
+[![Tauri](https://img.shields.io/badge/Tauri-v2.11.1-blue.svg)](https://tauri.app/)
+[![Tests](https://img.shields.io/badge/tests-973%20passing-brightgreen.svg)](#test-results)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 [[J][P] Japanese Version](README_ja.md) | [[Globe] Bilingual README](README.md)
@@ -24,32 +24,29 @@
 Thank you for your continued interest in KakeiBon.
 I'm BonoJovi (Yoshihiro NAKAHARA), the project initiator.
 
-**We have officially released Ver.2.1.0!**
+**We have officially released Ver.2.2.0!**
 
-Ver.2.1.0 is a minor release that lets you register monthly salary, utility bills, subscriptions, and other recurring transactions as a single rule, then bulk-generate the matching scheduled transactions across the rule's period. As a core feature that fits naturally with the monthly rhythm of household budgeting, it also supports the holiday-shift conventions used for payday (roll back) and direct debits (roll forward).
+Ver.2.2.0 is a minor release introducing the **toast notification system, unified bounded-field validation, and a full alert→toast migration** in one sweep. Every `alert()` call across all management screens has been replaced with non-blocking toast notifications, and a live character-counter validation layer has been rolled out to every bounded input field.
 
-Key new features:
+Key features and improvements:
 
-- **Recurring scheduled transaction rules**: register a cycle, period, and template (amount, category, accounts, memo) once, and the matching scheduled transactions are bulk-inserted for the entire period
-- **Cycles available from the v2.1.0 UI**: daily (every N days, anchored on a date) / monthly (every N months, fixed day of month) / monthly (every N months, **Nth weekday**). Weekly, yearly, and the end-of-month variants are supported by the backend; their UI inputs ship in v2.1.x
-- **Nth weekday of month**: lets you specify rules like "every 4th Thursday." This is the differentiator competitors such as Zaim do not support, and one of the original motivations for KakeiBon
-- **Holiday shift**: when a generated date lands on a Saturday, Sunday, or Japanese national holiday, you can roll back to the previous business day (payday convention) or forward to the next business day (direct-debit convention). Consecutive holidays are walked through until a real business day is reached
-- **Auto-seeded Japanese holiday master**: uses the jpholiday crate to populate a 16-year window (current year -5 / +10) at every startup
-- **Rule list + delete (two modes)**: see your registered rules; on delete, choose between "delete rule only (keep generated transactions as standalone scheduled entries)" and "delete rule + all generated transactions"
-
-This release adds a `RULE_ID` column to `TRANSACTIONS_HEADER` and several new tables, but there is no destructive change to existing data — startup migrations handle everything automatically.
+- **Toast notification component**: Introduced `showToast()` utility displaying non-blocking success, error, and info messages in the top-right corner. Eliminates UI-blocking dialogs across the entire app
+- **Unified bounded-field validation**: Added real-time character counter ("current / limit") to every input field with a database-level character limit. Counter turns red on overflow for immediate visual feedback
+- **alert() → toast migration across all screens**: Replaced 20+ `alert()` calls in account, transaction, category, shop, manufacturer, and product management screens with `showToast()`
+- **Login screen autofocus**: Username field is automatically focused on every entry to the login screen, enabling immediate keyboard input
+- **Header recalc dialog default changed**: Default changed to "keep current total" to prevent accidental overwrite of manually adjusted header totals
 
 If you would like to use the stable release version, please refer to the [main branch](https://github.com/BonoJovi/KakeiBonByRust/tree/main).
 
 The dev branch you are currently viewing is the development version, where we are working on features for the next release.
 If you want to try the latest features early, please use this dev branch.
 
-Looking ahead, Ver.2.2.0 will reuse the recurrence logic from Ver.2.1.0 to add *aggregation cycle start day customization* (align the monthly cycle with payday or pension transfer dates). Ver.2.1.x is planned to add the weekly / yearly UI, rule editing, and the user-defined holiday UI.
+**[Next Version]** Ver.2.3.0 will reuse the recurrence logic from Ver.2.1.0 to add *aggregation cycle start day customization* (align the monthly cycle with payday or pension transfer dates).
 We welcome messages via GitHub issues or email, whether it's words of encouragement or suggestions for features you'd like to see in the future — any feedback is appreciated.
 
 Thank you for your continued support of KakeiBon.
 
-**2026-05-04 (JST) Written by Yoshihiro NAKAHARA**
+**2026-05-19 (JST) Written by Yoshihiro NAKAHARA**
 
 </div>
 
@@ -203,9 +200,9 @@ Switch between Japanese and English seamlessly
 | **Backend** | Rust + Tauri | v2.8.5 |
 | **Database** | SQLite | WAL mode |
 | **Security** | Argon2id + AES-256-GCM | Password hashing + Data encryption |
-| **Testing** | Jest + Cargo Test | 527 tests passing (Rust: 201, JS: 326) |
-| **i18n Resources** | JSON-based | 992 resources (496 unique keys, 2 languages) |
-| **Code Lines** | Total | ~35,478 lines (Rust: 13,870, JS: 8,810, HTML: 3,355, CSS: 6,109, SQL: 3,334) |
+| **Testing** | Jest + Cargo Test | 973 tests passing (Rust: 350, JS: 623) |
+| **i18n Resources** | JSON-based | 984 resources (505 unique keys, 2 languages) |
+| **Code Lines** | Total | ~49,789 lines (Rust: 20,173, JS: 11,796, HTML: 4,011, CSS: 6,683, SQL: 7,126) |
 
 ---
 
@@ -243,28 +240,22 @@ cargo tauri build
 ## [Test] Test Results
 
 ```
-Backend (Rust):       201 passing ✅
-Frontend (JavaScript): 326 passing ✅
-Total Tests:          527 passing ✅
+Backend (Rust):       350 passing ✅
+Frontend (JavaScript): 623 passing ✅
+Total Tests:          973 passing ✅
 Success Rate:         100%
 ```
 
 **Recent Improvements**:
-- ✅ **Session Management Integration** (2025-11-30)
-  - All 52 API functions now use session-based authentication
-  - Enhanced security with proper user isolation
-  - Removed hardcoded user IDs throughout the codebase
+- ✅ **Test Coverage Expansion** (2026-05-19)
+  - Total test count increased from 800 to 973 tests
+  - Backend tests expanded from 201 to 350 tests (recurring rule logic + bounded-field validation)
+  - Frontend tests expanded from 599 to 623 tests (toast component + validation coverage)
 
-- ✅ **Test Quality Enhancement** (2025-11-30)
-  - Added explicit assertions to delegated tests
-  - Improved test readability and maintainability
-  - Enterprise-grade test structure achieved
-
-**Test Count Methodology** (Updated 2025-11-30):
-- **Previous count (613)**: Included nested `describe` blocks and test structure
-- **Current count (527)**: Counts only actual executable test cases
-- **Reason for change**: Improved accuracy and industry-standard methodology
-- **Note**: No tests were removed; this is purely a measurement refinement
+**Test Count Methodology**:
+- **Current count (973)**: Counts only actual executable test cases (Rust: 350, JavaScript: 623)
+- **Methodology**: Industry-standard test counting (test() and it() blocks only)
+- **Note**: Test count increases reflect actual new test implementations, not measurement changes
 
 See [Test Overview](docs/testing/en/TEST_OVERVIEW.md) for details
 
@@ -299,8 +290,8 @@ See [Test Overview](docs/testing/en/TEST_OVERVIEW.md) for details
 - [Note] **[Coding Standards](docs/developer/en/guides/CODING_STANDARDS.md)** - Code style guide
 - [Test] **Testing Documentation**
   - [Book] **[Test Overview](docs/testing/en/TEST_OVERVIEW.md)** - Test strategy and execution guide
-  - [BlueBook] **[Backend Test Index](docs/testing/en/BACKEND_TEST_INDEX.md)** - Complete Rust test list (201 tests)
-  - [GreenBook] **[Frontend Test Index](docs/testing/en/FRONTEND_TEST_INDEX.md)** - Complete JavaScript test list (262+ tests)
+  - [BlueBook] **[Backend Test Index](docs/testing/en/BACKEND_TEST_INDEX.md)** - Complete Rust test list (350 tests)
+  - [GreenBook] **[Frontend Test Index](docs/testing/en/FRONTEND_TEST_INDEX.md)** - Complete JavaScript test list (623 tests)
 
 #### API Documentation
 - [Link] **[Common API](docs/developer/en/api/API_COMMON.md)** - Auth, session, i18n

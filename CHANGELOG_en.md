@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v2.2.0] - 2026-05-19
+
+Minor release applying the toast notification system, bounded-field validation, and a full alert→toast migration in one sweep. Replaces 20+ `alert()` calls across all management screens with non-blocking toasts, and rolls out live character-counter validation to every bounded input field.
+
+### Features
+
+- **Toast notification component** (#45): Introduced `showToast()` utility displaying non-blocking success, error, and info messages in the top-right corner. Designed as a drop-in replacement for `alert()` without blocking user interaction
+- **Unified bounded-field validation** (#37): Added a real-time character counter ("current / limit") to every input field that has a database-level character limit. Counter turns red when the limit is exceeded, giving immediate visual feedback before the user tries to save
+- **alert() → toast migration across all screens** (#50): Replaced all 20+ `alert()` calls in account management, transaction management, category management, shop management, manufacturer management, and product management with `showToast()`. Navigation-bound access denials (triggered during page transitions) intentionally retain `alert()`
+
+### Improvements
+
+- **Login screen autofocus**: Username field is automatically focused on every entry to the login screen, allowing immediate keyboard input without a mouse click
+- **Header recalc dialog default changed to "keep"**: The "Recalculate header total?" confirmation dialog now defaults to "keep current total" instead of "recalculate," preventing accidental overwrites of manually adjusted totals
+
+### i18n
+
+- Added 11 new keys (22 resources total: en + ja) for toast error messages in account management, transaction management, and category management. Uses RESOURCE_IDs 2301–2322
+
+### Tests
+
+- Overall: 800 → 973 tests (Rust: 201 → 350, JavaScript: 599 → 623)
+
+---
+
 ## [v2.1.1] - 2026-05-14
 
 Patch release picking up an upstream Tauri security fix.

@@ -1,7 +1,7 @@
 use sqlx::sqlite::SqlitePool;
 use sqlx::Row;
 use crate::security::{hash_password, verify_password, SecurityError};
-use crate::consts::{ROLE_ADMIN, ROLE_USER};
+use crate::consts::{self, ROLE_ADMIN, ROLE_USER};
 use crate::sql_queries;
 use super::encryption::EncryptionService;
 
@@ -22,6 +22,7 @@ pub enum UserManagementError {
     AdminUserCannotBeDeleted,
     InvalidRole,
     DuplicateUsername,
+    Validation(String),
 }
 
 impl std::fmt::Display for UserManagementError {
@@ -33,8 +34,21 @@ impl std::fmt::Display for UserManagementError {
             UserManagementError::AdminUserCannotBeDeleted => write!(f, "Admin user cannot be deleted"),
             UserManagementError::InvalidRole => write!(f, "Invalid role"),
             UserManagementError::DuplicateUsername => write!(f, "Username already exists"),
+            UserManagementError::Validation(msg) => write!(f, "{}", msg),
         }
     }
+}
+
+/// Issue #37 Phase 2-3 — USERS.NAME length guard. Counts characters, not
+/// bytes, mirroring the frontend `maxlength` and char counter.
+fn validate_username_length(username: &str) -> Result<(), UserManagementError> {
+    if username.chars().count() > consts::MAX_NAME_LEN {
+        return Err(UserManagementError::Validation(format!(
+            "Username must be {} characters or less",
+            consts::MAX_NAME_LEN
+        )));
+    }
+    Ok(())
 }
 
 impl std::error::Error for UserManagementError {}
@@ -106,8 +120,10 @@ impl UserManagementService {
         username: &str,
         password: &str,
     ) -> Result<i64, UserManagementError> {
+        validate_username_length(username)?;
+
         let now = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
-        
+
         let exists = sqlx::query(sql_queries::USER_CHECK_NAME_EXISTS)
             .bind(username)
             .fetch_one(&self.pool)
@@ -148,6 +164,10 @@ impl UserManagementService {
         new_password: Option<&str>,
         old_password: Option<&str>,
     ) -> Result<(), UserManagementError> {
+        if let Some(name) = new_username {
+            validate_username_length(name)?;
+        }
+
         let _user = self.get_user(user_id).await?;
         
         if let Some(password) = new_password {
@@ -606,12 +626,55 @@ mod tests {
     async fn test_list_users() {
         let pool = setup_test_db().await;
         create_test_admin(&pool, "admin", "admin_password123456").await;
-        
+
         let service = UserManagementService::new(pool.clone());
         service.register_general_user("user1", "password1").await.unwrap();
         service.register_general_user("user2", "password2").await.unwrap();
-        
+
         let users = service.list_users().await.unwrap();
         assert_eq!(users.len(), 3);
+    }
+
+    // Issue #37 Phase 2-3 — bounded-field length checks must count
+    // characters (not bytes). Japanese is 3 bytes per char in UTF-8.
+
+    #[tokio::test]
+    async fn test_register_general_user_accepts_max_chars_of_multibyte_name() {
+        let pool = setup_test_db().await;
+        create_test_admin(&pool, "admin", "admin_password123456").await;
+
+        let service = UserManagementService::new(pool.clone());
+        let name = "あ".repeat(consts::MAX_NAME_LEN);
+        let result = service.register_general_user(&name, "password123456").await;
+        assert!(result.is_ok(), "expected MAX_NAME_LEN multibyte chars to be accepted: {:?}", result.err());
+    }
+
+    #[tokio::test]
+    async fn test_register_general_user_rejects_over_max_chars_of_multibyte_name() {
+        let pool = setup_test_db().await;
+        create_test_admin(&pool, "admin", "admin_password123456").await;
+
+        let service = UserManagementService::new(pool.clone());
+        let name = "あ".repeat(consts::MAX_NAME_LEN + 1);
+        let err = service.register_general_user(&name, "password123456").await.unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains(&consts::MAX_NAME_LEN.to_string()),
+            "error should reference the limit: {}", msg);
+    }
+
+    #[tokio::test]
+    async fn test_update_general_user_rejects_over_max_chars_of_multibyte_name() {
+        let pool = setup_test_db().await;
+        create_test_admin(&pool, "admin", "admin_password123456").await;
+
+        let service = UserManagementService::new(pool.clone());
+        let user_id = service.register_general_user("testuser", "password123456")
+            .await.unwrap();
+
+        let name = "あ".repeat(consts::MAX_NAME_LEN + 1);
+        let err = service.update_general_user(user_id, Some(&name), None).await.unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains(&consts::MAX_NAME_LEN.to_string()),
+            "error should reference the limit: {}", msg);
     }
 }

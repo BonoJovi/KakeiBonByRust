@@ -37,3 +37,11 @@ export const TAX_ROUND_UP = 2;
 // Tax inclusion type constants (must match src/consts.rs)
 export const TAX_INCLUDED = 0;  // 内税 - tax is included in prices
 export const TAX_EXCLUDED = 1;  // 外税 - tax is calculated separately
+
+// Bounded-field length limits in characters (must match src/consts.rs).
+// Used by HTML maxlength + JS submit-time validation.
+export const MAX_NAME_LEN = 128;        // shop/manufacturer/product/account/category/user names
+export const MAX_I18N_NAME_LEN = 256;   // category i18n names
+export const MAX_ITEM_NAME_LEN = 200;   // transaction detail item_name, recurring rule detail item_name
+export const MAX_RULE_NAME_LEN = 200;   // recurring rule name
+export const MAX_MEMO_LEN = 1000;       // memo fields (transactions, recurring rules, shops, etc.)

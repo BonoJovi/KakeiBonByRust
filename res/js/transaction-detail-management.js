@@ -4,16 +4,17 @@ import { setupIndicators } from './indicators.js';
 import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers, adjustWindowSize } from './font-size.js';
 import { setupLanguageMenuHandlers, setupLanguageMenu, handleLogout, handleQuit } from './menu.js';
 import { HTML_FILES } from './html-files.js';
-import { ROLE_ADMIN } from './consts.js';
+import { ROLE_ADMIN, MAX_ITEM_NAME_LEN, MAX_MEMO_LEN } from './consts.js';
 import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
 import { createMenuBar } from './menu.js';
 import { applyHeaderRecalculationPrompt } from './header-recalc.js';
+import { setupTaxCalculationListeners } from './detail-tax-calc.js';
+import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
 
 let currentUserId = null;
 let currentUserRole = null;
 let transactionId = null;
 let category1Code = null; // Store CATEGORY1_CODE from transaction header
-let lastTaxInputField = null; // Track which amount field was last edited: 'excluding' or 'including'
 let taxRoundingType = 0; // Store TAX_ROUNDING_TYPE from transaction header (0: floor, 1: half-up, 2: ceil)
 let currentHeaderTotal = 0; // Cached TOTAL_AMOUNT from the loaded header; used to detect drift after a detail edit
 
@@ -58,6 +59,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Check if user is admin - admin cannot access transaction detail management
         if (currentUserRole === ROLE_ADMIN) {
             console.log('Admin user detected, transaction detail management access denied');
+            // alert() is intentional here: see Issue #50 comment on
+            // navigation-bound access-denied notices.
             alert(i18n.t('transaction.admin_access_denied') || 'Transaction management is not available for administrator accounts. Please login as a regular user.');
             window.location.href = HTML_FILES.INDEX;
             return;
@@ -137,173 +140,25 @@ function setupMenuHandlers() {
 }
 
 /**
- * Setup tax calculation listeners for automatic calculation
- * between tax-excluded and tax-included amounts
+ * Wire up tax-calculation listeners using the shared module.
  */
-function setupTaxCalculationListeners() {
+function installTaxCalculationListeners() {
     const taxRate = document.getElementById('tax-rate');
     const amountExcludingTax = document.getElementById('amount-excluding-tax');
     const amountIncludingTax = document.getElementById('amount-including-tax');
     const taxAmount = document.getElementById('tax-amount');
-    
     if (!taxRate || !amountExcludingTax || !amountIncludingTax || !taxAmount) {
         return;
     }
-    
-    // Calculate tax-included amount when tax-excluded amount is entered
-    amountExcludingTax.addEventListener('input', () => {
-        calculateFromExcludingTax(
-            amountExcludingTax,
-            taxRate,
-            taxAmount,
-            amountIncludingTax
-        );
-    });
-    
-    // Calculate tax-excluded amount when tax-included amount is entered
-    amountIncludingTax.addEventListener('input', () => {
-        calculateFromIncludingTax(
-            amountIncludingTax,
-            taxRate,
-            taxAmount,
-            amountExcludingTax
-        );
-    });
-    
-    // Recalculate when tax rate changes
-    taxRate.addEventListener('change', () => {
-        // Recalculate based on which field was last edited
-        if (lastTaxInputField === 'including' && amountIncludingTax.value) {
-            // User last edited tax-included amount, so recalculate tax-excluded
-            calculateFromIncludingTax(
-                amountIncludingTax,
-                taxRate,
-                taxAmount,
-                amountExcludingTax
-            );
-        } else if (lastTaxInputField === 'excluding' && amountExcludingTax.value) {
-            // User last edited tax-excluded amount, so recalculate tax-included
-            calculateFromExcludingTax(
-                amountExcludingTax,
-                taxRate,
-                taxAmount,
-                amountIncludingTax
-            );
-        } else if (amountExcludingTax.value) {
-            // Default to tax-excluded if no flag is set
-            calculateFromExcludingTax(
-                amountExcludingTax,
-                taxRate,
-                taxAmount,
-                amountIncludingTax
-            );
-        } else if (amountIncludingTax.value) {
-            // Fall back to tax-included
-            calculateFromIncludingTax(
-                amountIncludingTax,
-                taxRate,
-                taxAmount,
-                amountExcludingTax
-            );
+    setupTaxCalculationListeners(
+        { taxRate, amountExcludingTax, amountIncludingTax, taxAmount },
+        {
+            getRoundingType: () => taxRoundingType,
+            onRoundingDiscrepancy: ({ userInput, calculated }) =>
+                showRoundingWarning(userInput, calculated),
+            onCalculationCleared: clearRoundingWarning,
         }
-    });
-}
-
-/**
- * Apply rounding based on tax rounding type
- * @param {number} value - Value to round
- * @param {number} roundingType - 0: floor, 1: half-up, 2: ceil
- * @returns {number} Rounded value
- */
-function applyTaxRounding(value, roundingType = 0) {
-    switch (roundingType) {
-        case 0: // Round down (切り捨て)
-            return Math.floor(value);
-        case 1: // Round half-up (四捨五入)
-            return Math.round(value);
-        case 2: // Round up (切り上げ)
-            return Math.ceil(value);
-        default:
-            return Math.floor(value);
-    }
-}
-
-/**
- * Calculate tax-included amount from tax-excluded amount
- * @param {HTMLInputElement} excludingTaxInput - Tax-excluded amount input
- * @param {HTMLSelectElement} taxRateSelect - Tax rate select
- * @param {HTMLInputElement} taxAmountInput - Tax amount input (readonly)
- * @param {HTMLInputElement} includingTaxInput - Tax-included amount input
- */
-function calculateFromExcludingTax(excludingTaxInput, taxRateSelect, taxAmountInput, includingTaxInput) {
-    const excluded = parseFloat(excludingTaxInput.value) || 0;
-    const rate = parseFloat(taxRateSelect.value) || 0;
-    
-    // Clear any previous warning (user is now entering tax-excluded amount)
-    clearRoundingWarning();
-    
-    // Mark that tax-excluded amount was last edited
-    lastTaxInputField = 'excluding';
-    
-    // Calculate tax amount using the configured rounding type
-    const tax = applyTaxRounding(excluded * rate / 100, taxRoundingType);
-    
-    // Calculate including tax amount
-    const included = excluded + tax;
-    
-    // Update fields
-    taxAmountInput.value = tax;
-    includingTaxInput.value = included || '';
-}
-
-/**
- * Calculate tax-excluded amount from tax-included amount
- * @param {HTMLInputElement} includingTaxInput - Tax-included amount input
- * @param {HTMLSelectElement} taxRateSelect - Tax rate select
- * @param {HTMLInputElement} taxAmountInput - Tax amount input (readonly)
- * @param {HTMLInputElement} excludingTaxInput - Tax-excluded amount input
- */
-function calculateFromIncludingTax(includingTaxInput, taxRateSelect, taxAmountInput, excludingTaxInput) {
-    const included = parseFloat(includingTaxInput.value) || 0;
-    const rate = parseFloat(taxRateSelect.value) || 0;
-    
-    // Clear any previous warning
-    clearRoundingWarning();
-    
-    // Mark that tax-included amount was last edited
-    lastTaxInputField = 'including';
-    
-    if (!included) {
-        excludingTaxInput.value = '';
-        taxAmountInput.value = 0;
-        return;
-    }
-    
-    if (rate === 0) {
-        // No tax
-        excludingTaxInput.value = included || '';
-        taxAmountInput.value = 0;
-        return;
-    }
-    
-    // Calculate tax-excluded amount using the configured rounding type
-    const excluded = applyTaxRounding(included / (1 + rate / 100), taxRoundingType);
-    
-    // Calculate tax amount
-    const tax = included - excluded;
-    
-    // Verify by reverse calculation
-    const taxReverse = applyTaxRounding(excluded * rate / 100, taxRoundingType);
-    const includedReverse = excluded + taxReverse;
-    
-    // Check if there's a rounding discrepancy
-    if (includedReverse !== included) {
-        showRoundingWarning(included, includedReverse);
-    }
-    
-    // Update fields
-    taxAmountInput.value = tax;
-    excludingTaxInput.value = excluded || '';
+    );
 }
 
 /**
@@ -429,8 +284,16 @@ function setupEventListeners() {
         }
     });
     
-    // Tax calculation listeners
-    setupTaxCalculationListeners();
+    // Tax calculation listeners (shared module)
+    installTaxCalculationListeners();
+
+    // Live-clear validation errors as the user edits + character counters
+    const itemNameInput = document.getElementById('item-name');
+    const memoInput = document.getElementById('memo');
+    itemNameInput?.addEventListener('input', () => clearValidationError(itemNameInput));
+    memoInput?.addEventListener('input', () => clearValidationError(memoInput));
+    if (itemNameInput) attachCharCounter(itemNameInput, MAX_ITEM_NAME_LEN);
+    if (memoInput) attachCharCounter(memoInput, MAX_MEMO_LEN);
     
     // Category2 change listener
     const category2Select = document.getElementById('category2-code');
@@ -726,6 +589,22 @@ async function openDetailModal(detail = null) {
     
     modal.classList.remove('hidden');
 
+    // Reset modal content scroll so the form header is visible on every open.
+    // .modal-content has `overflow-y: auto`, and `.hidden` only toggles
+    // display:none — the inner scrollTop survives close/re-open, which made
+    // the 2nd+ open inherit the previous scroll position.
+    const modalContent = modal.querySelector('.modal-content');
+    if (modalContent) modalContent.scrollTop = 0;
+
+    // Clear validation errors and refresh char counters after programmatic
+    // value changes (form.reset() / direct .value assignments do not fire 'input').
+    const itemNameInput = document.getElementById('item-name');
+    const memoInput = document.getElementById('memo');
+    clearValidationError(itemNameInput);
+    clearValidationError(memoInput);
+    itemNameInput?.dispatchEvent(new Event('input'));
+    memoInput?.dispatchEvent(new Event('input'));
+
     // Focus on item name input after modal opens (preventScroll to avoid modal shifting)
     setTimeout(() => document.getElementById('item-name')?.focus({ preventScroll: true }), 0);
 }
@@ -739,9 +618,11 @@ function closeDetailModal() {
 
 async function handleDetailFormSubmit(event) {
     event.preventDefault();
-    
+
     const detailId = document.getElementById('detail-id').value;
-    const itemName = document.getElementById('item-name').value.trim();
+    const itemNameInput = document.getElementById('item-name');
+    const memoInput = document.getElementById('memo');
+    const itemName = itemNameInput.value.trim();
     const category1Code = document.getElementById('category1-code').value;
     const category2Code = document.getElementById('category2-code').value;
     const category3Code = document.getElementById('category3-code').value;
@@ -749,19 +630,32 @@ async function handleDetailFormSubmit(event) {
     const amountIncludingTax = parseInt(document.getElementById('amount-including-tax').value) || 0;
     const taxRate = parseInt(document.getElementById('tax-rate').value) || 0;
     const taxAmount = parseInt(document.getElementById('tax-amount').value) || 0;
-    const memo = document.getElementById('memo').value.trim();
-    
+    const memo = memoInput.value.trim();
+
+    clearValidationError(itemNameInput);
+    clearValidationError(memoInput);
+
     // Validation
     if (!itemName) {
-        showMessage('error', i18n.t('detail_mgmt.error_item_name_required'));
+        showValidationError(itemNameInput, i18n.t('detail_mgmt.error_item_name_required'));
         return;
     }
-    
+
+    // Validation — max length (mirrors Rust defense in src/services/transaction.rs)
+    if ([...itemName].length > MAX_ITEM_NAME_LEN) {
+        showMaxLengthError(itemNameInput, i18n.t('detail_mgmt.item_name'), MAX_ITEM_NAME_LEN);
+        return;
+    }
+    if (memo && [...memo].length > MAX_MEMO_LEN) {
+        showMaxLengthError(memoInput, i18n.t('detail_mgmt.memo'), MAX_MEMO_LEN);
+        return;
+    }
+
     if (!category1Code) {
         showMessage('error', i18n.t('detail_mgmt.error_category_required'));
         return;
     }
-    
+
     if (amountExcludingTax < 0 || amountIncludingTax < 0) {
         showMessage('error', i18n.t('detail_mgmt.error_invalid_amount'));
         return;
@@ -813,6 +707,27 @@ async function handleDetailFormSubmit(event) {
         
     } catch (error) {
         console.error('Failed to save detail:', error);
+
+        // Map backend error messages to i18n resources / localized text.
+        // Rust defense line for bounded fields (src/services/transaction.rs).
+        const errorMessage = error.toString();
+        if (errorMessage.includes('Item name must be')) {
+            showValidationError(itemNameInput, i18n.t('validation.max_length', {
+                field: i18n.t('detail_mgmt.item_name'),
+                max: MAX_ITEM_NAME_LEN,
+                actual: [...itemName].length,
+            }));
+            return;
+        }
+        if (errorMessage.includes('Memo must be')) {
+            showValidationError(memoInput, i18n.t('validation.max_length', {
+                field: i18n.t('detail_mgmt.memo'),
+                max: MAX_MEMO_LEN,
+                actual: [...memo].length,
+            }));
+            return;
+        }
+
         showMessage('error', `${i18n.t('detail_mgmt.save_error')}: ${error.message}`);
     }
 }

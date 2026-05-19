@@ -3,6 +3,7 @@ import i18n from './i18n.js';
 import { setupIndicators } from './indicators.js';
 import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers } from './font-size.js';
 import * as session from './session.js';
+import { showToast } from './toast.js';
 
 let isLoggedIn = false;
 
@@ -466,6 +467,7 @@ async function checkSetupNeeded() {
             adminSetup.classList.add('hidden');
             loginForm.classList.remove('hidden');
             appContent.classList.add('hidden');
+            document.getElementById('username')?.focus();
         }
     } catch (error) {
         console.error('Failed to check setup status:', error);
@@ -572,7 +574,7 @@ async function handleLanguageChange(langCode) {
         console.log('Language changed successfully');
     } catch (error) {
         console.error('Failed to change language:', error);
-        alert(i18n.t('error.language_change_failed') + ': ' + error);
+        showToast(i18n.t('error.language_change_failed') + ': ' + error, { variant: 'error' });
     }
 }
 
@@ -616,6 +618,7 @@ async function handleAdminSetup(e) {
         setTimeout(() => {
             document.getElementById('admin-setup').classList.add('hidden');
             document.getElementById('login-form').classList.remove('hidden');
+            document.getElementById('username')?.focus();
         }, 2000);
         
     } catch (error) {
@@ -755,6 +758,7 @@ async function handleLogout() {
         document.getElementById('login-message').textContent = '';
         loginForm.classList.remove('hidden');
         appContent.classList.add('hidden');
+        document.getElementById('username').focus();
     } else {
         // Management page - redirect to index
         window.location.href = HTML_FILES.INDEX;
