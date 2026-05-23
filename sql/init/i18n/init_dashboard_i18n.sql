@@ -68,4 +68,6 @@ VALUES
 (2037, 'dashboard.year_suffix', 'en', '/', 'dashboard', 'Year suffix for period display', datetime('now')),
 (2038, 'dashboard.year_suffix', 'ja', '年', 'dashboard', '期間表示の年サフィックス', datetime('now')),
 (2039, 'dashboard.month_suffix', 'en', '', 'dashboard', 'Month suffix for period display', datetime('now')),
-(2040, 'dashboard.month_suffix', 'ja', '月', 'dashboard', '期間表示の月サフィックス', datetime('now'));
+(2040, 'dashboard.month_suffix', 'ja', '月', 'dashboard', '期間表示の月サフィックス', datetime('now')),
+(2347, 'dashboard.balance_as_of', 'en', 'as of {date}', 'dashboard', 'Account balance as-of date label', datetime('now')),
+(2348, 'dashboard.balance_as_of', 'ja', '{date} 時点', 'dashboard', '口座別残高の基準日ラベル', datetime('now'));

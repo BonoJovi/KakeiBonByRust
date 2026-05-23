@@ -1,7 +1,8 @@
 import { invoke } from '@tauri-apps/api/core';
 import i18n from './i18n.js';
 import { setupIndicators } from './indicators.js';
-import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers, adjustWindowSize } from './font-size.js';
+import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers} from './font-size.js';
+import { fitWindowToScreen } from './window-fit.js';
 import { setupLanguageMenuHandlers, setupLanguageMenu } from './menu.js';
 import { HTML_FILES } from './html-files.js';
 import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
@@ -44,7 +45,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     initializeFilterDefaults();
     setupEventHandlers();
-    await adjustWindowSize();
+    await fitWindowToScreen();
 
     console.log('[DOMContentLoaded] Initialization complete');
 });
@@ -125,7 +126,6 @@ async function executeAggregation() {
     }
 
     const year = parseInt(document.getElementById('year').value);
-    const yearStart = document.getElementById('year-start').value;
     const groupBy = document.getElementById('group-by').value;
 
     if (!year || year < 1900 || year > 2100) {
@@ -143,12 +143,11 @@ async function executeAggregation() {
     }
 
     try {
-        console.log(`Executing yearly aggregation: user_id=${user.user_id}, year=${year}, year_start=${yearStart}, group_by=${groupBy}`);
+        console.log(`Executing yearly aggregation: user_id=${user.user_id}, year=${year}, group_by=${groupBy}`);
 
         const includeScheduled = document.getElementById('filter-include-scheduled').checked;
         const results = await invoke('get_yearly_aggregation', {
             year: year,
-            yearStart: yearStart,
             groupBy: groupBy,
             includeScheduled: includeScheduled
         });

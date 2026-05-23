@@ -374,6 +374,36 @@ impl Database {
         Ok(())
     }
 
+    /// Run migrations for v2.3.0 aggregation period customization.
+    /// Adds MONTH_PERIOD_START_DAY / YEAR_PERIOD_START_MONTH / YEAR_PERIOD_START_DAY
+    /// to USERS. Defaults preserve the previous calendar-month / calendar-year behavior
+    /// for existing users, so no backfill is required.
+    pub async fn migrate_period_customization(&self) -> Result<(), sqlx::Error> {
+        self.ensure_users_period_columns().await?;
+        Ok(())
+    }
+
+    /// Add MONTH_PERIOD_START_DAY, YEAR_PERIOD_START_MONTH, YEAR_PERIOD_START_DAY to USERS.
+    async fn ensure_users_period_columns(&self) -> Result<(), sqlx::Error> {
+        for (name, ddl) in [
+            ("MONTH_PERIOD_START_DAY",  "ALTER TABLE USERS ADD COLUMN MONTH_PERIOD_START_DAY INTEGER DEFAULT 1"),
+            ("YEAR_PERIOD_START_MONTH", "ALTER TABLE USERS ADD COLUMN YEAR_PERIOD_START_MONTH INTEGER DEFAULT 1"),
+            ("YEAR_PERIOD_START_DAY",   "ALTER TABLE USERS ADD COLUMN YEAR_PERIOD_START_DAY INTEGER DEFAULT 1"),
+        ] {
+            let has_column: i64 = sqlx::query_scalar(
+                "SELECT COUNT(*) FROM pragma_table_info('USERS') WHERE name = ?"
+            )
+            .bind(name)
+            .fetch_one(&self.pool)
+            .await?;
+
+            if has_column == 0 {
+                sqlx::query(ddl).execute(&self.pool).await?;
+            }
+        }
+        Ok(())
+    }
+
     /// Create new tables for v2.1.0 (idempotent via IF NOT EXISTS).
     async fn create_recurring_tables(&self) -> Result<(), sqlx::Error> {
         sqlx::query(sql_queries::CREATE_RECURRING_RULES_TABLE)

@@ -7,6 +7,8 @@ use chrono::{Datelike, NaiveDate};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, SqlitePool};
 
+use crate::services::period::{monthly_period_bounds, yearly_period_bounds};
+
 // =============================================================================
 // Filter Enums
 // =============================================================================
@@ -142,15 +144,6 @@ pub enum WeekStart {
     Sunday,
     /// Week starts on Monday (ISO 8601, Europe/Japan style)
     Monday,
-}
-
-/// Year start month setting
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-pub enum YearStart {
-    /// Year starts in January (calendar year)
-    January,
-    /// Year starts in April (fiscal year, Japanese style)
-    April,
 }
 
 // =============================================================================
@@ -461,11 +454,12 @@ pub async fn execute_monthly_aggregation(
     user_id: i64,
     year: i32,
     month: u32,
+    start_day: u32,
     group_by: GroupBy,
     lang: &str,
     include_scheduled: bool,
 ) -> Result<Vec<AggregationResult>, String> {
-    let mut request = monthly_aggregation(user_id, year, month, group_by)
+    let mut request = monthly_aggregation(user_id, year, month, start_day, group_by)
         .map_err(|e| e.to_string())?;
     request.filter.include_scheduled = include_scheduled;
 
@@ -545,12 +539,13 @@ pub async fn execute_yearly_aggregation(
     pool: &SqlitePool,
     user_id: i64,
     year: i32,
-    year_start: YearStart,
+    start_month: u32,
+    start_day: u32,
     group_by: GroupBy,
     lang: &str,
     include_scheduled: bool,
 ) -> Result<Vec<AggregationResult>, String> {
-    let mut request = yearly_aggregation(user_id, year, year_start, group_by)
+    let mut request = yearly_aggregation(user_id, year, start_month, start_day, group_by)
         .map_err(|e| e.to_string())?;
     request.filter.include_scheduled = include_scheduled;
 
@@ -563,12 +558,13 @@ pub async fn execute_monthly_aggregation_by_category(
     user_id: i64,
     year: i32,
     month: u32,
+    start_day: u32,
     group_by: GroupBy,
     category_filter: CategoryFilter,
     lang: &str,
     include_scheduled: bool,
 ) -> Result<Vec<AggregationResult>, String> {
-    let mut request = monthly_aggregation_by_category(user_id, year, month, group_by, category_filter)
+    let mut request = monthly_aggregation_by_category(user_id, year, month, start_day, group_by, category_filter)
         .map_err(|e| e.to_string())?;
     request.filter.include_scheduled = include_scheduled;
 
@@ -1004,6 +1000,10 @@ pub enum AggregationError {
     InvalidDateRange { start: NaiveDate, end: NaiveDate },
     /// Invalid day for the given month
     InvalidDay { year: i32, month: u32, day: u32 },
+    /// Invalid period start day (must be 1-31)
+    InvalidStartDay(u32),
+    /// Invalid period start month (must be 1-12)
+    InvalidStartMonth(u32),
 }
 
 impl std::fmt::Display for AggregationError {
@@ -1021,6 +1021,12 @@ impl std::fmt::Display for AggregationError {
             AggregationError::InvalidDay { year, month, day } => {
                 write!(f, "Invalid day {} for {}-{:02}", day, year, month)
             }
+            AggregationError::InvalidStartDay(day) => {
+                write!(f, "Invalid period start day: {}. Must be between 1 and 31.", day)
+            }
+            AggregationError::InvalidStartMonth(month) => {
+                write!(f, "Invalid period start month: {}. Must be between 1 and 12.", month)
+            }
         }
     }
 }
@@ -1031,21 +1037,27 @@ impl std::error::Error for AggregationError {}
 // Wrapper Functions (Business Logic Layer)
 // =============================================================================
 
-/// Get the last day of a month
-fn get_last_day_of_month(year: i32, month: u32) -> u32 {
-    // Try to create the first day of the next month, then subtract one day
-    let next_month = if month == 12 { 1 } else { month + 1 };
-    let next_year = if month == 12 { year + 1 } else { year };
-
-    NaiveDate::from_ymd_opt(next_year, next_month, 1)
-        .map(|d| d.pred_opt().unwrap().day())
-        .unwrap_or(28) // Fallback for edge cases
-}
 
 /// Validate year value
 fn validate_year(year: i32) -> Result<(), AggregationError> {
     if year < 1900 || year > 2100 {
         return Err(AggregationError::InvalidYear(year));
+    }
+    Ok(())
+}
+
+/// Validate start day (1-31)
+fn validate_start_day(day: u32) -> Result<(), AggregationError> {
+    if !(1..=31).contains(&day) {
+        return Err(AggregationError::InvalidStartDay(day));
+    }
+    Ok(())
+}
+
+/// Validate start month (1-12)
+fn validate_start_month(month: u32) -> Result<(), AggregationError> {
+    if !(1..=12).contains(&month) {
+        return Err(AggregationError::InvalidStartMonth(month));
     }
     Ok(())
 }
@@ -1084,23 +1096,17 @@ pub fn monthly_aggregation(
     user_id: i64,
     year: i32,
     month: u32,
+    start_day: u32,
     group_by: GroupBy,
 ) -> Result<AggregationRequest, AggregationError> {
-    // Validate inputs
     validate_year(year)?;
     validate_month(month)?;
+    validate_start_day(start_day)?;
 
-    // Calculate date range for the month
-    let first_day = NaiveDate::from_ymd_opt(year, month, 1)
-        .ok_or(AggregationError::InvalidMonth(month))?;
-    let last_day_num = get_last_day_of_month(year, month);
-    let last_day = NaiveDate::from_ymd_opt(year, month, last_day_num)
-        .ok_or(AggregationError::InvalidDay { year, month, day: last_day_num })?;
+    let (start_date, end_date) = monthly_period_bounds(year, month, start_day);
 
-    // Create filter with date range
-    let filter = AggregationFilter::new(DateFilter::Between(first_day, last_day));
+    let filter = AggregationFilter::new(DateFilter::Between(start_date, end_date));
 
-    // Create request with default sort (amount descending)
     let request = AggregationRequest::new(user_id, filter, group_by)
         .with_sort(OrderField::Amount, SortOrder::Desc);
 
@@ -1321,38 +1327,21 @@ pub fn weekly_aggregation_by_date(
 pub fn yearly_aggregation(
     user_id: i64,
     year: i32,
-    year_start: YearStart,
+    start_month: u32,
+    start_day: u32,
     group_by: GroupBy,
 ) -> Result<AggregationRequest, AggregationError> {
     validate_year(year)?;
-    
-    // Calculate year range based on start month
-    let (start_date, end_date) = match year_start {
-        YearStart::January => {
-            // Calendar year: Jan 1 - Dec 31
-            let start = NaiveDate::from_ymd_opt(year, 1, 1)
-                .ok_or(AggregationError::InvalidYear(year))?;
-            let end = NaiveDate::from_ymd_opt(year, 12, 31)
-                .ok_or(AggregationError::InvalidYear(year))?;
-            (start, end)
-        }
-        YearStart::April => {
-            // Fiscal year: Apr 1 (year) - Mar 31 (year+1)
-            let start = NaiveDate::from_ymd_opt(year, 4, 1)
-                .ok_or(AggregationError::InvalidYear(year))?;
-            let end = NaiveDate::from_ymd_opt(year + 1, 3, 31)
-                .ok_or(AggregationError::InvalidYear(year + 1))?;
-            (start, end)
-        }
-    };
-    
-    // Create filter for year range
+    validate_start_month(start_month)?;
+    validate_start_day(start_day)?;
+
+    let (start_date, end_date) = yearly_period_bounds(year, start_month, start_day);
+
     let filter = AggregationFilter::new(DateFilter::Between(start_date, end_date));
-    
-    // Create request with default sort (amount descending)
+
     let request = AggregationRequest::new(user_id, filter, group_by)
         .with_sort(OrderField::Amount, SortOrder::Desc);
-    
+
     Ok(request)
 }
 
@@ -1370,10 +1359,11 @@ pub fn monthly_aggregation_by_category(
     user_id: i64,
     year: i32,
     month: u32,
+    start_day: u32,
     group_by: GroupBy,
     category_filter: CategoryFilter,
 ) -> Result<AggregationRequest, AggregationError> {
-    let mut request = monthly_aggregation(user_id, year, month, group_by)?;
+    let mut request = monthly_aggregation(user_id, year, month, start_day, group_by)?;
     request.filter.category = Some(category_filter);
     Ok(request)
 }
@@ -1394,10 +1384,11 @@ pub fn monthly_aggregation_by_amount(
     user_id: i64,
     year: i32,
     month: u32,
+    start_day: u32,
     group_by: GroupBy,
     amount_filter: AmountFilter,
 ) -> Result<AggregationRequest, AggregationError> {
-    let mut request = monthly_aggregation(user_id, year, month, group_by)?;
+    let mut request = monthly_aggregation(user_id, year, month, start_day, group_by)?;
     request.filter.amount = Some(amount_filter);
     Ok(request)
 }
@@ -1418,11 +1409,12 @@ pub fn monthly_aggregation_sorted(
     user_id: i64,
     year: i32,
     month: u32,
+    start_day: u32,
     group_by: GroupBy,
     order_by: OrderField,
     sort_order: SortOrder,
 ) -> Result<AggregationRequest, AggregationError> {
-    let mut request = monthly_aggregation(user_id, year, month, group_by)?;
+    let mut request = monthly_aggregation(user_id, year, month, start_day, group_by)?;
     request.order_by = order_by;
     request.sort_order = sort_order;
     Ok(request)
@@ -1449,6 +1441,7 @@ pub fn monthly_aggregation_full(
     user_id: i64,
     year: i32,
     month: u32,
+    start_day: u32,
     group_by: GroupBy,
     category_filter: Option<CategoryFilter>,
     amount_filter: Option<AmountFilter>,
@@ -1457,7 +1450,7 @@ pub fn monthly_aggregation_full(
     sort_order: SortOrder,
     limit: Option<usize>,
 ) -> Result<AggregationRequest, AggregationError> {
-    let mut request = monthly_aggregation(user_id, year, month, group_by)?;
+    let mut request = monthly_aggregation(user_id, year, month, start_day, group_by)?;
     request.filter.category = category_filter;
     request.filter.amount = amount_filter;
     request.filter.shop_id = shop_id;
@@ -1745,26 +1738,6 @@ mod tests {
     // =========================================================================
 
     #[test]
-    fn test_get_last_day_of_month_january() {
-        assert_eq!(get_last_day_of_month(2025, 1), 31);
-    }
-
-    #[test]
-    fn test_get_last_day_of_month_february_normal() {
-        assert_eq!(get_last_day_of_month(2025, 2), 28);
-    }
-
-    #[test]
-    fn test_get_last_day_of_month_february_leap() {
-        assert_eq!(get_last_day_of_month(2024, 2), 29);
-    }
-
-    #[test]
-    fn test_get_last_day_of_month_december() {
-        assert_eq!(get_last_day_of_month(2025, 12), 31);
-    }
-
-    #[test]
     fn test_validate_year_valid() {
         assert!(validate_year(2025).is_ok());
         assert!(validate_year(1900).is_ok());
@@ -1792,14 +1765,12 @@ mod tests {
 
     #[test]
     fn test_monthly_aggregation_success() {
-        // Use a past date that's always valid
-        let result = monthly_aggregation(1, 2024, 6, GroupBy::Category1);
+        let result = monthly_aggregation(1, 2024, 6, 1, GroupBy::Category1);
         assert!(result.is_ok());
 
         let request = result.unwrap();
         assert_eq!(request.user_id, 1);
 
-        // Check that the date filter is Between
         if let DateFilter::Between(start, end) = &request.filter.date {
             assert_eq!(start.year(), 2024);
             assert_eq!(start.month(), 6);
@@ -1813,21 +1784,41 @@ mod tests {
     }
 
     #[test]
+    fn test_monthly_aggregation_custom_start_day() {
+        let result = monthly_aggregation(1, 2026, 5, 13, GroupBy::Category1);
+        assert!(result.is_ok());
+
+        if let DateFilter::Between(start, end) = &result.unwrap().filter.date {
+            assert_eq!(*start, NaiveDate::from_ymd_opt(2026, 5, 13).unwrap());
+            assert_eq!(*end, NaiveDate::from_ymd_opt(2026, 6, 12).unwrap());
+        } else {
+            panic!("Expected DateFilter::Between");
+        }
+    }
+
+    #[test]
     fn test_monthly_aggregation_invalid_year() {
-        let result = monthly_aggregation(1, 1800, 6, GroupBy::Category1);
+        let result = monthly_aggregation(1, 1800, 6, 1, GroupBy::Category1);
         assert!(matches!(result, Err(AggregationError::InvalidYear(1800))));
     }
 
     #[test]
     fn test_monthly_aggregation_invalid_month() {
-        let result = monthly_aggregation(1, 2024, 13, GroupBy::Category1);
+        let result = monthly_aggregation(1, 2024, 13, 1, GroupBy::Category1);
         assert!(matches!(result, Err(AggregationError::InvalidMonth(13))));
     }
 
     #[test]
+    fn test_monthly_aggregation_invalid_start_day() {
+        let result = monthly_aggregation(1, 2024, 6, 32, GroupBy::Category1);
+        assert!(matches!(result, Err(AggregationError::InvalidStartDay(32))));
+        let result_zero = monthly_aggregation(1, 2024, 6, 0, GroupBy::Category1);
+        assert!(matches!(result_zero, Err(AggregationError::InvalidStartDay(0))));
+    }
+
+    #[test]
     fn test_monthly_aggregation_future_date_allowed() {
-        // Future dates should now be allowed (for scheduled transactions)
-        let result = monthly_aggregation(1, 2099, 1, GroupBy::Category1);
+        let result = monthly_aggregation(1, 2099, 1, 1, GroupBy::Category1);
         assert!(result.is_ok());
     }
 
@@ -1837,6 +1828,7 @@ mod tests {
             1,
             2024,
             6,
+            1,
             GroupBy::Category2,
             CategoryFilter::Category1("EXPENSE".to_string()),
         );
@@ -1852,6 +1844,7 @@ mod tests {
             1,
             2024,
             6,
+            1,
             GroupBy::Category1,
             AmountFilter::GreaterThan(10000),
         );
@@ -1867,6 +1860,7 @@ mod tests {
             1,
             2024,
             6,
+            1,
             GroupBy::Date,
             OrderField::TransactionDate,
             SortOrder::Asc,
@@ -1884,6 +1878,7 @@ mod tests {
             1,
             2024,
             6,
+            1,
             GroupBy::Category1,
             Some(CategoryFilter::Category1("EXPENSE".to_string())),
             Some(AmountFilter::GreaterThan(1000)),
@@ -1903,13 +1898,44 @@ mod tests {
 
     #[test]
     fn test_monthly_aggregation_generates_correct_sql() {
-        let request = monthly_aggregation(1, 2024, 11, GroupBy::Category1).unwrap();
+        let request = monthly_aggregation(1, 2024, 11, 1, GroupBy::Category1).unwrap();
         let sql = build_query(&request, "ja");
 
-        // Check that the SQL contains the correct date range
         assert!(sql.contains("2024-11-01"));
         assert!(sql.contains("2024-11-30"));
         assert!(sql.contains("BETWEEN"));
+    }
+
+    #[test]
+    fn test_yearly_aggregation_calendar_year() {
+        let result = yearly_aggregation(1, 2026, 1, 1, GroupBy::Category1);
+        assert!(result.is_ok());
+
+        if let DateFilter::Between(start, end) = &result.unwrap().filter.date {
+            assert_eq!(*start, NaiveDate::from_ymd_opt(2026, 1, 1).unwrap());
+            assert_eq!(*end, NaiveDate::from_ymd_opt(2026, 12, 31).unwrap());
+        } else {
+            panic!("Expected DateFilter::Between");
+        }
+    }
+
+    #[test]
+    fn test_yearly_aggregation_fiscal_year() {
+        let result = yearly_aggregation(1, 2026, 4, 1, GroupBy::Category1);
+        assert!(result.is_ok());
+
+        if let DateFilter::Between(start, end) = &result.unwrap().filter.date {
+            assert_eq!(*start, NaiveDate::from_ymd_opt(2026, 4, 1).unwrap());
+            assert_eq!(*end, NaiveDate::from_ymd_opt(2027, 3, 31).unwrap());
+        } else {
+            panic!("Expected DateFilter::Between");
+        }
+    }
+
+    #[test]
+    fn test_yearly_aggregation_invalid_start_month() {
+        let result = yearly_aggregation(1, 2026, 13, 1, GroupBy::Category1);
+        assert!(matches!(result, Err(AggregationError::InvalidStartMonth(13))));
     }
 
     #[test]

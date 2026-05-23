@@ -51,6 +51,53 @@
                 
                 <div id="user-list-message" class="message"></div>
 
+                <!-- Period Settings Section -->
+                <div class="section">
+                    <div class="section-header">
+                        <h2 data-i18n="user_mgmt.period_settings_title">Aggregation Period Settings</h2>
+                    </div>
+                    <p data-i18n="user_mgmt.period_settings_description">Customize the start day of monthly/yearly aggregation cycles to match your salary day, pension payment date, or any other personal schedule.</p>
+                    <div class="section-footer">
+                        <button id="open-period-settings-btn" class="btn-primary" data-i18n="user_mgmt.period_settings_open">Open Period Settings</button>
+                    </div>
+                </div>
+
+                <!-- Period Settings Modal -->
+                <div id="period-settings-modal" class="modal hidden">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h2 data-i18n="user_mgmt.period_settings_title">Aggregation Period Settings</h2>
+                            <button id="close-period-settings-modal" class="close-btn">&times;</button>
+                        </div>
+                        <form id="period-settings-form">
+                            <div class="form-group">
+                                <label for="month-period-start-day" data-i18n="user_mgmt.month_start_day_label">Monthly start day (1–31):</label>
+                                <div class="input-wrapper">
+                                    <input type="number" id="month-period-start-day" name="month-period-start-day" min="1" max="31" value="1" required />
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="year-period-start-month" data-i18n="user_mgmt.year_start_month_label">Yearly start month (1–12):</label>
+                                <div class="input-wrapper">
+                                    <input type="number" id="year-period-start-month" name="year-period-start-month" min="1" max="12" value="1" required />
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="year-period-start-day" data-i18n="user_mgmt.year_start_day_label">Yearly start day (1–31):</label>
+                                <div class="input-wrapper">
+                                    <input type="number" id="year-period-start-day" name="year-period-start-day" min="1" max="31" value="1" required />
+                                </div>
+                            </div>
+                            <p class="note" data-i18n="user_mgmt.end_of_month_note">If the selected day does not exist in a month, the last day of that month is used.</p>
+                            <div class="form-actions">
+                                <button type="button" id="period-settings-cancel" class="btn-secondary" data-i18n="user_mgmt.cancel">Cancel</button>
+                                <button type="submit" class="btn-primary" data-i18n="user_mgmt.save">Save</button>
+                            </div>
+                        </form>
+                        <div id="period-settings-message" class="message"></div>
+                    </div>
+                </div>
+
                 <!-- Add/Edit User Modal -->
                 <div id="user-modal" class="modal hidden">
                     <div class="modal-content">

@@ -56,6 +56,26 @@ pub fn validate_password_with_confirmation(password: &str, password_confirm: &st
     Ok(())
 }
 
+pub fn validate_period_start_day(day: i64) -> Result<u32, String> {
+    if !(1..=31).contains(&day) {
+        return Err(format!(
+            "Period start day must be between 1 and 31 (got {})",
+            day
+        ));
+    }
+    Ok(day as u32)
+}
+
+pub fn validate_period_start_month(month: i64) -> Result<u32, String> {
+    if !(1..=12).contains(&month) {
+        return Err(format!(
+            "Period start month must be between 1 and 12 (got {})",
+            month
+        ));
+    }
+    Ok(month as u32)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -251,5 +271,35 @@ mod tests {
             password_tests::test_boundary_cases();
         });
         assert!(result.is_ok(), "Boundary cases test should pass without panic");
+    }
+
+    #[test]
+    fn period_start_day_accepts_valid_range() {
+        assert_eq!(validate_period_start_day(1).unwrap(), 1);
+        assert_eq!(validate_period_start_day(15).unwrap(), 15);
+        assert_eq!(validate_period_start_day(31).unwrap(), 31);
+    }
+
+    #[test]
+    fn period_start_day_rejects_out_of_range() {
+        assert!(validate_period_start_day(0).is_err());
+        assert!(validate_period_start_day(32).is_err());
+        assert!(validate_period_start_day(-1).is_err());
+        assert!(validate_period_start_day(100).is_err());
+    }
+
+    #[test]
+    fn period_start_month_accepts_valid_range() {
+        assert_eq!(validate_period_start_month(1).unwrap(), 1);
+        assert_eq!(validate_period_start_month(6).unwrap(), 6);
+        assert_eq!(validate_period_start_month(12).unwrap(), 12);
+    }
+
+    #[test]
+    fn period_start_month_rejects_out_of_range() {
+        assert!(validate_period_start_month(0).is_err());
+        assert!(validate_period_start_month(13).is_err());
+        assert!(validate_period_start_month(-1).is_err());
+        assert!(validate_period_start_month(100).is_err());
     }
 }
