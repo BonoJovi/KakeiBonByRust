@@ -5,10 +5,10 @@
 > **A Modern Household Budget App with Focus on Readability and Usability**  
 > **見やすさと使いやすさを追求した、モダンな家計簿アプリケーション**
 
-[![Version](https://img.shields.io/badge/Version-2.2.0-blue)](https://github.com/BonoJovi/KakeiBonByRust/releases/tag/v2.2.0)
+[![Version](https://img.shields.io/badge/Version-2.3.0-blue)](https://github.com/BonoJovi/KakeiBonByRust/releases/tag/v2.3.0)
 [![Rust](https://img.shields.io/badge/Rust-1.70+-orange.svg)](https://www.rust-lang.org/)
 [![Tauri](https://img.shields.io/badge/Tauri-v2.11.1-blue.svg)](https://tauri.app/)
-[![Tests](https://img.shields.io/badge/tests-973%20passing-brightgreen.svg)](#test-results--テスト結果)
+[![Tests](https://img.shields.io/badge/tests-994%20passing-brightgreen.svg)](#test-results--テスト結果)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/bonojovi)
 
@@ -27,31 +27,30 @@
 いつもKakeiBonに気を留めていただき、誠にありがとうございます。
 プロジェクト発案者のBonoJovi(Yoshihiro NAKAHARA)です。
 
-**Ver.2.2.0を正式リリースいたしました！**
+**Ver.2.3.0を正式リリースいたしました！**
 
-Ver.2.2.0 は、**トースト通知・バリデーション基盤・alert→toast 移行**を一括適用するマイナーリリースです。従来の `alert()` によるブロッキングダイアログを全管理画面でノンブロッキングな toast 通知に置き換え、フォームの入力文字数をリアルタイムで可視化するバリデーション基盤を全画面に展開しました。
+Ver.2.3.0 は、**集計起算日カスタマイズ**を目玉機能とするマイナーリリースです。月次・年次集計のサイクル境界をユーザーが自由に設定できるようになり、給料日サイクルや年金日サイクルでの家計管理が可能になりました。あわせて全集計画面・ユーザ管理画面のウィンドウレイアウト改善、ダッシュボードの基準日表示の刷新、Linux fcitx5 環境でのログイン IME 制御も同梱しています。
 
 主な新機能・改善：
 
-- **トースト通知コンポーネント**: ノンブロッキングな成功・エラー・情報メッセージを画面右上に表示する `showToast()` ユーティリティを導入。画面操作をブロックしない UX を実現
-- **統一バリデーション基盤**: 文字数上限のあるすべての入力フィールドに「現在文字数/上限」カウンターをリアルタイム表示。上限超過時は赤色表示でユーザーに即時フィードバック
-- **全管理画面への alert → toast 移行**: アカウント・取引・カテゴリ・店舗・メーカー・商品管理の `alert()` 呼び出し 20+ 箇所を `showToast()` に置き換え
-- **ログイン画面のオートフォーカス**: ログイン画面へ遷移するたびにユーザー名フィールドが自動フォーカスされ、即座にキーボード入力が可能に
-- **ヘッダー合計再計算ダイアログのデフォルト変更**: デフォルトを「現在の合計を維持」に変更し、意図せず合計が書き換わる誤操作を防止
+- **集計起算日カスタマイズ**: 月次起算日 (1〜31) / 年次起算月 (1〜12) + 年次起算日 (1〜31) をユーザー単位で設定可能に。給料日 25 日や年金振込日 15 日などに合わせた家計集計サイクルを構築できます。月期ラベルは始点月で呼ぶ形（例: `2026年5月（5/13〜6/12）`）に
+- **ウィンドウ自動フィット + 中央配置**: ユーザ管理・全集計画面で起動時にウィンドウ高さを画面サイズに合わせ、現在のモニタで中央配置。集計結果テーブルは固定高さで内部スクロール、メインコンテンツ全体は外側でスクロール可能に
+- **ダッシュボード残高の基準日表示**: 口座別残高の表記を `2026-05-31 時点` 形式に刷新
+- **ログイン画面の IME 制御 (Linux)**: fcitx5 環境でも username フィールドの focus 時に自動で直接入力モードへ切り替え（`fcitx5-remote -c` を Tauri command 経由で）
 
 安定版リリースをご利用になりたい方は、[mainブランチ](https://github.com/BonoJovi/KakeiBonByRust/tree/main)をご参照ください。
 
 現在ご覧いただいている dev ブランチは開発版となり、次期バージョンの機能を開発中です。
 最新の機能をいち早く試してみたい方は、こちらの dev ブランチをお使いください。
 
-**【次期バージョン予定】** Ver.2.3.0 では、Ver.2.1.0 の繰り返しロジックを流用した「集計起算日カスタマイズ」（給料日や年金振込日に合わせて月次サイクルを設定）を実装予定です。
+**【次期バージョン予定】** Ver.2.4.0 では「起算日 HolidayShift 設定」（起算日が土日祝に当たった場合の前/後営業日への自動シフト）を予定しています。
 
 今後も引き続き機能拡充を進めていく予定です。
 GitHub の issue や e メールでのメッセージも受け付けていますので、応援メッセージや将来的に実装してほしい機能など、ちょっとしたことでも良いのでご連絡いただければ幸いです。
 
 それでは、引き続き KakeiBon をご愛顧頂ますよう、お願い申し上げます。
 
-**2026-05-19 (JST) Written by Yoshihiro NAKAHARA**
+**2026-05-23 (JST) Written by Yoshihiro NAKAHARA**
 
 ---
 
@@ -60,31 +59,30 @@ GitHub の issue や e メールでのメッセージも受け付けています
 Thank you for your continued interest in KakeiBon.
 I'm BonoJovi (Yoshihiro NAKAHARA), the project initiator.
 
-**We have officially released Ver.2.2.0!**
+**We have officially released Ver.2.3.0!**
 
-Ver.2.2.0 is a minor release that introduces the **toast notification system, unified bounded-field validation, and a full alert→toast migration** in one sweep. Every `alert()` call across all management screens has been replaced with non-blocking toast notifications, and a live character-counter validation layer has been rolled out to every bounded input field.
+Ver.2.3.0 is a minor release centered on **aggregation period start-day customization**. Users can now configure the monthly/yearly aggregation cycle boundaries to match their salary day or pension transfer date. The release also bundles window-layout improvements across all aggregation and user management screens, a refreshed dashboard "as of" date label, and login IME control for fcitx5 on Linux.
 
 Key features and improvements:
 
-- **Toast notification component**: Introduced `showToast()` utility displaying non-blocking success, error, and info messages in the top-right corner. Eliminates UI-blocking dialogs across the entire app
-- **Unified bounded-field validation**: Added real-time character counter ("current / limit") to every input field with a database-level character limit. Counter turns red on overflow for immediate visual feedback
-- **alert() → toast migration across all screens**: Replaced 20+ `alert()` calls in account, transaction, category, shop, manufacturer, and product management screens with `showToast()`
-- **Login screen autofocus**: Username field is automatically focused on every entry to the login screen, enabling immediate keyboard input
-- **Header recalc dialog default changed**: Default changed to "keep current total" to prevent accidental overwrite of manually adjusted header totals
+- **Aggregation period start day customization**: Configurable monthly start day (1-31), yearly start month (1-12) and yearly start day (1-31) per user. Align the household budget cycle with payday (e.g. the 25th) or pension day (e.g. the 15th). Period labels now read with the start month, e.g. `May 2026 (5/13 – 6/12)`
+- **Window auto-fit + centering**: User management and all aggregation screens now open with the window height matched to the screen and centered on the current monitor. Result tables use a fixed height with internal scrolling; main content scrolls on the outside
+- **Dashboard balance "as of" label**: Per-account balance display refreshed to read `as of 2026-05-31` / `2026-05-31 時点`
+- **Login screen IME control (Linux)**: In addition to ibus, the username field now also forces fcitx5 into direct-input mode on focus via `fcitx5-remote -c` through a Tauri command
 
 If you would like to use the stable release version, please refer to the [main branch](https://github.com/BonoJovi/KakeiBonByRust/tree/main).
 
 The dev branch you are currently viewing is the development version, where we are working on features for the next release.
 If you want to try the latest features early, please use this dev branch.
 
-**[Next Version]** Ver.2.3.0 will reuse the recurrence logic from Ver.2.1.0 to add *aggregation cycle start day customization* (align the monthly cycle with payday or pension transfer dates).
+**[Next Version]** Ver.2.4.0 will add a *period start-day holiday shift* setting (automatic shift to the previous/next business day when the configured start day falls on a Saturday, Sunday or public holiday).
 
 We will continue to enhance the features incrementally, so please look forward to continuous improvements.
 We welcome messages via GitHub issues or email, whether it's words of encouragement or suggestions for features you'd like to see in the future — any feedback is appreciated.
 
 Thank you for your continued support of KakeiBon.
 
-**2026-05-19 (JST) Written by Yoshihiro NAKAHARA**
+**2026-05-23 (JST) Written by Yoshihiro NAKAHARA**
 
 </div>
 

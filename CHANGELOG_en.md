@@ -2,6 +2,42 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v2.3.0] - 2026-05-23
+
+Minor release centered on aggregation period start-day customization. Users can now configure the monthly/yearly aggregation cycle boundaries to match their salary day or pension transfer date. Also bundles window-layout improvements across all aggregation screens, dashboard balance-date display, and login IME control for fcitx5 on Linux.
+
+### Features
+
+- **Aggregation period start day customization** (#24): Configurable monthly start day (1-31), yearly start month (1-12) and yearly start day (1-31) per user. Align the household budget cycle with payday (e.g. 25th) or pension day (e.g. 15th). When the chosen day doesn't exist in a given month (e.g. day 30 in February), the cycle clamps to the last day. Dashboard period labels now read with the start month, e.g. `May 2026 (5/13 – 6/12)`
+- **Window auto-fit + centering**: User management and all aggregation screens now open with the window height matched to the screen and centered on the current monitor. Result tables use a fixed height with internal scrolling; the main content scrolls on the outside when shrunk
+- **Dashboard balance "as of" label**: Per-account balance display now reads `as of 2026-05-31` / `2026-05-31 時点`
+
+### Improvements
+
+- **Login screen IME control (Linux)**: In addition to ibus, the username field now also forces fcitx5 into direct-input mode on focus by calling `fcitx5-remote -c` through a Tauri command (requires the user's fcitx5 input method list to have an English keyboard at the top)
+
+### Backend changes
+
+- Removed the `YearStart` enum from `services/aggregation.rs`; `monthly_aggregation` and `yearly_aggregation` now take `start_day` and `(start_month, start_day)` directly
+- New pure-function module `services/period.rs` consolidates period boundary math, absorbing the duplicate `end_of_month` from `recurring.rs`
+- Tauri commands (`get_monthly_aggregation`, `get_yearly_aggregation`, and related) automatically read the start day from the user's settings
+
+### i18n
+
+- 26 new resources (RESOURCE_IDs 2323-2348) — 20 `user_mgmt.*` keys for the Period Settings UI, 4 `validation.invalid_period_start_*` validation messages, 2 `dashboard.balance_as_of` labels
+
+### Tests
+
+- Rust: 350 → 371 tests (period.rs +16, aggregation.rs +7, validation.rs +8)
+- JavaScript (Jest): 623 tests all passing
+
+### Known limitations
+
+- Full IME-off on Linux + fcitx5 requires the user to put an English keyboard at the top of fcitx5's input method list (`fcitx5-configtool`)
+- Holiday/weekend shift for start days falling on a non-business day will be addressed in v2.4.0+ (#57)
+
+---
+
 ## [v2.2.0] - 2026-05-19
 
 Minor release applying the toast notification system, bounded-field validation, and a full alert→toast migration in one sweep. Replaces 20+ `alert()` calls across all management screens with non-blocking toasts, and rolls out live character-counter validation to every bounded input field.
