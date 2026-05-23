@@ -1041,7 +1041,8 @@ async function loadAccountBalancesAsOf(year, month) {
     const tbody = document.getElementById('account-balances-tbody');
     if (!asOfDateEl || !tbody) return;
 
-    asOfDateEl.textContent = asOf;
+    const asOfTemplate = i18n.t('dashboard.balance_as_of') || '{date}';
+    asOfDateEl.textContent = asOfTemplate.replace('{date}', asOf);
     tbody.innerHTML = `<tr><td colspan="2" class="account-balances-empty">${
         i18n.t('dashboard.balances_loading') || 'Loading...'
     }</td></tr>`;

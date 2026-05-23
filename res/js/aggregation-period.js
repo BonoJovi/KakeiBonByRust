@@ -1,7 +1,8 @@
 import { invoke } from '@tauri-apps/api/core';
 import i18n from './i18n.js';
 import { setupIndicators } from './indicators.js';
-import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers, adjustWindowSize } from './font-size.js';
+import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers} from './font-size.js';
+import { fitWindowToScreen } from './window-fit.js';
 import { setupLanguageMenuHandlers, setupLanguageMenu } from './menu.js';
 import { HTML_FILES } from './html-files.js';
 import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
@@ -44,7 +45,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     initializeFilterDefaults();
     setupEventHandlers();
-    await adjustWindowSize();
+    await fitWindowToScreen();
 
     console.log('[DOMContentLoaded] Initialization complete');
 });

@@ -2,13 +2,14 @@ import { invoke } from '@tauri-apps/api/core';
 import i18n from './i18n.js';
 import { ROLE_ADMIN, ROLE_USER, MAX_NAME_LEN } from './consts.js';
 import { setupIndicators } from './indicators.js';
-import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers, adjustWindowSize } from './font-size.js';
+import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers } from './font-size.js';
 import { HTML_FILES } from './html-files.js';
 import { Modal } from './modal.js';
 import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
 import { createMenuBar } from './menu.js';
 import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
 import { invalidatePeriodSettingsCache } from './period.js';
+import { fitWindowToScreen } from './window-fit.js';
 
 let currentUsers = [];
 let editingUserId = null;
@@ -72,9 +73,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     console.log('[DOMContentLoaded] Loading users');
     await loadUsers();
     
-    console.log('[DOMContentLoaded] Adjusting window size after loading content');
-    await adjustWindowSize();
-    
+    console.log('[DOMContentLoaded] Fitting window to screen');
+    await fitWindowToScreen();
+
     console.log('[DOMContentLoaded] Initialization complete');
 });
 

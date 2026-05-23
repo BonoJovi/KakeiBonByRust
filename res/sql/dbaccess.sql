@@ -1341,7 +1341,9 @@ VALUES
 (2343, 'validation.invalid_period_start_day', 'en', 'Start day must be between 1 and 31', 'validation', 'Invalid period start day', datetime('now')),
 (2344, 'validation.invalid_period_start_day', 'ja', '起算日は 1〜31 の範囲で指定してください', 'validation', '起算日範囲エラー', datetime('now')),
 (2345, 'validation.invalid_period_start_month', 'en', 'Start month must be between 1 and 12', 'validation', 'Invalid period start month', datetime('now')),
-(2346, 'validation.invalid_period_start_month', 'ja', '起算月は 1〜12 の範囲で指定してください', 'validation', '起算月範囲エラー', datetime('now'));
+(2346, 'validation.invalid_period_start_month', 'ja', '起算月は 1〜12 の範囲で指定してください', 'validation', '起算月範囲エラー', datetime('now')),
+(2347, 'dashboard.balance_as_of', 'en', 'as of {date}', 'dashboard', 'Account balance as-of date label', datetime('now')),
+(2348, 'dashboard.balance_as_of', 'ja', '{date} 時点', 'dashboard', '口座別残高の基準日ラベル', datetime('now'));
 
 -- Translation resources for language
 -- Auto-generated from database

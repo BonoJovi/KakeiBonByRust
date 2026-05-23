@@ -846,21 +846,186 @@ async fn adjust_window_size(
     window: tauri::Window
 ) -> Result<(), String> {
     use tauri::LogicalSize;
-    
+
     // Get current window size
     let current_size = window.inner_size()
         .map_err(|e| format!("Failed to get window size: {}", e))?;
-    
+
     // Convert to logical size
     let logical_current = current_size.to_logical::<f64>(window.scale_factor()
         .map_err(|e| format!("Failed to get scale factor: {}", e))?);
-    
+
     // Resize to match content size (both expand and shrink)
     if (width - logical_current.width).abs() > 1.0 || (height - logical_current.height).abs() > 1.0 {
         window.set_size(LogicalSize::new(width, height))
             .map_err(|e| format!("Failed to resize window: {}", e))?;
     }
-    
+
+    Ok(())
+}
+
+#[tauri::command]
+async fn center_window(window: tauri::Window) -> Result<(), String> {
+    window.center().map_err(|e| format!("Failed to center window: {}", e))
+}
+
+// Force fcitx5 into direct (keyboard) input on Linux. ibus already honors
+// `inputmode="latin"` + `lang="en"` on the username field, but fcitx5 ignores
+// those hints — see Issue #56 and the 2026-05-23 AI summary that recommended
+// `fcitx5-remote -c` as the canonical "switch to direct input" API.
+//
+// Strategy:
+//   1) `fcitx5-remote -c` — closes the active IM, switching the focused
+//       input context to direct keyboard mode. This is the most reliable
+//       on fcitx5 setups (works regardless of whether the user's first
+//       keyboard layout is keyboard-jp or keyboard-us).
+//   2) DBus `org.fcitx.Fcitx.Controller1.Deactivate` — fallback for cases
+//       where fcitx5-remote isn't on PATH but the DBus service is up.
+//
+// All failures are swallowed: ibus users, fcitx5-not-running, missing tools
+// should all be silent no-ops rather than surface as errors.
+#[cfg(target_os = "linux")]
+#[tauri::command]
+fn deactivate_fcitx_ime() -> Result<(), String> {
+    use std::process::Command;
+
+    if Command::new("fcitx5-remote").arg("-c").output().is_ok() {
+        return Ok(());
+    }
+
+    let _ = Command::new("dbus-send")
+        .args([
+            "--session",
+            "--type=method_call",
+            "--dest=org.fcitx.Fcitx5",
+            "/controller",
+            "org.fcitx.Fcitx.Controller1.Deactivate",
+        ])
+        .output();
+    Ok(())
+}
+
+#[cfg(not(target_os = "linux"))]
+#[tauri::command]
+fn deactivate_fcitx_ime() -> Result<(), String> {
+    Ok(())
+}
+
+// Resize the window to (width, height) and center it on the monitor it
+// currently lives on. Implemented as a single synchronous command on purpose:
+// the previous split-into-two-commands version raced the X11/XCB sequence
+// counter across Tokio worker threads (`xcb_xlib_threads_sequence_lost`) and
+// crashed the app. Keeping every GTK/X11 call inside a single command body
+// — and using `std::thread::sleep` rather than `tokio::sleep().await` so we
+// never yield to the runtime — ensures all X11 calls happen on the same
+// thread.
+#[tauri::command]
+fn fit_window_to_monitor(width: f64, height: f64, window: tauri::Window) -> Result<(), String> {
+    use tauri::{LogicalPosition, LogicalSize};
+
+    eprintln!("[fit_window_to_monitor] enter: requested={}x{}", width, height);
+
+    // Snapshot every window state we can read. KDE/GNOME edge-tiling and
+    // half-tile snaps don't always set is_maximized=true, so we need a
+    // broader picture before deciding how to break out.
+    let maximized = window.is_maximized().unwrap_or(false);
+    let fullscreen = window.is_fullscreen().unwrap_or(false);
+    let minimized = window.is_minimized().unwrap_or(false);
+    let decorated = window.is_decorated().unwrap_or(true);
+    let resizable = window.is_resizable().unwrap_or(true);
+    eprintln!(
+        "[fit_window_to_monitor] state: maximized={}, fullscreen={}, minimized={}, decorated={}, resizable={}",
+        maximized, fullscreen, minimized, decorated, resizable
+    );
+
+    if fullscreen {
+        window
+            .set_fullscreen(false)
+            .map_err(|e| format!("Failed to exit fullscreen: {}", e))?;
+        eprintln!("[fit_window_to_monitor] exited fullscreen");
+        std::thread::sleep(std::time::Duration::from_millis(80));
+    }
+
+    if maximized {
+        window
+            .unmaximize()
+            .map_err(|e| format!("Failed to unmaximize: {}", e))?;
+        eprintln!("[fit_window_to_monitor] unmaximized");
+        std::thread::sleep(std::time::Duration::from_millis(80));
+    }
+
+    let monitor = window
+        .current_monitor()
+        .map_err(|e| format!("Failed to get monitor: {}", e))?
+        .ok_or_else(|| "No current monitor".to_string())?;
+
+    let scale = window
+        .scale_factor()
+        .map_err(|e| format!("Failed to get scale: {}", e))?;
+    let monitor_size = monitor.size().to_logical::<f64>(scale);
+    let monitor_pos = monitor.position().to_logical::<f64>(scale);
+
+    eprintln!(
+        "[fit_window_to_monitor] monitor=({},{})+{}x{}, scale={}",
+        monitor_pos.x, monitor_pos.y, monitor_size.width, monitor_size.height, scale
+    );
+
+    let target_w = width.min(monitor_size.width).max(800.0);
+    let target_h = height.min(monitor_size.height).max(600.0);
+
+    // Raise the minimum size to the target. Without this, WebKitGTK's natural
+    // size hint shrinks the window down to roughly the content's intrinsic
+    // width (~1140px on these screens) and set_size is silently ignored.
+    // We restore the original minimum below after positioning.
+    window
+        .set_min_size(Some(LogicalSize::new(target_w, target_h)))
+        .map_err(|e| format!("Failed to raise min_size: {}", e))?;
+    eprintln!("[fit_window_to_monitor] raised min_size to {}x{}", target_w, target_h);
+
+    window
+        .set_size(LogicalSize::new(target_w, target_h))
+        .map_err(|e| format!("Failed to resize window: {}", e))?;
+    eprintln!("[fit_window_to_monitor] set_size done: {}x{}", target_w, target_h);
+
+    // Give the WM time to acknowledge the new size before we read it back.
+    // std::thread::sleep (not tokio::sleep) so we stay on the same thread —
+    // an .await here would let Tokio resume us on a different worker, which
+    // then races the X11 sequence counter.
+    std::thread::sleep(std::time::Duration::from_millis(150));
+
+    let window_outer = window
+        .outer_size()
+        .map_err(|e| format!("Failed to get window size: {}", e))?
+        .to_logical::<f64>(scale);
+
+    eprintln!(
+        "[fit_window_to_monitor] outer_size after resize: {}x{}",
+        window_outer.width, window_outer.height
+    );
+
+    // Center based on the real outer size (which includes WM decorations)
+    // rather than the requested target — otherwise the decoration overhead
+    // pushes the window off the right edge.
+    let center_x = monitor_pos.x + (monitor_size.width - window_outer.width) / 2.0;
+    let center_y = monitor_pos.y + (monitor_size.height - window_outer.height) / 2.0;
+
+    eprintln!(
+        "[fit_window_to_monitor] set_position to ({}, {})",
+        center_x, center_y
+    );
+
+    window
+        .set_position(LogicalPosition::new(center_x, center_y))
+        .map_err(|e| format!("Failed to position window: {}", e))?;
+
+    // Restore the original min size from tauri.conf.json so the user can
+    // still shrink the window manually if they want to.
+    window
+        .set_min_size(Some(LogicalSize::new(1100.0, 600.0)))
+        .map_err(|e| format!("Failed to restore min_size: {}", e))?;
+    eprintln!("[fit_window_to_monitor] restored min_size to 1100x600");
+
+    eprintln!("[fit_window_to_monitor] done");
     Ok(())
 }
 
@@ -2215,6 +2380,9 @@ pub fn run() {
             set_font_size,
             get_font_size,
             adjust_window_size,
+            center_window,
+            fit_window_to_monitor,
+            deactivate_fcitx_ime,
             get_category_tree_with_lang,
             get_category_tree_all_with_lang,
             enable_category2,
