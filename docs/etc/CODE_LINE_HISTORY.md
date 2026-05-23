@@ -1,6 +1,6 @@
 # KakeiBon Code & Documentation Line Count History
 
-**Last updated:** 2026-05-14
+**Last updated:** 2026-05-23
 **Maintained by:** [count_lines.sh](../../count_lines.sh) + git tag history
 
 ---
@@ -65,6 +65,8 @@ Measured by checking out each tag via `git worktree` and running the latest `cou
 | v2.0.1 | 2026-05-01 | 17,125 | 10,379 | 3,628 | 6,683 | 6,787 | 4,289 | 44,454 | 44,602 | 48,743 | 93,345 |
 | v2.1.0 | 2026-05-04 | 19,277 | 10,851 | 4,007 | 6,683 | 7,049 | 4,367 | 44,454 | 47,867 | 48,821 | 96,688 |
 | v2.1.1 | 2026-05-13 | 19,277 | 10,851 | 4,007 | 6,683 | 7,049 | 4,429 | 44,629 | 47,867 | 49,058 | 96,925 |
+| v2.2.0 | 2026-05-19 | 20,173 | 11,796 | 4,011 | 6,683 | 7,126 | 4,454 | 44,639 | 49,789 | 49,093 | 98,882 |
+| v2.3.0 | 2026-05-23 | 20,697 | 12,033 | 4,050 | 6,620 | 7,186 | 4,521 | 44,639 | 50,586 | 49,160 | 99,746 |
 
 **Note on dates:** v1.0.0 = 2025-11-21 (initial release). Tag UTC dates for v1.2.2 onward are confirmed via `gh release view`. Mid-v1 tags are placed chronologically; precise dates can be retrieved via `git log <tag> -1 --format=%aI`.
 
@@ -109,6 +111,25 @@ At v1.0.0 there was no `docs/` directory and only `README.md` (2 lines) at root.
 
 A documentation-only release. Code total unchanged because the Tauri 2.11.1 bump (security fix for GHSA-7gmj-67g7-phm9) lives in `Cargo.toml`/`Cargo.lock` and CI updates in `.github/workflows/`, none of which are measured by `count_lines.sh`. The +237 documentation lines consist of the README Errata/Disclosure section (+62) and this `CODE_LINE_HISTORY.md` document itself (+175).
 
+### v2.2.0: toast 通知・バリデーション基盤 / Toast notifications + validation foundation
+
+- `alert()` → `showToast()` 全 20+ 箇所移行 + 文字数カウンター付きバリデーション基盤を全管理画面に展開
+- Rust +896（19,277 → 20,173）、JS +945（10,851 → 11,796）、HTML +4、SQL +77、MD-root +25、docs/ +10
+- **Code total が初めて 49,000 行を突破**（47,867 → 49,789、+1,922）
+- 詳細は [CHANGELOG_ja.md](../../CHANGELOG_ja.md) / [CHANGELOG_en.md](../../CHANGELOG_en.md)
+
+Migrated 20+ `alert()` calls to the non-blocking `showToast()` utility and rolled out a live character-counter validation layer across every management screen. Code total crossed 49k lines for the first time (47,867 → 49,789, +1,922).
+
+### v2.3.0: 集計起算日カスタマイズ / Period start day customization
+
+- 月次・年次集計の起算日をユーザー設定可能に + 全集計画面のウィンドウ自動フィット + ダッシュボード時点ラベル + fcitx5 IME OFF (Linux)
+- Rust +524（20,173 → 20,697）、JS +237、HTML +39、SQL +60、MD-root +67、docs/ ±0、CSS は -63（main-content/section の flex 解除等で減少）
+- 新規モジュール `services/period.rs`（純粋関数、テスト 16 件）、`res/js/window-fit.js`、`res/js/login-ime.js`、`res/js/period.js`
+- **Grand total が 99,746 行で 100k 行に肉薄**
+- 詳細は [CHANGELOG_ja.md](../../CHANGELOG_ja.md) / [CHANGELOG_en.md](../../CHANGELOG_en.md)
+
+Added user-configurable monthly/yearly aggregation start days (Issue #24), auto-fitting and centering of aggregation/user-management windows, the dashboard "as of" balance label, and fcitx5 IME deactivation on the login screen for Linux. The new `services/period.rs` pure-function module (with 16 unit tests) anchors the cycle-boundary math and absorbs the duplicate `end_of_month` from `recurring.rs`. Grand total reached 99,746 lines, just shy of 100k.
+
 ---
 
 ## 過去に公開された誤った数値の訂正記録 / Errata for past published figures
@@ -133,6 +154,8 @@ In several past documents, articles, and LinkedIn posts, KakeiBon's scale was st
 | v1.0.2 時点の Grand total | — | 84,341 lines |
 | v2.1.1 時点の Code total | — | 47,867 lines |
 | v2.1.1 時点の Grand total | — | 96,925 lines |
+| v2.3.0 時点の Code total | — | 50,586 lines |
+| v2.3.0 時点の Grand total | — | 99,746 lines |
 
 ### 「35,000 行」の出所推定 / Likely origin of the 35,000 figure
 

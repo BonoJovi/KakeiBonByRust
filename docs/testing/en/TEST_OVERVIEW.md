@@ -2,8 +2,8 @@
 
 This document explains the test strategy, execution methods, and overall test structure of the KakeiBon project.
 
-**Last Updated**: 2025-12-06 06:45 JST  
-**Total Tests**: 463+ (Rust 201 + JavaScript 262+)
+**Last Updated**: 2026-05-23 JST (v2.3.0)
+**Total Tests**: 994 (Rust 371 + JavaScript 623). Detailed per-suite breakdowns below may still reflect earlier counts; see CHANGELOG / count_lines history for canonical figures.
 
 ---
 
