@@ -125,7 +125,6 @@ async function executeAggregation() {
     }
 
     const year = parseInt(document.getElementById('year').value);
-    const yearStart = document.getElementById('year-start').value;
     const groupBy = document.getElementById('group-by').value;
 
     if (!year || year < 1900 || year > 2100) {
@@ -143,12 +142,11 @@ async function executeAggregation() {
     }
 
     try {
-        console.log(`Executing yearly aggregation: user_id=${user.user_id}, year=${year}, year_start=${yearStart}, group_by=${groupBy}`);
+        console.log(`Executing yearly aggregation: user_id=${user.user_id}, year=${year}, group_by=${groupBy}`);
 
         const includeScheduled = document.getElementById('filter-include-scheduled').checked;
         const results = await invoke('get_yearly_aggregation', {
             year: year,
-            yearStart: yearStart,
             groupBy: groupBy,
             includeScheduled: includeScheduled
         });

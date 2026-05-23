@@ -8,6 +8,7 @@ import { Modal } from './modal.js';
 import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
 import { createMenuBar } from './menu.js';
 import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
+import { invalidatePeriodSettingsCache } from './period.js';
 
 let currentUsers = [];
 let editingUserId = null;
@@ -15,6 +16,7 @@ let editingUserId = null;
 // Modal instances
 let userModal;
 let deleteModal;
+let periodSettingsModal;
 
 console.log('user-management.js loaded');
 
@@ -132,6 +134,28 @@ function initModals() {
         },
         onSave: async (formData) => {
             await handleUserDelete(formData.userId);
+        }
+    });
+
+    // Initialize Period Settings Modal
+    periodSettingsModal = new Modal('period-settings-modal', {
+        formId: 'period-settings-form',
+        closeButtonId: 'close-period-settings-modal',
+        cancelButtonId: 'period-settings-cancel',
+        onOpen: async () => {
+            showMessage('period-settings-message', '', '');
+            try {
+                const settings = await invoke('get_user_period_settings');
+                document.getElementById('month-period-start-day').value = settings.month_period_start_day;
+                document.getElementById('year-period-start-month').value = settings.year_period_start_month;
+                document.getElementById('year-period-start-day').value = settings.year_period_start_day;
+            } catch (error) {
+                console.error('Failed to load period settings:', error);
+                showMessage('period-settings-message', i18n.t('user_mgmt.period_settings_load_failed') + ': ' + error, 'error');
+            }
+        },
+        onSave: async () => {
+            await handlePeriodSettingsSave();
         }
     });
 }
@@ -337,8 +361,44 @@ async function handleLanguageChange(langCode) {
 function setupModalEventHandlers() {
     const addUserBtn = document.getElementById('add-user-btn');
     addUserBtn?.addEventListener('click', openAddUserModal);
-    
+
+    const periodSettingsBtn = document.getElementById('open-period-settings-btn');
+    periodSettingsBtn?.addEventListener('click', () => periodSettingsModal.open('edit', {}));
+
     // Note: Modal class handles close, cancel, and save button events
+}
+
+async function handlePeriodSettingsSave() {
+    const monthStartDay = parseInt(document.getElementById('month-period-start-day').value, 10);
+    const yearStartMonth = parseInt(document.getElementById('year-period-start-month').value, 10);
+    const yearStartDay = parseInt(document.getElementById('year-period-start-day').value, 10);
+
+    if (!Number.isInteger(monthStartDay) || monthStartDay < 1 || monthStartDay > 31) {
+        showMessage('period-settings-message', i18n.t('validation.invalid_period_start_day'), 'error');
+        return;
+    }
+    if (!Number.isInteger(yearStartMonth) || yearStartMonth < 1 || yearStartMonth > 12) {
+        showMessage('period-settings-message', i18n.t('validation.invalid_period_start_month'), 'error');
+        return;
+    }
+    if (!Number.isInteger(yearStartDay) || yearStartDay < 1 || yearStartDay > 31) {
+        showMessage('period-settings-message', i18n.t('validation.invalid_period_start_day'), 'error');
+        return;
+    }
+
+    try {
+        await invoke('update_user_period_settings', {
+            monthPeriodStartDay: monthStartDay,
+            yearPeriodStartMonth: yearStartMonth,
+            yearPeriodStartDay: yearStartDay,
+        });
+        invalidatePeriodSettingsCache();
+        showMessage('period-settings-message', i18n.t('user_mgmt.period_settings_saved'), 'success');
+        setTimeout(() => periodSettingsModal.close(), 1000);
+    } catch (error) {
+        console.error('Failed to save period settings:', error);
+        showMessage('period-settings-message', i18n.t('user_mgmt.period_settings_save_failed') + ': ' + error, 'error');
+    }
 }
 
 async function loadUsers() {

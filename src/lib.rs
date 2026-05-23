@@ -19,6 +19,7 @@ mod services {
     pub mod session;
     pub mod aggregation;
     pub mod recurring;
+    pub mod period;
 }
 
 #[cfg(test)]
@@ -679,7 +680,7 @@ async fn update_user_settings(
     state: tauri::State<'_, AppState>
 ) -> Result<(), String> {
     let mut settings_mgr = state.settings.lock().await;
-    
+
     if let Some(obj) = settings.as_object() {
         for (key, value) in obj {
             if let Some(s) = value.as_str() {
@@ -688,7 +689,57 @@ async fn update_user_settings(
             }
         }
     }
-    
+
+    Ok(())
+}
+
+async fn fetch_period_settings(
+    pool: &sqlx::SqlitePool,
+    user_id: i64,
+) -> Result<(u32, u32, u32), String> {
+    let row: (i64, i64, i64) = sqlx::query_as(sql_queries::USER_GET_PERIOD_SETTINGS)
+        .bind(user_id)
+        .fetch_one(pool)
+        .await
+        .map_err(|e| format!("Failed to load period settings: {}", e))?;
+    Ok((row.0 as u32, row.1 as u32, row.2 as u32))
+}
+
+#[tauri::command]
+async fn get_user_period_settings(
+    state: tauri::State<'_, AppState>,
+) -> Result<serde_json::Value, String> {
+    let user_id = get_session_user_id(&state)?;
+    let db = state.db.lock().await;
+    let (month_day, year_month, year_day) = fetch_period_settings(db.pool(), user_id).await?;
+    Ok(serde_json::json!({
+        "month_period_start_day": month_day,
+        "year_period_start_month": year_month,
+        "year_period_start_day": year_day,
+    }))
+}
+
+#[tauri::command]
+async fn update_user_period_settings(
+    month_period_start_day: i64,
+    year_period_start_month: i64,
+    year_period_start_day: i64,
+    state: tauri::State<'_, AppState>,
+) -> Result<(), String> {
+    let user_id = get_session_user_id(&state)?;
+    let month_day = validation::validate_period_start_day(month_period_start_day)?;
+    let year_month = validation::validate_period_start_month(year_period_start_month)?;
+    let year_day = validation::validate_period_start_day(year_period_start_day)?;
+
+    let db = state.db.lock().await;
+    sqlx::query(sql_queries::USER_UPDATE_PERIOD_SETTINGS)
+        .bind(month_day as i64)
+        .bind(year_month as i64)
+        .bind(year_day as i64)
+        .bind(user_id)
+        .execute(db.pool())
+        .await
+        .map_err(|e| format!("Failed to update period settings: {}", e))?;
     Ok(())
 }
 
@@ -1815,11 +1866,14 @@ async fn get_monthly_aggregation(
 
     let group_by_enum = parse_group_by(&group_by)?;
 
+    let (month_start_day, _, _) = fetch_period_settings(db.pool(), user_id).await?;
+
     services::aggregation::execute_monthly_aggregation(
         db.pool(),
         user_id,
         year,
         month,
+        month_start_day,
         group_by_enum,
         &lang,
         include_scheduled.unwrap_or(false),
@@ -1970,7 +2024,6 @@ async fn get_weekly_aggregation_by_date(
 #[tauri::command]
 async fn get_yearly_aggregation(
     year: i32,
-    year_start: String, // "january" or "april"
     group_by: String,
     include_scheduled: Option<bool>,
     state: tauri::State<'_, AppState>
@@ -1983,18 +2036,14 @@ async fn get_yearly_aggregation(
 
     let group_by_enum = parse_group_by(&group_by)?;
 
-    // Parse year_start
-    let year_start_enum = match year_start.as_str() {
-        "january" => services::aggregation::YearStart::January,
-        "april" => services::aggregation::YearStart::April,
-        _ => return Err(format!("Invalid year_start value: {}", year_start)),
-    };
+    let (_, year_start_month, year_start_day) = fetch_period_settings(db.pool(), user_id).await?;
 
     services::aggregation::execute_yearly_aggregation(
         db.pool(),
         user_id,
         year,
-        year_start_enum,
+        year_start_month,
+        year_start_day,
         group_by_enum,
         &lang,
         include_scheduled.unwrap_or(false),
@@ -2044,11 +2093,14 @@ async fn get_monthly_aggregation_by_category(
         }
     };
 
+    let (month_start_day, _, _) = fetch_period_settings(db.pool(), user_id).await?;
+
     services::aggregation::execute_monthly_aggregation_by_category(
         db.pool(),
         user_id,
         year,
         month,
+        month_start_day,
         group_by_enum,
         category_filter,
         &lang,
@@ -2156,6 +2208,8 @@ pub fn run() {
             get_translations,
             get_user_settings,
             update_user_settings,
+            get_user_period_settings,
+            update_user_period_settings,
             get_available_languages,
             get_language_names,
             set_font_size,
@@ -2249,6 +2303,10 @@ pub fn run() {
                 // Run v2.1.0 recurring scheduled transactions migrations
                 database.migrate_recurring().await
                     .expect("Failed to migrate recurring tables");
+
+                // Run v2.3.0 aggregation period customization migrations
+                database.migrate_period_customization().await
+                    .expect("Failed to migrate period customization columns");
 
                 let auth_service = AuthService::new(database.pool().clone());
                 let user_mgmt_service = UserManagementService::new(database.pool().clone());

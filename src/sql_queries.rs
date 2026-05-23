@@ -82,6 +82,20 @@ pub const USER_GET_PASSWORD_BY_ID: &str = "SELECT PAW FROM USERS WHERE USER_ID =
 
 pub const USER_DELETE: &str = "DELETE FROM USERS WHERE USER_ID = ?";
 
+pub const USER_GET_PERIOD_SETTINGS: &str = r#"
+SELECT MONTH_PERIOD_START_DAY, YEAR_PERIOD_START_MONTH, YEAR_PERIOD_START_DAY
+FROM USERS WHERE USER_ID = ?
+"#;
+
+pub const USER_UPDATE_PERIOD_SETTINGS: &str = r#"
+UPDATE USERS
+SET MONTH_PERIOD_START_DAY = ?,
+    YEAR_PERIOD_START_MONTH = ?,
+    YEAR_PERIOD_START_DAY = ?,
+    UPDATE_DT = datetime('now')
+WHERE USER_ID = ?
+"#;
+
 // ============================================================================
 // Encryption Service Queries
 // ============================================================================

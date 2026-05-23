@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 use std::collections::HashSet;
 
+use crate::services::period::end_of_month;
 use crate::{sql_queries, consts};
 
 /// 周期と起点を一体で表現する。`unit` と「いつ発生するか」のアンカー情報を
@@ -216,14 +217,6 @@ fn generate_weekly(
     out
 }
 
-/// 指定した年月の月末日を返す（翌月 1 日 - 1 日）。
-fn end_of_month(year: i32, month: u32) -> Option<NaiveDate> {
-    let first = NaiveDate::from_ymd_opt(year, month, 1)?;
-    first
-        .checked_add_months(Months::new(1))?
-        .checked_sub_days(Days::new(1))
-}
-
 /// 指定した年月の第N週の指定曜日を返す。week=5 は「最終出現の指定曜日」として
 /// 扱う（4 回しかない月は 4 回目で代用）。指定曜日がその月に N 回未満（かつ week<5）
 /// の場合は None。
@@ -268,9 +261,8 @@ fn generate_monthly(
     loop {
         let candidate = match *rule {
             MonthlyDayRule::DayOfMonth { day } => NaiveDate::from_ymd_opt(year, month, day),
-            MonthlyDayRule::DayOfMonthOrEnd { day } => NaiveDate::from_ymd_opt(year, month, day)
-                .or_else(|| end_of_month(year, month)),
-            MonthlyDayRule::EndOfMonth => end_of_month(year, month),
+            MonthlyDayRule::DayOfMonthOrEnd { day } => Some(crate::services::period::resolve_day_or_end(year, month, day)),
+            MonthlyDayRule::EndOfMonth => Some(end_of_month(year, month)),
             MonthlyDayRule::NthWeekday { week, weekday } => {
                 nth_weekday_of_month(year, month, week, weekday)
             }
@@ -310,9 +302,8 @@ fn generate_yearly(
     loop {
         let candidate = match *rule {
             MonthlyDayRule::DayOfMonth { day } => NaiveDate::from_ymd_opt(year, month, day),
-            MonthlyDayRule::DayOfMonthOrEnd { day } => NaiveDate::from_ymd_opt(year, month, day)
-                .or_else(|| end_of_month(year, month)),
-            MonthlyDayRule::EndOfMonth => end_of_month(year, month),
+            MonthlyDayRule::DayOfMonthOrEnd { day } => Some(crate::services::period::resolve_day_or_end(year, month, day)),
+            MonthlyDayRule::EndOfMonth => Some(end_of_month(year, month)),
             MonthlyDayRule::NthWeekday { week, weekday } => {
                 nth_weekday_of_month(year, month, week, weekday)
             }

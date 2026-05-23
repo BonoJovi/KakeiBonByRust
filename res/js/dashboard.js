@@ -5,6 +5,7 @@ import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontS
 import { HTML_FILES } from './html-files.js';
 import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
 import { createMenuBar } from './menu.js';
+import { getPeriodSettings, formatMonthlyPeriodLabel } from './period.js';
 
 console.log('dashboard.js loaded');
 
@@ -205,16 +206,17 @@ async function loadDashboardData() {
         console.log('Category data:', categoryData);
         console.log('Monthly trend data:', monthlyTrendData);
 
-        // Calculate period strings for chart titles
-        const monthPeriod = `${year}${i18n.t('dashboard.year_suffix') || '年'}${month}${i18n.t('dashboard.month_suffix') || '月'}`;
+        const periodSettings = await getPeriodSettings();
+        const lang = i18n.getCurrentLanguage();
 
-        // Calculate trend period (from oldest to newest month)
+        const monthPeriod = formatMonthlyPeriodLabel(year, month, periodSettings.monthStartDay, lang);
+
         let trendPeriod = '';
         if (monthlyTrendData.length > 0) {
             const oldest = monthlyTrendData[0];
             const newest = monthlyTrendData[monthlyTrendData.length - 1];
-            const oldestStr = `${oldest.year}${i18n.t('dashboard.year_suffix') || '年'}${oldest.month}${i18n.t('dashboard.month_suffix') || '月'}`;
-            const newestStr = `${newest.year}${i18n.t('dashboard.year_suffix') || '年'}${newest.month}${i18n.t('dashboard.month_suffix') || '月'}`;
+            const oldestStr = formatMonthlyPeriodLabel(oldest.year, oldest.month, periodSettings.monthStartDay, lang);
+            const newestStr = formatMonthlyPeriodLabel(newest.year, newest.month, periodSettings.monthStartDay, lang);
             trendPeriod = `${oldestStr}〜${newestStr}`;
         }
 
