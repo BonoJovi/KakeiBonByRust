@@ -2476,6 +2476,10 @@ pub fn run() {
                 database.migrate_period_customization().await
                     .expect("Failed to migrate period customization columns");
 
+                // Run v2.4.0 monthly period start day holiday shift migrations
+                database.migrate_period_holiday_shift().await
+                    .expect("Failed to migrate period holiday shift column");
+
                 let auth_service = AuthService::new(database.pool().clone());
                 let user_mgmt_service = UserManagementService::new(database.pool().clone());
                 let encryption_service = EncryptionService::new(database.pool().clone());
