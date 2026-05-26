@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 use std::collections::HashSet;
 
+use crate::services::holiday::{shift_for_holidays, HolidayShift};
 use crate::services::period::end_of_month;
 use crate::{sql_queries, consts};
 
@@ -54,17 +55,6 @@ pub enum MonthlyDayRule {
     EndOfMonth,
     /// 第N週の指定曜日。week=5 は最終週として扱う。
     NthWeekday { week: u32, weekday: Weekday },
-}
-
-/// HOLIDAY_SHIFT_TYPE。RECURRING_RULES.HOLIDAY_SHIFT_TYPE に対応。
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum HolidayShift {
-    /// HOLIDAY_SHIFT_NONE = 0
-    None,
-    /// HOLIDAY_SHIFT_PREV = 1（給料日想定：直前の平日）
-    Prev,
-    /// HOLIDAY_SHIFT_NEXT = 2（引落想定：直後の平日）
-    Next,
 }
 
 /// 周期仕様。DB row や HEADER テンプレ部分は含めず、本モジュールは「いつ発生するか」
@@ -122,43 +112,6 @@ pub fn generate_dates(
         .collect();
     shifted.sort();
     shifted
-}
-
-/// 土日 + 祝日テーブルに含まれる日を非平日とみなす。
-fn is_non_business_day(d: NaiveDate, holidays: &HashSet<NaiveDate>) -> bool {
-    matches!(d.weekday(), Weekday::Sat | Weekday::Sun) || holidays.contains(&d)
-}
-
-/// 休日シフト。指定方向に「平日にぶつかるまで」進める／遡る。
-/// シフト結果が start..end の範囲外になっても採用する（呼び出し側で集約せず、
-/// カレンダー上の挙動をそのまま返す）。
-fn shift_for_holidays(
-    d: NaiveDate,
-    shift: HolidayShift,
-    holidays: &HashSet<NaiveDate>,
-) -> NaiveDate {
-    let mut current = d;
-    match shift {
-        HolidayShift::None => current,
-        HolidayShift::Prev => {
-            while is_non_business_day(current, holidays) {
-                match current.checked_sub_days(Days::new(1)) {
-                    Some(prev) => current = prev,
-                    None => break,
-                }
-            }
-            current
-        }
-        HolidayShift::Next => {
-            while is_non_business_day(current, holidays) {
-                match current.checked_add_days(Days::new(1)) {
-                    Some(next) => current = next,
-                    None => break,
-                }
-            }
-            current
-        }
-    }
 }
 
 fn generate_daily(

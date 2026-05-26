@@ -20,6 +20,7 @@ mod services {
     pub mod aggregation;
     pub mod recurring;
     pub mod period;
+    pub mod holiday;
 }
 
 #[cfg(test)]
