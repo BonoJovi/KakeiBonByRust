@@ -694,16 +694,46 @@ async fn update_user_settings(
     Ok(())
 }
 
+/// v2.4.0: 月次サイクル境界を holiday_shift 適用込みで返す。
+/// shift が None なら祝日テーブルアクセスを省略する。
+async fn monthly_bounds_with_shift_for(
+    pool: &sqlx::SqlitePool,
+    user_id: i64,
+    year: i32,
+    month: u32,
+    start_day: u32,
+    shift: services::holiday::HolidayShift,
+) -> Result<(chrono::NaiveDate, chrono::NaiveDate), String> {
+    if matches!(shift, services::holiday::HolidayShift::None) {
+        return Ok(services::period::monthly_period_bounds(year, month, start_day));
+    }
+
+    let raw_start = chrono::NaiveDate::from_ymd_opt(year, month, 1)
+        .ok_or_else(|| format!("Invalid year/month: {}/{}", year, month))?;
+    let (next_year, next_month) = if month == 12 { (year + 1, 1) } else { (year, month + 1) };
+    let raw_end = services::period::end_of_month(next_year, next_month);
+
+    let holidays = services::holiday::fetch_holidays(pool, user_id, raw_start, raw_end)
+        .await
+        .map_err(|e| format!("Failed to load holidays: {}", e))?;
+
+    Ok(services::period::monthly_period_bounds_with_shift(
+        year, month, start_day, shift, &holidays,
+    ))
+}
+
 async fn fetch_period_settings(
     pool: &sqlx::SqlitePool,
     user_id: i64,
-) -> Result<(u32, u32, u32), String> {
-    let row: (i64, i64, i64) = sqlx::query_as(sql_queries::USER_GET_PERIOD_SETTINGS)
+) -> Result<(u32, u32, u32, services::holiday::HolidayShift), String> {
+    let row: (i64, i64, i64, i64) = sqlx::query_as(sql_queries::USER_GET_PERIOD_SETTINGS)
         .bind(user_id)
         .fetch_one(pool)
         .await
         .map_err(|e| format!("Failed to load period settings: {}", e))?;
-    Ok((row.0 as u32, row.1 as u32, row.2 as u32))
+    let shift = services::holiday::HolidayShift::from_db_value(row.3 as i32)
+        .unwrap_or(services::holiday::HolidayShift::None);
+    Ok((row.0 as u32, row.1 as u32, row.2 as u32, shift))
 }
 
 #[tauri::command]
@@ -712,11 +742,40 @@ async fn get_user_period_settings(
 ) -> Result<serde_json::Value, String> {
     let user_id = get_session_user_id(&state)?;
     let db = state.db.lock().await;
-    let (month_day, year_month, year_day) = fetch_period_settings(db.pool(), user_id).await?;
+    let (month_day, year_month, year_day, month_shift) =
+        fetch_period_settings(db.pool(), user_id).await?;
     Ok(serde_json::json!({
         "month_period_start_day": month_day,
         "year_period_start_month": year_month,
         "year_period_start_day": year_day,
+        "month_period_holiday_shift": month_shift.to_db_value(),
+    }))
+}
+
+/// v2.4.0: 月次サイクル境界（shift 適用済み）を返す。
+/// フロントエンド側でラベル文字列を組み立てる際の真実の源泉。
+#[tauri::command]
+async fn get_monthly_period_bounds(
+    year: i32,
+    month: u32,
+    state: tauri::State<'_, AppState>,
+) -> Result<serde_json::Value, String> {
+    let user_id = get_session_user_id(&state)?;
+    let db = state.db.lock().await;
+    let (month_start_day, _, _, month_shift) =
+        fetch_period_settings(db.pool(), user_id).await?;
+    let (start, end) = monthly_bounds_with_shift_for(
+        db.pool(),
+        user_id,
+        year,
+        month,
+        month_start_day,
+        month_shift,
+    )
+    .await?;
+    Ok(serde_json::json!({
+        "start": start.format("%Y-%m-%d").to_string(),
+        "end": end.format("%Y-%m-%d").to_string(),
     }))
 }
 
@@ -725,18 +784,22 @@ async fn update_user_period_settings(
     month_period_start_day: i64,
     year_period_start_month: i64,
     year_period_start_day: i64,
+    month_period_holiday_shift: i64,
     state: tauri::State<'_, AppState>,
 ) -> Result<(), String> {
     let user_id = get_session_user_id(&state)?;
     let month_day = validation::validate_period_start_day(month_period_start_day)?;
     let year_month = validation::validate_period_start_month(year_period_start_month)?;
     let year_day = validation::validate_period_start_day(year_period_start_day)?;
+    let month_shift =
+        validation::validate_month_period_holiday_shift(month_period_holiday_shift)?;
 
     let db = state.db.lock().await;
     sqlx::query(sql_queries::USER_UPDATE_PERIOD_SETTINGS)
         .bind(month_day as i64)
         .bind(year_month as i64)
         .bind(year_day as i64)
+        .bind(month_shift as i64)
         .bind(user_id)
         .execute(db.pool())
         .await
@@ -2032,14 +2095,18 @@ async fn get_monthly_aggregation(
 
     let group_by_enum = parse_group_by(&group_by)?;
 
-    let (month_start_day, _, _) = fetch_period_settings(db.pool(), user_id).await?;
+    let (month_start_day, _, _, month_shift) =
+        fetch_period_settings(db.pool(), user_id).await?;
 
-    services::aggregation::execute_monthly_aggregation(
+    let (start, end) =
+        monthly_bounds_with_shift_for(db.pool(), user_id, year, month, month_start_day, month_shift)
+            .await?;
+
+    services::aggregation::execute_period_aggregation(
         db.pool(),
         user_id,
-        year,
-        month,
-        month_start_day,
+        start,
+        end,
         group_by_enum,
         &lang,
         include_scheduled.unwrap_or(false),
@@ -2202,7 +2269,8 @@ async fn get_yearly_aggregation(
 
     let group_by_enum = parse_group_by(&group_by)?;
 
-    let (_, year_start_month, year_start_day) = fetch_period_settings(db.pool(), user_id).await?;
+    let (_, year_start_month, year_start_day, _) =
+        fetch_period_settings(db.pool(), user_id).await?;
 
     services::aggregation::execute_yearly_aggregation(
         db.pool(),
@@ -2259,20 +2327,19 @@ async fn get_monthly_aggregation_by_category(
         }
     };
 
-    let (month_start_day, _, _) = fetch_period_settings(db.pool(), user_id).await?;
+    let (month_start_day, _, _, month_shift) =
+        fetch_period_settings(db.pool(), user_id).await?;
 
-    services::aggregation::execute_monthly_aggregation_by_category(
-        db.pool(),
-        user_id,
-        year,
-        month,
-        month_start_day,
-        group_by_enum,
-        category_filter,
-        &lang,
-        include_scheduled.unwrap_or(false),
-    )
-    .await
+    let (start, end) =
+        monthly_bounds_with_shift_for(db.pool(), user_id, year, month, month_start_day, month_shift)
+            .await?;
+
+    let mut request = services::aggregation::period_aggregation(user_id, start, end, group_by_enum)
+        .map_err(|e| e.to_string())?;
+    request.filter.category = Some(category_filter);
+    request.filter.include_scheduled = include_scheduled.unwrap_or(false);
+
+    services::aggregation::execute_aggregation(db.pool(), &request, &lang).await
 }
 
 // =============================================================================
@@ -2376,6 +2443,7 @@ pub fn run() {
             update_user_settings,
             get_user_period_settings,
             update_user_period_settings,
+            get_monthly_period_bounds,
             get_available_languages,
             get_language_names,
             set_font_size,

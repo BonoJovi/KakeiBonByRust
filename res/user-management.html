@@ -77,6 +77,24 @@
                                 </div>
                             </div>
                             <div class="form-group">
+                                <label data-i18n="user_mgmt.month_holiday_shift_label">If the monthly start day falls on a weekend or public holiday:</label>
+                                <div class="radio-group">
+                                    <label class="radio-option">
+                                        <input type="radio" name="month-period-holiday-shift" value="0" checked />
+                                        <span data-i18n="user_mgmt.month_holiday_shift_none">Use calendar date as-is</span>
+                                    </label>
+                                    <label class="radio-option">
+                                        <input type="radio" name="month-period-holiday-shift" value="1" />
+                                        <span data-i18n="user_mgmt.month_holiday_shift_prev">Shift to the preceding weekday</span>
+                                    </label>
+                                    <label class="radio-option">
+                                        <input type="radio" name="month-period-holiday-shift" value="2" />
+                                        <span data-i18n="user_mgmt.month_holiday_shift_next">Shift to the following weekday</span>
+                                    </label>
+                                </div>
+                                <p class="note" data-i18n="user_mgmt.month_holiday_shift_note">Applies to monthly start day only. Yearly start day is fixed to the calendar date.</p>
+                            </div>
+                            <div class="form-group">
                                 <label for="year-period-start-month" data-i18n="user_mgmt.year_start_month_label">Yearly start month (1–12):</label>
                                 <div class="input-wrapper">
                                     <input type="number" id="year-period-start-month" name="year-period-start-month" min="1" max="12" value="1" required />

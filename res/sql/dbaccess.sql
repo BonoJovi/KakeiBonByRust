@@ -1346,6 +1346,22 @@ VALUES
 (2347, 'dashboard.balance_as_of', 'en', 'as of {date}', 'dashboard', 'Account balance as-of date label', datetime('now')),
 (2348, 'dashboard.balance_as_of', 'ja', '{date} 時点', 'dashboard', '口座別残高の基準日ラベル', datetime('now'));
 
+-- v2.4.0: Monthly period holiday shift resources
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT)
+VALUES
+(2349, 'user_mgmt.month_holiday_shift_label', 'en', 'If the monthly start day falls on a weekend or public holiday:', 'user_mgmt', 'Monthly holiday shift section label', datetime('now')),
+(2350, 'user_mgmt.month_holiday_shift_label', 'ja', '月次起算日が土日祝に当たった場合:', 'user_mgmt', '月次起算日シフトのセクションラベル', datetime('now')),
+(2351, 'user_mgmt.month_holiday_shift_none', 'en', 'Use the calendar date as-is', 'user_mgmt', 'Holiday shift: keep calendar date', datetime('now')),
+(2352, 'user_mgmt.month_holiday_shift_none', 'ja', 'カレンダー通り', 'user_mgmt', '休日シフト: カレンダー通り', datetime('now')),
+(2353, 'user_mgmt.month_holiday_shift_prev', 'en', 'Shift to the preceding weekday', 'user_mgmt', 'Holiday shift: shift to previous weekday', datetime('now')),
+(2354, 'user_mgmt.month_holiday_shift_prev', 'ja', '土日祝なら直前の平日', 'user_mgmt', '休日シフト: 直前の平日', datetime('now')),
+(2355, 'user_mgmt.month_holiday_shift_next', 'en', 'Shift to the following weekday', 'user_mgmt', 'Holiday shift: shift to next weekday', datetime('now')),
+(2356, 'user_mgmt.month_holiday_shift_next', 'ja', '土日祝なら直後の平日', 'user_mgmt', '休日シフト: 直後の平日', datetime('now')),
+(2357, 'user_mgmt.month_holiday_shift_note', 'en', 'Applies to the monthly start day only. The yearly start day is fixed to the calendar date.', 'user_mgmt', 'Note about scope of holiday shift', datetime('now')),
+(2358, 'user_mgmt.month_holiday_shift_note', 'ja', '月次起算日のみ適用されます。年次起算日はカレンダー通り固定です。', 'user_mgmt', '休日シフトの適用範囲注記', datetime('now')),
+(2359, 'validation.invalid_month_period_holiday_shift', 'en', 'Month period holiday shift must be 0, 1, or 2', 'validation', 'Invalid month period holiday shift', datetime('now')),
+(2360, 'validation.invalid_month_period_holiday_shift', 'ja', '月次起算日のシフト設定は 0 / 1 / 2 のいずれかである必要があります', 'validation', '月次起算日シフト範囲エラー', datetime('now'));
+
 -- Translation resources for language
 -- Auto-generated from database
 -- Category: language

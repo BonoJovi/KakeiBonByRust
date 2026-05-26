@@ -1,7 +1,7 @@
 //! 繰り返し予定入出金（v2.1.0）の周期計算と DB アクセス。
 //! 周期計算は純粋関数として切り出し、DB / Tauri コマンド層から独立してテスト可能にしている。
 
-use chrono::{Datelike, Days, Months, NaiveDate, Weekday};
+use chrono::{Datelike, Days, NaiveDate, Weekday};
 use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 use std::collections::HashSet;
@@ -927,52 +927,7 @@ impl RecurringService {
         start: NaiveDate,
         end: NaiveDate,
     ) -> Result<HashSet<NaiveDate>, RecurringError> {
-        let locale: String = sqlx::query_scalar(
-            "SELECT COALESCE(HOLIDAY_LOCALE, 'JP') FROM USERS WHERE USER_ID = ?",
-        )
-        .bind(user_id)
-        .fetch_one(&self.pool)
-        .await?;
-
-        let widen = Days::new(14);
-        let widened_start = start.checked_sub_days(widen).unwrap_or(start);
-        let widened_end = end.checked_add_days(widen).unwrap_or(end);
-        let ws = widened_start.format("%Y-%m-%d").to_string();
-        let we = widened_end.format("%Y-%m-%d").to_string();
-
-        let mut holidays = HashSet::new();
-
-        let std_rows: Vec<String> = sqlx::query_scalar(
-            "SELECT HOLIDAY_DATE FROM HOLIDAYS_STANDARD \
-             WHERE LOCALE = ? AND HOLIDAY_DATE BETWEEN ? AND ?",
-        )
-        .bind(&locale)
-        .bind(&ws)
-        .bind(&we)
-        .fetch_all(&self.pool)
-        .await?;
-        for d_str in std_rows {
-            if let Ok(d) = NaiveDate::parse_from_str(&d_str, "%Y-%m-%d") {
-                holidays.insert(d);
-            }
-        }
-
-        let custom_rows: Vec<String> = sqlx::query_scalar(
-            "SELECT HOLIDAY_DATE FROM HOLIDAYS_USER_CUSTOM \
-             WHERE USER_ID = ? AND HOLIDAY_DATE BETWEEN ? AND ?",
-        )
-        .bind(user_id)
-        .bind(&ws)
-        .bind(&we)
-        .fetch_all(&self.pool)
-        .await?;
-        for d_str in custom_rows {
-            if let Ok(d) = NaiveDate::parse_from_str(&d_str, "%Y-%m-%d") {
-                holidays.insert(d);
-            }
-        }
-
-        Ok(holidays)
+        Ok(crate::services::holiday::fetch_holidays(&self.pool, user_id, start, end).await?)
     }
 }
 

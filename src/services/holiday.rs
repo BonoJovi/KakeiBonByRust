@@ -5,6 +5,7 @@
 //! 責任で、本モジュールは「与えられた祝日集合に対する平日判定とシフト計算」だけを担う。
 
 use chrono::{Datelike, Days, NaiveDate, Weekday};
+use sqlx::SqlitePool;
 use std::collections::HashSet;
 
 /// 休日シフトの方向。
@@ -19,6 +20,27 @@ pub enum HolidayShift {
     Prev,
     /// 2: 土日祝なら直後の平日（引落想定）
     Next,
+}
+
+impl HolidayShift {
+    /// DB の i32 値 (0/1/2) を enum に変換する。範囲外は None。
+    pub fn from_db_value(value: i32) -> Option<HolidayShift> {
+        match value {
+            0 => Some(HolidayShift::None),
+            1 => Some(HolidayShift::Prev),
+            2 => Some(HolidayShift::Next),
+            _ => None,
+        }
+    }
+
+    /// enum を DB の i32 値に変換する。
+    pub fn to_db_value(self) -> i32 {
+        match self {
+            HolidayShift::None => 0,
+            HolidayShift::Prev => 1,
+            HolidayShift::Next => 2,
+        }
+    }
 }
 
 /// 土日 + 祝日テーブルに含まれる日を非平日とみなす。
@@ -56,6 +78,66 @@ pub fn shift_for_holidays(
             current
         }
     }
+}
+
+/// HOLIDAYS_STANDARD と HOLIDAYS_USER_CUSTOM から、指定ウィンドウ ± 14 日の祝日を取得する。
+///
+/// ± 14 日のパディングは `HolidayShift::Prev` / `Next` が連休をまたいでサイクル外の日に
+/// 落ちる可能性を吸収するため（例: 1/1 祝日が前年 12/31 に shift など）。
+///
+/// 呼び出し側で `HolidayShift::None` を判別して空集合で済ませる最適化は呼び側の責任。
+pub async fn fetch_holidays(
+    pool: &SqlitePool,
+    user_id: i64,
+    start: NaiveDate,
+    end: NaiveDate,
+) -> Result<HashSet<NaiveDate>, sqlx::Error> {
+    let locale: String = sqlx::query_scalar(
+        "SELECT COALESCE(HOLIDAY_LOCALE, 'JP') FROM USERS WHERE USER_ID = ?",
+    )
+    .bind(user_id)
+    .fetch_one(pool)
+    .await?;
+
+    let widen = Days::new(14);
+    let widened_start = start.checked_sub_days(widen).unwrap_or(start);
+    let widened_end = end.checked_add_days(widen).unwrap_or(end);
+    let ws = widened_start.format("%Y-%m-%d").to_string();
+    let we = widened_end.format("%Y-%m-%d").to_string();
+
+    let mut holidays = HashSet::new();
+
+    let std_rows: Vec<String> = sqlx::query_scalar(
+        "SELECT HOLIDAY_DATE FROM HOLIDAYS_STANDARD \
+         WHERE LOCALE = ? AND HOLIDAY_DATE BETWEEN ? AND ?",
+    )
+    .bind(&locale)
+    .bind(&ws)
+    .bind(&we)
+    .fetch_all(pool)
+    .await?;
+    for d_str in std_rows {
+        if let Ok(d) = NaiveDate::parse_from_str(&d_str, "%Y-%m-%d") {
+            holidays.insert(d);
+        }
+    }
+
+    let custom_rows: Vec<String> = sqlx::query_scalar(
+        "SELECT HOLIDAY_DATE FROM HOLIDAYS_USER_CUSTOM \
+         WHERE USER_ID = ? AND HOLIDAY_DATE BETWEEN ? AND ?",
+    )
+    .bind(user_id)
+    .bind(&ws)
+    .bind(&we)
+    .fetch_all(pool)
+    .await?;
+    for d_str in custom_rows {
+        if let Ok(d) = NaiveDate::parse_from_str(&d_str, "%Y-%m-%d") {
+            holidays.insert(d);
+        }
+    }
+
+    Ok(holidays)
 }
 
 #[cfg(test)]
