@@ -255,25 +255,23 @@ class Modal {
      * @private
      */
     async _handleSave() {
-        if (!this.form) {
-            console.warn('No form associated with this modal');
-            return;
-        }
-        
-        // Collect form data
-        const formData = new FormData(this.form);
-        const data = Object.fromEntries(formData.entries());
+        // Collect form data when a form is associated. Confirmation-style
+        // modals (e.g. delete confirm) have no form — they rely on `this.data`
+        // populated by `open(mode, data)`.
+        const data = this.form
+            ? Object.fromEntries(new FormData(this.form).entries())
+            : {};
 
         // Add mode and stored data
         data.mode = this.mode;
         if (this.data) {
             Object.assign(data, this.data);
         }
-        
+
         try {
             // Call onSave callback
             await this.options.onSave(data);
-            
+
             // Close modal on success
             this.close();
         } catch (error) {
