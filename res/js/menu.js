@@ -788,6 +788,75 @@ function setupCustomValidationMessages() {
     });
 }
 
+/**
+ * Wire up the "File" menu for management-style pages (dashboard, aggregation, *-management).
+ *
+ * Handles three submenu items in the dropdown injected by `createMenuBar('management')`:
+ *   - "Back to Main" → navigate to INDEX
+ *   - "Logout"       → clear session, navigate to INDEX
+ *   - "Quit"         → invoke `handle_quit`
+ *
+ * Pages used to duplicate this wiring inline; aggregation pages were missing the
+ * submenu listeners entirely, so submenu clicks were silently dropped (v2.4.0 fix).
+ * Submenu items are resolved by `data-i18n` key so DOM order changes don't break wiring.
+ */
+export function setupFileMenuHandlers() {
+    const fileMenu = document.getElementById('file-menu');
+    const fileDropdown = document.getElementById('file-dropdown');
+    if (!fileMenu || !fileDropdown) {
+        console.warn('[setupFileMenuHandlers] file-menu or file-dropdown not found');
+        return;
+    }
+
+    fileMenu.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isShown = fileDropdown.classList.contains('show');
+        document.querySelectorAll('.dropdown').forEach((d) => {
+            if (d !== fileDropdown) d.classList.remove('show');
+        });
+        fileDropdown.classList.toggle('show', !isShown);
+    });
+
+    fileDropdown.addEventListener('click', (e) => e.stopPropagation());
+
+    const backToMainItem = fileDropdown.querySelector('[data-i18n="menu.back_to_main"]');
+    const logoutItem = fileDropdown.querySelector('[data-i18n="menu.logout"]');
+    const quitItem = fileDropdown.querySelector('[data-i18n="menu.quit"]');
+
+    if (backToMainItem) {
+        backToMainItem.addEventListener('click', (e) => {
+            e.stopPropagation();
+            window.location.href = HTML_FILES.INDEX;
+        });
+    }
+
+    if (logoutItem) {
+        logoutItem.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            fileDropdown.classList.remove('show');
+            try {
+                await session.clearSession();
+                window.location.href = HTML_FILES.INDEX;
+            } catch (error) {
+                console.error('Logout failed:', error);
+            }
+        });
+    }
+
+    if (quitItem) {
+        quitItem.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            try {
+                await invoke('handle_quit');
+            } catch (error) {
+                console.error('Quit failed:', error);
+            }
+        });
+    }
+}
+
 // Export functions for use in other modules
 export {
     setupLanguageMenuHandlers,

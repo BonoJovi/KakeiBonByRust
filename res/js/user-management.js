@@ -10,6 +10,7 @@ import { createMenuBar } from './menu.js';
 import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
 import { invalidatePeriodSettingsCache } from './period.js';
 import { fitWindowToScreen } from './window-fit.js';
+import { showToast } from './toast.js';
 
 let currentUsers = [];
 let editingUserId = null;
@@ -592,17 +593,14 @@ function closeDeleteModal() {
 
 async function handleUserDelete(userId) {
     if (!userId) return;
-    
-    showMessage('delete-result-message', i18n.t('user_mgmt.deleting'), 'info');
-    
-    await invoke('delete_general_user_info', { userId: userId });
-    
-    showMessage('delete-result-message', i18n.t('user_mgmt.user_deleted'), 'success');
-    
-    setTimeout(async () => {
-        deleteModal.close();
+    try {
+        await invoke('delete_general_user_info', { userId: userId });
+        showToast(i18n.t('user_mgmt.user_deleted'), { variant: 'success' });
         await loadUsers();
-    }, 1500);
+    } catch (error) {
+        showToast(i18n.t('error.delete_user_failed') + ': ' + error, { variant: 'error' });
+        throw error;
+    }
 }
 
 function handleLogout() {

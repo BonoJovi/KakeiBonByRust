@@ -4,7 +4,7 @@ import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontS
 import { fitWindowToScreen } from './window-fit.js';
 import { HTML_FILES } from './html-files.js';
 import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
-import { createMenuBar } from './menu.js';
+import { createMenuBar, setupFileMenuHandlers } from './menu.js';
 import * as AggCommon from './aggregation-common.js';
 
 console.log('aggregation.js loaded');
@@ -284,12 +284,7 @@ function clearMessage() {
 
 // Menu handlers (copied from other management pages)
 function setupMenuHandlers() {
-    // Close all dropdowns when clicking outside
-    document.addEventListener('click', (e) => {
-        if (!e.target.closest('.menu-item')) {
-            closeAllDropdowns();
-        }
-    });
+    setupFileMenuHandlers();
 }
 
 function closeAllDropdowns() {
