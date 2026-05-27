@@ -8,7 +8,6 @@ pub const ROLE_VISIT: i64 = 999;
 // Database constants
 pub const DB_DIR_NAME: &str = ".kakeibon";
 pub const DB_FILE_NAME: &str = "KakeiBonDB.sqlite3";
-pub const SQL_INIT_FILE_PATH: &str = "res/sql/dbaccess.sql";
 
 // Language constants
 pub const LANG_ENGLISH: &str = "en";
