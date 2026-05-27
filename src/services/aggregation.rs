@@ -449,6 +449,10 @@ pub async fn execute_aggregation(
 /// * `month` - Target month (1-12)
 /// * `group_by` - Aggregation axis
 /// * `lang` - Language code for localized names
+/// v2.4.0 以降、lib.rs の monthly 集計 command は `monthly_bounds_with_shift_for`
+/// 経由で `execute_period_aggregation` を呼ぶようになり、本関数は未使用。
+/// ビルダー (monthly_aggregation) のテスト経路と整合性を保つため残置。
+#[allow(dead_code)]
 pub async fn execute_monthly_aggregation(
     pool: &SqlitePool,
     user_id: i64,
@@ -553,6 +557,8 @@ pub async fn execute_yearly_aggregation(
 }
 
 /// Execute monthly aggregation with category filter
+/// v2.4.0 以降、lib.rs では未使用 (`monthly_bounds_with_shift_for` + period builder 経由)。
+#[allow(dead_code)]
 pub async fn execute_monthly_aggregation_by_category(
     pool: &SqlitePool,
     user_id: i64,
@@ -1355,6 +1361,7 @@ pub fn yearly_aggregation(
 /// * `month` - Target month (1-12)
 /// * `group_by` - Aggregation axis
 /// * `category_filter` - Category filter
+#[allow(dead_code)]
 pub fn monthly_aggregation_by_category(
     user_id: i64,
     year: i32,

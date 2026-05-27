@@ -2,6 +2,47 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v2.4.0] - 2026-05-27
+
+Minor release centered on the monthly period start-day holiday shift. Builds on v2.3.0's "aggregation period customization" by adding automatic shift when the start day falls on a weekend or public holiday — so a salary day of 25th on a Sunday now correctly cycles from Friday 23rd. Also bundles two regression fixes on management-style pages (delete modal's Delete button was inert; aggregation pages' File-menu submenu items were dead).
+
+### Features
+
+- **Monthly period start-day holiday shift** (#57): three options selectable per user when the monthly start day falls on a weekend or public holiday:
+  - `Use the calendar date as-is` — v2.3.0-compatible default
+  - `Shift to the preceding weekday` — salary-day intent (e.g. 1/25 Sun → cycle from 1/23 Fri)
+  - `Shift to the following weekday` — debit-day intent (e.g. 1/25 Sun → cycle from 1/26 Mon)
+- "Option D" algorithm: each month's boundary candidate is shifted independently. The previous period's end is auto-derived as `next start - 1`, so cycles cannot overlap or have gaps by construction
+- Yearly start day stays calendar-fixed (does not shift) — respects the fiscal-year metaphor
+- Dashboard monthly period label now reflects the shifted boundary (e.g. `January 2026 (1/23 – 2/24)`). Monthly-trend label uses a two-layer "period range + boundary range" format (e.g. `August 2025 – January 2026 (8/25 – 2/24)`) so middle months don't look missing
+
+### Improvements / Bug fixes
+
+- **Delete modal's Delete button no longer inert**: `Modal._handleSave` assumed every modal had a `<form>` and early-returned otherwise, so the form-less delete-confirm modal's onSave was silently dropped. Fixed to work for form-less confirmation modals. Also migrated delete feedback off `setTimeout(1500)` to a toast + immediate list reload
+- **Aggregation pages (monthly/yearly/weekly/daily/period) File-menu submenu items now respond**: each page only toggled the dropdown and never bound click handlers on the three submenu items (Back to Main / Logout / Quit). Extracted the working dashboard logic into a shared `setupFileMenuHandlers` in `menu.js`, with each aggregation page delegating to it
+
+### Backend changes
+
+- `services/holiday.rs` officially promoted to a module in v2.4.0: `HolidayShift::from_db_value` / `to_db_value` conversion helpers added, the holiday-table loader `fetch_holidays` was promoted out of `recurring.rs` and now serves both subsystems
+- `services/period.rs` gains `monthly_period_bounds_with_shift`. It consults the holiday table only when a shift is active; `HolidayShift::None` keeps a zero-cost path
+- Tauri commands: `fetch_period_settings` returns a 4-tuple including `HolidayShift`. `get_user_period_settings` / `update_user_period_settings` carry `month_period_holiday_shift`. New command `get_monthly_period_bounds` exposes shift-aware bounds to the frontend
+- The two monthly aggregation commands (with and without category filter) now route through `monthly_bounds_with_shift_for` + `execute_period_aggregation`
+
+### i18n
+
+- 6 new resources (RESOURCE_IDs 2349-2360) — 3 holiday-shift radio labels, 1 section label, 1 note, 1 validation error
+
+### Tests
+
+- Rust: 371 → 390 tests (period.rs +9 shift scenarios, validation.rs +2)
+- Flagship tests: `monthly_with_shift_prev_salary_day_25_on_sunday` (salary-day 25 on Sunday → 1/23 Friday boundary), `monthly_with_shift_prev_loops_through_consecutive_holidays` (Golden Week skip), `monthly_with_shift_next_end_of_month_31_crosses_boundary` (month-end 31 + Next crosses a month)
+
+### Known limitations
+
+- Extreme start-day values (e.g. 31) combined with the Next shift can theoretically produce a label like "January period with no day in January", but this does not occur for typical salary days (10 / 15 / 25 / 27), so it is accepted by design
+
+---
+
 ## [v2.3.0] - 2026-05-23
 
 Minor release centered on aggregation period start-day customization. Users can now configure the monthly/yearly aggregation cycle boundaries to match their salary day or pension transfer date. Also bundles window-layout improvements across all aggregation screens, dashboard balance-date display, and login IME control for fcitx5 on Linux.

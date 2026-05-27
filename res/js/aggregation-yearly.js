@@ -3,7 +3,7 @@ import i18n from './i18n.js';
 import { setupIndicators } from './indicators.js';
 import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers} from './font-size.js';
 import { fitWindowToScreen } from './window-fit.js';
-import { setupLanguageMenuHandlers, setupLanguageMenu } from './menu.js';
+import { setupLanguageMenuHandlers, setupLanguageMenu, setupFileMenuHandlers } from './menu.js';
 import { HTML_FILES } from './html-files.js';
 import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
 import { createMenuBar } from './menu.js';
@@ -101,21 +101,7 @@ function setupEventHandlers() {
 }
 
 function setupMenuHandlers() {
-    const fileMenu = document.getElementById('file-menu');
-    const fileDropdown = document.getElementById('file-dropdown');
-    
-    if (fileMenu && fileDropdown) {
-        fileMenu.addEventListener('click', (e) => {
-            e.stopPropagation();
-            fileDropdown.classList.toggle('show');
-        });
-        
-        document.addEventListener('click', () => {
-            document.querySelectorAll('.dropdown').forEach(dropdown => {
-                dropdown.classList.remove('show');
-            });
-        });
-    }
+    setupFileMenuHandlers();
 }
 
 async function executeAggregation() {

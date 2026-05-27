@@ -79,4 +79,14 @@ VALUES
 (2339, 'user_mgmt.period_settings_saved', 'en', 'Period settings saved', 'user_mgmt', 'Period settings save success', datetime('now')),
 (2340, 'user_mgmt.period_settings_saved', 'ja', '集計設定を保存しました', 'user_mgmt', '集計設定保存成功', datetime('now')),
 (2341, 'user_mgmt.period_settings_save_failed', 'en', 'Failed to save period settings', 'user_mgmt', 'Period settings save failure', datetime('now')),
-(2342, 'user_mgmt.period_settings_save_failed', 'ja', '集計設定の保存に失敗しました', 'user_mgmt', '集計設定保存失敗', datetime('now'));
+(2342, 'user_mgmt.period_settings_save_failed', 'ja', '集計設定の保存に失敗しました', 'user_mgmt', '集計設定保存失敗', datetime('now')),
+(2349, 'user_mgmt.month_holiday_shift_label', 'en', 'If the monthly start day falls on a weekend or public holiday:', 'user_mgmt', 'Monthly holiday shift section label', datetime('now')),
+(2350, 'user_mgmt.month_holiday_shift_label', 'ja', '月次起算日が土日祝に当たった場合:', 'user_mgmt', '月次起算日シフトのセクションラベル', datetime('now')),
+(2351, 'user_mgmt.month_holiday_shift_none', 'en', 'Use the calendar date as-is', 'user_mgmt', 'Holiday shift: keep calendar date', datetime('now')),
+(2352, 'user_mgmt.month_holiday_shift_none', 'ja', 'カレンダー通り', 'user_mgmt', '休日シフト: カレンダー通り', datetime('now')),
+(2353, 'user_mgmt.month_holiday_shift_prev', 'en', 'Shift to the preceding weekday', 'user_mgmt', 'Holiday shift: shift to previous weekday', datetime('now')),
+(2354, 'user_mgmt.month_holiday_shift_prev', 'ja', '土日祝なら直前の平日', 'user_mgmt', '休日シフト: 直前の平日', datetime('now')),
+(2355, 'user_mgmt.month_holiday_shift_next', 'en', 'Shift to the following weekday', 'user_mgmt', 'Holiday shift: shift to next weekday', datetime('now')),
+(2356, 'user_mgmt.month_holiday_shift_next', 'ja', '土日祝なら直後の平日', 'user_mgmt', '休日シフト: 直後の平日', datetime('now')),
+(2357, 'user_mgmt.month_holiday_shift_note', 'en', 'Applies to the monthly start day only. The yearly start day is fixed to the calendar date.', 'user_mgmt', 'Note about scope of holiday shift', datetime('now')),
+(2358, 'user_mgmt.month_holiday_shift_note', 'ja', '月次起算日のみ適用されます。年次起算日はカレンダー通り固定です。', 'user_mgmt', '休日シフトの適用範囲注記', datetime('now'));

@@ -10,6 +10,7 @@ import { createMenuBar } from './menu.js';
 import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
 import { invalidatePeriodSettingsCache } from './period.js';
 import { fitWindowToScreen } from './window-fit.js';
+import { showToast } from './toast.js';
 
 let currentUsers = [];
 let editingUserId = null;
@@ -150,6 +151,11 @@ function initModals() {
                 document.getElementById('month-period-start-day').value = settings.month_period_start_day;
                 document.getElementById('year-period-start-month').value = settings.year_period_start_month;
                 document.getElementById('year-period-start-day').value = settings.year_period_start_day;
+                const shift = Number(settings.month_period_holiday_shift) || 0;
+                const shiftInput = document.querySelector(
+                    `input[name="month-period-holiday-shift"][value="${shift}"]`
+                );
+                if (shiftInput) shiftInput.checked = true;
             } catch (error) {
                 console.error('Failed to load period settings:', error);
                 showMessage('period-settings-message', i18n.t('user_mgmt.period_settings_load_failed') + ': ' + error, 'error');
@@ -373,6 +379,8 @@ async function handlePeriodSettingsSave() {
     const monthStartDay = parseInt(document.getElementById('month-period-start-day').value, 10);
     const yearStartMonth = parseInt(document.getElementById('year-period-start-month').value, 10);
     const yearStartDay = parseInt(document.getElementById('year-period-start-day').value, 10);
+    const shiftRadio = document.querySelector('input[name="month-period-holiday-shift"]:checked');
+    const monthHolidayShift = shiftRadio ? parseInt(shiftRadio.value, 10) : 0;
 
     if (!Number.isInteger(monthStartDay) || monthStartDay < 1 || monthStartDay > 31) {
         showMessage('period-settings-message', i18n.t('validation.invalid_period_start_day'), 'error');
@@ -386,12 +394,17 @@ async function handlePeriodSettingsSave() {
         showMessage('period-settings-message', i18n.t('validation.invalid_period_start_day'), 'error');
         return;
     }
+    if (!Number.isInteger(monthHolidayShift) || monthHolidayShift < 0 || monthHolidayShift > 2) {
+        showMessage('period-settings-message', i18n.t('validation.invalid_month_period_holiday_shift'), 'error');
+        return;
+    }
 
     try {
         await invoke('update_user_period_settings', {
             monthPeriodStartDay: monthStartDay,
             yearPeriodStartMonth: yearStartMonth,
             yearPeriodStartDay: yearStartDay,
+            monthPeriodHolidayShift: monthHolidayShift,
         });
         invalidatePeriodSettingsCache();
         showMessage('period-settings-message', i18n.t('user_mgmt.period_settings_saved'), 'success');
@@ -580,17 +593,14 @@ function closeDeleteModal() {
 
 async function handleUserDelete(userId) {
     if (!userId) return;
-    
-    showMessage('delete-result-message', i18n.t('user_mgmt.deleting'), 'info');
-    
-    await invoke('delete_general_user_info', { userId: userId });
-    
-    showMessage('delete-result-message', i18n.t('user_mgmt.user_deleted'), 'success');
-    
-    setTimeout(async () => {
-        deleteModal.close();
+    try {
+        await invoke('delete_general_user_info', { userId: userId });
+        showToast(i18n.t('user_mgmt.user_deleted'), { variant: 'success' });
         await loadUsers();
-    }, 1500);
+    } catch (error) {
+        showToast(i18n.t('error.delete_user_failed') + ': ' + error, { variant: 'error' });
+        throw error;
+    }
 }
 
 function handleLogout() {

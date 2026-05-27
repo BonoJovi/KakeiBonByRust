@@ -404,6 +404,31 @@ impl Database {
         Ok(())
     }
 
+    /// Run migrations for v2.4.0 monthly period start day holiday shift.
+    /// Adds MONTH_PERIOD_HOLIDAY_SHIFT to USERS (0=None / 1=Prev / 2=Next).
+    /// Default 0 preserves v2.3.0 calendar-date-fixed behavior for existing users.
+    /// Yearly period start is intentionally not shifted (fiscal-year semantics).
+    pub async fn migrate_period_holiday_shift(&self) -> Result<(), sqlx::Error> {
+        self.ensure_users_period_holiday_shift_column().await?;
+        Ok(())
+    }
+
+    /// Add MONTH_PERIOD_HOLIDAY_SHIFT to USERS if absent.
+    async fn ensure_users_period_holiday_shift_column(&self) -> Result<(), sqlx::Error> {
+        let has_column: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM pragma_table_info('USERS') WHERE name = 'MONTH_PERIOD_HOLIDAY_SHIFT'"
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        if has_column == 0 {
+            sqlx::query("ALTER TABLE USERS ADD COLUMN MONTH_PERIOD_HOLIDAY_SHIFT INTEGER DEFAULT 0")
+                .execute(&self.pool)
+                .await?;
+        }
+        Ok(())
+    }
+
     /// Create new tables for v2.1.0 (idempotent via IF NOT EXISTS).
     async fn create_recurring_tables(&self) -> Result<(), sqlx::Error> {
         sqlx::query(sql_queries::CREATE_RECURRING_RULES_TABLE)

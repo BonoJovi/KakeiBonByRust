@@ -4,7 +4,7 @@
 
 > **A Modern Household Budget App with Focus on Readability and Usability**
 
-[![Version](https://img.shields.io/badge/Version-2.3.0-blue)](https://github.com/BonoJovi/KakeiBonByRust/releases/tag/v2.3.0)
+[![Version](https://img.shields.io/badge/Version-2.4.0-blue)](https://github.com/BonoJovi/KakeiBonByRust/releases/tag/v2.4.0)
 [![Rust](https://img.shields.io/badge/Rust-1.70+-orange.svg)](https://www.rust-lang.org/)
 [![Tauri](https://img.shields.io/badge/Tauri-v2.11.1-blue.svg)](https://tauri.app/)
 [![Tests](https://img.shields.io/badge/tests-994%20passing-brightgreen.svg)](#test-results)
@@ -25,28 +25,26 @@
 Thank you for your continued interest in KakeiBon.
 I'm BonoJovi (Yoshihiro NAKAHARA), the project initiator.
 
-**We have officially released Ver.2.3.0!**
+**We have officially released Ver.2.4.0!**
 
-Ver.2.3.0 is a minor release centered on **aggregation period start-day customization**. Users can now configure the monthly/yearly aggregation cycle boundaries to match their salary day or pension transfer date. The release also bundles window-layout improvements across all aggregation and user management screens, a refreshed dashboard "as of" date label, and login IME control for fcitx5 on Linux.
+Ver.2.4.0 is a minor release centered on the **monthly period start-day holiday shift**. Builds on v2.3.0's aggregation period customization by adding automatic shift when the start day falls on a weekend or public holiday — so a salary day of 25th on a Sunday now correctly cycles from Friday 23rd. The release also bundles two regression fixes on management-style pages (delete modal's Delete button was inert; aggregation pages' File-menu submenu items were dead).
 
 Key features and improvements:
 
-- **Aggregation period start day customization**: Configurable monthly start day (1-31), yearly start month (1-12) and yearly start day (1-31) per user. Align the household budget cycle with payday (e.g. the 25th) or pension day (e.g. the 15th). Period labels now read with the start month, e.g. `May 2026 (5/13 – 6/12)`
-- **Window auto-fit + centering**: User management and all aggregation screens now open with the window height matched to the screen and centered on the current monitor. Result tables use a fixed height with internal scrolling; main content scrolls on the outside
-- **Dashboard balance "as of" label**: Per-account balance display refreshed to read `as of 2026-05-31` / `2026-05-31 時点`
-- **Login screen IME control (Linux)**: In addition to ibus, the username field now also forces fcitx5 into direct-input mode on focus via `fcitx5-remote -c` through a Tauri command
+- **Monthly period start-day holiday shift** (#57): three options selectable per user when the monthly start day falls on a weekend or public holiday: `Use the calendar date as-is` / `Shift to the preceding weekday` (salary-day intent) / `Shift to the following weekday` (debit-day intent). Yearly start day stays calendar-fixed, respecting the fiscal-year metaphor
+- **Dashboard label reflects shifted boundaries**: Monthly period label now shows the shifted dates (e.g. `January 2026 (1/23 – 2/24)`). The monthly-trend label uses a two-layer "period range + boundary range" format (e.g. `August 2025 – January 2026 (8/25 – 2/24)`) so middle months don't look missing
+- **Regression fixes on management pages**: User-management's delete-confirm modal (a form-less confirmation modal) now correctly fires its Delete action. All five aggregation pages (monthly/yearly/weekly/daily/period) now respond to File-menu submenu clicks (Back to Main / Logout / Quit)
 
 If you would like to use the stable release version, please refer to the [main branch](https://github.com/BonoJovi/KakeiBonByRust/tree/main).
 
 The dev branch you are currently viewing is the development version, where we are working on features for the next release.
 If you want to try the latest features early, please use this dev branch.
 
-**[Next Version]** Ver.2.4.0 will add a *period start-day holiday shift* setting (automatic shift to the previous/next business day when the configured start day falls on a Saturday, Sunday or public holiday).
 We welcome messages via GitHub issues or email, whether it's words of encouragement or suggestions for features you'd like to see in the future — any feedback is appreciated.
 
 Thank you for your continued support of KakeiBon.
 
-**2026-05-23 (JST) Written by Yoshihiro NAKAHARA**
+**2026-05-27 (JST) Written by Yoshihiro NAKAHARA**
 
 </div>
 
