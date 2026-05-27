@@ -982,7 +982,9 @@ fn deactivate_fcitx_ime() -> Result<(), String> {
 // crashed the app. Keeping every GTK/X11 call inside a single command body
 // — and using `std::thread::sleep` rather than `tokio::sleep().await` so we
 // never yield to the runtime — ensures all X11 calls happen on the same
-// thread.
+// thread. Linux-only; the frontend dispatches to fit_window_to_monitor_windows
+// on Windows.
+#[cfg(target_os = "linux")]
 #[tauri::command]
 fn fit_window_to_monitor(width: f64, height: f64, window: tauri::Window) -> Result<(), String> {
     use tauri::{LogicalPosition, LogicalSize};
@@ -1090,6 +1092,79 @@ fn fit_window_to_monitor(width: f64, height: f64, window: tauri::Window) -> Resu
     eprintln!("[fit_window_to_monitor] restored min_size to 1100x600");
 
     eprintln!("[fit_window_to_monitor] done");
+    Ok(())
+}
+
+#[cfg(not(target_os = "linux"))]
+#[tauri::command]
+fn fit_window_to_monitor(_width: f64, _height: f64, _window: tauri::Window) -> Result<(), String> {
+    Ok(())
+}
+
+// Windows / WebView2 variant of fit_window_to_monitor.
+//
+// WebView2 auto-resizes the window to each page's intrinsic content size on
+// navigation, causing the window to "jump" between pages. We deterministically
+// re-fit and recenter on every page load instead. No X11 sequence dance and no
+// WebKitGTK min_size workaround are needed — WebView2 honors set_size directly.
+#[cfg(target_os = "windows")]
+#[tauri::command]
+fn fit_window_to_monitor_windows(width: f64, height: f64, window: tauri::Window) -> Result<(), String> {
+    use tauri::{LogicalPosition, LogicalSize};
+
+    eprintln!("[fit_window_to_monitor_windows] enter: requested={}x{}", width, height);
+
+    if window.is_fullscreen().unwrap_or(false) {
+        window
+            .set_fullscreen(false)
+            .map_err(|e| format!("Failed to exit fullscreen: {}", e))?;
+    }
+    if window.is_maximized().unwrap_or(false) {
+        window
+            .unmaximize()
+            .map_err(|e| format!("Failed to unmaximize: {}", e))?;
+    }
+
+    let monitor = window
+        .current_monitor()
+        .map_err(|e| format!("Failed to get monitor: {}", e))?
+        .ok_or_else(|| "No current monitor".to_string())?;
+
+    let scale = window
+        .scale_factor()
+        .map_err(|e| format!("Failed to get scale: {}", e))?;
+    let monitor_size = monitor.size().to_logical::<f64>(scale);
+    let monitor_pos = monitor.position().to_logical::<f64>(scale);
+
+    let target_w = width.min(monitor_size.width).max(800.0);
+    let target_h = height.min(monitor_size.height).max(600.0);
+
+    window
+        .set_size(LogicalSize::new(target_w, target_h))
+        .map_err(|e| format!("Failed to resize window: {}", e))?;
+
+    let window_outer = window
+        .outer_size()
+        .map_err(|e| format!("Failed to get window size: {}", e))?
+        .to_logical::<f64>(scale);
+
+    let center_x = monitor_pos.x + (monitor_size.width - window_outer.width) / 2.0;
+    let center_y = monitor_pos.y + (monitor_size.height - window_outer.height) / 2.0;
+
+    window
+        .set_position(LogicalPosition::new(center_x, center_y))
+        .map_err(|e| format!("Failed to position window: {}", e))?;
+
+    eprintln!(
+        "[fit_window_to_monitor_windows] done: outer={}x{}, pos=({}, {})",
+        window_outer.width, window_outer.height, center_x, center_y
+    );
+    Ok(())
+}
+
+#[cfg(not(target_os = "windows"))]
+#[tauri::command]
+fn fit_window_to_monitor_windows(_width: f64, _height: f64, _window: tauri::Window) -> Result<(), String> {
     Ok(())
 }
 
@@ -2451,6 +2526,7 @@ pub fn run() {
             adjust_window_size,
             center_window,
             fit_window_to_monitor,
+            fit_window_to_monitor_windows,
             deactivate_fcitx_ime,
             get_category_tree_with_lang,
             get_category_tree_all_with_lang,
