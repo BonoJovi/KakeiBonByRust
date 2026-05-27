@@ -64,12 +64,14 @@ impl CategoryService {
             return Ok(());
         }
         
-        // Read SQL file BEFORE starting transaction to avoid long-running transaction
-        let sql_content = std::fs::read_to_string("res/sql/default_categories_seed.sql")
-            .map_err(|e| CategoryError::DatabaseError(sqlx::Error::Io(e)))?;
-        
+        // Seed SQL is embedded at compile time. Reading from a CWD-relative
+        // path silently works under `cargo tauri dev` (CWD = project root) but
+        // crashes installed .msi/.exe builds because the install directory is
+        // the CWD and `res/sql/default_categories_seed.sql` isn't shipped there.
+        const DEFAULT_CATEGORIES_SEED: &str = include_str!("../../res/sql/default_categories_seed.sql");
+
         // Replace :pUserID placeholder with actual user_id
-        let sql_content = sql_content.replace(":pUserID", &user_id.to_string());
+        let sql_content = DEFAULT_CATEGORIES_SEED.replace(":pUserID", &user_id.to_string());
         
         // Start transaction
         let mut tx = self.pool.begin().await?;

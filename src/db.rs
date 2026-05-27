@@ -1,7 +1,13 @@
 use sqlx::sqlite::SqlitePool;
 use std::path::PathBuf;
-use crate::consts::{DB_DIR_NAME, DB_FILE_NAME, SQL_INIT_FILE_PATH};
+use crate::consts::{DB_DIR_NAME, DB_FILE_NAME};
 use crate::sql_queries;
+
+// Schema is embedded at compile time. Reading via std::fs::read_to_string with a
+// CWD-relative path silently works under `cargo tauri dev` (CWD = project root)
+// but crashes the installed .msi/.exe at startup, because the installed app's
+// CWD is the install directory and `res/sql/dbaccess.sql` is not there.
+const INIT_SQL: &str = include_str!("../res/sql/dbaccess.sql");
 
 /// Connect to a SQLite database with the given URL
 pub async fn connect_db(db_url: &str) -> Result<SqlitePool, sqlx::Error> {
@@ -53,15 +59,8 @@ impl Database {
     }
     
     pub async fn initialize(&self) -> Result<(), sqlx::Error> {
-        // Load SQL from file
-        let sql_path = get_sql_file_path();
-        let sql_content = std::fs::read_to_string(&sql_path)
-            .map_err(|e| sqlx::Error::Configuration(
-                format!("Failed to read SQL file at {}: {}", sql_path.display(), e).into()
-            ))?;
-        
         // Remove comment lines first
-        let cleaned_sql: Vec<&str> = sql_content
+        let cleaned_sql: Vec<&str> = INIT_SQL
             .lines()
             .filter(|line| !line.trim().starts_with("--") && !line.trim().is_empty())
             .collect();
@@ -468,14 +467,10 @@ pub fn get_db_path() -> PathBuf {
     let home = std::env::var("HOME")
         .or_else(|_| std::env::var("USERPROFILE"))
         .unwrap_or_else(|_| ".".to_string());
-    
+
     PathBuf::from(home)
         .join(DB_DIR_NAME)
         .join(DB_FILE_NAME)
-}
-
-fn get_sql_file_path() -> PathBuf {
-    PathBuf::from(SQL_INIT_FILE_PATH)
 }
 
 #[cfg(test)]
