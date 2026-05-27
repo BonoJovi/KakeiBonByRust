@@ -5,7 +5,7 @@ import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontS
 import { HTML_FILES } from './html-files.js';
 import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
 import { createMenuBar } from './menu.js';
-import { getPeriodSettings, formatMonthlyPeriodLabel } from './period.js';
+import { getPeriodSettings, formatMonthlyPeriodLabel, formatMonthlyPeriodBaseLabel, fetchMonthlyPeriodBounds } from './period.js';
 
 console.log('dashboard.js loaded');
 
@@ -209,15 +209,29 @@ async function loadDashboardData() {
         const periodSettings = await getPeriodSettings();
         const lang = i18n.getCurrentLanguage();
 
-        const monthPeriod = formatMonthlyPeriodLabel(year, month, periodSettings.monthStartDay, lang);
+        const monthPeriod = await formatMonthlyPeriodLabel(year, month, periodSettings.monthStartDay, lang);
 
         let trendPeriod = '';
         if (monthlyTrendData.length > 0) {
             const oldest = monthlyTrendData[0];
             const newest = monthlyTrendData[monthlyTrendData.length - 1];
-            const oldestStr = formatMonthlyPeriodLabel(oldest.year, oldest.month, periodSettings.monthStartDay, lang);
-            const newestStr = formatMonthlyPeriodLabel(newest.year, newest.month, periodSettings.monthStartDay, lang);
-            trendPeriod = `${oldestStr}〜${newestStr}`;
+            const oldestBase = formatMonthlyPeriodBaseLabel(oldest.year, oldest.month, lang);
+            const newestBase = formatMonthlyPeriodBaseLabel(newest.year, newest.month, lang);
+            const separator = lang === 'ja' ? '〜' : ' – ';
+            const needsBoundsSuffix =
+                periodSettings.monthHolidayShift !== 0 || periodSettings.monthStartDay !== 1;
+            if (needsBoundsSuffix) {
+                const [oldestBounds, newestBounds] = await Promise.all([
+                    fetchMonthlyPeriodBounds(oldest.year, oldest.month),
+                    fetchMonthlyPeriodBounds(newest.year, newest.month),
+                ]);
+                const fmt = (d) => `${d.getMonth() + 1}/${d.getDate()}`;
+                const rangeOpen = lang === 'ja' ? '（' : ' (';
+                const rangeClose = lang === 'ja' ? '）' : ')';
+                trendPeriod = `${oldestBase}${separator}${newestBase}${rangeOpen}${fmt(oldestBounds.start)}${separator}${fmt(newestBounds.end)}${rangeClose}`;
+            } else {
+                trendPeriod = `${oldestBase}${separator}${newestBase}`;
+            }
         }
 
         // Update chart titles with period

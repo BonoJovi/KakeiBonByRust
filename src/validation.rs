@@ -76,6 +76,17 @@ pub fn validate_period_start_month(month: i64) -> Result<u32, String> {
     Ok(month as u32)
 }
 
+/// v2.4.0: 月次起算日の休日シフト設定 (0=None, 1=Prev, 2=Next) を検証する。
+pub fn validate_month_period_holiday_shift(value: i64) -> Result<i32, String> {
+    if !(0..=2).contains(&value) {
+        return Err(format!(
+            "Month period holiday shift must be 0 (None), 1 (Prev), or 2 (Next) (got {})",
+            value
+        ));
+    }
+    Ok(value as i32)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -301,5 +312,19 @@ mod tests {
         assert!(validate_period_start_month(13).is_err());
         assert!(validate_period_start_month(-1).is_err());
         assert!(validate_period_start_month(100).is_err());
+    }
+
+    #[test]
+    fn month_period_holiday_shift_accepts_valid_values() {
+        assert_eq!(validate_month_period_holiday_shift(0).unwrap(), 0);
+        assert_eq!(validate_month_period_holiday_shift(1).unwrap(), 1);
+        assert_eq!(validate_month_period_holiday_shift(2).unwrap(), 2);
+    }
+
+    #[test]
+    fn month_period_holiday_shift_rejects_out_of_range() {
+        assert!(validate_month_period_holiday_shift(-1).is_err());
+        assert!(validate_month_period_holiday_shift(3).is_err());
+        assert!(validate_month_period_holiday_shift(100).is_err());
     }
 }

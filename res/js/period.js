@@ -10,13 +10,24 @@ export async function getPeriodSettings() {
             monthStartDay: Number(s.month_period_start_day) || 1,
             yearStartMonth: Number(s.year_period_start_month) || 1,
             yearStartDay: Number(s.year_period_start_day) || 1,
+            monthHolidayShift: Number(s.month_period_holiday_shift) || 0,
         };
         return cachedSettings;
     } catch (e) {
         console.warn('Failed to load period settings, using defaults:', e);
-        cachedSettings = { monthStartDay: 1, yearStartMonth: 1, yearStartDay: 1 };
+        cachedSettings = { monthStartDay: 1, yearStartMonth: 1, yearStartDay: 1, monthHolidayShift: 0 };
         return cachedSettings;
     }
+}
+
+/// v2.4.0: 月次サイクル境界を backend から取得する（休日シフト適用済み）。
+/// ローカルの monthlyPeriodBounds はカレンダー基準のみ。
+export async function fetchMonthlyPeriodBounds(year, month) {
+    const b = await invoke('get_monthly_period_bounds', { year, month });
+    return {
+        start: new Date(b.start + 'T00:00:00'),
+        end: new Date(b.end + 'T00:00:00'),
+    };
 }
 
 export function invalidatePeriodSettingsCache() {
@@ -54,14 +65,30 @@ function fmtMonthDay(date, lang) {
     return lang === 'en' ? `${m}/${d}` : `${m}/${d}`;
 }
 
-export function formatMonthlyPeriodLabel(year, month, startDay, lang) {
+/// 月期の「ベースラベル」だけを返す（括弧の境界日表示なし）。
+/// 月別推移など範囲表記の構成要素として使う。同期関数。
+export function formatMonthlyPeriodBaseLabel(year, month, lang) {
+    return lang === 'ja' ? `${year}年${month}月` : `${monthName(month, lang)} ${year}`;
+}
+
+export async function formatMonthlyPeriodLabel(year, month, startDay, lang) {
     const yearSuffix = lang === 'ja' ? '年' : '';
     const monthSuffix = lang === 'ja' ? '月' : '';
     const baseLabel = lang === 'ja'
         ? `${year}${yearSuffix}${month}${monthSuffix}`
         : `${monthName(month, lang)} ${year}`;
-    if (startDay === 1) return baseLabel;
-    const { start, end } = monthlyPeriodBounds(year, month, startDay);
+
+    const settings = await getPeriodSettings();
+    // shift None かつ起算日が 1 日 → 境界 = 当月そのもの、括弧表示不要
+    if (settings.monthHolidayShift === 0 && startDay === 1) return baseLabel;
+
+    let start, end;
+    try {
+        ({ start, end } = await fetchMonthlyPeriodBounds(year, month));
+    } catch (e) {
+        console.warn('Failed to fetch shift-aware bounds, falling back to calendar:', e);
+        ({ start, end } = monthlyPeriodBounds(year, month, startDay));
+    }
     const rangeOpen = lang === 'ja' ? '（' : ' (';
     const rangeClose = lang === 'ja' ? '）' : ')';
     const separator = lang === 'ja' ? '〜' : ' – ';
