@@ -4,10 +4,10 @@
 
 > **A Modern Household Budget App with Focus on Readability and Usability**
 
-[![Version](https://img.shields.io/badge/Version-2.4.0-blue)](https://github.com/BonoJovi/KakeiBonByRust/releases/tag/v2.4.0)
+[![Version](https://img.shields.io/badge/Version-2.5.0-blue)](https://github.com/BonoJovi/KakeiBonByRust/releases/tag/v2.5.0)
 [![Rust](https://img.shields.io/badge/Rust-1.70+-orange.svg)](https://www.rust-lang.org/)
 [![Tauri](https://img.shields.io/badge/Tauri-v2.11.1-blue.svg)](https://tauri.app/)
-[![Tests](https://img.shields.io/badge/tests-994%20passing-brightgreen.svg)](#test-results)
+[![Tests](https://img.shields.io/badge/tests-1013%20passing-brightgreen.svg)](#test-results)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 [[J][P] Japanese Version](README_ja.md) | [[Globe] Bilingual README](README.md)
@@ -25,15 +25,15 @@
 Thank you for your continued interest in KakeiBon.
 I'm BonoJovi (Yoshihiro NAKAHARA), the project initiator.
 
-**We have officially released Ver.2.4.0!**
+**We have officially released Ver.2.5.0!**
 
-Ver.2.4.0 is a minor release centered on the **monthly period start-day holiday shift**. Builds on v2.3.0's aggregation period customization by adding automatic shift when the start day falls on a weekend or public holiday — so a salary day of 25th on a Sunday now correctly cycles from Friday 23rd. The release also bundles two regression fixes on management-style pages (delete modal's Delete button was inert; aggregation pages' File-menu submenu items were dead).
+Ver.2.5.0 is a minor release focused on Windows window-display fixes. It addresses WebView2's behavior of auto-resizing the window to each page's content size on navigation (which made the window drift left across screen transitions), fixes the oversized top margin seen on every screen (content floated to vertical center), and fixes the inert close (x) button on the font-size settings modal. The Linux build's appearance is unaffected.
 
-Key features and improvements:
+Key fixes:
 
-- **Monthly period start-day holiday shift** (#57): three options selectable per user when the monthly start day falls on a weekend or public holiday: `Use the calendar date as-is` / `Shift to the preceding weekday` (salary-day intent) / `Shift to the following weekday` (debit-day intent). Yearly start day stays calendar-fixed, respecting the fiscal-year metaphor
-- **Dashboard label reflects shifted boundaries**: Monthly period label now shows the shifted dates (e.g. `January 2026 (1/23 – 2/24)`). The monthly-trend label uses a two-layer "period range + boundary range" format (e.g. `August 2025 – January 2026 (8/25 – 2/24)`) so middle months don't look missing
-- **Regression fixes on management pages**: User-management's delete-confirm modal (a form-less confirmation modal) now correctly fires its Delete action. All five aggregation pages (monthly/yearly/weekly/daily/period) now respond to File-menu submenu clicks (Back to Main / Logout / Quit)
+- **Fixed window position drift on Windows** (#60): WebView2 auto-resizes the window to each page's content size on navigation and re-anchors to the previous top-left, so the window crept left every time you moved between screens. Resolved by re-fitting to the monitor work area and re-centering on every page load
+- **Fixed oversized top margin on every screen**: content was vertically centered, leaving a large band above the title on short pages (e.g. empty aggregation results). Content pages now top-align; centering is scoped to the login / setup screen
+- **Fixed inert close (x) button on the font-size settings modal**: the close button had no click handler because `closeButtonId` was not passed at construction. Wired it up so it closes like every other modal
 
 If you would like to use the stable release version, please refer to the [main branch](https://github.com/BonoJovi/KakeiBonByRust/tree/main).
 
@@ -44,7 +44,7 @@ We welcome messages via GitHub issues or email, whether it's words of encouragem
 
 Thank you for your continued support of KakeiBon.
 
-**2026-05-27 (JST) Written by Yoshihiro NAKAHARA**
+**2026-05-28 (JST) Written by Yoshihiro NAKAHARA**
 
 </div>
 
@@ -198,7 +198,7 @@ Switch between Japanese and English seamlessly
 | **Backend** | Rust + Tauri | v2.8.5 |
 | **Database** | SQLite | WAL mode |
 | **Security** | Argon2id + AES-256-GCM | Password hashing + Data encryption |
-| **Testing** | Jest + Cargo Test | 973 tests passing (Rust: 350, JS: 623) |
+| **Testing** | Jest + Cargo Test | 1013 tests passing (Rust: 390, JS: 623) |
 | **i18n Resources** | JSON-based | 984 resources (505 unique keys, 2 languages) |
 | **Code Lines** | Total | ~49,789 lines (Rust: 20,173, JS: 11,796, HTML: 4,011, CSS: 6,683, SQL: 7,126) |
 
@@ -238,9 +238,9 @@ cargo tauri build
 ## [Test] Test Results
 
 ```
-Backend (Rust):       350 passing ✅
+Backend (Rust):       390 passing ✅
 Frontend (JavaScript): 623 passing ✅
-Total Tests:          973 passing ✅
+Total Tests:          1013 passing ✅
 Success Rate:         100%
 ```
 
