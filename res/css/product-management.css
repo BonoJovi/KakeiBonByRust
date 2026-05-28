@@ -71,13 +71,12 @@ body {
 }
 
 #product-list-container {
-    flex: 0 1 auto;
-    overflow-x: scroll;
-    overflow-y: scroll;
+    flex: 1 1 auto;
+    overflow-x: auto;
+    overflow-y: auto;
     border: 1px solid #ddd;
     border-radius: 4px;
     min-height: 0;
-    max-height: calc(100vh - 250px);
 }
 
 #product-list-container::-webkit-scrollbar {

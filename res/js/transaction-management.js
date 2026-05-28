@@ -1,7 +1,8 @@
 import { invoke } from '@tauri-apps/api/core';
 import i18n from './i18n.js';
 import { setupIndicators } from './indicators.js';
-import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers, adjustWindowSize } from './font-size.js';
+import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers } from './font-size.js';
+import { fitWindowToScreen } from './window-fit.js';
 import { setupLanguageMenuHandlers, setupLanguageMenu, handleLogout, handleQuit } from './menu.js';
 import { HTML_FILES } from './html-files.js';
 import { TAX_ROUND_DOWN, TAX_ROUND_HALF_UP, TAX_ROUND_UP, ROLE_ADMIN, ROLE_USER, MAX_MEMO_LEN } from './consts.js';
@@ -99,8 +100,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Check if we need to restore modal state
         await restoreModalState();
         
-        // Adjust window size after content is loaded
-        await adjustWindowSize();
+        // Fit + center the window on this monitor
+        await fitWindowToScreen();
         
     } catch (error) {
         console.error('Failed to initialize:', error);

@@ -4,10 +4,10 @@
 
 > **見やすさと使いやすさを追求した、モダンな家計簿アプリケーション**
 
-[![Version](https://img.shields.io/badge/Version-2.4.0-blue)](https://github.com/BonoJovi/KakeiBonByRust/releases/tag/v2.4.0)
+[![Version](https://img.shields.io/badge/Version-2.5.0-blue)](https://github.com/BonoJovi/KakeiBonByRust/releases/tag/v2.5.0)
 [![Rust](https://img.shields.io/badge/Rust-1.70+-orange.svg)](https://www.rust-lang.org/)
 [![Tauri](https://img.shields.io/badge/Tauri-v2.11.1-blue.svg)](https://tauri.app/)
-[![Tests](https://img.shields.io/badge/tests-994%20passing-brightgreen.svg)](#テスト結果)
+[![Tests](https://img.shields.io/badge/tests-1013%20passing-brightgreen.svg)](#テスト結果)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 [[G][B] English Version](README_en.md) | [[Globe] Bilingual README](README.md)
@@ -25,15 +25,15 @@
 いつもKakeiBonに気を留めていただき、誠にありがとうございます。
 プロジェクト発案者のBonoJovi(Yoshihiro NAKAHARA)です。
 
-**Ver.2.4.0を正式リリースいたしました！**
+**Ver.2.5.0を正式リリースいたしました！**
 
-Ver.2.4.0 は、**月次起算日の休日シフト**を目玉機能とするマイナーリリースです。v2.3.0 で導入した集計起算日カスタマイズに「土日祝に当たった場合の自動シフト」を追加し、給料日 25 日が日曜のときに前営業日 23 日（金）でサイクルを切るような直感的な家計集計が可能になりました。あわせて、管理画面群のデグレ修正 2 件（削除モーダルの削除ボタン無反応、集計画面のファイルメニュー サブメニュー無反応）も同梱しています。
+Ver.2.5.0 は、Windows 配布版のウィンドウ表示まわりの不具合を集中的に修正するマイナーリリースです。WebView2 がページ遷移ごとにウィンドウをそのページのコンテンツサイズへ自動リサイズする挙動に対処して起動後のウィンドウ位置ドリフトを解消し、全画面で発生していたメインコンテンツ上部の余白（中央寄せによる間延び）も上揃えに修正しました。フォントサイズ設定モーダルの×ボタンが反応しない不具合もあわせて解消しています。Linux 版の表示には影響しません。
 
-主な新機能・改善：
+主な修正：
 
-- **月次起算日の休日シフト** (#57): 月次起算日が土日祝に当たった場合の挙動をユーザー単位で 3 択から選択可能に。`カレンダー通り` / `土日祝なら直前の平日`（給料日想定）/ `土日祝なら直後の平日`（引落想定）。年次起算日は会計年度メタファを尊重してカレンダー固定
-- **ダッシュボードラベルの境界反映**: 月期ラベルがシフト後の境界日付を反映（例: `2026年1月（1/23〜2/24）`）。月別推移ラベルは「期間範囲 ＋ 境界範囲」の二層表記（例: `2025年8月 〜 2026年1月（8/25〜2/24）`）で中間期の連続性が分かるように改善
-- **管理画面のデグレ修正**: ユーザー管理の削除モーダル（form なし確認モーダル）の Delete ボタンが反応しない問題を修正。集計画面 5 つ（月次/年次/週次/日次/期間）のファイルメニュー サブメニュー（メインに戻る / ログアウト / 終了）が反応しない問題を修正
+- **Windows のウィンドウ位置ドリフトを修正** (#60): WebView2 はページ遷移ごとにウィンドウをコンテンツサイズへ自動リサイズし、直前位置の左上を基準に再配置するため、画面間を移動するたびにウィンドウが少しずつ左へずれていました。各ページのロード時にモニタの作業領域へ再フィットして中央へ再配置することで解消しました
+- **全画面の上部余白を修正**: メインコンテンツが中央寄せになり、内容の短いページ（空の集計結果など）でタイトル上部に大きな余白が出ていた問題を上揃えに修正。中央寄せはログイン / 初期設定画面のみに限定しました
+- **フォントサイズ設定モーダルの×ボタンを修正**: 生成時に `closeButtonId` が渡されておらず×ボタンにクリック処理が登録されていなかった問題を修正し、他のモーダルと同様に×で閉じられるよう統一しました
 
 安定版リリースをご利用になりたい方は、[mainブランチ](https://github.com/BonoJovi/KakeiBonByRust/tree/main)をご参照ください。
 
@@ -44,7 +44,7 @@ GitHub の issue や e メールでのメッセージも受け付けています
 
 それでは、引き続き KakeiBon をご愛顧頂ますよう、お願い申し上げます。
 
-**2026-05-27 (JST) Written by Yoshihiro NAKAHARA**
+**2026-05-28 (JST) Written by Yoshihiro NAKAHARA**
 
 </div>
 
@@ -198,7 +198,7 @@ GitHub の issue や e メールでのメッセージも受け付けています
 | **バックエンド** | Rust + Tauri | v2.8.5 |
 | **データベース** | SQLite | WAL mode |
 | **セキュリティ** | Argon2id + AES-256-GCM | Password hashing + Data encryption |
-| **テスト** | Jest + Cargo Test | 527 tests passing (Rust: 201, JS: 326) |
+| **テスト** | Jest + Cargo Test | 1013 tests passing (Rust: 390, JS: 623) |
 | **翻訳** | JSON-based | 992 resources (496 unique keys, 2 languages) |
 | **コード行数** | 合計 | ~35,478 lines (Rust: 13,870, JS: 8,810, HTML: 3,355, CSS: 6,109, SQL: 3,334) |
 
@@ -238,9 +238,9 @@ cargo tauri build
 ## [Test] テスト結果
 
 ```
-バックエンド (Rust):      201 passing ✅
-フロントエンド (JavaScript): 326 passing ✅
-総テスト数:               527 passing ✅
+バックエンド (Rust):      390 passing ✅
+フロントエンド (JavaScript): 623 passing ✅
+総テスト数:              1013 passing ✅
 成功率:                  100%
 ```
 

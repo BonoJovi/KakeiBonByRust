@@ -5,10 +5,10 @@
 > **A Modern Household Budget App with Focus on Readability and Usability**  
 > **見やすさと使いやすさを追求した、モダンな家計簿アプリケーション**
 
-[![Version](https://img.shields.io/badge/Version-2.4.0-blue)](https://github.com/BonoJovi/KakeiBonByRust/releases/tag/v2.4.0)
+[![Version](https://img.shields.io/badge/Version-2.5.0-blue)](https://github.com/BonoJovi/KakeiBonByRust/releases/tag/v2.5.0)
 [![Rust](https://img.shields.io/badge/Rust-1.70+-orange.svg)](https://www.rust-lang.org/)
 [![Tauri](https://img.shields.io/badge/Tauri-v2.11.1-blue.svg)](https://tauri.app/)
-[![Tests](https://img.shields.io/badge/tests-994%20passing-brightgreen.svg)](#test-results--テスト結果)
+[![Tests](https://img.shields.io/badge/tests-1013%20passing-brightgreen.svg)](#test-results--テスト結果)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/bonojovi)
 
@@ -27,15 +27,15 @@
 いつもKakeiBonに気を留めていただき、誠にありがとうございます。
 プロジェクト発案者のBonoJovi(Yoshihiro NAKAHARA)です。
 
-**Ver.2.4.0を正式リリースいたしました！**
+**Ver.2.5.0を正式リリースいたしました！**
 
-Ver.2.4.0 は、**月次起算日の休日シフト**を目玉機能とするマイナーリリースです。v2.3.0 で導入した集計起算日カスタマイズに「土日祝に当たった場合の自動シフト」を追加し、給料日 25 日が日曜のときに前営業日 23 日（金）でサイクルを切るような直感的な家計集計が可能になりました。あわせて、管理画面群のデグレ修正 2 件（削除モーダルの削除ボタン無反応、集計画面のファイルメニュー サブメニュー無反応）も同梱しています。
+Ver.2.5.0 は、Windows 配布版のウィンドウ表示まわりの不具合を集中的に修正するマイナーリリースです。WebView2 がページ遷移ごとにウィンドウをそのページのコンテンツサイズへ自動リサイズする挙動に対処して起動後のウィンドウ位置ドリフトを解消し、全画面で発生していたメインコンテンツ上部の余白（中央寄せによる間延び）も上揃えに修正しました。フォントサイズ設定モーダルの×ボタンが反応しない不具合もあわせて解消しています。Linux 版の表示には影響しません。
 
-主な新機能・改善：
+主な修正：
 
-- **月次起算日の休日シフト** (#57): 月次起算日が土日祝に当たった場合の挙動をユーザー単位で 3 択から選択可能に。`カレンダー通り` / `土日祝なら直前の平日`（給料日想定）/ `土日祝なら直後の平日`（引落想定）。年次起算日は会計年度メタファを尊重してカレンダー固定
-- **ダッシュボードラベルの境界反映**: 月期ラベルがシフト後の境界日付を反映（例: `2026年1月（1/23〜2/24）`）。月別推移ラベルは「期間範囲 ＋ 境界範囲」の二層表記（例: `2025年8月 〜 2026年1月（8/25〜2/24）`）で中間期の連続性が分かるように改善
-- **管理画面のデグレ修正**: ユーザー管理の削除モーダル（form なし確認モーダル）の Delete ボタンが反応しない問題を修正。集計画面 5 つ（月次/年次/週次/日次/期間）のファイルメニュー サブメニュー（メインに戻る / ログアウト / 終了）が反応しない問題を修正
+- **Windows のウィンドウ位置ドリフトを修正** (#60): WebView2 はページ遷移ごとにウィンドウをコンテンツサイズへ自動リサイズし、直前位置の左上を基準に再配置するため、画面間を移動するたびにウィンドウが少しずつ左へずれていました。各ページのロード時にモニタの作業領域へ再フィットして中央へ再配置することで解消しました
+- **全画面の上部余白を修正**: メインコンテンツが中央寄せになり、内容の短いページ（空の集計結果など）でタイトル上部に大きな余白が出ていた問題を上揃えに修正。中央寄せはログイン / 初期設定画面のみに限定しました
+- **フォントサイズ設定モーダルの×ボタンを修正**: 生成時に `closeButtonId` が渡されておらず×ボタンにクリック処理が登録されていなかった問題を修正し、他のモーダルと同様に×で閉じられるよう統一しました
 
 安定版リリースをご利用になりたい方は、[mainブランチ](https://github.com/BonoJovi/KakeiBonByRust/tree/main)をご参照ください。
 
@@ -47,7 +47,7 @@ GitHub の issue や e メールでのメッセージも受け付けています
 
 それでは、引き続き KakeiBon をご愛顧頂ますよう、お願い申し上げます。
 
-**2026-05-27 (JST) Written by Yoshihiro NAKAHARA**
+**2026-05-28 (JST) Written by Yoshihiro NAKAHARA**
 
 ---
 
@@ -56,15 +56,15 @@ GitHub の issue や e メールでのメッセージも受け付けています
 Thank you for your continued interest in KakeiBon.
 I'm BonoJovi (Yoshihiro NAKAHARA), the project initiator.
 
-**We have officially released Ver.2.4.0!**
+**We have officially released Ver.2.5.0!**
 
-Ver.2.4.0 is a minor release centered on the **monthly period start-day holiday shift**. Builds on v2.3.0's aggregation period customization by adding automatic shift when the start day falls on a weekend or public holiday — so a salary day of 25th on a Sunday now correctly cycles from Friday 23rd. The release also bundles two regression fixes on management-style pages (delete modal's Delete button was inert; aggregation pages' File-menu submenu items were dead).
+Ver.2.5.0 is a minor release focused on Windows window-display fixes. It addresses WebView2's behavior of auto-resizing the window to each page's content size on navigation (which made the window drift left across screen transitions), fixes the oversized top margin seen on every screen (content floated to vertical center), and fixes the inert close (x) button on the font-size settings modal. The Linux build's appearance is unaffected.
 
-Key features and improvements:
+Key fixes:
 
-- **Monthly period start-day holiday shift** (#57): three options selectable per user when the monthly start day falls on a weekend or public holiday: `Use the calendar date as-is` / `Shift to the preceding weekday` (salary-day intent) / `Shift to the following weekday` (debit-day intent). Yearly start day stays calendar-fixed, respecting the fiscal-year metaphor
-- **Dashboard label reflects shifted boundaries**: Monthly period label now shows the shifted dates (e.g. `January 2026 (1/23 – 2/24)`). The monthly-trend label uses a two-layer "period range + boundary range" format (e.g. `August 2025 – January 2026 (8/25 – 2/24)`) so middle months don't look missing
-- **Regression fixes on management pages**: User-management's delete-confirm modal (a form-less confirmation modal) now correctly fires its Delete action. All five aggregation pages (monthly/yearly/weekly/daily/period) now respond to File-menu submenu clicks (Back to Main / Logout / Quit)
+- **Fixed window position drift on Windows** (#60): WebView2 auto-resizes the window to each page's content size on navigation and re-anchors to the previous top-left, so the window crept left every time you moved between screens. Resolved by re-fitting to the monitor work area and re-centering on every page load
+- **Fixed oversized top margin on every screen**: content was vertically centered, leaving a large band above the title on short pages (e.g. empty aggregation results). Content pages now top-align; centering is scoped to the login / setup screen
+- **Fixed inert close (x) button on the font-size settings modal**: the close button had no click handler because `closeButtonId` was not passed at construction. Wired it up so it closes like every other modal
 
 If you would like to use the stable release version, please refer to the [main branch](https://github.com/BonoJovi/KakeiBonByRust/tree/main).
 
@@ -76,7 +76,7 @@ We welcome messages via GitHub issues or email, whether it's words of encouragem
 
 Thank you for your continued support of KakeiBon.
 
-**2026-05-27 (JST) Written by Yoshihiro NAKAHARA**
+**2026-05-28 (JST) Written by Yoshihiro NAKAHARA**
 
 </div>
 
@@ -291,10 +291,10 @@ Development is progressing smoothly, and we strive to update daily!
 
 | Metric | Count |
 |--------|-------|
-| 👁️ **Total Views** / 総閲覧数 | **211** |
-| 📦 **Total Clones** / 総クローン数 | **1,099** |
+| 👁️ **Total Views** / 総閲覧数 | **213** |
+| 📦 **Total Clones** / 総クローン数 | **1,160** |
 
-*Last Updated / 最終更新: 2026-05-27 01:49 UTC*
+*Last Updated / 最終更新: 2026-05-28 01:42 UTC*
 
 </div>
 <!-- STATS_END -->
@@ -403,7 +403,7 @@ Switch between Japanese and English seamlessly
 | **Backend** / **バックエンド** | Rust + Tauri | v2.8.5 |
 | **Database** / **データベース** | SQLite | WAL mode |
 | **Security** / **セキュリティ** | Argon2id + AES-256-GCM | Password hashing + Data encryption |
-| **Testing** / **テスト** | Jest + Cargo Test | 973 tests passing (Rust: 350, JS: 623) |
+| **Testing** / **テスト** | Jest + Cargo Test | 1013 tests passing (Rust: 390, JS: 623) |
 | **i18n Resources** / **翻訳** | JSON-based | 984 resources (505 unique keys, 2 languages) |
 | **Code Lines** / **コード行数** | Total / 合計 | ~49,789 lines (Rust: 20,173, JS: 11,796, HTML: 4,011, CSS: 6,683, SQL: 7,126) |
 
@@ -434,9 +434,9 @@ cargo tauri build
 ## [Test] Test Results / テスト結果
 
 ```
-Backend (Rust) / バックエンド:    350 passing ✅
+Backend (Rust) / バックエンド:    390 passing ✅
 Frontend (JavaScript) / フロント:  623 passing ✅
-Total Tests / 総テスト数:          973 passing ✅
+Total Tests / 総テスト数:          1013 passing ✅
 Success Rate / 成功率:            100%
 ```
 

@@ -2,6 +2,38 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v2.5.0] - 2026-05-28
+
+Minor release focused on Windows window-display fixes. Addresses WebView2's behavior of auto-resizing the window to each page's intrinsic content size on navigation, which made the window drift left across screen transitions. Also fixes the oversized top margin (content floated to vertical center) seen on every screen, and the inert close (x) button on the font-size settings modal. The Linux build's appearance is unaffected.
+
+### Bug fixes
+
+- **Fixed window position drift on Windows** (#60): WebView2 auto-resizes the window to each page's content size on navigation and re-anchors to the top-left of the previous position, so the window crept left every time you moved between screens. Resolved by re-fitting to the monitor work area and re-centering on every page load
+- **Fixed oversized top margin (content centered) on every screen**: `#main-content` used `justify-content: center`, which was only meant to vertically center the login box on the login screen, but it cascaded into every content page — so short pages (e.g. empty aggregation results) floated to the middle and left a large band above the title. Content pages now default to top alignment (`flex-start`); centering is scoped to the login / setup screen (`body.login-page`)
+- **Fixed inert close (x) button on the font-size settings modal**: the modal was constructed without `closeButtonId`, so the `Modal` class never bound a click handler to the x button (Cancel / Apply worked via their own listeners). Passing `closeButtonId` makes it close like every other modal
+
+### Backend changes
+
+- **Added a Windows-specific window-fit command `fit_window_to_monitor_windows`** (#60): bundles `set_size` and `set_position` into one synchronous Tauri command, resizing and centering to the current monitor's work area, with a larger height margin to clear the taskbar
+- Consolidated frontend window control into `window-fit.js`, dispatching by platform (Windows / Linux). Linux keeps the existing single-invoke approach to avoid the X11/XCB sequence-counter race. The login / setup screen re-fits on page load via the new `login-fit.js`
+
+### Tests
+
+- Rust: 390 tests passing (unchanged from v2.4.0; window control is GUI-dependent, no tests added)
+- JavaScript (Jest): 623 tests passing
+
+---
+
+## [v2.4.1] - 2026-05-28
+
+Emergency patch fixing a startup crash in the Windows distribution build (#62). It did not reproduce in the Linux development environment — the issue was specific to the distributed binary.
+
+### Bug fixes
+
+- **Fixed startup crash in the Windows distribution build** (#62): the schema / seed SQL was read from file paths at runtime, so the distributed binary (which does not ship the SQL files) failed to read them and crashed immediately on launch. Embedding the SQL into the binary at build time via `include_str!` makes initialization reliable in the distribution build
+
+---
+
 ## [v2.4.0] - 2026-05-27
 
 Minor release centered on the monthly period start-day holiday shift. Builds on v2.3.0's "aggregation period customization" by adding automatic shift when the start day falls on a weekend or public holiday — so a salary day of 25th on a Sunday now correctly cycles from Friday 23rd. Also bundles two regression fixes on management-style pages (delete modal's Delete button was inert; aggregation pages' File-menu submenu items were dead).

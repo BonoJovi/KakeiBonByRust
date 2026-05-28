@@ -71,13 +71,12 @@ body {
 }
 
 #account-list-container {
-    flex: 0 1 auto;
-    overflow-y: scroll;
-    overflow-x: scroll;
+    flex: 1 1 auto;
+    overflow-y: auto;
+    overflow-x: auto;
     border: 2px solid #999;
     border-radius: 4px;
     min-height: 0;
-    max-height: 18em;
 }
 
 /* Wide scrollbar for better usability */
