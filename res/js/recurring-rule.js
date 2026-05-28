@@ -1,7 +1,8 @@
 import { invoke } from '@tauri-apps/api/core';
 import { HTML_FILES } from './html-files.js';
 import i18n from './i18n.js';
-import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers, adjustWindowSize } from './font-size.js';
+import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers } from './font-size.js';
+import { fitWindowToScreen } from './window-fit.js';
 import { setupIndicators } from './indicators.js';
 import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
 import { createMenuBar, setupLanguageMenu, setupLanguageMenuHandlers } from './menu.js';
@@ -61,7 +62,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('end-date').value = oneYearLater.toISOString().slice(0, 10);
         document.getElementById('anchor-date').value = today.toISOString().slice(0, 10);
 
-        await adjustWindowSize();
+        await fitWindowToScreen();
         // Form is taller than the window; ensure the user starts at the top
         window.scrollTo(0, 0);
     } catch (err) {

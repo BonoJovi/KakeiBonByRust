@@ -114,6 +114,13 @@ body {
     width: 100%;
     display: flex;
     flex-direction: column;
+    justify-content: flex-start;
+}
+
+/* Login/setup screen only: vertically center the auth box in the window.
+   Content pages must stay top-aligned, otherwise short pages float to the
+   middle and leave a large empty band above the title. */
+body.login-page #main-content {
     justify-content: center;
 }
 
