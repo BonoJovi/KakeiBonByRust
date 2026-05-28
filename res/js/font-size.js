@@ -224,6 +224,7 @@ export function setupFontSizeModalHandlers() {
     }
     
     fontSizeModal = new Modal('font-size-modal', {
+        closeButtonId: 'font-size-modal-close',
         onOpen: () => {
             loadFontSizeModalSettings();
         }
