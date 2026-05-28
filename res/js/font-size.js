@@ -3,8 +3,8 @@ import i18n from './i18n.js';
 import { FONT_SIZE_OPTIONS, FONT_SIZE_SMALL, FONT_SIZE_MEDIUM, FONT_SIZE_LARGE, FONT_SIZE_CUSTOM } from './consts.js';
 import { Modal } from './modal.js';
 import { showToast } from './toast.js';
+import { fitWindowToScreen } from './window-fit.js';
 
-let resizeInProgress = false;
 let fontSizeModal;
 
 // Setup font size menu handlers
@@ -117,10 +117,13 @@ async function handleFontSizeChange(sizeCode) {
     try {
         console.log('Changing font size to:', sizeCode);
         await invoke('set_font_size', { fontSize: sizeCode });
-        
-        // Apply the new font size
+
+        // applyFontSize only sets the CSS variable; re-fit the window to the
+        // monitor afterwards so a font change can't leave it mis-sized or
+        // off-center (fit + recenter, same path as page load).
         await applyFontSize();
-        
+        await fitWindowToScreen();
+
         // Reload font size menu to update selection
         await setupFontSizeMenu();
         
@@ -159,139 +162,10 @@ export async function applyFontSize() {
         }
         
         document.documentElement.style.setProperty('--base-font-size', cssValue);
-        
+
         console.log('Applied font size:', fontSize, '→', cssValue);
-        
-        // Prevent multiple simultaneous resize attempts
-        if (resizeInProgress) {
-            return;
-        }
-        
-        resizeInProgress = true;
-        
-        try {
-            // Wait for layout to update using requestAnimationFrame
-            await new Promise(resolve => {
-                requestAnimationFrame(() => {
-                    requestAnimationFrame(() => {
-                        requestAnimationFrame(resolve);
-                    });
-                });
-            });
-            
-            // Adjust window size based on content (only once)
-            await adjustWindowSize();
-        } finally {
-            resizeInProgress = false;
-        }
     } catch (error) {
         console.error('Failed to apply font size:', error);
-        resizeInProgress = false;
-    }
-}
-
-// Adjust window size to fit content
-export async function adjustWindowSize() {
-    try {
-        console.log('[adjustWindowSize] Starting window size adjustment');
-        
-        // Calculate total content height by getting bounding rectangles
-        let maxWidth = 0;
-        let maxHeight = 0;
-        
-        // Check if we are in the main app (not login/setup screen)
-        const appContent = document.getElementById('app-content');
-        const isMainApp = appContent && !appContent.classList.contains('hidden');
-        
-        // Only measure modals if we're in the main app
-        if (isMainApp) {
-            const modals = document.querySelectorAll('.modal');
-            console.log('[adjustWindowSize] Found', modals.length, 'modals');
-            
-            for (const modal of modals) {
-                // Temporarily show modal to measure its size
-                const wasHidden = modal.classList.contains('hidden');
-                if (wasHidden) {
-                    modal.classList.remove('hidden');
-                    modal.style.visibility = 'hidden'; // Make invisible but still measurable
-                }
-                
-                const modalContent = modal.querySelector('.modal-content');
-                if (modalContent) {
-                    const rect = modalContent.getBoundingClientRect();
-                    console.log('[adjustWindowSize] Modal:', modal.id, 'Content size:', rect.width, 'x', rect.height);
-                    // Modal is centered, so we need to account for centering space
-                    const modalWidth = rect.width + 80; // Extra space for centering
-                    const modalHeight = rect.height + 80; // Extra space for centering
-                    maxWidth = Math.max(maxWidth, modalWidth);
-                    maxHeight = Math.max(maxHeight, modalHeight);
-                }
-                
-                // Restore hidden state
-                if (wasHidden) {
-                    modal.classList.add('hidden');
-                    modal.style.visibility = '';
-                }
-            }
-            
-            console.log('[adjustWindowSize] Modal max size:', maxWidth, 'x', maxHeight);
-        } else {
-            console.log('[adjustWindowSize] Skipping modal measurement (not in main app)');
-        }
-        
-        // Now shrink window to minimum size to get natural content size
-        const minWidth = 400;
-        const minHeight = 300;
-        
-        await invoke('adjust_window_size', { 
-            width: minWidth, 
-            height: minHeight 
-        });
-        
-        // Wait for layout to update after resize
-        await new Promise(resolve => {
-            requestAnimationFrame(() => {
-                requestAnimationFrame(resolve);
-            });
-        });
-        
-        // Measure the natural content size
-        const mainContent = document.getElementById('main-content');
-        const menuBar = document.getElementById('menu-bar');
-        
-        // Check all visible elements
-        const elements = [menuBar, mainContent];
-        for (const el of elements) {
-            if (el && !el.classList.contains('hidden')) {
-                const rect = el.getBoundingClientRect();
-                // Use scrollHeight instead of rect.height to get full content height
-                const actualHeight = Math.max(rect.height, el.scrollHeight);
-                console.log('[adjustWindowSize] Element:', el.id, 'Size:', rect.width, 'x', actualHeight, 'Bottom:', rect.bottom, 'ScrollHeight:', el.scrollHeight);
-                maxWidth = Math.max(maxWidth, rect.right);
-                // Calculate height from top position + actual content height
-                maxHeight = Math.max(maxHeight, rect.top + actualHeight);
-            }
-        }
-        
-        console.log('[adjustWindowSize] Final max size (content + modals):', maxWidth, 'x', maxHeight);
-        
-        // Add padding
-        const padding = 40;
-        const targetWidth = Math.max(minWidth, Math.ceil(maxWidth + padding));
-        const targetHeight = Math.max(minHeight, Math.ceil(maxHeight + padding));
-        
-        console.log('Target window size:', targetWidth, 'x', targetHeight);
-        
-        // Resize to fit content
-        await invoke('adjust_window_size', { 
-            width: targetWidth, 
-            height: targetHeight 
-        });
-        
-        console.log('[adjustWindowSize] Window size adjustment complete');
-        
-    } catch (error) {
-        console.error('Failed to adjust window size:', error);
     }
 }
 
@@ -300,7 +174,7 @@ async function openFontSizeModal() {
     if (fontSizeModal) {
         await loadFontSizeModalSettings();
         fontSizeModal.open();
-        await adjustWindowSize();
+        await fitWindowToScreen();
     } else {
         console.error('Font size modal not initialized');
     }
@@ -384,6 +258,7 @@ export function setupFontSizeModalHandlers() {
                 
                 await invoke('set_font_size', { fontSize: sizeValue });
                 await applyFontSize();
+                await fitWindowToScreen();
                 await setupFontSizeMenu();
                 
                 fontSizeModal.close();

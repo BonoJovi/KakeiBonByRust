@@ -1,7 +1,8 @@
 import { invoke } from '@tauri-apps/api/core';
 import { HTML_FILES } from './html-files.js';
 import i18n from './i18n.js';
-import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers, adjustWindowSize } from './font-size.js';
+import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers } from './font-size.js';
+import { fitWindowToScreen } from './window-fit.js';
 import { ROLE_ADMIN, ROLE_USER, MAX_NAME_LEN } from './consts.js';
 import { Modal } from './modal.js';
 import { setupIndicators } from './indicators.js';
@@ -72,8 +73,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         await loadTemplates();
         await loadAccounts();
         
-        // Adjust window size after content is loaded
-        await adjustWindowSize();
+        // Fit + center the window on this monitor
+        await fitWindowToScreen();
     } catch (error) {
         console.error('Initialization error:', error);
         showToast(i18n.t('account_mgmt.failed_to_initialize') + ': ' + error, { variant: 'error' });

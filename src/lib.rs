@@ -904,31 +904,6 @@ async fn get_font_size(
 }
 
 #[tauri::command]
-async fn adjust_window_size(
-    width: f64,
-    height: f64,
-    window: tauri::Window
-) -> Result<(), String> {
-    use tauri::LogicalSize;
-
-    // Get current window size
-    let current_size = window.inner_size()
-        .map_err(|e| format!("Failed to get window size: {}", e))?;
-
-    // Convert to logical size
-    let logical_current = current_size.to_logical::<f64>(window.scale_factor()
-        .map_err(|e| format!("Failed to get scale factor: {}", e))?);
-
-    // Resize to match content size (both expand and shrink)
-    if (width - logical_current.width).abs() > 1.0 || (height - logical_current.height).abs() > 1.0 {
-        window.set_size(LogicalSize::new(width, height))
-            .map_err(|e| format!("Failed to resize window: {}", e))?;
-    }
-
-    Ok(())
-}
-
-#[tauri::command]
 async fn center_window(window: tauri::Window) -> Result<(), String> {
     window.center().map_err(|e| format!("Failed to center window: {}", e))
 }
@@ -2523,7 +2498,6 @@ pub fn run() {
             get_language_names,
             set_font_size,
             get_font_size,
-            adjust_window_size,
             center_window,
             fit_window_to_monitor,
             fit_window_to_monitor_windows,
