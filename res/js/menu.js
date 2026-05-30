@@ -704,7 +704,7 @@ async function handleLoginSubmit(e) {
         
         console.log('Login result:', user);
         
-        messageDiv.textContent = i18n.t('login.success') + ' Welcome, ' + user.name + '!';
+        messageDiv.textContent = i18n.t('login.success') + ' ' + i18n.t('login.welcome', { name: user.name });
         messageDiv.className = 'message success';
         
         isLoggedIn = true;

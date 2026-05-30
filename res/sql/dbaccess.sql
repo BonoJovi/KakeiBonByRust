@@ -1360,7 +1360,9 @@ VALUES
 (2357, 'user_mgmt.month_holiday_shift_note', 'en', 'Applies to the monthly start day only. The yearly start day is fixed to the calendar date.', 'user_mgmt', 'Note about scope of holiday shift', datetime('now')),
 (2358, 'user_mgmt.month_holiday_shift_note', 'ja', '月次起算日のみ適用されます。年次起算日はカレンダー通り固定です。', 'user_mgmt', '休日シフトの適用範囲注記', datetime('now')),
 (2359, 'validation.invalid_month_period_holiday_shift', 'en', 'Month period holiday shift must be 0, 1, or 2', 'validation', 'Invalid month period holiday shift', datetime('now')),
-(2360, 'validation.invalid_month_period_holiday_shift', 'ja', '月次起算日のシフト設定は 0 / 1 / 2 のいずれかである必要があります', 'validation', '月次起算日シフト範囲エラー', datetime('now'));
+(2360, 'validation.invalid_month_period_holiday_shift', 'ja', '月次起算日のシフト設定は 0 / 1 / 2 のいずれかである必要があります', 'validation', '月次起算日シフト範囲エラー', datetime('now')),
+(2361, 'login.welcome', 'en', 'Welcome, {name}!', 'login', 'Login welcome message with user name placeholder', datetime('now')),
+(2362, 'login.welcome', 'ja', 'ようこそ、{name}さん！', 'login', 'ログイン後のウェルカムメッセージ（{name}補間）', datetime('now'));
 
 -- Translation resources for language
 -- Auto-generated from database
