@@ -4,10 +4,10 @@
 
 > **A Modern Household Budget App with Focus on Readability and Usability**
 
-[![Version](https://img.shields.io/badge/Version-2.5.0-blue)](https://github.com/BonoJovi/KakeiBonByRust/releases/tag/v2.5.0)
+[![Version](https://img.shields.io/badge/Version-2.6.0-blue)](https://github.com/BonoJovi/KakeiBonByRust/releases/tag/v2.6.0)
 [![Rust](https://img.shields.io/badge/Rust-1.70+-orange.svg)](https://www.rust-lang.org/)
 [![Tauri](https://img.shields.io/badge/Tauri-v2.11.1-blue.svg)](https://tauri.app/)
-[![Tests](https://img.shields.io/badge/tests-1013%20passing-brightgreen.svg)](#test-results)
+[![Tests](https://img.shields.io/badge/tests-1054%20passing-brightgreen.svg)](#test-results)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 [[J][P] Japanese Version](README_ja.md) | [[Globe] Bilingual README](README.md)
@@ -25,15 +25,16 @@
 Thank you for your continued interest in KakeiBon.
 I'm BonoJovi (Yoshihiro NAKAHARA), the project initiator.
 
-**We have officially released Ver.2.5.0!**
+**We have officially released Ver.2.6.0!**
 
-Ver.2.5.0 is a minor release focused on Windows window-display fixes. It addresses WebView2's behavior of auto-resizing the window to each page's content size on navigation (which made the window drift left across screen transitions), fixes the oversized top margin seen on every screen (content floated to vertical center), and fixes the inert close (x) button on the font-size settings modal. The Linux build's appearance is unaffected.
+Ver.2.6.0 is a feature release that integrates the product / manufacturer master into the transaction-entry flow. The master management screens have shipped since the v1.x line, but no part of the transaction flow ever referenced them — this release wires the last gap of that work-in-progress feature, so users can normalize spelling drift in item names by linking each detail line to a master entry. It also adds an in-flow path to register a still-unmastered product or manufacturer mid-entry, and unifies the look (borders / header colors / scrollbars / container height) across every list screen.
 
-Key fixes:
+Key additions / fixes:
 
-- **Fixed window position drift on Windows** (#60): WebView2 auto-resizes the window to each page's content size on navigation and re-anchors to the previous top-left, so the window crept left every time you moved between screens. Resolved by re-fitting to the monitor work area and re-centering on every page load
-- **Fixed oversized top margin on every screen**: content was vertically centered, leaving a large band above the title on short pages (e.g. empty aggregation results). Content pages now top-align; centering is scoped to the login / setup screen
-- **Fixed inert close (x) button on the font-size settings modal**: the close button had no click handler because `closeButtonId` was not passed at construction. Wired it up so it closes like every other modal
+- **Product autocomplete in transaction details** (#65): the "Item name" input on the detail-entry modal now suggests products from the master with substring matching, shown as `product (manufacturer)`. Selecting a candidate keeps the `PRODUCT_ID` in form state; free-text entry still works exactly as before, and typing on top of a previous selection automatically demotes the row back to free-text
+- **In-flow path to register an unmastered product**: a new "Open in product master ↗" button persists the entire detail form to `sessionStorage` and jumps to the product master with the typed text pre-filled; "← Back to detail entry" restores the modal in its original state with the new product already linked
+- **Manufacturer side-trip from inside the product modal**: an analogous "Open in manufacturer master ↗" button lets the user register a new manufacturer mid-edit. The 3-hop chain (detail → product → manufacturer → product → detail) preserves every form value across all hops
+- **Unified list-screen visuals**: row borders, sticky navy-on-white headers, wide always-visible scrollbars, and flex layout that follows the window height are now consistent across all management pages
 
 If you would like to use the stable release version, please refer to the [main branch](https://github.com/BonoJovi/KakeiBonByRust/tree/main).
 
@@ -44,7 +45,7 @@ We welcome messages via GitHub issues or email, whether it's words of encouragem
 
 Thank you for your continued support of KakeiBon.
 
-**2026-05-28 (JST) Written by Yoshihiro NAKAHARA**
+**2026-05-30 (JST) Written by Yoshihiro NAKAHARA**
 
 </div>
 

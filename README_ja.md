@@ -4,10 +4,10 @@
 
 > **見やすさと使いやすさを追求した、モダンな家計簿アプリケーション**
 
-[![Version](https://img.shields.io/badge/Version-2.5.0-blue)](https://github.com/BonoJovi/KakeiBonByRust/releases/tag/v2.5.0)
+[![Version](https://img.shields.io/badge/Version-2.6.0-blue)](https://github.com/BonoJovi/KakeiBonByRust/releases/tag/v2.6.0)
 [![Rust](https://img.shields.io/badge/Rust-1.70+-orange.svg)](https://www.rust-lang.org/)
 [![Tauri](https://img.shields.io/badge/Tauri-v2.11.1-blue.svg)](https://tauri.app/)
-[![Tests](https://img.shields.io/badge/tests-1013%20passing-brightgreen.svg)](#テスト結果)
+[![Tests](https://img.shields.io/badge/tests-1054%20passing-brightgreen.svg)](#テスト結果)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 [[G][B] English Version](README_en.md) | [[Globe] Bilingual README](README.md)
@@ -25,15 +25,16 @@
 いつもKakeiBonに気を留めていただき、誠にありがとうございます。
 プロジェクト発案者のBonoJovi(Yoshihiro NAKAHARA)です。
 
-**Ver.2.5.0を正式リリースいたしました！**
+**Ver.2.6.0を正式リリースいたしました！**
 
-Ver.2.5.0 は、Windows 配布版のウィンドウ表示まわりの不具合を集中的に修正するマイナーリリースです。WebView2 がページ遷移ごとにウィンドウをそのページのコンテンツサイズへ自動リサイズする挙動に対処して起動後のウィンドウ位置ドリフトを解消し、全画面で発生していたメインコンテンツ上部の余白（中央寄せによる間延び）も上揃えに修正しました。フォントサイズ設定モーダルの×ボタンが反応しない不具合もあわせて解消しています。Linux 版の表示には影響しません。
+Ver.2.6.0 は、商品・メーカーマスタを入出金フローへ統合した機能リリースです。これまでマスタ管理画面までは完成していたものの、入出金本流から参照されていなかった「仕掛り機能」を完成させ、明細入力時にマスタ照合で表記揺れを吸収できるようになりました。あわせて、マスタ未登録の商品/メーカーを明細入力中にその場で登録できる往復動線を整備し、一覧画面の見た目（罫線・ヘッダ色・スクロールバー・コンテナ高さ）を全画面で統一しました。
 
-主な修正：
+主な追加・修正：
 
-- **Windows のウィンドウ位置ドリフトを修正** (#60): WebView2 はページ遷移ごとにウィンドウをコンテンツサイズへ自動リサイズし、直前位置の左上を基準に再配置するため、画面間を移動するたびにウィンドウが少しずつ左へずれていました。各ページのロード時にモニタの作業領域へ再フィットして中央へ再配置することで解消しました
-- **全画面の上部余白を修正**: メインコンテンツが中央寄せになり、内容の短いページ（空の集計結果など）でタイトル上部に大きな余白が出ていた問題を上揃えに修正。中央寄せはログイン / 初期設定画面のみに限定しました
-- **フォントサイズ設定モーダルの×ボタンを修正**: 生成時に `closeButtonId` が渡されておらず×ボタンにクリック処理が登録されていなかった問題を修正し、他のモーダルと同様に×で閉じられるよう統一しました
+- **入出金明細の商品 autocomplete** (#65): 明細登録モーダルの「品目名」入力に商品マスタの部分一致サジェストを装着。`商品名 (メーカー名)` 形式で候補を表示し、選択すれば内部に `PRODUCT_ID` が保持され、表記揺れを吸収できるようになりました。自由入力もこれまで通り可能です
+- **マスタ未登録の品目をその場で登録できる動線**: 明細モーダルに「商品マスタで登録 ↗」ボタンを配置。入力途中のフォーム全体を `sessionStorage` で保持したまま商品マスタへ jump し、登録後に「← 明細入力に戻る」で元の入力状態へ復帰します
+- **メーカー未登録の場合も同じ流れで補完**: 商品モーダルに「メーカーマスタで登録 ↗」ボタンを追加し、3 ホップ (明細→商品→メーカー→商品→明細) を跨いでもフォーム状態が破綻しないようにしました
+- **一覧画面のビジュアル統一**: 罫線太さ・ヘッダ色（濃紺 + 白文字、sticky）・スクロールバーのスタイル・コンテナの flex 配置を全画面で統一。これまで画面ごとに微妙に違っていた見た目を揃えました
 
 安定版リリースをご利用になりたい方は、[mainブランチ](https://github.com/BonoJovi/KakeiBonByRust/tree/main)をご参照ください。
 
@@ -44,7 +45,7 @@ GitHub の issue や e メールでのメッセージも受け付けています
 
 それでは、引き続き KakeiBon をご愛顧頂ますよう、お願い申し上げます。
 
-**2026-05-28 (JST) Written by Yoshihiro NAKAHARA**
+**2026-05-30 (JST) Written by Yoshihiro NAKAHARA**
 
 </div>
 
