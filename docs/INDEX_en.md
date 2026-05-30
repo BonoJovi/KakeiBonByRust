@@ -1,6 +1,6 @@
 # KakeiBon Documentation Index
 
-**Last Updated**: 2025-12-05 06:35 JST
+**Last Updated**: 2026-05-30 JST
 
 This document provides quick access to all KakeiBon project documentation.
 
@@ -8,6 +8,7 @@ This document provides quick access to all KakeiBon project documentation.
 
 ## [List] Table of Contents
 
+- [Recent Updates (v2.x)](#recent-updates-v2x)
 - [Quick Start](#quick-start)
 - [User Documentation](#user-documentation)
 - [Developer Documentation](#developer-documentation)
@@ -15,6 +16,20 @@ This document provides quick access to all KakeiBon project documentation.
 - [Design Documentation](#design-documentation)
 - [Screen-by-Screen Quick Reference](#screen-by-screen-quick-reference)
 - [Keyword Index](#keyword-index)
+
+---
+
+## [New] Recent Updates (v2.x)
+
+Highlights of recent feature additions and bug fixes. See [CHANGELOG_en](../CHANGELOG_en.md) for details.
+
+- **v2.5.0** (2026-05-28): Fixed Windows window-position drift, top-margin issue on all screens, and font-size modal close (×) button
+- **v2.4.1** (2026-05-28): Windows startup-crash hotfix (SQL inlined via `include_str!`)
+- **v2.4.0** (2026-05-27): Monthly period-start holiday shift (auto-shift to the nearest weekday when the start day falls on a weekend/holiday; 3 modes per user)
+- **v2.3.0** (2026-05-23): Customizable aggregation period start (monthly/yearly start day configurable per user)
+- **v2.2.0** (2026-05-19): Toast notifications, unified validation, alert → toast migration
+- **v2.1.0 / v2.1.1** (2026-05-04 / 05-14): Recurring scheduled transactions (RULE_ID-centric design, Monthly{DayOfMonth} / NthWeekday, jpholiday auto-seeded)
+- **v2.0.0 / v2.0.1** (2026-05-01): Tax calculation refactor (AMOUNT is tax-exclusive; aggregations SUM header-level rounded values)
 
 ---
 
@@ -100,9 +115,9 @@ This document provides quick access to all KakeiBon project documentation.
 ### Testing
 | Document | Description |
 |----------|-------------|
-| [Testing Guide](developer/en/guides/testing-guide.md) | Test strategy and automated testing |
+| [Test Overview](testing/en/TEST_OVERVIEW.md) | Test strategy and automated testing |
 | [Testing Strategy](developer/en/testing/TESTING.md) | Comprehensive testing strategy |
-| [Test Summary](developer/en/testing/TEST_SUMMARY.md) | Test results summary |
+| [Test Results](testing/en/TEST_RESULTS.md) | Test results summary |
 | [Session Management Test Report](developer/en/testing/session-management-test-report.md) | Session management test results |
 
 ---
@@ -264,7 +279,7 @@ This document provides quick access to all KakeiBon project documentation.
 ### T
 - **Tauri**: [Development Setup](developer/ja/setup/DEVELOPMENT_SETUP.md) (Japanese only)
 - **Tax Calculation**: [Tax Calculation Logic](design/architecture/tax-calculation-logic.md)
-- **Testing**: [Testing Guide](developer/en/guides/testing-guide.md), [Test Summary](developer/en/testing/TEST_SUMMARY.md)
+- **Testing**: [Test Overview](testing/en/TEST_OVERVIEW.md), [Test Results](testing/en/TEST_RESULTS.md)
 - **Transaction**: [Transaction Management API](developer/en/api/API_TRANSACTION.md), [Transaction Management UI](developer/en/guides/TRANSACTION_MANAGEMENT_UI.md)
 - **Translation**: [Translation Guide](developer/en/guides/translation-guide.md)
 - **Troubleshooting**: [Troubleshooting](user/en/TROUBLESHOOTING.md)
@@ -307,4 +322,4 @@ This document provides quick access to all KakeiBon project documentation.
 
 ---
 
-**Last Updated**: 2025-12-05 06:35 JST
+**Last Updated**: 2026-05-30 JST
