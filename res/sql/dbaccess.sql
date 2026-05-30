@@ -761,6 +761,10 @@ CREATE TABLE IF NOT EXISTS TRANSACTIONS_HEADER (
 );
 
 -- SQL_30000003: Create TRANSACTIONS_DETAIL table
+-- PRODUCT_ID links a detail line to the PRODUCTS master so that "セブン" /
+-- "7-11" style free-text spelling drift can be normalized at aggregation time.
+-- ON DELETE SET NULL: erasing a master row demotes affected details back to
+-- pure free-text rather than dropping the transaction history.
 CREATE TABLE IF NOT EXISTS TRANSACTIONS_DETAIL (
     DETAIL_ID INTEGER PRIMARY KEY AUTOINCREMENT,
     TRANSACTION_ID INTEGER NOT NULL,
@@ -770,10 +774,12 @@ CREATE TABLE IF NOT EXISTS TRANSACTIONS_DETAIL (
     AMOUNT INTEGER NOT NULL,
     TAX_AMOUNT INTEGER DEFAULT 0,
     TAX_RATE INTEGER DEFAULT 8,
+    PRODUCT_ID INTEGER,
     MEMO_ID INTEGER,
     ENTRY_DT DATETIME NOT NULL DEFAULT (datetime('now')),
     UPDATE_DT DATETIME,
     FOREIGN KEY (TRANSACTION_ID) REFERENCES TRANSACTIONS_HEADER(TRANSACTION_ID) ON DELETE CASCADE,
+    FOREIGN KEY (PRODUCT_ID) REFERENCES PRODUCTS(PRODUCT_ID) ON DELETE SET NULL,
     FOREIGN KEY (MEMO_ID) REFERENCES MEMOS(MEMO_ID),
     CHECK (ITEM_NAME != '')
 );
@@ -796,6 +802,11 @@ CREATE INDEX IF NOT EXISTS idx_transactions_header_date ON TRANSACTIONS_HEADER(T
 -- Create indexes for transactions_detail
 CREATE INDEX IF NOT EXISTS idx_transactions_detail_transaction ON TRANSACTIONS_DETAIL(TRANSACTION_ID);
 CREATE INDEX IF NOT EXISTS idx_transactions_detail_categories ON TRANSACTIONS_DETAIL(CATEGORY2_CODE, CATEGORY3_CODE);
+-- idx_transactions_detail_product is created by ensure_product_id_column in
+-- src/db.rs after PRODUCT_ID has been ALTER-added. Creating it here would
+-- fire BEFORE the migration on pre-v2.6.0 databases (CREATE TABLE IF NOT
+-- EXISTS is a no-op for them, so PRODUCT_ID is still missing) and crash the
+-- whole initialize() call.
 
 -- ============================================================================
 -- v2.1.0: Recurring Scheduled Transactions
@@ -1360,7 +1371,11 @@ VALUES
 (2357, 'user_mgmt.month_holiday_shift_note', 'en', 'Applies to the monthly start day only. The yearly start day is fixed to the calendar date.', 'user_mgmt', 'Note about scope of holiday shift', datetime('now')),
 (2358, 'user_mgmt.month_holiday_shift_note', 'ja', '月次起算日のみ適用されます。年次起算日はカレンダー通り固定です。', 'user_mgmt', '休日シフトの適用範囲注記', datetime('now')),
 (2359, 'validation.invalid_month_period_holiday_shift', 'en', 'Month period holiday shift must be 0, 1, or 2', 'validation', 'Invalid month period holiday shift', datetime('now')),
-(2360, 'validation.invalid_month_period_holiday_shift', 'ja', '月次起算日のシフト設定は 0 / 1 / 2 のいずれかである必要があります', 'validation', '月次起算日シフト範囲エラー', datetime('now'));
+(2360, 'validation.invalid_month_period_holiday_shift', 'ja', '月次起算日のシフト設定は 0 / 1 / 2 のいずれかである必要があります', 'validation', '月次起算日シフト範囲エラー', datetime('now')),
+(2361, 'login.welcome', 'en', 'Welcome, {name}!', 'login', 'Login welcome message with user name placeholder', datetime('now')),
+(2362, 'login.welcome', 'ja', 'ようこそ、{name}さん！', 'login', 'ログイン後のウェルカムメッセージ（{name}補間）', datetime('now')),
+(2363, 'detail_mgmt.autocomplete_no_match', 'en', 'No matching product in master', 'detail_mgmt', 'Autocomplete empty-result hint when no PRODUCTS row matches the typed query', datetime('now')),
+(2364, 'detail_mgmt.autocomplete_no_match', 'ja', 'マスタに一致する商品がありません', 'detail_mgmt', '商品マスタに一致候補が無い場合の autocomplete 表示', datetime('now'));
 
 -- Translation resources for language
 -- Auto-generated from database
@@ -1769,4 +1784,12 @@ INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESO
 INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2320, 'category_mgmt.failed_to_hide', 'ja', '費目の非表示化に失敗しました', 'category_mgmt', '非表示化エラーメッセージ', datetime('now'));
 INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2321, 'category_mgmt.failed_to_show', 'en', 'Failed to show category', 'category_mgmt', 'Show error message', datetime('now'));
 INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2322, 'category_mgmt.failed_to_show', 'ja', '費目の表示化に失敗しました', 'category_mgmt', '表示化エラーメッセージ', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2365, 'detail_mgmt.open_product_master', 'en', 'Open in product master ↗', 'detail_mgmt', 'Button: jump to product master to register the typed item as a product', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2366, 'detail_mgmt.open_product_master', 'ja', '商品マスタで登録 ↗', 'detail_mgmt', '入力した品目を商品マスタに登録するためのジャンプボタン', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2367, 'product_mgmt.back_to_detail', 'en', '← Back to detail entry', 'product_mgmt', 'Button: return to the detail entry modal after registering a product', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2368, 'product_mgmt.back_to_detail', 'ja', '← 明細入力に戻る', 'product_mgmt', '商品登録後に明細入力モーダルへ戻るためのボタン', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2369, 'product_mgmt.open_manufacturer_master', 'en', 'Open in manufacturer master ↗', 'product_mgmt', 'Button on the product modal: jump to manufacturer master to register a new manufacturer', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2370, 'product_mgmt.open_manufacturer_master', 'ja', 'メーカーマスタで登録 ↗', 'product_mgmt', '商品モーダルのメーカー欄ジャンプボタン', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2371, 'manufacturer_mgmt.back_to_product', 'en', '← Back to product entry', 'manufacturer_mgmt', 'Button: return to the product master modal after registering a manufacturer', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2372, 'manufacturer_mgmt.back_to_product', 'ja', '← 商品入力に戻る', 'manufacturer_mgmt', 'メーカー登録後に商品マスタモーダルへ戻るためのボタン', datetime('now'));
 

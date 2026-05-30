@@ -166,7 +166,7 @@ Need help or have questions?
 
 - **GitHub Issues**: For bugs and feature requests
 - **GitHub Discussions**: For questions and discussions
-- **Email**: [bonojovi@zundou.org](mailto:bonojovi@zundou.org)
+- **Email**: [bonojovi2741@gmail.com](mailto:bonojovi2741@gmail.com)
 
 ---
 

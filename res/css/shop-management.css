@@ -136,10 +136,6 @@ body {
     background-color: #f9f9f9;
 }
 
-#shops-table tbody tr:last-child td {
-    border-bottom: none;
-}
-
 /* Actions column - auto width */
 #shops-table th:nth-child(3),
 #shops-table td:nth-child(3) {

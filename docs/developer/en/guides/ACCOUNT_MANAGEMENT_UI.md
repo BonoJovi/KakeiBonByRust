@@ -391,4 +391,4 @@ const currentUserRole = ROLE_USER;
 **Last Updated**: 2025-11-08 07:40 JST
 
 **Author**: AI Assistant  
-**Supervisor**: Yoshihiro NAKAHARA (bonojovi@zundou.org)
+**Supervisor**: Yoshihiro NAKAHARA (bonojovi2741@gmail.com)

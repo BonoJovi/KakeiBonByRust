@@ -144,6 +144,21 @@
                 <!-- Transaction List -->
                 <div class="section">
                     <div id="transaction-list-container">
+                        <!-- Static header row that mirrors the columns produced by createTransactionItem() in transaction-management.js. -->
+                        <div class="transaction-header-row">
+                            <div class="transaction-content">
+                                <div class="transaction-date" data-i18n="transaction_mgmt.transaction_date">Transaction Date</div>
+                                <div class="transaction-category" data-i18n="transaction_mgmt.category1">Category</div>
+                                <div class="transaction-account">
+                                    <span data-i18n="transaction_mgmt.from_account">From</span>
+                                    →
+                                    <span data-i18n="transaction_mgmt.to_account">To</span>
+                                </div>
+                                <div class="transaction-amount" data-i18n="transaction_mgmt.total_amount">Amount</div>
+                                <div class="transaction-memo" data-i18n="transaction_mgmt.memo">Memo</div>
+                            </div>
+                            <div class="transaction-actions-header" data-i18n="common.actions">Actions</div>
+                        </div>
                         <div id="transaction-list" class="transaction-list">
                             <!-- Transaction items will be populated here -->
                             <div class="loading" data-i18n="common.loading">Loading...</div>

@@ -113,6 +113,37 @@ impl Database {
         // Add IS_SCHEDULED column if it doesn't exist (for tables created before this column was added)
         self.ensure_is_scheduled_column().await?;
 
+        // Add PRODUCT_ID column for v2.6.0 master integration
+        self.ensure_product_id_column().await?;
+
+        Ok(())
+    }
+
+    /// Add PRODUCT_ID to TRANSACTIONS_DETAIL if absent (v2.6.0 master integration).
+    /// SQLite's ALTER TABLE ADD COLUMN cannot attach a FOREIGN KEY clause, so
+    /// existing DBs end up without the FK declaration; new DBs created via
+    /// MIGRATE_TRANSACTIONS_DETAIL_CREATE_NEW do carry it. Integrity is
+    /// preserved at the application layer (search_products_by_name only returns
+    /// the user's own products, and delete-product would need to clear refs).
+    async fn ensure_product_id_column(&self) -> Result<(), sqlx::Error> {
+        let has_column: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM pragma_table_info('TRANSACTIONS_DETAIL') WHERE name = 'PRODUCT_ID'"
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        if has_column == 0 {
+            sqlx::query("ALTER TABLE TRANSACTIONS_DETAIL ADD COLUMN PRODUCT_ID INTEGER")
+                .execute(&self.pool)
+                .await?;
+        }
+
+        sqlx::query(
+            "CREATE INDEX IF NOT EXISTS idx_transactions_detail_product ON TRANSACTIONS_DETAIL(PRODUCT_ID)"
+        )
+        .execute(&self.pool)
+        .await?;
+
         Ok(())
     }
 
@@ -621,6 +652,19 @@ mod tests {
         .await
         .expect("Failed to insert test transaction header");
 
+        // Create MANUFACTURERS + PRODUCTS so the v2.6.0 migration target
+        // schema (which carries an FK PRODUCT_ID -> PRODUCTS) can resolve its
+        // FOREIGN KEY clause when CREATE TABLE runs. SQLite still validates
+        // the referenced-table identifier at CREATE time on modern versions.
+        sqlx::query(sql_queries::TEST_MANUFACTURER_CREATE_TABLE)
+            .execute(&pool)
+            .await
+            .expect("Failed to create MANUFACTURERS table");
+        sqlx::query(sql_queries::TEST_PRODUCT_CREATE_TABLE)
+            .execute(&pool)
+            .await
+            .expect("Failed to create PRODUCTS table");
+
         // Create old schema TRANSACTIONS_DETAIL table (without USER_ID and CATEGORY1_CODE)
         sqlx::query(sql_queries::TEST_CREATE_OLD_TRANSACTIONS_DETAIL_TABLE)
         .execute(&pool)
@@ -678,6 +722,63 @@ mod tests {
         assert_eq!(row.7, 1000, "AMOUNT should be preserved");
 
         // Clean up
+        drop(db);
+        let _ = std::fs::remove_file(&test_db_path);
+    }
+
+    #[tokio::test]
+    async fn test_ensure_product_id_column_idempotent() {
+        // Adds PRODUCT_ID + index on first run; subsequent runs must no-op
+        // without erroring out. Models the "user upgrades to v2.6.0, then
+        // reopens the app another day" path where the column already exists.
+        let temp_dir = std::env::temp_dir();
+        let test_db_name = format!("test_ensure_product_id_{}.db", std::process::id());
+        let test_db_path = temp_dir.join(&test_db_name);
+        let _ = std::fs::remove_file(&test_db_path);
+
+        let db_url = format!("sqlite://{}?mode=rwc", test_db_path.display());
+        let pool = connect_db(&db_url).await.expect("Failed to connect");
+
+        // Pre-v2.6.0 detail schema (no PRODUCT_ID column)
+        sqlx::query(
+            "CREATE TABLE TRANSACTIONS_DETAIL ( \
+                DETAIL_ID INTEGER PRIMARY KEY AUTOINCREMENT, \
+                TRANSACTION_ID INTEGER NOT NULL, \
+                USER_ID INTEGER NOT NULL, \
+                CATEGORY1_CODE VARCHAR(50) NOT NULL, \
+                ITEM_NAME TEXT NOT NULL, \
+                AMOUNT INTEGER NOT NULL \
+            )"
+        )
+        .execute(&pool)
+        .await
+        .expect("Failed to create legacy detail table");
+
+        let db = Database { pool };
+
+        // First call: should ALTER + create index
+        db.ensure_product_id_column().await.expect("first call");
+        // Second call: should no-op (column + index already present)
+        db.ensure_product_id_column().await.expect("second call");
+
+        // Verify PRODUCT_ID column now exists
+        let has_column: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM pragma_table_info('TRANSACTIONS_DETAIL') WHERE name = 'PRODUCT_ID'"
+        )
+        .fetch_one(db.pool())
+        .await
+        .expect("Failed to query pragma");
+        assert_eq!(has_column, 1, "PRODUCT_ID column should exist after migration");
+
+        // Verify the index landed
+        let has_index: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name='idx_transactions_detail_product'"
+        )
+        .fetch_one(db.pool())
+        .await
+        .expect("Failed to query indexes");
+        assert_eq!(has_index, 1, "idx_transactions_detail_product should exist");
+
         drop(db);
         let _ = std::fs::remove_file(&test_db_path);
     }

@@ -21,7 +21,7 @@
 - [Art] システム設計
 - [Test] 動作テスト（メイン担当）
 - [Note] ドキュメント監修・調整
-- [Email] 連絡先: bonojovi@zundou.org
+- [Email] 連絡先: bonojovi2741@gmail.com
 
 ### [Robot] AI開発パートナー
 
@@ -175,7 +175,7 @@ graph LR
 ### プロジェクトに関するご質問・ご意見
 
 **Yoshihiro NAKAHARA**  
-[Email] Email: bonojovi@zundou.org
+[Email] Email: bonojovi2741@gmail.com
 
 ### 不具合報告・機能要望
 
@@ -220,7 +220,7 @@ Lazarus/Free Pascalで開発された安定版
 **Last Updated / 最終更新**: 2025-11-08 17:01 JST
 
 **作成者**: AI Assistant  
-**監修**: Yoshihiro NAKAHARA (bonojovi@zundou.org)
+**監修**: Yoshihiro NAKAHARA (bonojovi2741@gmail.com)
 
 ---
 

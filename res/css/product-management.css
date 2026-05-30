@@ -74,9 +74,30 @@ body {
     flex: 1 1 auto;
     overflow-x: auto;
     overflow-y: auto;
-    border: 1px solid #ddd;
+    border: 2px solid #999;
     border-radius: 4px;
     min-height: 0;
+}
+
+.back-to-detail-btn {
+    margin-bottom: 12px;
+    align-self: flex-start;
+}
+
+.manufacturer-row {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+}
+
+.manufacturer-row > #product-manufacturer {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.manufacturer-jump-btn {
+    flex: 0 0 auto;
+    white-space: nowrap;
 }
 
 #product-list-container::-webkit-scrollbar {
@@ -126,10 +147,6 @@ body {
 
 #products-table tbody tr:hover {
     background-color: #f9f9f9;
-}
-
-#products-table tbody tr:last-child td {
-    border-bottom: none;
 }
 
 /* Actions column - minimal width */

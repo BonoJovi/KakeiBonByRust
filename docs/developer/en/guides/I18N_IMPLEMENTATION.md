@@ -557,4 +557,4 @@ Frontend implementation (menus and dialogs) is planned for the next phase.
 ---
 
 **Author**: AI Assistant  
-**Supervisor**: Yoshihiro NAKAHARA (bonojovi@zundou.org)
+**Supervisor**: Yoshihiro NAKAHARA (bonojovi2741@gmail.com)

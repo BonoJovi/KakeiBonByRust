@@ -606,7 +606,7 @@ If you're comfortable with Git:
 
 ### Method 3: Email
 
-Send to: [bonojovi@zundou.org](mailto:bonojovi@zundou.org)
+Send to: [bonojovi2741@gmail.com](mailto:bonojovi2741@gmail.com)
 - Attach your translation file
 - Include your language code and any notes
 
@@ -671,7 +671,7 @@ Send to: [bonojovi@zundou.org](mailto:bonojovi@zundou.org)
 ## Need Help?
 
 - **GitHub Issues**: [Translation Discussion](https://github.com/BonoJovi/KakeiBonByRust/issues?q=label%3Atranslation)
-- **Email**: [bonojovi@zundou.org](mailto:bonojovi@zundou.org)
+- **Email**: [bonojovi2741@gmail.com](mailto:bonojovi2741@gmail.com)
 
 ---
 

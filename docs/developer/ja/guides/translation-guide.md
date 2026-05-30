@@ -606,7 +606,7 @@ Gitに慣れている場合：
 
 ### 方法3: Email
 
-送信先: [bonojovi@zundou.org](mailto:bonojovi@zundou.org)
+送信先: [bonojovi2741@gmail.com](mailto:bonojovi2741@gmail.com)
 - 翻訳ファイルを添付
 - 言語コードと注意事項を含める
 
@@ -671,7 +671,7 @@ Gitに慣れている場合：
 ## サポートが必要ですか？
 
 - **GitHub Issues**: [翻訳ディスカッション](https://github.com/BonoJovi/KakeiBonByRust/issues?q=label%3Atranslation)
-- **Email**: [bonojovi@zundou.org](mailto:bonojovi@zundou.org)
+- **Email**: [bonojovi2741@gmail.com](mailto:bonojovi2741@gmail.com)
 
 ---
 

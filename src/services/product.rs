@@ -51,6 +51,32 @@ pub async fn get_products(pool: &SqlitePool, user_id: i64, include_disabled: boo
     Ok(products)
 }
 
+/// Search products by partial name match for autocomplete in transaction entry.
+/// Returns up to 20 enabled products matching the query (case-insensitive
+/// substring). Empty/whitespace-only queries return an empty list to avoid
+/// dumping the full master into the dropdown on focus.
+pub async fn search_products_by_name(
+    pool: &SqlitePool,
+    user_id: i64,
+    query: &str,
+) -> Result<Vec<Product>, String> {
+    let trimmed = query.trim();
+    if trimmed.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let pattern = format!("%{}%", trimmed);
+
+    let products = sqlx::query_as::<_, Product>(sql_queries::PRODUCT_SEARCH_BY_NAME)
+        .bind(user_id)
+        .bind(&pattern)
+        .fetch_all(pool)
+        .await
+        .map_err(|e| format!("Failed to search products: {}", e))?;
+
+    Ok(products)
+}
+
 /// Get a single product by ID
 pub async fn get_product_by_id(
     pool: &SqlitePool,
@@ -570,5 +596,100 @@ mod tests {
         let err = update_product(&pool, 2, product_id, update_request).await.unwrap_err();
         assert!(err.contains(&consts::MAX_MEMO_LEN.to_string()),
             "error should reference the limit: {}", err);
+    }
+
+    // v2.6.0 autocomplete: search_products_by_name
+
+    #[tokio::test]
+    async fn test_search_products_substring_match() {
+        let pool = setup_test_db().await;
+
+        for name in ["セブンイレブン", "セブン店", "ファミリーマート"] {
+            add_product(&pool, 2, AddProductRequest {
+                product_name: name.to_string(),
+                manufacturer_id: None,
+                memo: None,
+                is_disabled: None,
+            }).await.unwrap();
+        }
+
+        let hits = search_products_by_name(&pool, 2, "セブン").await.unwrap();
+        let names: Vec<String> = hits.iter().map(|p| p.product_name.clone()).collect();
+        assert_eq!(hits.len(), 2);
+        assert!(names.iter().any(|n| n == "セブンイレブン"));
+        assert!(names.iter().any(|n| n == "セブン店"));
+    }
+
+    #[tokio::test]
+    async fn test_search_products_excludes_other_users() {
+        let pool = setup_test_db().await;
+
+        add_product(&pool, 2, AddProductRequest {
+            product_name: "私の商品".to_string(),
+            manufacturer_id: None,
+            memo: None,
+            is_disabled: None,
+        }).await.unwrap();
+
+        // user_id=1 (admin) should not see user_id=2's products
+        let hits = search_products_by_name(&pool, 1, "商品").await.unwrap();
+        assert!(hits.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_search_products_excludes_disabled() {
+        let pool = setup_test_db().await;
+
+        add_product(&pool, 2, AddProductRequest {
+            product_name: "廃番商品".to_string(),
+            manufacturer_id: None,
+            memo: None,
+            is_disabled: None,
+        }).await.unwrap();
+        let products = get_products(&pool, 2, false).await.unwrap();
+        delete_product(&pool, 2, products[0].product_id).await.unwrap();
+
+        let hits = search_products_by_name(&pool, 2, "廃番").await.unwrap();
+        assert!(hits.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_search_products_empty_query_returns_empty() {
+        let pool = setup_test_db().await;
+
+        add_product(&pool, 2, AddProductRequest {
+            product_name: "anything".to_string(),
+            manufacturer_id: None,
+            memo: None,
+            is_disabled: None,
+        }).await.unwrap();
+
+        // Empty query must not dump the master into the dropdown
+        assert!(search_products_by_name(&pool, 2, "").await.unwrap().is_empty());
+        assert!(search_products_by_name(&pool, 2, "   ").await.unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_search_products_includes_manufacturer_name() {
+        let pool = setup_test_db().await;
+
+        add_manufacturer(&pool, 2, AddManufacturerRequest {
+            manufacturer_name: "ニッスイ".to_string(),
+            memo: None,
+            is_disabled: None,
+        }).await.unwrap();
+        let manufacturers = crate::services::manufacturer::get_manufacturers(&pool, 2, false).await.unwrap();
+        let manufacturer_id = manufacturers[0].manufacturer_id;
+
+        add_product(&pool, 2, AddProductRequest {
+            product_name: "サバ缶".to_string(),
+            manufacturer_id: Some(manufacturer_id),
+            memo: None,
+            is_disabled: None,
+        }).await.unwrap();
+
+        let hits = search_products_by_name(&pool, 2, "サバ").await.unwrap();
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].manufacturer_name.as_deref(), Some("ニッスイ"));
     }
 }

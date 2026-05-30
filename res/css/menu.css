@@ -115,6 +115,29 @@ body {
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
+    /* Firefox — match the per-list wide scrollbar style */
+    scrollbar-width: auto;
+    scrollbar-color: #888 #f1f1f1;
+}
+
+/* WebKit — wide, always-visible scrollbar to match the list containers */
+#main-content::-webkit-scrollbar {
+    width: 16px;
+    height: 16px;
+}
+
+#main-content::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+#main-content::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+#main-content::-webkit-scrollbar-thumb:hover {
+    background: #555;
 }
 
 /* Login/setup screen only: vertically center the auth box in the window.
@@ -275,6 +298,29 @@ body.login-page #main-content {
     width: 90%;
     max-height: 90vh;
     overflow-y: auto;
+    /* Firefox — match the per-list wide scrollbar style */
+    scrollbar-width: auto;
+    scrollbar-color: #888 #f1f1f1;
+}
+
+/* WebKit — wide, always-visible scrollbar inside modals */
+.modal-content::-webkit-scrollbar {
+    width: 16px;
+    height: 16px;
+}
+
+.modal-content::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.modal-content::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+.modal-content::-webkit-scrollbar-thumb:hover {
+    background: #555;
 }
 
 .modal-header {

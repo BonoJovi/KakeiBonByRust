@@ -21,7 +21,10 @@
         <div id="main-content">
             <div class="product-management-container">
                 <h1 data-i18n="product_mgmt.title">Product Management</h1>
-                
+
+                <!-- Shown only when arrived from transaction detail entry via the "Open in product master" jump. -->
+                <button id="back-to-detail-btn" class="btn-secondary back-to-detail-btn" style="display: none;" data-i18n="product_mgmt.back_to_detail">← Back to detail entry</button>
+
                 <!-- Product List Section -->
                 <div class="section">
                     <div class="section-header">
@@ -71,9 +74,12 @@
                     <div class="form-group">
                         <label for="product-manufacturer" data-i18n="product_mgmt.manufacturer">Manufacturer:</label>
                         <div class="input-wrapper">
-                            <select id="product-manufacturer" name="product-manufacturer">
-                                <option value="">-- Select Manufacturer --</option>
-                            </select>
+                            <div class="manufacturer-row">
+                                <select id="product-manufacturer" name="product-manufacturer">
+                                    <option value="">-- Select Manufacturer --</option>
+                                </select>
+                                <button type="button" class="btn-secondary manufacturer-jump-btn" id="open-manufacturer-master-btn" data-i18n="product_mgmt.open_manufacturer_master">Open in manufacturer master ↗</button>
+                            </div>
                         </div>
                     </div>
 

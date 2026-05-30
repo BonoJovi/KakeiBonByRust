@@ -1,6 +1,6 @@
 # KakeiBon by Rust ドキュメント索引
 
-**最終更新**: 2026-01-18 JST
+**最終更新**: 2026-05-30 JST
 
 このドキュメントは、KakeiBon by Rustプロジェクトのすべてのドキュメントへのクイックアクセスを提供します。
 
@@ -8,6 +8,7 @@
 
 ## [List] 目次
 
+- [最近の主な更新 (v2.x)](#最近の主な更新-v2x)
 - [クイックスタート](#クイックスタート)
 - [ユーザー向けドキュメント](#ユーザー向けドキュメント)
 - [開発者向けドキュメント](#開発者向けドキュメント)
@@ -15,6 +16,20 @@
 - [設計ドキュメント](#設計ドキュメント)
 - [画面別クイックリファレンス](#画面別クイックリファレンス)
 - [キーワード索引](#キーワード索引)
+
+---
+
+## [New] 最近の主な更新 (v2.x)
+
+直近の機能追加・不具合修正の要点。詳細は [CHANGELOG_ja](../CHANGELOG_ja.md)。
+
+- **v2.5.0** (2026-05-28): Windows 配布版のウィンドウ位置ドリフト修正、全画面の上部余白修正、フォントサイズ設定モーダルの×ボタン修正
+- **v2.4.1** (2026-05-28): Windows 配布版の起動クラッシュ hotfix（SQL の include_str! 化）
+- **v2.4.0** (2026-05-27): 月次起算日の休日シフト（土日祝にあたる起算日を直前/直後の平日へ自動シフト、ユーザー単位で3択）
+- **v2.3.0** (2026-05-23): 集計起算日カスタマイズ（月次・年次の起算日をユーザー単位で設定）
+- **v2.2.0** (2026-05-19): toast 通知導入、バリデーション統一、alert → toast 移行
+- **v2.1.0 / v2.1.1** (2026-05-04 / 05-14): 繰り返し予定入出金（RULE_ID 中心設計、Monthly{DayOfMonth} / NthWeekday、jpholiday 自動シード）
+- **v2.0.0 / v2.0.1** (2026-05-01): 税計算リファクタ（AMOUNT を税抜固定、集計はヘッダー単位の丸め値を SUM）
 
 ---
 
@@ -68,7 +83,7 @@
 |------------|------|
 | [開発者ガイド](developer/ja/guides/DEVELOPER_GUIDE.md) | 開発の進め方・ワークフロー |
 | [コーディング規約](developer/ja/guides/CODING_STANDARDS.md) | Rust/JavaScript/CSS規約 |
-| [テストガイド](developer/ja/guides/testing-guide.md) | テスト戦略・実施方法 |
+| [テスト概要](testing/ja/TEST_OVERVIEW.md) | テスト戦略・実施方法 |
 | [ドキュメントポリシー](developer/en/guides/DOCUMENTATION_POLICY.md) | ドキュメント作成ルール（英語版のみ） |
 
 ### 機能実装ガイド
@@ -99,8 +114,8 @@
 ### テスト
 | ドキュメント | 説明 |
 |------------|------|
-| [テストガイド](developer/ja/guides/testing-guide.md) | テスト戦略・自動テスト |
-| [テストサマリー](developer/ja/testing/TEST_SUMMARY.md) | テスト結果サマリー |
+| [テスト概要](testing/ja/TEST_OVERVIEW.md) | テスト戦略・自動テスト |
+| [テスト実行結果](testing/ja/TEST_RESULTS.md) | テスト結果サマリー |
 
 ---
 
@@ -239,7 +254,7 @@
 - **多言語**: [I18N実装ガイド](developer/ja/guides/I18N_IMPLEMENTATION.md), [翻訳ガイド](developer/ja/guides/translation-guide.md)
 - **データベース**: [データベース設計](developer/ja/design/DATABASE_DESIGN.md), [データベース設定](developer/ja/guides/DATABASE_CONFIGURATION.md)
 - **店舗**: [マスタデータAPI](developer/ja/api/API_MASTER_DATA.md)（店舗セクション）
-- **テスト**: [テストガイド](developer/ja/guides/testing-guide.md), [テストサマリー](developer/ja/testing/TEST_SUMMARY.md)
+- **テスト**: [テスト概要](testing/ja/TEST_OVERVIEW.md), [テスト実行結果](testing/ja/TEST_RESULTS.md)
 
 ### は行
 - **バリデーション**: [共通API](developer/ja/api/API_COMMON.md)（バリデーションセクション）

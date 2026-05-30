@@ -4,7 +4,7 @@
 
 - **Type**: Tauri v2 desktop app (Rust backend + Vanilla JS frontend + SQLite)
 - **Purpose**: Household budget app (家計簿) with bilingual support (JP/EN)
-- **Version**: v1.2.0
+- **Version**: v2.5.0
 - **Branch**: `dev` for development, `main` for releases
 
 ## Essential Rules

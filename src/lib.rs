@@ -1780,6 +1780,16 @@ async fn delete_product(
     services::product::delete_product(db.pool(), user_id, product_id).await
 }
 
+#[tauri::command]
+async fn search_products_by_name(
+    query: String,
+    state: tauri::State<'_, AppState>
+) -> Result<Vec<services::product::Product>, String> {
+    let user_id = get_session_user_id(&state)?;
+    let db = state.db.lock().await;
+    services::product::search_products_by_name(db.pool(), user_id, &query).await
+}
+
 // ============================================================================
 // Transaction Management Commands
 // ============================================================================
@@ -1959,6 +1969,7 @@ async fn add_transaction_detail(
     tax_rate: i32,
     tax_amount: i64,
     amount_including_tax: Option<i64>,
+    product_id: Option<i64>,
     memo: Option<String>,
     state: tauri::State<'_, AppState>
 ) -> Result<i64, String> {
@@ -1976,6 +1987,7 @@ async fn add_transaction_detail(
         tax_rate,
         tax_amount,
         amount_including_tax,
+        product_id,
         memo,
     };
 
@@ -1994,6 +2006,7 @@ async fn update_transaction_detail(
     tax_rate: i32,
     tax_amount: i64,
     amount_including_tax: Option<i64>,
+    product_id: Option<i64>,
     memo: Option<String>,
     state: tauri::State<'_, AppState>
 ) -> Result<(), String> {
@@ -2011,6 +2024,7 @@ async fn update_transaction_detail(
         tax_rate,
         tax_amount,
         amount_including_tax,
+        product_id,
         memo,
     };
 
@@ -2541,6 +2555,7 @@ pub fn run() {
             add_product,
             update_product,
             delete_product,
+            search_products_by_name,
             save_transaction_header,
             get_transaction_header,
             select_transaction_headers,

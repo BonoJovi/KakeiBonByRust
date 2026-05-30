@@ -18,7 +18,6 @@ export function createMenuBar(pageType = 'management') {
     
     if (pageType === 'index') {
         fileMenuItems = `
-            <div class="dropdown-item" data-i18n="menu.login">Login</div>
             <div class="dropdown-item" data-i18n="menu.logout">Logout</div>
             <div class="dropdown-separator"></div>
             <div class="dropdown-item" data-i18n="menu.quit">Quit</div>
@@ -221,17 +220,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Add event listeners to dropdown items (only for index page)
         // Other pages (dashboard, management) handle their own file menu handlers
         if (isIndexPage) {
-            const loginItem = fileDropdown.querySelector('.dropdown-item:nth-child(1)');
-            const logoutItem = fileDropdown.querySelector('.dropdown-item:nth-child(2)');
-            const quitItem = fileDropdown.querySelector('.dropdown-item:nth-child(4)');
+            const logoutItem = fileDropdown.querySelector('.dropdown-item:nth-child(1)');
+            const quitItem = fileDropdown.querySelector('.dropdown-item:nth-child(3)');
 
-            if (loginItem) {
-                loginItem.addEventListener('click', function(e) {
-                    console.log('Login item clicked');
-                    handleLoginMenu();
-                    fileDropdown.classList.remove('show');
-                });
-            }
             if (logoutItem) {
                 logoutItem.addEventListener('click', function(e) {
                     console.log('Logout item clicked');
@@ -677,17 +668,6 @@ async function handleUserSetup(e) {
     }
 }
 
-function handleLoginMenu() {
-    console.log('Login menu clicked');
-    const loginContainer = document.getElementById('login-form');
-    const appContent = document.getElementById('app-content');
-    
-    if (!isLoggedIn) {
-        loginContainer.classList.remove('hidden');
-        appContent.classList.add('hidden');
-    }
-}
-
 async function handleLoginSubmit(e) {
     e.preventDefault();
     console.log('Login form submitted');
@@ -704,7 +684,7 @@ async function handleLoginSubmit(e) {
         
         console.log('Login result:', user);
         
-        messageDiv.textContent = i18n.t('login.success') + ' Welcome, ' + user.name + '!';
+        messageDiv.textContent = i18n.t('login.success') + ' ' + i18n.t('login.welcome', { name: user.name });
         messageDiv.className = 'message success';
         
         isLoggedIn = true;

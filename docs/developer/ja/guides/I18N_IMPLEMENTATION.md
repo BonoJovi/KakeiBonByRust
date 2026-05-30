@@ -557,4 +557,4 @@ $HOME/.kakeibon/
 ---
 
 **作成者**: AI Assistant  
-**監修**: Yoshihiro NAKAHARA (bonojovi@zundou.org)
+**監修**: Yoshihiro NAKAHARA (bonojovi2741@gmail.com)

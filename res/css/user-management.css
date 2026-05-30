@@ -14,6 +14,8 @@ body {
     height: calc(100vh - 60px);
     overflow-y: auto;
     overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 .user-management-container {
@@ -22,6 +24,18 @@ body {
     padding: 20px;
     width: 100%;
     box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+#user-list-section {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
 }
 
 .user-management-container h1 {
@@ -65,11 +79,12 @@ body {
 }
 
 #user-list-container {
-    height: 24em;
+    flex: 1 1 auto;
     overflow-y: auto;
     overflow-x: auto;
     border: 2px solid #999;
     border-radius: 4px;
+    min-height: 0;
 }
 
 /* Wide scrollbar for better usability */
