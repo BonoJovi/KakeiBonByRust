@@ -2,6 +2,35 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v2.6.0] - 2026-05-30
+
+Feature release that integrates the product / manufacturer master into the transaction-entry flow (#65 Phase 1). The master management screens have shipped since the v1.x line, but no part of the transaction flow ever referenced them — this release wires the last gap of that work-in-progress feature, so users can normalize spelling drift in item names by linking each detail line to a master entry.
+
+### New features
+
+- **Product autocomplete in transaction details** (#65): the "Item name" input on the detail-entry modal now suggests products from the master with substring matching, shown as `product (manufacturer)`. Selecting a candidate keeps the `PRODUCT_ID` in form state; free-text entry still works exactly as before, and typing on top of a previous selection automatically demotes the row back to free-text
+- Edit mode restores the existing `PRODUCT_ID`, so detail rows that were previously linked open with the dropdown selection intact
+- Keyboard navigation (↑↓ Enter Esc) is built in from day one. We avoid `<datalist>` to sidestep the WebKitGTK + ibus IME interference risk, and instead use a `<div>`-based dropdown anchored absolutely under the input
+
+### Schema
+
+- Added `TRANSACTIONS_DETAIL.PRODUCT_ID INTEGER NULL`. The foreign key uses `REFERENCES PRODUCTS(PRODUCT_ID) ON DELETE SET NULL`, so deleting a master product demotes affected detail rows to free-text rather than dropping transaction history
+- Manufacturer is intentionally not duplicated onto `TRANSACTIONS_DETAIL`; it is dereferenced via `PRODUCT_ID` → `PRODUCTS.MANUFACTURER_ID`. Manufacturer-axis aggregation slices are out of scope for Phase 1 (planned for Phase 2)
+- Existing rows are preserved non-destructively (`PRODUCT_ID = NULL`); a new `ensure_product_id_column` migration applies an idempotent `ALTER TABLE` at startup to upgrade pre-v2.6.0 databases
+
+### Backend changes
+
+- New Tauri command `search_products_by_name(query)`: returns up to 20 enabled products whose `PRODUCT_NAME` substring-matches the query. Empty queries return an empty list so focusing the input does not dump the full master into the dropdown
+- Extended `TRANSACTION_DETAIL_GET_WITH_INFO` with `LEFT JOIN`s on `PRODUCTS` / `MANUFACTURERS`, returning `PRODUCT_ID` / `PRODUCT_NAME` / `MANUFACTURER_NAME` in a single round-trip
+- Added `product_id: Option<i64>` to `SaveTransactionDetailRequest` / `SaveRecurringRuleDetailRequest` (with `#[serde(default)]` so existing frontend calls continue to work unmodified)
+
+### Tests
+
+- Rust: 399 tests passing (8 added for master integration: search substring / cross-user isolation / disabled-exclusion / empty-query / manufacturer-name inclusion, CRUD `PRODUCT_ID` round-trip / free-text path / set-then-clear update, and migration idempotence)
+- JavaScript (Jest): 633 tests passing (10 added for the autocomplete state machine: selection→keystroke demotion / edit-mode restoration / stale-fetch guard)
+
+---
+
 ## [v2.5.0] - 2026-05-28
 
 Minor release focused on Windows window-display fixes. Addresses WebView2's behavior of auto-resizing the window to each page's intrinsic content size on navigation, which made the window drift left across screen transitions. Also fixes the oversized top margin (content floated to vertical center) seen on every screen, and the inert close (x) button on the font-size settings modal. The Linux build's appearance is unaffected.

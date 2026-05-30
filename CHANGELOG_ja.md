@@ -2,6 +2,35 @@
 
 このファイルには、プロジェクトのすべての重要な変更が記録されます。
 
+## [v2.6.0] - 2026-05-30
+
+商品・メーカーマスタを入出金フローへ統合した機能リリース (#65 Phase 1)。v1.x 系でマスタ管理画面までは完成していたものの、入出金本流から参照されていなかった「仕掛り機能」を完成させ、明細入力時にマスタ照合で表記揺れを吸収できるようになりました。
+
+### 新機能
+
+- **入出金明細の商品 autocomplete** (#65): 明細登録モーダルの「品目名」入力に商品マスタの部分一致サジェストを装着。`商品名 (メーカー名)` 形式で候補を表示し、選択すれば内部に `PRODUCT_ID` が保持される。任意の自由テキスト入力もこれまで通り可能で、選択後にタイプし直すと自動的に自由入力扱いに戻る
+- 編集モードで既存の `PRODUCT_ID` を復元するため、過去にマスタ紐付けした明細はそのままドロップダウン選択状態で開く
+- キーボード操作 (↑↓ Enter Esc) を最初から完備、`<datalist>` は WebKitGTK + ibus 環境での IME 干渉リスクを避けて `<div>` ベースの自前 dropdown で実装
+
+### スキーマ
+
+- `TRANSACTIONS_DETAIL.PRODUCT_ID INTEGER NULL` を追加。FK は `REFERENCES PRODUCTS(PRODUCT_ID) ON DELETE SET NULL` で、マスタ商品を削除しても明細履歴は残り自由テキストに戻る
+- メーカーは `TRANSACTIONS_DETAIL` に直接持たず、`PRODUCT_ID` → `PRODUCTS.MANUFACTURER_ID` 経由で参照する設計。Phase 1 ではメーカー軸の集計スライスは未対応 (Phase 2 で予定)
+- 既存データは非破壊で温存 (`PRODUCT_ID = NULL`)、起動時の `ensure_product_id_column` が冪等な ALTER で既存 DB を v2.6.0 スキーマへ昇格
+
+### バックエンド改修
+
+- 新規 Tauri command `search_products_by_name(query)`: autocomplete サーバ側として `PRODUCT_NAME` 部分一致を最大 20 件返す。空クエリは結果ゼロを返し、フォーカス時にマスタ全件を流し込まない安全設計
+- `TRANSACTION_DETAIL_GET_WITH_INFO` を `PRODUCTS` / `MANUFACTURERS` への LEFT JOIN で拡張、`PRODUCT_ID` / `PRODUCT_NAME` / `MANUFACTURER_NAME` を一発で取得
+- `SaveTransactionDetailRequest` / `SaveRecurringRuleDetailRequest` に `product_id: Option<i64>` を追加（`#[serde(default)]` で既存フロント呼び出しと互換）
+
+### テスト
+
+- Rust: 399 件全 PASS（マスタ統合 8 件追加: search の部分一致 / 他ユーザー除外 / 廃番除外 / 空クエリ / メーカー名同梱、CRUD の PRODUCT_ID round-trip / 自由テキストパス / set→clear 更新、migration の冪等性）
+- JavaScript (Jest): 633 件全 PASS（autocomplete state machine 10 件追加: 選択→打ち直しの demote / edit-mode 復元 / stale-fetch ガード）
+
+---
+
 ## [v2.5.0] - 2026-05-28
 
 Windows 配布版のウィンドウ表示まわりの不具合を集中的に修正するマイナーリリース。WebView2 がページ遷移ごとにウィンドウをそのページのコンテンツサイズへ自動リサイズする挙動に対処し、起動後にウィンドウが左へずれていく位置ドリフトを解消しました。あわせて、全画面で発生していたメインコンテンツの上部余白（中央寄せによる間延び）を上揃えに修正し、フォントサイズ設定モーダルの×ボタンが反応しない不具合も解消しています。Linux 版の表示には影響しません。
