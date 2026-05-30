@@ -126,11 +126,13 @@
                 <form id="detail-form">
                     <input type="hidden" id="detail-id" name="detail-id" />
                     <input type="hidden" id="category1-code" name="category1-code" />
-                    
+                    <input type="hidden" id="product-id" name="product-id" />
+
                     <div class="form-group">
                         <label for="item-name" data-i18n="detail_mgmt.item_name">Item Name:</label>
-                        <div class="input-wrapper">
-                            <input type="text" id="item-name" name="item-name" maxlength="200" required />
+                        <div class="input-wrapper product-autocomplete-wrapper">
+                            <input type="text" id="item-name" name="item-name" maxlength="200" autocomplete="off" required />
+                            <div id="product-autocomplete-dropdown" class="product-autocomplete-dropdown hidden" role="listbox"></div>
                         </div>
                     </div>
 

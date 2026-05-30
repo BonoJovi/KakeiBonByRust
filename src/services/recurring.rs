@@ -592,6 +592,8 @@ pub struct SaveRecurringRuleDetailRequest {
     pub tax_amount: i64,
     pub tax_rate: i32,
     pub amount_including_tax: Option<i64>,
+    #[serde(default)]
+    pub product_id: Option<i64>,
     pub detail_memo: Option<String>,
 }
 
@@ -826,6 +828,7 @@ impl RecurringService {
                 .bind(request.detail.tax_amount)
                 .bind(request.detail.tax_rate)
                 .bind(request.detail.amount_including_tax)
+                .bind(request.detail.product_id)
                 .bind(detail_memo_id)
                 .execute(&mut *tx)
                 .await?;
@@ -1710,6 +1713,7 @@ mod tests {
                 tax_amount: 0,
                 tax_rate: 0,
                 amount_including_tax: Some(100),
+                product_id: None,
                 detail_memo: None,
             },
         }

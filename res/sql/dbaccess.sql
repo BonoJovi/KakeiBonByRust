@@ -761,6 +761,10 @@ CREATE TABLE IF NOT EXISTS TRANSACTIONS_HEADER (
 );
 
 -- SQL_30000003: Create TRANSACTIONS_DETAIL table
+-- PRODUCT_ID links a detail line to the PRODUCTS master so that "セブン" /
+-- "7-11" style free-text spelling drift can be normalized at aggregation time.
+-- ON DELETE SET NULL: erasing a master row demotes affected details back to
+-- pure free-text rather than dropping the transaction history.
 CREATE TABLE IF NOT EXISTS TRANSACTIONS_DETAIL (
     DETAIL_ID INTEGER PRIMARY KEY AUTOINCREMENT,
     TRANSACTION_ID INTEGER NOT NULL,
@@ -770,10 +774,12 @@ CREATE TABLE IF NOT EXISTS TRANSACTIONS_DETAIL (
     AMOUNT INTEGER NOT NULL,
     TAX_AMOUNT INTEGER DEFAULT 0,
     TAX_RATE INTEGER DEFAULT 8,
+    PRODUCT_ID INTEGER,
     MEMO_ID INTEGER,
     ENTRY_DT DATETIME NOT NULL DEFAULT (datetime('now')),
     UPDATE_DT DATETIME,
     FOREIGN KEY (TRANSACTION_ID) REFERENCES TRANSACTIONS_HEADER(TRANSACTION_ID) ON DELETE CASCADE,
+    FOREIGN KEY (PRODUCT_ID) REFERENCES PRODUCTS(PRODUCT_ID) ON DELETE SET NULL,
     FOREIGN KEY (MEMO_ID) REFERENCES MEMOS(MEMO_ID),
     CHECK (ITEM_NAME != '')
 );
@@ -796,6 +802,7 @@ CREATE INDEX IF NOT EXISTS idx_transactions_header_date ON TRANSACTIONS_HEADER(T
 -- Create indexes for transactions_detail
 CREATE INDEX IF NOT EXISTS idx_transactions_detail_transaction ON TRANSACTIONS_DETAIL(TRANSACTION_ID);
 CREATE INDEX IF NOT EXISTS idx_transactions_detail_categories ON TRANSACTIONS_DETAIL(CATEGORY2_CODE, CATEGORY3_CODE);
+CREATE INDEX IF NOT EXISTS idx_transactions_detail_product ON TRANSACTIONS_DETAIL(PRODUCT_ID);
 
 -- ============================================================================
 -- v2.1.0: Recurring Scheduled Transactions
@@ -1362,7 +1369,9 @@ VALUES
 (2359, 'validation.invalid_month_period_holiday_shift', 'en', 'Month period holiday shift must be 0, 1, or 2', 'validation', 'Invalid month period holiday shift', datetime('now')),
 (2360, 'validation.invalid_month_period_holiday_shift', 'ja', '月次起算日のシフト設定は 0 / 1 / 2 のいずれかである必要があります', 'validation', '月次起算日シフト範囲エラー', datetime('now')),
 (2361, 'login.welcome', 'en', 'Welcome, {name}!', 'login', 'Login welcome message with user name placeholder', datetime('now')),
-(2362, 'login.welcome', 'ja', 'ようこそ、{name}さん！', 'login', 'ログイン後のウェルカムメッセージ（{name}補間）', datetime('now'));
+(2362, 'login.welcome', 'ja', 'ようこそ、{name}さん！', 'login', 'ログイン後のウェルカムメッセージ（{name}補間）', datetime('now')),
+(2363, 'detail_mgmt.autocomplete_no_match', 'en', 'No matching product in master', 'detail_mgmt', 'Autocomplete empty-result hint when no PRODUCTS row matches the typed query', datetime('now')),
+(2364, 'detail_mgmt.autocomplete_no_match', 'ja', 'マスタに一致する商品がありません', 'detail_mgmt', '商品マスタに一致候補が無い場合の autocomplete 表示', datetime('now'));
 
 -- Translation resources for language
 -- Auto-generated from database

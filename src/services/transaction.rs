@@ -77,6 +77,8 @@ pub struct TransactionDetail {
     pub tax_rate: i32,
     #[sqlx(rename = "AMOUNT_INCLUDING_TAX")]
     pub amount_including_tax: Option<i64>,
+    #[sqlx(rename = "PRODUCT_ID")]
+    pub product_id: Option<i64>,
     #[sqlx(rename = "MEMO_ID")]
     pub memo_id: Option<i64>,
     #[sqlx(rename = "ENTRY_DT")]
@@ -97,6 +99,8 @@ pub struct SaveTransactionDetailRequest {
     pub tax_rate: i32,
     pub tax_amount: i64,
     pub amount_including_tax: Option<i64>,
+    #[serde(default)]
+    pub product_id: Option<i64>,
     pub memo: Option<String>,
 }
 
@@ -117,6 +121,9 @@ pub struct TransactionDetailWithInfo {
     pub tax_amount: i64,
     pub tax_rate: i32,
     pub amount_including_tax: Option<i64>,
+    pub product_id: Option<i64>,
+    pub product_name: Option<String>,
+    pub manufacturer_name: Option<String>,
     pub memo_id: Option<i64>,
     pub memo_text: Option<String>,
     pub entry_dt: String,
@@ -1154,6 +1161,9 @@ impl TransactionService {
                 tax_amount: row.get("TAX_AMOUNT"),
                 tax_rate: row.get("TAX_RATE"),
                 amount_including_tax: row.get("AMOUNT_INCLUDING_TAX"),
+                product_id: row.get("PRODUCT_ID"),
+                product_name: row.get("PRODUCT_NAME"),
+                manufacturer_name: row.get("MANUFACTURER_NAME"),
                 memo_id: row.get("MEMO_ID"),
                 memo_text: row.get("MEMO_TEXT"),
                 entry_dt: row.get("ENTRY_DT"),
@@ -1238,6 +1248,7 @@ impl TransactionService {
             .bind(request.tax_amount)
             .bind(request.tax_rate)
             .bind(request.amount_including_tax)
+            .bind(request.product_id)
             .bind(memo_id)
             .execute(&self.pool)
             .await?;
@@ -1347,6 +1358,7 @@ impl TransactionService {
             .bind(request.tax_amount)
             .bind(request.tax_rate)
             .bind(request.amount_including_tax)
+            .bind(request.product_id)
             .bind(memo_id)
             .bind(detail_id)
             .bind(user_id)
@@ -1913,6 +1925,19 @@ mod tests {
             .await
             .unwrap();
 
+        // Create MANUFACTURERS and PRODUCTS tables (v2.6.0: needed for the
+        // LEFT JOIN in TRANSACTION_DETAIL_GET_WITH_INFO; tests don't populate
+        // master rows by default, so the JOIN just yields NULLs for the
+        // free-text path that most tests exercise).
+        sqlx::query(sql_queries::TEST_MANUFACTURER_CREATE_TABLE)
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query(sql_queries::TEST_PRODUCT_CREATE_TABLE)
+            .execute(&pool)
+            .await
+            .unwrap();
+
         // Create TRANSACTIONS_DETAIL table
         sqlx::query(sql_queries::TEST_TRANSACTION_CREATE_DETAIL_TABLE)
             .execute(&pool)
@@ -1951,6 +1976,7 @@ mod tests {
             tax_rate: 8,
             tax_amount: 40,
             amount_including_tax: Some(540),
+            product_id: None,
             memo: None,
         }
     }
@@ -2130,6 +2156,7 @@ mod tests {
             tax_rate: 8,
             tax_amount: 16,
             amount_including_tax: Some(216),
+            product_id: None,
             memo: Some("Test memo".to_string()),
         };
         let detail_id = service.add_transaction_detail(2, transaction_id, request).await.unwrap();
@@ -2162,6 +2189,7 @@ mod tests {
             tax_rate: 0,
             tax_amount: 0,
             amount_including_tax: None,
+            product_id: None,
             memo: None,
         };
         let detail_id = service.add_transaction_detail(2, transaction_id, request).await.unwrap();
@@ -2219,6 +2247,7 @@ mod tests {
             tax_rate: 10,
             tax_amount: 60,
             amount_including_tax: Some(660),
+            product_id: None,
             memo: Some("Updated memo".to_string()),
         };
         let result = service.update_transaction_detail(2, detail_id, update_request).await;
@@ -2511,6 +2540,7 @@ mod tests {
             tax_rate: 0,
             tax_amount: 0,
             amount_including_tax: None,
+            product_id: None,
             memo: None,
         };
         let detail_id = service.add_transaction_detail(2, transaction_id, request).await.unwrap();
@@ -2541,6 +2571,7 @@ mod tests {
             tax_rate: 10,
             tax_amount: 80,
             amount_including_tax: Some(880),
+            product_id: None,
             memo: None,
         };
         let detail_id = service.add_transaction_detail(2, transaction_id, request).await.unwrap();
@@ -3171,6 +3202,7 @@ mod tests {
                     tax_rate: 8,
                     tax_amount: 16,
                     amount_including_tax: Some(216),
+                    product_id: None,
                     memo: None,
                 },
             )
@@ -3350,6 +3382,96 @@ mod tests {
             }
             other => panic!("expected ValidationError, got {:?}", other),
         }
+    }
+
+    // v2.6.0 master integration: product_id round-trip on TRANSACTIONS_DETAIL
+
+    /// Helper: seed a manufacturer + product into the test pool and return
+    /// (manufacturer_id, product_id). Reused by the master-integration tests.
+    async fn seed_master_pair(pool: &sqlx::SqlitePool) -> (i64, i64) {
+        let manuf_result = sqlx::query(sql_queries::MANUFACTURER_INSERT)
+            .bind(2_i64)
+            .bind("ニッスイ")
+            .bind::<Option<&str>>(None)
+            .bind(1_i64)
+            .bind(0_i64)
+            .execute(pool)
+            .await
+            .unwrap();
+        let manufacturer_id = manuf_result.last_insert_rowid();
+
+        let prod_result = sqlx::query(sql_queries::PRODUCT_INSERT)
+            .bind(2_i64)
+            .bind("サバ缶")
+            .bind(Some(manufacturer_id))
+            .bind::<Option<&str>>(None)
+            .bind(1_i64)
+            .bind(0_i64)
+            .execute(pool)
+            .await
+            .unwrap();
+        (manufacturer_id, prod_result.last_insert_rowid())
+    }
+
+    #[tokio::test]
+    async fn test_add_detail_with_product_id_round_trips() {
+        let pool = setup_test_db().await;
+        let (_, product_id) = seed_master_pair(&pool).await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        let mut request = basic_detail_request();
+        request.product_id = Some(product_id);
+        let detail_id = service.add_transaction_detail(2, transaction_id, request).await.unwrap();
+
+        let details = service.get_transaction_details(2, transaction_id).await.unwrap();
+        assert_eq!(details.len(), 1);
+        assert_eq!(details[0].detail_id, detail_id);
+        assert_eq!(details[0].product_id, Some(product_id));
+        assert_eq!(details[0].product_name.as_deref(), Some("サバ缶"));
+        assert_eq!(details[0].manufacturer_name.as_deref(), Some("ニッスイ"));
+    }
+
+    #[tokio::test]
+    async fn test_add_detail_without_product_id_yields_free_text_row() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        // Default basic_detail_request has product_id: None
+        let request = basic_detail_request();
+        service.add_transaction_detail(2, transaction_id, request).await.unwrap();
+
+        let details = service.get_transaction_details(2, transaction_id).await.unwrap();
+        assert_eq!(details.len(), 1);
+        assert_eq!(details[0].product_id, None);
+        assert_eq!(details[0].product_name, None);
+        assert_eq!(details[0].manufacturer_name, None);
+    }
+
+    #[tokio::test]
+    async fn test_update_detail_can_set_then_clear_product_id() {
+        let pool = setup_test_db().await;
+        let (_, product_id) = seed_master_pair(&pool).await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        // Start as free text
+        let detail_id = service.add_transaction_detail(2, transaction_id, basic_detail_request()).await.unwrap();
+
+        // Promote to product-linked
+        let mut linked = basic_detail_request();
+        linked.product_id = Some(product_id);
+        service.update_transaction_detail(2, detail_id, linked).await.unwrap();
+        let after_link = service.get_transaction_details(2, transaction_id).await.unwrap();
+        assert_eq!(after_link[0].product_id, Some(product_id));
+
+        // Demote back to free text (user typed over the master link)
+        let mut unlinked = basic_detail_request();
+        unlinked.product_id = None;
+        service.update_transaction_detail(2, detail_id, unlinked).await.unwrap();
+        let after_unlink = service.get_transaction_details(2, transaction_id).await.unwrap();
+        assert_eq!(after_unlink[0].product_id, None);
     }
 }
 

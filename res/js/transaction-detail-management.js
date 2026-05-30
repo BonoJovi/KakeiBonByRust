@@ -19,6 +19,21 @@ let category1Code = null; // Store CATEGORY1_CODE from transaction header
 let taxRoundingType = 0; // Store TAX_ROUNDING_TYPE from transaction header (0: floor, 1: half-up, 2: ceil)
 let currentHeaderTotal = 0; // Cached TOTAL_AMOUNT from the loaded header; used to detect drift after a detail edit
 
+// Product autocomplete state (v2.6.0 master integration).
+// PRODUCT_ID is held off-DOM so a user can type a custom item name on top of
+// a previous selection without us accidentally still sending the stale id.
+// Any keystroke after a selection clears it; only a fresh pick re-sets it.
+const autocompleteState = {
+    selectedProductId: null,
+    candidates: [],
+    activeIndex: -1,
+    debounceTimer: null,
+    // Token guards against an older fetch's results overwriting a newer one
+    // when the user types fast. Each new fetch bumps the token; the response
+    // only renders if its token still matches.
+    requestToken: 0,
+};
+
 document.addEventListener('DOMContentLoaded', async function() {
     
     // Create menu bar
@@ -295,6 +310,9 @@ function setupEventListeners() {
     memoInput?.addEventListener('input', () => clearValidationError(memoInput));
     if (itemNameInput) attachCharCounter(itemNameInput, MAX_ITEM_NAME_LEN);
     if (memoInput) attachCharCounter(memoInput, MAX_MEMO_LEN);
+
+    // Product autocomplete (v2.6.0)
+    installProductAutocomplete();
     
     // Category2 change listener
     const category2Select = document.getElementById('category2-code');
@@ -544,6 +562,174 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+// ============================================================================
+// Product autocomplete (v2.6.0 master integration)
+// ============================================================================
+
+const AUTOCOMPLETE_DEBOUNCE_MS = 180;
+
+function installProductAutocomplete() {
+    const input = document.getElementById('item-name');
+    const dropdown = document.getElementById('product-autocomplete-dropdown');
+    if (!input || !dropdown) return;
+
+    input.addEventListener('input', handleAutocompleteInput);
+    input.addEventListener('keydown', handleAutocompleteKeydown);
+    input.addEventListener('blur', handleAutocompleteBlur);
+    // mousedown (not click) so the input's blur doesn't fire first and hide
+    // the dropdown before we can read which item was clicked.
+    dropdown.addEventListener('mousedown', handleAutocompleteMousedown);
+}
+
+function handleAutocompleteInput(event) {
+    // Any keystroke after a selection means the user is overwriting the
+    // master link; demote back to free-text until they pick again.
+    autocompleteState.selectedProductId = setHiddenProductId(null);
+
+    const query = event.target.value.trim();
+    if (!query) {
+        hideAutocomplete();
+        return;
+    }
+
+    clearTimeout(autocompleteState.debounceTimer);
+    autocompleteState.debounceTimer = setTimeout(() => fetchAndRenderCandidates(query), AUTOCOMPLETE_DEBOUNCE_MS);
+}
+
+async function fetchAndRenderCandidates(query) {
+    const token = ++autocompleteState.requestToken;
+    try {
+        const results = await invoke('search_products_by_name', { query });
+        if (token !== autocompleteState.requestToken) return; // stale
+        renderAutocomplete(results || []);
+    } catch (err) {
+        console.error('search_products_by_name failed:', err);
+        if (token === autocompleteState.requestToken) hideAutocomplete();
+    }
+}
+
+function renderAutocomplete(candidates) {
+    const dropdown = document.getElementById('product-autocomplete-dropdown');
+    if (!dropdown) return;
+
+    autocompleteState.candidates = candidates;
+    autocompleteState.activeIndex = -1;
+
+    if (candidates.length === 0) {
+        dropdown.innerHTML = `<div class="product-autocomplete-empty">${escapeHtml(i18n.t('detail_mgmt.autocomplete_no_match'))}</div>`;
+        dropdown.classList.remove('hidden');
+        return;
+    }
+
+    dropdown.innerHTML = candidates.map((c, idx) => {
+        const manuf = c.manufacturer_name
+            ? `<span class="product-autocomplete-item__manufacturer">(${escapeHtml(c.manufacturer_name)})</span>`
+            : '';
+        return `<div class="product-autocomplete-item" data-idx="${idx}" role="option">
+            <span class="product-autocomplete-item__name">${escapeHtml(c.product_name)}</span>${manuf}
+        </div>`;
+    }).join('');
+    dropdown.classList.remove('hidden');
+}
+
+function handleAutocompleteKeydown(event) {
+    const dropdown = document.getElementById('product-autocomplete-dropdown');
+    if (!dropdown || dropdown.classList.contains('hidden')) return;
+    if (autocompleteState.candidates.length === 0) return;
+
+    switch (event.key) {
+        case 'ArrowDown':
+            event.preventDefault();
+            moveActive(1);
+            break;
+        case 'ArrowUp':
+            event.preventDefault();
+            moveActive(-1);
+            break;
+        case 'Enter':
+            if (autocompleteState.activeIndex >= 0) {
+                event.preventDefault();
+                selectCandidate(autocompleteState.activeIndex);
+            }
+            break;
+        case 'Escape':
+            event.preventDefault();
+            hideAutocomplete();
+            break;
+    }
+}
+
+function moveActive(delta) {
+    const n = autocompleteState.candidates.length;
+    if (n === 0) return;
+    let next = autocompleteState.activeIndex + delta;
+    if (next < 0) next = n - 1;
+    if (next >= n) next = 0;
+    autocompleteState.activeIndex = next;
+
+    const dropdown = document.getElementById('product-autocomplete-dropdown');
+    if (!dropdown) return;
+    dropdown.querySelectorAll('.product-autocomplete-item').forEach((el, idx) => {
+        el.classList.toggle('product-autocomplete-item--active', idx === next);
+        if (idx === next) el.scrollIntoView({ block: 'nearest' });
+    });
+}
+
+function handleAutocompleteMousedown(event) {
+    const target = event.target.closest('.product-autocomplete-item');
+    if (!target) return;
+    event.preventDefault(); // keep input focus
+    const idx = parseInt(target.dataset.idx, 10);
+    if (!Number.isNaN(idx)) selectCandidate(idx);
+}
+
+function selectCandidate(index) {
+    const candidate = autocompleteState.candidates[index];
+    if (!candidate) return;
+
+    const input = document.getElementById('item-name');
+    if (input) {
+        input.value = candidate.product_name;
+        clearValidationError(input);
+        // Notify char counter / validators of the programmatic change
+        input.dispatchEvent(new Event('input', { bubbles: false }));
+    }
+    autocompleteState.selectedProductId = setHiddenProductId(candidate.product_id);
+    hideAutocomplete();
+}
+
+function handleAutocompleteBlur() {
+    // Defer hide so a mousedown on a dropdown item still fires before we
+    // tear the dropdown down. mousedown handler also preventDefaults blur.
+    setTimeout(hideAutocomplete, 120);
+}
+
+function hideAutocomplete() {
+    const dropdown = document.getElementById('product-autocomplete-dropdown');
+    if (dropdown) {
+        dropdown.classList.add('hidden');
+        dropdown.innerHTML = '';
+    }
+    autocompleteState.candidates = [];
+    autocompleteState.activeIndex = -1;
+}
+
+function resetAutocompleteState() {
+    clearTimeout(autocompleteState.debounceTimer);
+    autocompleteState.debounceTimer = null;
+    autocompleteState.requestToken++;
+    autocompleteState.selectedProductId = setHiddenProductId(null);
+    hideAutocomplete();
+}
+
+// Mirror the PRODUCT_ID into the hidden input. Returns the value so callers
+// can also keep the module variable in sync in a single expression.
+function setHiddenProductId(value) {
+    const hidden = document.getElementById('product-id');
+    if (hidden) hidden.value = value == null ? '' : String(value);
+    return value;
+}
+
 async function openDetailModal(detail = null) {
     const modal = document.getElementById('detail-modal');
     const modalTitle = document.getElementById('modal-title');
@@ -554,21 +740,26 @@ async function openDetailModal(detail = null) {
     // Reset form
     detailForm.reset();
     document.getElementById('detail-id').value = '';
-    
+    resetAutocompleteState();
+
     // Set CATEGORY1_CODE from header (always needed for both add and edit)
     document.getElementById('category1-code').value = category1Code || '';
-    
+
     // Load category dropdowns
     await loadCategoryDropdowns();
-    
+
     if (detail) {
         // Edit mode
         modalTitle.setAttribute('data-i18n', 'detail_mgmt.edit_detail');
         modalTitle.textContent = i18n.t('detail_mgmt.edit_detail');
-        
+
         // Populate form with detail data
         document.getElementById('detail-id').value = detail.detail_id;
         document.getElementById('item-name').value = detail.item_name;
+        // Restore PRODUCT_ID link if this row was tied to a master entry
+        if (detail.product_id != null) {
+            autocompleteState.selectedProductId = setHiddenProductId(detail.product_id);
+        }
         
         // Set category values after dropdowns are loaded
         document.getElementById('category2-code').value = detail.category2_code;
@@ -663,6 +854,7 @@ async function handleDetailFormSubmit(event) {
     }
     
     try {
+        const productId = autocompleteState.selectedProductId;
         if (detailId) {
             // Update existing detail
             await invoke('update_transaction_detail', {
@@ -675,6 +867,7 @@ async function handleDetailFormSubmit(event) {
                 amountIncludingTax: amountIncludingTax,
                 taxRate: taxRate,
                 taxAmount: taxAmount,
+                productId: productId,
                 memo: memo || null
             });
         } else {
@@ -689,6 +882,7 @@ async function handleDetailFormSubmit(event) {
                 amountIncludingTax: amountIncludingTax,
                 taxRate: taxRate,
                 taxAmount: taxAmount,
+                productId: productId,
                 memo: memo || null
             });
         }
