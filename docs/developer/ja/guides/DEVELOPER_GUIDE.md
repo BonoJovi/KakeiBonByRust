@@ -1,736 +1,241 @@
-# 開発者ガイド (Developer Guide)
+# 開発者ガイド
 
-## 目次
-1. [プロジェクト概要](#プロジェクト概要)
-2. [開発環境のセットアップ](#開発環境のセットアップ)
-3. [プロジェクト構成](#プロジェクト構成)
-4. [アーキテクチャ](#アーキテクチャ)
-5. [コーディング規約](#コーディング規約)
-6. [定数管理のベストプラクティス](#定数管理のベストプラクティス)
-7. [データベース接続パターン](#データベース接続パターン)
-8. [テストとプロダクションの分離](#テストとプロダクションの分離)
-9. [ビルドとテスト](#ビルドとテスト)
-10. [デバッグ方法](#デバッグ方法)
-11. [トラブルシューティング](#トラブルシューティング)
+KakeiBonByRust の開発に参加する開発者向けの概観・横串解説ドキュメントです。
+個別領域の詳細は専門ガイドへ誘導しています。
+
+**対象**: バックエンド (Rust) / フロントエンド (Vanilla JS) / DB (SQLite) いずれの貢献者
+**最終更新**: 2026-05-30 (v2.5.0 時点)
 
 ---
 
-## プロジェクト概要
+## 1. プロジェクト概要
 
-**KakeiBon** は、Rust + Tauri v2 + SQLiteで構築された家計簿アプリケーションです。
+KakeiBonByRust は、Tauri v2 で構築された家計簿（household budget）デスクトップアプリです。
 
-### 技術スタック
-- **フロントエンド**: Vanilla JavaScript (ES6 Modules), HTML5, CSS3
-- **バックエンド**: Rust 1.77.2+, Tauri v2.8.5
-- **データベース**: SQLite 3
-- **主要ライブラリ**:
-  - `rusqlite`: SQLiteデータベース操作
-  - `serde/serde_json`: JSONシリアライゼーション
-  - `argon2`: パスワードハッシュ化
-  - `aes-gcm`: データ暗号化
-  - `chrono`: 日時処理
-
-### 主要機能
-- ユーザー管理（管理者・一般ユーザー）
-- 多言語対応（日本語・英語）
-- カスタマイズ可能なフォントサイズ
-- 階層的な費目管理（大分類・中分類・小分類）
-- セキュアなパスワード管理
+- **アーキテクチャ**: Tauri v2（Rust バックエンド + Vanilla JS フロントエンド + SQLite）
+- **対応言語**: 日本語 / 英語（i18n）
+- **対応プラットフォーム**: Linux（検証済み）/ Windows（v2.4.1 以降配布対応）/ macOS（未検証）
+- **ライセンス**: ISC（package.json）
+- **対象用途**: 家計用途専用（会計処理は対象外）
 
 ---
 
-## 開発環境のセットアップ
+## 2. 技術スタック
 
-### 必要なツール
-```bash
-# Rustのインストール
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+実態は `Cargo.toml` / `package.json` を正としますが、v2.5.0 時点の主要要素は以下:
 
-# Node.js (Tauriのフロントエンド依存関係用)
-# 推奨: v18以上
+### 2.1 Rust 依存（`Cargo.toml`）
 
-# Tauri CLIのインストール
-cargo install tauri-cli
+| カテゴリ | クレート | バージョン |
+|---|---|---|
+| フレームワーク | `tauri` | 2.11.1 |
+| ビルド | `tauri-build` | 2.5.2 |
+| ロギング | `tauri-plugin-log` | 2.7.1 |
+| ランタイム | `tokio` | 1.x (full features) |
+| シリアライズ | `serde`, `serde_json` | 1.x |
+| DB（テスト用） | `sqlx` | 0.8.6 (`runtime-tokio`, `sqlite`) |
+| 日時 | `chrono` | 0.4 (serde) |
+| 暗号 | `argon2`, `aes-gcm`, `base64`, `rand` | — |
+| ロケール補助 | `glib` | 0.20 |
+| 祝日 | `jpholiday` | 0.1.4 |
 
-# SQLite3 (デバッグ用)
-sudo apt install sqlite3  # Ubuntu/Debian
-brew install sqlite3      # macOS
-```
+> **注意**: 本番 DB アクセスは `rusqlite` ベースの自作レイヤ（`src/db.rs` + `src/sql_queries.rs`）を使用。`sqlx` は `src/test_helpers.rs` のテストインフラ専用です。
 
-### プロジェクトのクローンとセットアップ
-```bash
-git clone <repository-url>
-cd KakeiBonByRust
+- Rust edition: 2021
+- 最低 Rust バージョン: 1.77.2
 
-# 依存関係のインストール
-cargo build
+### 2.2 フロントエンド
 
-# 開発モードで実行
-cargo tauri dev
-```
+- **形態**: Vanilla JS + HTML + CSS（フレームワークなし）
+- **モジュール形式**: ES Modules（**`.js` 拡張子をインポート時に明記**）
+- **テスト**: Jest（`res/tests/` 以下）
+- **node/npm 管理**: nvm（非対話 zsh では PATH に npm が無いことに注意）
+
+### 2.3 データベース
+
+- **エンジン**: SQLite 3
+- **ファイル**: `~/.kakeibon/KakeiBonDB.sqlite3`
+- **スキーマ管理**: `res/sql/` 配下の SQL ファイル
+- **アクセス規約**: すべてのクエリを `src/sql_queries.rs` に集約、prepared statements 必須
 
 ---
 
-## プロジェクト構成
+## 3. プロジェクト構造
 
 ```
 KakeiBonByRust/
-├── src/                    # フロントエンドソース
-│   ├── index.html          # メインHTML
-│   ├── js/                 # JavaScriptモジュール
-│   │   ├── main.js
-│   │   ├── i18n.js        # 多言語対応
-│   │   ├── user_mgmt.js   # ユーザー管理
-│   │   └── category.js    # 費目管理
-│   └── css/               # スタイルシート
+├── src/                          # Rust バックエンド
+│   ├── main.rs / lib.rs          # エントリポイント
+│   ├── db.rs                     # DB 接続レイヤ
+│   ├── sql_queries.rs            # SQL クエリ集約
+│   ├── consts.rs                 # ROLE_ADMIN/USER, MIN_PASSWORD_LENGTH など
+│   ├── crypto.rs                 # AES-256-GCM 暗号化
+│   ├── security.rs               # argon2 ハッシュ、認証
+│   ├── settings.rs               # ユーザー設定 (起算日, HolidayShift など)
+│   ├── validation.rs             # 統一バリデーション
+│   ├── test_helpers.rs           # テスト用 sqlx ヘルパ
+│   └── services/                 # ドメインロジック (15 module)
+│       ├── account.rs            # 口座管理
+│       ├── aggregation.rs        # 集計
+│       ├── auth.rs               # 認証
+│       ├── category.rs           # 費目管理
+│       ├── encryption.rs         # 暗号化サービス
+│       ├── holiday.rs            # 祝日 (jpholiday)
+│       ├── i18n.rs               # 多言語リソース
+│       ├── manufacturer.rs       # メーカー
+│       ├── period.rs             # 期間計算 (起算日含む)
+│       ├── product.rs            # 商品
+│       ├── recurring.rs          # 繰り返し予定入出金 (RULE_ID 中心設計)
+│       ├── session.rs            # セッション
+│       ├── shop.rs               # 店舗
+│       ├── transaction.rs        # 入出金
+│       └── user_management.rs    # ユーザー管理
 │
-├── src-tauri/             # バックエンドソース (Rust)
-│   ├── src/
-│   │   ├── main.rs        # アプリケーションエントリポイント
-│   │   ├── lib.rs         # Tauriコマンド登録
-│   │   ├── consts.rs      # 定数定義
-│   │   ├── commands/      # Tauriコマンド実装
-│   │   │   ├── mod.rs
-│   │   │   ├── i18n.rs
-│   │   │   ├── category.rs
-│   │   │   └── settings.rs
-│   │   ├── db/            # データベースアクセス層
-│   │   │   ├── mod.rs
-│   │   │   ├── i18n.rs
-│   │   │   └── category.rs
-│   │   └── models/        # データモデル
-│   │       ├── mod.rs
-│   │       └── category.rs
-│   ├── Cargo.toml         # Rust依存関係
-│   └── tauri.conf.json    # Tauri設定
+├── res/                          # フロントエンドリソース
+│   ├── js/                       # ES Modules (~34 ファイル)
+│   ├── css/                      # スタイルシート
+│   ├── sql/                      # 初期 SQL / シード
+│   └── tests/                    # Jest テストスイート
 │
-├── res/                   # リソースファイル
-│   └── sql/
-│       └── dbaccess.sql   # データベース初期化SQL
-│
-├── docs/                  # ドキュメント
-│   ├── ja/               # 日本語ドキュメント
-│   └── en/               # 英語ドキュメント
-│
-└── TODO.md               # タスク管理
+├── docs/                         # ドキュメント (詳細は INDEX_ja.md)
+├── scripts/                      # リリース・統計・i18n チェックスクリプト
+├── src-tauri ファイル群           # tauri.conf.json など
+├── CHANGELOG_ja.md / CHANGELOG_en.md  # リリースノート
+└── Cargo.toml / package.json     # 依存定義
 ```
 
 ---
 
-## アーキテクチャ
+## 4. 開発環境セットアップ
 
-### レイヤー構成
+詳細手順は専門ドキュメントへ:
+- [開発環境セットアップ](../setup/DEVELOPMENT_SETUP.md)
 
-```
-┌─────────────────────────────────────┐
-│      Frontend (JavaScript)          │
-│  - UI レンダリング                   │
-│  - ユーザーインタラクション           │
-│  - Tauri API 呼び出し                │
-└──────────────┬──────────────────────┘
-               │ invoke()
-               ▼
-┌─────────────────────────────────────┐
-│    Tauri Commands (lib.rs)          │
-│  - commands::i18n::*                │
-│  - commands::category::*            │
-│  - commands::settings::*            │
-└──────────────┬──────────────────────┘
-               │
-               ▼
-┌─────────────────────────────────────┐
-│    Database Access Layer (db/)      │
-│  - db::i18n::get_all_translations() │
-│  - db::category::*                  │
-└──────────────┬──────────────────────┘
-               │
-               ▼
-┌─────────────────────────────────────┐
-│       SQLite Database               │
-│  $HOME/.kakeibon/KakeiBonDB.sqlite3 │
-└─────────────────────────────────────┘
-```
-
-### データフロー例：言語変更
-
-```
-1. ユーザーが言語メニューをクリック (Frontend)
-   ↓
-2. invoke('set_language', {language: 'en'}) (Frontend)
-   ↓
-3. commands::i18n::set_language() (Tauri Command)
-   ↓
-4. KakeiBon.jsonに設定を保存 (Backend)
-   ↓
-5. Success メッセージを返す (Backend → Frontend)
-   ↓
-6. invoke('get_translations', {language: 'en'}) (Frontend)
-   ↓
-7. db::i18n::get_all_translations() (Database Access)
-   ↓
-8. HashMap<String, String> を返す (Backend → Frontend)
-   ↓
-9. UIを更新 (Frontend)
-```
+要点だけ:
+- Linux 上では `apt`/`pacman` 等で WebKitGTK と関連パッケージが必要
+- node は **nvm 管理**を推奨（非対話シェル PATH に注意）
+- Rust は `rustup` で edition 2021 + 1.77.2 以上
 
 ---
 
-## コーディング規約
-
-### Rust コーディング規約
-
-#### 命名規則
-```rust
-// 定数: UPPER_SNAKE_CASE
-pub const DB_FILE_NAME: &str = "KakeiBonDB.sqlite3";
-
-// 関数: snake_case
-pub fn get_translations(language: String) -> Result<HashMap<String, String>, String> {
-    // ...
-}
-
-// 構造体: PascalCase
-pub struct Category1 {
-    pub user_id: i64,
-    pub category1_code: String,
-    // ...
-}
-
-// 変数: snake_case
-let db_path = get_db_path();
-```
-
-#### エラーハンドリング
-```rust
-// Result型を使用
-pub fn get_connection() -> Result<Connection, rusqlite::Error> {
-    Connection::open(get_db_path())
-}
-
-// map_errでエラーを文字列に変換
-#[tauri::command]
-pub fn get_translations(language: String) -> Result<HashMap<String, String>, String> {
-    get_all_translations(&language)
-        .map_err(|e| format!("Failed to get translations: {}", e))
-}
-```
-
-#### ドキュメントコメント
-```rust
-/// ユーザーIDに紐づく大分類一覧を取得
-///
-/// # 引数
-/// * `user_id` - ユーザーID
-///
-/// # 戻り値
-/// カテゴリ1のリストまたはエラー
-pub fn get_category1_list(user_id: i64) -> Result<Vec<Category1>, rusqlite::Error> {
-    // 実装
-}
-```
-
-### JavaScript コーディング規約
-
-#### モジュール構成
-```javascript
-// ES6 Modules を使用
-import { invoke } from '@tauri-apps/api/core';
-
-// 名前空間でグローバル汚染を防ぐ
-const CategoryManager = {
-    init() { /* ... */ },
-    loadCategories() { /* ... */ }
-};
-
-export default CategoryManager;
-```
-
-#### 非同期処理
-```javascript
-// async/await を使用
-async function loadTranslations(language) {
-    try {
-        const translations = await invoke('get_translations', { language });
-        return translations;
-    } catch (error) {
-        console.error('Failed to load translations:', error);
-        throw error;
-    }
-}
-```
-
-#### 命名規則
-```javascript
-// クラス: PascalCase
-class I18n { }
-
-// 関数: camelCase
-function loadCategories() { }
-
-// 定数: UPPER_SNAKE_CASE
-const DEFAULT_LANGUAGE = 'ja';
-```
-
----
-
-## 定数管理のベストプラクティス
-
-### 定数の一元管理 (`src-tauri/src/consts.rs`)
-
-プロジェクト全体で使用する定数は `consts.rs` で一元管理します。
-
-```rust
-// src-tauri/src/consts.rs
-
-// ユーザーロール定数
-pub const ROLE_ADMIN: i64 = 0;
-pub const ROLE_USER: i64 = 1;
-pub const ROLE_VISIT: i64 = 999;
-
-// データベース定数
-pub const DB_DIR_NAME: &str = ".kakeibon";
-pub const DB_FILE_NAME: &str = "KakeiBonDB.sqlite3";
-pub const SQL_INIT_FILE_PATH: &str = "res/sql/dbaccess.sql";
-
-// 言語定数
-pub const LANG_ENGLISH: &str = "en";
-pub const LANG_JAPANESE: &str = "ja";
-pub const LANG_DEFAULT: &str = LANG_JAPANESE;
-
-// フォントサイズ定数
-pub const FONT_SIZE_SMALL: &str = "small";
-pub const FONT_SIZE_MEDIUM: &str = "medium";
-pub const FONT_SIZE_LARGE: &str = "large";
-pub const FONT_SIZE_DEFAULT: &str = FONT_SIZE_MEDIUM;
-```
-
-### 定数の使用例
-
-```rust
-use crate::consts::{DB_DIR_NAME, DB_FILE_NAME, LANG_DEFAULT};
-
-fn get_db_path() -> PathBuf {
-    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
-    PathBuf::from(home).join(DB_DIR_NAME).join(DB_FILE_NAME)
-}
-
-fn get_default_language() -> &'static str {
-    LANG_DEFAULT
-}
-```
-
-### 定数追加時のチェックリスト
-
-- [ ] `consts.rs` に定数を追加
-- [ ] 適切な命名規則を使用（UPPER_SNAKE_CASE）
-- [ ] 型を明示（`&str`, `i64`, etc.）
-- [ ] 関連するドキュメントを更新
-- [ ] 既存のハードコードされた値を置き換え
-
----
-
-## データベース接続パターン
-
-### 基本パターン
-
-```rust
-use rusqlite::{Connection, Result};
-use std::path::PathBuf;
-use crate::consts::{DB_DIR_NAME, DB_FILE_NAME};
-
-/// データベースパスを取得
-fn get_db_path() -> PathBuf {
-    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
-    PathBuf::from(home).join(DB_DIR_NAME).join(DB_FILE_NAME)
-}
-
-/// データベース接続を取得
-pub fn get_connection() -> Result<Connection> {
-    Connection::open(get_db_path())
-}
-```
-
-### トランザクション処理
-
-```rust
-pub fn add_category_with_children(
-    user_id: i64,
-    category: Category1,
-    children: Vec<Category2>
-) -> Result<(), rusqlite::Error> {
-    let mut conn = get_connection()?;
-    let tx = conn.transaction()?;
-
-    // 親カテゴリを追加
-    tx.execute(
-        "INSERT INTO CATEGORY1 (USER_ID, CATEGORY1_CODE, ...) VALUES (?1, ?2, ...)",
-        params![user_id, category.code],
-    )?;
-
-    // 子カテゴリを追加
-    for child in children {
-        tx.execute(
-            "INSERT INTO CATEGORY2 (USER_ID, CATEGORY1_CODE, CATEGORY2_CODE, ...) VALUES (?1, ?2, ?3, ...)",
-            params![user_id, category.code, child.code],
-        )?;
-    }
-
-    tx.commit()?;
-    Ok(())
-}
-```
-
-### プリペアドステートメントの使用
-
-```rust
-pub fn get_categories_by_user(user_id: i64) -> Result<Vec<Category1>, rusqlite::Error> {
-    let conn = get_connection()?;
-    let mut stmt = conn.prepare(
-        "SELECT USER_ID, CATEGORY1_CODE, CATEGORY1_NAME, DISPLAY_ORDER 
-         FROM CATEGORY1 
-         WHERE USER_ID = ?1 
-         ORDER BY DISPLAY_ORDER"
-    )?;
-
-    let category_iter = stmt.query_map([user_id], |row| {
-        Ok(Category1 {
-            user_id: row.get(0)?,
-            category1_code: row.get(1)?,
-            category1_name: row.get(2)?,
-            display_order: row.get(3)?,
-        })
-    })?;
-
-    let mut categories = Vec::new();
-    for category in category_iter {
-        categories.push(category?);
-    }
-    Ok(categories)
-}
-```
-
-### データベース初期化
-
-```rust
-use std::fs;
-
-pub fn initialize_database() -> Result<(), String> {
-    let db_path = get_db_path();
-    
-    // データベースディレクトリを作成
-    if let Some(parent) = db_path.parent() {
-        fs::create_dir_all(parent)
-            .map_err(|e| format!("Failed to create db directory: {}", e))?;
-    }
-
-    // データベースが存在しない場合のみ初期化
-    if !db_path.exists() {
-        let conn = Connection::open(&db_path)
-            .map_err(|e| format!("Failed to open database: {}", e))?;
-
-        // SQLファイルを読み込んで実行
-        let sql = fs::read_to_string("res/sql/dbaccess.sql")
-            .map_err(|e| format!("Failed to read SQL file: {}", e))?;
-
-        conn.execute_batch(&sql)
-            .map_err(|e| format!("Failed to execute SQL: {}", e))?;
-    }
-
-    Ok(())
-}
-```
-
----
-
-## テストとプロダクションの分離
-
-### テスト用データベース接続
-
-```rust
-#[cfg(test)]
-fn get_test_connection() -> Result<Connection> {
-    // インメモリデータベースを使用
-    let conn = Connection::open_in_memory()?;
-    
-    // テスト用テーブルを作成
-    conn.execute(
-        "CREATE TABLE CATEGORY1 (
-            USER_ID INTEGER NOT NULL,
-            CATEGORY1_CODE VARCHAR(64) NOT NULL,
-            DISPLAY_ORDER INTEGER NOT NULL,
-            CATEGORY1_NAME VARCHAR(128) NOT NULL,
-            PRIMARY KEY(USER_ID, CATEGORY1_CODE)
-        )",
-        [],
-    )?;
-    
-    Ok(conn)
-}
-```
-
-### テストの構造
-
-```rust
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_add_category() {
-        // Arrange
-        let conn = get_test_connection().unwrap();
-        
-        // Act
-        let result = add_category1(&conn, 1, "EXPENSE", "支出", 1);
-        
-        // Assert
-        assert!(result.is_ok());
-        
-        // Verify
-        let categories = get_category1_list(&conn, 1).unwrap();
-        assert_eq!(categories.len(), 1);
-        assert_eq!(categories[0].category1_code, "EXPENSE");
-    }
-
-    #[test]
-    fn test_transaction_rollback() {
-        let conn = get_test_connection().unwrap();
-        
-        // トランザクションが失敗した場合、ロールバックされることを確認
-        let result = add_invalid_category(&conn);
-        assert!(result.is_err());
-        
-        let categories = get_category1_list(&conn, 1).unwrap();
-        assert_eq!(categories.len(), 0); // データが追加されていないことを確認
-    }
-}
-```
-
-### 環境変数による分岐
-
-```rust
-fn get_db_path() -> PathBuf {
-    if cfg!(test) {
-        // テスト環境では一時ディレクトリを使用
-        PathBuf::from("/tmp/kakeibon_test.db")
-    } else {
-        // プロダクション環境
-        let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
-        PathBuf::from(home).join(DB_DIR_NAME).join(DB_FILE_NAME)
-    }
-}
-```
-
----
-
-## ビルドとテスト
-
-### 開発モード実行
+## 5. よく使うコマンド
 
 ```bash
-# Tauriアプリを開発モードで起動
+# 開発実行（ホットリロード付き）
 cargo tauri dev
 
-# バックエンドのみビルド
-cd src-tauri
-cargo build
-```
-
-### テスト実行
-
-```bash
-# 全テストを実行
+# バックエンドテスト
 cargo test
 
-# 特定のモジュールのテストのみ実行
-cargo test db::category
+# フロントエンドテスト (Jest)
+cd res/tests && npm test
 
-# テスト出力を詳細表示
-cargo test -- --nocapture
+# 全テスト一括実行（バックエンド + フロントエンド）
+./res/tests/run-all-tests.sh
 
-# 並列実行を無効化（デバッグ用）
-cargo test -- --test-threads=1
-```
+# リリース前チェック (3 version files 整合, etc.)
+./scripts/check-release.sh
 
-### プロダクションビルド
+# i18n リソース整合チェック
+./scripts/check_i18n_resources.sh
 
-```bash
 # リリースビルド
 cargo tauri build
-
-# ビルド成果物は以下に生成される
-# target/release/bundle/
 ```
 
-### コードフォーマット
-
-```bash
-# コードフォーマット
-cargo fmt
-
-# フォーマットチェックのみ（CIで使用）
-cargo fmt -- --check
-```
-
-### Lintチェック
-
-```bash
-# Clippy でコード品質チェック
-cargo clippy
-
-# 厳格モード
-cargo clippy -- -D warnings
-```
+> **再起動の用語**: Tauri アプリのため、フロント変更の反映は「ブラウザリロード」ではなく「**アプリ再起動**」になります。
 
 ---
 
-## デバッグ方法
+## 6. コーディング規約
 
-### ログ出力
+詳細は [コーディング規約](CODING_STANDARDS.md) を参照。
 
-```rust
-use log::{info, warn, error, debug};
+要点（必ず守る）:
 
-pub fn some_function() {
-    debug!("Debug message");
-    info!("Info message");
-    warn!("Warning message");
-    error!("Error message");
-}
-```
+### Rust
+- 本番コードで `unwrap()` 禁止 → `Result<T, E>` で返す
+- すべての SQL は `src/sql_queries.rs` に集約、prepared statements
+- コミット前に `cargo fmt`、`cargo clippy` の警告ゼロ
 
-### フロントエンドからのデバッグ
+### JavaScript
+- ES Modules（インポートに `.js` 拡張子）
+- バリデーションは `validation.rs`（バックエンド）と対応する JS 側で**二段階**実施
 
-```javascript
-// コンソールログ
-console.log('Debug info:', data);
-console.error('Error:', error);
+### コミットメッセージ
+- 英語、Conventional Commits 形式: `type(scope): description`
+  - 例: `fix(window): fit + center every screen on load`
 
-// Tauri コマンドのエラーをキャッチ
-try {
-    const result = await invoke('some_command', { param: value });
-    console.log('Success:', result);
-} catch (error) {
-    console.error('Command failed:', error);
-}
-```
-
-### データベースのデバッグ
-
-```bash
-# SQLiteデータベースに直接接続
-sqlite3 ~/.kakeibon/KakeiBonDB.sqlite3
-
-# テーブル一覧
-.tables
-
-# スキーマ確認
-.schema CATEGORY1
-
-# データ確認
-SELECT * FROM I18N_RESOURCES WHERE LANG_CODE = 'ja' LIMIT 10;
-
-# 終了
-.quit
-```
-
-### ブレークポイントを使用したデバッグ
-
-```rust
-// dbg!マクロを使用
-let result = dbg!(some_function());
-
-// panic!でクラッシュさせて調査
-panic!("Debug point: value = {:?}", value);
-```
+### ユーザー向け文字列
+- ハードコード禁止、すべて i18n リソース経由
+- 新規 RESOURCE_ID 追加時は **MAX ID を確認**してから（`INSERT OR IGNORE` は重複時サイレントスキップする）。`/i18n-add` スキルが推奨手順
 
 ---
 
-## トラブルシューティング
+## 7. i18n ワークフロー
 
-### よくある問題と解決策
+詳細は [I18N 実装ガイド](I18N_IMPLEMENTATION.md) / [翻訳ガイド](translation-guide.md) を参照。
 
-#### 1. データベース接続エラー
-
-**問題**: `Failed to open database file`
-
-**原因**: データベースファイルまたはディレクトリが存在しない
-
-**解決策**:
-```bash
-# ディレクトリを作成
-mkdir -p ~/.kakeibon
-
-# データベースを初期化
-sqlite3 ~/.kakeibon/KakeiBonDB.sqlite3 < res/sql/dbaccess.sql
-```
-
-#### 2. ビルドエラー
-
-**問題**: `error: linker 'cc' not found`
-
-**原因**: C コンパイラがインストールされていない
-
-**解決策**:
-```bash
-# Ubuntu/Debian
-sudo apt install build-essential
-
-# macOS
-xcode-select --install
-```
-
-#### 3. テスト失敗
-
-**問題**: テストが不規則に失敗する
-
-**原因**: 並列実行による競合
-
-**解決策**:
-```bash
-# シングルスレッドで実行
-cargo test -- --test-threads=1
-```
-
-#### 4. Tauri コマンドが呼び出せない
-
-**問題**: `Command not found`
-
-**原因**: コマンドが `lib.rs` に登録されていない
-
-**解決策**:
-```rust
-// src-tauri/src/lib.rs
-#[cfg_attr(mobile, tauri::mobile_entry_point)]
-pub fn run() {
-    tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![
-            commands::i18n::get_translations,
-            commands::category::get_category_tree,
-            // ← 新しいコマンドをここに追加
-        ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
-}
-```
-
-### デバッグのヒント
-
-1. **エラーメッセージを注意深く読む**: Rustのエラーメッセージは詳細で有用
-2. **ログを活用する**: `log` クレートで適切にログを出力
-3. **小さく分けてテストする**: 問題を分離して特定
-4. **ドキュメントを参照する**: Tauri、rusqlite のドキュメントを確認
-5. **コミュニティに質問する**: GitHub Issues、Discord で質問
+ポイント:
+- バックエンド: `src/services/i18n.rs` がリソースを解決
+- フロントエンド: `res/js/i18n.js` が言語切替を担当
+- リソースは SQLite テーブル (`*_I18N`) に格納、初回起動でシード
+- 対応言語: 日本語 (ja) / 英語 (en)、追加歓迎
 
 ---
 
-## 参考リンク
+## 8. リリース手順
 
-- [Tauri Documentation](https://tauri.app/v1/guides/)
-- [rusqlite Documentation](https://docs.rs/rusqlite/latest/rusqlite/)
-- [Rust Book](https://doc.rust-lang.org/book/)
-- [SQLite Documentation](https://www.sqlite.org/docs.html)
+詳細は CHANGELOG_ja.md と `scripts/check-release.sh` を参照。`/release` スキルが推奨フローです。
+
+3 つのバージョンファイルを必ず**同期**:
+1. `Cargo.toml` の `version`
+2. `src-tauri/tauri.conf.json` の `version`
+3. `package.json` の `version`
+
+その後:
+1. `CHANGELOG_ja.md` / `CHANGELOG_en.md` にエントリ追加
+2. `./scripts/check-release.sh` で整合チェック
+3. `dev` → `main` マージで release workflow が自動起動（draft → publish）
+4. `gh release create` を手で打たない（workflow と 422 衝突する）
 
 ---
 
-最終更新: 2025-10-28
+## 9. ブランチ運用
+
+- **`dev`**: 全ての開発作業はこちら
+- **`main`**: リリースタグ用、`dev` からのマージで更新
+- 大規模リファクタは `dev-vN` のような並行ブランチでマージコンフリクトを回避
+
+---
+
+## 10. テスト戦略
+
+詳細は [テスト概要](../../../testing/ja/TEST_OVERVIEW.md) を参照。
+
+v2.5.0 時点の規模:
+- Rust: 390 件
+- JavaScript (Jest): 623 件
+
+> テスト数は CHANGELOG_ja.md の各リリースエントリが最新値です。
+
+---
+
+## 11. 関連ドキュメント
+
+- [ドキュメント索引 (INDEX_ja)](../../../INDEX_ja.md) — すべてのドキュメントの入口
+- [コーディング規約](CODING_STANDARDS.md)
+- [I18N 実装ガイド](I18N_IMPLEMENTATION.md)
+- [開発環境セットアップ](../setup/DEVELOPMENT_SETUP.md)
+- [テスト概要](../../../testing/ja/TEST_OVERVIEW.md)
+- [CHANGELOG_ja](../../../../CHANGELOG_ja.md)
+- [貢献ガイド](../../../../CONTRIBUTING.md)
+- [行動規範](../../../../CODE_OF_CONDUCT.md)
+
+---
+
+## 12. 質問・サポート
+
+- GitHub Issues — バグ・機能リクエスト
+- GitHub Discussions — 質問・議論
+- メール: [bonojovi2741@gmail.com](mailto:bonojovi2741@gmail.com)
