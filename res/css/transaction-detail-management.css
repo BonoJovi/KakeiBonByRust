@@ -5,11 +5,18 @@ body {
     margin: 0;
     padding: 0;
     background-color: #f5f5f5;
+    height: 100vh;
+    overflow: hidden;
 }
 
 #main-content {
     margin-top: 60px;
     padding: 20px;
+    box-sizing: border-box;
+    height: calc(100vh - 60px);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 .detail-management-container {
@@ -19,6 +26,12 @@ body {
     padding: 30px;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
 }
 
 .page-header {
@@ -28,6 +41,7 @@ body {
     border-bottom: 2px solid #4CAF50;
     padding-bottom: 10px;
     margin-bottom: 20px;
+    flex-shrink: 0;
 }
 
 .page-header h1 {
@@ -44,6 +58,7 @@ body {
     border-radius: 8px;
     padding: 20px;
     margin-bottom: 20px;
+    flex-shrink: 0;
 }
 
 .info-row {
@@ -71,6 +86,7 @@ body {
     justify-content: flex-start;
     gap: 10px;
     margin-bottom: 20px;
+    flex-shrink: 0;
 }
 
 .btn {
@@ -116,15 +132,20 @@ body {
 
 /* Detail List Section */
 .section {
-    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
 }
 
 .detail-list-container {
-    overflow-x: scroll;
-    overflow-y: scroll;
-    max-height: 9em;
+    flex: 1 1 auto;
+    overflow-x: auto;
+    overflow-y: auto;
     border: 2px solid #999;
     border-radius: 4px;
+    min-height: 0;
 }
 
 /* Wide scrollbar for better usability */
@@ -166,9 +187,13 @@ body {
 #detail-table th {
     padding: 0.75em;
     text-align: left;
-    border-bottom: 2px solid #ddd;
-    font-weight: bold;
-    color: #333;
+    border-bottom: 2px solid #999;
+    font-weight: 600;
+    color: #fff;
+    background-color: #34495e;
+    position: sticky;
+    top: 0;
+    z-index: 10;
 }
 
 /* Column width adjustments for better layout */
@@ -203,7 +228,7 @@ body {
 
 #detail-table td {
     padding: 0.75em;
-    border-bottom: 1px solid #e0e0e0;
+    border-bottom: 2px solid #999;
 }
 
 #detail-table tbody tr:hover {
@@ -404,6 +429,22 @@ body {
    a time via .product-autocomplete-item--active. */
 .product-autocomplete-wrapper {
     position: relative;
+}
+
+.item-name-row {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+}
+
+.item-name-row > #item-name {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.item-name-master-btn {
+    flex: 0 0 auto;
+    white-space: nowrap;
 }
 
 .product-autocomplete-dropdown {

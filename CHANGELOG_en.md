@@ -11,6 +11,19 @@ Feature release that integrates the product / manufacturer master into the trans
 - **Product autocomplete in transaction details** (#65): the "Item name" input on the detail-entry modal now suggests products from the master with substring matching, shown as `product (manufacturer)`. Selecting a candidate keeps the `PRODUCT_ID` in form state; free-text entry still works exactly as before, and typing on top of a previous selection automatically demotes the row back to free-text
 - Edit mode restores the existing `PRODUCT_ID`, so detail rows that were previously linked open with the dropdown selection intact
 - Keyboard navigation (↑↓ Enter Esc) is built in from day one. We avoid `<datalist>` to sidestep the WebKitGTK + ibus IME interference risk, and instead use a `<div>`-based dropdown anchored absolutely under the input
+- **In-flow path to register an unmastered item**: a new "Open in product master ↗" button sits next to the item-name input. Clicking it persists the entire in-flight form (item name / categories / amounts / memo / any existing `PRODUCT_ID` link) to `sessionStorage` and jumps to product management with `prefill_name` set, auto-opening the add modal. The follow-up "← Back to detail entry" button returns via a `restore=1` URL that re-opens the detail modal in its original state, with the just-registered product written back into the draft as `selected_product_id` so the row is already linked on return
+- **Manufacturer side-trip from inside the product modal**: an "Open in manufacturer master ↗" button next to the manufacturer dropdown persists the in-flight product form (including the original `return_to_transaction_id`) as a `product_draft` and jumps to manufacturer management with the add modal pre-opened. "← Back to product entry" restores the product modal with the just-registered manufacturer pre-selected, and the "← Back to detail entry" button reappears when the original trip started from the detail modal — so the 3-hop chain (detail → product → manufacturer → product → detail) doesn't break
+
+### UI fixes / cross-screen visual unification
+
+- Aligned the manufacturer / product master list-container border with the other master screens (accounts / shops) — `2px solid #999` instead of the thinner `1px solid #ddd` they had been using
+- Fixed the transaction-list table height being clamped to ~2 rows (`max-height: 10em`). Changed to `flex: 1 1 auto` so the list fills the remaining flex space of its section, eliminating the empty band below the table
+- Fixed the detail-management page taking only content height (leaving a large blank band below). Switched `body` to `height: 100vh / overflow: hidden`, `#main-content` to flex column with `height: calc(100vh - 60px)`, and made `.detail-management-container` / `.section` `flex: 1` so the detail list claims the remaining vertical space
+- Fixed the user-list panel being locked to a fixed `24em` height (would not follow window resize). Brought it in line with the other master screens via the same flex layout
+- Unified row-border weight and color across every list screen: master tables drop the `tr:last-child td { border-bottom: none; }` so the final row keeps its 2px rule; `.transaction-item` border thickened from `1px solid #ddd` to `2px solid #999`; `#detail-table td` from `1px solid #e0e0e0` to `2px solid #999`
+- Unified header-row look across every list to match master `<th>` styling — navy `#34495e` background + white text. Transaction list got a new static `.transaction-header-row` (sticky-positioned so column labels stay visible while scrolling); detail-table `th` also went sticky + navy
+- Unified scrollbars: `#main-content` and modal `.modal-content` now use the same wide always-visible style (`16px` width, `scrollbar-color: #888 #f1f1f1`) used by master list containers, replacing the OS-default thin hover-only scrollbars
+- Added `cargo:rerun-if-changed=../res/sql/dbaccess.sql` / `default_categories_seed.sql` to `build.rs`. Cargo wasn't tracking the `include_str!` source through the build-script step, so SQL-only edits sometimes produced an unchanged binary — new i18n resources would silently fail to land in the DB until a Rust file was also touched
 
 ### Schema
 
@@ -27,7 +40,7 @@ Feature release that integrates the product / manufacturer master into the trans
 ### Tests
 
 - Rust: 399 tests passing (8 added for master integration: search substring / cross-user isolation / disabled-exclusion / empty-query / manufacturer-name inclusion, CRUD `PRODUCT_ID` round-trip / free-text path / set-then-clear update, and migration idempotence)
-- JavaScript (Jest): 633 tests passing (10 added for the autocomplete state machine: selection→keystroke demotion / edit-mode restoration / stale-fetch guard)
+- JavaScript (Jest): 655 tests passing (10 for the autocomplete state machine, 11 for the `detail_draft` master-jump contract, 11 for the `product_draft` manufacturer-side-trip contract: persist / consume / clear round-trip, malformed-JSON safe discard, `linkNewProductToDraft` / `linkNewManufacturerToProductDraft` match priority, and 3-hop preservation of `return_to_transaction_id`)
 
 ---
 

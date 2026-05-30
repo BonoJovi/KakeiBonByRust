@@ -79,6 +79,11 @@ body {
     min-height: 0;
 }
 
+.back-to-product-btn {
+    margin-bottom: 12px;
+    align-self: flex-start;
+}
+
 #manufacturer-list-container::-webkit-scrollbar {
     width: 16px;
     height: 16px;
@@ -126,10 +131,6 @@ body {
 
 #manufacturers-table tbody tr:hover {
     background-color: #f9f9f9;
-}
-
-#manufacturers-table tbody tr:last-child td {
-    border-bottom: none;
 }
 
 /* Actions column - minimal width */

@@ -131,7 +131,10 @@
                     <div class="form-group">
                         <label for="item-name" data-i18n="detail_mgmt.item_name">Item Name:</label>
                         <div class="input-wrapper product-autocomplete-wrapper">
-                            <input type="text" id="item-name" name="item-name" maxlength="200" autocomplete="off" required />
+                            <div class="item-name-row">
+                                <input type="text" id="item-name" name="item-name" maxlength="200" autocomplete="off" required />
+                                <button type="button" class="btn btn-secondary item-name-master-btn" id="open-product-master-btn" data-i18n="detail_mgmt.open_product_master">Open in product master ↗</button>
+                            </div>
                             <div id="product-autocomplete-dropdown" class="product-autocomplete-dropdown hidden" role="listbox"></div>
                         </div>
                     </div>

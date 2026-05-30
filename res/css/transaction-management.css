@@ -116,21 +116,50 @@ body {
     flex-direction: column;
 }
 
+/* Static header row mirroring transaction-item layout. Sticky so the
+ * column labels stay visible when the list scrolls. Color palette
+ * matches the master-list <th> style (dark navy + white). */
+.transaction-header-row {
+    display: flex;
+    gap: 10px;
+    padding: 10px 15px;
+    background-color: #34495e;
+    border-bottom: 2px solid #999;
+    font-weight: 600;
+    color: #fff;
+    min-width: fit-content;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    align-items: center;
+}
+
+.transaction-actions-header {
+    min-width: 6em;
+    text-align: center;
+}
+
+/* Override per-column gray colors inside the header row so labels stay
+ * white on the navy background. */
+.transaction-header-row .transaction-date,
+.transaction-header-row .transaction-category,
+.transaction-header-row .transaction-account,
+.transaction-header-row .transaction-amount,
+.transaction-header-row .transaction-memo {
+    color: inherit;
+}
+
 .transaction-item {
     display: flex;
     gap: 10px;
     padding: 10px 15px;
-    border-bottom: 1px solid #ddd;
+    border-bottom: 2px solid #999;
     align-items: center;
     min-width: fit-content;
 }
 
 .transaction-item:hover {
     background-color: #f5f5f5;
-}
-
-.transaction-item:last-child {
-    border-bottom: none;
 }
 
 /* Scheduled transaction visual differentiation */

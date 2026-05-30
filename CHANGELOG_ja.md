@@ -11,6 +11,19 @@
 - **入出金明細の商品 autocomplete** (#65): 明細登録モーダルの「品目名」入力に商品マスタの部分一致サジェストを装着。`商品名 (メーカー名)` 形式で候補を表示し、選択すれば内部に `PRODUCT_ID` が保持される。任意の自由テキスト入力もこれまで通り可能で、選択後にタイプし直すと自動的に自由入力扱いに戻る
 - 編集モードで既存の `PRODUCT_ID` を復元するため、過去にマスタ紐付けした明細はそのままドロップダウン選択状態で開く
 - キーボード操作 (↑↓ Enter Esc) を最初から完備、`<datalist>` は WebKitGTK + ibus 環境での IME 干渉リスクを避けて `<div>` ベースの自前 dropdown で実装
+- **マスタ未登録の品目をその場で登録できる動線**: 明細モーダルの品目名横に「商品マスタで登録 ↗」ボタンを配置。クリックすると入力途中のフォーム全体 (品目名 / カテゴリ / 金額 / メモ / 既存の `PRODUCT_ID` 紐付け) を `sessionStorage` に保存し、商品マスタ画面を `prefill_name` 付きで開いて「新規追加」モーダルを自動展開。登録後の「← 明細入力に戻る」ボタンで `restore=1` 付き URL へ遷移し、明細モーダルを元の入力状態で再オープン。登録した商品が `selected_product_id` として draft に書き戻されるため、戻った瞬間にマスタ照合済み行として扱われる
+- **メーカー未登録の場合も同じ流れで補完**: 商品マスタの新規追加モーダル内、メーカードロップダウン横に「メーカーマスタで登録 ↗」ボタンを配置。商品入力中の状態 (商品名 / メモ / 元の `return_to_transaction_id`) を `product_draft` として保存して、メーカーマスタへ side-trip。「← 商品入力に戻る」で戻ると商品モーダルが新規メーカー選択済みで再オープンし、明細から来ていた場合は「← 明細入力に戻る」ボタンもそのまま復活するので 3 ホップ動線が破綻しない
+
+### UI バグ修正 / 一覧画面の見た目を全体的に統一
+
+- メーカー管理 / 商品管理画面の一覧コンテナの罫線を、他マスタ管理画面 (口座 / 店舗) と揃えて `2px solid #999` に統一。これまで `1px solid #ddd` で薄く見えていた
+- 入出金管理画面の一覧テーブルが内容 2 行分の高さで固定 (`max-height: 10em`) されていた不具合を修正。`flex: 1 1 auto` に変更してセクション内の残り高さを正しく取るようにし、下に不自然な余白が出る現象を解消
+- 明細管理画面のコンテナ自体がコンテンツ分の高さしか取らず、下に大きな余白が出ていた不具合を修正。`body height: 100vh / overflow: hidden`、`#main-content` を `flex column / height: calc(100vh - 60px)`、`.detail-management-container` と `.section` を `flex: 1` に変更して、明細リストが画面残り高さを正しく占有するようにした
+- ユーザー管理画面のユーザー一覧の高さが固定 (`24em`) で、ウィンドウリサイズに追従しなかった不具合を修正。他マスタ管理画面と同じ flex layout に揃えた
+- 一覧画面の罫線太さ / 色を全画面で統一: マスタ系 (`tr:last-child td` の `border-bottom: none` を削除して最終行にも線を残す)、入出金 (`.transaction-item` の罫線を `1px solid #ddd` → `2px solid #999`)、明細 (`#detail-table td` の罫線を `1px solid #e0e0e0` → `2px solid #999`)
+- 入出金一覧 / 明細一覧のヘッダ行の色をマスタ一覧と同じ濃紺背景 (`#34495e`) + 白文字に統一し、ヘッダと明細行を視覚的に明確に分離。入出金一覧には静的なヘッダ行 (`.transaction-header-row`) を追加 (sticky 配置で、リストをスクロールしても常に上部に固定)。明細一覧の `#detail-table th` も sticky + 濃紺背景に
+- `#main-content` とモーダル内 `.modal-content` のスクロールバーをマスタ一覧と同じ太い・常時表示スタイル (`16px` 幅 + `scrollbar-color: #888 #f1f1f1`) に統一。これまで OS デフォルトの細い・hover 表示と混在していた
+- `build.rs` に `cargo:rerun-if-changed=../res/sql/dbaccess.sql` / `default_categories_seed.sql` を追加し、SQL のみの変更でも Rust 側が再ビルドされるように。これまでは SQL を編集しても include_str! で埋め込まれたバイナリが古いままで、新規 i18n リソースが起動時の INSERT で流れないことがあった
 
 ### スキーマ
 
@@ -27,7 +40,7 @@
 ### テスト
 
 - Rust: 399 件全 PASS（マスタ統合 8 件追加: search の部分一致 / 他ユーザー除外 / 廃番除外 / 空クエリ / メーカー名同梱、CRUD の PRODUCT_ID round-trip / 自由テキストパス / set→clear 更新、migration の冪等性）
-- JavaScript (Jest): 633 件全 PASS（autocomplete state machine 10 件追加: 選択→打ち直しの demote / edit-mode 復元 / stale-fetch ガード）
+- JavaScript (Jest): 655 件全 PASS（autocomplete state machine 10 件、マスタ動線 detail_draft 11 件、メーカー動線 product_draft 11 件: persist/consume/clear のラウンドトリップ / 壊れた JSON の安全な破棄 / `linkNewProductToDraft` / `linkNewManufacturerToProductDraft` のマッチ優先順 / `return_to_transaction_id` の 3 ホップ越し保持）
 
 ---
 

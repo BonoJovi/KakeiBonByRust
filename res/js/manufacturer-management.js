@@ -24,6 +24,13 @@ let deleteModal = null;
 let manufacturerToDelete = null;
 let showDisabledItems = false;
 
+// When the user arrives here from the product modal via the
+// "Open in manufacturer master" jump, this flag is set so saveManufacturer()
+// can write the new manufacturer id back into the persisted product draft,
+// and the "Back to product entry" button can be wired up.
+let returnToProduct = false;
+const PRODUCT_DRAFT_KEY = 'kakeibon.product_draft.v1';
+
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
     
@@ -72,6 +79,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         setupIndicators();
         setupEventListeners();
         await loadManufacturers();
+
+        // Wire up the side-trip back-button if we arrived from the product
+        // modal. The product draft itself lives in sessionStorage; we only
+        // need the flag here to (a) reveal the button and (b) let
+        // saveManufacturer() stamp the new manufacturer id into the draft.
+        const urlParams = new URLSearchParams(window.location.search);
+        returnToProduct = urlParams.get('return_to_product') === '1';
+
+        if (returnToProduct) {
+            const backBtn = document.getElementById('back-to-product-btn');
+            if (backBtn) {
+                backBtn.style.display = '';
+                backBtn.addEventListener('click', () => {
+                    window.location.href = HTML_FILES.PRODUCT_MANAGEMENT + '?restore_product=1';
+                });
+            }
+            // Auto-open the add modal so the user can immediately register a
+            // manufacturer (matches the product-side prefill UX).
+            openModal('add');
+        }
 
         // Fit + center the window on this monitor
         await fitWindowToScreen();
@@ -299,6 +326,25 @@ function renderManufacturers() {
     });
 }
 
+// After a successful manufacturer add inside the product-side-trip flow,
+// look the new row up by name from the freshly-reloaded `manufacturers`
+// array and stamp its id into the persisted product draft. Best-effort: if
+// the lookup fails for any reason, the draft is left untouched so the user
+// can still come back and pick the manufacturer manually from the dropdown.
+function linkNewManufacturerToProductDraft(manufacturerName) {
+    try {
+        const raw = sessionStorage.getItem(PRODUCT_DRAFT_KEY);
+        if (!raw) return;
+        const match = manufacturers.find(m => m.manufacturer_name === manufacturerName);
+        if (!match) return;
+        const draft = JSON.parse(raw);
+        draft.manufacturer_id = String(match.manufacturer_id);
+        sessionStorage.setItem(PRODUCT_DRAFT_KEY, JSON.stringify(draft));
+    } catch (e) {
+        console.warn('Could not link new manufacturer to product draft:', e);
+    }
+}
+
 async function saveManufacturer() {
     const manufacturerNameInput = document.getElementById('manufacturer-name');
     const manufacturerMemoInput = document.getElementById('manufacturer-memo');
@@ -349,8 +395,17 @@ async function saveManufacturer() {
             console.log('Manufacturer added successfully');
         }
 
-        // Reload manufacturers list (modal will be closed by Modal class)
+        // Reload manufacturers list (modal will be closed by Modal class).
+        // This also refreshes the in-memory `manufacturers` array, which we
+        // need to look up the newly added one by name below.
         await loadManufacturers();
+
+        // If this add was the product-side trip, stamp the new manufacturer
+        // id into the persisted product draft so the user resumes with it
+        // already selected after "Back to product entry".
+        if (returnToProduct && !editingManufacturerId) {
+            linkNewManufacturerToProductDraft(manufacturerName);
+        }
     } catch (error) {
         console.error('Failed to save manufacturer:', error);
 

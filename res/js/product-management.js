@@ -25,6 +25,24 @@ let deleteModal = null;
 let productToDelete = null;
 let showDisabledItems = false;
 
+// When the user lands here via the "Open in product master" jump from the
+// transaction detail modal, the URL carries `return_to=<transaction_id>` and
+// optionally `prefill_name=<typed text>`. We keep the return target on a
+// module-level variable so saveProduct() can update the persisted detail
+// draft with the newly created product id.
+let returnToTransactionId = null;
+const DETAIL_DRAFT_KEY = 'kakeibon.detail_draft.v1';
+
+// Holds the in-flight product-modal state while the user side-jumps to
+// manufacturer-management to register a new manufacturer. The return trip
+// (manufacturer save → "Back to product entry") lands on
+// product-management.html?restore_product=1, which consumes this draft to
+// re-open the product modal in its original state — including the
+// just-registered manufacturer pre-selected and the original
+// "Back to detail entry" target if the user originally came from the
+// detail modal.
+const PRODUCT_DRAFT_KEY = 'kakeibon.product_draft.v1';
+
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
     
@@ -74,6 +92,51 @@ document.addEventListener('DOMContentLoaded', async () => {
         setupEventListeners();
         await loadManufacturers();
         await loadProducts();
+
+        // Handle the cross-page round-trips that arrive at product-management:
+        //  - From detail modal: ?prefill_name=...&return_to=<tid>
+        //  - From manufacturer modal: ?restore_product=1 (consume product_draft)
+        // When restoring from the manufacturer side trip, return_to_transaction_id
+        // inside the draft is what re-wires the "Back to detail entry" button.
+        const urlParams = new URLSearchParams(window.location.search);
+        const shouldRestoreProduct = urlParams.get('restore_product') === '1';
+
+        if (shouldRestoreProduct) {
+            const draft = consumeProductDraft();
+            if (draft) {
+                returnToTransactionId = draft.return_to_transaction_id || null;
+                openModal('add');
+                document.getElementById('product-name').value = draft.product_name || '';
+                document.getElementById('product-manufacturer').value = draft.manufacturer_id || '';
+                document.getElementById('product-memo').value = draft.memo || '';
+                document.getElementById('product-is-disabled').checked = !!draft.is_disabled;
+                clearProductDraft();
+            }
+        } else {
+            returnToTransactionId = urlParams.get('return_to') || null;
+        }
+
+        if (returnToTransactionId) {
+            const backBtn = document.getElementById('back-to-detail-btn');
+            if (backBtn) {
+                backBtn.style.display = '';
+                backBtn.addEventListener('click', () => {
+                    const params = new URLSearchParams();
+                    params.set('transaction_id', returnToTransactionId);
+                    params.set('restore', '1');
+                    window.location.href = HTML_FILES.TRANSACTION_DETAIL_MANAGEMENT + '?' + params.toString();
+                });
+            }
+        }
+
+        const prefillName = urlParams.get('prefill_name') || '';
+        if (prefillName && !shouldRestoreProduct) {
+            openModal('add');
+            const productNameInput = document.getElementById('product-name');
+            if (productNameInput) {
+                productNameInput.value = prefillName;
+            }
+        }
 
         // Fit + center the window on this monitor
         await fitWindowToScreen();
@@ -161,6 +224,19 @@ function setupEventListeners() {
     document.getElementById('add-product-btn').addEventListener('click', () => {
         openModal('add');
     });
+
+    // "Open in manufacturer master" jump from inside the product modal.
+    // Persists the current product form to sessionStorage and navigates to
+    // manufacturer-management. The user comes back via the "Back to product
+    // entry" button on that page, which lands on ?restore_product=1 here.
+    const openManufacturerBtn = document.getElementById('open-manufacturer-master-btn');
+    if (openManufacturerBtn) {
+        openManufacturerBtn.addEventListener('click', () => {
+            const draft = buildProductDraftFromForm();
+            persistProductDraft(draft);
+            window.location.href = HTML_FILES.MANUFACTURER_MANAGEMENT + '?return_to_product=1';
+        });
+    }
 
     // Toggle disabled items button
     document.getElementById('toggle-disabled-btn').addEventListener('click', () => {
@@ -398,6 +474,14 @@ async function saveProduct() {
                 isDisabled: isDisabled === 1 ? isDisabled : null
             });
             console.log('Product added successfully');
+
+            // If this add was triggered by the detail-jump flow, look up the
+            // new product by name and stamp its id into the persisted draft
+            // so the user returns to the detail modal with the new master
+            // entry already selected (canonicalizing the item name too).
+            if (returnToTransactionId) {
+                await linkNewProductToDraft(productName);
+            }
         }
 
         // Reload products list (modal will be closed by Modal class)
@@ -438,6 +522,60 @@ async function saveProduct() {
 
         // Re-throw error to prevent modal from closing
         throw error;
+    }
+}
+
+// Snapshot the product modal's current inputs so the user can step out to
+// manufacturer-management and come back to a pre-filled product modal. We
+// carry return_to_transaction_id forward so the eventual "Back to detail
+// entry" path still works two hops down.
+function buildProductDraftFromForm() {
+    return {
+        product_name: document.getElementById('product-name')?.value || '',
+        manufacturer_id: document.getElementById('product-manufacturer')?.value || '',
+        memo: document.getElementById('product-memo')?.value || '',
+        is_disabled: !!document.getElementById('product-is-disabled')?.checked,
+        return_to_transaction_id: returnToTransactionId,
+    };
+}
+
+function persistProductDraft(draft) {
+    sessionStorage.setItem(PRODUCT_DRAFT_KEY, JSON.stringify(draft));
+}
+
+function consumeProductDraft() {
+    const raw = sessionStorage.getItem(PRODUCT_DRAFT_KEY);
+    if (!raw) return null;
+    try {
+        return JSON.parse(raw);
+    } catch (e) {
+        console.error('Failed to parse product draft, discarding', e);
+        sessionStorage.removeItem(PRODUCT_DRAFT_KEY);
+        return null;
+    }
+}
+
+function clearProductDraft() {
+    sessionStorage.removeItem(PRODUCT_DRAFT_KEY);
+}
+
+// Update the in-flight detail draft so the user resumes with the newly
+// registered product selected. Best-effort: any error here just leaves the
+// draft as-is — the user can still come back and pick the product manually
+// from the autocomplete.
+async function linkNewProductToDraft(productName) {
+    try {
+        const raw = sessionStorage.getItem(DETAIL_DRAFT_KEY);
+        if (!raw) return;
+        const candidates = await invoke('search_products_by_name', { query: productName });
+        if (!candidates || candidates.length === 0) return;
+        const match = candidates.find(c => c.product_name === productName) || candidates[0];
+        const draft = JSON.parse(raw);
+        draft.selected_product_id = match.product_id;
+        draft.item_name = match.product_name;
+        sessionStorage.setItem(DETAIL_DRAFT_KEY, JSON.stringify(draft));
+    } catch (e) {
+        console.warn('Could not link new product to detail draft:', e);
     }
 }
 

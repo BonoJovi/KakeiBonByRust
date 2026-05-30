@@ -34,6 +34,49 @@ const autocompleteState = {
     requestToken: 0,
 };
 
+// Detail-form draft persisted across the round-trip to product-management.
+// When the user clicks "Open in product master" mid-edit, the in-flight form
+// state is serialized to sessionStorage so it can be restored when the user
+// comes back via the "Back to detail entry" button. The v1 suffix lets us
+// evolve the schema later without crashing on stale drafts in a session.
+const DETAIL_DRAFT_KEY = 'kakeibon.detail_draft.v1';
+
+export function buildDraftFromForm() {
+    return {
+        transaction_id: transactionId,
+        detail_id: document.getElementById('detail-id')?.value || null,
+        item_name: document.getElementById('item-name')?.value || '',
+        category2_code: document.getElementById('category2-code')?.value || '',
+        category3_code: document.getElementById('category3-code')?.value || '',
+        tax_rate: document.getElementById('tax-rate')?.value || '10',
+        amount_excluding_tax: document.getElementById('amount-excluding-tax')?.value || '',
+        amount_including_tax: document.getElementById('amount-including-tax')?.value || '',
+        tax_amount: document.getElementById('tax-amount')?.value || '',
+        memo: document.getElementById('memo')?.value || '',
+        selected_product_id: autocompleteState.selectedProductId,
+    };
+}
+
+export function persistDraft(draft) {
+    sessionStorage.setItem(DETAIL_DRAFT_KEY, JSON.stringify(draft));
+}
+
+export function consumeDraft() {
+    const raw = sessionStorage.getItem(DETAIL_DRAFT_KEY);
+    if (!raw) return null;
+    try {
+        return JSON.parse(raw);
+    } catch (e) {
+        console.error('Failed to parse detail draft, discarding', e);
+        sessionStorage.removeItem(DETAIL_DRAFT_KEY);
+        return null;
+    }
+}
+
+export function clearDraft() {
+    sessionStorage.removeItem(DETAIL_DRAFT_KEY);
+}
+
 document.addEventListener('DOMContentLoaded', async function() {
     
     // Create menu bar
@@ -105,7 +148,22 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Load transaction details
         await loadDetails();
-        
+
+        // If we just came back from product-management via the "Back to detail
+        // entry" button, restore the half-filled modal. Only consume the draft
+        // on a successful restore; otherwise leave it for the user to retry.
+        if (urlParams.get('restore') === '1') {
+            const draft = consumeDraft();
+            if (draft) {
+                try {
+                    await restoreDraftIntoModal(draft);
+                    clearDraft();
+                } catch (e) {
+                    console.error('Failed to restore detail draft', e);
+                }
+            }
+        }
+
         // Fit + center the window on this monitor
         await fitWindowToScreen();
         
@@ -230,6 +288,22 @@ function setupEventListeners() {
     if (addDetailBtn) {
         addDetailBtn.addEventListener('click', async () => {
             await openDetailModal();
+        });
+    }
+
+    // "Open in product master" button: jumps to product master while
+    // preserving the in-flight modal state via sessionStorage so the user can
+    // come back to the half-filled detail row after registering the product.
+    const openProductMasterBtn = document.getElementById('open-product-master-btn');
+    if (openProductMasterBtn) {
+        openProductMasterBtn.addEventListener('click', () => {
+            const draft = buildDraftFromForm();
+            persistDraft(draft);
+            const params = new URLSearchParams();
+            if (draft.item_name) params.set('prefill_name', draft.item_name);
+            if (transactionId) params.set('return_to', transactionId);
+            const qs = params.toString();
+            window.location.href = HTML_FILES.PRODUCT_MANAGEMENT + (qs ? '?' + qs : '');
         });
     }
     
@@ -806,6 +880,37 @@ function closeDetailModal() {
     if (modal) {
         modal.classList.add('hidden');
     }
+}
+
+// Populate the detail modal from a draft saved before the user jumped to
+// product-management. Mirrors the value assignments in openDetailModal()'s
+// edit branch but works for both new and existing-row drafts.
+export async function restoreDraftIntoModal(draft) {
+    await openDetailModal();
+
+    if (draft.detail_id) {
+        document.getElementById('detail-id').value = draft.detail_id;
+        const modalTitle = document.getElementById('modal-title');
+        if (modalTitle) {
+            modalTitle.setAttribute('data-i18n', 'detail_mgmt.edit_detail');
+            modalTitle.textContent = i18n.t('detail_mgmt.edit_detail');
+        }
+    }
+
+    document.getElementById('item-name').value = draft.item_name || '';
+    if (draft.selected_product_id != null) {
+        autocompleteState.selectedProductId = setHiddenProductId(draft.selected_product_id);
+    }
+    if (draft.category2_code) {
+        document.getElementById('category2-code').value = draft.category2_code;
+        await loadCategory3Options(draft.category2_code);
+        document.getElementById('category3-code').value = draft.category3_code || '';
+    }
+    document.getElementById('tax-rate').value = draft.tax_rate || '10';
+    document.getElementById('amount-excluding-tax').value = draft.amount_excluding_tax || '';
+    document.getElementById('amount-including-tax').value = draft.amount_including_tax || '';
+    document.getElementById('tax-amount').value = draft.tax_amount || '';
+    document.getElementById('memo').value = draft.memo || '';
 }
 
 async function handleDetailFormSubmit(event) {

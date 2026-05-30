@@ -136,10 +136,6 @@ body {
     background-color: #f9f9f9;
 }
 
-#accounts-table tbody tr:last-child td {
-    border-bottom: none;
-}
-
 .action-buttons {
     display: flex;
     gap: 8px;
