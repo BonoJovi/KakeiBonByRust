@@ -420,4 +420,4 @@ WHERE USER_ID = ?;
 **Created**: 2025-11-02 21:44 JST
 
 **Author**: AI Assistant  
-**Supervisor**: Yoshihiro NAKAHARA (bonojovi@zundou.org)
+**Supervisor**: Yoshihiro NAKAHARA (bonojovi2741@gmail.com)
