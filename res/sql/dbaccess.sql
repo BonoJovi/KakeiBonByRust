@@ -802,7 +802,11 @@ CREATE INDEX IF NOT EXISTS idx_transactions_header_date ON TRANSACTIONS_HEADER(T
 -- Create indexes for transactions_detail
 CREATE INDEX IF NOT EXISTS idx_transactions_detail_transaction ON TRANSACTIONS_DETAIL(TRANSACTION_ID);
 CREATE INDEX IF NOT EXISTS idx_transactions_detail_categories ON TRANSACTIONS_DETAIL(CATEGORY2_CODE, CATEGORY3_CODE);
-CREATE INDEX IF NOT EXISTS idx_transactions_detail_product ON TRANSACTIONS_DETAIL(PRODUCT_ID);
+-- idx_transactions_detail_product is created by ensure_product_id_column in
+-- src/db.rs after PRODUCT_ID has been ALTER-added. Creating it here would
+-- fire BEFORE the migration on pre-v2.6.0 databases (CREATE TABLE IF NOT
+-- EXISTS is a no-op for them, so PRODUCT_ID is still missing) and crash the
+-- whole initialize() call.
 
 -- ============================================================================
 -- v2.1.0: Recurring Scheduled Transactions
