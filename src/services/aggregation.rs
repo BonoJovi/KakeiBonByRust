@@ -10,6 +10,18 @@ use sqlx::{FromRow, SqlitePool};
 use crate::services::period::{monthly_period_bounds, yearly_period_bounds};
 
 // =============================================================================
+// SQL Literal Escaping
+// =============================================================================
+
+/// Escape a string for interpolation inside a single-quoted SQL literal.
+///
+/// SQLite only recognises `''` as an escape inside string literals, so doubling
+/// the quotes is sufficient to keep the value inside its literal.
+fn escape_sql_literal(value: &str) -> String {
+    value.replace('\'', "''")
+}
+
+// =============================================================================
 // Filter Enums
 // =============================================================================
 
@@ -109,18 +121,21 @@ impl CategoryFilter {
     pub fn to_sql(&self) -> String {
         match self {
             CategoryFilter::Category1(cat1) => {
-                format!("th.CATEGORY1_CODE = '{}'", cat1)
+                format!("th.CATEGORY1_CODE = '{}'", escape_sql_literal(cat1))
             }
             CategoryFilter::Category2(cat1, cat2) => {
                 format!(
                     "th.CATEGORY1_CODE = '{}' AND th.CATEGORY2_CODE = '{}'",
-                    cat1, cat2
+                    escape_sql_literal(cat1),
+                    escape_sql_literal(cat2)
                 )
             }
             CategoryFilter::Category3(cat1, cat2, cat3) => {
                 format!(
                     "th.CATEGORY1_CODE = '{}' AND th.CATEGORY2_CODE = '{}' AND th.CATEGORY3_CODE = '{}'",
-                    cat1, cat2, cat3
+                    escape_sql_literal(cat1),
+                    escape_sql_literal(cat2),
+                    escape_sql_literal(cat3)
                 )
             }
             CategoryFilter::None => String::new(),
@@ -822,7 +837,7 @@ fn build_detail_group_pieces(group_by: &GroupBy, lang: &str) -> (String, String,
                  AND c2.CATEGORY1_CODE = c2i.CATEGORY1_CODE \
                  AND c2.CATEGORY2_CODE = c2i.CATEGORY2_CODE \
                  AND c2i.LANG_CODE = '{}'",
-                lang
+                escape_sql_literal(lang)
             ),
         ),
         GroupBy::Category3 => (
@@ -839,7 +854,7 @@ fn build_detail_group_pieces(group_by: &GroupBy, lang: &str) -> (String, String,
                  AND c3.CATEGORY2_CODE = c3i.CATEGORY2_CODE \
                  AND c3.CATEGORY3_CODE = c3i.CATEGORY3_CODE \
                  AND c3i.LANG_CODE = '{}'",
-                lang
+                escape_sql_literal(lang)
             ),
         ),
         GroupBy::Product => (
@@ -943,7 +958,7 @@ fn build_join_clauses(group_by: &GroupBy, _user_id: i64, lang: &str) -> String {
 LEFT JOIN CATEGORY1 c1 ON th.USER_ID = c1.USER_ID AND th.CATEGORY1_CODE = c1.CATEGORY1_CODE
 LEFT JOIN CATEGORY1_I18N c1i ON c1.USER_ID = c1i.USER_ID AND c1.CATEGORY1_CODE = c1i.CATEGORY1_CODE AND c1i.LANG_CODE = '{}'
 "#,
-                lang
+                escape_sql_literal(lang)
             )
         }
         GroupBy::Category2 => {
@@ -953,7 +968,7 @@ INNER JOIN TRANSACTIONS_DETAIL td ON th.USER_ID = td.USER_ID AND th.TRANSACTION_
 LEFT JOIN CATEGORY2 c2 ON td.USER_ID = c2.USER_ID AND td.CATEGORY1_CODE = c2.CATEGORY1_CODE AND td.CATEGORY2_CODE = c2.CATEGORY2_CODE
 LEFT JOIN CATEGORY2_I18N c2i ON c2.USER_ID = c2i.USER_ID AND c2.CATEGORY1_CODE = c2i.CATEGORY1_CODE AND c2.CATEGORY2_CODE = c2i.CATEGORY2_CODE AND c2i.LANG_CODE = '{}'
 "#,
-                lang
+                escape_sql_literal(lang)
             )
         }
         GroupBy::Category3 => {
@@ -963,7 +978,7 @@ INNER JOIN TRANSACTIONS_DETAIL td ON th.USER_ID = td.USER_ID AND th.TRANSACTION_
 LEFT JOIN CATEGORY3 c3 ON td.USER_ID = c3.USER_ID AND td.CATEGORY1_CODE = c3.CATEGORY1_CODE AND td.CATEGORY2_CODE = c3.CATEGORY2_CODE AND td.CATEGORY3_CODE = c3.CATEGORY3_CODE
 LEFT JOIN CATEGORY3_I18N c3i ON c3.USER_ID = c3i.USER_ID AND c3.CATEGORY1_CODE = c3i.CATEGORY1_CODE AND c3.CATEGORY2_CODE = c3i.CATEGORY2_CODE AND c3.CATEGORY3_CODE = c3i.CATEGORY3_CODE AND c3i.LANG_CODE = '{}'
 "#,
-                lang
+                escape_sql_literal(lang)
             )
         }
         GroupBy::Account => {
@@ -1517,6 +1532,19 @@ mod tests {
         let sql = filter.to_sql();
         assert!(sql.contains("CATEGORY1_CODE"));
         assert!(sql.contains("EXPENSE"));
+    }
+
+    #[test]
+    fn test_category_filter_escapes_quotes() {
+        let filter = CategoryFilter::Category1("X' OR 1=1--".to_string());
+        let sql = filter.to_sql();
+        assert_eq!(sql, "th.CATEGORY1_CODE = 'X'' OR 1=1--'");
+    }
+
+    #[test]
+    fn test_join_clauses_escape_lang() {
+        let sql = build_join_clauses(&GroupBy::Category1, 1, "ja' OR '1'='1");
+        assert!(sql.contains("c1i.LANG_CODE = 'ja'' OR ''1''=''1'"));
     }
 
     #[test]

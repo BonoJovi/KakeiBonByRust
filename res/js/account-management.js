@@ -11,6 +11,7 @@ import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
 import { createMenuBar } from './menu.js';
 import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
 import { showToast } from './toast.js';
+import { escapeHtml } from './escape-html.js';
 
 console.log('=== ACCOUNT-MANAGEMENT.JS LOADED - ALL imports enabled ===');
 console.log('invoke:', typeof invoke);
@@ -210,7 +211,7 @@ async function loadAccounts() {
         }
     } catch (error) {
         console.error('Failed to load accounts:', error);
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #dc3545;">Error loading accounts: ${error}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #dc3545;">Error loading accounts: ${escapeHtml(error)}</td></tr>`;
     } finally {
         loading.style.display = 'none';
     }

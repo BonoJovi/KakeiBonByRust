@@ -2,6 +2,9 @@ use sqlx::{SqlitePool, Row};
 use serde::{Serialize, Deserialize};
 use crate::{sql_queries, consts, validation};
 
+/// Upper bound for page size in paginated transaction listings
+const MAX_PER_PAGE: i64 = 500;
+
 /// Transaction header data structure
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct TransactionHeader {
@@ -713,6 +716,11 @@ impl TransactionService {
         page: i64,
         per_page: i64,
     ) -> Result<TransactionListResponse, TransactionError> {
+        // Clamp pagination input: per_page = 0 would divide by zero below and
+        // negative values would produce a negative OFFSET.
+        let page = page.max(1);
+        let per_page = per_page.clamp(1, MAX_PER_PAGE);
+
         // Build WHERE clauses (with table alias 't.')
         let mut where_clauses = vec!["t.USER_ID = ?".to_string()];
         let mut params: Vec<String> = vec![user_id.to_string()];
@@ -1606,9 +1614,17 @@ impl TransactionService {
             .ok_or_else(|| {
                 TransactionError::DatabaseError("DB path has no parent directory".to_string())
             })?;
-        let backup_dir = backup.parent().map(|p| p.to_path_buf()).ok_or_else(|| {
-            TransactionError::ValidationError("Backup path has no parent directory".to_string())
-        })?;
+        // Canonicalize both sides so `..` segments and symlinks cannot be used
+        // to point ATTACH at a file outside the DB directory.
+        let main_dir = main_dir.canonicalize().unwrap_or(main_dir);
+        let backup_dir = backup
+            .parent()
+            .map(|p| p.canonicalize().unwrap_or_else(|_| p.to_path_buf()))
+            .ok_or_else(|| {
+                TransactionError::ValidationError(
+                    "Backup path has no parent directory".to_string(),
+                )
+            })?;
         if backup_dir != main_dir {
             return Err(TransactionError::ValidationError(format!(
                 "Backup must live in the kakeibon DB directory ({:?})",

@@ -11,6 +11,7 @@ import { createMenuBar } from './menu.js';
 import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
 import { showToast } from './toast.js';
 import { MAX_I18N_NAME_LEN } from './consts.js';
+import { escapeHtml } from './escape-html.js';
 
 // Category level constants
 const LEVEL_CATEGORY1 = 1;
@@ -366,11 +367,11 @@ function renderCategory1(categoryTree, index, total) {
     
     div.innerHTML = `
         <div class="category-header">
-            <span class="expand-icon ${hasChildren ? (isExpanded ? 'expanded expandable' : 'collapsed expandable') : 'empty'}" data-category-code="${category.category1_code}"></span>
-            <span class="category-name ${hasChildren ? 'expandable' : ''}">${categoryName}</span>
+            <span class="expand-icon ${hasChildren ? (isExpanded ? 'expanded expandable' : 'collapsed expandable') : 'empty'}" data-category-code="${escapeHtml(category.category1_code)}"></span>
+            <span class="category-name ${hasChildren ? 'expandable' : ''}">${escapeHtml(categoryName)}</span>
             <span class="category-order">${i18n.t('category_mgmt.order')}: ${category.display_order}</span>
             <div class="category-actions">
-                <button class="btn-icon btn-add" data-action="add-child" data-category-code="${category.category1_code}" data-category1-code="${category.category1_code}" data-level="1">
+                <button class="btn-icon btn-add" data-action="add-child" data-category-code="${escapeHtml(category.category1_code)}" data-category1-code="${escapeHtml(category.category1_code)}" data-level="1">
                     ${i18n.t('category_mgmt.add_sub')}
                 </button>
             </div>
@@ -427,10 +428,10 @@ function renderCategory2(cat2Tree, parent1Code, index, total) {
         div.innerHTML = `
             <div class="category-header">
                 <span class="expand-icon empty"></span>
-                <span class="category-name disabled-name">${categoryName}</span>
+                <span class="category-name disabled-name">${escapeHtml(categoryName)}</span>
                 <span class="category-badge-hidden">${i18n.t('category_mgmt.hidden')}</span>
                 <div class="category-actions">
-                    <button class="btn-icon btn-show" data-action="show" data-category1-code="${parent1Code}" data-category2-code="${category.category2_code}" data-level="2">
+                    <button class="btn-icon btn-show" data-action="show" data-category1-code="${escapeHtml(parent1Code)}" data-category2-code="${escapeHtml(category.category2_code)}" data-level="2">
                         ${i18n.t('common.show')}
                     </button>
                 </div>
@@ -439,23 +440,23 @@ function renderCategory2(cat2Tree, parent1Code, index, total) {
     } else {
         div.innerHTML = `
             <div class="category-header">
-                <span class="expand-icon ${hasChildren ? (isExpanded ? 'expanded expandable' : 'collapsed expandable') : 'empty'}" data-category-code="${category.category2_code}"></span>
-                <span class="category-name ${hasChildren ? 'expandable' : ''}">${categoryName}</span>
+                <span class="expand-icon ${hasChildren ? (isExpanded ? 'expanded expandable' : 'collapsed expandable') : 'empty'}" data-category-code="${escapeHtml(category.category2_code)}"></span>
+                <span class="category-name ${hasChildren ? 'expandable' : ''}">${escapeHtml(categoryName)}</span>
                 <span class="category-order">${i18n.t('category_mgmt.order')}: ${category.display_order}</span>
                 <div class="category-actions">
-                    <button class="btn-icon btn-add" data-action="add-child" data-category-code="${category.category2_code}" data-category1-code="${parent1Code}" data-category2-code="${category.category2_code}" data-level="2">
+                    <button class="btn-icon btn-add" data-action="add-child" data-category-code="${escapeHtml(category.category2_code)}" data-category1-code="${escapeHtml(parent1Code)}" data-category2-code="${escapeHtml(category.category2_code)}" data-level="2">
                         ${i18n.t('category_mgmt.add_sub')}
                     </button>
-                    <button class="btn-icon btn-edit" data-action="edit" data-category-code="${category.category2_code}" data-category1-code="${parent1Code}" data-category2-code="${category.category2_code}" data-level="2">
+                    <button class="btn-icon btn-edit" data-action="edit" data-category-code="${escapeHtml(category.category2_code)}" data-category1-code="${escapeHtml(parent1Code)}" data-category2-code="${escapeHtml(category.category2_code)}" data-level="2">
                         ${i18n.t('common.edit')}
                     </button>
-                    <button class="btn-icon btn-up" data-action="move-up" data-category-code="${category.category2_code}" data-category1-code="${parent1Code}" data-category2-code="${category.category2_code}" data-level="2" ${index === 0 ? 'disabled' : ''}>
+                    <button class="btn-icon btn-up" data-action="move-up" data-category-code="${escapeHtml(category.category2_code)}" data-category1-code="${escapeHtml(parent1Code)}" data-category2-code="${escapeHtml(category.category2_code)}" data-level="2" ${index === 0 ? 'disabled' : ''}>
                         ↑
                     </button>
-                    <button class="btn-icon btn-down" data-action="move-down" data-category-code="${category.category2_code}" data-category1-code="${parent1Code}" data-category2-code="${category.category2_code}" data-level="2" ${index === total - 1 ? 'disabled' : ''}>
+                    <button class="btn-icon btn-down" data-action="move-down" data-category-code="${escapeHtml(category.category2_code)}" data-category1-code="${escapeHtml(parent1Code)}" data-category2-code="${escapeHtml(category.category2_code)}" data-level="2" ${index === total - 1 ? 'disabled' : ''}>
                         ↓
                     </button>
-                    <button class="btn-icon btn-hide" data-action="hide" data-category-code="${category.category2_code}" data-category1-code="${parent1Code}" data-category2-code="${category.category2_code}" data-level="2" data-has-children="${hasChildren}">
+                    <button class="btn-icon btn-hide" data-action="hide" data-category-code="${escapeHtml(category.category2_code)}" data-category1-code="${escapeHtml(parent1Code)}" data-category2-code="${escapeHtml(category.category2_code)}" data-level="2" data-has-children="${hasChildren}">
                         ${i18n.t('common.hide')}
                     </button>
                 </div>
@@ -510,10 +511,10 @@ function renderCategory3(category, parent1Code, parent2Code, index, total) {
         div.innerHTML = `
             <div class="category-header">
                 <span class="expand-icon empty"></span>
-                <span class="category-name disabled-name">${categoryName}</span>
+                <span class="category-name disabled-name">${escapeHtml(categoryName)}</span>
                 <span class="category-badge-hidden">${i18n.t('category_mgmt.hidden')}</span>
                 <div class="category-actions">
-                    <button class="btn-icon btn-show" data-action="show" data-category1-code="${parent1Code}" data-category2-code="${parent2Code}" data-category3-code="${category.category3_code}" data-level="3">
+                    <button class="btn-icon btn-show" data-action="show" data-category1-code="${escapeHtml(parent1Code)}" data-category2-code="${escapeHtml(parent2Code)}" data-category3-code="${escapeHtml(category.category3_code)}" data-level="3">
                         ${i18n.t('common.show')}
                     </button>
                 </div>
@@ -523,19 +524,19 @@ function renderCategory3(category, parent1Code, parent2Code, index, total) {
         div.innerHTML = `
             <div class="category-header">
                 <span class="expand-icon empty"></span>
-                <span class="category-name">${categoryName}</span>
+                <span class="category-name">${escapeHtml(categoryName)}</span>
                 <span class="category-order">${i18n.t('category_mgmt.order')}: ${category.display_order}</span>
                 <div class="category-actions">
-                    <button class="btn-icon btn-edit" data-action="edit" data-category-code="${category.category3_code}" data-category1-code="${parent1Code}" data-category2-code="${parent2Code}" data-category3-code="${category.category3_code}" data-level="3">
+                    <button class="btn-icon btn-edit" data-action="edit" data-category-code="${escapeHtml(category.category3_code)}" data-category1-code="${escapeHtml(parent1Code)}" data-category2-code="${escapeHtml(parent2Code)}" data-category3-code="${escapeHtml(category.category3_code)}" data-level="3">
                         ${i18n.t('common.edit')}
                     </button>
-                    <button class="btn-icon btn-up" data-action="move-up" data-category-code="${category.category3_code}" data-category1-code="${parent1Code}" data-category2-code="${parent2Code}" data-category3-code="${category.category3_code}" data-level="3" ${index === 0 ? 'disabled' : ''}>
+                    <button class="btn-icon btn-up" data-action="move-up" data-category-code="${escapeHtml(category.category3_code)}" data-category1-code="${escapeHtml(parent1Code)}" data-category2-code="${escapeHtml(parent2Code)}" data-category3-code="${escapeHtml(category.category3_code)}" data-level="3" ${index === 0 ? 'disabled' : ''}>
                         ↑
                     </button>
-                    <button class="btn-icon btn-down" data-action="move-down" data-category-code="${category.category3_code}" data-category1-code="${parent1Code}" data-category2-code="${parent2Code}" data-category3-code="${category.category3_code}" data-level="3" ${index === total - 1 ? 'disabled' : ''}>
+                    <button class="btn-icon btn-down" data-action="move-down" data-category-code="${escapeHtml(category.category3_code)}" data-category1-code="${escapeHtml(parent1Code)}" data-category2-code="${escapeHtml(parent2Code)}" data-category3-code="${escapeHtml(category.category3_code)}" data-level="3" ${index === total - 1 ? 'disabled' : ''}>
                         ↓
                     </button>
-                    <button class="btn-icon btn-hide" data-action="hide" data-category-code="${category.category3_code}" data-category1-code="${parent1Code}" data-category2-code="${parent2Code}" data-category3-code="${category.category3_code}" data-level="3">
+                    <button class="btn-icon btn-hide" data-action="hide" data-category-code="${escapeHtml(category.category3_code)}" data-category1-code="${escapeHtml(parent1Code)}" data-category2-code="${escapeHtml(parent2Code)}" data-category3-code="${escapeHtml(category.category3_code)}" data-level="3">
                         ${i18n.t('common.hide')}
                     </button>
                 </div>
