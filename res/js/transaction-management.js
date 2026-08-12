@@ -318,6 +318,7 @@ async function loadCategoriesForFilter() {
         
     } catch (error) {
         console.error('Failed to load categories:', error);
+        showToast(i18n.t('error.category_load_failed') + ': ' + error, { variant: 'error' });
     }
 }
 
@@ -759,6 +760,7 @@ async function loadCategoriesForModal() {
         
     } catch (error) {
         console.error('Failed to load categories:', error);
+        showToast(i18n.t('error.category_load_failed') + ': ' + error, { variant: 'error' });
     }
 }
 
@@ -804,6 +806,7 @@ async function loadAccountsForModal() {
         
     } catch (error) {
         console.error('Failed to load accounts:', error);
+        showToast(i18n.t('error.load_accounts_failed') + ': ' + error, { variant: 'error' });
     }
 }
 
@@ -834,6 +837,7 @@ async function loadShopsForModal() {
 
     } catch (error) {
         console.error('Failed to load shops:', error);
+        showToast(i18n.t('error.load_shops_failed') + ': ' + error, { variant: 'error' });
     }
 }
 

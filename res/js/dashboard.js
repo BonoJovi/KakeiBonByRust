@@ -7,6 +7,7 @@ import { HTML_FILES } from './html-files.js';
 import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
 import { createMenuBar } from './menu.js';
 import { getPeriodSettings, formatMonthlyPeriodLabel, formatMonthlyPeriodBaseLabel, fetchMonthlyPeriodBounds } from './period.js';
+import { showToast } from './toast.js';
 
 console.log('dashboard.js loaded');
 
@@ -677,6 +678,7 @@ function setupMenuHandlers() {
                     window.location.href = HTML_FILES.INDEX;
                 } catch (error) {
                     console.error('Logout failed:', error);
+                    showToast(i18n.t('error.logout_failed') + ': ' + error, { variant: 'error' });
                 }
             });
         } else {
@@ -692,6 +694,7 @@ function setupMenuHandlers() {
                     await invoke('handle_quit');
                 } catch (error) {
                     console.error('Quit failed:', error);
+                    showToast(i18n.t('error.quit_failed') + ': ' + error, { variant: 'error' });
                 }
             });
         }
@@ -732,6 +735,7 @@ async function handleMenuClick(menuKey) {
                 window.location.href = HTML_FILES.INDEX;
             } catch (error) {
                 console.error('Logout failed:', error);
+                showToast(i18n.t('error.logout_failed') + ': ' + error, { variant: 'error' });
             }
             break;
         case 'menu.quit':
@@ -739,6 +743,7 @@ async function handleMenuClick(menuKey) {
                 await invoke('handle_quit');
             } catch (error) {
                 console.error('Quit failed:', error);
+                showToast(i18n.t('error.quit_failed') + ': ' + error, { variant: 'error' });
             }
             break;
         case 'menu.user_management':

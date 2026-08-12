@@ -161,7 +161,12 @@ impl EncryptionService {
                 // Decrypt and re-encrypt each field
                 let mut updates = Vec::new();
                 for (idx, column) in columns.iter().enumerate() {
-                    let encrypted_value: Option<String> = row.try_get(idx + 1).ok();
+                    // A decode failure here would otherwise skip the column and
+                    // leave it encrypted with the old key, making it permanently
+                    // unreadable after the password change.
+                    let encrypted_value: Option<String> = row
+                        .try_get(idx + 1)
+                        .map_err(EncryptionError::DatabaseError)?;
                     
                     if let Some(enc_val) = encrypted_value {
                         // Decrypt with old key
