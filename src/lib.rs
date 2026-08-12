@@ -70,6 +70,26 @@ fn get_session_user_id(state: &tauri::State<'_, AppState>) -> Result<i64, String
     }
 }
 
+/// Helper function to get the authenticated session user
+fn get_session_user(
+    state: &tauri::State<'_, AppState>
+) -> Result<services::session::User, String> {
+    state
+        .session
+        .get_user()
+        .ok_or_else(|| "User not authenticated. Please login first.".to_string())
+}
+
+/// Helper function requiring an authenticated administrator session
+fn require_admin_session(state: &tauri::State<'_, AppState>) -> Result<(), String> {
+    let user = get_session_user(state)?;
+    if user.role == consts::ROLE_ADMIN {
+        Ok(())
+    } else {
+        Err("Administrator privileges are required for this operation.".to_string())
+    }
+}
+
 #[tauri::command]
 async fn login_user(
     username: String,
@@ -112,6 +132,13 @@ async fn register_admin(
     
     let auth = state.auth.lock().await;
     
+    // Admin registration is only allowed during first-run setup
+    match auth.has_users().await {
+        Ok(true) => return Err("Setup already completed. Admin registration is disabled.".to_string()),
+        Ok(false) => {}
+        Err(e) => return Err(format!("Database error: {}", e)),
+    }
+    
     match auth.register_admin_user(&username, &password).await {
         Ok(_) => Ok("Admin user registered successfully".to_string()),
         Err(e) => Err(format!("Registration failed: {}", e)),
@@ -127,7 +154,18 @@ async fn register_user(
     // Validate password
     validate_password(&password)?;
     
+    // Only an authenticated user may complete the initial general-user setup
+    get_session_user(&state)?;
+    
     let auth = state.auth.lock().await;
+    
+    // General-user registration through this command is setup-only;
+    // later accounts are created via `create_general_user` (admin only)
+    match auth.has_general_users().await {
+        Ok(true) => return Err("User setup already completed. Use user management instead.".to_string()),
+        Ok(false) => {}
+        Err(e) => return Err(format!("Database error: {}", e)),
+    }
     
     match auth.register_user(&username, &password).await {
         Ok(_) => Ok("User registered successfully".to_string()),
@@ -267,19 +305,24 @@ fn validate_passwords_frontend(password: String, password_confirm: String) -> Re
 
 #[tauri::command]
 async fn list_users(state: tauri::State<'_, AppState>) -> Result<Vec<serde_json::Value>, String> {
+    let session_user = get_session_user(&state)?;
+    let is_admin = session_user.role == consts::ROLE_ADMIN;
     let user_mgmt = state.user_mgmt.lock().await;
     
     match user_mgmt.list_users().await {
         Ok(users) => {
-            let json_users: Vec<serde_json::Value> = users.into_iter().map(|u| {
-                serde_json::json!({
-                    "user_id": u.user_id,
-                    "name": u.name,
-                    "role": u.role,
-                    "entry_dt": u.entry_dt,
-                    "update_dt": u.update_dt,
-                })
-            }).collect();
+            // Non-admin sessions may only see their own account
+            let json_users: Vec<serde_json::Value> = users.into_iter()
+                .filter(|u| is_admin || u.user_id == session_user.user_id)
+                .map(|u| {
+                    serde_json::json!({
+                        "user_id": u.user_id,
+                        "name": u.name,
+                        "role": u.role,
+                        "entry_dt": u.entry_dt,
+                        "update_dt": u.update_dt,
+                    })
+                }).collect();
             Ok(json_users)
         }
         Err(e) => Err(format!("Failed to list users: {}", e)),
@@ -291,8 +334,12 @@ async fn get_user(
     user_id: i64,
     state: tauri::State<'_, AppState>
 ) -> Result<serde_json::Value, String> {
-    // Note: This function keeps user_id parameter as it's used for admin to query other users
-    // If querying self, frontend should pass session user_id
+    // Admins may query any user; other sessions only themselves
+    let session_user = get_session_user(&state)?;
+    if session_user.role != consts::ROLE_ADMIN && session_user.user_id != user_id {
+        return Err("Administrator privileges are required for this operation.".to_string());
+    }
+    
     let user_mgmt = state.user_mgmt.lock().await;
     
     match user_mgmt.get_user(user_id).await {
@@ -313,6 +360,7 @@ async fn create_general_user(
     password: String,
     state: tauri::State<'_, AppState>
 ) -> Result<i64, String> {
+    require_admin_session(&state)?;
     validate_password(&password)?;
     
     let user_mgmt = state.user_mgmt.lock().await;
@@ -432,7 +480,7 @@ async fn delete_general_user_info(
     user_id: i64,
     state: tauri::State<'_, AppState>
 ) -> Result<(), String> {
-    // Note: This function keeps user_id parameter as it's used for admin to delete other users
+    require_admin_session(&state)?;
     let user_mgmt = state.user_mgmt.lock().await;
     
     match user_mgmt.delete_general_user(user_id).await {
@@ -445,6 +493,7 @@ async fn delete_general_user_info(
 async fn list_encrypted_fields(
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<serde_json::Value>, String> {
+    require_admin_session(&state)?;
     let encryption = state.encryption.lock().await;
     
     match encryption.get_encrypted_fields().await {
@@ -471,6 +520,7 @@ async fn register_encrypted_field(
     description: Option<String>,
     state: tauri::State<'_, AppState>
 ) -> Result<i64, String> {
+    require_admin_session(&state)?;
     let encryption = state.encryption.lock().await;
     
     match encryption.register_encrypted_field(

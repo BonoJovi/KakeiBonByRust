@@ -10,6 +10,7 @@ import { createMenuBar } from './menu.js';
 import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
 import { showToast } from './toast.js';
 import { MAX_NAME_LEN, MAX_MEMO_LEN } from './consts.js';
+import { escapeHtml } from './escape-html.js';
 
 console.log('=== PRODUCT-MANAGEMENT.JS LOADED ===');
 
@@ -370,7 +371,7 @@ function renderProducts() {
         if (isDisabled) {
             // Add [非表示] badge for disabled items
             const badge = `<span style="color: #ffc107; font-weight: bold; margin-left: 8px;">[${i18n.t('common.disabled_label')}]</span>`;
-            nameCell.innerHTML = `<span style="color: #ffffff;">${product.product_name}</span>${badge}`;
+            nameCell.innerHTML = `<span style="color: #ffffff;">${escapeHtml(product.product_name)}</span>${badge}`;
         } else {
             nameCell.textContent = product.product_name;
         }
