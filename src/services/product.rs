@@ -1,6 +1,11 @@
 use serde::{Deserialize, Serialize};
 use sqlx::{SqlitePool, FromRow};
-use crate::{sql_queries, consts};
+use crate::services::master_data;
+use crate::sql_queries;
+use crate::validation;
+
+const NAME_LABEL: &str = "Product name";
+const DUPLICATE_LABEL: &str = "product name";
 
 #[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
 #[sqlx(rename_all = "SCREAMING_SNAKE_CASE")]
@@ -83,61 +88,14 @@ pub async fn get_product_by_id(
     user_id: i64,
     product_id: i64,
 ) -> Result<Option<Product>, String> {
-    let product = sqlx::query_as::<_, Product>(
-        sql_queries::PRODUCT_GET_BY_ID
+    master_data::fetch_by_id(
+        pool,
+        sql_queries::PRODUCT_GET_BY_ID,
+        user_id,
+        product_id,
+        "product",
     )
-    .bind(user_id)
-    .bind(product_id)
-    .fetch_optional(pool)
     .await
-    .map_err(|e| format!("Failed to get product: {}", e))?;
-
-    Ok(product)
-}
-
-/// Get next display order
-async fn get_next_display_order(pool: &SqlitePool, user_id: i64) -> Result<i64, String> {
-    let result: (i64,) = sqlx::query_as(sql_queries::PRODUCT_GET_NEXT_DISPLAY_ORDER)
-        .bind(user_id)
-        .fetch_one(pool)
-        .await
-        .map_err(|e| format!("Failed to get next display order: {}", e))?;
-
-    Ok(result.0)
-}
-
-/// Check if product name is duplicate (for add)
-async fn check_duplicate_for_add(
-    pool: &SqlitePool,
-    user_id: i64,
-    product_name: &str,
-) -> Result<bool, String> {
-    let result: (i64,) = sqlx::query_as(sql_queries::PRODUCT_CHECK_DUPLICATE_FOR_ADD)
-        .bind(user_id)
-        .bind(product_name)
-        .fetch_one(pool)
-        .await
-        .map_err(|e| format!("Failed to check duplicate product name: {}", e))?;
-
-    Ok(result.0 > 0)
-}
-
-/// Check if product name is duplicate (for update)
-async fn check_duplicate_for_update(
-    pool: &SqlitePool,
-    user_id: i64,
-    product_name: &str,
-    product_id: i64,
-) -> Result<bool, String> {
-    let result: (i64,) = sqlx::query_as(sql_queries::PRODUCT_CHECK_DUPLICATE_FOR_UPDATE)
-        .bind(user_id)
-        .bind(product_name)
-        .bind(product_id)
-        .fetch_one(pool)
-        .await
-        .map_err(|e| format!("Failed to check duplicate product name: {}", e))?;
-
-    Ok(result.0 > 0)
 }
 
 /// Add a new product
@@ -146,28 +104,29 @@ pub async fn add_product(
     user_id: i64,
     request: AddProductRequest,
 ) -> Result<String, String> {
-    // Validate product name
-    if request.product_name.trim().is_empty() {
-        return Err("Product name cannot be empty".to_string());
-    }
-    if request.product_name.chars().count() > consts::MAX_NAME_LEN {
-        return Err(format!("Product name must be {} characters or less", consts::MAX_NAME_LEN));
-    }
-
-    // Validate memo length
-    if let Some(memo) = &request.memo {
-        if memo.chars().count() > consts::MAX_MEMO_LEN {
-            return Err(format!("Memo must be {} characters or less", consts::MAX_MEMO_LEN));
-        }
-    }
+    validation::validate_master_name(NAME_LABEL, &request.product_name)?;
+    validation::validate_memo("Memo", request.memo.as_ref())?;
 
     // Check for duplicate product name
-    if check_duplicate_for_add(pool, user_id, &request.product_name).await? {
+    if master_data::value_exists(
+        pool,
+        sql_queries::PRODUCT_CHECK_DUPLICATE_FOR_ADD,
+        user_id,
+        &request.product_name,
+        DUPLICATE_LABEL,
+    )
+    .await?
+    {
         return Err("Product name already exists".to_string());
     }
 
     // Get next display order
-    let display_order = get_next_display_order(pool, user_id).await?;
+    let display_order = master_data::fetch_next_display_order(
+        pool,
+        sql_queries::PRODUCT_GET_NEXT_DISPLAY_ORDER,
+        user_id,
+    )
+    .await?;
 
     // Get is_disabled value (default to 0)
     let is_disabled = request.is_disabled.unwrap_or(0);
@@ -194,20 +153,8 @@ pub async fn update_product(
     product_id: i64,
     request: UpdateProductRequest,
 ) -> Result<String, String> {
-    // Validate product name
-    if request.product_name.trim().is_empty() {
-        return Err("Product name cannot be empty".to_string());
-    }
-    if request.product_name.chars().count() > consts::MAX_NAME_LEN {
-        return Err(format!("Product name must be {} characters or less", consts::MAX_NAME_LEN));
-    }
-
-    // Validate memo length
-    if let Some(memo) = &request.memo {
-        if memo.chars().count() > consts::MAX_MEMO_LEN {
-            return Err(format!("Memo must be {} characters or less", consts::MAX_MEMO_LEN));
-        }
-    }
+    validation::validate_master_name(NAME_LABEL, &request.product_name)?;
+    validation::validate_memo("Memo", request.memo.as_ref())?;
 
     // Check if product exists
     get_product_by_id(pool, user_id, product_id)
@@ -215,7 +162,16 @@ pub async fn update_product(
         .ok_or("Product not found")?;
 
     // Check for duplicate product name
-    if check_duplicate_for_update(pool, user_id, &request.product_name, product_id).await? {
+    if master_data::value_exists_excluding(
+        pool,
+        sql_queries::PRODUCT_CHECK_DUPLICATE_FOR_UPDATE,
+        user_id,
+        &request.product_name,
+        product_id,
+        DUPLICATE_LABEL,
+    )
+    .await?
+    {
         return Err("Product name already exists".to_string());
     }
 
@@ -247,12 +203,14 @@ pub async fn delete_product(
         .ok_or("Product not found")?;
 
     // Logical delete
-    sqlx::query(sql_queries::PRODUCT_DELETE_LOGICAL)
-        .bind(user_id)
-        .bind(product_id)
-        .execute(pool)
-        .await
-        .map_err(|e| format!("Failed to delete product: {}", e))?;
+    master_data::execute_by_id(
+        pool,
+        sql_queries::PRODUCT_DELETE_LOGICAL,
+        user_id,
+        product_id,
+        "delete product",
+    )
+    .await?;
 
     Ok("Product deleted successfully".to_string())
 }
@@ -260,6 +218,7 @@ pub async fn delete_product(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::consts;
     use crate::test_helpers::database::{init_db, TEST_DB_URL};
     use crate::services::manufacturer::{add_manufacturer, AddManufacturerRequest};
 

@@ -42,13 +42,8 @@ impl std::fmt::Display for UserManagementError {
 /// Issue #37 Phase 2-3 — USERS.NAME length guard. Counts characters, not
 /// bytes, mirroring the frontend `maxlength` and char counter.
 fn validate_username_length(username: &str) -> Result<(), UserManagementError> {
-    if username.chars().count() > consts::MAX_NAME_LEN {
-        return Err(UserManagementError::Validation(format!(
-            "Username must be {} characters or less",
-            consts::MAX_NAME_LEN
-        )));
-    }
-    Ok(())
+    crate::validation::validate_max_chars("Username", username, consts::MAX_NAME_LEN)
+        .map_err(UserManagementError::Validation)
 }
 
 impl std::error::Error for UserManagementError {}

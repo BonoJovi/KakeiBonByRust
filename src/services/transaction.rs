@@ -1,6 +1,6 @@
 use sqlx::{SqlitePool, Row};
 use serde::{Serialize, Deserialize};
-use crate::{sql_queries, consts};
+use crate::{sql_queries, consts, validation};
 
 /// Transaction header data structure
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
@@ -225,6 +225,18 @@ impl From<sqlx::Error> for TransactionError {
     }
 }
 
+/// MEMOS.MEMO_TEXT length guard, shared by the header and detail paths.
+fn validate_memo_length(memo_text: &str) -> Result<(), TransactionError> {
+    validation::validate_max_chars("Memo", memo_text, consts::MAX_MEMO_LEN)
+        .map_err(TransactionError::ValidationError)
+}
+
+/// TRANSACTIONS_DETAIL.ITEM_NAME length guard.
+fn validate_item_name_length(item_name: &str) -> Result<(), TransactionError> {
+    validation::validate_max_chars("Item name", item_name, consts::MAX_ITEM_NAME_LEN)
+        .map_err(TransactionError::ValidationError)
+}
+
 /// Result of `recalculate_all_transaction_totals`. The frontend uses this to
 /// tell the user how much work was actually done and where the safety-net
 /// backup ended up, so they can roll back later from a single button click.
@@ -445,11 +457,7 @@ impl TransactionService {
         // Save memo if provided
         let memo_id = if let Some(text) = &request.memo {
             if !text.trim().is_empty() {
-                if text.chars().count() > consts::MAX_MEMO_LEN {
-                    return Err(TransactionError::ValidationError(
-                        format!("Memo must be {} characters or less", consts::MAX_MEMO_LEN),
-                    ));
-                }
+                validate_memo_length(text)?;
                 let result = sqlx::query(sql_queries::MEMO_INSERT)
                     .bind(user_id)
                     .bind(text)
@@ -526,11 +534,7 @@ impl TransactionService {
         // Save memo if provided
         let memo_id = if let Some(text) = memo_text {
             if !text.trim().is_empty() {
-                if text.chars().count() > consts::MAX_MEMO_LEN {
-                    return Err(TransactionError::ValidationError(
-                        format!("Memo must be {} characters or less", consts::MAX_MEMO_LEN),
-                    ));
-                }
+                validate_memo_length(text)?;
                 let result = sqlx::query(sql_queries::MEMO_INSERT)
                     .bind(user_id)
                     .bind(text)
@@ -660,11 +664,7 @@ impl TransactionService {
                     "Memo cannot be empty or whitespace only".to_string(),
                 ));
             }
-            if m.chars().count() > consts::MAX_MEMO_LEN {
-                return Err(TransactionError::ValidationError(
-                    format!("Memo must be {} characters or less", consts::MAX_MEMO_LEN),
-                ));
-            }
+            validate_memo_length(m)?;
         }
 
         let result = sqlx::query(sql_queries::TRANSACTION_INSERT)
@@ -931,12 +931,7 @@ impl TransactionService {
             return Ok(None);
         }
 
-        // Validate memo length
-        if memo_text.chars().count() > consts::MAX_MEMO_LEN {
-            return Err(TransactionError::ValidationError(
-                format!("Memo must be {} characters or less", consts::MAX_MEMO_LEN),
-            ));
-        }
+        validate_memo_length(memo_text)?;
 
         // Check if memo with same text already exists
         let existing_memo = sqlx::query(sql_queries::MEMO_FIND_BY_TEXT)
@@ -975,12 +970,7 @@ impl TransactionService {
             return Ok(None);
         }
 
-        // Validate memo length
-        if memo_text.chars().count() > consts::MAX_MEMO_LEN {
-            return Err(TransactionError::ValidationError(
-                format!("Memo must be {} characters or less", consts::MAX_MEMO_LEN),
-            ));
-        }
+        validate_memo_length(memo_text)?;
 
         // Check if current memo_id is shared with other transactions
         let is_shared = if let Some(memo_id) = current_memo_id {
@@ -1188,11 +1178,7 @@ impl TransactionService {
             ));
         }
 
-        if request.item_name.chars().count() > consts::MAX_ITEM_NAME_LEN {
-            return Err(TransactionError::ValidationError(
-                format!("Item name must be {} characters or less", consts::MAX_ITEM_NAME_LEN),
-            ));
-        }
+        validate_item_name_length(&request.item_name)?;
 
         // Validate amount
         if request.amount < 0 || request.amount > 999_999_999 {
@@ -1218,11 +1204,7 @@ impl TransactionService {
         // Save memo if provided
         let memo_id = if let Some(text) = &request.memo {
             if !text.trim().is_empty() {
-                if text.chars().count() > consts::MAX_MEMO_LEN {
-                    return Err(TransactionError::ValidationError(
-                        format!("Memo must be {} characters or less", consts::MAX_MEMO_LEN),
-                    ));
-                }
+                validate_memo_length(text)?;
                 let result = sqlx::query(sql_queries::MEMO_INSERT)
                     .bind(user_id)
                     .bind(text)
@@ -1270,11 +1252,7 @@ impl TransactionService {
             ));
         }
 
-        if request.item_name.chars().count() > consts::MAX_ITEM_NAME_LEN {
-            return Err(TransactionError::ValidationError(
-                format!("Item name must be {} characters or less", consts::MAX_ITEM_NAME_LEN),
-            ));
-        }
+        validate_item_name_length(&request.item_name)?;
 
         // Validate amount
         if request.amount < 0 || request.amount > 999_999_999 {
@@ -1311,11 +1289,7 @@ impl TransactionService {
         // Handle memo update
         let memo_id = if let Some(text) = &request.memo {
             if !text.trim().is_empty() {
-                if text.chars().count() > consts::MAX_MEMO_LEN {
-                    return Err(TransactionError::ValidationError(
-                        format!("Memo must be {} characters or less", consts::MAX_MEMO_LEN),
-                    ));
-                }
+                validate_memo_length(text)?;
                 
                 if let Some(old_memo_id) = existing_detail.memo_id {
                     // Update existing memo
