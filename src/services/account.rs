@@ -568,4 +568,260 @@ mod tests {
         assert!(err.contains(&consts::MAX_NAME_LEN.to_string()),
             "error should reference the limit: {}", err);
     }
+
+    async fn add_test_account(pool: &SqlitePool, code: &str, initial_balance: i64) {
+        let request = AddAccountRequest {
+            account_code: code.to_string(),
+            account_name: format!("{} account", code),
+            template_code: "CASH".to_string(),
+            initial_balance,
+        };
+        add_account(pool, 2, request).await.unwrap();
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    async fn insert_header(
+        pool: &SqlitePool,
+        category1: &str,
+        from_account: &str,
+        to_account: &str,
+        date: &str,
+        amount: i64,
+        is_scheduled: i64,
+    ) {
+        sqlx::query(sql_queries::TEST_ACCOUNT_INSERT_HEADER)
+            .bind(2_i64)
+            .bind(category1)
+            .bind(from_account)
+            .bind(to_account)
+            .bind(date)
+            .bind(amount)
+            .bind(is_scheduled)
+            .execute(pool)
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_get_account_templates_ordered_by_display_order() {
+        let pool = setup_test_db().await;
+
+        let templates = get_account_templates(&pool).await.unwrap();
+
+        let codes: Vec<&str> = templates.iter().map(|t| t.template_code.as_str()).collect();
+        assert_eq!(codes, vec!["CASH", "BANK"]);
+    }
+
+    #[tokio::test]
+    async fn test_get_account_by_code_returns_none_when_missing() {
+        let pool = setup_test_db().await;
+
+        let account = get_account_by_code(&pool, 2, "MISSING").await.unwrap();
+
+        assert!(account.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_get_all_accounts_spans_users() {
+        let pool = setup_test_db().await;
+        add_test_account(&pool, "CASH", 0).await;
+        add_account(
+            &pool,
+            1,
+            AddAccountRequest {
+                account_code: "ADMIN".to_string(),
+                account_name: "Admin account".to_string(),
+                template_code: "BANK".to_string(),
+                initial_balance: 0,
+            },
+        )
+        .await
+        .unwrap();
+
+        let accounts = get_all_accounts(&pool).await.unwrap();
+
+        assert_eq!(accounts.len(), 2);
+        assert_eq!(accounts[0].user_id, 1, "should be ordered by USER_ID");
+        assert_eq!(accounts[1].user_id, 2);
+    }
+
+    #[tokio::test]
+    async fn test_get_all_accounts_includes_disabled() {
+        let pool = setup_test_db().await;
+        add_test_account(&pool, "CASH", 0).await;
+        delete_account(&pool, 2, "CASH").await.unwrap();
+
+        assert!(get_accounts(&pool, 2).await.unwrap().is_empty());
+        assert_eq!(get_all_accounts(&pool).await.unwrap().len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_add_account_normalizes_code_to_uppercase() {
+        let pool = setup_test_db().await;
+
+        add_account(
+            &pool,
+            2,
+            AddAccountRequest {
+                account_code: "  cash  ".to_string(),
+                account_name: "Cash".to_string(),
+                template_code: "CASH".to_string(),
+                initial_balance: 0,
+            },
+        )
+        .await
+        .unwrap();
+
+        assert!(get_account_by_code(&pool, 2, "CASH").await.unwrap().is_some());
+    }
+
+    #[tokio::test]
+    async fn test_add_account_rejects_blank_code() {
+        let pool = setup_test_db().await;
+
+        let err = add_account(
+            &pool,
+            2,
+            AddAccountRequest {
+                account_code: "   ".to_string(),
+                account_name: "Cash".to_string(),
+                template_code: "CASH".to_string(),
+                initial_balance: 0,
+            },
+        )
+        .await
+        .unwrap_err();
+
+        assert!(err.contains("empty"), "unexpected error: {}", err);
+    }
+
+    #[tokio::test]
+    async fn test_add_account_reactivates_deleted_account() {
+        let pool = setup_test_db().await;
+        add_test_account(&pool, "CASH", 1000).await;
+        delete_account(&pool, 2, "CASH").await.unwrap();
+
+        add_test_account(&pool, "CASH", 2000).await;
+
+        let is_disabled: i64 = sqlx::query_scalar(sql_queries::TEST_ACCOUNT_GET_IS_DISABLED)
+            .bind(2_i64)
+            .bind("CASH")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(is_disabled, 0, "re-adding should reactivate the account");
+        assert_eq!(get_accounts(&pool, 2).await.unwrap().len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_update_account_rejects_unknown_code() {
+        let pool = setup_test_db().await;
+
+        let err = update_account(
+            &pool,
+            2,
+            UpdateAccountRequest {
+                account_code: "MISSING".to_string(),
+                account_name: "Missing".to_string(),
+                template_code: "CASH".to_string(),
+                initial_balance: 0,
+                display_order: 1,
+            },
+        )
+        .await
+        .unwrap_err();
+
+        assert_eq!(err, "Account not found");
+    }
+
+    #[tokio::test]
+    async fn test_delete_account_rejects_unknown_code() {
+        let pool = setup_test_db().await;
+
+        let err = delete_account(&pool, 2, "MISSING").await.unwrap_err();
+
+        assert_eq!(err, "Account not found");
+    }
+
+    #[tokio::test]
+    async fn test_initialize_none_account_is_idempotent() {
+        let pool = setup_test_db().await;
+        sqlx::query(sql_queries::TEST_ACCOUNT_INSERT_NONE_TEMPLATE)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        initialize_none_account(&pool, 2).await.unwrap();
+        // Second call swallows the duplicate-code error and still succeeds
+        initialize_none_account(&pool, 2).await.unwrap();
+
+        let accounts = get_accounts(&pool, 2).await.unwrap();
+        assert_eq!(accounts.len(), 1);
+        assert_eq!(accounts[0].account_code, "NONE");
+        assert_eq!(accounts[0].template_code, "NONE");
+    }
+
+    #[tokio::test]
+    async fn test_get_account_balances_as_of_applies_transaction_signs() {
+        let pool = setup_test_db().await;
+        sqlx::query(sql_queries::TEST_TRANSACTION_CREATE_HEADER_TABLE)
+            .execute(&pool)
+            .await
+            .unwrap();
+        add_test_account(&pool, "CASH", 1000).await;
+        add_test_account(&pool, "BANK", 5000).await;
+
+        insert_header(&pool, "INCOME", "NONE", "CASH", "2026-01-05", 300, 0).await;
+        insert_header(&pool, "EXPENSE", "CASH", "NONE", "2026-01-06", 100, 0).await;
+        insert_header(&pool, "TRANSFER", "BANK", "CASH", "2026-01-07", 2000, 0).await;
+
+        let balances = get_account_balances_as_of(&pool, 2, "2026-01-31")
+            .await
+            .unwrap();
+
+        let cash = balances.iter().find(|b| b.account_code == "CASH").unwrap();
+        let bank = balances.iter().find(|b| b.account_code == "BANK").unwrap();
+        assert_eq!(cash.balance, 1000 + 300 - 100 + 2000);
+        assert_eq!(bank.balance, 5000 - 2000);
+    }
+
+    #[tokio::test]
+    async fn test_get_account_balances_as_of_ignores_future_and_scheduled() {
+        let pool = setup_test_db().await;
+        sqlx::query(sql_queries::TEST_TRANSACTION_CREATE_HEADER_TABLE)
+            .execute(&pool)
+            .await
+            .unwrap();
+        add_test_account(&pool, "CASH", 1000).await;
+
+        insert_header(&pool, "INCOME", "NONE", "CASH", "2026-01-05", 300, 0).await;
+        // After the as-of date
+        insert_header(&pool, "INCOME", "NONE", "CASH", "2026-02-01", 700, 0).await;
+        // Not actualised yet
+        insert_header(&pool, "INCOME", "NONE", "CASH", "2026-01-06", 900, 1).await;
+
+        let balances = get_account_balances_as_of(&pool, 2, "2026-01-31")
+            .await
+            .unwrap();
+
+        assert_eq!(balances.len(), 1);
+        assert_eq!(balances[0].balance, 1300);
+    }
+
+    #[tokio::test]
+    async fn test_get_account_balances_as_of_excludes_disabled_accounts() {
+        let pool = setup_test_db().await;
+        sqlx::query(sql_queries::TEST_TRANSACTION_CREATE_HEADER_TABLE)
+            .execute(&pool)
+            .await
+            .unwrap();
+        add_test_account(&pool, "CASH", 1000).await;
+        delete_account(&pool, 2, "CASH").await.unwrap();
+
+        let balances = get_account_balances_as_of(&pool, 2, "2026-01-31")
+            .await
+            .unwrap();
+
+        assert!(balances.is_empty());
+    }
 }

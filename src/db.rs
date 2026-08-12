@@ -782,4 +782,208 @@ mod tests {
         drop(db);
         let _ = std::fs::remove_file(&test_db_path);
     }
+
+    /// In-memory database, no schema. Migrations only touch `self.pool`, so
+    /// `sqlite::memory:` is enough and keeps the tests file-system free.
+    async fn memory_db() -> Database {
+        let pool = connect_db(crate::test_helpers::database::TEST_DB_URL)
+            .await
+            .expect("Failed to connect to in-memory database");
+        Database { pool }
+    }
+
+    async fn column_count(db: &Database, table: &str, column: &str) -> i64 {
+        sqlx::query_scalar(sql_queries::TEST_DB_COUNT_TABLE_COLUMN)
+            .bind(table)
+            .bind(column)
+            .fetch_one(db.pool())
+            .await
+            .expect("Failed to query pragma_table_info")
+    }
+
+    async fn table_count(db: &Database, table: &str) -> i64 {
+        sqlx::query_scalar(sql_queries::TEST_DB_COUNT_TABLE)
+            .bind(table)
+            .fetch_one(db.pool())
+            .await
+            .expect("Failed to query sqlite_master")
+    }
+
+    #[tokio::test]
+    async fn test_initialize_creates_core_schema() {
+        let db = memory_db().await;
+
+        db.initialize().await.expect("initialize should succeed");
+
+        for table in [
+            "USERS",
+            "CATEGORY1",
+            "CATEGORY2",
+            "CATEGORY3",
+            "ACCOUNTS",
+            "ACCOUNT_TEMPLATES",
+            "TRANSACTIONS_HEADER",
+            "TRANSACTIONS_DETAIL",
+            "RECURRING_RULES",
+            "HOLIDAYS_STANDARD",
+        ] {
+            assert_eq!(table_count(&db, table).await, 1, "{} should be created", table);
+        }
+
+        // Re-running on an existing database must stay a no-op (every statement
+        // in dbaccess.sql is IF NOT EXISTS / INSERT OR IGNORE).
+        db.initialize().await.expect("initialize should be idempotent");
+    }
+
+    #[tokio::test]
+    async fn test_migrate_transactions_creates_current_schema() {
+        let db = memory_db().await;
+        db.initialize().await.expect("initialize");
+
+        db.migrate_transactions().await.expect("first run");
+
+        assert_eq!(table_count(&db, "MEMOS").await, 1);
+        for column in ["AMOUNT_INCLUDING_TAX", "PRODUCT_ID"] {
+            assert_eq!(
+                column_count(&db, "TRANSACTIONS_DETAIL", column).await,
+                1,
+                "TRANSACTIONS_DETAIL.{} should exist",
+                column
+            );
+        }
+        assert_eq!(
+            column_count(&db, "TRANSACTIONS_HEADER", "IS_SCHEDULED").await,
+            1
+        );
+
+        db.migrate_transactions().await.expect("second run");
+    }
+
+    #[tokio::test]
+    async fn test_check_transactions_detail_needs_migration_transitions() {
+        // No TRANSACTIONS_DETAIL table at all
+        let db = memory_db().await;
+        assert!(!db
+            .check_transactions_detail_needs_migration()
+            .await
+            .expect("missing table"));
+
+        // dbaccess.sql still ships the pre-USER_ID detail schema, so a freshly
+        // initialized database needs the migration...
+        db.initialize().await.expect("initialize");
+        assert!(db
+            .check_transactions_detail_needs_migration()
+            .await
+            .expect("fresh schema"));
+
+        // ...and stops needing it once migrate_transactions has run.
+        db.migrate_transactions().await.expect("migrate");
+        assert!(!db
+            .check_transactions_detail_needs_migration()
+            .await
+            .expect("migrated schema"));
+    }
+
+    #[tokio::test]
+    async fn test_migrate_recurring_upgrades_legacy_schema() {
+        let db = memory_db().await;
+        sqlx::query(sql_queries::TEST_DB_CREATE_LEGACY_USERS_TABLE)
+            .execute(db.pool())
+            .await
+            .expect("legacy USERS");
+        sqlx::query(sql_queries::TEST_DB_CREATE_LEGACY_HEADER_TABLE)
+            .execute(db.pool())
+            .await
+            .expect("legacy TRANSACTIONS_HEADER");
+
+        db.migrate_recurring().await.expect("first run");
+
+        assert_eq!(column_count(&db, "TRANSACTIONS_HEADER", "RULE_ID").await, 1);
+        for column in ["HOLIDAY_LOCALE", "WEEK_START_DAY"] {
+            assert_eq!(column_count(&db, "USERS", column).await, 1, "USERS.{}", column);
+        }
+        for table in [
+            "RECURRING_RULES",
+            "RECURRING_RULE_DETAILS",
+            "HOLIDAYS_STANDARD",
+            "HOLIDAYS_USER_CUSTOM",
+        ] {
+            assert_eq!(table_count(&db, table).await, 1, "{} should be created", table);
+        }
+
+        // The obsolete linked-list columns from the unreleased dev build are gone
+        assert_eq!(column_count(&db, "TRANSACTIONS_HEADER", "GROUP_HEAD").await, 0);
+        assert_eq!(
+            column_count(&db, "TRANSACTIONS_HEADER", "NEXT_TRANSACTION_ID").await,
+            0
+        );
+
+        let seeded: i64 = sqlx::query_scalar(sql_queries::TEST_DB_COUNT_STANDARD_HOLIDAYS)
+            .fetch_one(db.pool())
+            .await
+            .expect("count seeded holidays");
+        assert!(seeded > 0, "Japanese holidays should be seeded");
+
+        db.migrate_recurring().await.expect("second run");
+
+        let seeded_after: i64 = sqlx::query_scalar(sql_queries::TEST_DB_COUNT_STANDARD_HOLIDAYS)
+            .fetch_one(db.pool())
+            .await
+            .expect("count seeded holidays after rerun");
+        assert_eq!(
+            seeded, seeded_after,
+            "re-seeding must not duplicate holidays"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_migrate_period_customization_adds_columns_idempotently() {
+        let db = memory_db().await;
+        sqlx::query(sql_queries::TEST_DB_CREATE_LEGACY_USERS_TABLE)
+            .execute(db.pool())
+            .await
+            .expect("legacy USERS");
+
+        db.migrate_period_customization().await.expect("first run");
+        db.migrate_period_customization().await.expect("second run");
+
+        for column in [
+            "MONTH_PERIOD_START_DAY",
+            "YEAR_PERIOD_START_MONTH",
+            "YEAR_PERIOD_START_DAY",
+        ] {
+            assert_eq!(column_count(&db, "USERS", column).await, 1, "USERS.{}", column);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_migrate_period_holiday_shift_adds_column_idempotently() {
+        let db = memory_db().await;
+        sqlx::query(sql_queries::TEST_DB_CREATE_LEGACY_USERS_TABLE)
+            .execute(db.pool())
+            .await
+            .expect("legacy USERS");
+
+        db.migrate_period_holiday_shift().await.expect("first run");
+        db.migrate_period_holiday_shift().await.expect("second run");
+
+        assert_eq!(
+            column_count(&db, "USERS", "MONTH_PERIOD_HOLIDAY_SHIFT").await,
+            1
+        );
+    }
+
+    #[test]
+    fn test_get_db_path_points_at_app_directory() {
+        let path = get_db_path();
+
+        assert_eq!(
+            path.file_name().and_then(|n| n.to_str()),
+            Some(DB_FILE_NAME)
+        );
+        assert_eq!(
+            path.parent().and_then(|p| p.file_name()).and_then(|n| n.to_str()),
+            Some(DB_DIR_NAME)
+        );
+    }
 }
