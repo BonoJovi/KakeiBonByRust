@@ -722,7 +722,11 @@ async function handleLogout() {
         await session.clearSession();
         console.log('Session cleared');
     } catch (error) {
+        // The backend session is still authenticated, so do not present the
+        // user with a logged-out UI.
         console.error('Failed to clear session:', error);
+        showToast(i18n.t('error.logout_failed') + ': ' + error, { variant: 'error' });
+        return;
     }
     
     isLoggedIn = false;
@@ -745,9 +749,14 @@ async function handleLogout() {
     }
 }
 
-function handleQuit() {
+async function handleQuit() {
     console.log('Quit clicked');
-    invoke('handle_quit');
+    try {
+        await invoke('handle_quit');
+    } catch (error) {
+        console.error('Quit failed:', error);
+        showToast(i18n.t('error.quit_failed') + ': ' + error, { variant: 'error' });
+    }
 }
 
 function setupCustomValidationMessages() {
@@ -820,6 +829,7 @@ export function setupFileMenuHandlers() {
                 window.location.href = HTML_FILES.INDEX;
             } catch (error) {
                 console.error('Logout failed:', error);
+                showToast(i18n.t('error.logout_failed') + ': ' + error, { variant: 'error' });
             }
         });
     }
@@ -832,6 +842,7 @@ export function setupFileMenuHandlers() {
                 await invoke('handle_quit');
             } catch (error) {
                 console.error('Quit failed:', error);
+                showToast(i18n.t('error.quit_failed') + ': ' + error, { variant: 'error' });
             }
         });
     }

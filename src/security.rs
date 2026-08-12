@@ -59,9 +59,13 @@ pub fn verify_password(password: &str, hash: &str) -> Result<bool, SecurityError
     
     let argon2 = Argon2::default();
     
+    // Only an actual password mismatch is a `false` answer. Any other argon2
+    // failure (unsupported algorithm, malformed parameters, ...) is a real
+    // error and must not be indistinguishable from a wrong password.
     match argon2.verify_password(password.as_bytes(), &parsed_hash) {
         Ok(_) => Ok(true),
-        Err(_) => Ok(false),
+        Err(argon2::password_hash::Error::Password) => Ok(false),
+        Err(e) => Err(SecurityError::VerifyError(e.to_string())),
     }
 }
 
@@ -121,6 +125,17 @@ mod tests {
         
         let result = verify_password(wrong_password, &hash).expect("Failed to verify password");
         assert!(!result);
+    }
+
+    #[test]
+    fn test_verify_password_reports_non_argon2_hash_as_error() {
+        // A well-formed PHC string from another algorithm parses, but argon2
+        // cannot verify it. That must surface as an error rather than as a
+        // plain "wrong password" answer.
+        let hash = "$pbkdf2-sha256$i=1000$c2FsdHNhbHQ$aGFzaGhhc2hoYXNoaGFzaA";
+
+        let result = verify_password("testPassword123", hash);
+        assert!(matches!(result, Err(SecurityError::VerifyError(_))), "got {:?}", result);
     }
 
     #[test]

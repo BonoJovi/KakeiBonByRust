@@ -1875,7 +1875,10 @@ async fn select_transaction_headers(
     for transaction_id in transaction_ids {
         match transaction.get_transaction_header(user_id, transaction_id).await {
             Ok(header) => headers.push(header),
-            Err(_) => continue, // Skip not found transactions
+            // Ids the user no longer owns are skipped, but a database failure
+            // must not be reported as an incomplete-but-successful selection.
+            Err(services::transaction::TransactionError::NotFound) => continue,
+            Err(e) => return Err(e.to_string()),
         }
     }
     Ok(headers)
@@ -2591,41 +2594,42 @@ pub fn run() {
             }
 
             // Initialize database
-            let rt = tokio::runtime::Runtime::new().unwrap();
+            let rt = tokio::runtime::Runtime::new()
+                .map_err(|e| format!("Failed to create Tokio runtime: {}", e))?;
             let (db, auth, user_mgmt, encryption, settings, i18n, category, transaction, recurring) = rt.block_on(async {
                 let database = Database::new().await
-                    .expect("Failed to connect to database");
+                    .map_err(|e| format!("Failed to connect to database: {}", e))?;
                 database.initialize().await
-                    .expect("Failed to initialize database");
+                    .map_err(|e| format!("Failed to initialize database: {}", e))?;
 
                 // Run transaction-related table migrations
                 database.migrate_transactions().await
-                    .expect("Failed to migrate transaction tables");
+                    .map_err(|e| format!("Failed to migrate transaction tables: {}", e))?;
 
                 // Run v2.1.0 recurring scheduled transactions migrations
                 database.migrate_recurring().await
-                    .expect("Failed to migrate recurring tables");
+                    .map_err(|e| format!("Failed to migrate recurring tables: {}", e))?;
 
                 // Run v2.3.0 aggregation period customization migrations
                 database.migrate_period_customization().await
-                    .expect("Failed to migrate period customization columns");
+                    .map_err(|e| format!("Failed to migrate period customization columns: {}", e))?;
 
                 // Run v2.4.0 monthly period start day holiday shift migrations
                 database.migrate_period_holiday_shift().await
-                    .expect("Failed to migrate period holiday shift column");
+                    .map_err(|e| format!("Failed to migrate period holiday shift column: {}", e))?;
 
                 let auth_service = AuthService::new(database.pool().clone());
                 let user_mgmt_service = UserManagementService::new(database.pool().clone());
                 let encryption_service = EncryptionService::new(database.pool().clone());
                 let settings_manager = SettingsManager::new()
-                    .expect("Failed to initialize settings");
+                    .map_err(|e| format!("Failed to initialize settings: {}", e))?;
                 let i18n_service = I18nService::new(database.pool().clone());
                 let category_service = CategoryService::new(database.pool().clone());
                 let transaction_service = TransactionService::new(database.pool().clone());
                 let recurring_service = RecurringService::new(database.pool().clone());
 
-                (database, auth_service, user_mgmt_service, encryption_service, settings_manager, i18n_service, category_service, transaction_service, recurring_service)
-            });
+                Ok::<_, String>((database, auth_service, user_mgmt_service, encryption_service, settings_manager, i18n_service, category_service, transaction_service, recurring_service))
+            })?;
 
             app.manage(AppState {
                 db: Arc::new(Mutex::new(db)),

@@ -2,6 +2,9 @@ use serde::{Deserialize, Serialize};
 use sqlx::{SqlitePool, FromRow};
 use crate::{sql_queries, consts};
 
+/// Error returned by `add_account` when an active account already uses the code.
+pub const ERR_ACCOUNT_CODE_EXISTS: &str = "Account code already exists";
+
 /// Normalize account code to uppercase
 fn normalize_account_code(code: &str) -> String {
     code.trim().to_uppercase()
@@ -248,7 +251,7 @@ pub async fn add_account(
 
     // Check for duplicate code (only active accounts)
     if check_duplicate_code(pool, user_id, &request.account_code).await? {
-        return Err("Account code already exists".to_string());
+        return Err(ERR_ACCOUNT_CODE_EXISTS.to_string());
     }
 
     // Get next display order
@@ -347,10 +350,13 @@ pub async fn initialize_none_account(pool: &SqlitePool, user_id: i64) -> Result<
         initial_balance: 0,
     };
     
-    // Add account (ignore error if already exists)
-    let _ = add_account(pool, user_id, request).await;
-    
-    Ok(())
+    // The NONE account may already exist (re-initialization); anything else is
+    // a real failure and must be propagated.
+    match add_account(pool, user_id, request).await {
+        Ok(_) => Ok(()),
+        Err(e) if e == ERR_ACCOUNT_CODE_EXISTS => Ok(()),
+        Err(e) => Err(format!("Failed to initialize NONE account: {}", e)),
+    }
 }
 
 #[cfg(test)]
@@ -567,5 +573,35 @@ mod tests {
         let err = update_account(&pool, 2, update_request).await.unwrap_err();
         assert!(err.contains(&consts::MAX_NAME_LEN.to_string()),
             "error should reference the limit: {}", err);
+    }
+
+    #[tokio::test]
+    async fn test_initialize_none_account_is_idempotent() {
+        let pool = setup_test_db().await;
+        sqlx::query(
+            "INSERT INTO ACCOUNT_TEMPLATES (TEMPLATE_CODE, TEMPLATE_NAME_JA, TEMPLATE_NAME_EN, DISPLAY_ORDER) \
+             VALUES ('NONE', '未指定', 'Unspecified', 0)",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        initialize_none_account(&pool, 2).await.unwrap();
+        initialize_none_account(&pool, 2).await.unwrap();
+
+        let accounts = get_accounts(&pool, 2).await.unwrap();
+        assert_eq!(accounts.len(), 1);
+        assert_eq!(accounts[0].account_code, "NONE");
+    }
+
+    #[tokio::test]
+    async fn test_initialize_none_account_propagates_failure() {
+        // No NONE template exists in the test fixtures, so initialization must
+        // fail loudly instead of silently leaving the user without the account.
+        let pool = setup_test_db().await;
+
+        let err = initialize_none_account(&pool, 2).await.unwrap_err();
+        assert!(err.contains("NONE template"), "unexpected error: {}", err);
+        assert!(get_accounts(&pool, 2).await.unwrap().is_empty());
     }
 }

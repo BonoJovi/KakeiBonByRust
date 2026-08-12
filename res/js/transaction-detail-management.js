@@ -11,6 +11,7 @@ import { createMenuBar } from './menu.js';
 import { applyHeaderRecalculationPrompt } from './header-recalc.js';
 import { setupTaxCalculationListeners } from './detail-tax-calc.js';
 import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
+import { showToast } from './toast.js';
 
 let currentUserId = null;
 let currentUserRole = null;
@@ -496,6 +497,7 @@ async function loadCategory3Options(category2Code) {
         
     } catch (error) {
         console.error('Failed to load category3 options:', error);
+        showToast(i18n.t('error.category_load_failed') + ': ' + error, { variant: 'error' });
     }
 }
 
