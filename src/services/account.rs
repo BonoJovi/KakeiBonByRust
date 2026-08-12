@@ -1,6 +1,11 @@
 use serde::{Deserialize, Serialize};
 use sqlx::{SqlitePool, FromRow};
-use crate::{sql_queries, consts};
+use crate::consts;
+use crate::services::master_data;
+use crate::sql_queries;
+use crate::validation;
+
+const NAME_LABEL: &str = "Account name";
 
 /// Error returned by `add_account` when an active account already uses the code.
 pub const ERR_ACCOUNT_CODE_EXISTS: &str = "Account code already exists";
@@ -209,25 +214,14 @@ async fn check_duplicate_code(
     user_id: i64,
     account_code: &str,
 ) -> Result<bool, String> {
-    let result: (i64,) = sqlx::query_as(sql_queries::ACCOUNT_CHECK_DUPLICATE_CODE)
-        .bind(user_id)
-        .bind(account_code)
-        .fetch_one(pool)
-        .await
-        .map_err(|e| format!("Failed to check duplicate code: {}", e))?;
-
-    Ok(result.0 > 0)
-}
-
-/// Get next display order
-async fn get_next_display_order(pool: &SqlitePool, user_id: i64) -> Result<i64, String> {
-    let result: (i64,) = sqlx::query_as(sql_queries::ACCOUNT_GET_NEXT_DISPLAY_ORDER)
-        .bind(user_id)
-        .fetch_one(pool)
-        .await
-        .map_err(|e| format!("Failed to get next display order: {}", e))?;
-
-    Ok(result.0)
+    master_data::value_exists(
+        pool,
+        sql_queries::ACCOUNT_CHECK_DUPLICATE_CODE,
+        user_id,
+        account_code,
+        "code",
+    )
+    .await
 }
 
 /// Add a new account (or reactivate if deleted)
@@ -244,10 +238,7 @@ pub async fn add_account(
         return Err("Account code cannot be empty".to_string());
     }
 
-    // Validate account name length
-    if request.account_name.chars().count() > consts::MAX_NAME_LEN {
-        return Err(format!("Account name must be {} characters or less", consts::MAX_NAME_LEN));
-    }
+    validation::validate_max_chars(NAME_LABEL, &request.account_name, consts::MAX_NAME_LEN)?;
 
     // Check for duplicate code (only active accounts)
     if check_duplicate_code(pool, user_id, &request.account_code).await? {
@@ -255,7 +246,12 @@ pub async fn add_account(
     }
 
     // Get next display order
-    let display_order = get_next_display_order(pool, user_id).await?;
+    let display_order = master_data::fetch_next_display_order(
+        pool,
+        sql_queries::ACCOUNT_GET_NEXT_DISPLAY_ORDER,
+        user_id,
+    )
+    .await?;
 
     // Upsert account (insert or reactivate if deleted)
     sqlx::query(sql_queries::ACCOUNT_UPSERT)
@@ -281,10 +277,7 @@ pub async fn update_account(
     // Normalize account code to uppercase
     request.account_code = normalize_account_code(&request.account_code);
 
-    // Validate account name length
-    if request.account_name.chars().count() > consts::MAX_NAME_LEN {
-        return Err(format!("Account name must be {} characters or less", consts::MAX_NAME_LEN));
-    }
+    validation::validate_max_chars(NAME_LABEL, &request.account_name, consts::MAX_NAME_LEN)?;
 
     // Check if account exists
     get_account_by_code(pool, user_id, &request.account_code)

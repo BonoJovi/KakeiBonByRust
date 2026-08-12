@@ -1,6 +1,11 @@
 use serde::{Deserialize, Serialize};
 use sqlx::{SqlitePool, FromRow};
-use crate::{sql_queries, consts};
+use crate::services::master_data;
+use crate::sql_queries;
+use crate::validation;
+
+const NAME_LABEL: &str = "Shop name";
+const DUPLICATE_LABEL: &str = "shop name";
 
 #[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
 #[sqlx(rename_all = "SCREAMING_SNAKE_CASE")]
@@ -47,61 +52,7 @@ pub async fn get_shop_by_id(
     user_id: i64,
     shop_id: i64,
 ) -> Result<Option<Shop>, String> {
-    let shop = sqlx::query_as::<_, Shop>(
-        sql_queries::SHOP_GET_BY_ID
-    )
-    .bind(user_id)
-    .bind(shop_id)
-    .fetch_optional(pool)
-    .await
-    .map_err(|e| format!("Failed to get shop: {}", e))?;
-
-    Ok(shop)
-}
-
-/// Get next display order
-async fn get_next_display_order(pool: &SqlitePool, user_id: i64) -> Result<i64, String> {
-    let result: (i64,) = sqlx::query_as(sql_queries::SHOP_GET_NEXT_DISPLAY_ORDER)
-        .bind(user_id)
-        .fetch_one(pool)
-        .await
-        .map_err(|e| format!("Failed to get next display order: {}", e))?;
-
-    Ok(result.0)
-}
-
-/// Check if shop name is duplicate (for add)
-async fn check_duplicate_for_add(
-    pool: &SqlitePool,
-    user_id: i64,
-    shop_name: &str,
-) -> Result<bool, String> {
-    let result: (i64,) = sqlx::query_as(sql_queries::SHOP_CHECK_DUPLICATE_FOR_ADD)
-        .bind(user_id)
-        .bind(shop_name)
-        .fetch_one(pool)
-        .await
-        .map_err(|e| format!("Failed to check duplicate shop name: {}", e))?;
-
-    Ok(result.0 > 0)
-}
-
-/// Check if shop name is duplicate (for update)
-async fn check_duplicate_for_update(
-    pool: &SqlitePool,
-    user_id: i64,
-    shop_name: &str,
-    shop_id: i64,
-) -> Result<bool, String> {
-    let result: (i64,) = sqlx::query_as(sql_queries::SHOP_CHECK_DUPLICATE_FOR_UPDATE)
-        .bind(user_id)
-        .bind(shop_name)
-        .bind(shop_id)
-        .fetch_one(pool)
-        .await
-        .map_err(|e| format!("Failed to check duplicate shop name: {}", e))?;
-
-    Ok(result.0 > 0)
+    master_data::fetch_by_id(pool, sql_queries::SHOP_GET_BY_ID, user_id, shop_id, "shop").await
 }
 
 /// Add a new shop
@@ -110,28 +61,29 @@ pub async fn add_shop(
     user_id: i64,
     request: AddShopRequest,
 ) -> Result<String, String> {
-    // Validate shop name
-    if request.shop_name.trim().is_empty() {
-        return Err("Shop name cannot be empty".to_string());
-    }
-    if request.shop_name.chars().count() > consts::MAX_NAME_LEN {
-        return Err(format!("Shop name must be {} characters or less", consts::MAX_NAME_LEN));
-    }
-
-    // Validate memo length
-    if let Some(memo) = &request.memo {
-        if memo.chars().count() > consts::MAX_MEMO_LEN {
-            return Err(format!("Memo must be {} characters or less", consts::MAX_MEMO_LEN));
-        }
-    }
+    validation::validate_master_name(NAME_LABEL, &request.shop_name)?;
+    validation::validate_memo("Memo", request.memo.as_ref())?;
 
     // Check for duplicate shop name
-    if check_duplicate_for_add(pool, user_id, &request.shop_name).await? {
+    if master_data::value_exists(
+        pool,
+        sql_queries::SHOP_CHECK_DUPLICATE_FOR_ADD,
+        user_id,
+        &request.shop_name,
+        DUPLICATE_LABEL,
+    )
+    .await?
+    {
         return Err("Shop name already exists".to_string());
     }
 
     // Get next display order
-    let display_order = get_next_display_order(pool, user_id).await?;
+    let display_order = master_data::fetch_next_display_order(
+        pool,
+        sql_queries::SHOP_GET_NEXT_DISPLAY_ORDER,
+        user_id,
+    )
+    .await?;
 
     // Insert shop
     sqlx::query(sql_queries::SHOP_INSERT)
@@ -153,20 +105,8 @@ pub async fn update_shop(
     shop_id: i64,
     request: UpdateShopRequest,
 ) -> Result<String, String> {
-    // Validate shop name
-    if request.shop_name.trim().is_empty() {
-        return Err("Shop name cannot be empty".to_string());
-    }
-    if request.shop_name.chars().count() > consts::MAX_NAME_LEN {
-        return Err(format!("Shop name must be {} characters or less", consts::MAX_NAME_LEN));
-    }
-
-    // Validate memo length
-    if let Some(memo) = &request.memo {
-        if memo.chars().count() > consts::MAX_MEMO_LEN {
-            return Err(format!("Memo must be {} characters or less", consts::MAX_MEMO_LEN));
-        }
-    }
+    validation::validate_master_name(NAME_LABEL, &request.shop_name)?;
+    validation::validate_memo("Memo", request.memo.as_ref())?;
 
     // Check if shop exists
     get_shop_by_id(pool, user_id, shop_id)
@@ -174,7 +114,16 @@ pub async fn update_shop(
         .ok_or("Shop not found")?;
 
     // Check for duplicate shop name
-    if check_duplicate_for_update(pool, user_id, &request.shop_name, shop_id).await? {
+    if master_data::value_exists_excluding(
+        pool,
+        sql_queries::SHOP_CHECK_DUPLICATE_FOR_UPDATE,
+        user_id,
+        &request.shop_name,
+        shop_id,
+        DUPLICATE_LABEL,
+    )
+    .await?
+    {
         return Err("Shop name already exists".to_string());
     }
 
@@ -204,12 +153,14 @@ pub async fn delete_shop(
         .ok_or("Shop not found")?;
 
     // Logical delete
-    sqlx::query(sql_queries::SHOP_DELETE_LOGICAL)
-        .bind(user_id)
-        .bind(shop_id)
-        .execute(pool)
-        .await
-        .map_err(|e| format!("Failed to delete shop: {}", e))?;
+    master_data::execute_by_id(
+        pool,
+        sql_queries::SHOP_DELETE_LOGICAL,
+        user_id,
+        shop_id,
+        "delete shop",
+    )
+    .await?;
 
     Ok("Shop deleted successfully".to_string())
 }
@@ -217,6 +168,7 @@ pub async fn delete_shop(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::consts;
     use crate::test_helpers::database::{init_db, TEST_DB_URL};
 
     async fn setup_test_db() -> SqlitePool {

@@ -31,14 +31,8 @@ impl From<sqlx::Error> for CategoryError {
 /// name columns (`CATEGORY*_I18N.*_NAME_I18N`). Counts characters, not
 /// bytes, so Japanese input is not implicitly clipped to ~85 chars.
 fn validate_i18n_name_length(name: &str, label: &str) -> Result<(), CategoryError> {
-    if name.chars().count() > consts::MAX_I18N_NAME_LEN {
-        return Err(CategoryError::Validation(format!(
-            "{} must be {} characters or less",
-            label,
-            consts::MAX_I18N_NAME_LEN
-        )));
-    }
-    Ok(())
+    crate::validation::validate_max_chars(label, name, consts::MAX_I18N_NAME_LEN)
+        .map_err(CategoryError::Validation)
 }
 
 pub struct CategoryService {

@@ -1,6 +1,11 @@
 use serde::{Deserialize, Serialize};
 use sqlx::{SqlitePool, FromRow};
-use crate::{sql_queries, consts};
+use crate::services::master_data;
+use crate::sql_queries;
+use crate::validation;
+
+const NAME_LABEL: &str = "Manufacturer name";
+const DUPLICATE_LABEL: &str = "manufacturer name";
 
 #[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
 #[sqlx(rename_all = "SCREAMING_SNAKE_CASE")]
@@ -53,61 +58,14 @@ pub async fn get_manufacturer_by_id(
     user_id: i64,
     manufacturer_id: i64,
 ) -> Result<Option<Manufacturer>, String> {
-    let manufacturer = sqlx::query_as::<_, Manufacturer>(
-        sql_queries::MANUFACTURER_GET_BY_ID
+    master_data::fetch_by_id(
+        pool,
+        sql_queries::MANUFACTURER_GET_BY_ID,
+        user_id,
+        manufacturer_id,
+        "manufacturer",
     )
-    .bind(user_id)
-    .bind(manufacturer_id)
-    .fetch_optional(pool)
     .await
-    .map_err(|e| format!("Failed to get manufacturer: {}", e))?;
-
-    Ok(manufacturer)
-}
-
-/// Get next display order
-async fn get_next_display_order(pool: &SqlitePool, user_id: i64) -> Result<i64, String> {
-    let result: (i64,) = sqlx::query_as(sql_queries::MANUFACTURER_GET_NEXT_DISPLAY_ORDER)
-        .bind(user_id)
-        .fetch_one(pool)
-        .await
-        .map_err(|e| format!("Failed to get next display order: {}", e))?;
-
-    Ok(result.0)
-}
-
-/// Check if manufacturer name is duplicate (for add)
-async fn check_duplicate_for_add(
-    pool: &SqlitePool,
-    user_id: i64,
-    manufacturer_name: &str,
-) -> Result<bool, String> {
-    let result: (i64,) = sqlx::query_as(sql_queries::MANUFACTURER_CHECK_DUPLICATE_FOR_ADD)
-        .bind(user_id)
-        .bind(manufacturer_name)
-        .fetch_one(pool)
-        .await
-        .map_err(|e| format!("Failed to check duplicate manufacturer name: {}", e))?;
-
-    Ok(result.0 > 0)
-}
-
-/// Check if manufacturer name is duplicate (for update)
-async fn check_duplicate_for_update(
-    pool: &SqlitePool,
-    user_id: i64,
-    manufacturer_name: &str,
-    manufacturer_id: i64,
-) -> Result<bool, String> {
-    let result: (i64,) = sqlx::query_as(sql_queries::MANUFACTURER_CHECK_DUPLICATE_FOR_UPDATE)
-        .bind(user_id)
-        .bind(manufacturer_name)
-        .bind(manufacturer_id)
-        .fetch_one(pool)
-        .await
-        .map_err(|e| format!("Failed to check duplicate manufacturer name: {}", e))?;
-
-    Ok(result.0 > 0)
 }
 
 /// Add a new manufacturer
@@ -116,28 +74,29 @@ pub async fn add_manufacturer(
     user_id: i64,
     request: AddManufacturerRequest,
 ) -> Result<String, String> {
-    // Validate manufacturer name
-    if request.manufacturer_name.trim().is_empty() {
-        return Err("Manufacturer name cannot be empty".to_string());
-    }
-    if request.manufacturer_name.chars().count() > consts::MAX_NAME_LEN {
-        return Err(format!("Manufacturer name must be {} characters or less", consts::MAX_NAME_LEN));
-    }
-
-    // Validate memo length
-    if let Some(memo) = &request.memo {
-        if memo.chars().count() > consts::MAX_MEMO_LEN {
-            return Err(format!("Memo must be {} characters or less", consts::MAX_MEMO_LEN));
-        }
-    }
+    validation::validate_master_name(NAME_LABEL, &request.manufacturer_name)?;
+    validation::validate_memo("Memo", request.memo.as_ref())?;
 
     // Check for duplicate manufacturer name
-    if check_duplicate_for_add(pool, user_id, &request.manufacturer_name).await? {
+    if master_data::value_exists(
+        pool,
+        sql_queries::MANUFACTURER_CHECK_DUPLICATE_FOR_ADD,
+        user_id,
+        &request.manufacturer_name,
+        DUPLICATE_LABEL,
+    )
+    .await?
+    {
         return Err("Manufacturer name already exists".to_string());
     }
 
     // Get next display order
-    let display_order = get_next_display_order(pool, user_id).await?;
+    let display_order = master_data::fetch_next_display_order(
+        pool,
+        sql_queries::MANUFACTURER_GET_NEXT_DISPLAY_ORDER,
+        user_id,
+    )
+    .await?;
 
     // Get is_disabled value (default to 0)
     let is_disabled = request.is_disabled.unwrap_or(0);
@@ -163,20 +122,8 @@ pub async fn update_manufacturer(
     manufacturer_id: i64,
     request: UpdateManufacturerRequest,
 ) -> Result<String, String> {
-    // Validate manufacturer name
-    if request.manufacturer_name.trim().is_empty() {
-        return Err("Manufacturer name cannot be empty".to_string());
-    }
-    if request.manufacturer_name.chars().count() > consts::MAX_NAME_LEN {
-        return Err(format!("Manufacturer name must be {} characters or less", consts::MAX_NAME_LEN));
-    }
-
-    // Validate memo length
-    if let Some(memo) = &request.memo {
-        if memo.chars().count() > consts::MAX_MEMO_LEN {
-            return Err(format!("Memo must be {} characters or less", consts::MAX_MEMO_LEN));
-        }
-    }
+    validation::validate_master_name(NAME_LABEL, &request.manufacturer_name)?;
+    validation::validate_memo("Memo", request.memo.as_ref())?;
 
     // Check if manufacturer exists
     get_manufacturer_by_id(pool, user_id, manufacturer_id)
@@ -184,7 +131,16 @@ pub async fn update_manufacturer(
         .ok_or("Manufacturer not found")?;
 
     // Check for duplicate manufacturer name
-    if check_duplicate_for_update(pool, user_id, &request.manufacturer_name, manufacturer_id).await? {
+    if master_data::value_exists_excluding(
+        pool,
+        sql_queries::MANUFACTURER_CHECK_DUPLICATE_FOR_UPDATE,
+        user_id,
+        &request.manufacturer_name,
+        manufacturer_id,
+        DUPLICATE_LABEL,
+    )
+    .await?
+    {
         return Err("Manufacturer name already exists".to_string());
     }
 
@@ -215,12 +171,14 @@ pub async fn delete_manufacturer(
         .ok_or("Manufacturer not found")?;
 
     // Logical delete
-    sqlx::query(sql_queries::MANUFACTURER_DELETE_LOGICAL)
-        .bind(user_id)
-        .bind(manufacturer_id)
-        .execute(pool)
-        .await
-        .map_err(|e| format!("Failed to delete manufacturer: {}", e))?;
+    master_data::execute_by_id(
+        pool,
+        sql_queries::MANUFACTURER_DELETE_LOGICAL,
+        user_id,
+        manufacturer_id,
+        "delete manufacturer",
+    )
+    .await?;
 
     Ok("Manufacturer deleted successfully".to_string())
 }
@@ -228,6 +186,7 @@ pub async fn delete_manufacturer(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::consts;
     use crate::test_helpers::database::{init_db, TEST_DB_URL};
 
     async fn setup_test_db() -> SqlitePool {

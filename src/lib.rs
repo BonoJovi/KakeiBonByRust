@@ -21,6 +21,7 @@ mod services {
     pub mod recurring;
     pub mod period;
     pub mod holiday;
+    pub mod master_data;
 }
 
 #[cfg(test)]
