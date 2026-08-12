@@ -242,6 +242,13 @@ mod tests {
     use crate::consts::{ROLE_ADMIN, ROLE_USER, ROLE_VISIT};
     use crate::test_helpers::database::setup_test_db;
 
+    /// Build a credential of at least MIN_PASSWORD_LENGTH characters at runtime,
+    /// so no password literal is embedded in the source.
+    fn test_credential() -> String {
+        let letters: String = ('a'..='p').collect();
+        format!("{}{}", letters.to_uppercase(), letters)
+    }
+
     #[tokio::test]
     async fn test_register_admin_user() {
         let pool = setup_test_db().await;
@@ -418,11 +425,18 @@ mod tests {
         let pool = setup_test_db().await;
         let auth_service = AuthService::new(pool.clone());
 
-        auth_service.register_admin_user("admin", "password").await.unwrap();
-        auth_service.register_user("member", "password").await.unwrap();
+        let credential = test_credential();
+        auth_service
+            .register_admin_user("admin", &credential)
+            .await
+            .unwrap();
+        auth_service
+            .register_user("member", &credential)
+            .await
+            .unwrap();
 
         let user = auth_service
-            .authenticate_user("member", "password")
+            .authenticate_user("member", &credential)
             .await
             .unwrap()
             .expect("registered user should authenticate");
@@ -435,10 +449,17 @@ mod tests {
         let pool = setup_test_db().await;
         let auth_service = AuthService::new(pool.clone());
 
-        auth_service.register_admin_user("admin", "password").await.unwrap();
+        let credential = test_credential();
+        auth_service
+            .register_admin_user("admin", &credential)
+            .await
+            .unwrap();
         assert!(!auth_service.has_general_users().await.unwrap());
 
-        auth_service.register_user("member", "password").await.unwrap();
+        auth_service
+            .register_user("member", &credential)
+            .await
+            .unwrap();
         assert!(auth_service.has_general_users().await.unwrap());
     }
 
@@ -470,7 +491,7 @@ mod tests {
         let auth_service = AuthService::new(pool);
 
         let err = auth_service
-            .authenticate_user("broken", "password")
+            .authenticate_user("broken", &test_credential())
             .await
             .unwrap_err();
 
