@@ -80,6 +80,17 @@ pub fn shift_for_holidays(
     }
 }
 
+/// 祝日テーブルの `HOLIDAY_DATE` を `NaiveDate` に変換する。パース失敗は
+/// テーブルが壊れている（`YYYY-MM-DD` 以外が入っている）ことを意味するため、
+/// 黙って読み飛ばさず Decode エラーとして呼び出し側に返す。
+fn parse_holiday_date(value: &str, table: &str) -> Result<NaiveDate, sqlx::Error> {
+    NaiveDate::parse_from_str(value, "%Y-%m-%d").map_err(|e| {
+        sqlx::Error::Decode(
+            format!("Invalid HOLIDAY_DATE '{}' in {}: {}", value, table, e).into(),
+        )
+    })
+}
+
 /// HOLIDAYS_STANDARD と HOLIDAYS_USER_CUSTOM から、指定ウィンドウ ± 14 日の祝日を取得する。
 ///
 /// ± 14 日のパディングは `HolidayShift::Prev` / `Next` が連休をまたいでサイクル外の日に
@@ -117,9 +128,7 @@ pub async fn fetch_holidays(
     .fetch_all(pool)
     .await?;
     for d_str in std_rows {
-        if let Ok(d) = NaiveDate::parse_from_str(&d_str, "%Y-%m-%d") {
-            holidays.insert(d);
-        }
+        holidays.insert(parse_holiday_date(&d_str, "HOLIDAYS_STANDARD")?);
     }
 
     let custom_rows: Vec<String> = sqlx::query_scalar(
@@ -132,9 +141,7 @@ pub async fn fetch_holidays(
     .fetch_all(pool)
     .await?;
     for d_str in custom_rows {
-        if let Ok(d) = NaiveDate::parse_from_str(&d_str, "%Y-%m-%d") {
-            holidays.insert(d);
-        }
+        holidays.insert(parse_holiday_date(&d_str, "HOLIDAYS_USER_CUSTOM")?);
     }
 
     Ok(holidays)
@@ -191,6 +198,20 @@ mod tests {
             .execute(pool)
             .await
             .unwrap();
+    }
+
+    #[test]
+    fn parse_holiday_date_accepts_iso_date() {
+        assert_eq!(
+            parse_holiday_date("2026-05-05", "HOLIDAYS_STANDARD").unwrap(),
+            d(2026, 5, 5)
+        );
+    }
+
+    #[test]
+    fn parse_holiday_date_rejects_malformed_value() {
+        let err = parse_holiday_date("2026/05/05", "HOLIDAYS_STANDARD").unwrap_err();
+        assert!(matches!(err, sqlx::Error::Decode(_)), "got {:?}", err);
     }
 
     #[test]

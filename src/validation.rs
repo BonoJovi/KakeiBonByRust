@@ -1,6 +1,52 @@
-/// Password validation module
-/// 
-/// Provides validation logic for user passwords to ensure security requirements are met.
+//! Validation module
+//!
+//! Provides validation logic for passwords and for bounded text fields
+//! (names, item names, memos) shared by every service.
+
+use crate::consts;
+
+/// Rejects text longer than `max_len` characters. Counts characters, not
+/// bytes, so multibyte input (Japanese) is not implicitly clipped.
+///
+/// # Arguments
+/// * `label` - Field name used in the error message (e.g. `"Shop name"`)
+pub fn validate_max_chars(label: &str, value: &str, max_len: usize) -> Result<(), String> {
+    if value.chars().count() > max_len {
+        return Err(format!("{} must be {} characters or less", label, max_len));
+    }
+    Ok(())
+}
+
+/// Same as [`validate_max_chars`] but for optional fields; `None` is valid.
+pub fn validate_optional_max_chars(
+    label: &str,
+    value: Option<&String>,
+    max_len: usize,
+) -> Result<(), String> {
+    match value {
+        Some(value) => validate_max_chars(label, value, max_len),
+        None => Ok(()),
+    }
+}
+
+/// Rejects an empty (or whitespace-only) required text field.
+pub fn validate_not_empty(label: &str, value: &str) -> Result<(), String> {
+    if value.trim().is_empty() {
+        return Err(format!("{} cannot be empty", label));
+    }
+    Ok(())
+}
+
+/// Master-data name guard: required and at most [`consts::MAX_NAME_LEN`] characters.
+pub fn validate_master_name(label: &str, name: &str) -> Result<(), String> {
+    validate_not_empty(label, name)?;
+    validate_max_chars(label, name, consts::MAX_NAME_LEN)
+}
+
+/// Memo guard shared by master data, transactions and recurring rules.
+pub fn validate_memo(label: &str, memo: Option<&String>) -> Result<(), String> {
+    validate_optional_max_chars(label, memo, consts::MAX_MEMO_LEN)
+}
 
 /// Validates a password according to security requirements
 /// 
@@ -282,6 +328,36 @@ mod tests {
             password_tests::test_boundary_cases();
         });
         assert!(result.is_ok(), "Boundary cases test should pass without panic");
+    }
+
+    #[test]
+    fn max_chars_counts_characters_not_bytes() {
+        // Japanese is 3 bytes per char in UTF-8.
+        let name = "あ".repeat(consts::MAX_NAME_LEN);
+        assert!(validate_max_chars("Shop name", &name, consts::MAX_NAME_LEN).is_ok());
+
+        let too_long = "あ".repeat(consts::MAX_NAME_LEN + 1);
+        assert_eq!(
+            validate_max_chars("Shop name", &too_long, consts::MAX_NAME_LEN).unwrap_err(),
+            format!("Shop name must be {} characters or less", consts::MAX_NAME_LEN)
+        );
+    }
+
+    #[test]
+    fn optional_max_chars_accepts_none() {
+        assert!(validate_optional_max_chars("Memo", None, consts::MAX_MEMO_LEN).is_ok());
+        assert!(validate_memo("Memo", None).is_ok());
+        assert!(validate_memo("Memo", Some(&"メ".repeat(consts::MAX_MEMO_LEN))).is_ok());
+        assert!(validate_memo("Memo", Some(&"メ".repeat(consts::MAX_MEMO_LEN + 1))).is_err());
+    }
+
+    #[test]
+    fn master_name_rejects_empty_and_whitespace_only() {
+        assert_eq!(
+            validate_master_name("Shop name", "   ").unwrap_err(),
+            "Shop name cannot be empty"
+        );
+        assert!(validate_master_name("Shop name", "イオン新宿店").is_ok());
     }
 
     #[test]

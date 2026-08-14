@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { HTML_FILES } from './html-files.js';
 import i18n from './i18n.js';
+import { setupLanguageMenu, setupLanguageMenuHandlers } from './language-menu.js';
 import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers } from './font-size.js';
 import { fitWindowToScreen } from './window-fit.js';
 import { Modal } from './modal.js';
@@ -10,6 +11,7 @@ import { createMenuBar } from './menu.js';
 import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
 import { showToast } from './toast.js';
 import { MAX_NAME_LEN, MAX_MEMO_LEN } from './consts.js';
+import { escapeHtml } from './escape-html.js';
 
 console.log('=== PRODUCT-MANAGEMENT.JS LOADED ===');
 
@@ -78,7 +80,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         setupMenuHandlers();
         
         // Setup language and font size menus
-        await setupLanguageMenu();
+        await setupLanguageMenu(loadProducts);
         setupLanguageMenuHandlers();
         
         setupFontSizeMenuHandlers();
@@ -370,7 +372,7 @@ function renderProducts() {
         if (isDisabled) {
             // Add [非表示] badge for disabled items
             const badge = `<span style="color: #ffc107; font-weight: bold; margin-left: 8px;">[${i18n.t('common.disabled_label')}]</span>`;
-            nameCell.innerHTML = `<span style="color: #ffffff;">${product.product_name}</span>${badge}`;
+            nameCell.innerHTML = `<span style="color: #ffffff;">${escapeHtml(product.product_name)}</span>${badge}`;
         } else {
             nameCell.textContent = product.product_name;
         }
@@ -646,71 +648,4 @@ function setupMenuHandlers() {
     }
 }
 
-function setupLanguageMenuHandlers() {
-    const languageMenu = document.getElementById('language-menu');
-    const languageDropdown = document.getElementById('language-dropdown');
-    
-    if (!languageMenu || !languageDropdown) return;
-    if (languageMenu.dataset.initialized === 'true') return;
-    
-    languageMenu.addEventListener('click', function(e) {
-        e.stopPropagation();
-        const isShown = languageDropdown.classList.contains('show');
-        document.querySelectorAll('.dropdown').forEach(d => {
-            if (d !== languageDropdown) d.classList.remove('show');
-        });
-        if (!isShown) languageDropdown.classList.add('show');
-    });
-    
-    languageDropdown.addEventListener('click', function(e) {
-        e.stopPropagation();
-    });
-    
-    languageMenu.dataset.initialized = 'true';
-}
 
-async function setupLanguageMenu() {
-    try {
-        const languageNames = await invoke('get_language_names');
-        const currentLang = i18n.getCurrentLanguage();
-        const languageDropdown = document.getElementById('language-dropdown');
-        
-        if (!languageDropdown) return;
-        
-        languageDropdown.innerHTML = '';
-        
-        for (const [langCode, langName] of languageNames) {
-            const item = document.createElement('div');
-            item.className = 'dropdown-item';
-            item.textContent = langName;
-            item.dataset.langCode = langCode;
-            
-            if (langCode === currentLang) {
-                item.classList.add('active');
-            }
-            
-            item.addEventListener('click', async function(e) {
-                e.stopPropagation();
-                await handleLanguageChange(langCode);
-                languageDropdown.classList.remove('show');
-            });
-            
-            languageDropdown.appendChild(item);
-        }
-    } catch (error) {
-        console.error('Failed to setup language menu:', error);
-    }
-}
-
-async function handleLanguageChange(langCode) {
-    try {
-        await i18n.setLanguage(langCode);
-        await setupLanguageMenu();
-        // Font Size submenu items are built via textContent (no data-i18n),
-        // so an explicit redraw is needed after language change.
-        await setupFontSizeMenu();
-        await loadProducts();
-    } catch (error) {
-        console.error('Failed to change language:', error);
-    }
-}

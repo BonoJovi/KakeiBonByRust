@@ -13,6 +13,7 @@ import { applyHeaderRecalculationPrompt } from './header-recalc.js';
 import { calculateRecommendedTotal } from './tax-calc.js';
 import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
 import { showToast } from './toast.js';
+import { escapeHtml } from './escape-html.js';
 
 let currentUserId = null;
 let currentUserRole = null;
@@ -318,6 +319,7 @@ async function loadCategoriesForFilter() {
         
     } catch (error) {
         console.error('Failed to load categories:', error);
+        showToast(i18n.t('error.category_load_failed') + ': ' + error, { variant: 'error' });
     }
 }
 
@@ -349,7 +351,7 @@ async function loadTransactions() {
     } catch (error) {
         console.error('Failed to load transactions:', error);
         const listContainer = document.getElementById('transaction-list');
-        listContainer.innerHTML = `<div class="error">Failed to load transactions: ${error}</div>`;
+        listContainer.innerHTML = `<div class="error">Failed to load transactions: ${escapeHtml(error)}</div>`;
     }
 }
 
@@ -759,6 +761,7 @@ async function loadCategoriesForModal() {
         
     } catch (error) {
         console.error('Failed to load categories:', error);
+        showToast(i18n.t('error.category_load_failed') + ': ' + error, { variant: 'error' });
     }
 }
 
@@ -804,6 +807,7 @@ async function loadAccountsForModal() {
         
     } catch (error) {
         console.error('Failed to load accounts:', error);
+        showToast(i18n.t('error.load_accounts_failed') + ': ' + error, { variant: 'error' });
     }
 }
 
@@ -834,6 +838,7 @@ async function loadShopsForModal() {
 
     } catch (error) {
         console.error('Failed to load shops:', error);
+        showToast(i18n.t('error.load_shops_failed') + ': ' + error, { variant: 'error' });
     }
 }
 
