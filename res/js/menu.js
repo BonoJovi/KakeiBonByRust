@@ -179,9 +179,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 });
                 
                 // Toggle this dropdown
-                if (!isShown) {
-                    fileDropdown.classList.add('show');
-                }
+                fileDropdown.classList.toggle('show', !isShown);
                 
                 console.log('After toggle - classes:', fileDropdown.className);
                 console.log('Computed display style:', window.getComputedStyle(fileDropdown).display);
@@ -788,6 +786,10 @@ function setupCustomValidationMessages() {
  * Pages used to duplicate this wiring inline; aggregation pages were missing the
  * submenu listeners entirely, so submenu clicks were silently dropped (v2.4.0 fix).
  * Submenu items are resolved by `data-i18n` key so DOM order changes don't break wiring.
+ *
+ * The toggle and the submenu items are guarded by separate flags: this runs after the
+ * `DOMContentLoaded` handler above may already have wired the toggle, while the submenu
+ * items are only ever wired here.
  */
 export function setupFileMenuHandlers() {
     const fileMenu = document.getElementById('file-menu');
@@ -797,16 +799,25 @@ export function setupFileMenuHandlers() {
         return;
     }
 
-    fileMenu.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const isShown = fileDropdown.classList.contains('show');
-        document.querySelectorAll('.dropdown').forEach((d) => {
-            if (d !== fileDropdown) d.classList.remove('show');
+    if (fileMenu.dataset.initialized !== 'true') {
+        fileMenu.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isShown = fileDropdown.classList.contains('show');
+            document.querySelectorAll('.dropdown').forEach((d) => {
+                if (d !== fileDropdown) d.classList.remove('show');
+            });
+            fileDropdown.classList.toggle('show', !isShown);
         });
-        fileDropdown.classList.toggle('show', !isShown);
-    });
 
-    fileDropdown.addEventListener('click', (e) => e.stopPropagation());
+        fileDropdown.addEventListener('click', (e) => e.stopPropagation());
+
+        fileMenu.dataset.initialized = 'true';
+    }
+
+    if (fileDropdown.dataset.itemsInitialized === 'true') {
+        return;
+    }
+    fileDropdown.dataset.itemsInitialized = 'true';
 
     const backToMainItem = fileDropdown.querySelector('[data-i18n="menu.back_to_main"]');
     const logoutItem = fileDropdown.querySelector('[data-i18n="menu.logout"]');

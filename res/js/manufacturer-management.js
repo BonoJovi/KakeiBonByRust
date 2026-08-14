@@ -466,23 +466,28 @@ function setupMenuHandlers() {
     const fileDropdown = document.getElementById('file-dropdown');
     
     if (fileMenu && fileDropdown) {
-        if (fileMenu.dataset.initialized === 'true') {
+        if (fileMenu.dataset.initialized !== 'true') {
+            fileMenu.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const isShown = fileDropdown.classList.contains('show');
+                document.querySelectorAll('.dropdown').forEach(d => {
+                    if (d !== fileDropdown) d.classList.remove('show');
+                });
+                fileDropdown.classList.toggle('show', !isShown);
+            });
+
+            fileDropdown.addEventListener('click', function(e) {
+                e.stopPropagation();
+            });
+
+            fileMenu.dataset.initialized = 'true';
+        }
+
+        if (fileDropdown.dataset.itemsInitialized === 'true') {
             return;
         }
-        
-        fileMenu.addEventListener('click', function(e) {
-            e.stopPropagation();
-            const isShown = fileDropdown.classList.contains('show');
-            document.querySelectorAll('.dropdown').forEach(d => {
-                if (d !== fileDropdown) d.classList.remove('show');
-            });
-            if (!isShown) fileDropdown.classList.add('show');
-        });
-        
-        fileDropdown.addEventListener('click', function(e) {
-            e.stopPropagation();
-        });
-        
+        fileDropdown.dataset.itemsInitialized = 'true';
+
         const dropdownItems = fileDropdown.querySelectorAll('.dropdown-item');
         dropdownItems[0]?.addEventListener('click', () => {
             window.location.href = HTML_FILES.INDEX;
@@ -497,8 +502,6 @@ function setupMenuHandlers() {
             await invoke('quit_app');
             fileDropdown.classList.remove('show');
         });
-        
-        fileMenu.dataset.initialized = 'true';
     }
     
     if (!document.body.dataset.globalClickHandlerInitialized) {

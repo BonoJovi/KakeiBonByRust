@@ -634,16 +634,21 @@ function setupMenuHandlers() {
 
     // Toggle dropdowns on click
     if (fileMenu && fileDropdown) {
-        fileMenu.addEventListener('click', (e) => {
-            e.stopPropagation();
-            fileDropdown.classList.toggle('show');
-            if (adminDropdown) adminDropdown.classList.remove('show');
-        });
+        // The toggle may already be wired by menu.js; the items are only wired here
+        if (fileMenu.dataset.initialized !== 'true') {
+            fileMenu.addEventListener('click', (e) => {
+                e.stopPropagation();
+                fileDropdown.classList.toggle('show');
+                if (adminDropdown) adminDropdown.classList.remove('show');
+            });
 
-        // Prevent clicks inside dropdown from closing it immediately
-        fileDropdown.addEventListener('click', (e) => {
-            e.stopPropagation();
-        });
+            // Prevent clicks inside dropdown from closing it immediately
+            fileDropdown.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+
+            fileMenu.dataset.initialized = 'true';
+        }
 
         // File menu items for management pages
         // Structure: Back to Main, separator, Logout, Quit
