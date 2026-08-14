@@ -408,7 +408,7 @@ async function handlePeriodSettingsSave() {
             monthPeriodHolidayShift: monthHolidayShift,
         });
         invalidatePeriodSettingsCache();
-        showMessage('period-settings-message', i18n.t('user_mgmt.period_settings_saved'), 'success');
+        showToast(i18n.t('user_mgmt.period_settings_saved'), { variant: 'success' });
     } catch (error) {
         console.error('Failed to save period settings:', error);
         showMessage('period-settings-message', i18n.t('user_mgmt.period_settings_save_failed') + ': ' + error, 'error');
