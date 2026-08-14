@@ -184,40 +184,44 @@ function setupMenuHandlers() {
     console.log('[setupMenuHandlers] fileDropdown:', fileDropdown);
     
     if (fileMenu && fileDropdown) {
-        // Check if already initialized
+        // The toggle may already be wired by menu.js; the items are only wired here
         if (fileMenu.dataset.initialized === 'true') {
-            console.log('[setupMenuHandlers] File menu already initialized, skipping');
+            console.log('[setupMenuHandlers] File menu toggle already initialized, skipping');
+        } else {
+            console.log('[setupMenuHandlers] Adding click listener to fileMenu');
+            fileMenu.addEventListener('click', function(e) {
+                console.log('[fileMenu clicked]');
+                e.stopPropagation();
+
+                const isShown = fileDropdown.classList.contains('show');
+
+                // Close all other dropdowns
+                document.querySelectorAll('.dropdown').forEach(d => {
+                    if (d !== fileDropdown) {
+                        d.classList.remove('show');
+                    }
+                });
+
+                // Toggle this dropdown
+                fileDropdown.classList.toggle('show', !isShown);
+
+                console.log('[fileMenu] Toggled show class, current classes:', fileDropdown.className);
+            });
+
+            // Prevent dropdown from closing when clicking inside it
+            fileDropdown.addEventListener('click', function(e) {
+                console.log('[fileDropdown clicked]');
+                e.stopPropagation();
+            });
+
+            fileMenu.dataset.initialized = 'true';
+        }
+
+        if (fileDropdown.dataset.itemsInitialized === 'true') {
             return;
         }
-        
-        console.log('[setupMenuHandlers] Adding click listener to fileMenu');
-        fileMenu.addEventListener('click', function(e) {
-            console.log('[fileMenu clicked]');
-            e.stopPropagation();
-            
-            const isShown = fileDropdown.classList.contains('show');
-            
-            // Close all other dropdowns
-            document.querySelectorAll('.dropdown').forEach(d => {
-                if (d !== fileDropdown) {
-                    d.classList.remove('show');
-                }
-            });
-            
-            // Toggle this dropdown
-            if (!isShown) {
-                fileDropdown.classList.add('show');
-            }
-            
-            console.log('[fileMenu] Toggled show class, current classes:', fileDropdown.className);
-        });
-        
-        // Prevent dropdown from closing when clicking inside it
-        fileDropdown.addEventListener('click', function(e) {
-            console.log('[fileDropdown clicked]');
-            e.stopPropagation();
-        });
-        
+        fileDropdown.dataset.itemsInitialized = 'true';
+
         const dropdownItems = fileDropdown.querySelectorAll('.dropdown-item');
         dropdownItems[0]?.addEventListener('click', () => {
             console.log('[fileDropdown] Back to main clicked');
@@ -234,10 +238,7 @@ function setupMenuHandlers() {
             handleQuit();
             fileDropdown.classList.remove('show');
         });
-        
-        // Mark as initialized
-        fileMenu.dataset.initialized = 'true';
-        console.log('[setupMenuHandlers] File menu marked as initialized');
+        console.log('[setupMenuHandlers] File menu items wired');
     }
     
     // Global click handler to close all dropdowns (only register once)

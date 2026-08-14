@@ -223,24 +223,27 @@ function setupMenuHandlers() {
     const fileDropdown = document.getElementById('file-dropdown');
     
     if (fileMenu && fileDropdown) {
-        fileMenu.addEventListener('click', function(e) {
-            e.stopPropagation();
-            const isShown = fileDropdown.classList.contains('show');
-            
-            document.querySelectorAll('.dropdown').forEach(d => {
-                if (d !== fileDropdown) {
-                    d.classList.remove('show');
-                }
+        // The toggle may already be wired by menu.js; the items are only wired here
+        if (fileMenu.dataset.initialized !== 'true') {
+            fileMenu.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const isShown = fileDropdown.classList.contains('show');
+
+                document.querySelectorAll('.dropdown').forEach(d => {
+                    if (d !== fileDropdown) {
+                        d.classList.remove('show');
+                    }
+                });
+
+                fileDropdown.classList.toggle('show', !isShown);
             });
-            
-            if (!isShown) {
-                fileDropdown.classList.add('show');
-            }
-        });
-        
-        fileDropdown.addEventListener('click', function(e) {
-            e.stopPropagation();
-        });
+
+            fileDropdown.addEventListener('click', function(e) {
+                e.stopPropagation();
+            });
+
+            fileMenu.dataset.initialized = 'true';
+        }
         
         // Back to main
         const backToMainItem = fileDropdown.querySelector('.dropdown-item:nth-child(1)');

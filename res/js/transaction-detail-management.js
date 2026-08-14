@@ -180,10 +180,14 @@ function setupMenuHandlers() {
     const fileDropdown = document.getElementById('file-dropdown');
     
     if (fileMenu && fileDropdown) {
-        fileMenu.addEventListener('click', (e) => {
-            e.stopPropagation();
-            fileDropdown.classList.toggle('show');
-        });
+        // The toggle may already be wired by menu.js; the items are only wired here
+        if (fileMenu.dataset.initialized !== 'true') {
+            fileMenu.addEventListener('click', (e) => {
+                e.stopPropagation();
+                fileDropdown.classList.toggle('show');
+            });
+            fileMenu.dataset.initialized = 'true';
+        }
         
         // Back to transactions
         const backToTransactionsItem = fileDropdown.querySelector('[data-i18n="menu.back_to_transactions"]');
