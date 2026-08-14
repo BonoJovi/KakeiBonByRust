@@ -384,19 +384,19 @@ async function handlePeriodSettingsSave() {
 
     if (!Number.isInteger(monthStartDay) || monthStartDay < 1 || monthStartDay > 31) {
         showMessage('period-settings-message', i18n.t('validation.invalid_period_start_day'), 'error');
-        return;
+        throw new Error('Validation error: invalid month period start day');
     }
     if (!Number.isInteger(yearStartMonth) || yearStartMonth < 1 || yearStartMonth > 12) {
         showMessage('period-settings-message', i18n.t('validation.invalid_period_start_month'), 'error');
-        return;
+        throw new Error('Validation error: invalid year period start month');
     }
     if (!Number.isInteger(yearStartDay) || yearStartDay < 1 || yearStartDay > 31) {
         showMessage('period-settings-message', i18n.t('validation.invalid_period_start_day'), 'error');
-        return;
+        throw new Error('Validation error: invalid year period start day');
     }
     if (!Number.isInteger(monthHolidayShift) || monthHolidayShift < 0 || monthHolidayShift > 2) {
         showMessage('period-settings-message', i18n.t('validation.invalid_month_period_holiday_shift'), 'error');
-        return;
+        throw new Error('Validation error: invalid month period holiday shift');
     }
 
     try {
@@ -408,10 +408,10 @@ async function handlePeriodSettingsSave() {
         });
         invalidatePeriodSettingsCache();
         showMessage('period-settings-message', i18n.t('user_mgmt.period_settings_saved'), 'success');
-        setTimeout(() => periodSettingsModal.close(), 1000);
     } catch (error) {
         console.error('Failed to save period settings:', error);
         showMessage('period-settings-message', i18n.t('user_mgmt.period_settings_save_failed') + ': ' + error, 'error');
+        throw error;
     }
 }
 
