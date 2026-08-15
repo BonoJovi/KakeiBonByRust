@@ -752,6 +752,18 @@ mod tests {
 
         initialize_none_account(&pool, 2).await.unwrap();
         // Second call swallows the duplicate-code error and still succeeds
+    #[tokio::test]
+    async fn test_initialize_none_account_is_idempotent() {
+        let pool = setup_test_db().await;
+        sqlx::query(
+            "INSERT INTO ACCOUNT_TEMPLATES (TEMPLATE_CODE, TEMPLATE_NAME_JA, TEMPLATE_NAME_EN, DISPLAY_ORDER) \
+             VALUES ('NONE', '未指定', 'Unspecified', 0)",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        initialize_none_account(&pool, 2).await.unwrap();
         initialize_none_account(&pool, 2).await.unwrap();
 
         let accounts = get_accounts(&pool, 2).await.unwrap();
