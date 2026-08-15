@@ -242,6 +242,13 @@ mod tests {
     use crate::consts::{ROLE_ADMIN, ROLE_USER, ROLE_VISIT};
     use crate::test_helpers::database::setup_test_db;
 
+    /// Build a credential of at least MIN_PASSWORD_LENGTH characters at runtime,
+    /// so no password literal is embedded in the source.
+    fn test_credential() -> String {
+        let letters: String = ('a'..='p').collect();
+        format!("{}{}", letters.to_uppercase(), letters)
+    }
+
     #[tokio::test]
     async fn test_register_admin_user() {
         let pool = setup_test_db().await;
@@ -411,6 +418,100 @@ mod tests {
         let result = auth_service.authenticate_user(username, password).await;
         assert!(result.is_ok());
         assert!(result.unwrap().is_some());
+    }
+
+    #[tokio::test]
+    async fn test_register_user_assigns_general_role() {
+        let pool = setup_test_db().await;
+        let auth_service = AuthService::new(pool.clone());
+
+        let credential = test_credential();
+        auth_service
+            .register_admin_user("admin", &credential)
+            .await
+            .unwrap();
+        auth_service
+            .register_user("member", &credential)
+            .await
+            .unwrap();
+
+        let user = auth_service
+            .authenticate_user("member", &credential)
+            .await
+            .unwrap()
+            .expect("registered user should authenticate");
+        assert_eq!(user.role, ROLE_USER);
+        assert_eq!(user.user_id, 2, "USER_ID should follow the admin's");
+    }
+
+    #[tokio::test]
+    async fn test_has_general_users() {
+        let pool = setup_test_db().await;
+        let auth_service = AuthService::new(pool.clone());
+
+        let credential = test_credential();
+        auth_service
+            .register_admin_user("admin", &credential)
+            .await
+            .unwrap();
+        assert!(!auth_service.has_general_users().await.unwrap());
+
+        auth_service
+            .register_user("member", &credential)
+            .await
+            .unwrap();
+        assert!(auth_service.has_general_users().await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_has_users_without_users_table() {
+        // Pre-initialization state: the USERS table does not exist yet
+        let pool = crate::test_helpers::database::init_db(
+            crate::test_helpers::database::TEST_DB_URL,
+        )
+        .await
+        .unwrap();
+        let auth_service = AuthService::new(pool);
+
+        assert!(!auth_service.has_users().await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_authenticate_user_rejects_malformed_stored_hash() {
+        let pool = setup_test_db().await;
+        sqlx::query(sql_queries::AUTH_INSERT_USER)
+            .bind(1_i64)
+            .bind("broken")
+            .bind("not-an-argon2-hash")
+            .bind(ROLE_USER)
+            .bind("2026-01-01 00:00:00")
+            .execute(&pool)
+            .await
+            .unwrap();
+        let auth_service = AuthService::new(pool);
+
+        let err = auth_service
+            .authenticate_user("broken", &test_credential())
+            .await
+            .unwrap_err();
+
+        assert!(matches!(err, AuthError::SecurityError(_)), "got {:?}", err);
+    }
+
+    #[test]
+    fn test_auth_error_display() {
+        assert_eq!(
+            AuthError::InvalidCredentials.to_string(),
+            "Invalid credentials"
+        );
+        assert!(AuthError::from(sqlx::Error::RowNotFound)
+            .to_string()
+            .starts_with("Database error: "));
+        assert!(
+            AuthError::from(SecurityError::HashError("boom".to_string()))
+                .to_string()
+                .starts_with("Security error: ")
+        );
     }
 
     #[test]

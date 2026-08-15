@@ -1768,3 +1768,87 @@ pub const TEST_TRANSACTION_INSERT_CATEGORY2: &str =
 pub const TEST_TRANSACTION_INSERT_CATEGORY3: &str =
     "INSERT INTO CATEGORY3 (USER_ID, CATEGORY1_CODE, CATEGORY2_CODE, CATEGORY3_CODE, DISPLAY_ORDER, CATEGORY3_NAME) VALUES (2, 'EXPENSE', 'FOOD', 'GROCERY', 1, '食料品')";
 
+
+// ============================================================================
+// Test queries for holiday service
+// ============================================================================
+
+pub const TEST_HOLIDAY_CREATE_USERS_TABLE: &str = r#"
+CREATE TABLE USERS (
+    USER_ID INTEGER PRIMARY KEY,
+    NAME TEXT NOT NULL,
+    PAW TEXT NOT NULL,
+    ROLE INTEGER NOT NULL,
+    HOLIDAY_LOCALE TEXT DEFAULT 'JP',
+    ENTRY_DT DATETIME NOT NULL DEFAULT (datetime('now'))
+)
+"#;
+
+pub const TEST_HOLIDAY_INSERT_USER: &str =
+    "INSERT INTO USERS (USER_ID, NAME, PAW, ROLE, HOLIDAY_LOCALE) VALUES (?, ?, 'hash', 1, ?)";
+
+pub const TEST_HOLIDAY_INSERT_STANDARD: &str =
+    "INSERT INTO HOLIDAYS_STANDARD (LOCALE, HOLIDAY_DATE, HOLIDAY_NAME) VALUES (?, ?, ?)";
+
+pub const TEST_HOLIDAY_INSERT_CUSTOM: &str =
+    "INSERT INTO HOLIDAYS_USER_CUSTOM (USER_ID, HOLIDAY_DATE, HOLIDAY_NAME) VALUES (?, ?, ?)";
+
+// ============================================================================
+// Test queries for db migrations
+// ============================================================================
+
+// Pre-v2.1.0 USERS schema: no HOLIDAY_LOCALE / WEEK_START_DAY / period columns.
+pub const TEST_DB_CREATE_LEGACY_USERS_TABLE: &str = r#"
+CREATE TABLE USERS (
+    USER_ID INTEGER PRIMARY KEY,
+    NAME TEXT NOT NULL,
+    PAW TEXT NOT NULL,
+    ROLE INTEGER NOT NULL,
+    ENTRY_DT DATETIME NOT NULL DEFAULT (datetime('now'))
+)
+"#;
+
+// Pre-v2.1.0 TRANSACTIONS_HEADER schema: no RULE_ID, but carries the obsolete
+// linked-list columns an unreleased dev build added.
+pub const TEST_DB_CREATE_LEGACY_HEADER_TABLE: &str = r#"
+CREATE TABLE TRANSACTIONS_HEADER (
+    TRANSACTION_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    USER_ID INTEGER NOT NULL,
+    CATEGORY1_CODE VARCHAR(50) NOT NULL,
+    FROM_ACCOUNT_CODE VARCHAR(50) NOT NULL,
+    TO_ACCOUNT_CODE VARCHAR(50) NOT NULL,
+    TRANSACTION_DATE DATETIME NOT NULL,
+    TOTAL_AMOUNT INTEGER NOT NULL,
+    GROUP_HEAD INTEGER,
+    NEXT_TRANSACTION_ID INTEGER,
+    ENTRY_DT DATETIME NOT NULL DEFAULT (datetime('now'))
+)
+"#;
+
+pub const TEST_DB_COUNT_TABLE_COLUMN: &str =
+    "SELECT COUNT(*) FROM pragma_table_info(?) WHERE name = ?";
+
+pub const TEST_DB_COUNT_TABLE: &str =
+    "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = ?";
+
+pub const TEST_DB_COUNT_STANDARD_HOLIDAYS: &str =
+    "SELECT COUNT(*) FROM HOLIDAYS_STANDARD WHERE LOCALE = 'JP'";
+
+// ============================================================================
+// Additional test queries for account service
+// ============================================================================
+
+pub const TEST_ACCOUNT_INSERT_HEADER: &str = r#"
+INSERT INTO TRANSACTIONS_HEADER
+    (USER_ID, CATEGORY1_CODE, FROM_ACCOUNT_CODE, TO_ACCOUNT_CODE,
+     TRANSACTION_DATE, TOTAL_AMOUNT, IS_SCHEDULED)
+VALUES (?, ?, ?, ?, ?, ?, ?)
+"#;
+
+pub const TEST_ACCOUNT_GET_IS_DISABLED: &str =
+    "SELECT IS_DISABLED FROM ACCOUNTS WHERE USER_ID = ? AND ACCOUNT_CODE = ?";
+
+pub const TEST_ACCOUNT_INSERT_NONE_TEMPLATE: &str = r#"
+INSERT INTO ACCOUNT_TEMPLATES (TEMPLATE_CODE, TEMPLATE_NAME_JA, TEMPLATE_NAME_EN, DISPLAY_ORDER)
+VALUES ('NONE', '指定なし', 'Unspecified', 0)
+"#;
