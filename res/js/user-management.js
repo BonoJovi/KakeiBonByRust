@@ -6,7 +6,7 @@ import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontS
 import { HTML_FILES } from './html-files.js';
 import { Modal } from './modal.js';
 import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
-import { createMenuBar } from './menu.js';
+import { createMenuBar, handleLogout, handleQuit } from './menu.js';
 import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
 import { invalidatePeriodSettingsCache } from './period.js';
 import { fitWindowToScreen } from './window-fit.js';
@@ -602,16 +602,6 @@ async function handleUserDelete(userId) {
         showToast(i18n.t('error.delete_user_failed') + ': ' + error, { variant: 'error' });
         throw error;
     }
-}
-
-function handleLogout() {
-    console.log('Logout clicked');
-    window.location.href = HTML_FILES.INDEX;
-}
-
-function handleQuit() {
-    console.log('Quit clicked');
-    invoke('handle_quit');
 }
 
 function setupCustomValidationMessages() {

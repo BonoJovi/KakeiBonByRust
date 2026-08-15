@@ -707,12 +707,13 @@ function setupMenuHandlers() {
         console.error('[setupMenuHandlers] fileMenu or fileDropdown NOT FOUND!');
     }
 
-    if (adminMenu && adminDropdown) {
+    if (adminMenu && adminDropdown && adminMenu.dataset.initialized !== 'true') {
         adminMenu.addEventListener('click', (e) => {
             e.stopPropagation();
             adminDropdown.classList.toggle('show');
             if (fileDropdown) fileDropdown.classList.remove('show');
         });
+        adminMenu.dataset.initialized = 'true';
     }
 
     // Close dropdowns when clicking outside

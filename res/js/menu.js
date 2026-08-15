@@ -245,24 +245,25 @@ document.addEventListener('DOMContentLoaded', async function() {
     const adminDropdown = document.getElementById('admin-dropdown');
     
     if (adminMenu && adminDropdown) {
-        adminMenu.addEventListener('click', function(e) {
-            console.log('Admin menu clicked');
-            e.stopPropagation();
-            
-            const isShown = adminDropdown.classList.contains('show');
-            
-            // Close all other dropdowns
-            document.querySelectorAll('.dropdown').forEach(d => {
-                if (d !== adminDropdown) {
-                    d.classList.remove('show');
-                }
+        if (adminMenu.dataset.initialized !== 'true') {
+            adminMenu.addEventListener('click', function(e) {
+                console.log('Admin menu clicked');
+                e.stopPropagation();
+
+                const isShown = adminDropdown.classList.contains('show');
+
+                // Close all other dropdowns
+                document.querySelectorAll('.dropdown').forEach(d => {
+                    if (d !== adminDropdown) {
+                        d.classList.remove('show');
+                    }
+                });
+
+                adminDropdown.classList.toggle('show', !isShown);
             });
-            
-            // Toggle this dropdown
-            if (!isShown) {
-                adminDropdown.classList.add('show');
-            }
-        });
+
+            adminMenu.dataset.initialized = 'true';
+        }
         
         adminDropdown.addEventListener('click', function(e) {
             // Allow submenu items to close the dropdown
