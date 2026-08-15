@@ -752,6 +752,9 @@ async fn update_user_settings(
     let obj = settings.as_object()
         .ok_or_else(|| "Settings must be a JSON object".to_string())?;
 
+    // Validate every entry before applying any of them, so a rejected entry
+    // cannot leave earlier entries applied in memory but never saved to disk
+    let mut normalized_entries = Vec::with_capacity(obj.len());
     for (key, value) in obj {
         let raw = value.as_str()
             .ok_or_else(|| format!("Setting {} must be a string", key))?;
@@ -762,7 +765,11 @@ async fn update_user_settings(
             _ => return Err(format!("Unknown setting: {}", key)),
         };
 
-        settings_mgr.set(key, &normalized)
+        normalized_entries.push((key.clone(), normalized));
+    }
+
+    for (key, normalized) in &normalized_entries {
+        settings_mgr.set(key, normalized)
             .map_err(|e| format!("Failed to set {}: {}", key, e))?;
     }
 
