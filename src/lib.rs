@@ -21,6 +21,7 @@ mod services {
     pub mod recurring;
     pub mod period;
     pub mod holiday;
+    pub mod master_data;
 }
 
 #[cfg(test)]
@@ -70,6 +71,26 @@ fn get_session_user_id(state: &tauri::State<'_, AppState>) -> Result<i64, String
     }
 }
 
+/// Helper function to get the authenticated session user
+fn get_session_user(
+    state: &tauri::State<'_, AppState>
+) -> Result<services::session::User, String> {
+    state
+        .session
+        .get_user()
+        .ok_or_else(|| "User not authenticated. Please login first.".to_string())
+}
+
+/// Helper function requiring an authenticated administrator session
+fn require_admin_session(state: &tauri::State<'_, AppState>) -> Result<(), String> {
+    let user = get_session_user(state)?;
+    if user.role == consts::ROLE_ADMIN {
+        Ok(())
+    } else {
+        Err("Administrator privileges are required for this operation.".to_string())
+    }
+}
+
 #[tauri::command]
 async fn login_user(
     username: String,
@@ -112,6 +133,13 @@ async fn register_admin(
     
     let auth = state.auth.lock().await;
     
+    // Admin registration is only allowed during first-run setup
+    match auth.has_users().await {
+        Ok(true) => return Err("Setup already completed. Admin registration is disabled.".to_string()),
+        Ok(false) => {}
+        Err(e) => return Err(format!("Database error: {}", e)),
+    }
+    
     match auth.register_admin_user(&username, &password).await {
         Ok(_) => Ok("Admin user registered successfully".to_string()),
         Err(e) => Err(format!("Registration failed: {}", e)),
@@ -127,7 +155,18 @@ async fn register_user(
     // Validate password
     validate_password(&password)?;
     
+    // Only an authenticated user may complete the initial general-user setup
+    get_session_user(&state)?;
+    
     let auth = state.auth.lock().await;
+    
+    // General-user registration through this command is setup-only;
+    // later accounts are created via `create_general_user` (admin only)
+    match auth.has_general_users().await {
+        Ok(true) => return Err("User setup already completed. Use user management instead.".to_string()),
+        Ok(false) => {}
+        Err(e) => return Err(format!("Database error: {}", e)),
+    }
     
     match auth.register_user(&username, &password).await {
         Ok(_) => Ok("User registered successfully".to_string()),
@@ -267,19 +306,24 @@ fn validate_passwords_frontend(password: String, password_confirm: String) -> Re
 
 #[tauri::command]
 async fn list_users(state: tauri::State<'_, AppState>) -> Result<Vec<serde_json::Value>, String> {
+    let session_user = get_session_user(&state)?;
+    let is_admin = session_user.role == consts::ROLE_ADMIN;
     let user_mgmt = state.user_mgmt.lock().await;
     
     match user_mgmt.list_users().await {
         Ok(users) => {
-            let json_users: Vec<serde_json::Value> = users.into_iter().map(|u| {
-                serde_json::json!({
-                    "user_id": u.user_id,
-                    "name": u.name,
-                    "role": u.role,
-                    "entry_dt": u.entry_dt,
-                    "update_dt": u.update_dt,
-                })
-            }).collect();
+            // Non-admin sessions may only see their own account
+            let json_users: Vec<serde_json::Value> = users.into_iter()
+                .filter(|u| is_admin || u.user_id == session_user.user_id)
+                .map(|u| {
+                    serde_json::json!({
+                        "user_id": u.user_id,
+                        "name": u.name,
+                        "role": u.role,
+                        "entry_dt": u.entry_dt,
+                        "update_dt": u.update_dt,
+                    })
+                }).collect();
             Ok(json_users)
         }
         Err(e) => Err(format!("Failed to list users: {}", e)),
@@ -291,8 +335,12 @@ async fn get_user(
     user_id: i64,
     state: tauri::State<'_, AppState>
 ) -> Result<serde_json::Value, String> {
-    // Note: This function keeps user_id parameter as it's used for admin to query other users
-    // If querying self, frontend should pass session user_id
+    // Admins may query any user; other sessions only themselves
+    let session_user = get_session_user(&state)?;
+    if session_user.role != consts::ROLE_ADMIN && session_user.user_id != user_id {
+        return Err("Administrator privileges are required for this operation.".to_string());
+    }
+    
     let user_mgmt = state.user_mgmt.lock().await;
     
     match user_mgmt.get_user(user_id).await {
@@ -313,6 +361,7 @@ async fn create_general_user(
     password: String,
     state: tauri::State<'_, AppState>
 ) -> Result<i64, String> {
+    require_admin_session(&state)?;
     validate_password(&password)?;
     
     let user_mgmt = state.user_mgmt.lock().await;
@@ -432,7 +481,7 @@ async fn delete_general_user_info(
     user_id: i64,
     state: tauri::State<'_, AppState>
 ) -> Result<(), String> {
-    // Note: This function keeps user_id parameter as it's used for admin to delete other users
+    require_admin_session(&state)?;
     let user_mgmt = state.user_mgmt.lock().await;
     
     match user_mgmt.delete_general_user(user_id).await {
@@ -445,6 +494,7 @@ async fn delete_general_user_info(
 async fn list_encrypted_fields(
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<serde_json::Value>, String> {
+    require_admin_session(&state)?;
     let encryption = state.encryption.lock().await;
     
     match encryption.get_encrypted_fields().await {
@@ -471,6 +521,7 @@ async fn register_encrypted_field(
     description: Option<String>,
     state: tauri::State<'_, AppState>
 ) -> Result<i64, String> {
+    require_admin_session(&state)?;
     let encryption = state.encryption.lock().await;
     
     match encryption.register_encrypted_field(
@@ -1875,7 +1926,10 @@ async fn select_transaction_headers(
     for transaction_id in transaction_ids {
         match transaction.get_transaction_header(user_id, transaction_id).await {
             Ok(header) => headers.push(header),
-            Err(_) => continue, // Skip not found transactions
+            // Ids the user no longer owns are skipped, but a database failure
+            // must not be reported as an incomplete-but-successful selection.
+            Err(services::transaction::TransactionError::NotFound) => continue,
+            Err(e) => return Err(e.to_string()),
         }
     }
     Ok(headers)
@@ -2591,41 +2645,42 @@ pub fn run() {
             }
 
             // Initialize database
-            let rt = tokio::runtime::Runtime::new().unwrap();
+            let rt = tokio::runtime::Runtime::new()
+                .map_err(|e| format!("Failed to create Tokio runtime: {}", e))?;
             let (db, auth, user_mgmt, encryption, settings, i18n, category, transaction, recurring) = rt.block_on(async {
                 let database = Database::new().await
-                    .expect("Failed to connect to database");
+                    .map_err(|e| format!("Failed to connect to database: {}", e))?;
                 database.initialize().await
-                    .expect("Failed to initialize database");
+                    .map_err(|e| format!("Failed to initialize database: {}", e))?;
 
                 // Run transaction-related table migrations
                 database.migrate_transactions().await
-                    .expect("Failed to migrate transaction tables");
+                    .map_err(|e| format!("Failed to migrate transaction tables: {}", e))?;
 
                 // Run v2.1.0 recurring scheduled transactions migrations
                 database.migrate_recurring().await
-                    .expect("Failed to migrate recurring tables");
+                    .map_err(|e| format!("Failed to migrate recurring tables: {}", e))?;
 
                 // Run v2.3.0 aggregation period customization migrations
                 database.migrate_period_customization().await
-                    .expect("Failed to migrate period customization columns");
+                    .map_err(|e| format!("Failed to migrate period customization columns: {}", e))?;
 
                 // Run v2.4.0 monthly period start day holiday shift migrations
                 database.migrate_period_holiday_shift().await
-                    .expect("Failed to migrate period holiday shift column");
+                    .map_err(|e| format!("Failed to migrate period holiday shift column: {}", e))?;
 
                 let auth_service = AuthService::new(database.pool().clone());
                 let user_mgmt_service = UserManagementService::new(database.pool().clone());
                 let encryption_service = EncryptionService::new(database.pool().clone());
                 let settings_manager = SettingsManager::new()
-                    .expect("Failed to initialize settings");
+                    .map_err(|e| format!("Failed to initialize settings: {}", e))?;
                 let i18n_service = I18nService::new(database.pool().clone());
                 let category_service = CategoryService::new(database.pool().clone());
                 let transaction_service = TransactionService::new(database.pool().clone());
                 let recurring_service = RecurringService::new(database.pool().clone());
 
-                (database, auth_service, user_mgmt_service, encryption_service, settings_manager, i18n_service, category_service, transaction_service, recurring_service)
-            });
+                Ok::<_, String>((database, auth_service, user_mgmt_service, encryption_service, settings_manager, i18n_service, category_service, transaction_service, recurring_service))
+            })?;
 
             app.manage(AppState {
                 db: Arc::new(Mutex::new(db)),

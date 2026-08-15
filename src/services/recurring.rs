@@ -8,7 +8,7 @@ use std::collections::HashSet;
 
 use crate::services::holiday::{shift_for_holidays, HolidayShift};
 use crate::services::period::end_of_month;
-use crate::{sql_queries, consts};
+use crate::{sql_queries, consts, validation};
 
 /// 周期と起点を一体で表現する。`unit` と「いつ発生するか」のアンカー情報を
 /// バリアントごとに固定することで、不正な組み合わせ（例: Day なのに DayOfMonth が
@@ -664,36 +664,22 @@ impl RecurringService {
         }
 
         // Bounded-field length checks (Issue #37 Phase 2-3, character count).
-        if let Some(rule_name) = &request.rule_name {
-            if rule_name.chars().count() > consts::MAX_RULE_NAME_LEN {
-                return Err(RecurringError::Validation(format!(
-                    "Rule name must be {} characters or less",
-                    consts::MAX_RULE_NAME_LEN
-                )));
-            }
-        }
-        if request.detail.item_name.chars().count() > consts::MAX_ITEM_NAME_LEN {
-            return Err(RecurringError::Validation(format!(
-                "Item name must be {} characters or less",
-                consts::MAX_ITEM_NAME_LEN
-            )));
-        }
-        if let Some(memo) = &request.header_memo {
-            if memo.chars().count() > consts::MAX_MEMO_LEN {
-                return Err(RecurringError::Validation(format!(
-                    "Header memo must be {} characters or less",
-                    consts::MAX_MEMO_LEN
-                )));
-            }
-        }
-        if let Some(memo) = &request.detail.detail_memo {
-            if memo.chars().count() > consts::MAX_MEMO_LEN {
-                return Err(RecurringError::Validation(format!(
-                    "Detail memo must be {} characters or less",
-                    consts::MAX_MEMO_LEN
-                )));
-            }
-        }
+        validation::validate_optional_max_chars(
+            "Rule name",
+            request.rule_name.as_ref(),
+            consts::MAX_RULE_NAME_LEN,
+        )
+        .map_err(RecurringError::Validation)?;
+        validation::validate_max_chars(
+            "Item name",
+            &request.detail.item_name,
+            consts::MAX_ITEM_NAME_LEN,
+        )
+        .map_err(RecurringError::Validation)?;
+        validation::validate_memo("Header memo", request.header_memo.as_ref())
+            .map_err(RecurringError::Validation)?;
+        validation::validate_memo("Detail memo", request.detail.detail_memo.as_ref())
+            .map_err(RecurringError::Validation)?;
 
         let anchor_date = match &request.anchor_date {
             Some(s) => Some(

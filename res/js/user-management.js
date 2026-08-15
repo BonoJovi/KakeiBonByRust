@@ -184,40 +184,44 @@ function setupMenuHandlers() {
     console.log('[setupMenuHandlers] fileDropdown:', fileDropdown);
     
     if (fileMenu && fileDropdown) {
-        // Check if already initialized
+        // The toggle may already be wired by menu.js; the items are only wired here
         if (fileMenu.dataset.initialized === 'true') {
-            console.log('[setupMenuHandlers] File menu already initialized, skipping');
+            console.log('[setupMenuHandlers] File menu toggle already initialized, skipping');
+        } else {
+            console.log('[setupMenuHandlers] Adding click listener to fileMenu');
+            fileMenu.addEventListener('click', function(e) {
+                console.log('[fileMenu clicked]');
+                e.stopPropagation();
+
+                const isShown = fileDropdown.classList.contains('show');
+
+                // Close all other dropdowns
+                document.querySelectorAll('.dropdown').forEach(d => {
+                    if (d !== fileDropdown) {
+                        d.classList.remove('show');
+                    }
+                });
+
+                // Toggle this dropdown
+                fileDropdown.classList.toggle('show', !isShown);
+
+                console.log('[fileMenu] Toggled show class, current classes:', fileDropdown.className);
+            });
+
+            // Prevent dropdown from closing when clicking inside it
+            fileDropdown.addEventListener('click', function(e) {
+                console.log('[fileDropdown clicked]');
+                e.stopPropagation();
+            });
+
+            fileMenu.dataset.initialized = 'true';
+        }
+
+        if (fileDropdown.dataset.itemsInitialized === 'true') {
             return;
         }
-        
-        console.log('[setupMenuHandlers] Adding click listener to fileMenu');
-        fileMenu.addEventListener('click', function(e) {
-            console.log('[fileMenu clicked]');
-            e.stopPropagation();
-            
-            const isShown = fileDropdown.classList.contains('show');
-            
-            // Close all other dropdowns
-            document.querySelectorAll('.dropdown').forEach(d => {
-                if (d !== fileDropdown) {
-                    d.classList.remove('show');
-                }
-            });
-            
-            // Toggle this dropdown
-            if (!isShown) {
-                fileDropdown.classList.add('show');
-            }
-            
-            console.log('[fileMenu] Toggled show class, current classes:', fileDropdown.className);
-        });
-        
-        // Prevent dropdown from closing when clicking inside it
-        fileDropdown.addEventListener('click', function(e) {
-            console.log('[fileDropdown clicked]');
-            e.stopPropagation();
-        });
-        
+        fileDropdown.dataset.itemsInitialized = 'true';
+
         const dropdownItems = fileDropdown.querySelectorAll('.dropdown-item');
         dropdownItems[0]?.addEventListener('click', () => {
             console.log('[fileDropdown] Back to main clicked');
@@ -234,10 +238,7 @@ function setupMenuHandlers() {
             handleQuit();
             fileDropdown.classList.remove('show');
         });
-        
-        // Mark as initialized
-        fileMenu.dataset.initialized = 'true';
-        console.log('[setupMenuHandlers] File menu marked as initialized');
+        console.log('[setupMenuHandlers] File menu items wired');
     }
     
     // Global click handler to close all dropdowns (only register once)
@@ -384,19 +385,19 @@ async function handlePeriodSettingsSave() {
 
     if (!Number.isInteger(monthStartDay) || monthStartDay < 1 || monthStartDay > 31) {
         showMessage('period-settings-message', i18n.t('validation.invalid_period_start_day'), 'error');
-        return;
+        throw new Error('Validation error: invalid month period start day');
     }
     if (!Number.isInteger(yearStartMonth) || yearStartMonth < 1 || yearStartMonth > 12) {
         showMessage('period-settings-message', i18n.t('validation.invalid_period_start_month'), 'error');
-        return;
+        throw new Error('Validation error: invalid year period start month');
     }
     if (!Number.isInteger(yearStartDay) || yearStartDay < 1 || yearStartDay > 31) {
         showMessage('period-settings-message', i18n.t('validation.invalid_period_start_day'), 'error');
-        return;
+        throw new Error('Validation error: invalid year period start day');
     }
     if (!Number.isInteger(monthHolidayShift) || monthHolidayShift < 0 || monthHolidayShift > 2) {
         showMessage('period-settings-message', i18n.t('validation.invalid_month_period_holiday_shift'), 'error');
-        return;
+        throw new Error('Validation error: invalid month period holiday shift');
     }
 
     try {
@@ -407,11 +408,11 @@ async function handlePeriodSettingsSave() {
             monthPeriodHolidayShift: monthHolidayShift,
         });
         invalidatePeriodSettingsCache();
-        showMessage('period-settings-message', i18n.t('user_mgmt.period_settings_saved'), 'success');
-        setTimeout(() => periodSettingsModal.close(), 1000);
+        showToast(i18n.t('user_mgmt.period_settings_saved'), { variant: 'success' });
     } catch (error) {
         console.error('Failed to save period settings:', error);
         showMessage('period-settings-message', i18n.t('user_mgmt.period_settings_save_failed') + ': ' + error, 'error');
+        throw error;
     }
 }
 

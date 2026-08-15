@@ -31,14 +31,8 @@ impl From<sqlx::Error> for CategoryError {
 /// name columns (`CATEGORY*_I18N.*_NAME_I18N`). Counts characters, not
 /// bytes, so Japanese input is not implicitly clipped to ~85 chars.
 fn validate_i18n_name_length(name: &str, label: &str) -> Result<(), CategoryError> {
-    if name.chars().count() > consts::MAX_I18N_NAME_LEN {
-        return Err(CategoryError::Validation(format!(
-            "{} must be {} characters or less",
-            label,
-            consts::MAX_I18N_NAME_LEN
-        )));
-    }
-    Ok(())
+    crate::validation::validate_max_chars(label, name, consts::MAX_I18N_NAME_LEN)
+        .map_err(CategoryError::Validation)
 }
 
 pub struct CategoryService {
@@ -844,16 +838,18 @@ impl CategoryService {
         
         let target_order = current_order - 1;
         
-        // Get the sibling category at the target position
-        let sibling_result: Result<String, sqlx::Error> = 
+        // Get the sibling category at the target position. A missing sibling
+        // means there is nothing to swap with (no-op); any other database
+        // error must reach the caller instead of being reported as success.
+        let sibling_code: Option<String> =
             sqlx::query_scalar(sql_queries::CATEGORY2_GET_SIBLING_BY_ORDER)
             .bind(user_id)
             .bind(category1_code)
             .bind(target_order)
-            .fetch_one(&self.pool)
-            .await;
+            .fetch_optional(&self.pool)
+            .await?;
         
-        if let Ok(sibling_code) = sibling_result {
+        if let Some(sibling_code) = sibling_code {
             // Swap orders using a transaction
             let mut tx = self.pool.begin().await?;
             
@@ -898,16 +894,18 @@ impl CategoryService {
         
         let target_order = current_order + 1;
         
-        // Get the sibling category at the target position
-        let sibling_result: Result<String, sqlx::Error> = 
+        // Get the sibling category at the target position. A missing sibling
+        // means there is nothing to swap with (no-op); any other database
+        // error must reach the caller instead of being reported as success.
+        let sibling_code: Option<String> =
             sqlx::query_scalar(sql_queries::CATEGORY2_GET_SIBLING_BY_ORDER)
             .bind(user_id)
             .bind(category1_code)
             .bind(target_order)
-            .fetch_one(&self.pool)
-            .await;
+            .fetch_optional(&self.pool)
+            .await?;
         
-        if let Ok(sibling_code) = sibling_result {
+        if let Some(sibling_code) = sibling_code {
             // Swap orders using a transaction
             let mut tx = self.pool.begin().await?;
             
@@ -959,17 +957,19 @@ impl CategoryService {
         
         let target_order = current_order - 1;
         
-        // Get the sibling category at the target position
-        let sibling_result: Result<String, sqlx::Error> = 
+        // Get the sibling category at the target position. A missing sibling
+        // means there is nothing to swap with (no-op); any other database
+        // error must reach the caller instead of being reported as success.
+        let sibling_code: Option<String> =
             sqlx::query_scalar(sql_queries::CATEGORY3_GET_SIBLING_BY_ORDER)
             .bind(user_id)
             .bind(category1_code)
             .bind(category2_code)
             .bind(target_order)
-            .fetch_one(&self.pool)
-            .await;
+            .fetch_optional(&self.pool)
+            .await?;
         
-        if let Ok(sibling_code) = sibling_result {
+        if let Some(sibling_code) = sibling_code {
             // Swap orders using a transaction
             let mut tx = self.pool.begin().await?;
             
@@ -1018,17 +1018,19 @@ impl CategoryService {
         
         let target_order = current_order + 1;
         
-        // Get the sibling category at the target position
-        let sibling_result: Result<String, sqlx::Error> = 
+        // Get the sibling category at the target position. A missing sibling
+        // means there is nothing to swap with (no-op); any other database
+        // error must reach the caller instead of being reported as success.
+        let sibling_code: Option<String> =
             sqlx::query_scalar(sql_queries::CATEGORY3_GET_SIBLING_BY_ORDER)
             .bind(user_id)
             .bind(category1_code)
             .bind(category2_code)
             .bind(target_order)
-            .fetch_one(&self.pool)
-            .await;
+            .fetch_optional(&self.pool)
+            .await?;
         
-        if let Ok(sibling_code) = sibling_result {
+        if let Some(sibling_code) = sibling_code {
             // Swap orders using a transaction
             let mut tx = self.pool.begin().await?;
             

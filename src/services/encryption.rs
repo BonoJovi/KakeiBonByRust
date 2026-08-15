@@ -20,6 +20,7 @@ pub enum EncryptionError {
     DecryptionFailed(String),
     EncryptionFailed(String),
     NoEncryptedFields,
+    InvalidIdentifier(String),
 }
 
 impl std::fmt::Display for EncryptionError {
@@ -30,11 +31,33 @@ impl std::fmt::Display for EncryptionError {
             EncryptionError::DecryptionFailed(e) => write!(f, "Decryption failed: {}", e),
             EncryptionError::EncryptionFailed(e) => write!(f, "Encryption failed: {}", e),
             EncryptionError::NoEncryptedFields => write!(f, "No encrypted fields defined"),
+            EncryptionError::InvalidIdentifier(name) => {
+                write!(f, "Invalid SQL identifier: {}", name)
+            }
         }
     }
 }
 
 impl std::error::Error for EncryptionError {}
+
+/// Validate a table or column name before it is interpolated into SQL.
+///
+/// Identifiers can never be bound as parameters, so the only safe option is to
+/// restrict them to a conservative character set and length.
+fn validate_sql_identifier(name: &str) -> Result<(), EncryptionError> {
+    let valid = !name.is_empty()
+        && name.len() <= 64
+        && name
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '_')
+        && !name.starts_with(|c: char| c.is_ascii_digit());
+
+    if valid {
+        Ok(())
+    } else {
+        Err(EncryptionError::InvalidIdentifier(name.to_string()))
+    }
+}
 
 impl From<sqlx::Error> for EncryptionError {
     fn from(err: sqlx::Error) -> Self {
@@ -90,6 +113,9 @@ impl EncryptionService {
         column_name: &str,
         description: Option<&str>,
     ) -> Result<i64, EncryptionError> {
+        validate_sql_identifier(table_name)?;
+        validate_sql_identifier(column_name)?;
+
         let now = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
 
         let result = sqlx::query(sql_queries::ENCRYPTION_GET_NEXT_FIELD_ID)
@@ -144,6 +170,12 @@ impl EncryptionService {
 
         // Re-encrypt data for each table
         for (table_name, columns) in tables {
+            // Identifiers cannot be bound, so validate them before interpolating
+            validate_sql_identifier(&table_name)?;
+            for column in &columns {
+                validate_sql_identifier(column)?;
+            }
+
             // Build SELECT query
             let column_list = columns.join(", ");
             let select_query = format!(
@@ -161,7 +193,12 @@ impl EncryptionService {
                 // Decrypt and re-encrypt each field
                 let mut updates = Vec::new();
                 for (idx, column) in columns.iter().enumerate() {
-                    let encrypted_value: Option<String> = row.try_get(idx + 1).ok();
+                    // A decode failure here would otherwise skip the column and
+                    // leave it encrypted with the old key, making it permanently
+                    // unreadable after the password change.
+                    let encrypted_value: Option<String> = row
+                        .try_get(idx + 1)
+                        .map_err(EncryptionError::DatabaseError)?;
                     
                     if let Some(enc_val) = encrypted_value {
                         // Decrypt with old key
@@ -298,6 +335,31 @@ mod tests {
         assert_eq!(fields.len(), 1);
         assert_eq!(fields[0].table_name, "TEST_DATA");
         assert_eq!(fields[0].column_name, "SECRET_NOTE");
+    }
+
+    #[tokio::test]
+    async fn test_register_encrypted_field_rejects_invalid_identifiers() {
+        let pool = setup_test_db().await;
+        let service = EncryptionService::new(pool.clone());
+
+        for (table, column) in [
+            ("TEST_DATA; DROP TABLE USERS--", "SECRET_NOTE"),
+            ("TEST_DATA", "SECRET_NOTE, PAW"),
+            ("", "SECRET_NOTE"),
+            ("1TEST", "SECRET_NOTE"),
+        ] {
+            let result = service
+                .register_encrypted_field(table, column, None)
+                .await;
+            assert!(
+                matches!(result, Err(EncryptionError::InvalidIdentifier(_))),
+                "expected rejection for {}.{}",
+                table,
+                column
+            );
+        }
+
+        assert!(service.get_encrypted_fields().await.unwrap().is_empty());
     }
 
     #[tokio::test]

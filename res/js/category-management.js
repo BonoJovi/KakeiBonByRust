@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import i18n from './i18n.js';
+import { setupLanguageMenu, setupLanguageMenuHandlers } from './language-menu.js';
 import { setupIndicators } from './indicators.js';
 import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers } from './font-size.js';
 import { fitWindowToScreen } from './window-fit.js';
@@ -10,6 +11,7 @@ import { createMenuBar } from './menu.js';
 import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
 import { showToast } from './toast.js';
 import { MAX_I18N_NAME_LEN } from './consts.js';
+import { escapeHtml } from './escape-html.js';
 
 // Category level constants
 const LEVEL_CATEGORY1 = 1;
@@ -64,7 +66,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     // Setup language and font size menus
     console.log('[DOMContentLoaded] Setting up language menu');
-    await setupLanguageMenu();
+    await setupLanguageMenu(loadCategories);
     setupLanguageMenuHandlers();
     
     console.log('[DOMContentLoaded] Setting up font size menu');
@@ -221,24 +223,27 @@ function setupMenuHandlers() {
     const fileDropdown = document.getElementById('file-dropdown');
     
     if (fileMenu && fileDropdown) {
-        fileMenu.addEventListener('click', function(e) {
-            e.stopPropagation();
-            const isShown = fileDropdown.classList.contains('show');
-            
-            document.querySelectorAll('.dropdown').forEach(d => {
-                if (d !== fileDropdown) {
-                    d.classList.remove('show');
-                }
+        // The toggle may already be wired by menu.js; the items are only wired here
+        if (fileMenu.dataset.initialized !== 'true') {
+            fileMenu.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const isShown = fileDropdown.classList.contains('show');
+
+                document.querySelectorAll('.dropdown').forEach(d => {
+                    if (d !== fileDropdown) {
+                        d.classList.remove('show');
+                    }
+                });
+
+                fileDropdown.classList.toggle('show', !isShown);
             });
-            
-            if (!isShown) {
-                fileDropdown.classList.add('show');
-            }
-        });
-        
-        fileDropdown.addEventListener('click', function(e) {
-            e.stopPropagation();
-        });
+
+            fileDropdown.addEventListener('click', function(e) {
+                e.stopPropagation();
+            });
+
+            fileMenu.dataset.initialized = 'true';
+        }
         
         // Back to main
         const backToMainItem = fileDropdown.querySelector('.dropdown-item:nth-child(1)');
@@ -277,93 +282,6 @@ function setupMenuHandlers() {
     }
 }
 
-function setupLanguageMenuHandlers() {
-    const languageMenu = document.getElementById('language-menu');
-    const languageDropdown = document.getElementById('language-dropdown');
-    
-    if (!languageMenu || !languageDropdown) {
-        return;
-    }
-    
-    if (languageMenu.dataset.initialized === 'true') {
-        return;
-    }
-    
-    languageMenu.addEventListener('click', function(e) {
-        e.stopPropagation();
-        
-        const isShown = languageDropdown.classList.contains('show');
-        
-        document.querySelectorAll('.dropdown').forEach(d => {
-            if (d !== languageDropdown) {
-                d.classList.remove('show');
-            }
-        });
-        
-        if (!isShown) {
-            languageDropdown.classList.add('show');
-        }
-    });
-    
-    languageDropdown.addEventListener('click', function(e) {
-        e.stopPropagation();
-    });
-    
-    languageMenu.dataset.initialized = 'true';
-}
-
-async function setupLanguageMenu() {
-    try {
-        // Fetch language names from backend. Each entry is shown in its own
-        // native script (English / 日本語 / ...) regardless of the current UI
-        // language, so users can always recognize the language they want.
-        const languageNames = await invoke('get_language_names');
-        const currentLang = i18n.currentLanguage;
-
-        const languageDropdown = document.getElementById('language-dropdown');
-        if (!languageDropdown) {
-            return;
-        }
-
-        languageDropdown.innerHTML = '';
-
-        for (const [langCode, langName] of languageNames) {
-            const item = document.createElement('div');
-            item.className = 'dropdown-item';
-            item.textContent = langName;
-            item.dataset.langCode = langCode;
-
-            if (langCode === currentLang) {
-                item.classList.add('active');
-            }
-
-            item.addEventListener('click', async function(e) {
-                e.stopPropagation();
-                await handleLanguageChange(langCode);
-                languageDropdown.classList.remove('show');
-            });
-
-            languageDropdown.appendChild(item);
-        }
-    } catch (error) {
-        console.error('Failed to setup language menu:', error);
-    }
-}
-
-async function handleLanguageChange(langCode) {
-    try {
-        await i18n.setLanguage(langCode);
-        await setupLanguageMenu();
-        // Font Size submenu items are built via textContent (no data-i18n),
-        // so an explicit redraw is needed after language change.
-        await setupFontSizeMenu();
-
-        // Reload categories to get translated names
-        await loadCategories();
-    } catch (error) {
-        console.error('Failed to change language:', error);
-    }
-}
 
 function setupModalHandlers() {
     // Category1 modal handlers (not yet migrated to Modal class)
@@ -452,11 +370,11 @@ function renderCategory1(categoryTree, index, total) {
     
     div.innerHTML = `
         <div class="category-header">
-            <span class="expand-icon ${hasChildren ? (isExpanded ? 'expanded expandable' : 'collapsed expandable') : 'empty'}" data-category-code="${category.category1_code}"></span>
-            <span class="category-name ${hasChildren ? 'expandable' : ''}">${categoryName}</span>
+            <span class="expand-icon ${hasChildren ? (isExpanded ? 'expanded expandable' : 'collapsed expandable') : 'empty'}" data-category-code="${escapeHtml(category.category1_code)}"></span>
+            <span class="category-name ${hasChildren ? 'expandable' : ''}">${escapeHtml(categoryName)}</span>
             <span class="category-order">${i18n.t('category_mgmt.order')}: ${category.display_order}</span>
             <div class="category-actions">
-                <button class="btn-icon btn-add" data-action="add-child" data-category-code="${category.category1_code}" data-category1-code="${category.category1_code}" data-level="1">
+                <button class="btn-icon btn-add" data-action="add-child" data-category-code="${escapeHtml(category.category1_code)}" data-category1-code="${escapeHtml(category.category1_code)}" data-level="1">
                     ${i18n.t('category_mgmt.add_sub')}
                 </button>
             </div>
@@ -513,10 +431,10 @@ function renderCategory2(cat2Tree, parent1Code, index, total) {
         div.innerHTML = `
             <div class="category-header">
                 <span class="expand-icon empty"></span>
-                <span class="category-name disabled-name">${categoryName}</span>
+                <span class="category-name disabled-name">${escapeHtml(categoryName)}</span>
                 <span class="category-badge-hidden">${i18n.t('category_mgmt.hidden')}</span>
                 <div class="category-actions">
-                    <button class="btn-icon btn-show" data-action="show" data-category1-code="${parent1Code}" data-category2-code="${category.category2_code}" data-level="2">
+                    <button class="btn-icon btn-show" data-action="show" data-category1-code="${escapeHtml(parent1Code)}" data-category2-code="${escapeHtml(category.category2_code)}" data-level="2">
                         ${i18n.t('common.show')}
                     </button>
                 </div>
@@ -525,23 +443,23 @@ function renderCategory2(cat2Tree, parent1Code, index, total) {
     } else {
         div.innerHTML = `
             <div class="category-header">
-                <span class="expand-icon ${hasChildren ? (isExpanded ? 'expanded expandable' : 'collapsed expandable') : 'empty'}" data-category-code="${category.category2_code}"></span>
-                <span class="category-name ${hasChildren ? 'expandable' : ''}">${categoryName}</span>
+                <span class="expand-icon ${hasChildren ? (isExpanded ? 'expanded expandable' : 'collapsed expandable') : 'empty'}" data-category-code="${escapeHtml(category.category2_code)}"></span>
+                <span class="category-name ${hasChildren ? 'expandable' : ''}">${escapeHtml(categoryName)}</span>
                 <span class="category-order">${i18n.t('category_mgmt.order')}: ${category.display_order}</span>
                 <div class="category-actions">
-                    <button class="btn-icon btn-add" data-action="add-child" data-category-code="${category.category2_code}" data-category1-code="${parent1Code}" data-category2-code="${category.category2_code}" data-level="2">
+                    <button class="btn-icon btn-add" data-action="add-child" data-category-code="${escapeHtml(category.category2_code)}" data-category1-code="${escapeHtml(parent1Code)}" data-category2-code="${escapeHtml(category.category2_code)}" data-level="2">
                         ${i18n.t('category_mgmt.add_sub')}
                     </button>
-                    <button class="btn-icon btn-edit" data-action="edit" data-category-code="${category.category2_code}" data-category1-code="${parent1Code}" data-category2-code="${category.category2_code}" data-level="2">
+                    <button class="btn-icon btn-edit" data-action="edit" data-category-code="${escapeHtml(category.category2_code)}" data-category1-code="${escapeHtml(parent1Code)}" data-category2-code="${escapeHtml(category.category2_code)}" data-level="2">
                         ${i18n.t('common.edit')}
                     </button>
-                    <button class="btn-icon btn-up" data-action="move-up" data-category-code="${category.category2_code}" data-category1-code="${parent1Code}" data-category2-code="${category.category2_code}" data-level="2" ${index === 0 ? 'disabled' : ''}>
+                    <button class="btn-icon btn-up" data-action="move-up" data-category-code="${escapeHtml(category.category2_code)}" data-category1-code="${escapeHtml(parent1Code)}" data-category2-code="${escapeHtml(category.category2_code)}" data-level="2" ${index === 0 ? 'disabled' : ''}>
                         ↑
                     </button>
-                    <button class="btn-icon btn-down" data-action="move-down" data-category-code="${category.category2_code}" data-category1-code="${parent1Code}" data-category2-code="${category.category2_code}" data-level="2" ${index === total - 1 ? 'disabled' : ''}>
+                    <button class="btn-icon btn-down" data-action="move-down" data-category-code="${escapeHtml(category.category2_code)}" data-category1-code="${escapeHtml(parent1Code)}" data-category2-code="${escapeHtml(category.category2_code)}" data-level="2" ${index === total - 1 ? 'disabled' : ''}>
                         ↓
                     </button>
-                    <button class="btn-icon btn-hide" data-action="hide" data-category-code="${category.category2_code}" data-category1-code="${parent1Code}" data-category2-code="${category.category2_code}" data-level="2" data-has-children="${hasChildren}">
+                    <button class="btn-icon btn-hide" data-action="hide" data-category-code="${escapeHtml(category.category2_code)}" data-category1-code="${escapeHtml(parent1Code)}" data-category2-code="${escapeHtml(category.category2_code)}" data-level="2" data-has-children="${hasChildren}">
                         ${i18n.t('common.hide')}
                     </button>
                 </div>
@@ -596,10 +514,10 @@ function renderCategory3(category, parent1Code, parent2Code, index, total) {
         div.innerHTML = `
             <div class="category-header">
                 <span class="expand-icon empty"></span>
-                <span class="category-name disabled-name">${categoryName}</span>
+                <span class="category-name disabled-name">${escapeHtml(categoryName)}</span>
                 <span class="category-badge-hidden">${i18n.t('category_mgmt.hidden')}</span>
                 <div class="category-actions">
-                    <button class="btn-icon btn-show" data-action="show" data-category1-code="${parent1Code}" data-category2-code="${parent2Code}" data-category3-code="${category.category3_code}" data-level="3">
+                    <button class="btn-icon btn-show" data-action="show" data-category1-code="${escapeHtml(parent1Code)}" data-category2-code="${escapeHtml(parent2Code)}" data-category3-code="${escapeHtml(category.category3_code)}" data-level="3">
                         ${i18n.t('common.show')}
                     </button>
                 </div>
@@ -609,19 +527,19 @@ function renderCategory3(category, parent1Code, parent2Code, index, total) {
         div.innerHTML = `
             <div class="category-header">
                 <span class="expand-icon empty"></span>
-                <span class="category-name">${categoryName}</span>
+                <span class="category-name">${escapeHtml(categoryName)}</span>
                 <span class="category-order">${i18n.t('category_mgmt.order')}: ${category.display_order}</span>
                 <div class="category-actions">
-                    <button class="btn-icon btn-edit" data-action="edit" data-category-code="${category.category3_code}" data-category1-code="${parent1Code}" data-category2-code="${parent2Code}" data-category3-code="${category.category3_code}" data-level="3">
+                    <button class="btn-icon btn-edit" data-action="edit" data-category-code="${escapeHtml(category.category3_code)}" data-category1-code="${escapeHtml(parent1Code)}" data-category2-code="${escapeHtml(parent2Code)}" data-category3-code="${escapeHtml(category.category3_code)}" data-level="3">
                         ${i18n.t('common.edit')}
                     </button>
-                    <button class="btn-icon btn-up" data-action="move-up" data-category-code="${category.category3_code}" data-category1-code="${parent1Code}" data-category2-code="${parent2Code}" data-category3-code="${category.category3_code}" data-level="3" ${index === 0 ? 'disabled' : ''}>
+                    <button class="btn-icon btn-up" data-action="move-up" data-category-code="${escapeHtml(category.category3_code)}" data-category1-code="${escapeHtml(parent1Code)}" data-category2-code="${escapeHtml(parent2Code)}" data-category3-code="${escapeHtml(category.category3_code)}" data-level="3" ${index === 0 ? 'disabled' : ''}>
                         ↑
                     </button>
-                    <button class="btn-icon btn-down" data-action="move-down" data-category-code="${category.category3_code}" data-category1-code="${parent1Code}" data-category2-code="${parent2Code}" data-category3-code="${category.category3_code}" data-level="3" ${index === total - 1 ? 'disabled' : ''}>
+                    <button class="btn-icon btn-down" data-action="move-down" data-category-code="${escapeHtml(category.category3_code)}" data-category1-code="${escapeHtml(parent1Code)}" data-category2-code="${escapeHtml(parent2Code)}" data-category3-code="${escapeHtml(category.category3_code)}" data-level="3" ${index === total - 1 ? 'disabled' : ''}>
                         ↓
                     </button>
-                    <button class="btn-icon btn-hide" data-action="hide" data-category-code="${category.category3_code}" data-category1-code="${parent1Code}" data-category2-code="${parent2Code}" data-category3-code="${category.category3_code}" data-level="3">
+                    <button class="btn-icon btn-hide" data-action="hide" data-category-code="${escapeHtml(category.category3_code)}" data-category1-code="${escapeHtml(parent1Code)}" data-category2-code="${escapeHtml(parent2Code)}" data-category3-code="${escapeHtml(category.category3_code)}" data-level="3">
                         ${i18n.t('common.hide')}
                     </button>
                 </div>

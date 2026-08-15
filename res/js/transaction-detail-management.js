@@ -11,6 +11,7 @@ import { createMenuBar } from './menu.js';
 import { applyHeaderRecalculationPrompt } from './header-recalc.js';
 import { setupTaxCalculationListeners } from './detail-tax-calc.js';
 import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
+import { showToast } from './toast.js';
 
 let currentUserId = null;
 let currentUserRole = null;
@@ -179,10 +180,14 @@ function setupMenuHandlers() {
     const fileDropdown = document.getElementById('file-dropdown');
     
     if (fileMenu && fileDropdown) {
-        fileMenu.addEventListener('click', (e) => {
-            e.stopPropagation();
-            fileDropdown.classList.toggle('show');
-        });
+        // The toggle may already be wired by menu.js; the items are only wired here
+        if (fileMenu.dataset.initialized !== 'true') {
+            fileMenu.addEventListener('click', (e) => {
+                e.stopPropagation();
+                fileDropdown.classList.toggle('show');
+            });
+            fileMenu.dataset.initialized = 'true';
+        }
         
         // Back to transactions
         const backToTransactionsItem = fileDropdown.querySelector('[data-i18n="menu.back_to_transactions"]');
@@ -496,6 +501,7 @@ async function loadCategory3Options(category2Code) {
         
     } catch (error) {
         console.error('Failed to load category3 options:', error);
+        showToast(i18n.t('error.category_load_failed') + ': ' + error, { variant: 'error' });
     }
 }
 
