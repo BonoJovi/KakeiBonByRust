@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2025-12-06 06:45 JST  
-**Total Tests**: 201
+**Total Tests**: 205
 
 ---
 
@@ -30,6 +30,7 @@ This document provides a complete index of all backend tests implemented in Rust
   - [services/aggregation.rs](#servicesaggregationrs)
   - [services/session.rs](#servicessessionrs)
   - [services/i18n.rs](#servicesi18nrs)
+  - [lib.rs](#librs)
 
 ---
 
@@ -380,6 +381,19 @@ Internationalization (i18n) service tests.
 
 **Total**: 8 tests
 
+### lib.rs
+
+Settings value validation used by the `set_language` / `set_font_size` / `update_user_settings` commands.
+
+| Test Function | Description | File | Line |
+|---------------|-------------|------|------|
+| `normalize_language_accepts_names_and_codes` | Accept language names and codes (en/English/ja/日本語/Japanese) | src/lib.rs | 2733 |
+| `normalize_language_rejects_unknown_values` | Reject unknown language values | src/lib.rs | 2742 |
+| `normalize_font_size_accepts_keywords_and_percentages` | Accept size keywords and percentages in 50-200 | src/lib.rs | 2748 |
+| `normalize_font_size_rejects_out_of_range_and_garbage` | Reject out-of-range percentages and invalid strings | src/lib.rs | 2757 |
+
+**Total**: 4 tests
+
 ---
 
 ## Test Statistics Summary
@@ -389,7 +403,7 @@ Internationalization (i18n) service tests.
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **178** |
+| **Inline Tests** | **182** |
 | validation.rs | 23 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -406,7 +420,8 @@ Internationalization (i18n) service tests.
 | services/aggregation.rs | 2 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
-| **Total** | **201** |
+| lib.rs | 4 |
+| **Total** | **205** |
 
 ---
 

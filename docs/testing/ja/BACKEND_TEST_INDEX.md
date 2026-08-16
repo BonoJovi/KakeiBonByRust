@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2025-12-06 06:24 JST  
-**総テスト数**: 201件
+**総テスト数**: 205件
 
 ---
 
@@ -30,6 +30,7 @@
   - [services/aggregation.rs](#servicesaggregationrs)
   - [services/session.rs](#servicessessionrs)
   - [services/i18n.rs](#servicesi18nrs)
+  - [lib.rs](#librs)
 
 ---
 
@@ -380,6 +381,19 @@ AES-256-GCM暗号化・復号化のテスト。
 
 **合計**: 8件
 
+### lib.rs
+
+`set_language` / `set_font_size` / `update_user_settings` コマンドが使う設定値バリデーションのテスト。
+
+| テスト関数 | 説明 | ファイル | 行 |
+|-----------|------|---------|-----|
+| `normalize_language_accepts_names_and_codes` | 言語名・言語コード（en/English/ja/日本語/Japanese）を受理 | src/lib.rs | 2733 |
+| `normalize_language_rejects_unknown_values` | 未知の言語値を拒否 | src/lib.rs | 2742 |
+| `normalize_font_size_accepts_keywords_and_percentages` | サイズキーワードと50〜200%の指定を受理 | src/lib.rs | 2748 |
+| `normalize_font_size_rejects_out_of_range_and_garbage` | 範囲外の割合と不正文字列を拒否 | src/lib.rs | 2757 |
+
+**合計**: 4件
+
 ---
 
 ## テスト統計サマリー
@@ -389,7 +403,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **178件** |
+| **インラインテスト** | **182件** |
 | validation.rs | 23 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -406,7 +420,8 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/aggregation.rs | 2 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
-| **総計** | **201件** |
+| lib.rs | 4 |
+| **総計** | **205件** |
 
 ---
 

@@ -7,7 +7,7 @@ import { fitWindowToScreen } from './window-fit.js';
 import { Modal } from './modal.js';
 import { setupIndicators } from './indicators.js';
 import { getCurrentSessionUser, isSessionAuthenticated, getSessionSourceScreen, clearSessionSourceScreen } from './session.js';
-import { createMenuBar } from './menu.js';
+import { createMenuBar, handleLogout, handleQuit } from './menu.js';
 import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
 import { showToast } from './toast.js';
 import { MAX_NAME_LEN, MAX_MEMO_LEN } from './consts.js';
@@ -402,14 +402,13 @@ function setupMenuHandlers() {
             window.location.href = HTML_FILES.INDEX;
             fileDropdown.classList.remove('show');
         });
-        dropdownItems[1]?.addEventListener('click', async () => {
-            await invoke('logout');
-            window.location.href = HTML_FILES.INDEX;
+        dropdownItems[1]?.addEventListener('click', () => {
             fileDropdown.classList.remove('show');
+            handleLogout();
         });
-        dropdownItems[2]?.addEventListener('click', async () => {
-            await invoke('quit_app');
+        dropdownItems[2]?.addEventListener('click', () => {
             fileDropdown.classList.remove('show');
+            handleQuit();
         });
     }
     

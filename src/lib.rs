@@ -617,6 +617,26 @@ async fn reload_settings(
         .map_err(|e| format!("Failed to reload settings: {}", e))
 }
 
+/// Validate a language name/code and normalize it to a stored language code.
+fn normalize_language(language: &str) -> Result<&'static str, String> {
+    match language {
+        "English" | "en" => Ok(LANG_ENGLISH),
+        "日本語" | "Japanese" | "ja" => Ok(LANG_JAPANESE),
+        _ => Err("Invalid language".to_string()),
+    }
+}
+
+/// Validate a font size keyword or custom percentage (50-200).
+fn normalize_font_size(font_size: &str) -> Result<String, String> {
+    match font_size {
+        FONT_SIZE_SMALL | FONT_SIZE_MEDIUM | FONT_SIZE_LARGE => Ok(font_size.to_string()),
+        _ => match font_size.parse::<u32>() {
+            Ok(percent) if (50..=200).contains(&percent) => Ok(font_size.to_string()),
+            _ => Err("Invalid font size: must be 'small', 'medium', 'large', or a percentage between 50 and 200".to_string()),
+        },
+    }
+}
+
 #[tauri::command]
 async fn set_language(
     language: String,
@@ -626,11 +646,7 @@ async fn set_language(
     let i18n = state.i18n.lock().await;
     
     // Validate and normalize language code
-    let lang_code = match language.as_str() {
-        "English" | "en" => LANG_ENGLISH,
-        "日本語" | "Japanese" | "ja" => LANG_JAPANESE,
-        _ => return Err("Invalid language".to_string()),
-    };
+    let lang_code = normalize_language(&language)?;
     
     // Save language setting
     settings.set("language", lang_code)
@@ -733,14 +749,33 @@ async fn update_user_settings(
 ) -> Result<(), String> {
     let mut settings_mgr = state.settings.lock().await;
 
-    if let Some(obj) = settings.as_object() {
-        for (key, value) in obj {
-            if let Some(s) = value.as_str() {
-                settings_mgr.set(key, s)
-                    .map_err(|e| format!("Failed to set {}: {}", key, e))?;
-            }
-        }
+    let obj = settings.as_object()
+        .ok_or_else(|| "Settings must be a JSON object".to_string())?;
+
+    // Validate every entry before applying any of them, so a rejected entry
+    // cannot leave earlier entries applied in memory but never saved to disk
+    let mut normalized_entries = Vec::with_capacity(obj.len());
+    for (key, value) in obj {
+        let raw = value.as_str()
+            .ok_or_else(|| format!("Setting {} must be a string", key))?;
+
+        let normalized = match key.as_str() {
+            "language" => normalize_language(raw)?.to_string(),
+            "font_size" => normalize_font_size(raw)?,
+            _ => return Err(format!("Unknown setting: {}", key)),
+        };
+
+        normalized_entries.push((key.clone(), normalized));
     }
+
+    for (key, normalized) in &normalized_entries {
+        settings_mgr.set(key, normalized)
+            .map_err(|e| format!("Failed to set {}: {}", key, e))?;
+    }
+
+    // Persist to disk so the change survives an application restart
+    settings_mgr.save()
+        .map_err(|e| format!("Failed to save settings: {}", e))?;
 
     Ok(())
 }
@@ -905,18 +940,7 @@ async fn set_font_size(
     let i18n = state.i18n.lock().await;
     
     // Validate font size
-    let size = match font_size.as_str() {
-        FONT_SIZE_SMALL => FONT_SIZE_SMALL.to_string(),
-        FONT_SIZE_MEDIUM => FONT_SIZE_MEDIUM.to_string(),
-        FONT_SIZE_LARGE => FONT_SIZE_LARGE.to_string(),
-        _ => {
-            // Try to parse as custom percentage (50-200)
-            match font_size.parse::<u32>() {
-                Ok(percent) if percent >= 50 && percent <= 200 => font_size.clone(),
-                _ => return Err("Invalid font size: must be 'small', 'medium', 'large', or a percentage between 50 and 200".to_string()),
-            }
-        }
-    };
+    let size = normalize_font_size(&font_size)?;
     
     // Save font size setting
     settings.set("font_size", &size)
@@ -2699,4 +2723,41 @@ pub fn run() {
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[cfg(test)]
+mod settings_validation_tests {
+    use super::*;
+
+    #[test]
+    fn normalize_language_accepts_names_and_codes() {
+        assert_eq!(normalize_language("en").unwrap(), LANG_ENGLISH);
+        assert_eq!(normalize_language("English").unwrap(), LANG_ENGLISH);
+        assert_eq!(normalize_language("ja").unwrap(), LANG_JAPANESE);
+        assert_eq!(normalize_language("日本語").unwrap(), LANG_JAPANESE);
+        assert_eq!(normalize_language("Japanese").unwrap(), LANG_JAPANESE);
+    }
+
+    #[test]
+    fn normalize_language_rejects_unknown_values() {
+        assert!(normalize_language("fr").is_err());
+        assert!(normalize_language("").is_err());
+    }
+
+    #[test]
+    fn normalize_font_size_accepts_keywords_and_percentages() {
+        assert_eq!(normalize_font_size(FONT_SIZE_SMALL).unwrap(), FONT_SIZE_SMALL);
+        assert_eq!(normalize_font_size(FONT_SIZE_MEDIUM).unwrap(), FONT_SIZE_MEDIUM);
+        assert_eq!(normalize_font_size(FONT_SIZE_LARGE).unwrap(), FONT_SIZE_LARGE);
+        assert_eq!(normalize_font_size("50").unwrap(), "50");
+        assert_eq!(normalize_font_size("200").unwrap(), "200");
+    }
+
+    #[test]
+    fn normalize_font_size_rejects_out_of_range_and_garbage() {
+        assert!(normalize_font_size("49").is_err());
+        assert!(normalize_font_size("201").is_err());
+        assert!(normalize_font_size("huge").is_err());
+        assert!(normalize_font_size("").is_err());
+    }
 }

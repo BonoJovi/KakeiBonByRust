@@ -625,7 +625,7 @@ async function loadDetails() {
             detailList.innerHTML = `
                 <tr>
                     <td colspan="5" style="text-align: center; padding: 40px; color: #d32f2f;">
-                        ${i18n.t('common.error')}: ${error.message}
+                        ${escapeHtml(i18n.t('common.error'))}: ${escapeHtml(error.message)}
                     </td>
                 </tr>
             `;

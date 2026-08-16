@@ -8,7 +8,7 @@ import { ROLE_ADMIN, ROLE_USER, MAX_NAME_LEN } from './consts.js';
 import { Modal } from './modal.js';
 import { setupIndicators } from './indicators.js';
 import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
-import { createMenuBar } from './menu.js';
+import { createMenuBar, handleLogout, handleQuit } from './menu.js';
 import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
 import { showToast } from './toast.js';
 import { escapeHtml } from './escape-html.js';
@@ -382,12 +382,6 @@ function clearErrors() {
     });
 }
 
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
 // Menu handlers
 function setupMenuHandlers() {
     const fileMenu = document.getElementById('file-menu');
@@ -421,14 +415,13 @@ function setupMenuHandlers() {
             window.location.href = HTML_FILES.INDEX;
             fileDropdown.classList.remove('show');
         });
-        dropdownItems[1]?.addEventListener('click', async () => {
-            await invoke('logout');
-            window.location.href = HTML_FILES.INDEX;
+        dropdownItems[1]?.addEventListener('click', () => {
             fileDropdown.classList.remove('show');
+            handleLogout();
         });
-        dropdownItems[2]?.addEventListener('click', async () => {
-            await invoke('quit_app');
+        dropdownItems[2]?.addEventListener('click', () => {
             fileDropdown.classList.remove('show');
+            handleQuit();
         });
     }
     

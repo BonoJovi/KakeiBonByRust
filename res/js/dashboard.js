@@ -707,12 +707,18 @@ function setupMenuHandlers() {
         console.error('[setupMenuHandlers] fileMenu or fileDropdown NOT FOUND!');
     }
 
-    if (adminMenu && adminDropdown) {
+    // Same semantics as the shared toggle in menu.js, so it does not matter
+    // which of the two registers first (see dataset.initialized guard).
+    if (adminMenu && adminDropdown && adminMenu.dataset.initialized !== 'true') {
         adminMenu.addEventListener('click', (e) => {
             e.stopPropagation();
-            adminDropdown.classList.toggle('show');
-            if (fileDropdown) fileDropdown.classList.remove('show');
+            const isShown = adminDropdown.classList.contains('show');
+            document.querySelectorAll('.dropdown').forEach((d) => {
+                if (d !== adminDropdown) d.classList.remove('show');
+            });
+            adminDropdown.classList.toggle('show', !isShown);
         });
+        adminMenu.dataset.initialized = 'true';
     }
 
     // Close dropdowns when clicking outside

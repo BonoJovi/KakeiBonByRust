@@ -7,7 +7,7 @@ import { fitWindowToScreen } from './window-fit.js';
 import { Modal } from './modal.js';
 import { HTML_FILES } from './html-files.js';
 import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
-import { createMenuBar } from './menu.js';
+import { createMenuBar, handleLogout, handleQuit } from './menu.js';
 import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
 import { showToast } from './toast.js';
 import { MAX_I18N_NAME_LEN } from './consts.js';
@@ -257,8 +257,8 @@ function setupMenuHandlers() {
         const logoutItem = fileDropdown.querySelector('.dropdown-item:nth-child(3)');
         if (logoutItem) {
             logoutItem.addEventListener('click', function() {
-                // TODO: Implement logout
-                window.location.href = HTML_FILES.INDEX;
+                fileDropdown.classList.remove('show');
+                handleLogout();
             });
         }
         
@@ -266,7 +266,8 @@ function setupMenuHandlers() {
         const quitItem = fileDropdown.querySelector('.dropdown-item:nth-child(4)');
         if (quitItem) {
             quitItem.addEventListener('click', function() {
-                invoke('handle_quit');
+                fileDropdown.classList.remove('show');
+                handleQuit();
             });
         }
     }
