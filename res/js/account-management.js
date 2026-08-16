@@ -382,12 +382,6 @@ function clearErrors() {
     });
 }
 
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
 // Menu handlers
 function setupMenuHandlers() {
     const fileMenu = document.getElementById('file-menu');
