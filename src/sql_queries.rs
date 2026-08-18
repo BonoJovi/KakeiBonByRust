@@ -1263,9 +1263,10 @@ DELETE FROM MEMOS WHERE MEMO_ID = ?
 "#;
 
 pub const MEMO_COUNT_USAGE: &str = r#"
-SELECT COUNT(*) as usage_count
-FROM TRANSACTIONS_HEADER
-WHERE MEMO_ID = ?
+SELECT
+  (SELECT COUNT(*) FROM TRANSACTIONS_HEADER WHERE MEMO_ID = ?)
+  + (SELECT COUNT(*) FROM TRANSACTIONS_DETAIL WHERE MEMO_ID = ?)
+  AS usage_count
 "#;
 
 // ============================================================================
