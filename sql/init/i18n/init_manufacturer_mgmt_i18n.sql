@@ -30,3 +30,10 @@ VALUES
 (1106, 'manufacturer_mgmt.manufacturer_list', 'ja', 'メーカー一覧', 'manufacturer_mgmt', 'メーカー一覧セクションタイトル', datetime('now')),
 (1107, 'manufacturer_mgmt.delete_manufacturer', 'en', 'Delete Manufacturer', 'manufacturer_mgmt', 'Delete manufacturer modal title', datetime('now')),
 (1108, 'manufacturer_mgmt.delete_manufacturer', 'ja', 'メーカー削除', 'manufacturer_mgmt', 'メーカー削除モーダルタイトル', datetime('now'));
+
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT)
+VALUES
+(2385, 'manufacturer_mgmt.failed_to_save', 'en', 'Failed to save manufacturer', 'manufacturer_mgmt', 'Save failure message', datetime('now')),
+(2386, 'manufacturer_mgmt.failed_to_save', 'ja', 'メーカーの保存に失敗しました', 'manufacturer_mgmt', '保存失敗メッセージ', datetime('now')),
+(2387, 'manufacturer_mgmt.not_found', 'en', 'Manufacturer not found. The list has been reloaded.', 'manufacturer_mgmt', 'Stale edit target message', datetime('now')),
+(2388, 'manufacturer_mgmt.not_found', 'ja', 'メーカーが見つかりません。一覧を再読み込みしました。', 'manufacturer_mgmt', '編集対象消失メッセージ', datetime('now'));

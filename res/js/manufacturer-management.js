@@ -6,7 +6,7 @@ import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontS
 import { fitWindowToScreen } from './window-fit.js';
 import { Modal } from './modal.js';
 import { setupIndicators } from './indicators.js';
-import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
+import { getCurrentSessionUser } from './session.js';
 import { createMenuBar, handleLogout, handleQuit } from './menu.js';
 import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
 import { showToast } from './toast.js';
@@ -40,17 +40,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     createMenuBar('management');
     console.log('DOMContentLoaded fired');
     try {
-        // Check session authentication
-        if (!await isSessionAuthenticated()) {
-            console.error('Not authenticated, redirecting to login');
-            window.location.href = HTML_FILES.INDEX;
-            return;
-        }
-        
-        // Get current user info
+        // Check session authentication and get user info in a single call
         const user = await getCurrentSessionUser();
         if (!user) {
-            console.error('Failed to get user info, redirecting to login');
+            console.error('Not authenticated, redirecting to login');
             window.location.href = HTML_FILES.INDEX;
             return;
         }
@@ -106,7 +99,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         await fitWindowToScreen();
     } catch (error) {
         console.error('Initialization error:', error);
-        showToast(i18n.t('manufacturer_mgmt.failed_to_initialize') + ': ' + error, { variant: 'error' });
+        showToast(i18n.t('manufacturer_mgmt.failed_to_initialize'), { variant: 'error' });
     }
 });
 
@@ -173,10 +166,17 @@ function initDeleteModal() {
     });
 
     // Confirm delete button
-    document.getElementById('confirm-delete-btn').addEventListener('click', async () => {
-        if (manufacturerToDelete) {
+    const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+    confirmDeleteBtn.addEventListener('click', async () => {
+        if (!manufacturerToDelete || confirmDeleteBtn.disabled) return;
+        confirmDeleteBtn.disabled = true;
+        try {
             await deleteManufacturer(manufacturerToDelete.manufacturer_id);
             deleteModal.close();
+        } catch (error) {
+            // Keep the confirmation modal open so the user can retry or cancel
+        } finally {
+            confirmDeleteBtn.disabled = false;
         }
     });
 }
@@ -250,7 +250,7 @@ async function loadManufacturers() {
         table.style.display = 'table';
     } catch (error) {
         console.error('Failed to load manufacturers:', error);
-        loading.textContent = i18n.t('manufacturer_mgmt.failed_to_load') + ': ' + error;
+        loading.textContent = i18n.t('manufacturer_mgmt.failed_to_load');
     }
 }
 
@@ -375,15 +375,28 @@ async function saveManufacturer() {
         throw new Error('Validation error: memo too long');
     }
 
+    // Resolve the edit target BEFORE the invoke try/catch so a missing
+    // entry is not routed through the generic save-error mapping (which
+    // would layer a `manufacturer_mgmt.failed_to_save` inline error under
+    // the dedicated `not_found` toast). Modal closes on return since
+    // there is nothing left to edit.
+    let manufacturerForUpdate = null;
+    if (editingManufacturerId !== null) {
+        manufacturerForUpdate = manufacturers.find(m => m.manufacturer_id === editingManufacturerId);
+        if (!manufacturerForUpdate) {
+            showToast(i18n.t('manufacturer_mgmt.not_found'), { variant: 'error' });
+            await loadManufacturers();
+            return;
+        }
+    }
+
     try {
-        if (editingManufacturerId) {
-            // Update existing manufacturer
-            const manufacturer = manufacturers.find(m => m.manufacturer_id === editingManufacturerId);
+        if (editingManufacturerId !== null) {
             await invoke('update_manufacturer', {
                 manufacturerId: editingManufacturerId,
                 manufacturerName: manufacturerName,
                 memo: memo || null,
-                displayOrder: manufacturer.display_order,
+                displayOrder: manufacturerForUpdate.display_order,
                 isDisabled: isDisabled
             });
             console.log('Manufacturer updated successfully');
@@ -395,18 +408,6 @@ async function saveManufacturer() {
                 isDisabled: isDisabled === 1 ? isDisabled : null
             });
             console.log('Manufacturer added successfully');
-        }
-
-        // Reload manufacturers list (modal will be closed by Modal class).
-        // This also refreshes the in-memory `manufacturers` array, which we
-        // need to look up the newly added one by name below.
-        await loadManufacturers();
-
-        // If this add was the product-side trip, stamp the new manufacturer
-        // id into the persisted product draft so the user resumes with it
-        // already selected after "Back to product entry".
-        if (returnToProduct && !editingManufacturerId) {
-            linkNewManufacturerToProductDraft(manufacturerName);
         }
     } catch (error) {
         console.error('Failed to save manufacturer:', error);
@@ -435,8 +436,9 @@ async function saveManufacturer() {
         } else if (errorMessage.includes('cannot be empty')) {
             nameMessage = i18n.t('manufacturer_mgmt.empty_name');
         } else {
-            // Fallback to original error message on the name field
-            nameMessage = errorMessage;
+            // Unrecognized backend error: show a localized generic message
+            // (details stay in the console) instead of the raw error
+            nameMessage = i18n.t('manufacturer_mgmt.failed_to_save');
         }
 
         if (nameMessage) showValidationError(manufacturerNameInput, nameMessage);
@@ -444,6 +446,17 @@ async function saveManufacturer() {
 
         // Re-throw error to prevent modal from closing
         throw error;
+    }
+
+    // Save succeeded: failures past this point (list reload, side-trip
+    // link) must not be reported as a failed save
+    await loadManufacturers();
+
+    // If this add was the product-side trip, stamp the new manufacturer
+    // id into the persisted product draft so the user resumes with it
+    // already selected after "Back to product entry".
+    if (returnToProduct && editingManufacturerId === null) {
+        linkNewManufacturerToProductDraft(manufacturerName);
     }
 }
 
@@ -456,7 +469,8 @@ async function deleteManufacturer(manufacturerId) {
         await loadManufacturers();
     } catch (error) {
         console.error('Failed to delete manufacturer:', error);
-        showToast(i18n.t('manufacturer_mgmt.failed_to_delete') + ': ' + error, { variant: 'error' });
+        showToast(i18n.t('manufacturer_mgmt.failed_to_delete'), { variant: 'error' });
+        throw error;
     }
 }
 
