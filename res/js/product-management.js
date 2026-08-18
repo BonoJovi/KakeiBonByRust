@@ -454,21 +454,29 @@ async function saveProduct() {
         throw new Error('Validation error: memo too long');
     }
 
+    // Resolve the edit target BEFORE the invoke try/catch so a missing
+    // entry is not routed through the generic save-error mapping (which
+    // would layer a `product_mgmt.failed_to_save` inline error under the
+    // dedicated `not_found` toast). Modal closes on return since there
+    // is nothing left to edit.
+    let productForUpdate = null;
+    if (editingProductId !== null) {
+        productForUpdate = products.find(p => p.product_id === editingProductId);
+        if (!productForUpdate) {
+            showToast(i18n.t('product_mgmt.not_found'), { variant: 'error' });
+            await loadProducts();
+            return;
+        }
+    }
+
     try {
         if (editingProductId !== null) {
-            // Update existing product
-            const product = products.find(p => p.product_id === editingProductId);
-            if (!product) {
-                showToast(i18n.t('product_mgmt.not_found'), { variant: 'error' });
-                await loadProducts();
-                throw new Error('Product not found in local list');
-            }
             await invoke('update_product', {
                 productId: editingProductId,
                 productName: productName,
                 manufacturerId: manufacturerId,
                 memo: memo || null,
-                displayOrder: product.display_order,
+                displayOrder: productForUpdate.display_order,
                 isDisabled: isDisabled
             });
             console.log('Product updated successfully');
