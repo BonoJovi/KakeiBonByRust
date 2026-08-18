@@ -36,3 +36,10 @@ VALUES
 (1102, 'shop_mgmt.shop_list', 'ja', '店舗一覧', 'shop_mgmt', '店舗一覧セクションタイトル', datetime('now')),
 (1103, 'shop_mgmt.delete_shop', 'en', 'Delete Shop', 'shop_mgmt', 'Delete shop modal title', datetime('now')),
 (1104, 'shop_mgmt.delete_shop', 'ja', '店舗削除', 'shop_mgmt', '店舗削除モーダルタイトル', datetime('now'));
+
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT)
+VALUES
+(2381, 'shop_mgmt.failed_to_save', 'en', 'Failed to save shop', 'shop_mgmt', 'Save failure message', datetime('now')),
+(2382, 'shop_mgmt.failed_to_save', 'ja', '店舗の保存に失敗しました', 'shop_mgmt', '保存失敗メッセージ', datetime('now')),
+(2383, 'shop_mgmt.not_found', 'en', 'Shop not found. The list has been reloaded.', 'shop_mgmt', 'Stale edit target message', datetime('now')),
+(2384, 'shop_mgmt.not_found', 'ja', '店舗が見つかりません。一覧を再読み込みしました。', 'shop_mgmt', '編集対象消失メッセージ', datetime('now'));

@@ -77,6 +77,8 @@ export function showMaxLengthError(inputEl, fieldLabel, max, actual) {
  * input/textarea. Updates on every `input` event. Counts Unicode code
  * points via `[...str].length` so the displayed count matches the
  * backend's `chars().count()` validation (surrogate pairs count as one).
+ * Input beyond `max` code points is truncated, replacing the HTML
+ * `maxlength` attribute (which counts UTF-16 code units, not code points).
  *
  * Idempotent: calling twice on the same element reuses the existing
  * counter and replaces the listener.
@@ -102,8 +104,11 @@ export function attachCharCounter(inputEl, max) {
     }
 
     const update = () => {
-        const count = [...(inputEl.value || '')].length;
-        counterEl.textContent = `${count} / ${max}`;
+        const chars = [...(inputEl.value || '')];
+        if (chars.length > max) {
+            inputEl.value = chars.slice(0, max).join('');
+        }
+        counterEl.textContent = `${[...(inputEl.value || '')].length} / ${max}`;
     };
     inputEl.__charCounterHandler = update;
     inputEl.addEventListener('input', update);

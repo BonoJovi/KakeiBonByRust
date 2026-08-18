@@ -97,6 +97,10 @@ async fn login_user(
     password: String,
     state: tauri::State<'_, AppState>
 ) -> Result<services::session::User, String> {
+    // Every login attempt starts from a clean session so no user or
+    // side-trip state from a previous login can leak into the new one
+    state.session.clear_all();
+    
     let auth = state.auth.lock().await;
     
     match auth.authenticate_user(&username, &password).await {
@@ -219,6 +223,9 @@ fn set_session_source_screen(
     source_screen: String,
     state: tauri::State<'_, AppState>
 ) -> Result<(), String> {
+    if !consts::VALID_SOURCE_SCREENS.contains(&source_screen.as_str()) {
+        return Err(format!("Invalid source screen: {}", source_screen));
+    }
     state.session.set_source_screen(source_screen);
     Ok(())
 }

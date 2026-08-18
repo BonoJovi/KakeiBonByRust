@@ -2,8 +2,10 @@ import { invoke } from '@tauri-apps/api/core';
 import i18n from './i18n.js';
 import { setupIndicators } from './indicators.js';
 import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers } from './font-size.js';
+import { setupLanguageMenuHandlers, setupLanguageMenu } from './language-menu.js';
 import * as session from './session.js';
 import { showToast } from './toast.js';
+import { HTML_FILES } from './html-files.js';
 
 let isLoggedIn = false;
 
@@ -102,8 +104,6 @@ document.addEventListener('keydown', function(e) {
         handleQuit();
     }
 });
-
-import { HTML_FILES } from './html-files.js';
 
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('DOM loaded');
@@ -455,9 +455,18 @@ async function checkSetupNeeded() {
             appContent.classList.add('hidden');
         } else {
             adminSetup.classList.add('hidden');
-            loginForm.classList.remove('hidden');
-            appContent.classList.add('hidden');
-            document.getElementById('username')?.focus();
+            // A session may still be active (e.g. "Back to Main" from a
+            // management screen): show the app instead of the login form
+            const authenticated = await session.isSessionAuthenticated().catch(() => false);
+            if (authenticated) {
+                isLoggedIn = true;
+                loginForm.classList.add('hidden');
+                appContent.classList.remove('hidden');
+            } else {
+                loginForm.classList.remove('hidden');
+                appContent.classList.add('hidden');
+                document.getElementById('username')?.focus();
+            }
         }
     } catch (error) {
         console.error('Failed to check setup status:', error);
@@ -465,106 +474,6 @@ async function checkSetupNeeded() {
         adminSetup.classList.remove('hidden');
         loginForm.classList.add('hidden');
         appContent.classList.add('hidden');
-    }
-}
-
-function setupLanguageMenuHandlers() {
-    const languageMenu = document.getElementById('language-menu');
-    const languageDropdown = document.getElementById('language-dropdown');
-    
-    if (!languageMenu || !languageDropdown) {
-        console.error('Language menu elements not found');
-        return;
-    }
-    
-    // Check if already initialized
-    if (languageMenu.dataset.initialized === 'true') {
-        console.log('[setupLanguageMenuHandlers] Already initialized, skipping');
-        return;
-    }
-    
-    // Setup dropdown toggle - only once
-    languageMenu.addEventListener('click', function(e) {
-        console.log('Language menu clicked');
-        e.stopPropagation();
-        
-        const isShown = languageDropdown.classList.contains('show');
-        
-        // Close all other dropdowns
-        document.querySelectorAll('.dropdown').forEach(dropdown => {
-            if (dropdown !== languageDropdown) {
-                dropdown.classList.remove('show');
-            }
-        });
-        
-        // Toggle this dropdown
-        if (!isShown) {
-            languageDropdown.classList.add('show');
-        }
-        
-        console.log('Language dropdown toggled, show class:', languageDropdown.classList.contains('show'));
-    });
-    
-    // Mark as initialized
-    languageMenu.dataset.initialized = 'true';
-}
-
-async function setupLanguageMenu() {
-    try {
-        // Fetch language names from backend. Each entry is shown in its own
-        // native script (English / 日本語 / ...) regardless of the current UI
-        // language, so users can always recognize the language they want.
-        const languageNames = await invoke('get_language_names');
-        const currentLang = i18n.getCurrentLanguage();
-
-        const languageDropdown = document.getElementById('language-dropdown');
-        if (!languageDropdown) {
-            console.error('Language dropdown not found');
-            return;
-        }
-
-        languageDropdown.innerHTML = '';
-
-        for (const [langCode, langName] of languageNames) {
-            const item = document.createElement('div');
-            item.className = 'dropdown-item';
-            item.textContent = langName;
-            item.dataset.langCode = langCode;
-
-            // Mark current language with active class (shows filled circle)
-            if (langCode === currentLang) {
-                item.classList.add('active');
-            }
-
-            item.addEventListener('click', async function(e) {
-                e.stopPropagation();
-                await handleLanguageChange(langCode);
-                languageDropdown.classList.remove('show');
-            });
-
-            languageDropdown.appendChild(item);
-        }
-
-    } catch (error) {
-        console.error('Failed to setup language menu:', error);
-    }
-}
-
-async function handleLanguageChange(langCode) {
-    try {
-        console.log('Changing language to:', langCode);
-        await i18n.setLanguage(langCode);
-
-        // Reload menus whose items are generated dynamically.
-        // i18n.updateUI() only refreshes elements with data-i18n attributes,
-        // so menus built via textContent (Language, Font Size) need an explicit redraw.
-        await setupLanguageMenu();
-        await setupFontSizeMenu();
-
-        console.log('Language changed successfully');
-    } catch (error) {
-        console.error('Failed to change language:', error);
-        showToast(i18n.t('error.language_change_failed') + ': ' + error, { variant: 'error' });
     }
 }
 
@@ -860,11 +769,12 @@ export function setupFileMenuHandlers() {
     }
 }
 
-// Export functions for use in other modules
+// Export functions for use in other modules.
+// The language menu implementation lives in language-menu.js; it is
+// re-exported here for pages that import it from menu.js.
 export {
     setupLanguageMenuHandlers,
     setupLanguageMenu,
-    handleLanguageChange,
     handleLogout,
     handleQuit,
     setupCustomValidationMessages
