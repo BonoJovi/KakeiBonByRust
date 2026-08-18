@@ -6,7 +6,7 @@ import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontS
 import { fitWindowToScreen } from './window-fit.js';
 import { Modal } from './modal.js';
 import { setupIndicators } from './indicators.js';
-import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
+import { getCurrentSessionUser } from './session.js';
 import { createMenuBar, handleLogout, handleQuit } from './menu.js';
 import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
 import { showToast } from './toast.js';
@@ -52,17 +52,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     createMenuBar('management');
     console.log('DOMContentLoaded fired');
     try {
-        // Check session authentication
-        if (!await isSessionAuthenticated()) {
-            console.error('Not authenticated, redirecting to login');
-            window.location.href = HTML_FILES.INDEX;
-            return;
-        }
-        
-        // Get current user info
+        // Check session authentication and get user info in a single call
         const user = await getCurrentSessionUser();
         if (!user) {
-            console.error('Failed to get user info, redirecting to login');
+            console.error('Not authenticated, redirecting to login');
             window.location.href = HTML_FILES.INDEX;
             return;
         }
@@ -144,7 +137,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         await fitWindowToScreen();
     } catch (error) {
         console.error('Initialization error:', error);
-        showToast(i18n.t('product_mgmt.failed_to_initialize') + ': ' + error, { variant: 'error' });
+        showToast(i18n.t('product_mgmt.failed_to_initialize'), { variant: 'error' });
     }
 });
 
@@ -213,10 +206,17 @@ function initDeleteModal() {
     });
 
     // Confirm delete button
-    document.getElementById('confirm-delete-btn').addEventListener('click', async () => {
-        if (productToDelete) {
+    const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+    confirmDeleteBtn.addEventListener('click', async () => {
+        if (!productToDelete || confirmDeleteBtn.disabled) return;
+        confirmDeleteBtn.disabled = true;
+        try {
             await deleteProduct(productToDelete.product_id);
             deleteModal.close();
+        } catch (error) {
+            // Keep the confirmation modal open so the user can retry or cancel
+        } finally {
+            confirmDeleteBtn.disabled = false;
         }
     });
 }
@@ -337,7 +337,7 @@ async function loadProducts() {
         table.style.display = 'table';
     } catch (error) {
         console.error('Failed to load products:', error);
-        loading.textContent = i18n.t('product_mgmt.failed_to_load') + ': ' + error;
+        loading.textContent = i18n.t('product_mgmt.failed_to_load');
     }
 }
 
@@ -454,16 +454,29 @@ async function saveProduct() {
         throw new Error('Validation error: memo too long');
     }
 
+    // Resolve the edit target BEFORE the invoke try/catch so a missing
+    // entry is not routed through the generic save-error mapping (which
+    // would layer a `product_mgmt.failed_to_save` inline error under the
+    // dedicated `not_found` toast). Modal closes on return since there
+    // is nothing left to edit.
+    let productForUpdate = null;
+    if (editingProductId !== null) {
+        productForUpdate = products.find(p => p.product_id === editingProductId);
+        if (!productForUpdate) {
+            showToast(i18n.t('product_mgmt.not_found'), { variant: 'error' });
+            await loadProducts();
+            return;
+        }
+    }
+
     try {
-        if (editingProductId) {
-            // Update existing product
-            const product = products.find(p => p.product_id === editingProductId);
+        if (editingProductId !== null) {
             await invoke('update_product', {
                 productId: editingProductId,
                 productName: productName,
                 manufacturerId: manufacturerId,
                 memo: memo || null,
-                displayOrder: product.display_order,
+                displayOrder: productForUpdate.display_order,
                 isDisabled: isDisabled
             });
             console.log('Product updated successfully');
@@ -476,18 +489,7 @@ async function saveProduct() {
                 isDisabled: isDisabled === 1 ? isDisabled : null
             });
             console.log('Product added successfully');
-
-            // If this add was triggered by the detail-jump flow, look up the
-            // new product by name and stamp its id into the persisted draft
-            // so the user returns to the detail modal with the new master
-            // entry already selected (canonicalizing the item name too).
-            if (returnToTransactionId) {
-                await linkNewProductToDraft(productName);
-            }
         }
-
-        // Reload products list (modal will be closed by Modal class)
-        await loadProducts();
     } catch (error) {
         console.error('Failed to save product:', error);
 
@@ -515,8 +517,9 @@ async function saveProduct() {
         } else if (errorMessage.includes('cannot be empty')) {
             nameMessage = i18n.t('product_mgmt.empty_name');
         } else {
-            // Fallback to original error message on the name field
-            nameMessage = errorMessage;
+            // Unrecognized backend error: show a localized generic message
+            // (details stay in the console) instead of the raw error
+            nameMessage = i18n.t('product_mgmt.failed_to_save');
         }
 
         if (nameMessage) showValidationError(productNameInput, nameMessage);
@@ -525,6 +528,19 @@ async function saveProduct() {
         // Re-throw error to prevent modal from closing
         throw error;
     }
+
+    // Save succeeded: failures past this point (detail-draft link, list
+    // reload) must not be reported as a failed save
+    if (returnToTransactionId && editingProductId === null) {
+        // If this add was triggered by the detail-jump flow, look up the
+        // new product by name and stamp its id into the persisted draft
+        // so the user returns to the detail modal with the new master
+        // entry already selected (canonicalizing the item name too).
+        await linkNewProductToDraft(productName);
+    }
+
+    // Reload products list (modal will be closed by Modal class)
+    await loadProducts();
 }
 
 // Snapshot the product modal's current inputs so the user can step out to
@@ -590,7 +606,8 @@ async function deleteProduct(productId) {
         await loadProducts();
     } catch (error) {
         console.error('Failed to delete product:', error);
-        showToast(i18n.t('product_mgmt.failed_to_delete') + ': ' + error, { variant: 'error' });
+        showToast(i18n.t('product_mgmt.failed_to_delete'), { variant: 'error' });
+        throw error;
     }
 }
 

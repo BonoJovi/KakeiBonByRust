@@ -34,3 +34,10 @@ VALUES
 (1110, 'product_mgmt.product_list', 'ja', '商品一覧', 'product_mgmt', '商品一覧セクションタイトル', datetime('now')),
 (1111, 'product_mgmt.delete_product', 'en', 'Delete Product', 'product_mgmt', 'Delete product modal title', datetime('now')),
 (1112, 'product_mgmt.delete_product', 'ja', '商品削除', 'product_mgmt', '商品削除モーダルタイトル', datetime('now'));
+
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT)
+VALUES
+(2389, 'product_mgmt.failed_to_save', 'en', 'Failed to save product', 'product_mgmt', 'Save failure message', datetime('now')),
+(2390, 'product_mgmt.failed_to_save', 'ja', '商品の保存に失敗しました', 'product_mgmt', '保存失敗メッセージ', datetime('now')),
+(2391, 'product_mgmt.not_found', 'en', 'Product not found. The list has been reloaded.', 'product_mgmt', 'Stale edit target message', datetime('now')),
+(2392, 'product_mgmt.not_found', 'ja', '商品が見つかりません。一覧を再読み込みしました。', 'product_mgmt', '編集対象消失メッセージ', datetime('now'));
