@@ -375,20 +375,28 @@ async function saveManufacturer() {
         throw new Error('Validation error: memo too long');
     }
 
+    // Resolve the edit target BEFORE the invoke try/catch so a missing
+    // entry is not routed through the generic save-error mapping (which
+    // would layer a `manufacturer_mgmt.failed_to_save` inline error under
+    // the dedicated `not_found` toast). Modal closes on return since
+    // there is nothing left to edit.
+    let manufacturerForUpdate = null;
+    if (editingManufacturerId !== null) {
+        manufacturerForUpdate = manufacturers.find(m => m.manufacturer_id === editingManufacturerId);
+        if (!manufacturerForUpdate) {
+            showToast(i18n.t('manufacturer_mgmt.not_found'), { variant: 'error' });
+            await loadManufacturers();
+            return;
+        }
+    }
+
     try {
         if (editingManufacturerId !== null) {
-            // Update existing manufacturer
-            const manufacturer = manufacturers.find(m => m.manufacturer_id === editingManufacturerId);
-            if (!manufacturer) {
-                showToast(i18n.t('manufacturer_mgmt.not_found'), { variant: 'error' });
-                await loadManufacturers();
-                throw new Error('Manufacturer not found in local list');
-            }
             await invoke('update_manufacturer', {
                 manufacturerId: editingManufacturerId,
                 manufacturerName: manufacturerName,
                 memo: memo || null,
-                displayOrder: manufacturer.display_order,
+                displayOrder: manufacturerForUpdate.display_order,
                 isDisabled: isDisabled
             });
             console.log('Manufacturer updated successfully');
