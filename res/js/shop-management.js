@@ -295,20 +295,28 @@ async function saveShop() {
         throw new Error('Validation error: memo too long');
     }
 
+    // Resolve the edit target BEFORE the invoke try/catch so a missing
+    // entry is not routed through the generic save-error mapping (which
+    // would layer a `shop_mgmt.failed_to_save` inline error under the
+    // dedicated `not_found` toast). Modal closes on return since there
+    // is nothing left to edit.
+    let shopForUpdate = null;
+    if (editingShopId !== null) {
+        shopForUpdate = shops.find(s => s.shop_id === editingShopId);
+        if (!shopForUpdate) {
+            showToast(i18n.t('shop_mgmt.not_found'), { variant: 'error' });
+            await loadShops();
+            return;
+        }
+    }
+
     try {
         if (editingShopId !== null) {
-            // Update existing shop
-            const shop = shops.find(s => s.shop_id === editingShopId);
-            if (!shop) {
-                showToast(i18n.t('shop_mgmt.not_found'), { variant: 'error' });
-                await loadShops();
-                throw new Error('Shop not found in local list');
-            }
             await invoke('update_shop', {
                 shopId: editingShopId,
                 shopName: shopName,
                 memo: memo || null,
-                displayOrder: shop.display_order
+                displayOrder: shopForUpdate.display_order
             });
             console.log('Shop updated successfully');
         } else {
