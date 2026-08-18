@@ -10,6 +10,10 @@ import { invoke } from '@tauri-apps/api/core';
 import i18n from './i18n.js';
 import { setupFontSizeMenu } from './font-size.js';
 
+// The screen's reload callback. Persisted so a later callback-less call
+// (menu.js re-renders the items on every page) cannot drop it.
+let lastOnLanguageChanged = null;
+
 /**
  * Wire the dropdown open/close behaviour. Idempotent: repeated calls on the
  * same page are ignored.
@@ -46,6 +50,10 @@ export function setupLanguageMenuHandlers() {
  *   e.g. to reload screen data whose labels come from the backend.
  */
 export async function setupLanguageMenu(onLanguageChanged) {
+    if (onLanguageChanged !== undefined) {
+        lastOnLanguageChanged = onLanguageChanged;
+    }
+    const callback = lastOnLanguageChanged;
     try {
         const languageNames = await invoke('get_language_names');
         const currentLang = i18n.getCurrentLanguage();
@@ -67,7 +75,7 @@ export async function setupLanguageMenu(onLanguageChanged) {
 
             item.addEventListener('click', async function(e) {
                 e.stopPropagation();
-                await handleLanguageChange(langCode, onLanguageChanged);
+                await handleLanguageChange(langCode, callback);
                 languageDropdown.classList.remove('show');
             });
 

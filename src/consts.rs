@@ -20,6 +20,11 @@ pub const FONT_SIZE_MEDIUM: &str = "medium";
 pub const FONT_SIZE_LARGE: &str = "large";
 pub const FONT_SIZE_DEFAULT: &str = FONT_SIZE_MEDIUM;
 
+// Session source_screen values accepted for the side-trip pattern
+// (must match res/js/consts.js SOURCE_SCREEN_*)
+pub const SOURCE_SCREEN_TRANSACTION_MGMT: &str = "transaction_mgmt";
+pub const VALID_SOURCE_SCREENS: &[&str] = &[SOURCE_SCREEN_TRANSACTION_MGMT];
+
 // Tax rounding mode constants
 pub const TAX_ROUND_DOWN: i64 = 0;
 pub const TAX_ROUND_HALF_UP: i64 = 1;

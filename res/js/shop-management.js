@@ -6,11 +6,11 @@ import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontS
 import { fitWindowToScreen } from './window-fit.js';
 import { Modal } from './modal.js';
 import { setupIndicators } from './indicators.js';
-import { getCurrentSessionUser, isSessionAuthenticated, getSessionSourceScreen, clearSessionSourceScreen } from './session.js';
+import { getCurrentSessionUser, getSessionSourceScreen, clearSessionSourceScreen, clearSessionModalState, clearSessionCategory1Code } from './session.js';
 import { createMenuBar, handleLogout, handleQuit } from './menu.js';
 import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
 import { showToast } from './toast.js';
-import { MAX_NAME_LEN, MAX_MEMO_LEN } from './consts.js';
+import { MAX_NAME_LEN, MAX_MEMO_LEN, SOURCE_SCREEN_TRANSACTION_MGMT } from './consts.js';
 
 console.log('=== SHOP-MANAGEMENT.JS LOADED ===');
 
@@ -23,6 +23,9 @@ let editingShopId = null;
 let shopModal = null;
 let deleteModal = null;
 let shopToDelete = null;
+// Screen that side-tripped here (captured once at load, cleared from the
+// session immediately so it cannot go stale if the user leaves without saving)
+let sideTripSource = null;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
@@ -31,17 +34,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     createMenuBar('management');
     console.log('DOMContentLoaded fired');
     try {
-        // Check session authentication
-        if (!await isSessionAuthenticated()) {
-            console.error('Not authenticated, redirecting to login');
-            window.location.href = HTML_FILES.INDEX;
-            return;
-        }
-        
-        // Get current user info
+        // Check session authentication and get user info in a single call
         const user = await getCurrentSessionUser();
         if (!user) {
-            console.error('Failed to get user info, redirecting to login');
+            console.error('Not authenticated, redirecting to login');
             window.location.href = HTML_FILES.INDEX;
             return;
         }
@@ -49,6 +45,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         currentUserId = user.user_id;
         currentUserRole = user.role;
         console.log(`Logged in as: ${user.name} (ID: ${currentUserId}, Role: ${currentUserRole})`);
+        
+        sideTripSource = await getSessionSourceScreen();
+        if (sideTripSource) {
+            await clearSessionSourceScreen();
+        }
         
         await i18n.init();
         console.log('i18n initialized:', i18n.initialized);
@@ -77,7 +78,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         await fitWindowToScreen();
     } catch (error) {
         console.error('Initialization error:', error);
-        showToast(i18n.t('shop_mgmt.failed_to_initialize') + ': ' + error, { variant: 'error' });
+        showToast(i18n.t('shop_mgmt.failed_to_initialize'), { variant: 'error' });
     }
 });
 
@@ -142,10 +143,17 @@ function initDeleteModal() {
     });
 
     // Confirm delete button
-    document.getElementById('confirm-delete-btn').addEventListener('click', async () => {
-        if (shopToDelete) {
+    const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+    confirmDeleteBtn.addEventListener('click', async () => {
+        if (!shopToDelete || confirmDeleteBtn.disabled) return;
+        confirmDeleteBtn.disabled = true;
+        try {
             await deleteShop(shopToDelete.shop_id);
             deleteModal.close();
+        } catch (error) {
+            // Keep the confirmation modal open so the user can retry or cancel
+        } finally {
+            confirmDeleteBtn.disabled = false;
         }
     });
 }
@@ -199,7 +207,7 @@ async function loadShops() {
         table.style.display = 'table';
     } catch (error) {
         console.error('Failed to load shops:', error);
-        loading.textContent = i18n.t('shop_mgmt.failed_to_load') + ': ' + error;
+        loading.textContent = i18n.t('shop_mgmt.failed_to_load');
     }
 }
 
@@ -288,9 +296,14 @@ async function saveShop() {
     }
 
     try {
-        if (editingShopId) {
+        if (editingShopId !== null) {
             // Update existing shop
             const shop = shops.find(s => s.shop_id === editingShopId);
+            if (!shop) {
+                showToast(i18n.t('shop_mgmt.not_found'), { variant: 'error' });
+                await loadShops();
+                throw new Error('Shop not found in local list');
+            }
             await invoke('update_shop', {
                 shopId: editingShopId,
                 shopName: shopName,
@@ -305,17 +318,6 @@ async function saveShop() {
                 memo: memo || null
             });
             console.log('Shop added successfully');
-        }
-
-        // Reload shops list (modal will be closed by Modal class)
-        await loadShops();
-        
-        // Check if called from another screen
-        const callerScreen = await getSessionSourceScreen();
-        if (callerScreen) {
-            // Clear session and return to caller screen
-            await clearSessionSourceScreen();
-            window.location.href = HTML_FILES.TRANSACTION_MANAGEMENT;
         }
     } catch (error) {
         console.error('Failed to save shop:', error);
@@ -344,8 +346,9 @@ async function saveShop() {
         } else if (errorMessage.includes('cannot be empty')) {
             nameMessage = i18n.t('shop_mgmt.empty_name');
         } else {
-            // Fallback to original error message on the name field
-            nameMessage = errorMessage;
+            // Unrecognized backend error: show a localized generic message
+            // (details stay in the console) instead of the raw error
+            nameMessage = i18n.t('shop_mgmt.failed_to_save');
         }
 
         if (nameMessage) showValidationError(shopNameInput, nameMessage);
@@ -353,6 +356,14 @@ async function saveShop() {
 
         // Re-throw error to prevent modal from closing
         throw error;
+    }
+
+    // Save succeeded: failures past this point (list reload, side-trip
+    // return) must not be reported as a failed save
+    await loadShops();
+
+    if (sideTripSource === SOURCE_SCREEN_TRANSACTION_MGMT) {
+        window.location.href = HTML_FILES.TRANSACTION_MANAGEMENT;
     }
 }
 
@@ -365,7 +376,8 @@ async function deleteShop(shopId) {
         await loadShops();
     } catch (error) {
         console.error('Failed to delete shop:', error);
-        showToast(i18n.t('shop_mgmt.failed_to_delete') + ': ' + error, { variant: 'error' });
+        showToast(i18n.t('shop_mgmt.failed_to_delete'), { variant: 'error' });
+        throw error;
     }
 }
 
@@ -398,9 +410,19 @@ function setupMenuHandlers() {
         fileDropdown.dataset.itemsInitialized = 'true';
 
         const dropdownItems = fileDropdown.querySelectorAll('.dropdown-item');
-        dropdownItems[0]?.addEventListener('click', () => {
-            window.location.href = HTML_FILES.INDEX;
+        dropdownItems[0]?.addEventListener('click', async () => {
             fileDropdown.classList.remove('show');
+            if (sideTripSource) {
+                // Leaving without saving abandons the side-trip: drop the
+                // caller's saved modal state so it is not restored later
+                try {
+                    await clearSessionModalState();
+                    await clearSessionCategory1Code();
+                } catch (error) {
+                    console.error('Failed to clear side-trip state:', error);
+                }
+            }
+            window.location.href = HTML_FILES.INDEX;
         });
         dropdownItems[1]?.addEventListener('click', () => {
             fileDropdown.classList.remove('show');

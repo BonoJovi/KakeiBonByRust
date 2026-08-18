@@ -5,7 +5,7 @@ import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontS
 import { fitWindowToScreen } from './window-fit.js';
 import { setupLanguageMenuHandlers, setupLanguageMenu, handleLogout, handleQuit } from './menu.js';
 import { HTML_FILES } from './html-files.js';
-import { TAX_ROUND_DOWN, TAX_ROUND_HALF_UP, TAX_ROUND_UP, ROLE_ADMIN, ROLE_USER, MAX_MEMO_LEN } from './consts.js';
+import { TAX_ROUND_DOWN, TAX_ROUND_HALF_UP, TAX_ROUND_UP, ROLE_ADMIN, ROLE_USER, MAX_MEMO_LEN, SOURCE_SCREEN_TRANSACTION_MGMT } from './consts.js';
 import { Modal } from './modal.js';
 import { getCurrentSessionUser, isSessionAuthenticated, setSessionSourceScreen, getSessionModalState, setSessionModalState, clearSessionModalState } from './session.js';
 import { createMenuBar } from './menu.js';
@@ -704,7 +704,7 @@ function initializeTransactionModal() {
             // Save modal state before navigation
             await saveModalState();
             // Set caller screen in session
-            await setSessionSourceScreen('transaction_mgmt');
+            await setSessionSourceScreen(SOURCE_SCREEN_TRANSACTION_MGMT);
             window.location.href = HTML_FILES.SHOP_MANAGEMENT;
         });
     }
