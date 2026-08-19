@@ -809,22 +809,12 @@ impl TransactionService {
 
         // Keyword: substring match against memo text on the header row and on
         // any detail row of the same header. MEMO_TEXT is user-supplied so we
-        // escape LIKE metacharacters and pair with ESCAPE '\'.
+        // escape LIKE metacharacters and bind the same pattern twice.
         if let Some(kw) = keyword {
             let kw = kw.trim();
             if !kw.is_empty() {
                 let pattern = format!("%{}%", escape_like_pattern(kw));
-                where_clauses.push(
-                    r"(EXISTS (SELECT 1 FROM MEMOS mh
-                        WHERE mh.MEMO_ID = t.MEMO_ID
-                          AND mh.MEMO_TEXT LIKE ? ESCAPE '\')
-                       OR EXISTS (SELECT 1 FROM TRANSACTIONS_DETAIL td
-                        JOIN MEMOS md ON md.MEMO_ID = td.MEMO_ID
-                        WHERE td.USER_ID = t.USER_ID
-                          AND td.TRANSACTION_ID = t.TRANSACTION_ID
-                          AND md.MEMO_TEXT LIKE ? ESCAPE '\'))"
-                        .to_string(),
-                );
+                where_clauses.push(sql_queries::TRANSACTION_KEYWORD_MEMO_FILTER.to_string());
                 params.push(pattern.clone());
                 params.push(pattern);
             }

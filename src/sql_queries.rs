@@ -767,6 +767,19 @@ WHERE
 
 pub const TRANSACTION_LIST_ORDER: &str = " ORDER BY t.TRANSACTION_DATE DESC, t.TRANSACTION_ID DESC";
 
+// Keyword filter: substring match against memo text on the header row and
+// on any detail row of the header. Two `?` placeholders — bind the same
+// escaped LIKE pattern twice. Paired with `ESCAPE '\'` so caller-supplied
+// LIKE metacharacters (`%`, `_`, `\`) match literally.
+pub const TRANSACTION_KEYWORD_MEMO_FILTER: &str = r"(EXISTS (SELECT 1 FROM MEMOS mh
+    WHERE mh.MEMO_ID = t.MEMO_ID
+      AND mh.MEMO_TEXT LIKE ? ESCAPE '\')
+   OR EXISTS (SELECT 1 FROM TRANSACTIONS_DETAIL td
+    JOIN MEMOS md ON md.MEMO_ID = td.MEMO_ID
+    WHERE td.USER_ID = t.USER_ID
+      AND td.TRANSACTION_ID = t.TRANSACTION_ID
+      AND md.MEMO_TEXT LIKE ? ESCAPE '\'))";
+
 
 // ============================================================================
 // Transaction Tables Migration
