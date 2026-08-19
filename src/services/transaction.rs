@@ -986,12 +986,15 @@ impl TransactionService {
         }
     }
 
-    /// Total references to a memo across TRANSACTIONS_HEADER and
-    /// TRANSACTIONS_DETAIL. A memo is considered shared when this exceeds
-    /// the caller's own reference (typically shared > 1 for updates, or
-    /// leftover > 0 after the caller already released its reference).
+    /// Total references to a memo across TRANSACTIONS_HEADER,
+    /// TRANSACTIONS_DETAIL, RECURRING_RULES, and RECURRING_RULE_DETAILS.
+    /// A memo is considered shared when this exceeds the caller's own
+    /// reference (typically shared > 1 for updates, or leftover > 0 after
+    /// the caller already released its reference).
     async fn memo_usage_count(&self, memo_id: i64) -> Result<i64, TransactionError> {
         let count: i64 = sqlx::query_scalar(sql_queries::MEMO_COUNT_USAGE)
+            .bind(memo_id)
+            .bind(memo_id)
             .bind(memo_id)
             .bind(memo_id)
             .fetch_one(&self.pool)
@@ -1332,11 +1335,17 @@ impl TransactionService {
         // memo row directly, which corrupts any header or sibling detail that
         // shared the same MEMO_ID via MEMO_FIND_BY_TEXT reuse. Gate every
         // destructive step on a share check.
-        let memo_id = if let Some(text) = &request.memo {
+        //
+        // Note: `deferred_memo_delete` carries the old MEMO_ID out to *after*
+        // the DETAIL update. Deleting a memo row while the detail still
+        // references it violates the MEMOS FK under production settings
+        // (PRAGMA foreign_keys = ON), so the delete must run only once the
+        // reference has been released.
+        let (memo_id, deferred_memo_delete) = if let Some(text) = &request.memo {
             if !text.trim().is_empty() {
                 validate_memo_length(text)?;
 
-                if let Some(old_memo_id) = existing_detail.memo_id {
+                let resolved = if let Some(old_memo_id) = existing_detail.memo_id {
                     let shared = self.memo_usage_count(old_memo_id).await? > 1;
                     if shared {
                         // Old memo has other references — must not mutate it.
@@ -1355,22 +1364,15 @@ impl TransactionService {
                     // No prior memo — find-or-create to avoid duplicate rows
                     // when the same text already lives in MEMOS.
                     self.get_or_create_memo_id(user_id, Some(text)).await?
-                }
+                };
+                (resolved, None)
             } else {
-                // Text cleared — release this detail's reference. Only delete
-                // the memo row when nothing else still points at it.
-                if let Some(old_memo_id) = existing_detail.memo_id {
-                    if self.memo_usage_count(old_memo_id).await? <= 1 {
-                        sqlx::query(sql_queries::MEMO_DELETE)
-                            .bind(old_memo_id)
-                            .execute(&self.pool)
-                            .await?;
-                    }
-                }
-                None
+                // Text cleared — defer the old memo's cleanup until after
+                // the DETAIL update has released its reference.
+                (None, existing_detail.memo_id)
             }
         } else {
-            existing_detail.memo_id
+            (existing_detail.memo_id, None)
         };
 
         // Update detail
@@ -1392,6 +1394,18 @@ impl TransactionService {
 
         if result.rows_affected() == 0 {
             return Err(TransactionError::NotFound);
+        }
+
+        // Now that the detail's MEMO_ID has been released (or overwritten),
+        // clean up the old memo row if the user cleared the memo text and
+        // nothing else still points at it.
+        if let Some(old_memo_id) = deferred_memo_delete {
+            if self.memo_usage_count(old_memo_id).await? == 0 {
+                sqlx::query(sql_queries::MEMO_DELETE)
+                    .bind(old_memo_id)
+                    .execute(&self.pool)
+                    .await?;
+            }
         }
 
         Ok(())
@@ -1982,6 +1996,32 @@ mod tests {
             .await
             .unwrap();
 
+        // Recurring rule tables. MEMO_COUNT_USAGE queries these to detect
+        // memos shared with recurring rules; without them, every UPDATE /
+        // DELETE path that touches a memo would fail with "no such table"
+        // even when the test itself does not exercise recurring rules.
+        sqlx::query(sql_queries::CREATE_RECURRING_RULES_TABLE)
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query(sql_queries::CREATE_RECURRING_RULE_DETAILS_TABLE)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        pool
+    }
+
+    /// Same in-memory schema as `setup_test_db`, plus `PRAGMA foreign_keys
+    /// = ON` so tests can exercise production-equivalent FK enforcement
+    /// (needed for regression tests around MEMO_DELETE ordering, since the
+    /// bug only surfaces when the MEMOS FK is actually enforced).
+    async fn setup_test_db_with_foreign_keys() -> SqlitePool {
+        let pool = setup_test_db().await;
+        sqlx::query("PRAGMA foreign_keys = ON")
+            .execute(&pool)
+            .await
+            .unwrap();
         pool
     }
 
@@ -3895,6 +3935,139 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(header_b_after.memo_text.as_deref(), Some("keep_me"));
+    }
+
+    /// Insert a minimal RECURRING_RULES row that references `memo_id`.
+    /// Used to reproduce sharing between a recurring rule and a
+    /// transaction detail — MEMO_COUNT_USAGE must count this row.
+    async fn seed_recurring_rule_referencing_memo(pool: &SqlitePool, memo_id: i64) -> i64 {
+        let result = sqlx::query(
+            "INSERT INTO RECURRING_RULES (
+                USER_ID, PERIOD_UNIT, PERIOD_INTERVAL,
+                START_DATE, END_DATE,
+                CATEGORY1_CODE, FROM_ACCOUNT_CODE, TO_ACCOUNT_CODE,
+                TOTAL_AMOUNT, TAX_INCLUDED_TYPE, MEMO_ID
+            ) VALUES (2, 'MONTHLY', 1, '2024-01-01', '2024-12-31',
+                      'EXPENSE', 'CASH', 'BANK', 1000, 1, ?)",
+        )
+        .bind(memo_id)
+        .execute(pool)
+        .await
+        .unwrap();
+        result.last_insert_rowid()
+    }
+
+    /// Regression for Devin review of PR #82. When a detail's MEMO_ID is
+    /// shared with a RECURRING_RULES row (which happens naturally because
+    /// generated occurrences copy the rule's MEMO_ID), editing the detail's
+    /// memo used to rewrite the recurring rule's memo too — MEMO_COUNT_USAGE
+    /// only counted TRANSACTIONS_HEADER / _DETAIL and missed the rule.
+    #[tokio::test]
+    async fn test_update_detail_memo_does_not_corrupt_recurring_rule_memo() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool.clone());
+
+        let header_id = create_test_header(&service).await;
+        let mut detail_req = basic_detail_request();
+        detail_req.memo = Some("shared_with_recurring".to_string());
+        let detail_id = service
+            .add_transaction_detail(2, header_id, detail_req)
+            .await
+            .unwrap();
+        let shared_memo_id = service
+            .get_transaction_details(2, header_id)
+            .await
+            .unwrap()[0]
+            .memo_id
+            .unwrap();
+
+        // Recurring rule also references this memo.
+        seed_recurring_rule_referencing_memo(&pool, shared_memo_id).await;
+
+        let mut edit = basic_detail_request();
+        edit.memo = Some("edited_via_detail".to_string());
+        service.update_transaction_detail(2, detail_id, edit).await.unwrap();
+
+        // The recurring rule's memo text must remain untouched.
+        let rule_memo: Option<String> =
+            sqlx::query_scalar("SELECT MEMO_TEXT FROM MEMOS WHERE MEMO_ID = ?")
+                .bind(shared_memo_id)
+                .fetch_optional(&pool)
+                .await
+                .unwrap();
+        assert_eq!(rule_memo.as_deref(), Some("shared_with_recurring"));
+
+        // Detail has been redirected to a fresh memo.
+        let after = service.get_transaction_details(2, header_id).await.unwrap();
+        assert_eq!(after[0].memo_text.as_deref(), Some("edited_via_detail"));
+        assert_ne!(after[0].memo_id.unwrap(), shared_memo_id);
+    }
+
+    /// Regression for Devin review of PR #82. Deleting a detail whose
+    /// MEMO_ID is shared with a RECURRING_RULES row used to unconditionally
+    /// DELETE the memo row (and under production FK enforcement, blow up
+    /// with FOREIGN KEY constraint failed).
+    #[tokio::test]
+    async fn test_delete_detail_preserves_memo_still_referenced_by_recurring_rule() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool.clone());
+
+        let header_id = create_test_header(&service).await;
+        let mut detail_req = basic_detail_request();
+        detail_req.memo = Some("keep_for_rule".to_string());
+        let detail_id = service
+            .add_transaction_detail(2, header_id, detail_req)
+            .await
+            .unwrap();
+        let shared_memo_id = service
+            .get_transaction_details(2, header_id)
+            .await
+            .unwrap()[0]
+            .memo_id
+            .unwrap();
+
+        seed_recurring_rule_referencing_memo(&pool, shared_memo_id).await;
+
+        service.delete_transaction_detail(2, detail_id).await.unwrap();
+
+        let still_there: Option<String> =
+            sqlx::query_scalar("SELECT MEMO_TEXT FROM MEMOS WHERE MEMO_ID = ?")
+                .bind(shared_memo_id)
+                .fetch_optional(&pool)
+                .await
+                .unwrap();
+        assert_eq!(still_there.as_deref(), Some("keep_for_rule"));
+    }
+
+    /// Regression for Devin review of PR #82. Under production settings
+    /// (`PRAGMA foreign_keys = ON`), clearing a detail's memo used to fail
+    /// with FOREIGN KEY constraint failed because MEMO_DELETE ran before
+    /// the DETAIL UPDATE released the reference. Prior tests missed this
+    /// because the default test schema did not declare the MEMOS FK and
+    /// FK enforcement was off.
+    #[tokio::test]
+    async fn test_clear_detail_memo_succeeds_under_foreign_keys_on() {
+        let pool = setup_test_db_with_foreign_keys().await;
+        let service = TransactionService::new(pool);
+
+        let header_id = create_test_header(&service).await;
+        let mut with_memo = basic_detail_request();
+        with_memo.memo = Some("to_clear".to_string());
+        let detail_id = service
+            .add_transaction_detail(2, header_id, with_memo)
+            .await
+            .unwrap();
+
+        let mut cleared = basic_detail_request();
+        cleared.memo = Some("".to_string());
+        service
+            .update_transaction_detail(2, detail_id, cleared)
+            .await
+            .expect("clearing memo must not violate the MEMOS foreign key");
+
+        let after = service.get_transaction_details(2, header_id).await.unwrap();
+        assert!(after[0].memo_id.is_none());
+        assert!(after[0].memo_text.is_none());
     }
 }
 

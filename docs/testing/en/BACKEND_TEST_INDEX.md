@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2025-12-06 06:45 JST  
-**Total Tests**: 208
+**Total Tests**: 216
 
 ---
 
@@ -335,8 +335,16 @@ Transaction management service tests.
 | `test_tax_type_validation_values` | Verify valid tax type values | src/services/transaction.rs | 1375 |
 | `test_get_transactions_end_date_includes_boundary_day` | End-date filter must include same-day timestamps (bare 'YYYY-MM-DD' anchored to 23:59:59) | src/services/transaction.rs | 3293 |
 | `test_get_transactions_keyword_matches_header_and_detail_memo` | Keyword must substring-match memo text on both header and detail rows | src/services/transaction.rs | 3364 |
+| `test_update_detail_memo_does_not_corrupt_shared_header_memo` | Detail memo edit must not clobber header memo sharing MEMO_ID | src/services/transaction.rs | 3584 |
+| `test_delete_detail_preserves_memo_still_referenced_by_header` | Detail delete must keep memo row when header still references it | src/services/transaction.rs | 3618 |
+| `test_update_detail_memo_updates_in_place_when_not_shared` | Solo-referenced memo still updates in place | src/services/transaction.rs | 3644 |
+| `test_delete_detail_removes_orphaned_memo` | Solo-referenced memo is deleted when detail removed | src/services/transaction.rs | 3674 |
+| `test_clear_detail_memo_does_not_delete_memo_still_used_by_header` | Clearing shared detail memo must not delete memo row used by header | src/services/transaction.rs | 3706 |
+| `test_update_detail_memo_does_not_corrupt_recurring_rule_memo` | Detail memo edit must not overwrite memo shared with a recurring rule | src/services/transaction.rs | 3760 |
+| `test_delete_detail_preserves_memo_still_referenced_by_recurring_rule` | Detail delete must keep memo row still referenced by a recurring rule | src/services/transaction.rs | 3805 |
+| `test_clear_detail_memo_succeeds_under_foreign_keys_on` | Clearing a detail memo must not violate the MEMOS foreign key | src/services/transaction.rs | 3843 |
 
-**Total**: 7 tests
+**Total**: 15 tests
 
 ### services/aggregation.rs
 
@@ -416,7 +424,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **185** |
+| **Inline Tests** | **193** |
 | validation.rs | 23 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -429,13 +437,13 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/manufacturer.rs | 7 |
 | services/product.rs | 7 |
 | services/shop.rs | 7 |
-| services/transaction.rs | 7 |
+| services/transaction.rs | 15 |
 | services/aggregation.rs | 2 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 1 |
 | lib.rs | 4 |
-| **Total** | **208** |
+| **Total** | **216** |
 
 ---
 
