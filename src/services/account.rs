@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 use sqlx::{SqlitePool, FromRow};
-use crate::consts;
 use crate::services::master_data;
 use crate::sql_queries;
 use crate::validation;
@@ -238,7 +237,12 @@ pub async fn add_account(
         return Err("Account code cannot be empty".to_string());
     }
 
-    validation::validate_max_chars(NAME_LABEL, &request.account_name, consts::MAX_NAME_LEN)?;
+    // `validate_master_name` bundles the non-empty and max-length checks that
+    // shop/manufacturer/product go through. Using the same helper (rather than
+    // the bare `validate_max_chars`) closes a gap where a request coming in
+    // through a direct `invoke` — bypassing the frontend guard at
+    // account-management.js:286-288 — could persist an all-whitespace name.
+    validation::validate_master_name(NAME_LABEL, &request.account_name)?;
 
     // Check for duplicate code (only active accounts)
     if check_duplicate_code(pool, user_id, &request.account_code).await? {
@@ -277,7 +281,12 @@ pub async fn update_account(
     // Normalize account code to uppercase
     request.account_code = normalize_account_code(&request.account_code);
 
-    validation::validate_max_chars(NAME_LABEL, &request.account_name, consts::MAX_NAME_LEN)?;
+    // `validate_master_name` bundles the non-empty and max-length checks that
+    // shop/manufacturer/product go through. Using the same helper (rather than
+    // the bare `validate_max_chars`) closes a gap where a request coming in
+    // through a direct `invoke` — bypassing the frontend guard at
+    // account-management.js:286-288 — could persist an all-whitespace name.
+    validation::validate_master_name(NAME_LABEL, &request.account_name)?;
 
     // Check if account exists
     get_account_by_code(pool, user_id, &request.account_code)
@@ -355,6 +364,7 @@ pub async fn initialize_none_account(pool: &SqlitePool, user_id: i64) -> Result<
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::consts;
     use crate::test_helpers::database::{init_db, TEST_DB_URL};
 
     async fn setup_test_db() -> SqlitePool {
@@ -566,6 +576,64 @@ mod tests {
         let err = update_account(&pool, 2, update_request).await.unwrap_err();
         assert!(err.contains(&consts::MAX_NAME_LEN.to_string()),
             "error should reference the limit: {}", err);
+    }
+
+    /// Fable-5 review #16 — `add_account` used to call
+    /// `validate_max_chars` only, letting an empty (or all-whitespace)
+    /// account name through when the request skipped the frontend guard
+    /// at `account-management.js:286-288` (e.g. a direct `invoke` call).
+    /// Shop / Manufacturer / Product already use `validate_master_name`,
+    /// which bundles the non-empty check; this test locks the same
+    /// behaviour in for accounts.
+    #[tokio::test]
+    async fn test_add_account_rejects_empty_name() {
+        let pool = setup_test_db().await;
+
+        let request = AddAccountRequest {
+            account_code: "TEST".to_string(),
+            account_name: String::new(),
+            template_code: "BANK".to_string(),
+            initial_balance: 0,
+        };
+        let err = add_account(&pool, 2, request).await.unwrap_err();
+        assert!(err.contains("cannot be empty"), "unexpected error: {}", err);
+    }
+
+    #[tokio::test]
+    async fn test_add_account_rejects_whitespace_only_name() {
+        let pool = setup_test_db().await;
+
+        let request = AddAccountRequest {
+            account_code: "TEST".to_string(),
+            account_name: "   \t\n".to_string(),
+            template_code: "BANK".to_string(),
+            initial_balance: 0,
+        };
+        let err = add_account(&pool, 2, request).await.unwrap_err();
+        assert!(err.contains("cannot be empty"), "unexpected error: {}", err);
+    }
+
+    #[tokio::test]
+    async fn test_update_account_rejects_empty_name() {
+        let pool = setup_test_db().await;
+
+        let add_request = AddAccountRequest {
+            account_code: "TEST".to_string(),
+            account_name: "Test".to_string(),
+            template_code: "BANK".to_string(),
+            initial_balance: 0,
+        };
+        add_account(&pool, 2, add_request).await.unwrap();
+
+        let update_request = UpdateAccountRequest {
+            account_code: "TEST".to_string(),
+            account_name: "   ".to_string(),
+            template_code: "BANK".to_string(),
+            initial_balance: 0,
+            display_order: 1,
+        };
+        let err = update_account(&pool, 2, update_request).await.unwrap_err();
+        assert!(err.contains("cannot be empty"), "unexpected error: {}", err);
     }
 
     async fn add_test_account(pool: &SqlitePool, code: &str, initial_balance: i64) {
