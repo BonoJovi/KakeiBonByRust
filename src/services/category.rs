@@ -7,6 +7,7 @@ pub enum CategoryError {
     DatabaseError(sqlx::Error),
     DuplicateName(String),
     Validation(String),
+    NotFound,
 }
 
 impl std::fmt::Display for CategoryError {
@@ -15,6 +16,7 @@ impl std::fmt::Display for CategoryError {
             CategoryError::DatabaseError(e) => write!(f, "Database error: {}", e),
             CategoryError::DuplicateName(name) => write!(f, "Category name '{}' already exists", name),
             CategoryError::Validation(msg) => write!(f, "{}", msg),
+            CategoryError::NotFound => write!(f, "Category not found"),
         }
     }
 }
@@ -584,6 +586,12 @@ impl CategoryService {
     }
     
     /// Get category2 data for editing
+    ///
+    /// Uses `fetch_optional` so a concurrently disabled/deleted row surfaces
+    /// as `CategoryError::NotFound` (mapped by the frontend to a dedicated
+    /// `not_found` toast) instead of leaking a raw sqlx `RowNotFound` string
+    /// through the generic save-error path — matching the Shop/Product/
+    /// Manufacturer master-audit pattern (PR #75/#76/#77).
     pub async fn get_category2_for_edit(
         &self,
         user_id: i64,
@@ -594,17 +602,19 @@ impl CategoryService {
             .bind(user_id)
             .bind(category1_code)
             .bind(category2_code)
-            .fetch_one(&self.pool)
-            .await?;
-        
+            .fetch_optional(&self.pool)
+            .await?
+            .ok_or(CategoryError::NotFound)?;
+
         Ok(CategoryForEdit {
             code: row.get("CATEGORY2_CODE"),
             name_ja: row.get("name_ja"),
             name_en: row.get("name_en"),
         })
     }
-    
-    /// Get category3 data for editing
+
+    /// Get category3 data for editing (see `get_category2_for_edit` for the
+    /// not-found handling rationale).
     pub async fn get_category3_for_edit(
         &self,
         user_id: i64,
@@ -617,9 +627,10 @@ impl CategoryService {
             .bind(category1_code)
             .bind(category2_code)
             .bind(category3_code)
-            .fetch_one(&self.pool)
-            .await?;
-        
+            .fetch_optional(&self.pool)
+            .await?
+            .ok_or(CategoryError::NotFound)?;
+
         Ok(CategoryForEdit {
             code: row.get("CATEGORY3_CODE"),
             name_ja: row.get("name_ja"),
@@ -1061,6 +1072,12 @@ impl CategoryService {
     }
 
     /// Disable (hide) a CATEGORY2 and its child CATEGORY3 entries
+    ///
+    /// The CATEGORY3 disable can legitimately touch zero rows (a leaf
+    /// category), so its `rows_affected` is not checked. The CATEGORY2
+    /// disable itself must hit exactly one row — zero means the target was
+    /// removed by another window and we return `NotFound` (matches
+    /// Shop/Product/Manufacturer master-audit contract, PR #75/#76/#77).
     pub async fn disable_category2(
         &self,
         user_id: i64,
@@ -1069,7 +1086,7 @@ impl CategoryService {
     ) -> Result<(), CategoryError> {
         let mut tx = self.pool.begin().await?;
 
-        // Disable all child CATEGORY3 entries
+        // Disable all child CATEGORY3 entries (may be zero — that is fine)
         sqlx::query(sql_queries::CATEGORY3_DISABLE_BY_CATEGORY2)
             .bind(user_id)
             .bind(category1_code)
@@ -1077,19 +1094,27 @@ impl CategoryService {
             .execute(&mut *tx)
             .await?;
 
-        // Disable the CATEGORY2 itself
-        sqlx::query(sql_queries::CATEGORY2_DELETE_LOGICAL)
+        // Disable the CATEGORY2 itself — must hit exactly one row
+        let result = sqlx::query(sql_queries::CATEGORY2_DELETE_LOGICAL)
             .bind(user_id)
             .bind(category1_code)
             .bind(category2_code)
             .execute(&mut *tx)
             .await?;
 
+        if result.rows_affected() == 0 {
+            return Err(CategoryError::NotFound);
+        }
+
         tx.commit().await?;
         Ok(())
     }
 
     /// Disable (hide) a CATEGORY3
+    ///
+    /// Returns `NotFound` when the target row is already gone (concurrent
+    /// removal from another window), so the frontend can show the dedicated
+    /// `not_found` toast and reload the tree.
     pub async fn disable_category3(
         &self,
         user_id: i64,
@@ -1097,13 +1122,17 @@ impl CategoryService {
         category2_code: &str,
         category3_code: &str,
     ) -> Result<(), CategoryError> {
-        sqlx::query(sql_queries::CATEGORY3_DELETE_LOGICAL)
+        let result = sqlx::query(sql_queries::CATEGORY3_DELETE_LOGICAL)
             .bind(user_id)
             .bind(category1_code)
             .bind(category2_code)
             .bind(category3_code)
             .execute(&self.pool)
             .await?;
+
+        if result.rows_affected() == 0 {
+            return Err(CategoryError::NotFound);
+        }
 
         Ok(())
     }
@@ -1834,6 +1863,75 @@ mod tests {
         assert_eq!(cat3_edit.code, cat3_code);
         assert_eq!(cat3_edit.name_ja, "米");
         assert_eq!(cat3_edit.name_en, "Rice");
+    }
+
+    // Fable-5 review #6 — a stale edit target (row removed from another
+    // window between list load and edit-modal open) must surface as
+    // `CategoryError::NotFound`, not as a raw sqlx `RowNotFound` string
+    // being displayed on screen through the generic error path.
+    #[tokio::test]
+    async fn test_get_category2_for_edit_returns_not_found_for_missing() {
+        let pool = setup_test_db().await;
+        let service = CategoryService::new(pool.clone());
+        let user_id: i64 = 1;
+        setup_category1(&pool, user_id).await;
+
+        let result = service.get_category2_for_edit(user_id, "EXPENSE", "NONEXISTENT").await;
+        assert!(matches!(result.unwrap_err(), CategoryError::NotFound));
+    }
+
+    #[tokio::test]
+    async fn test_get_category3_for_edit_returns_not_found_for_missing() {
+        let pool = setup_test_db().await;
+        let service = CategoryService::new(pool.clone());
+        let user_id: i64 = 1;
+        setup_category1(&pool, user_id).await;
+        let cat2_code = service.add_category2(user_id, "EXPENSE", "食費", "Food").await.unwrap();
+
+        let result = service.get_category3_for_edit(user_id, "EXPENSE", &cat2_code, "NONEXISTENT").await;
+        assert!(matches!(result.unwrap_err(), CategoryError::NotFound));
+    }
+
+    // Fable-5 review #7 — logical delete of a category that is already gone
+    // (concurrent removal from another window) must return NotFound so the
+    // frontend shows the dedicated not_found toast, not a silent success.
+    #[tokio::test]
+    async fn test_disable_category2_returns_not_found_for_missing() {
+        let pool = setup_test_db().await;
+        let service = CategoryService::new(pool.clone());
+        let user_id: i64 = 1;
+        setup_category1(&pool, user_id).await;
+
+        let result = service.disable_category2(user_id, "EXPENSE", "NONEXISTENT").await;
+        assert!(matches!(result.unwrap_err(), CategoryError::NotFound));
+    }
+
+    #[tokio::test]
+    async fn test_disable_category3_returns_not_found_for_missing() {
+        let pool = setup_test_db().await;
+        let service = CategoryService::new(pool.clone());
+        let user_id: i64 = 1;
+        setup_category1(&pool, user_id).await;
+        let cat2_code = service.add_category2(user_id, "EXPENSE", "食費", "Food").await.unwrap();
+
+        let result = service.disable_category3(user_id, "EXPENSE", &cat2_code, "NONEXISTENT").await;
+        assert!(matches!(result.unwrap_err(), CategoryError::NotFound));
+    }
+
+    // Fable-5 review #7 — the CATEGORY3 disable inside `disable_category2`
+    // sweeps children and may legitimately hit zero rows (leaf CATEGORY2);
+    // that must not be treated as NotFound as long as the CATEGORY2 itself
+    // is disabled successfully.
+    #[tokio::test]
+    async fn test_disable_category2_succeeds_with_no_children() {
+        let pool = setup_test_db().await;
+        let service = CategoryService::new(pool.clone());
+        let user_id: i64 = 1;
+        setup_category1(&pool, user_id).await;
+        let cat2_code = service.add_category2(user_id, "EXPENSE", "食費", "Food").await.unwrap();
+
+        let result = service.disable_category2(user_id, "EXPENSE", &cat2_code).await;
+        assert!(result.is_ok(), "leaf CATEGORY2 disable should succeed: {:?}", result.err());
     }
 
     // Issue #37 Phase 2-3 — bounded-field length checks must count

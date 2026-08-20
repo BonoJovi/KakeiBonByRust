@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2025-12-06 06:24 JST  
-**総テスト数**: 216件
+**総テスト数**: 221件
 
 ---
 
@@ -271,8 +271,13 @@ AES-256-GCM暗号化・復号化のテスト。
 | `test_update_category2_duplicate_name` | 中カテゴリの重複名更新エラー | src/services/category.rs | 1552 |
 | `test_move_category2_boundary` | 中カテゴリの境界値移動テスト | src/services/category.rs | 1571 |
 | `test_get_category_for_edit` | 編集用カテゴリ情報取得 | src/services/category.rs | 1623 |
+| `test_get_category2_for_edit_returns_not_found_for_missing` | 消失した中カテゴリ編集取得は NotFound を返す (Fable-5 #6) | src/services/category.rs | 1873 |
+| `test_get_category3_for_edit_returns_not_found_for_missing` | 消失した小カテゴリ編集取得は NotFound を返す (Fable-5 #6) | src/services/category.rs | 1884 |
+| `test_disable_category2_returns_not_found_for_missing` | 消失した中カテゴリ論理削除は NotFound を返す (Fable-5 #7) | src/services/category.rs | 1899 |
+| `test_disable_category3_returns_not_found_for_missing` | 消失した小カテゴリ論理削除は NotFound を返す (Fable-5 #7) | src/services/category.rs | 1910 |
+| `test_disable_category2_succeeds_with_no_children` | 子カテゴリなしの中カテゴリ論理削除は成功する（子スイープは0件許容） | src/services/category.rs | 1926 |
 
-**合計**: 13件
+**合計**: 18件
 
 ### services/manufacturer.rs
 
@@ -424,7 +429,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **193件** |
+| **インラインテスト** | **198件** |
 | validation.rs | 23 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -433,7 +438,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/auth.rs | 13 |
 | services/user_management.rs | 13 |
 | services/encryption.rs | 4 |
-| services/category.rs | 13 |
+| services/category.rs | 18 |
 | services/manufacturer.rs | 7 |
 | services/product.rs | 7 |
 | services/shop.rs | 7 |
@@ -443,7 +448,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/i18n.rs | 8 |
 | services/recurring.rs | 1 |
 | lib.rs | 4 |
-| **総計** | **216件** |
+| **総計** | **221件** |
 
 ---
 
