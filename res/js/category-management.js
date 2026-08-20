@@ -682,6 +682,16 @@ async function openEditModal(categoryCode, category1Code, category2Code, level) 
         }
     } catch (error) {
         console.error('Failed to load category data for edit:', error);
+
+        // Concurrent removal from another window: show the dedicated
+        // not_found toast and refresh the tree so the stale row disappears.
+        // Matches the Shop/Product/Manufacturer master-audit contract.
+        if (String(error).includes('not found')) {
+            showToast(i18n.t('category_mgmt.not_found'), { variant: 'error' });
+            await loadCategories();
+            return;
+        }
+
         const errorMsg = i18n.t('category_mgmt.error_load_category');
         const errorElement = document.getElementById('error-message');
         if (errorElement) {
@@ -1002,6 +1012,16 @@ async function hideCategory(category1Code, category2Code, category3Code, level, 
         await loadCategories();
     } catch (error) {
         console.error('Failed to hide category:', error);
+
+        // Target was already disabled/deleted in another window: show the
+        // dedicated not_found toast and refresh the tree instead of the
+        // generic hide-failure message.
+        if (String(error).includes('not found')) {
+            showToast(i18n.t('category_mgmt.not_found'), { variant: 'error' });
+            await loadCategories();
+            return;
+        }
+
         showToast(i18n.t('category_mgmt.failed_to_hide') + ': ' + error, { variant: 'error' });
     }
 }
