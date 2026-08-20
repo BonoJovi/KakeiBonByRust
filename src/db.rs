@@ -1,4 +1,5 @@
 use sqlx::sqlite::SqlitePool;
+use sqlx::Acquire; // for `PoolConnection::begin`
 use std::path::PathBuf;
 use crate::consts::{DB_DIR_NAME, DB_FILE_NAME};
 use crate::sql_queries;
@@ -170,44 +171,64 @@ impl Database {
         Ok(has_user_id == 0)
     }
 
-    /// Migrate TRANSACTIONS_DETAIL table from old schema to new schema
+    /// Migrate TRANSACTIONS_DETAIL table from old schema to new schema.
+    ///
+    /// `PRAGMA foreign_keys` is a connection-local setting in SQLite, and
+    /// its value cannot be changed inside a transaction — the engine
+    /// silently ignores the write mid-transaction. The previous shape
+    /// (begin → `PRAGMA foreign_keys = OFF` on the tx → COPY → commit)
+    /// therefore ran COPY_DATA with FK still ON, so a DB carrying any
+    /// orphaned rows from earlier builds would fail with
+    /// `FOREIGN KEY constraint failed` and the app would refuse to
+    /// start. Additionally, running the final `PRAGMA ... = ON` against
+    /// `self.pool` grabbed *some* pooled connection — not necessarily
+    /// the one that had FK turned off — so the state fix was also
+    /// unreliable.
+    ///
+    /// Fix (Fable-5 review #11): pin one connection with `pool.acquire`,
+    /// flip the PRAGMA on that connection *outside* any transaction,
+    /// run the migration in a transaction on the same connection,
+    /// commit, then restore the PRAGMA on the same connection before it
+    /// returns to the pool. On error, best-effort restore FK to avoid
+    /// leaking a FK-off connection back into circulation.
     async fn migrate_transactions_detail_table(&self) -> Result<(), sqlx::Error> {
-        // Begin transaction
-        let mut tx = self.pool.begin().await?;
+        let mut conn = self.pool.acquire().await?;
 
-        // Disable foreign key constraints temporarily
+        // PRAGMA outside any transaction, on the same connection that
+        // will run the migration. Any transaction bounded by BEGIN/COMMIT
+        // opened after this point inherits FK = OFF.
         sqlx::query("PRAGMA foreign_keys = OFF")
-            .execute(&mut *tx)
+            .execute(&mut *conn)
             .await?;
 
-        // Create new table with updated schema
-        sqlx::query(sql_queries::MIGRATE_TRANSACTIONS_DETAIL_CREATE_NEW)
-            .execute(&mut *tx)
-            .await?;
+        let migration = async {
+            let mut tx = conn.begin().await?;
+            sqlx::query(sql_queries::MIGRATE_TRANSACTIONS_DETAIL_CREATE_NEW)
+                .execute(&mut *tx)
+                .await?;
+            sqlx::query(sql_queries::MIGRATE_TRANSACTIONS_DETAIL_COPY_DATA)
+                .execute(&mut *tx)
+                .await?;
+            sqlx::query(sql_queries::MIGRATE_TRANSACTIONS_DETAIL_DROP_OLD)
+                .execute(&mut *tx)
+                .await?;
+            sqlx::query(sql_queries::MIGRATE_TRANSACTIONS_DETAIL_RENAME_NEW)
+                .execute(&mut *tx)
+                .await?;
+            tx.commit().await
+        }
+        .await;
 
-        // Copy data from old table to new table
-        sqlx::query(sql_queries::MIGRATE_TRANSACTIONS_DETAIL_COPY_DATA)
-            .execute(&mut *tx)
-            .await?;
+        // Restore FK on the SAME connection, regardless of migration
+        // outcome — otherwise a mid-migration failure would return a
+        // FK-off connection to the pool and every later borrower would
+        // silently skip cascade deletes.
+        let restore = sqlx::query("PRAGMA foreign_keys = ON")
+            .execute(&mut *conn)
+            .await;
 
-        // Drop old table
-        sqlx::query(sql_queries::MIGRATE_TRANSACTIONS_DETAIL_DROP_OLD)
-            .execute(&mut *tx)
-            .await?;
-
-        // Rename new table to original name
-        sqlx::query(sql_queries::MIGRATE_TRANSACTIONS_DETAIL_RENAME_NEW)
-            .execute(&mut *tx)
-            .await?;
-
-        // Commit transaction
-        tx.commit().await?;
-
-        // Re-enable foreign key constraints
-        sqlx::query("PRAGMA foreign_keys = ON")
-            .execute(&self.pool)
-            .await?;
-
+        migration?;
+        restore?;
         Ok(())
     }
 
@@ -234,35 +255,40 @@ impl Database {
             return Ok(());
         }
 
-        // Recreate table with nullable CATEGORY2_CODE and CATEGORY3_CODE
-        let mut tx = self.pool.begin().await?;
+        // Recreate table with nullable CATEGORY2_CODE and CATEGORY3_CODE.
+        // Same PRAGMA-outside-tx / same-connection dance as
+        // `migrate_transactions_detail_table` above — see that function
+        // for the full rationale.
+        let mut conn = self.pool.acquire().await?;
 
         sqlx::query("PRAGMA foreign_keys = OFF")
-            .execute(&mut *tx)
+            .execute(&mut *conn)
             .await?;
 
-        sqlx::query(sql_queries::MIGRATE_TRANSACTIONS_DETAIL_CREATE_NEW)
-            .execute(&mut *tx)
-            .await?;
+        let migration = async {
+            let mut tx = conn.begin().await?;
+            sqlx::query(sql_queries::MIGRATE_TRANSACTIONS_DETAIL_CREATE_NEW)
+                .execute(&mut *tx)
+                .await?;
+            sqlx::query(sql_queries::MIGRATE_NULLABLE_CATEGORY_COPY_DATA)
+                .execute(&mut *tx)
+                .await?;
+            sqlx::query(sql_queries::MIGRATE_TRANSACTIONS_DETAIL_DROP_OLD)
+                .execute(&mut *tx)
+                .await?;
+            sqlx::query(sql_queries::MIGRATE_TRANSACTIONS_DETAIL_RENAME_NEW)
+                .execute(&mut *tx)
+                .await?;
+            tx.commit().await
+        }
+        .await;
 
-        sqlx::query(sql_queries::MIGRATE_NULLABLE_CATEGORY_COPY_DATA)
-            .execute(&mut *tx)
-            .await?;
+        let restore = sqlx::query("PRAGMA foreign_keys = ON")
+            .execute(&mut *conn)
+            .await;
 
-        sqlx::query(sql_queries::MIGRATE_TRANSACTIONS_DETAIL_DROP_OLD)
-            .execute(&mut *tx)
-            .await?;
-
-        sqlx::query(sql_queries::MIGRATE_TRANSACTIONS_DETAIL_RENAME_NEW)
-            .execute(&mut *tx)
-            .await?;
-
-        tx.commit().await?;
-
-        sqlx::query("PRAGMA foreign_keys = ON")
-            .execute(&self.pool)
-            .await?;
-
+        migration?;
+        restore?;
         Ok(())
     }
 
@@ -985,5 +1011,189 @@ mod tests {
             path.parent().and_then(|p| p.file_name()).and_then(|n| n.to_str()),
             Some(DB_DIR_NAME)
         );
+    }
+
+    /// Fable-5 review #11 — reproduce the "orphaned MEMO_ID crashes the
+    /// upgrade" case Fable described. Legacy DBs from earlier builds
+    /// occasionally carry TRANSACTIONS_DETAIL rows whose MEMO_ID points
+    /// at a memo row that no longer exists. The new schema declares
+    /// `FOREIGN KEY (MEMO_ID) REFERENCES MEMOS(MEMO_ID)`, so with FK
+    /// enforcement ON the COPY_DATA step would fail with
+    /// `FOREIGN KEY constraint failed` and the app would refuse to
+    /// start.
+    ///
+    /// The pre-fix `migrate_transactions_detail_table` tried to disable
+    /// FK enforcement with `PRAGMA foreign_keys = OFF` executed *inside*
+    /// the transaction — SQLite silently ignores mid-tx PRAGMA writes,
+    /// so FK stayed ON and the migration blew up. The fix pins one
+    /// connection with `pool.acquire`, flips PRAGMA outside the tx on
+    /// that same connection, and only then begins the tx.
+    #[tokio::test]
+    async fn test_migrate_survives_orphaned_memo_reference() {
+        let temp_dir = std::env::temp_dir();
+        let test_db_name = format!("test_migrate_orphan_memo_{}.db", std::process::id());
+        let test_db_path = temp_dir.join(&test_db_name);
+        let _ = std::fs::remove_file(&test_db_path);
+
+        let db_url = format!("sqlite://{}?mode=rwc", test_db_path.display());
+        let pool = connect_db(&db_url).await.expect("connect");
+
+        // FK ON — this is the production default, and also the state the
+        // migration path must cope with (pre-fix code assumed it could
+        // flip it off mid-tx, which is a no-op).
+        sqlx::query("PRAGMA foreign_keys = ON")
+            .execute(&pool)
+            .await
+            .expect("enable fk");
+
+        // Seed the minimum schema the migration touches: users,
+        // categories, memos, accounts, transactions_header, plus the
+        // MANUFACTURERS/PRODUCTS tables referenced by the new schema's
+        // FOREIGN KEY clauses.
+        sqlx::query(sql_queries::TEST_CREATE_USERS_TABLE).execute(&pool).await.unwrap();
+        sqlx::query(sql_queries::TEST_INSERT_USER_ADMIN).execute(&pool).await.unwrap();
+
+        sqlx::query(sql_queries::TEST_CREATE_CATEGORY1_TABLE).execute(&pool).await.unwrap();
+        sqlx::query(sql_queries::TEST_INSERT_CATEGORY1).execute(&pool).await.unwrap();
+
+        sqlx::query(sql_queries::CREATE_MEMOS_TABLE).execute(&pool).await.unwrap();
+
+        sqlx::query(sql_queries::TEST_ACCOUNT_CREATE_TEMPLATES_TABLE).execute(&pool).await.unwrap();
+        sqlx::query(
+            "INSERT INTO ACCOUNT_TEMPLATES (TEMPLATE_CODE, TEMPLATE_NAME_JA, TEMPLATE_NAME_EN, DISPLAY_ORDER) \
+             VALUES ('CASH', '現金', 'Cash', 1)"
+        ).execute(&pool).await.unwrap();
+
+        sqlx::query(sql_queries::TEST_TRANSACTION_CREATE_ACCOUNTS_TABLE).execute(&pool).await.unwrap();
+        sqlx::query(
+            "INSERT INTO ACCOUNTS (USER_ID, ACCOUNT_CODE, ACCOUNT_NAME, TEMPLATE_CODE) \
+             VALUES (1, 'NONE', 'None', 'CASH')"
+        ).execute(&pool).await.unwrap();
+
+        sqlx::query(sql_queries::CREATE_TRANSACTIONS_HEADER_TABLE).execute(&pool).await.unwrap();
+        sqlx::query(sql_queries::TEST_INSERT_TRANSACTION_HEADER).execute(&pool).await.unwrap();
+
+        sqlx::query(sql_queries::TEST_MANUFACTURER_CREATE_TABLE).execute(&pool).await.unwrap();
+        sqlx::query(sql_queries::TEST_PRODUCT_CREATE_TABLE).execute(&pool).await.unwrap();
+
+        sqlx::query(sql_queries::TEST_CREATE_OLD_TRANSACTIONS_DETAIL_TABLE)
+            .execute(&pool).await.unwrap();
+
+        // The core provocation: a detail row whose MEMO_ID does NOT
+        // resolve to any memo. Old schema declares the FK but with
+        // PRAGMA foreign_keys = OFF the row is insertable; production
+        // DBs from earlier builds can contain rows like this.
+        //
+        // Pin one connection for the PRAGMA-off / INSERT / PRAGMA-on
+        // sequence so all three land on the same connection. Running
+        // them via the pool would distribute across connections and
+        // the INSERT would arrive on a fresh (FK-on-by-default) one.
+        {
+            let mut seed_conn = pool.acquire().await.unwrap();
+            sqlx::query("PRAGMA foreign_keys = OFF")
+                .execute(&mut *seed_conn).await.unwrap();
+            sqlx::query(
+                "INSERT INTO TRANSACTIONS_DETAIL \
+                 (DETAIL_ID, TRANSACTION_ID, CATEGORY2_CODE, CATEGORY3_CODE, ITEM_NAME, AMOUNT, MEMO_ID) \
+                 VALUES (1, 1, 'SALARY', 'MONTHLY', 'Test Item', 1000, 9999)"
+            ).execute(&mut *seed_conn).await.unwrap();
+            sqlx::query("PRAGMA foreign_keys = ON")
+                .execute(&mut *seed_conn).await.unwrap();
+        }
+
+        let db = Database { pool };
+
+        // The migration must succeed even though the seeded detail's
+        // MEMO_ID references a nonexistent memo.
+        db.migrate_transactions_detail_table()
+            .await
+            .expect("migration must survive orphaned MEMO_ID references");
+
+        // Post-check: the row landed in the new table with its dangling
+        // MEMO_ID intact (the app is expected to null it out at read
+        // time or ignore missing memos — the migration itself is not
+        // in the data-cleanup business).
+        let memo_id: Option<i64> = sqlx::query_scalar(
+            "SELECT MEMO_ID FROM TRANSACTIONS_DETAIL WHERE DETAIL_ID = 1",
+        )
+        .fetch_one(db.pool())
+        .await
+        .expect("select migrated row");
+        assert_eq!(memo_id, Some(9999));
+
+        drop(db);
+        let _ = std::fs::remove_file(&test_db_path);
+    }
+
+    /// Fable-5 review #11 — the pre-fix code called `PRAGMA
+    /// foreign_keys = ON` on `self.pool` after commit, which grabbed
+    /// whatever connection the pool handed out (not necessarily the one
+    /// that ran the PRAGMA OFF). With the fix, the OFF/ON pair runs on
+    /// the same acquired connection, and by the time the connection
+    /// returns to the pool FK enforcement is ON again. Test that any
+    /// pool connection returns `1` for `PRAGMA foreign_keys` after
+    /// `migrate_transactions_detail_table` finishes.
+    #[tokio::test]
+    async fn test_migrate_leaves_foreign_keys_on() {
+        let temp_dir = std::env::temp_dir();
+        let test_db_name = format!("test_migrate_fk_on_{}.db", std::process::id());
+        let test_db_path = temp_dir.join(&test_db_name);
+        let _ = std::fs::remove_file(&test_db_path);
+
+        let db_url = format!("sqlite://{}?mode=rwc", test_db_path.display());
+        let pool = connect_db(&db_url).await.expect("connect");
+
+        sqlx::query("PRAGMA foreign_keys = ON")
+            .execute(&pool)
+            .await
+            .expect("enable fk");
+
+        sqlx::query(sql_queries::TEST_CREATE_USERS_TABLE).execute(&pool).await.unwrap();
+        sqlx::query(sql_queries::TEST_INSERT_USER_ADMIN).execute(&pool).await.unwrap();
+        sqlx::query(sql_queries::TEST_CREATE_CATEGORY1_TABLE).execute(&pool).await.unwrap();
+        sqlx::query(sql_queries::TEST_INSERT_CATEGORY1).execute(&pool).await.unwrap();
+        sqlx::query(sql_queries::CREATE_MEMOS_TABLE).execute(&pool).await.unwrap();
+        sqlx::query(sql_queries::TEST_ACCOUNT_CREATE_TEMPLATES_TABLE).execute(&pool).await.unwrap();
+        sqlx::query(
+            "INSERT INTO ACCOUNT_TEMPLATES (TEMPLATE_CODE, TEMPLATE_NAME_JA, TEMPLATE_NAME_EN, DISPLAY_ORDER) \
+             VALUES ('CASH', '現金', 'Cash', 1)"
+        ).execute(&pool).await.unwrap();
+        sqlx::query(sql_queries::TEST_TRANSACTION_CREATE_ACCOUNTS_TABLE).execute(&pool).await.unwrap();
+        sqlx::query(
+            "INSERT INTO ACCOUNTS (USER_ID, ACCOUNT_CODE, ACCOUNT_NAME, TEMPLATE_CODE) \
+             VALUES (1, 'NONE', 'None', 'CASH')"
+        ).execute(&pool).await.unwrap();
+        sqlx::query(sql_queries::CREATE_TRANSACTIONS_HEADER_TABLE).execute(&pool).await.unwrap();
+        sqlx::query(sql_queries::TEST_INSERT_TRANSACTION_HEADER).execute(&pool).await.unwrap();
+        sqlx::query(sql_queries::TEST_MANUFACTURER_CREATE_TABLE).execute(&pool).await.unwrap();
+        sqlx::query(sql_queries::TEST_PRODUCT_CREATE_TABLE).execute(&pool).await.unwrap();
+        sqlx::query(sql_queries::TEST_CREATE_OLD_TRANSACTIONS_DETAIL_TABLE)
+            .execute(&pool).await.unwrap();
+        sqlx::query(sql_queries::TEST_INSERT_TRANSACTION_DETAIL)
+            .execute(&pool).await.unwrap();
+
+        let db = Database { pool };
+
+        db.migrate_transactions_detail_table()
+            .await
+            .expect("migration");
+
+        // Sample many pool connections to catch a "some connection has
+        // FK OFF" regression. The pool default is 10 connections in
+        // sqlx-sqlite; sampling 20 exercises each at least once.
+        for i in 0..20 {
+            let fk: i64 = sqlx::query_scalar("PRAGMA foreign_keys")
+                .fetch_one(db.pool())
+                .await
+                .expect("read pragma");
+            assert_eq!(
+                fk, 1,
+                "iteration {}: connection returned to pool must have FK enforcement ON",
+                i,
+            );
+        }
+
+        drop(db);
+        let _ = std::fs::remove_file(&test_db_path);
     }
 }

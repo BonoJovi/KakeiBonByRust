@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2025-12-06 06:45 JST  
-**Total Tests**: 239
+**Total Tests**: 241
 
 ---
 
@@ -177,8 +177,10 @@ Database initialization and migration tests.
 |---------------|-------------|------|------|
 | `test_wal_mode_enabled` | Verify WAL mode is enabled | src/db.rs | 187 |
 | `test_transactions_detail_migration` | Test transactions_detail table migration | src/db.rs | 217 |
+| `test_migrate_survives_orphaned_memo_reference` | Migration cope with FK-orphaned MEMO_ID from legacy DBs (Fable-5 #11) | src/db.rs | 1032 |
+| `test_migrate_leaves_foreign_keys_on` | PRAGMA foreign_keys is restored to ON on the acquired connection after migration (Fable-5 #11) | src/db.rs | 1137 |
 
-**Total**: 2 tests
+**Total**: 4 tests
 
 ### settings.rs
 
@@ -457,11 +459,11 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **216** |
+| **Inline Tests** | **218** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
-| db.rs | 2 |
+| db.rs | 4 |
 | settings.rs | 12 |
 | services/auth.rs | 13 |
 | services/user_management.rs | 13 |
@@ -477,7 +479,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/i18n.rs | 8 |
 | services/recurring.rs | 1 |
 | lib.rs | 4 |
-| **Total** | **239** |
+| **Total** | **241** |
 
 ---
 

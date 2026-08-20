@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2025-12-06 06:24 JST  
-**総テスト数**: 239件
+**総テスト数**: 241件
 
 ---
 
@@ -177,8 +177,10 @@ AES-256-GCM暗号化・復号化のテスト。
 |-----------|------|---------|-----|
 | `test_wal_mode_enabled` | WALモード有効化の確認 | src/db.rs | 187 |
 | `test_transactions_detail_migration` | transactions_detailテーブルのマイグレーション | src/db.rs | 217 |
+| `test_migrate_survives_orphaned_memo_reference` | 旧DBの孤児MEMO_ID参照でも migration が成功 (Fable-5 #11) | src/db.rs | 1032 |
+| `test_migrate_leaves_foreign_keys_on` | migration 後に PRAGMA foreign_keys が ON に復元されている (Fable-5 #11) | src/db.rs | 1137 |
 
-**合計**: 2件
+**合計**: 4件
 
 ### settings.rs
 
@@ -457,11 +459,11 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **216件** |
+| **インラインテスト** | **218件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
-| db.rs | 2 |
+| db.rs | 4 |
 | settings.rs | 12 |
 | services/auth.rs | 13 |
 | services/user_management.rs | 13 |
@@ -477,7 +479,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/i18n.rs | 8 |
 | services/recurring.rs | 1 |
 | lib.rs | 4 |
-| **総計** | **239件** |
+| **総計** | **241件** |
 
 ---
 
