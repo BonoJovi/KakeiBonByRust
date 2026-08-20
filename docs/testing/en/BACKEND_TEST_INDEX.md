@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2025-12-06 06:45 JST  
-**Total Tests**: 216
+**Total Tests**: 221
 
 ---
 
@@ -429,7 +429,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **193** |
+| **Inline Tests** | **198** |
 | validation.rs | 23 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -448,7 +448,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/i18n.rs | 8 |
 | services/recurring.rs | 1 |
 | lib.rs | 4 |
-| **Total** | **216** |
+| **Total** | **221** |
 
 ---
 
