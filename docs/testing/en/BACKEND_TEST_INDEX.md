@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2025-12-06 06:45 JST  
-**Total Tests**: 235
+**Total Tests**: 239
 
 ---
 
@@ -326,8 +326,12 @@ Product management service tests.
 | `test_empty_product_name` | Empty product name error | src/services/product.rs | 367 |
 | `test_add_duplicate_product` | Duplicate product name error | src/services/product.rs | 383 |
 | `test_manufacturer_deletion_sets_product_manufacturer_to_null` | Manufacturer deletion impact on products (CASCADE NULL) | src/services/product.rs | 409 |
+| `test_add_product_rejects_foreign_manufacturer_id` | Cross-owner manufacturer_id on add returns "Manufacturer not found" (Fable-5 #13) | src/services/product.rs | 716 |
+| `test_add_product_rejects_nonexistent_manufacturer_id` | Nonexistent manufacturer_id on add returns "Manufacturer not found" (Fable-5 #13) | src/services/product.rs | 767 |
+| `test_update_product_rejects_foreign_manufacturer_id` | Cross-owner manufacturer_id on update returns "Manufacturer not found" (Fable-5 #13) | src/services/product.rs | 792 |
+| `test_product_join_scopes_manufacturer_by_user_id` | PRODUCT_GET_* JOIN must not leak another user's manufacturer name (Fable-5 #13) | src/services/product.rs | 871 |
 
-**Total**: 7 tests
+**Total**: 11 tests
 
 ### services/shop.rs
 
@@ -453,7 +457,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **212** |
+| **Inline Tests** | **216** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -465,7 +469,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/account.rs | 3 |
 | services/category.rs | 18 |
 | services/manufacturer.rs | 7 |
-| services/product.rs | 7 |
+| services/product.rs | 11 |
 | services/shop.rs | 7 |
 | services/transaction.rs | 17 |
 | services/aggregation.rs | 6 |
@@ -473,7 +477,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/i18n.rs | 8 |
 | services/recurring.rs | 1 |
 | lib.rs | 4 |
-| **Total** | **235** |
+| **Total** | **239** |
 
 ---
 
