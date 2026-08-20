@@ -405,7 +405,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **182** |
+| **Inline Tests** | **184** |
 | validation.rs | 23 |
 | security.rs | 13 |
 | crypto.rs | 15 |
