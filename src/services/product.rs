@@ -107,6 +107,16 @@ pub async fn add_product(
     validation::validate_master_name(NAME_LABEL, &request.product_name)?;
     validation::validate_memo("Memo", request.memo.as_ref())?;
 
+    // Verify manufacturer ownership. PRODUCTS.MANUFACTURER_ID's FK only
+    // enforces "some manufacturer row exists" — it does not check that
+    // the manufacturer belongs to `user_id`. Without this guard, a direct
+    // `invoke` from user B with a `manufacturer_id` that belongs to user A
+    // would silently attach one of B's products to A's manufacturer,
+    // and the PRODUCT_GET_ALL LEFT JOIN would then show A's manufacturer
+    // name on B's product row (JOIN scope is fixed in the same PR).
+    // Fable-5 review #13.
+    verify_manufacturer_ownership(pool, user_id, request.manufacturer_id).await?;
+
     // Check for duplicate product name
     if master_data::value_exists(
         pool,
@@ -146,6 +156,31 @@ pub async fn add_product(
     Ok("Product added successfully".to_string())
 }
 
+/// If `manufacturer_id` is `Some`, confirm the manufacturer exists AND
+/// belongs to `user_id`. Returns `"Manufacturer not found"` otherwise,
+/// mirroring the string the frontend already maps for missing-master
+/// scenarios. `None` (no manufacturer) is always OK — products can be
+/// registered without a manufacturer.
+async fn verify_manufacturer_ownership(
+    pool: &SqlitePool,
+    user_id: i64,
+    manufacturer_id: Option<i64>,
+) -> Result<(), String> {
+    let Some(id) = manufacturer_id else {
+        return Ok(());
+    };
+    let exists: Option<i64> = sqlx::query_scalar(sql_queries::MANUFACTURER_EXISTS_FOR_USER)
+        .bind(id)
+        .bind(user_id)
+        .fetch_optional(pool)
+        .await
+        .map_err(|e| format!("Failed to verify manufacturer: {}", e))?;
+    if exists.is_none() {
+        return Err("Manufacturer not found".to_string());
+    }
+    Ok(())
+}
+
 /// Update a product
 pub async fn update_product(
     pool: &SqlitePool,
@@ -155,6 +190,10 @@ pub async fn update_product(
 ) -> Result<String, String> {
     validation::validate_master_name(NAME_LABEL, &request.product_name)?;
     validation::validate_memo("Memo", request.memo.as_ref())?;
+
+    // Verify manufacturer ownership before touching the row — same
+    // reasoning as `add_product`. Fable-5 review #13.
+    verify_manufacturer_ownership(pool, user_id, request.manufacturer_id).await?;
 
     // Check if product exists
     get_product_by_id(pool, user_id, product_id)
@@ -650,5 +689,241 @@ mod tests {
         let hits = search_products_by_name(&pool, 2, "サバ").await.unwrap();
         assert_eq!(hits.len(), 1);
         assert_eq!(hits[0].manufacturer_name.as_deref(), Some("ニッスイ"));
+    }
+
+    /// Helper: seed a second general user (USER_ID = 3) alongside the
+    /// standard admin (1) and general (2) already inserted by
+    /// `setup_test_db`. Cross-owner tests need two general users to
+    /// exercise the ownership boundary.
+    async fn seed_second_general_user(pool: &SqlitePool) {
+        sqlx::query(
+            "INSERT INTO USERS (USER_ID, NAME, PAW, ROLE, ENTRY_DT) \
+             VALUES (3, 'testuser2', 'dummy', 1, datetime('now'))",
+        )
+        .execute(pool)
+        .await
+        .unwrap();
+    }
+
+    /// Fable-5 review #13 — `add_product` used to bind whatever
+    /// `manufacturer_id` the request supplied straight into
+    /// PRODUCT_INSERT. The FK on PRODUCTS.MANUFACTURER_ID only enforces
+    /// "some manufacturer row exists", not ownership, so a direct
+    /// `invoke` from user B could attach one of B's products to a
+    /// manufacturer_id that belongs to user A. This test locks in the
+    /// new ownership check.
+    #[tokio::test]
+    async fn test_add_product_rejects_foreign_manufacturer_id() {
+        let pool = setup_test_db().await;
+        seed_second_general_user(&pool).await;
+
+        // User 2 registers a manufacturer of theirs.
+        add_manufacturer(
+            &pool,
+            2,
+            AddManufacturerRequest {
+                manufacturer_name: "ニッスイ".to_string(),
+                memo: None,
+                is_disabled: None,
+            },
+        )
+        .await
+        .unwrap();
+        let user2_manufacturer_id =
+            crate::services::manufacturer::get_manufacturers(&pool, 2, false)
+                .await
+                .unwrap()[0]
+                .manufacturer_id;
+
+        // User 3 tries to attach that manufacturer_id to a new product —
+        // must fail before the INSERT touches PRODUCTS.
+        let attempt = add_product(
+            &pool,
+            3,
+            AddProductRequest {
+                product_name: "サバ缶".to_string(),
+                manufacturer_id: Some(user2_manufacturer_id),
+                memo: None,
+                is_disabled: None,
+            },
+        )
+        .await;
+
+        assert!(
+            attempt.as_ref().is_err_and(|e| e.contains("Manufacturer not found")),
+            "cross-owner manufacturer_id must be rejected: {:?}",
+            attempt
+        );
+
+        // User 3 should have zero products (no leakage from the failed
+        // request into PRODUCTS).
+        assert!(get_products(&pool, 3, false).await.unwrap().is_empty());
+    }
+
+    /// Nonexistent manufacturer_id must also be rejected, even for the
+    /// legitimate owner. Prevents the frontend from persisting a stale
+    /// reference to a manufacturer the user just deleted.
+    #[tokio::test]
+    async fn test_add_product_rejects_nonexistent_manufacturer_id() {
+        let pool = setup_test_db().await;
+
+        let attempt = add_product(
+            &pool,
+            2,
+            AddProductRequest {
+                product_name: "サバ缶".to_string(),
+                manufacturer_id: Some(999_999),
+                memo: None,
+                is_disabled: None,
+            },
+        )
+        .await;
+
+        assert!(
+            attempt.as_ref().is_err_and(|e| e.contains("Manufacturer not found")),
+            "nonexistent manufacturer_id must be rejected: {:?}",
+            attempt
+        );
+    }
+
+    /// Same guard on the update path: reassigning a product to another
+    /// user's manufacturer must be rejected before the UPDATE runs.
+    #[tokio::test]
+    async fn test_update_product_rejects_foreign_manufacturer_id() {
+        let pool = setup_test_db().await;
+        seed_second_general_user(&pool).await;
+
+        // Owner (user 2) creates a product without a manufacturer.
+        add_product(
+            &pool,
+            2,
+            AddProductRequest {
+                product_name: "サバ缶".to_string(),
+                manufacturer_id: None,
+                memo: None,
+                is_disabled: None,
+            },
+        )
+        .await
+        .unwrap();
+        let product_id = get_products(&pool, 2, false).await.unwrap()[0].product_id;
+
+        // User 3 registers a manufacturer of theirs.
+        add_manufacturer(
+            &pool,
+            3,
+            AddManufacturerRequest {
+                manufacturer_name: "他ユーザーメーカー".to_string(),
+                memo: None,
+                is_disabled: None,
+            },
+        )
+        .await
+        .unwrap();
+        let user3_manufacturer_id =
+            crate::services::manufacturer::get_manufacturers(&pool, 3, false)
+                .await
+                .unwrap()[0]
+                .manufacturer_id;
+
+        // Owner tries to reassign their product to user 3's manufacturer.
+        let attempt = update_product(
+            &pool,
+            2,
+            product_id,
+            UpdateProductRequest {
+                product_name: "サバ缶".to_string(),
+                manufacturer_id: Some(user3_manufacturer_id),
+                memo: None,
+                display_order: 1,
+                is_disabled: 0,
+            },
+        )
+        .await;
+
+        assert!(
+            attempt.as_ref().is_err_and(|e| e.contains("Manufacturer not found")),
+            "cross-owner manufacturer_id must be rejected on update: {:?}",
+            attempt
+        );
+
+        // The product row must be unchanged: still no manufacturer.
+        let after = &get_products(&pool, 2, false).await.unwrap()[0];
+        assert_eq!(after.manufacturer_id, None);
+    }
+
+    /// Defense-in-depth for the JOIN scope in
+    /// PRODUCT_GET_ALL / _BY_ID / _INCLUDING_DISABLED / _SEARCH_BY_NAME.
+    /// MANUFACTURERS.MANUFACTURER_ID is globally unique (AUTOINCREMENT
+    /// PK), so a `p.MANUFACTURER_ID = m.MANUFACTURER_ID` join can only
+    /// ever hit one row; the leak Fable-5 review #13 warns about is not
+    /// a same-id collision but the case where a PRODUCTS row already
+    /// references a manufacturer from another user (either from the
+    /// pre-fix `add_product` gap or hand-crafted DB corruption). Without
+    /// `m.USER_ID = p.USER_ID` on the JOIN, that other user's
+    /// manufacturer name would show up on this user's product row.
+    ///
+    /// This test simulates that corrupt state by hand-inserting the
+    /// cross-owner row into PRODUCTS (bypassing our newly-added
+    /// verification), then confirms the JOIN returns NULL for
+    /// `manufacturer_name` instead of leaking user 3's name to user 2.
+    #[tokio::test]
+    async fn test_product_join_scopes_manufacturer_by_user_id() {
+        let pool = setup_test_db().await;
+        seed_second_general_user(&pool).await;
+
+        // User 3's manufacturer.
+        add_manufacturer(
+            &pool,
+            3,
+            AddManufacturerRequest {
+                manufacturer_name: "他ユーザーメーカー".to_string(),
+                memo: None,
+                is_disabled: None,
+            },
+        )
+        .await
+        .unwrap();
+        let user3_manufacturer_id =
+            crate::services::manufacturer::get_manufacturers(&pool, 3, false)
+                .await
+                .unwrap()[0]
+                .manufacturer_id;
+
+        // Hand-insert a PRODUCT for user 2 that (incorrectly) references
+        // user 3's manufacturer_id. This bypasses our new add-time check
+        // to simulate legacy corruption / DB-level tampering.
+        sqlx::query(
+            "INSERT INTO PRODUCTS (USER_ID, PRODUCT_NAME, MANUFACTURER_ID, \
+              MEMO, DISPLAY_ORDER, IS_DISABLED, ENTRY_DT) \
+             VALUES (2, 'サバ缶', ?, NULL, 1, 0, datetime('now'))",
+        )
+        .bind(user3_manufacturer_id)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        // PRODUCT_GET_ALL scoping fix: user 2's product row must not
+        // show user 3's manufacturer name.
+        let products = get_products(&pool, 2, false).await.unwrap();
+        assert_eq!(products.len(), 1);
+        assert_eq!(
+            products[0].manufacturer_name, None,
+            "JOIN must NOT leak user 3's manufacturer name to user 2 \
+             (got Some({:?}))",
+            products[0].manufacturer_name,
+        );
+
+        // Same guard on PRODUCT_GET_BY_ID.
+        let single = get_product_by_id(&pool, 2, products[0].product_id)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(single.manufacturer_name, None);
+
+        // PRODUCT_SEARCH_BY_NAME goes through the same JOIN.
+        let hits = search_products_by_name(&pool, 2, "サバ").await.unwrap();
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].manufacturer_name, None);
     }
 }

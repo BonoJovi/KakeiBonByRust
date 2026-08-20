@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2025-12-06 06:24 JST  
-**総テスト数**: 235件
+**総テスト数**: 239件
 
 ---
 
@@ -326,8 +326,12 @@ AES-256-GCM暗号化・復号化のテスト。
 | `test_empty_product_name` | 空商品名のエラー | src/services/product.rs | 367 |
 | `test_add_duplicate_product` | 重複商品名のエラー | src/services/product.rs | 383 |
 | `test_manufacturer_deletion_sets_product_manufacturer_to_null` | メーカー削除時の商品への影響（CASCADE NULL） | src/services/product.rs | 409 |
+| `test_add_product_rejects_foreign_manufacturer_id` | 他ユーザーの manufacturer_id で add は "Manufacturer not found" (Fable-5 #13) | src/services/product.rs | 716 |
+| `test_add_product_rejects_nonexistent_manufacturer_id` | 存在しない manufacturer_id で add は "Manufacturer not found" (Fable-5 #13) | src/services/product.rs | 767 |
+| `test_update_product_rejects_foreign_manufacturer_id` | 他ユーザーの manufacturer_id で update は "Manufacturer not found" (Fable-5 #13) | src/services/product.rs | 792 |
+| `test_product_join_scopes_manufacturer_by_user_id` | PRODUCT_GET_* JOIN は他ユーザーの manufacturer 名を漏らさない (Fable-5 #13) | src/services/product.rs | 871 |
 
-**合計**: 7件
+**合計**: 11件
 
 ### services/shop.rs
 
@@ -453,7 +457,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **212件** |
+| **インラインテスト** | **216件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -465,7 +469,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/account.rs | 3 |
 | services/category.rs | 18 |
 | services/manufacturer.rs | 7 |
-| services/product.rs | 7 |
+| services/product.rs | 11 |
 | services/shop.rs | 7 |
 | services/transaction.rs | 17 |
 | services/aggregation.rs | 6 |
@@ -473,7 +477,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/i18n.rs | 8 |
 | services/recurring.rs | 1 |
 | lib.rs | 4 |
-| **総計** | **235件** |
+| **総計** | **239件** |
 
 ---
 

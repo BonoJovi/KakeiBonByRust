@@ -1400,12 +1400,21 @@ WHERE USER_ID = ? AND MANUFACTURER_NAME = ? AND MANUFACTURER_ID != ? AND IS_DISA
 // Product Service Queries
 // ============================================================================
 
+// The JOIN on MANUFACTURER_ID additionally requires the manufacturer to
+// belong to the same user as the product. Without `m.USER_ID = p.USER_ID`,
+// a product row whose MANUFACTURER_ID happens to collide with another
+// user's manufacturer_id (perfectly possible — the pool is
+// AUTOINCREMENT per table, not per user) would display *that other
+// user's* manufacturer name. Mirrors the scoping already in
+// TRANSACTION_DETAIL_GET_WITH_INFO. Fable-5 review #13.
 pub const PRODUCT_GET_ALL: &str = r#"
 SELECT p.PRODUCT_ID, p.USER_ID, p.PRODUCT_NAME,
        p.MANUFACTURER_ID, m.MANUFACTURER_NAME,
        p.MEMO, p.DISPLAY_ORDER, p.IS_DISABLED, p.ENTRY_DT, p.UPDATE_DT
 FROM PRODUCTS p
-LEFT JOIN MANUFACTURERS m ON p.MANUFACTURER_ID = m.MANUFACTURER_ID
+LEFT JOIN MANUFACTURERS m
+    ON p.MANUFACTURER_ID = m.MANUFACTURER_ID
+   AND m.USER_ID = p.USER_ID
 WHERE p.USER_ID = ? AND p.IS_DISABLED = 0
 ORDER BY p.DISPLAY_ORDER, p.PRODUCT_NAME
 "#;
@@ -1415,7 +1424,9 @@ SELECT p.PRODUCT_ID, p.USER_ID, p.PRODUCT_NAME,
        p.MANUFACTURER_ID, m.MANUFACTURER_NAME,
        p.MEMO, p.DISPLAY_ORDER, p.IS_DISABLED, p.ENTRY_DT, p.UPDATE_DT
 FROM PRODUCTS p
-LEFT JOIN MANUFACTURERS m ON p.MANUFACTURER_ID = m.MANUFACTURER_ID
+LEFT JOIN MANUFACTURERS m
+    ON p.MANUFACTURER_ID = m.MANUFACTURER_ID
+   AND m.USER_ID = p.USER_ID
 WHERE p.USER_ID = ?
 ORDER BY p.DISPLAY_ORDER, p.PRODUCT_NAME
 "#;
@@ -1425,7 +1436,9 @@ SELECT p.PRODUCT_ID, p.USER_ID, p.PRODUCT_NAME,
        p.MANUFACTURER_ID, m.MANUFACTURER_NAME,
        p.MEMO, p.DISPLAY_ORDER, p.IS_DISABLED, p.ENTRY_DT, p.UPDATE_DT
 FROM PRODUCTS p
-LEFT JOIN MANUFACTURERS m ON p.MANUFACTURER_ID = m.MANUFACTURER_ID
+LEFT JOIN MANUFACTURERS m
+    ON p.MANUFACTURER_ID = m.MANUFACTURER_ID
+   AND m.USER_ID = p.USER_ID
 WHERE p.USER_ID = ? AND p.PRODUCT_ID = ?
 "#;
 
@@ -1474,10 +1487,23 @@ SELECT p.PRODUCT_ID, p.USER_ID, p.PRODUCT_NAME,
        p.MANUFACTURER_ID, m.MANUFACTURER_NAME,
        p.MEMO, p.DISPLAY_ORDER, p.IS_DISABLED, p.ENTRY_DT, p.UPDATE_DT
 FROM PRODUCTS p
-LEFT JOIN MANUFACTURERS m ON p.MANUFACTURER_ID = m.MANUFACTURER_ID
+LEFT JOIN MANUFACTURERS m
+    ON p.MANUFACTURER_ID = m.MANUFACTURER_ID
+   AND m.USER_ID = p.USER_ID
 WHERE p.USER_ID = ? AND p.IS_DISABLED = 0 AND p.PRODUCT_NAME LIKE ?
 ORDER BY p.PRODUCT_NAME
 LIMIT 20
+"#;
+
+/// Cheap existence + ownership check for MANUFACTURERS. Used before
+/// binding `manufacturer_id` into `PRODUCT_INSERT` / `PRODUCT_UPDATE` so
+/// a request from user B cannot attach one of B's products to a
+/// manufacturer_id that belongs to user A. See Fable-5 review #13.
+pub const MANUFACTURER_EXISTS_FOR_USER: &str = r#"
+SELECT 1
+FROM MANUFACTURERS
+WHERE MANUFACTURER_ID = ? AND USER_ID = ?
+LIMIT 1
 "#;
 
 // ============================================================================
