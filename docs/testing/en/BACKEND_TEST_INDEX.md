@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2025-12-06 06:45 JST  
-**Total Tests**: 242
+**Total Tests**: 245
 
 ---
 
@@ -258,8 +258,11 @@ Encryption service tests (field encryption, re-encryption).
 | `test_re_encrypt_user_data` | Test user data re-encryption | src/services/encryption.rs | 326 |
 | `test_decrypt_with_wrong_password_fails` | Decryption fails with wrong password | src/services/encryption.rs | 380 |
 | `test_re_encrypt_user_data_preserves_per_row_plaintext` | Multi-row re-encryption keeps each row's own plaintext (Fable-5 #14) | src/services/encryption.rs | 473 |
+| `test_encrypt_uses_per_user_salt_not_user_id` | Same password/plaintext produces distinct ciphertext across users (Fable-5 #15) | src/services/encryption.rs | 657 |
+| `test_encrypt_decrypt_salt_survives_service_reconstruction` | Salt is refetched from DB so a new service instance round-trips ciphertext (Fable-5 #15) | src/services/encryption.rs | 703 |
+| `test_encrypt_errors_when_user_missing` | Missing USERS row errors loudly instead of falling back to user_id salt (Fable-5 #15) | src/services/encryption.rs | 722 |
 
-**Total**: 5 tests
+**Total**: 8 tests
 
 ### services/account.rs
 
@@ -460,7 +463,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **219** |
+| **Inline Tests** | **222** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -468,7 +471,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | settings.rs | 12 |
 | services/auth.rs | 13 |
 | services/user_management.rs | 13 |
-| services/encryption.rs | 5 |
+| services/encryption.rs | 8 |
 | services/account.rs | 3 |
 | services/category.rs | 18 |
 | services/manufacturer.rs | 7 |
@@ -480,7 +483,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/i18n.rs | 8 |
 | services/recurring.rs | 1 |
 | lib.rs | 4 |
-| **Total** | **242** |
+| **Total** | **245** |
 
 ---
 

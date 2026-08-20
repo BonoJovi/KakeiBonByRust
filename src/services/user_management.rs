@@ -1,6 +1,6 @@
 use sqlx::sqlite::SqlitePool;
 use sqlx::Row;
-use crate::security::{hash_password, verify_password, SecurityError};
+use crate::security::{generate_encryption_salt, hash_password, verify_password, SecurityError};
 use crate::consts::{self, ROLE_ADMIN, ROLE_USER};
 use crate::sql_queries;
 use super::encryption::EncryptionService;
@@ -129,24 +129,28 @@ impl UserManagementService {
         }
 
         let password_hash = hash_password(password)?;
-        
+
+        // Per-user Argon2 encryption salt (Fable-5 review #15).
+        let encryption_salt = generate_encryption_salt();
+
         let result = sqlx::query(sql_queries::USER_GET_NEXT_ID)
             .fetch_one(&self.pool)
             .await?;
         let next_id: i64 = result.get(0);
-        
+
         sqlx::query(sql_queries::USER_INSERT)
             .bind(next_id)
             .bind(username)
             .bind(password_hash)
             .bind(ROLE_USER)
+            .bind(encryption_salt.as_slice())
             .bind(now)
             .execute(&self.pool)
             .await?;
-        
+
         // Insert "Unspecified" master data for the new user
         self.insert_unspecified_data(next_id).await?;
-        
+
         Ok(next_id)
     }
 

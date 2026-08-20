@@ -485,6 +485,52 @@ impl Database {
         Ok(())
     }
 
+    /// Fable-5 review #15 — per-user random salt for Argon2 key derivation.
+    ///
+    /// Adds `ENCRYPTION_SALT BLOB` to USERS if the column is absent, then
+    /// backfills every legacy row that has `ENCRYPTION_SALT IS NULL` with
+    /// a fresh cryptographically-random 16-byte salt. Safe on live DBs
+    /// because `ENCRYPTED_FIELDS` is unseeded in production and no
+    /// frontend path invokes `encrypt_field` / `decrypt_field` /
+    /// `re_encrypt_user_data`, so there is no existing ciphertext whose
+    /// old (predictable) salt we would have to preserve.
+    pub async fn migrate_encryption_salt(&self) -> Result<(), sqlx::Error> {
+        // Add the column (idempotent).
+        let has_column: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM pragma_table_info('USERS') WHERE name = 'ENCRYPTION_SALT'"
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        if has_column == 0 {
+            sqlx::query("ALTER TABLE USERS ADD COLUMN ENCRYPTION_SALT BLOB")
+                .execute(&self.pool)
+                .await?;
+        }
+
+        // Backfill any row whose salt is still NULL (new column, or a row
+        // that skipped the register path somehow). One UPDATE per row so
+        // every user ends up with a *different* salt — the whole point of
+        // the fix is that attackers can't share a rainbow table across
+        // users.
+        let user_ids: Vec<i64> = sqlx::query_scalar(
+            "SELECT USER_ID FROM USERS WHERE ENCRYPTION_SALT IS NULL"
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        for user_id in user_ids {
+            let salt = crate::security::generate_encryption_salt();
+            sqlx::query("UPDATE USERS SET ENCRYPTION_SALT = ? WHERE USER_ID = ?")
+                .bind(salt.as_slice())
+                .bind(user_id)
+                .execute(&self.pool)
+                .await?;
+        }
+
+        Ok(())
+    }
+
     /// Create new tables for v2.1.0 (idempotent via IF NOT EXISTS).
     async fn create_recurring_tables(&self) -> Result<(), sqlx::Error> {
         sqlx::query(sql_queries::CREATE_RECURRING_RULES_TABLE)

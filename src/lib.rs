@@ -2700,6 +2700,11 @@ pub fn run() {
                 database.migrate_period_holiday_shift().await
                     .map_err(|e| format!("Failed to migrate period holiday shift column: {}", e))?;
 
+                // Fable-5 review #15 — add ENCRYPTION_SALT to USERS and
+                // backfill legacy rows with per-user random salts.
+                database.migrate_encryption_salt().await
+                    .map_err(|e| format!("Failed to migrate encryption salt column: {}", e))?;
+
                 let auth_service = AuthService::new(database.pool().clone());
                 let user_mgmt_service = UserManagementService::new(database.pool().clone());
                 let encryption_service = EncryptionService::new(database.pool().clone());

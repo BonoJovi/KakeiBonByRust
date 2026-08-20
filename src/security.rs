@@ -1,7 +1,17 @@
 use argon2::{
-    password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
+    password_hash::{
+        rand_core::{OsRng, RngCore},
+        PasswordHash, PasswordHasher, PasswordVerifier, SaltString,
+    },
     Argon2,
 };
+
+/// Width (in bytes) of the Argon2 salt stored per user in USERS.ENCRYPTION_SALT.
+/// 16 bytes is the sweet spot: comfortably above the 8-byte lower bound
+/// `derive_encryption_key` enforces (and comfortably above the 4-byte
+/// `user_id` width the pre-fix code used), while still small enough to
+/// go into the row without ceremony.
+pub const ENCRYPTION_SALT_LEN: usize = 16;
 
 #[derive(Debug)]
 pub enum SecurityError {
@@ -67,6 +77,21 @@ pub fn verify_password(password: &str, hash: &str) -> Result<bool, SecurityError
         Err(argon2::password_hash::Error::Password) => Ok(false),
         Err(e) => Err(SecurityError::VerifyError(e.to_string())),
     }
+}
+
+/// Generate a fresh cryptographically-secure salt for a new user's Argon2
+/// encryption-key derivation. Used at user creation and by the migration
+/// backfill that adds ENCRYPTION_SALT to USERS for legacy rows.
+///
+/// Fable-5 review #15: the pre-fix code used `user_id.to_le_bytes()` as
+/// the salt, which is 8 bytes wide and, worse, predictable across every
+/// installation (user_id=1 always had the same salt). Rainbow-table
+/// pre-computation against a stolen DB became feasible. A per-user
+/// random salt from `OsRng` closes both problems.
+pub fn generate_encryption_salt() -> [u8; ENCRYPTION_SALT_LEN] {
+    let mut salt = [0u8; ENCRYPTION_SALT_LEN];
+    OsRng.fill_bytes(&mut salt);
+    salt
 }
 
 /// Derive a 256-bit encryption key from a password and salt using Argon2
