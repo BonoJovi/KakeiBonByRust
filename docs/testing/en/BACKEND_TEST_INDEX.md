@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2025-12-06 06:45 JST  
-**Total Tests**: 227
+**Total Tests**: 230
 
 ---
 
@@ -22,6 +22,7 @@ This document provides a complete index of all backend tests implemented in Rust
   - [services/auth.rs](#servicesauthrs)
   - [services/user_management.rs](#servicesuser_managementrs)
   - [services/encryption.rs](#servicesencryptionrs)
+  - [services/account.rs](#servicesaccountrs)
   - [services/category.rs](#servicescategoryrs)
   - [services/manufacturer.rs](#servicesmanufacturerrs)
   - [services/product.rs](#servicesproductrs)
@@ -254,6 +255,18 @@ Encryption service tests (field encryption, re-encryption).
 
 **Total**: 4 tests
 
+### services/account.rs
+
+Account management service tests.
+
+| Test Function | Description | File | Line |
+|---------------|-------------|------|------|
+| `test_add_account_rejects_empty_name` | Empty account name is rejected at backend (Fable-5 #16) | src/services/account.rs | 589 |
+| `test_add_account_rejects_whitespace_only_name` | Whitespace-only account name is rejected at backend (Fable-5 #16) | src/services/account.rs | 603 |
+| `test_update_account_rejects_empty_name` | Empty account name via update is rejected at backend (Fable-5 #16) | src/services/account.rs | 617 |
+
+**Total**: 3 tests
+
 ### services/category.rs
 
 Category management service tests (3-tier category CRUD).
@@ -435,7 +448,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **204** |
+| **Inline Tests** | **207** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -444,6 +457,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/auth.rs | 13 |
 | services/user_management.rs | 13 |
 | services/encryption.rs | 4 |
+| services/account.rs | 3 |
 | services/category.rs | 18 |
 | services/manufacturer.rs | 7 |
 | services/product.rs | 7 |
@@ -454,7 +468,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/i18n.rs | 8 |
 | services/recurring.rs | 1 |
 | lib.rs | 4 |
-| **Total** | **227** |
+| **Total** | **230** |
 
 ---
 

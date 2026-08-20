@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2025-12-06 06:24 JST  
-**総テスト数**: 227件
+**総テスト数**: 230件
 
 ---
 
@@ -22,6 +22,7 @@
   - [services/auth.rs](#servicesauthrs)
   - [services/user_management.rs](#servicesuser_managementrs)
   - [services/encryption.rs](#servicesencryptionrs)
+  - [services/account.rs](#servicesaccountrs)
   - [services/category.rs](#servicescategoryrs)
   - [services/manufacturer.rs](#servicesmanufacturerrs)
   - [services/product.rs](#servicesproductrs)
@@ -254,6 +255,18 @@ AES-256-GCM暗号化・復号化のテスト。
 
 **合計**: 4件
 
+### services/account.rs
+
+口座管理サービスのテスト。
+
+| テスト関数 | 説明 | ファイル | 行 |
+|-----------|------|---------|-----|
+| `test_add_account_rejects_empty_name` | 口座名が空のとき backend で拒否 (Fable-5 #16) | src/services/account.rs | 589 |
+| `test_add_account_rejects_whitespace_only_name` | 空白のみの口座名は backend で拒否 (Fable-5 #16) | src/services/account.rs | 603 |
+| `test_update_account_rejects_empty_name` | 更新で口座名が空のとき backend で拒否 (Fable-5 #16) | src/services/account.rs | 617 |
+
+**合計**: 3件
+
 ### services/category.rs
 
 カテゴリ管理サービス（3階層カテゴリのCRUD）のテスト。
@@ -435,7 +448,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **204件** |
+| **インラインテスト** | **207件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -444,6 +457,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/auth.rs | 13 |
 | services/user_management.rs | 13 |
 | services/encryption.rs | 4 |
+| services/account.rs | 3 |
 | services/category.rs | 18 |
 | services/manufacturer.rs | 7 |
 | services/product.rs | 7 |
@@ -454,7 +468,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/i18n.rs | 8 |
 | services/recurring.rs | 1 |
 | lib.rs | 4 |
-| **総計** | **227件** |
+| **総計** | **230件** |
 
 ---
 
