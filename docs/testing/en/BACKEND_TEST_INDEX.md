@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2025-12-06 06:45 JST  
-**Total Tests**: 223
+**Total Tests**: 227
 
 ---
 
@@ -361,8 +361,12 @@ Aggregation service tests.
 |---------------|-------------|------|------|
 | `test_monthly_aggregation_current_month` | Monthly aggregation for current month | src/services/aggregation.rs | 1554 |
 | `test_monthly_aggregation_next_month` | Monthly aggregation for next month | src/services/aggregation.rs | 1563 |
+| `test_detail_query_grosses_up_null_tax_included_row` | NULL AMOUNT_INCLUDING_TAX at TAX_RATE>0 is grossed up, not dropped (Fable-5 #3) | src/services/aggregation.rs | 2343 |
+| `test_detail_query_grosses_up_zero_tax_included_row` | AMOUNT_INCLUDING_TAX=0 (frontend empty-input sentinel) is treated as pre-tax (Fable-5 #3) | src/services/aggregation.rs | 2367 |
+| `test_detail_query_avg_matches_total_over_count_with_mixed_rates` | avg × count == total holds for a mixed-rate transaction (Fable-5 #4) | src/services/aggregation.rs | 2398 |
+| `test_detail_query_avg_multi_transaction_arithmetic` | avg = total / txn_count over 2 transactions (Fable-5 #4) | src/services/aggregation.rs | 2430 |
 
-**Total**: 2 tests
+**Total**: 6 tests
 
 ### services/session.rs
 
@@ -431,7 +435,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **200** |
+| **Inline Tests** | **204** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -445,12 +449,12 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/product.rs | 7 |
 | services/shop.rs | 7 |
 | services/transaction.rs | 15 |
-| services/aggregation.rs | 2 |
+| services/aggregation.rs | 6 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 1 |
 | lib.rs | 4 |
-| **Total** | **223** |
+| **Total** | **227** |
 
 ---
 

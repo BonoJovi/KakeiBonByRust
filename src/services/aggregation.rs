@@ -725,8 +725,14 @@ ORDER BY {} {}
 ///
 /// The amount classification follows the rule we agreed on with the data:
 /// a row counts as "already tax-included" when `TAX_RATE = 0` (gross-up has no
-/// effect anyway) **or** `AMOUNT = AMOUNT_INCLUDING_TAX` (the user entered a
-/// tax-included receipt verbatim). Everything else is treated as pre-tax.
+/// effect anyway) **or** `AMOUNT = AMOUNT_INCLUDING_TAX` and the tax-included
+/// column is actually populated (the user entered a tax-included receipt
+/// verbatim). Everything else — including rows where `AMOUNT_INCLUDING_TAX` is
+/// NULL (older rows added before the column existed) or 0 (the frontend sends
+/// 0 for empty input) — is treated as pre-tax and grossed up, matching the
+/// authoritative Rust classifier in
+/// `services::transaction::calculate_recommended_total`. The two branches are
+/// exhaustive complements so no row silently drops out of both sums.
 fn build_detail_query(request: &AggregationRequest, lang: &str) -> String {
     let where_clause = build_where_clause(request.user_id, &request.filter);
     let order_field = request.order_by.to_order_by_field();
@@ -741,7 +747,15 @@ SELECT
     sub.group_name,
     SUM(sub.signed_amount) AS total_amount,
     COUNT(DISTINCT sub.txn_id) AS count,
-    CAST(AVG(sub.signed_amount) AS INTEGER) AS avg_amount
+    -- Derive avg_amount from total / txn_count so `avg × count == total`
+    -- always holds. `AVG(sub.signed_amount)` averages over `sub` rows, which
+    -- are one per (txn × group × tax_rate × rounding_type) slice: a single
+    -- transaction with 8 % and 10 % details produces two `sub` rows but only
+    -- one distinct `txn_id`, so the raw AVG halves the reported average.
+    -- The multiplication by 1.0 promotes the numerator to REAL before the
+    -- division, preserving the truncate-toward-zero semantics of the prior
+    -- `CAST(AVG(...) AS INTEGER)` shape.
+    CAST(SUM(sub.signed_amount) * 1.0 / COUNT(DISTINCT sub.txn_id) AS INTEGER) AS avg_amount
 FROM (
     SELECT
         agg.txn_id,
@@ -783,11 +797,15 @@ FROM (
             td.TAX_RATE AS tax_rate,
             th.TAX_ROUNDING_TYPE AS rounding_type,
             SUM(CASE
-                WHEN td.TAX_RATE = 0 OR td.AMOUNT = td.AMOUNT_INCLUDING_TAX
+                WHEN td.TAX_RATE = 0
+                  OR (td.AMOUNT_INCLUDING_TAX IS NOT NULL
+                      AND td.AMOUNT = td.AMOUNT_INCLUDING_TAX)
                 THEN td.AMOUNT ELSE 0
             END) AS already_included_sum,
             SUM(CASE
-                WHEN td.TAX_RATE > 0 AND td.AMOUNT < td.AMOUNT_INCLUDING_TAX
+                WHEN td.TAX_RATE > 0
+                  AND (td.AMOUNT_INCLUDING_TAX IS NULL
+                       OR td.AMOUNT != td.AMOUNT_INCLUDING_TAX)
                 THEN td.AMOUNT ELSE 0
             END) AS pretax_sum
         FROM TRANSACTIONS_HEADER th
@@ -2308,5 +2326,125 @@ mod tests {
             results[0].total_amount, -216,
             "tax-included input must not be grossed up a second time"
         );
+    }
+
+    /// Fable-5 review #3 — before the fix, an `AMOUNT_INCLUDING_TAX = NULL`
+    /// row at TAX_RATE > 0 satisfied neither CASE branch (both compared with
+    /// NULL and evaluated to NULL, i.e. not true), so its amount silently
+    /// dropped out of both `already_included_sum` and `pretax_sum`. Detail
+    /// aggregations returned 0 for a category that clearly had spend, while
+    /// the header total (via `calculate_recommended_total`, which treats
+    /// `amount_including_tax = None` as pre-tax) reported the correct value —
+    /// so the two disagreed and the money appeared to vanish.
+    ///
+    /// The corrected classifier grosses this row up exactly like the Rust
+    /// side does: 1000 × 1.08 = 1080, EXPENSE → signed = -1080.
+    #[tokio::test]
+    async fn test_detail_query_grosses_up_null_tax_included_row() {
+        let pool = setup_aggregation_test_db().await;
+
+        let txn = insert_test_header(&pool, 1, /*floor*/ 0, /*tax_excluded*/ 1, 0).await;
+        insert_detail(&pool, 1, txn, 1, "FOOD", 1000, 8, /*NULL*/ None).await;
+
+        let request = june_2024_request(GroupBy::Category2);
+        let sql = build_query(&request, "ja");
+        let results: Vec<AggregationResult> =
+            sqlx::query_as(&sql).fetch_all(&pool).await.unwrap();
+
+        assert_eq!(results.len(), 1, "row must not be dropped: got {:?}", results);
+        assert_eq!(
+            results[0].total_amount, -1080,
+            "NULL AMOUNT_INCLUDING_TAX at TAX_RATE > 0 must be treated as pre-tax \
+             and grossed up (matches calculate_recommended_total)"
+        );
+    }
+
+    /// Same regression, `AMOUNT_INCLUDING_TAX = 0` variant. The frontend
+    /// sends 0 for empty input (transaction-detail-management.js), so this
+    /// happens for every detail row saved without a tax-included receipt.
+    /// Before the fix the row dropped out; after the fix it's grossed up.
+    #[tokio::test]
+    async fn test_detail_query_grosses_up_zero_tax_included_row() {
+        let pool = setup_aggregation_test_db().await;
+
+        let txn = insert_test_header(&pool, 1, 0, 1, 0).await;
+        insert_detail(&pool, 1, txn, 1, "FOOD", 1000, 10, Some(0)).await;
+
+        let request = june_2024_request(GroupBy::Category2);
+        let sql = build_query(&request, "ja");
+        let results: Vec<AggregationResult> =
+            sqlx::query_as(&sql).fetch_all(&pool).await.unwrap();
+
+        assert_eq!(results.len(), 1);
+        // 1000 × 1.10 = 1100, EXPENSE → -1100.
+        assert_eq!(
+            results[0].total_amount, -1100,
+            "AMOUNT_INCLUDING_TAX = 0 (frontend's empty-input sentinel) must be \
+             treated as pre-tax"
+        );
+    }
+
+    /// Fable-5 review #4 — `avg_amount` used to come from
+    /// `AVG(sub.signed_amount)`, where `sub` had one row per
+    /// (txn × group × tax_rate × rounding_type) slice. A transaction with
+    /// details at both 8 % and 10 % produced two `sub` rows but only one
+    /// distinct `txn_id`, so the average was computed over 2 slices while
+    /// `count` remained 1 — giving `avg × count ≠ total` and roughly halving
+    /// the displayed average.
+    ///
+    /// After the fix, `avg_amount = total_amount / txn_count` by construction,
+    /// so the equality always holds.
+    #[tokio::test]
+    async fn test_detail_query_avg_matches_total_over_count_with_mixed_rates() {
+        let pool = setup_aggregation_test_db().await;
+
+        // One transaction, two details on FOOD at different tax rates.
+        // Pre-fix would put them in two `sub` rows → AVG halved.
+        let txn = insert_test_header(&pool, 1, 0, 1, 0).await;
+        insert_detail(&pool, 1, txn, 1, "FOOD", 1000, 8, Some(1080)).await;
+        insert_detail(&pool, 1, txn, 2, "FOOD", 500, 10, Some(550)).await;
+
+        let request = june_2024_request(GroupBy::Category2);
+        let sql = build_query(&request, "ja");
+        let results: Vec<AggregationResult> =
+            sqlx::query_as(&sql).fetch_all(&pool).await.unwrap();
+
+        assert_eq!(results.len(), 1);
+        let row = &results[0];
+        // 1000×1.08 + 500×1.10 = 1080 + 550 = 1630, EXPENSE → -1630.
+        assert_eq!(row.total_amount, -1630);
+        assert_eq!(row.count, 1, "one transaction");
+        // The invariant that failed pre-fix: avg × count must equal total.
+        assert_eq!(
+            row.avg_amount * row.count,
+            row.total_amount,
+            "avg × count must equal total; got avg={}, count={}, total={}",
+            row.avg_amount, row.count, row.total_amount,
+        );
+    }
+
+    /// Two-transaction avg sanity check: total = -1080 + -550 = -1630 over
+    /// 2 transactions → avg = -815. Guards against the numerator/denominator
+    /// pair drifting apart in future refactors.
+    #[tokio::test]
+    async fn test_detail_query_avg_multi_transaction_arithmetic() {
+        let pool = setup_aggregation_test_db().await;
+
+        let txn1 = insert_test_header(&pool, 1, 0, 1, 0).await;
+        insert_detail(&pool, 1, txn1, 1, "FOOD", 1000, 8, Some(1080)).await;
+        let txn2 = insert_test_header(&pool, 1, 0, 1, 0).await;
+        insert_detail(&pool, 1, txn2, 1, "FOOD", 500, 10, Some(550)).await;
+
+        let request = june_2024_request(GroupBy::Category2);
+        let sql = build_query(&request, "ja");
+        let results: Vec<AggregationResult> =
+            sqlx::query_as(&sql).fetch_all(&pool).await.unwrap();
+
+        assert_eq!(results.len(), 1);
+        let row = &results[0];
+        assert_eq!(row.total_amount, -1630);
+        assert_eq!(row.count, 2);
+        // -1630 / 2 = -815 (integer division truncates towards zero).
+        assert_eq!(row.avg_amount, -815);
     }
 }
