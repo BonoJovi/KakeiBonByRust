@@ -97,15 +97,53 @@ impl SettingsManager {
         Ok(settings)
     }
     
-    /// Save settings to file
+    /// Save settings to file.
+    ///
+    /// Uses the classic write-tmp-then-rename pattern so a crash (or a
+    /// kill, or a disk-full) mid-write cannot leave a half-written JSON
+    /// file at `path`. Before this change, `fs::write` truncated the
+    /// target before streaming the new bytes; if the process died between
+    /// the truncate and the final flush, subsequent starts would hit a
+    /// `JsonError` in `load_from_file` and `SettingsManager::new()` would
+    /// error, which `lib.rs` `setup` propagates via `?` — the app then
+    /// fails to launch until the user deletes the file by hand.
+    ///
+    /// The tmp file is created in the *same directory* as `path` because
+    /// `fs::rename` is only guaranteed to be atomic when source and
+    /// destination share a filesystem (a rename across mounts fails with
+    /// `EXDEV` on Linux). On any error the tmp file is best-effort cleaned
+    /// up so we don't accumulate `.tmp` cruft next to the real settings.
     fn save_to_file(path: &PathBuf, settings: &UserSettings) -> Result<(), SettingsError> {
         // Ensure directory exists
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent)?;
         }
-        
+
         let content = serde_json::to_string_pretty(settings)?;
-        fs::write(path, content)?;
+
+        // Build the sibling tmp path: same directory, filename + ".tmp".
+        // `file_name()` returns None only for paths that end in `..`,
+        // which settings paths never do, so an empty fallback is fine —
+        // the ensuing rename would then fail loudly rather than silently
+        // corrupting anything.
+        let mut tmp_path = path.clone();
+        let mut tmp_name = path
+            .file_name()
+            .unwrap_or_default()
+            .to_os_string();
+        tmp_name.push(".tmp");
+        tmp_path.set_file_name(tmp_name);
+
+        if let Err(e) = fs::write(&tmp_path, &content) {
+            let _ = fs::remove_file(&tmp_path);
+            return Err(SettingsError::IoError(e));
+        }
+
+        if let Err(e) = fs::rename(&tmp_path, path) {
+            let _ = fs::remove_file(&tmp_path);
+            return Err(SettingsError::IoError(e));
+        }
+
         Ok(())
     }
     
@@ -297,5 +335,99 @@ mod tests {
         assert!(keys.contains(&"key1".to_string()));
         assert!(keys.contains(&"key2".to_string()));
         assert!(keys.contains(&"key3".to_string()));
+    }
+
+    /// Fable-5 review #10 — `save_to_file` now uses the write-tmp-then-
+    /// rename pattern. Verify that a successful save leaves neither the
+    /// sibling `.tmp` file behind (would accumulate clutter on every save)
+    /// nor an incomplete target (would make the next start fail to parse).
+    #[test]
+    fn test_save_leaves_no_tmp_sibling_and_target_is_parseable() {
+        let (path, _temp) = make_test_path();
+
+        let mut manager = SettingsManager::with_path(path.clone()).unwrap();
+        manager.set("theme", "dark").unwrap();
+        manager.set("font_size", "medium").unwrap();
+        manager.save().unwrap();
+
+        // Target exists and is valid JSON round-trippable through the manager.
+        assert!(path.exists(), "target settings file should exist after save");
+        let reloaded = SettingsManager::with_path(path.clone()).unwrap();
+        assert_eq!(reloaded.get_string("theme").unwrap(), "dark");
+        assert_eq!(reloaded.get_string("font_size").unwrap(), "medium");
+
+        // Sibling `<file>.tmp` must have been renamed away — its presence
+        // here would mean either the rename failed silently or the fix
+        // regressed to a plain `fs::write`.
+        let mut tmp_path = path.clone();
+        let mut tmp_name = path.file_name().unwrap().to_os_string();
+        tmp_name.push(".tmp");
+        tmp_path.set_file_name(tmp_name);
+        assert!(
+            !tmp_path.exists(),
+            "sibling tmp file should not remain after save: {:?}",
+            tmp_path,
+        );
+    }
+
+    /// Repeated saves must be idempotent w.r.t. filesystem entries — no
+    /// stray `.tmp` file left after any of them, target parseable every
+    /// time. Guards against a partial fix that only handled the first
+    /// save (e.g. tmp cleanup only in an error branch).
+    #[test]
+    fn test_repeated_saves_do_not_accumulate_tmp_files() {
+        let (path, _temp) = make_test_path();
+        let mut manager = SettingsManager::with_path(path.clone()).unwrap();
+
+        for i in 0..5 {
+            manager.set("counter", i).unwrap();
+            manager.save().unwrap();
+        }
+
+        let mut tmp_path = path.clone();
+        let mut tmp_name = path.file_name().unwrap().to_os_string();
+        tmp_name.push(".tmp");
+        tmp_path.set_file_name(tmp_name);
+        assert!(!tmp_path.exists(), "no tmp file should be left after 5 saves");
+
+        let reloaded = SettingsManager::with_path(path).unwrap();
+        assert_eq!(reloaded.get_int("counter").unwrap(), 4);
+    }
+
+    /// Regression guard: a `.tmp` file left behind from a previous crashed
+    /// save must not be treated as the real settings by `with_path` / the
+    /// load path. `with_path` looks at `path`, not `path.tmp`, so the
+    /// leftover is inert until the next save happens to rename over it —
+    /// which is fine as long as the previous target (or an empty state)
+    /// is still valid to load from.
+    #[test]
+    fn test_stale_tmp_file_is_not_loaded() {
+        let (path, _temp) = make_test_path();
+
+        // Seed a normal settings file with the manager first.
+        {
+            let mut manager = SettingsManager::with_path(path.clone()).unwrap();
+            manager.set("theme", "light").unwrap();
+            manager.save().unwrap();
+        }
+
+        // Now plant a corrupted `.tmp` next to it (as if a previous save
+        // had crashed after write but before rename).
+        let mut tmp_path = path.clone();
+        let mut tmp_name = path.file_name().unwrap().to_os_string();
+        tmp_name.push(".tmp");
+        tmp_path.set_file_name(tmp_name);
+        fs::write(&tmp_path, "{ this is not valid json").unwrap();
+
+        // Re-opening the manager must still succeed and read the real file,
+        // not the corrupt tmp.
+        let manager = SettingsManager::with_path(path.clone()).unwrap();
+        assert_eq!(manager.get_string("theme").unwrap(), "light");
+
+        // The next save should overwrite the tmp cleanly.
+        let mut manager = manager;
+        manager.set("theme", "dark").unwrap();
+        manager.save().unwrap();
+        assert!(!tmp_path.exists(), "next save must clean the tmp path via rename");
     }
 }
