@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2025-12-06 06:24 JST  
-**総テスト数**: 207件
+**総テスト数**: 208件
 
 ---
 
@@ -30,6 +30,7 @@
   - [services/aggregation.rs](#servicesaggregationrs)
   - [services/session.rs](#servicessessionrs)
   - [services/i18n.rs](#servicesi18nrs)
+  - [services/recurring.rs](#servicesrecurringrs)
   - [lib.rs](#librs)
 
 ---
@@ -383,6 +384,16 @@ AES-256-GCM暗号化・復号化のテスト。
 
 **合計**: 8件
 
+### services/recurring.rs
+
+繰り返し予定入出金ルールサービスのテスト。
+
+| テスト関数 | 説明 | ファイル | 行 |
+|-----------|------|---------|-----|
+| `test_delete_rule_returns_not_found_for_missing` | 消失したルールの削除は空コミット偽成功でなく NotFound を返す (Fable-5 #8) | src/services/recurring.rs | 1783 |
+
+**合計**: 1件
+
 ### lib.rs
 
 `set_language` / `set_font_size` / `update_user_settings` コマンドが使う設定値バリデーションのテスト。
@@ -405,7 +416,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **184件** |
+| **インラインテスト** | **185件** |
 | validation.rs | 23 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -422,8 +433,9 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/aggregation.rs | 2 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
+| services/recurring.rs | 1 |
 | lib.rs | 4 |
-| **総計** | **207件** |
+| **総計** | **208件** |
 
 ---
 

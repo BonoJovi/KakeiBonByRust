@@ -536,6 +536,7 @@ fn columns_to_monthly_rule(cols: &CycleColumns) -> Result<MonthlyDayRule, String
 pub enum RecurringError {
     Database(sqlx::Error),
     Validation(String),
+    NotFound,
 }
 
 impl std::fmt::Display for RecurringError {
@@ -543,6 +544,7 @@ impl std::fmt::Display for RecurringError {
         match self {
             RecurringError::Database(e) => write!(f, "Database error: {}", e),
             RecurringError::Validation(msg) => write!(f, "Validation error: {}", msg),
+            RecurringError::NotFound => write!(f, "Recurring rule not found"),
         }
     }
 }
@@ -896,11 +898,21 @@ impl RecurringService {
                 .await?;
         }
 
-        sqlx::query(sql_queries::RECURRING_RULES_DELETE)
+        // The rule delete itself must hit exactly one row. Zero means the
+        // rule was already removed (concurrent op from another window, or
+        // a stale/foreign rule_id) — return NotFound instead of committing
+        // an empty transaction and showing a fake success toast. The prior
+        // cascade/detach step tolerates zero rows because a fresh rule can
+        // legitimately have no materialized occurrences.
+        let result = sqlx::query(sql_queries::RECURRING_RULES_DELETE)
             .bind(rule_id)
             .bind(user_id)
             .execute(&mut *tx)
             .await?;
+
+        if result.rows_affected() == 0 {
+            return Err(RecurringError::NotFound);
+        }
 
         tx.commit().await?;
         Ok(())
@@ -1760,4 +1772,25 @@ mod tests {
         assert!(msg.contains(&consts::MAX_MEMO_LEN.to_string()),
             "error should reference the limit: {}", msg);
     }
+
+    // Fable-5 review #8 — deleting a rule that no longer exists (concurrent
+    // removal from another window, foreign or stale rule_id) must return
+    // NotFound so the frontend shows a targeted toast instead of a fake
+    // "deleted" success. Matches the Shop/Manufacturer/Product master-audit
+    // contract (PR #75/#76/#77) and the category not_found rollout
+    // (PR #83).
+    #[tokio::test]
+    async fn test_delete_rule_returns_not_found_for_missing() {
+        let pool = crate::test_helpers::database::setup_test_db().await;
+        let service = RecurringService::new(pool);
+
+        let result = service.delete_rule(2, 99999, false).await;
+        assert!(matches!(result.unwrap_err(), RecurringError::NotFound));
+
+        // cascade variant must behave identically — a rule that was never
+        // there cannot have any generated occurrences to sweep.
+        let result_cascade = service.delete_rule(2, 99999, true).await;
+        assert!(matches!(result_cascade.unwrap_err(), RecurringError::NotFound));
+    }
+
 }
