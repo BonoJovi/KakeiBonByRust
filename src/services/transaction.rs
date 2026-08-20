@@ -1246,6 +1246,27 @@ impl TransactionService {
             ));
         }
 
+        // Verify the parent header exists AND belongs to this user. The FK
+        // on TRANSACTIONS_DETAIL.TRANSACTION_ID only checks that some header
+        // row exists — it does not enforce ownership. Without this guard, a
+        // request coming through direct `invoke` (bypassing the frontend
+        // form) with another user's transaction_id would attach the new
+        // detail to that other user's header. `update_transaction_detail` /
+        // `delete_transaction_detail` already do the equivalent check via
+        // `fetch_optional` on the existing detail row (see below); this
+        // brings `add` to the same standard so the three CRUD paths are
+        // symmetric. Runs before MEMO_INSERT so a rejected add cannot leave
+        // an orphaned MEMOS row behind.
+        let parent_exists: Option<i64> =
+            sqlx::query_scalar(sql_queries::TRANSACTION_HEADER_EXISTS_FOR_USER)
+                .bind(transaction_id)
+                .bind(user_id)
+                .fetch_optional(&self.pool)
+                .await?;
+        if parent_exists.is_none() {
+            return Err(TransactionError::NotFound);
+        }
+
         // Save memo if provided
         let memo_id = if let Some(text) = &request.memo {
             if !text.trim().is_empty() {
@@ -4068,6 +4089,69 @@ mod tests {
         let after = service.get_transaction_details(2, header_id).await.unwrap();
         assert!(after[0].memo_id.is_none());
         assert!(after[0].memo_text.is_none());
+    }
+
+    /// Fable-5 review #12 — before the fix, `add_transaction_detail` did
+    /// not check that the parent `transaction_id` belonged to `user_id`.
+    /// The FK on TRANSACTIONS_DETAIL.TRANSACTION_ID only requires the
+    /// header row to exist; a direct `invoke` from user B with user A's
+    /// transaction_id would attach B's detail to A's header. Now `add`
+    /// mirrors the fetch+ok_or(NotFound) contract that update/delete
+    /// already used.
+    ///
+    /// Note: this test uses `setup_test_db()`, whose schema does not
+    /// enforce the TRANSACTIONS_DETAIL → TRANSACTIONS_HEADER foreign
+    /// key. That's the exact condition under which the pre-fix code
+    /// would have happily inserted a foreign-owned detail — production
+    /// enforces the FK but only on the shape of the reference, not on
+    /// USER_ID, so the same cross-owner attach happens there too.
+    #[tokio::test]
+    async fn test_add_detail_rejects_foreign_transaction_id() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+
+        // create_test_header seeds user_id = 2.
+        let header_id_of_user_2 = create_test_header(&service).await;
+
+        // A different user (user_id = 3) tries to attach a detail to user
+        // 2's header. Must be rejected as NotFound before any INSERT or
+        // MEMO_INSERT runs.
+        let attempt = service
+            .add_transaction_detail(3, header_id_of_user_2, basic_detail_request())
+            .await;
+
+        assert!(
+            matches!(attempt, Err(TransactionError::NotFound)),
+            "cross-owner attach must return NotFound, got: {:?}",
+            attempt
+        );
+
+        // User 2 (the actual owner) can still add a detail to the same
+        // header, confirming the ownership check does not over-block.
+        service
+            .add_transaction_detail(2, header_id_of_user_2, basic_detail_request())
+            .await
+            .expect("owner should be able to add a detail to their own header");
+    }
+
+    /// Attempting to add a detail to a transaction_id that does not exist
+    /// at all must also return NotFound rather than surface a generic
+    /// sqlx error (the pre-fix code would trip the FK later, giving a
+    /// less legible message; without any FK, it would insert silently).
+    #[tokio::test]
+    async fn test_add_detail_rejects_nonexistent_transaction_id() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+
+        let attempt = service
+            .add_transaction_detail(2, 999_999, basic_detail_request())
+            .await;
+
+        assert!(
+            matches!(attempt, Err(TransactionError::NotFound)),
+            "nonexistent parent must return NotFound, got: {:?}",
+            attempt
+        );
     }
 }
 

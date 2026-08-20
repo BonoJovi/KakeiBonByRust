@@ -1159,6 +1159,20 @@ FROM TRANSACTIONS_HEADER
 WHERE TRANSACTION_ID = ? AND USER_ID = ?
 "#;
 
+/// Cheap existence + ownership check used before inserting a
+/// TRANSACTIONS_DETAIL row. The FK on TRANSACTIONS_DETAIL.TRANSACTION_ID
+/// only enforces "some header exists" — it does not check that the
+/// header belongs to the caller. Without this SELECT, a request that
+/// bypasses the frontend (e.g. a direct `invoke` with another user's
+/// transaction_id) would attach one user's detail to another user's
+/// header.
+pub const TRANSACTION_HEADER_EXISTS_FOR_USER: &str = r#"
+SELECT 1
+FROM TRANSACTIONS_HEADER
+WHERE TRANSACTION_ID = ? AND USER_ID = ?
+LIMIT 1
+"#;
+
 /// Update only TOTAL_AMOUNT (and the audit timestamp). Used when the header
 /// total is recalculated from details after a detail edit, without touching
 /// any of the other header fields the user just edited.

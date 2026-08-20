@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2025-12-06 06:24 JST  
-**総テスト数**: 233件
+**総テスト数**: 235件
 
 ---
 
@@ -366,8 +366,10 @@ AES-256-GCM暗号化・復号化のテスト。
 | `test_update_detail_memo_does_not_corrupt_recurring_rule_memo` | 明細メモ編集が繰り返しルールと共有するメモを破壊しないこと | src/services/transaction.rs | 3760 |
 | `test_delete_detail_preserves_memo_still_referenced_by_recurring_rule` | 繰り返しルールが参照中の memo は明細削除で残ること | src/services/transaction.rs | 3805 |
 | `test_clear_detail_memo_succeeds_under_foreign_keys_on` | 明細メモのクリアが MEMOS 外部キーに違反しないこと | src/services/transaction.rs | 3843 |
+| `test_add_detail_rejects_foreign_transaction_id` | 他ユーザーの transaction_id で明細追加は NotFound を返す (Fable-5 #12) | src/services/transaction.rs | 4109 |
+| `test_add_detail_rejects_nonexistent_transaction_id` | 存在しない transaction_id で明細追加は NotFound を返す (Fable-5 #12) | src/services/transaction.rs | 4142 |
 
-**合計**: 15件
+**合計**: 17件
 
 ### services/aggregation.rs
 
@@ -451,7 +453,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **210件** |
+| **インラインテスト** | **212件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -465,13 +467,13 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/manufacturer.rs | 7 |
 | services/product.rs | 7 |
 | services/shop.rs | 7 |
-| services/transaction.rs | 15 |
+| services/transaction.rs | 17 |
 | services/aggregation.rs | 6 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 1 |
 | lib.rs | 4 |
-| **総計** | **233件** |
+| **総計** | **235件** |
 
 ---
 
