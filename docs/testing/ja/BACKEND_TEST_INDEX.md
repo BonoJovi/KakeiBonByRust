@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2025-12-06 06:24 JST  
-**総テスト数**: 221件
+**総テスト数**: 223件
 
 ---
 
@@ -104,7 +104,9 @@
 | `test_password_more_than_16_characters` | 16文字以上のパスワードの受け入れ | src/validation.rs | 130 |
 | `test_password_with_spaces` | スペースを含むパスワードの受け入れ | src/validation.rs | 137 |
 | `test_password_with_special_characters` | 特殊文字を含むパスワードの受け入れ | src/validation.rs | 144 |
-| `test_password_with_unicode` | Unicode文字を含むパスワードの受け入れ | src/validation.rs | 151 |
+| `test_password_with_unicode` | Unicode文字を含むパスワードの受け入れ (16 BMP 日本語文字) | src/validation.rs | 236 |
+| `test_multibyte_password_below_min_length_rejected` | バイト数16以上でも文字数15の日本語パスワードは拒否 (Fable-5 #9 リグレッション) | src/validation.rs | 249 |
+| `test_multibyte_password_at_min_length_accepted` | 16文字日本語パスワードは Unicode scalar 境界で受け入れ | src/validation.rs | 262 |
 | `test_very_long_password` | 非常に長いパスワード（128文字）の受け入れ | src/validation.rs | 158 |
 | `test_password_confirmation_matching` | パスワード確認の一致テスト | src/validation.rs | 164 |
 | `test_password_confirmation_not_matching` | パスワード確認の不一致テスト | src/validation.rs | 173 |
@@ -118,7 +120,7 @@
 | `test_numeric_password` | 数字のみのパスワード | src/validation.rs | 242 |
 | `test_password_boundary_cases` | 境界値ケース（15, 16, 17文字） | src/validation.rs | 248 |
 
-**合計**: 23件
+**合計**: 25件
 
 ### security.rs
 
@@ -429,8 +431,8 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **198件** |
-| validation.rs | 23 |
+| **インラインテスト** | **200件** |
+| validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
 | db.rs | 2 |
@@ -448,7 +450,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/i18n.rs | 8 |
 | services/recurring.rs | 1 |
 | lib.rs | 4 |
-| **総計** | **221件** |
+| **総計** | **223件** |
 
 ---
 

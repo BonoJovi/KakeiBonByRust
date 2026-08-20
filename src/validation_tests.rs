@@ -93,9 +93,13 @@ pub mod password_tests {
         assert!(password.len() >= 16);
         assert!(validate_password(password).is_ok());
         
-        // Password with unicode
-        let password = "パスワード1234567890";
-        assert!(password.len() >= 16);
+        // Password with unicode — 16 BMP JA chars (`.chars().count() == 16`),
+        // not 15. Previously this asserted a 15-char JA password `is_ok`,
+        // which only held because the backend counted UTF-8 bytes; Fable-5
+        // review #9 flipped the gate to `chars().count()`, so the test now
+        // covers the intended "unicode acceptance at the boundary" case.
+        let password = "パスワード12345678901";
+        assert_eq!(password.chars().count(), 16);
         assert!(validate_password(password).is_ok());
         
         // Very long password
