@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2025-12-06 06:24 JST  
-**総テスト数**: 223件
+**総テスト数**: 227件
 
 ---
 
@@ -361,8 +361,12 @@ AES-256-GCM暗号化・復号化のテスト。
 |-----------|------|---------|-----|
 | `test_monthly_aggregation_current_month` | 当月の月次集計 | src/services/aggregation.rs | 1554 |
 | `test_monthly_aggregation_next_month` | 翌月の月次集計 | src/services/aggregation.rs | 1563 |
+| `test_detail_query_grosses_up_null_tax_included_row` | TAX_RATE>0 で AMOUNT_INCLUDING_TAX が NULL の明細も税抜として割増 (Fable-5 #3) | src/services/aggregation.rs | 2343 |
+| `test_detail_query_grosses_up_zero_tax_included_row` | AMOUNT_INCLUDING_TAX=0 (フロント空欄) も税抜扱い (Fable-5 #3) | src/services/aggregation.rs | 2367 |
+| `test_detail_query_avg_matches_total_over_count_with_mixed_rates` | 混在税率取引で avg × count == total を保持 (Fable-5 #4) | src/services/aggregation.rs | 2398 |
+| `test_detail_query_avg_multi_transaction_arithmetic` | 2 取引の avg = total / txn_count 検証 (Fable-5 #4) | src/services/aggregation.rs | 2430 |
 
-**合計**: 2件
+**合計**: 6件
 
 ### services/session.rs
 
@@ -431,7 +435,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **200件** |
+| **インラインテスト** | **204件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -445,12 +449,12 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/product.rs | 7 |
 | services/shop.rs | 7 |
 | services/transaction.rs | 15 |
-| services/aggregation.rs | 2 |
+| services/aggregation.rs | 6 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 1 |
 | lib.rs | 4 |
-| **総計** | **223件** |
+| **総計** | **227件** |
 
 ---
 
