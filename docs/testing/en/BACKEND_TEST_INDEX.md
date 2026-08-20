@@ -104,7 +104,9 @@ Password validation logic tests.
 | `test_password_more_than_16_characters` | Accept 16+ character password | src/validation.rs | 130 |
 | `test_password_with_spaces` | Accept password with spaces | src/validation.rs | 137 |
 | `test_password_with_special_characters` | Accept password with special characters | src/validation.rs | 144 |
-| `test_password_with_unicode` | Accept password with Unicode characters | src/validation.rs | 151 |
+| `test_password_with_unicode` | Accept password with Unicode characters (16 BMP JA chars) | src/validation.rs | 236 |
+| `test_multibyte_password_below_min_length_rejected` | Reject 15-char JA password despite byte count >= 16 (Fable-5 #9 regression guard) | src/validation.rs | 249 |
+| `test_multibyte_password_at_min_length_accepted` | Accept 16-char JA password at Unicode-scalar boundary | src/validation.rs | 262 |
 | `test_very_long_password` | Accept very long password (128 chars) | src/validation.rs | 158 |
 | `test_password_confirmation_matching` | Test password confirmation match | src/validation.rs | 164 |
 | `test_password_confirmation_not_matching` | Test password confirmation mismatch | src/validation.rs | 173 |
@@ -118,7 +120,7 @@ Password validation logic tests.
 | `test_numeric_password` | Numeric-only password | src/validation.rs | 242 |
 | `test_password_boundary_cases` | Boundary cases (15, 16, 17 chars) | src/validation.rs | 248 |
 
-**Total**: 23 tests
+**Total**: 25 tests
 
 ### security.rs
 
@@ -429,8 +431,8 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **198** |
-| validation.rs | 23 |
+| **Inline Tests** | **200** |
+| validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
 | db.rs | 2 |

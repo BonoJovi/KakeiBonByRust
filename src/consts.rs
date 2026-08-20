@@ -62,3 +62,11 @@ pub const MAX_ITEM_NAME_LEN: usize = 200;     // TRANSACTIONS_DETAIL.ITEM_NAME, 
 #[allow(dead_code)]
 pub const MAX_RULE_NAME_LEN: usize = 200;     // RECURRING_RULES.RULE_NAME
 pub const MAX_MEMO_LEN: usize = 1000;         // MEMOS.MEMO_TEXT (used by transactions and recurring rules)
+
+// Minimum password length in Unicode scalar values (chars), not bytes.
+// The frontend counts UTF-16 code units via String.prototype.length, which
+// matches char count for BMP input (including all Japanese kana/kanji), so
+// the backend must count chars too — otherwise a 6-char Japanese password
+// reaches 16 bytes and slips through the length gate while the frontend
+// (correctly) rejects it. See `validation::validate_password`.
+pub const MIN_PASSWORD_LENGTH: usize = 16;

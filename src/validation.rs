@@ -61,12 +61,20 @@ pub fn validate_password(password: &str) -> Result<(), String> {
     if password.trim().is_empty() {
         return Err("Password cannot be empty!".to_string());
     }
-    
-    // Check minimum length (16 characters)
-    if password.len() < 16 {
-        return Err("Password must be at least 16 characters long!".to_string());
+
+    // Count characters, not UTF-8 bytes. Using `password.len()` here would
+    // let a 6-char Japanese password (18 bytes) satisfy the "16 characters"
+    // rule while the frontend (which counts UTF-16 code units and matches
+    // char count for BMP text) rejects the same input — a policy split the
+    // user could stumble across only after a failed login. See
+    // `consts::MIN_PASSWORD_LENGTH`.
+    if password.chars().count() < consts::MIN_PASSWORD_LENGTH {
+        return Err(format!(
+            "Password must be at least {} characters long!",
+            consts::MIN_PASSWORD_LENGTH
+        ));
     }
-    
+
     Ok(())
 }
 
@@ -226,9 +234,35 @@ mod tests {
 
     #[test]
     fn test_password_with_unicode() {
-        let password = "パスワード1234567890";
-        assert!(password.len() >= 16);
+        // 16 chars of BMP Japanese input. `.chars().count()` == 16 here,
+        // even though `.len()` (UTF-8 bytes) is much larger.
+        let password = "パスワード12345678901";
+        assert_eq!(password.chars().count(), 16);
         assert!(validate_password(password).is_ok());
+    }
+
+    /// Fable-5 review #9 — regression guard against `password.len()` (byte
+    /// count) sneaking back in. A 15-char Japanese password is 15 chars
+    /// but ~25 bytes; before the fix it satisfied `len() >= 16` and slipped
+    /// through the backend gate while the frontend correctly rejected it.
+    #[test]
+    fn test_multibyte_password_below_min_length_rejected() {
+        let password = "パスワード1234567890"; // 15 chars, ~25 UTF-8 bytes
+        assert_eq!(password.chars().count(), 15);
+        assert!(
+            password.len() >= consts::MIN_PASSWORD_LENGTH,
+            "test premise: byte count should be >= min length so a bytes-based check would incorrectly accept"
+        );
+        assert!(validate_password(password).is_err());
+    }
+
+    /// The boundary in Unicode scalar values: a 16-char JA password must
+    /// pass (the mirror of the above test at the acceptance boundary).
+    #[test]
+    fn test_multibyte_password_at_min_length_accepted() {
+        let password = "あ".repeat(consts::MIN_PASSWORD_LENGTH);
+        assert_eq!(password.chars().count(), consts::MIN_PASSWORD_LENGTH);
+        assert!(validate_password(&password).is_ok());
     }
 
     #[test]
