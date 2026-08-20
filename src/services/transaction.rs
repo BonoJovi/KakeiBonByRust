@@ -240,6 +240,13 @@ fn validate_item_name_length(item_name: &str) -> Result<(), TransactionError> {
         .map_err(TransactionError::ValidationError)
 }
 
+/// Escape SQL LIKE metacharacters so user-supplied text matches literally.
+/// Paired with `LIKE ? ESCAPE '\'` in the query. Backslash must be escaped
+/// first so we do not re-escape the escapes we just added.
+fn escape_like_pattern(s: &str) -> String {
+    s.replace('\\', "\\\\").replace('%', "\\%").replace('_', "\\_")
+}
+
 /// Result of `recalculate_all_transaction_totals`. The frontend uses this to
 /// tell the user how much work was actually done and where the safety-net
 /// backup ended up, so they can roll back later from a single button click.
@@ -743,7 +750,16 @@ impl TransactionService {
 
         if let Some(end) = end_date {
             where_clauses.push("t.TRANSACTION_DATE <= ?".to_string());
-            params.push(end.to_string());
+            // TRANSACTION_DATE is stored as 'YYYY-MM-DD HH:MM:SS' but the UI's
+            // <input type="date"> sends bare 'YYYY-MM-DD', which under string
+            // comparison drops every same-day timestamp. Anchor to end-of-day
+            // so the boundary day is included.
+            let normalized = if end.len() == 10 {
+                format!("{} 23:59:59", end)
+            } else {
+                end.to_string()
+            };
+            params.push(normalized);
         }
 
         if let Some(cat1) = category1_code {
@@ -791,9 +807,18 @@ impl TransactionService {
             params.push(max.to_string());
         }
 
-        // Note: DESCRIPTION and MEMO are not in HEADER
-        // Keyword search is not implemented for header-only queries
-        let _ = keyword; // Suppress unused warning
+        // Keyword: substring match against memo text on the header row and on
+        // any detail row of the same header. MEMO_TEXT is user-supplied so we
+        // escape LIKE metacharacters and bind the same pattern twice.
+        if let Some(kw) = keyword {
+            let kw = kw.trim();
+            if !kw.is_empty() {
+                let pattern = format!("%{}%", escape_like_pattern(kw));
+                where_clauses.push(sql_queries::TRANSACTION_KEYWORD_MEMO_FILTER.to_string());
+                params.push(pattern.clone());
+                params.push(pattern);
+            }
+        }
 
         let where_clause = where_clauses.join(" AND ");
 
@@ -3249,6 +3274,187 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(empty.total_count, 2);
+    }
+
+    /// Regression: an end-date filter of 'YYYY-MM-DD' used to string-compare
+    /// against 'YYYY-MM-DD HH:MM:SS' in TRANSACTION_DATE and silently drop
+    /// every same-day timestamp. The boundary day must be inclusive.
+    #[tokio::test]
+    async fn test_get_transactions_end_date_includes_boundary_day() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+
+        let mut request = SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "EXPENSE".to_string(),
+            from_account_code: "CASH".to_string(),
+            to_account_code: "BANK".to_string(),
+            transaction_date: "2024-05-10 09:00:00".to_string(),
+            total_amount: 1000,
+            tax_rounding_type: consts::TAX_ROUND_DOWN,
+            tax_included_type: consts::TAX_EXCLUDED,
+            memo: None,
+            is_scheduled: None,
+        };
+        service.save_transaction_header(2, request.clone()).await.unwrap();
+
+        request.transaction_date = "2024-05-15 12:00:00".to_string();
+        service.save_transaction_header(2, request.clone()).await.unwrap();
+
+        request.transaction_date = "2024-05-15 23:30:00".to_string();
+        service.save_transaction_header(2, request.clone()).await.unwrap();
+
+        request.transaction_date = "2024-05-16 08:00:00".to_string();
+        service.save_transaction_header(2, request).await.unwrap();
+
+        // end=2024-05-15 must include both same-day rows (12:00 and 23:30).
+        let result = service
+            .get_transactions(
+                2,
+                Some("2024-05-10"),
+                Some("2024-05-15"),
+                None, None, None, None, None, None,
+                false, 1, 50,
+            )
+            .await
+            .unwrap();
+        assert_eq!(result.total_count, 3);
+
+        // Bare same-day range must return the two rows on that day.
+        let single_day = service
+            .get_transactions(
+                2,
+                Some("2024-05-15"),
+                Some("2024-05-15"),
+                None, None, None, None, None, None,
+                false, 1, 50,
+            )
+            .await
+            .unwrap();
+        assert_eq!(single_day.total_count, 2);
+
+        // Datetime-form end must still work unchanged.
+        let datetime_end = service
+            .get_transactions(
+                2,
+                None,
+                Some("2024-05-15 12:00:00"),
+                None, None, None, None, None, None,
+                false, 1, 50,
+            )
+            .await
+            .unwrap();
+        assert_eq!(datetime_end.total_count, 2);
+    }
+
+    /// Regression: the keyword parameter used to be discarded (`let _ = keyword`),
+    /// leaving the search box a silent no-op. Keyword must substring-match
+    /// against memos on the header row and on any detail row of the header.
+    #[tokio::test]
+    async fn test_get_transactions_keyword_matches_header_and_detail_memo() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+
+        // Header A: memo on header only.
+        let header_a = SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "EXPENSE".to_string(),
+            from_account_code: "CASH".to_string(),
+            to_account_code: "BANK".to_string(),
+            transaction_date: "2024-06-01 10:00:00".to_string(),
+            total_amount: 1000,
+            tax_rounding_type: consts::TAX_ROUND_DOWN,
+            tax_included_type: consts::TAX_EXCLUDED,
+            memo: Some("駅前スーパーの牛乳".to_string()),
+            is_scheduled: None,
+        };
+        let id_a = service.save_transaction_header(2, header_a).await.unwrap();
+
+        // Header B: memo on detail only.
+        let header_b = SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "EXPENSE".to_string(),
+            from_account_code: "CASH".to_string(),
+            to_account_code: "BANK".to_string(),
+            transaction_date: "2024-06-02 10:00:00".to_string(),
+            total_amount: 500,
+            tax_rounding_type: consts::TAX_ROUND_DOWN,
+            tax_included_type: consts::TAX_EXCLUDED,
+            memo: None,
+            is_scheduled: None,
+        };
+        let id_b = service.save_transaction_header(2, header_b).await.unwrap();
+        let mut detail = basic_detail_request();
+        detail.memo = Some("ヨーグルト特売".to_string());
+        service.add_transaction_detail(2, id_b, detail).await.unwrap();
+
+        // Header C: no memo at all — must never match.
+        let header_c = SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "EXPENSE".to_string(),
+            from_account_code: "CASH".to_string(),
+            to_account_code: "BANK".to_string(),
+            transaction_date: "2024-06-03 10:00:00".to_string(),
+            total_amount: 300,
+            tax_rounding_type: consts::TAX_ROUND_DOWN,
+            tax_included_type: consts::TAX_EXCLUDED,
+            memo: None,
+            is_scheduled: None,
+        };
+        service.save_transaction_header(2, header_c).await.unwrap();
+
+        // Keyword hits header memo only.
+        let hit_header = service
+            .get_transactions(
+                2, None, None, None, None, None, None, None,
+                Some("牛乳"), false, 1, 50,
+            )
+            .await
+            .unwrap();
+        assert_eq!(hit_header.total_count, 1);
+        assert_eq!(hit_header.transactions[0].transaction_id, id_a);
+
+        // Keyword hits detail memo only.
+        let hit_detail = service
+            .get_transactions(
+                2, None, None, None, None, None, None, None,
+                Some("特売"), false, 1, 50,
+            )
+            .await
+            .unwrap();
+        assert_eq!(hit_detail.total_count, 1);
+        assert_eq!(hit_detail.transactions[0].transaction_id, id_b);
+
+        // No match returns no rows.
+        let miss = service
+            .get_transactions(
+                2, None, None, None, None, None, None, None,
+                Some("ダミー"), false, 1, 50,
+            )
+            .await
+            .unwrap();
+        assert_eq!(miss.total_count, 0);
+
+        // Whitespace-only keyword is treated as no filter.
+        let whitespace = service
+            .get_transactions(
+                2, None, None, None, None, None, None, None,
+                Some("   "), false, 1, 50,
+            )
+            .await
+            .unwrap();
+        assert_eq!(whitespace.total_count, 3);
+
+        // LIKE metacharacter '%' must be escaped — it should match literally,
+        // not as a wildcard.
+        let percent_miss = service
+            .get_transactions(
+                2, None, None, None, None, None, None, None,
+                Some("%"), false, 1, 50,
+            )
+            .await
+            .unwrap();
+        assert_eq!(percent_miss.total_count, 0);
     }
 
     #[tokio::test]

@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2025-12-06 06:24 JST  
-**総テスト数**: 205件
+**総テスト数**: 207件
 
 ---
 
@@ -332,8 +332,10 @@ AES-256-GCM暗号化・復号化のテスト。
 | `test_update_transaction_header_tax_type` | 取引ヘッダーの税種別更新 | src/services/transaction.rs | 1309 |
 | `test_default_tax_type_is_excluded` | デフォルト税種別が税抜であることを確認 | src/services/transaction.rs | 1351 |
 | `test_tax_type_validation_values` | 税種別の有効値確認 | src/services/transaction.rs | 1375 |
+| `test_get_transactions_end_date_includes_boundary_day` | 終了日フィルタが同日タイムスタンプを含むこと (bare 'YYYY-MM-DD' を 23:59:59 に正規化) | src/services/transaction.rs | 3293 |
+| `test_get_transactions_keyword_matches_header_and_detail_memo` | キーワードがヘッダー/明細のメモテキストで部分一致すること | src/services/transaction.rs | 3364 |
 
-**合計**: 5件
+**合計**: 7件
 
 ### services/aggregation.rs
 
@@ -403,7 +405,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **182件** |
+| **インラインテスト** | **184件** |
 | validation.rs | 23 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -416,12 +418,12 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/manufacturer.rs | 7 |
 | services/product.rs | 7 |
 | services/shop.rs | 7 |
-| services/transaction.rs | 5 |
+| services/transaction.rs | 7 |
 | services/aggregation.rs | 2 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | lib.rs | 4 |
-| **総計** | **205件** |
+| **総計** | **207件** |
 
 ---
 

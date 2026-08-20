@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2025-12-06 06:45 JST  
-**Total Tests**: 205
+**Total Tests**: 207
 
 ---
 
@@ -332,8 +332,10 @@ Transaction management service tests.
 | `test_update_transaction_header_tax_type` | Update transaction header tax type | src/services/transaction.rs | 1309 |
 | `test_default_tax_type_is_excluded` | Verify default tax type is excluded | src/services/transaction.rs | 1351 |
 | `test_tax_type_validation_values` | Verify valid tax type values | src/services/transaction.rs | 1375 |
+| `test_get_transactions_end_date_includes_boundary_day` | End-date filter must include same-day timestamps (bare 'YYYY-MM-DD' anchored to 23:59:59) | src/services/transaction.rs | 3293 |
+| `test_get_transactions_keyword_matches_header_and_detail_memo` | Keyword must substring-match memo text on both header and detail rows | src/services/transaction.rs | 3364 |
 
-**Total**: 5 tests
+**Total**: 7 tests
 
 ### services/aggregation.rs
 
@@ -403,7 +405,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **182** |
+| **Inline Tests** | **184** |
 | validation.rs | 23 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -416,12 +418,12 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/manufacturer.rs | 7 |
 | services/product.rs | 7 |
 | services/shop.rs | 7 |
-| services/transaction.rs | 5 |
+| services/transaction.rs | 7 |
 | services/aggregation.rs | 2 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | lib.rs | 4 |
-| **Total** | **205** |
+| **Total** | **207** |
 
 ---
 
