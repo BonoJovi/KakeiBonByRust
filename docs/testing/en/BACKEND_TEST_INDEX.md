@@ -271,8 +271,13 @@ Category management service tests (3-tier category CRUD).
 | `test_update_category2_duplicate_name` | Medium category duplicate name update error | src/services/category.rs | 1552 |
 | `test_move_category2_boundary` | Medium category boundary value move test | src/services/category.rs | 1571 |
 | `test_get_category_for_edit` | Get category info for editing | src/services/category.rs | 1623 |
+| `test_get_category2_for_edit_returns_not_found_for_missing` | Missing CATEGORY2 edit fetch returns NotFound (Fable-5 #6) | src/services/category.rs | 1873 |
+| `test_get_category3_for_edit_returns_not_found_for_missing` | Missing CATEGORY3 edit fetch returns NotFound (Fable-5 #6) | src/services/category.rs | 1884 |
+| `test_disable_category2_returns_not_found_for_missing` | Missing CATEGORY2 disable returns NotFound (Fable-5 #7) | src/services/category.rs | 1899 |
+| `test_disable_category3_returns_not_found_for_missing` | Missing CATEGORY3 disable returns NotFound (Fable-5 #7) | src/services/category.rs | 1910 |
+| `test_disable_category2_succeeds_with_no_children` | Leaf CATEGORY2 disable succeeds (child sweep tolerates 0 rows) | src/services/category.rs | 1926 |
 
-**Total**: 13 tests
+**Total**: 18 tests
 
 ### services/manufacturer.rs
 
@@ -433,7 +438,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/auth.rs | 13 |
 | services/user_management.rs | 13 |
 | services/encryption.rs | 4 |
-| services/category.rs | 13 |
+| services/category.rs | 18 |
 | services/manufacturer.rs | 7 |
 | services/product.rs | 7 |
 | services/shop.rs | 7 |
