@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2025-12-06 06:45 JST  
-**Total Tests**: 233
+**Total Tests**: 235
 
 ---
 
@@ -366,8 +366,10 @@ Transaction management service tests.
 | `test_update_detail_memo_does_not_corrupt_recurring_rule_memo` | Detail memo edit must not overwrite memo shared with a recurring rule | src/services/transaction.rs | 3760 |
 | `test_delete_detail_preserves_memo_still_referenced_by_recurring_rule` | Detail delete must keep memo row still referenced by a recurring rule | src/services/transaction.rs | 3805 |
 | `test_clear_detail_memo_succeeds_under_foreign_keys_on` | Clearing a detail memo must not violate the MEMOS foreign key | src/services/transaction.rs | 3843 |
+| `test_add_detail_rejects_foreign_transaction_id` | Adding a detail against another user's transaction_id must return NotFound (Fable-5 #12) | src/services/transaction.rs | 4109 |
+| `test_add_detail_rejects_nonexistent_transaction_id` | Adding a detail against a missing transaction_id must return NotFound (Fable-5 #12) | src/services/transaction.rs | 4142 |
 
-**Total**: 15 tests
+**Total**: 17 tests
 
 ### services/aggregation.rs
 
@@ -451,7 +453,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **210** |
+| **Inline Tests** | **212** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -465,13 +467,13 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/manufacturer.rs | 7 |
 | services/product.rs | 7 |
 | services/shop.rs | 7 |
-| services/transaction.rs | 15 |
+| services/transaction.rs | 17 |
 | services/aggregation.rs | 6 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 1 |
 | lib.rs | 4 |
-| **Total** | **233** |
+| **Total** | **235** |
 
 ---
 
