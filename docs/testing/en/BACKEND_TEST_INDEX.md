@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2025-12-06 06:45 JST  
-**Total Tests**: 230
+**Total Tests**: 233
 
 ---
 
@@ -195,8 +195,11 @@ Settings management functionality tests.
 | `test_entry_not_found` | Error handling for non-existent entry | src/settings.rs | 273 |
 | `test_complex_type` | Save and retrieve complex types (JSON) | src/settings.rs | 289 |
 | `test_keys_list` | Retrieve keys list | src/settings.rs | 315 |
+| `test_save_leaves_no_tmp_sibling_and_target_is_parseable` | Successful save renames tmp away and leaves target valid (Fable-5 #10) | src/settings.rs | 345 |
+| `test_repeated_saves_do_not_accumulate_tmp_files` | Repeated saves keep the filesystem clean (Fable-5 #10) | src/settings.rs | 378 |
+| `test_stale_tmp_file_is_not_loaded` | A leftover `.tmp` from a crashed save is inert; real target still loads (Fable-5 #10) | src/settings.rs | 404 |
 
-**Total**: 9 tests
+**Total**: 12 tests
 
 ### services/auth.rs
 
@@ -448,12 +451,12 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **207** |
+| **Inline Tests** | **210** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
 | db.rs | 2 |
-| settings.rs | 9 |
+| settings.rs | 12 |
 | services/auth.rs | 13 |
 | services/user_management.rs | 13 |
 | services/encryption.rs | 4 |
@@ -468,7 +471,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/i18n.rs | 8 |
 | services/recurring.rs | 1 |
 | lib.rs | 4 |
-| **Total** | **230** |
+| **Total** | **233** |
 
 ---
 

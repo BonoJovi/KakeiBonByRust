@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2025-12-06 06:24 JST  
-**総テスト数**: 230件
+**総テスト数**: 233件
 
 ---
 
@@ -195,8 +195,11 @@ AES-256-GCM暗号化・復号化のテスト。
 | `test_entry_not_found` | 存在しないエントリのエラーハンドリング | src/settings.rs | 273 |
 | `test_complex_type` | 複雑な型（JSON）の保存・取得 | src/settings.rs | 289 |
 | `test_keys_list` | キー一覧の取得 | src/settings.rs | 315 |
+| `test_save_leaves_no_tmp_sibling_and_target_is_parseable` | save 成功後に tmp ファイルが残らず、target は読み込み可能 (Fable-5 #10) | src/settings.rs | 345 |
+| `test_repeated_saves_do_not_accumulate_tmp_files` | 繰り返しの save で tmp ファイルが累積しない (Fable-5 #10) | src/settings.rs | 378 |
+| `test_stale_tmp_file_is_not_loaded` | クラッシュ由来の tmp が残っていても real target を優先ロード (Fable-5 #10) | src/settings.rs | 404 |
 
-**合計**: 9件
+**合計**: 12件
 
 ### services/auth.rs
 
@@ -448,12 +451,12 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **207件** |
+| **インラインテスト** | **210件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
 | db.rs | 2 |
-| settings.rs | 9 |
+| settings.rs | 12 |
 | services/auth.rs | 13 |
 | services/user_management.rs | 13 |
 | services/encryption.rs | 4 |
@@ -468,7 +471,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/i18n.rs | 8 |
 | services/recurring.rs | 1 |
 | lib.rs | 4 |
-| **総計** | **230件** |
+| **総計** | **233件** |
 
 ---
 
