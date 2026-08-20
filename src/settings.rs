@@ -264,14 +264,14 @@ mod tests {
 
         {
             let mut manager = SettingsManager::with_path(path.clone()).unwrap();
-            manager.set("theme", "dark").unwrap();
+            manager.set("font_size", "medium").unwrap();
             manager.save().unwrap();
         } // manager is dropped here
 
         // Re-open the same settings file (simulates app restart)
         let manager2 = SettingsManager::with_path(path).unwrap();
-        let theme = manager2.get_string("theme").unwrap();
-        assert_eq!(theme, "dark");
+        let font_size = manager2.get_string("font_size").unwrap();
+        assert_eq!(font_size, "medium");
     }
 
     #[test]
@@ -346,14 +346,14 @@ mod tests {
         let (path, _temp) = make_test_path();
 
         let mut manager = SettingsManager::with_path(path.clone()).unwrap();
-        manager.set("theme", "dark").unwrap();
+        manager.set("language", "ja").unwrap();
         manager.set("font_size", "medium").unwrap();
         manager.save().unwrap();
 
         // Target exists and is valid JSON round-trippable through the manager.
         assert!(path.exists(), "target settings file should exist after save");
         let reloaded = SettingsManager::with_path(path.clone()).unwrap();
-        assert_eq!(reloaded.get_string("theme").unwrap(), "dark");
+        assert_eq!(reloaded.get_string("language").unwrap(), "ja");
         assert_eq!(reloaded.get_string("font_size").unwrap(), "medium");
 
         // Sibling `<file>.tmp` must have been renamed away — its presence
@@ -407,7 +407,7 @@ mod tests {
         // Seed a normal settings file with the manager first.
         {
             let mut manager = SettingsManager::with_path(path.clone()).unwrap();
-            manager.set("theme", "light").unwrap();
+            manager.set("font_size", "small").unwrap();
             manager.save().unwrap();
         }
 
@@ -422,11 +422,11 @@ mod tests {
         // Re-opening the manager must still succeed and read the real file,
         // not the corrupt tmp.
         let manager = SettingsManager::with_path(path.clone()).unwrap();
-        assert_eq!(manager.get_string("theme").unwrap(), "light");
+        assert_eq!(manager.get_string("font_size").unwrap(), "small");
 
         // The next save should overwrite the tmp cleanly.
         let mut manager = manager;
-        manager.set("theme", "dark").unwrap();
+        manager.set("font_size", "large").unwrap();
         manager.save().unwrap();
         assert!(!tmp_path.exists(), "next save must clean the tmp path via rename");
     }
