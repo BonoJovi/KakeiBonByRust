@@ -537,6 +537,19 @@ async function deleteRule(cascade) {
         await loadRules();
     } catch (err) {
         console.error('delete_recurring_rule failed:', err);
+
+        // Target rule was removed by another window (or a stale rule_id):
+        // surface the dedicated not_found message and refresh the list so
+        // the phantom row disappears — matches the Shop/Product/Manufacturer/
+        // Category master-audit contract (PR #75/#76/#77/#83).
+        if (String(err).includes('not found')) {
+            const notFoundMsg = i18n.t('recurring_rule.not_found') ||
+                'Recurring rule not found. The list has been reloaded.';
+            showResult('error', notFoundMsg);
+            await loadRules();
+            return;
+        }
+
         const prefix = i18n.t('recurring_rule.delete_failed') || 'Failed to delete rule:';
         showResult('error', `${prefix} ${err}`);
     }
