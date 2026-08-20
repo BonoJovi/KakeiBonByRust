@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2025-12-06 06:45 JST  
-**Total Tests**: 207
+**Total Tests**: 208
 
 ---
 
@@ -30,6 +30,7 @@ This document provides a complete index of all backend tests implemented in Rust
   - [services/aggregation.rs](#servicesaggregationrs)
   - [services/session.rs](#servicessessionrs)
   - [services/i18n.rs](#servicesi18nrs)
+  - [services/recurring.rs](#servicesrecurringrs)
   - [lib.rs](#librs)
 
 ---
@@ -383,6 +384,16 @@ Internationalization (i18n) service tests.
 
 **Total**: 8 tests
 
+### services/recurring.rs
+
+Recurring transaction rule service tests.
+
+| Test Function | Description | File | Line |
+|---------------|-------------|------|------|
+| `test_delete_rule_returns_not_found_for_missing` | Delete of a missing rule returns NotFound instead of empty-commit fake success (Fable-5 #8) | src/services/recurring.rs | 1783 |
+
+**Total**: 1 test
+
 ### lib.rs
 
 Settings value validation used by the `set_language` / `set_font_size` / `update_user_settings` commands.
@@ -405,7 +416,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **184** |
+| **Inline Tests** | **185** |
 | validation.rs | 23 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -422,8 +433,9 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/aggregation.rs | 2 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
+| services/recurring.rs | 1 |
 | lib.rs | 4 |
-| **Total** | **207** |
+| **Total** | **208** |
 
 ---
 
