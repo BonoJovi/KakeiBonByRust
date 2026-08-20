@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2025-12-06 06:45 JST  
-**Total Tests**: 241
+**Total Tests**: 242
 
 ---
 
@@ -257,8 +257,9 @@ Encryption service tests (field encryption, re-encryption).
 | `test_encrypt_decrypt_field` | Test field encryption/decryption | src/services/encryption.rs | 304 |
 | `test_re_encrypt_user_data` | Test user data re-encryption | src/services/encryption.rs | 326 |
 | `test_decrypt_with_wrong_password_fails` | Decryption fails with wrong password | src/services/encryption.rs | 380 |
+| `test_re_encrypt_user_data_preserves_per_row_plaintext` | Multi-row re-encryption keeps each row's own plaintext (Fable-5 #14) | src/services/encryption.rs | 473 |
 
-**Total**: 4 tests
+**Total**: 5 tests
 
 ### services/account.rs
 
@@ -459,7 +460,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **218** |
+| **Inline Tests** | **219** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -467,7 +468,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | settings.rs | 12 |
 | services/auth.rs | 13 |
 | services/user_management.rs | 13 |
-| services/encryption.rs | 4 |
+| services/encryption.rs | 5 |
 | services/account.rs | 3 |
 | services/category.rs | 18 |
 | services/manufacturer.rs | 7 |
@@ -479,7 +480,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/i18n.rs | 8 |
 | services/recurring.rs | 1 |
 | lib.rs | 4 |
-| **Total** | **241** |
+| **Total** | **242** |
 
 ---
 
