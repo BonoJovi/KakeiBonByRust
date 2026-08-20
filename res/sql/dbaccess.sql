@@ -1,4 +1,11 @@
 -- SQL_10000001: Create USERS table
+--
+-- ENCRYPTION_SALT: 16-byte cryptographically-random salt for the user's
+-- Argon2 encryption-key derivation (used by services::encryption). Stored
+-- per user so an attacker with a stolen DB cannot pre-compute a rainbow
+-- table shared across every install — see Fable-5 review #15.
+-- Column is BLOB and nullable so ALTER TABLE on legacy DBs succeeds;
+-- the migration path backfills every existing row with a fresh salt.
 CREATE TABLE IF NOT EXISTS USERS (
     USER_ID INTEGER NOT NULL,
     NAME VARCHAR(128) NOT NULL UNIQUE,
@@ -10,6 +17,7 @@ CREATE TABLE IF NOT EXISTS USERS (
     MONTH_PERIOD_HOLIDAY_SHIFT INTEGER DEFAULT 0,
     YEAR_PERIOD_START_MONTH INTEGER DEFAULT 1,
     YEAR_PERIOD_START_DAY INTEGER DEFAULT 1,
+    ENCRYPTION_SALT BLOB,
     ENTRY_DT DATETIME NOT NULL,
     UPDATE_DT DATETIME,
     PRIMARY KEY(USER_ID)

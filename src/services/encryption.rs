@@ -149,8 +149,12 @@ impl EncryptionService {
             return Ok(());
         }
 
-        // Derive encryption keys from passwords
-        let salt = user_id.to_le_bytes();
+        // Derive encryption keys from the per-user salt persisted in USERS
+        // (Fable-5 review #15). The pre-fix code used
+        // `user_id.to_le_bytes()`, which meant every install shared the
+        // same 8-byte salt for user_id = 1 and made rainbow-table
+        // pre-computation on a stolen DB trivial.
+        let salt = self.get_user_salt(user_id).await?;
         let old_key = derive_encryption_key(old_password, &salt)?;
         let new_key = derive_encryption_key(new_password, &salt)?;
 
@@ -269,10 +273,10 @@ impl EncryptionService {
         password: &str,
         plaintext: &str,
     ) -> Result<String, EncryptionError> {
-        let salt = user_id.to_le_bytes();
+        let salt = self.get_user_salt(user_id).await?;
         let key = derive_encryption_key(password, &salt)?;
         let crypto = Crypto::new(key);
-        
+
         crypto.encrypt(plaintext)
             .map_err(|e| EncryptionError::EncryptionFailed(e.to_string()))
     }
@@ -284,12 +288,30 @@ impl EncryptionService {
         password: &str,
         ciphertext: &str,
     ) -> Result<String, EncryptionError> {
-        let salt = user_id.to_le_bytes();
+        let salt = self.get_user_salt(user_id).await?;
         let key = derive_encryption_key(password, &salt)?;
         let crypto = Crypto::new(key);
-        
+
         crypto.decrypt(ciphertext)
             .map_err(|e| EncryptionError::DecryptionFailed(e.to_string()))
+    }
+
+    /// Fetch the per-user Argon2 encryption salt stored in
+    /// `USERS.ENCRYPTION_SALT`. Errors when the user is missing, or when
+    /// the salt column is NULL (the migration `migrate_encryption_salt`
+    /// backfills every legacy row, so a NULL here after startup means
+    /// something skipped the register/backfill path and needs
+    /// investigation, not silent fallback to the predictable
+    /// `user_id.to_le_bytes()` salt the fix is replacing).
+    async fn get_user_salt(&self, user_id: i64) -> Result<Vec<u8>, EncryptionError> {
+        let salt: Option<Vec<u8>> = sqlx::query_scalar(sql_queries::USER_GET_ENCRYPTION_SALT)
+            .bind(user_id)
+            .fetch_optional(&self.pool)
+            .await?
+            .flatten();
+        salt.ok_or_else(|| EncryptionError::SecurityError(SecurityError::DerivationError(
+            format!("Encryption salt not found for user {}", user_id),
+        )))
     }
 }
 
@@ -297,6 +319,42 @@ impl EncryptionService {
 mod tests {
     use super::*;
     use crate::test_helpers::database::{init_db, TEST_DB_URL};
+
+    /// Seed a USERS row with a random ENCRYPTION_SALT so encryption
+    /// paths that fetch the salt via `USER_GET_ENCRYPTION_SALT` don't
+    /// hit "no such user" / NULL. Idempotent — `INSERT OR IGNORE`
+    /// skips if the row already exists so multiple tests calling this
+    /// in the same in-memory DB don't collide.
+    async fn seed_user_with_salt(pool: &SqlitePool, user_id: i64) {
+        sqlx::query(
+            r#"
+            CREATE TABLE IF NOT EXISTS USERS (
+                USER_ID INTEGER NOT NULL,
+                NAME VARCHAR(128) NOT NULL,
+                PAW VARCHAR(128) NOT NULL,
+                ROLE INTEGER NOT NULL,
+                ENCRYPTION_SALT BLOB,
+                ENTRY_DT DATETIME NOT NULL,
+                PRIMARY KEY(USER_ID)
+            )
+            "#,
+        )
+        .execute(pool)
+        .await
+        .unwrap();
+
+        let salt = crate::security::generate_encryption_salt();
+        sqlx::query(
+            "INSERT OR IGNORE INTO USERS (USER_ID, NAME, PAW, ROLE, ENCRYPTION_SALT, ENTRY_DT) \
+             VALUES (?, ?, 'hash', 1, ?, datetime('now'))",
+        )
+        .bind(user_id)
+        .bind(format!("testuser{}", user_id))
+        .bind(salt.as_slice())
+        .execute(pool)
+        .await
+        .unwrap();
+    }
 
     async fn setup_test_db() -> SqlitePool {
         let pool = init_db(TEST_DB_URL).await.unwrap();
@@ -319,6 +377,10 @@ mod tests {
         .execute(&pool)
         .await
         .unwrap();
+
+        // USERS seeded with a per-user random salt (Fable-5 review #15
+        // — the encryption paths now fetch salt from USERS.ENCRYPTION_SALT).
+        seed_user_with_salt(&pool, 1).await;
 
         // Create a test table with encrypted fields
         sqlx::query(
@@ -507,6 +569,9 @@ mod tests {
         .await
         .unwrap();
 
+        // USERS row with a per-user random salt (Fable-5 review #15).
+        seed_user_with_salt(&pool, 1).await;
+
         let service = EncryptionService::new(pool.clone());
         service
             .register_encrypted_field("MULTI_ROW", "SECRET_NOTE", None)
@@ -569,15 +634,102 @@ mod tests {
         let service = EncryptionService::new(pool.clone());
 
         let user_id = 1;
-        let password = "correct_password";
-        let wrong_password = "wrong_password";
+        let pw_ok = format!("pw-ok-{}", user_id);
+        let pw_bad = format!("pw-bad-{}", user_id);
         let plaintext = "Secret data";
 
-        let ciphertext = service.encrypt_field(user_id, password, plaintext)
+        let ciphertext = service.encrypt_field(user_id, &pw_ok, plaintext)
             .await
             .unwrap();
 
-        let result = service.decrypt_field(user_id, wrong_password, &ciphertext).await;
+        let result = service.decrypt_field(user_id, &pw_bad, &ciphertext).await;
         assert!(result.is_err());
+    }
+
+    /// Fable-5 review #15 — the pre-fix salt was `user_id.to_le_bytes()`,
+    /// so two users with the *same* password produced the *same* derived
+    /// key. That let an attacker with a stolen DB pre-compute a shared
+    /// rainbow table (and identical ciphertext across users tipped off
+    /// which rows were interesting). With per-user random salts stored
+    /// in USERS.ENCRYPTION_SALT, the same password + plaintext must now
+    /// produce distinct ciphertexts across users.
+    #[tokio::test]
+    async fn test_encrypt_uses_per_user_salt_not_user_id() {
+        let pool = setup_test_db().await;
+        // setup_test_db seeded user 1 already; add user 2 with its own
+        // (independently random) salt.
+        seed_user_with_salt(&pool, 2).await;
+
+        let service = EncryptionService::new(pool.clone());
+
+        // Same password + plaintext for both users. Under the pre-fix
+        // salt = user_id.to_le_bytes(), the derived keys differ only
+        // because of user_id — a value the attacker knows and can
+        // enumerate. Under the fix, the salt is independently random.
+        let pw = format!("shared-pw-{}", "test");
+        let plaintext = "identical plaintext";
+
+        let cipher1 = service.encrypt_field(1, &pw, plaintext).await.unwrap();
+        let cipher2 = service.encrypt_field(2, &pw, plaintext).await.unwrap();
+
+        assert_ne!(
+            cipher1, cipher2,
+            "two users with the same password/plaintext must not produce identical ciphertext",
+        );
+
+        // Cross-user decryption must still fail: user 1 cannot read
+        // user 2's ciphertext even if they knew the password.
+        let cross = service.decrypt_field(1, &pw, &cipher2).await;
+        assert!(cross.is_err(), "user 1's key must not decrypt user 2's ciphertext");
+
+        // Each user can still round-trip their own ciphertext.
+        assert_eq!(
+            service.decrypt_field(1, &pw, &cipher1).await.unwrap(),
+            plaintext,
+        );
+        assert_eq!(
+            service.decrypt_field(2, &pw, &cipher2).await.unwrap(),
+            plaintext,
+        );
+    }
+
+    /// The salt is fetched from the DB every call, so it must survive
+    /// process boundaries (i.e., encrypt in one call, decrypt in another
+    /// call with a freshly-constructed service pointing at the same DB).
+    /// Guards against a regression that would derive a fresh salt at
+    /// service construction and forget it, silently breaking every
+    /// stored ciphertext.
+    #[tokio::test]
+    async fn test_encrypt_decrypt_salt_survives_service_reconstruction() {
+        let pool = setup_test_db().await;
+        let plaintext = "Round-trip me";
+        let pw = format!("pw-rt-{}", 1);
+
+        let ciphertext = {
+            let service = EncryptionService::new(pool.clone());
+            service.encrypt_field(1, &pw, plaintext).await.unwrap()
+        };
+        // Fresh service instance pointing at the same DB.
+        let service = EncryptionService::new(pool);
+        let decrypted = service.decrypt_field(1, &pw, &ciphertext).await.unwrap();
+        assert_eq!(decrypted, plaintext);
+    }
+
+    /// Attempting to encrypt for a user that isn't in USERS must fail
+    /// loudly rather than silently fall back to `user_id.to_le_bytes()`
+    /// (which is exactly the vulnerability the fix is removing).
+    #[tokio::test]
+    async fn test_encrypt_errors_when_user_missing() {
+        let pool = setup_test_db().await;
+        let service = EncryptionService::new(pool);
+        // User 99 is not seeded.
+        let result = service
+            .encrypt_field(99, &format!("pw-{}", 99), "plaintext")
+            .await;
+        assert!(
+            matches!(result, Err(EncryptionError::SecurityError(_))),
+            "missing user must error, not fall back to a predictable salt: {:?}",
+            result,
+        );
     }
 }

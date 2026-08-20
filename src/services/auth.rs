@@ -1,6 +1,6 @@
 use sqlx::sqlite::SqlitePool;
 use sqlx::Row;
-use crate::security::{hash_password, verify_password, SecurityError};
+use crate::security::{generate_encryption_salt, hash_password, verify_password, SecurityError};
 use crate::consts::{ROLE_ADMIN, ROLE_USER};
 use crate::sql_queries;
 use crate::services::category;
@@ -102,23 +102,29 @@ impl AuthService {
     /// * `Err(AuthError)` - Database or security error
     pub async fn register_admin_user(&self, username: &str, password: &str) -> Result<(), AuthError> {
         let now = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
-        
+
         // Hash password using Argon2
         let password_hash = hash_password(password)?;
-        
+
+        // Per-user salt for the Argon2 encryption-key derivation
+        // (services::encryption). Fable-5 review #15 — see the SQL
+        // schema comment for the full rationale.
+        let encryption_salt = generate_encryption_salt();
+
         // Get next user ID (auto-increment)
         let next_id: i64 = sqlx::query_scalar(sql_queries::AUTH_GET_NEXT_USER_ID)
             .fetch_one(&self.pool)
             .await?;
-        
+
         // Start transaction
         let mut tx = self.pool.begin().await?;
-        
+
         sqlx::query(sql_queries::AUTH_INSERT_USER)
             .bind(next_id)  // Use auto-incremented ID instead of hardcoded 1
             .bind(username)
             .bind(password_hash)
             .bind(ROLE_ADMIN)
+            .bind(encryption_salt.as_slice())
             .bind(now)
             .execute(&mut *tx)
             .await?;
@@ -153,25 +159,29 @@ impl AuthService {
     /// * `Err(AuthError)` - Database or security error
     pub async fn register_user(&self, username: &str, password: &str) -> Result<(), AuthError> {
         let now = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
-        
+
         // Hash password using Argon2
         let password_hash = hash_password(password)?;
-        
+
+        // Per-user Argon2 encryption salt (Fable-5 review #15).
+        let encryption_salt = generate_encryption_salt();
+
         // Get next user ID
         let result = sqlx::query(sql_queries::AUTH_GET_NEXT_USER_ID)
             .fetch_one(&self.pool)
             .await?;
-        
+
         let next_id: i64 = result.get(0);
-        
+
         // Start transaction
         let mut tx = self.pool.begin().await?;
-        
+
         sqlx::query(sql_queries::AUTH_INSERT_USER)
             .bind(next_id)
             .bind(username)
             .bind(password_hash)
             .bind(ROLE_USER)
+            .bind(encryption_salt.as_slice())
             .bind(now)
             .execute(&mut *tx)
             .await?;

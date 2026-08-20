@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2025-12-06 06:24 JST  
-**総テスト数**: 242件
+**総テスト数**: 245件
 
 ---
 
@@ -258,8 +258,11 @@ AES-256-GCM暗号化・復号化のテスト。
 | `test_re_encrypt_user_data` | ユーザーデータの再暗号化テスト | src/services/encryption.rs | 326 |
 | `test_decrypt_with_wrong_password_fails` | 間違ったパスワードでの復号化失敗 | src/services/encryption.rs | 380 |
 | `test_re_encrypt_user_data_preserves_per_row_plaintext` | 複数行の再暗号化で各行の平文が保持される (Fable-5 #14) | src/services/encryption.rs | 473 |
+| `test_encrypt_uses_per_user_salt_not_user_id` | 同じ password/plaintext でもユーザーごとに ciphertext が異なる (Fable-5 #15) | src/services/encryption.rs | 657 |
+| `test_encrypt_decrypt_salt_survives_service_reconstruction` | salt を DB から再取得するため、新しい service インスタンスで round-trip が成立 (Fable-5 #15) | src/services/encryption.rs | 703 |
+| `test_encrypt_errors_when_user_missing` | USERS 行が無い場合は user_id 由来 salt に fallback せずエラー (Fable-5 #15) | src/services/encryption.rs | 722 |
 
-**合計**: 5件
+**合計**: 8件
 
 ### services/account.rs
 
@@ -460,7 +463,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **219件** |
+| **インラインテスト** | **222件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -468,7 +471,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | settings.rs | 12 |
 | services/auth.rs | 13 |
 | services/user_management.rs | 13 |
-| services/encryption.rs | 5 |
+| services/encryption.rs | 8 |
 | services/account.rs | 3 |
 | services/category.rs | 18 |
 | services/manufacturer.rs | 7 |
@@ -480,7 +483,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/i18n.rs | 8 |
 | services/recurring.rs | 1 |
 | lib.rs | 4 |
-| **総計** | **242件** |
+| **総計** | **245件** |
 
 ---
 
