@@ -159,6 +159,17 @@ ORDER BY LANG_CODE
 
 pub const CATEGORY_COUNT_BY_USER: &str = "SELECT COUNT(*) FROM CATEGORY1 WHERE USER_ID = ?";
 
+// PR4 (Fable-5 #24): category.rs count queries used for either a
+// "already populated?" guard or as the incremental suffix for the next
+// CATEGORY{2,3}_CODE (`C2_{USER}_{CAT1}_{count+1}`).
+pub const CATEGORY2_COUNT_BY_USER: &str = "SELECT COUNT(*) FROM CATEGORY2 WHERE USER_ID = ?";
+
+pub const CATEGORY2_COUNT_BY_USER_AND_CATEGORY1: &str =
+    "SELECT COUNT(*) FROM CATEGORY2 WHERE USER_ID = ? AND CATEGORY1_CODE = ?";
+
+pub const CATEGORY3_COUNT_BY_USER_AND_CATEGORY2: &str =
+    "SELECT COUNT(*) FROM CATEGORY3 WHERE USER_ID = ? AND CATEGORY1_CODE = ? AND CATEGORY2_CODE = ?";
+
 pub const CATEGORY1_LIST: &str = r#"
 SELECT 
     c.USER_ID,
@@ -527,6 +538,80 @@ pub const ACCOUNT_GET_NEXT_DISPLAY_ORDER: &str = r#"
 SELECT COALESCE(MAX(DISPLAY_ORDER), 0) + 1 as next_order
 FROM ACCOUNTS
 WHERE USER_ID = ?
+"#;
+
+// PR4: extracted from account.rs to satisfy the "all queries live in
+// sql_queries.rs" project rule (Fable-5 #24).
+// PR4 (Fable-5 #24): holiday.rs inline SQL moved out.
+pub const HOLIDAY_GET_USER_LOCALE: &str = r#"
+SELECT COALESCE(HOLIDAY_LOCALE, 'JP') FROM USERS WHERE USER_ID = ?
+"#;
+
+pub const HOLIDAY_LIST_STANDARD_IN_RANGE: &str = r#"
+SELECT HOLIDAY_DATE FROM HOLIDAYS_STANDARD
+WHERE LOCALE = ? AND HOLIDAY_DATE BETWEEN ? AND ?
+"#;
+
+pub const HOLIDAY_LIST_USER_CUSTOM_IN_RANGE: &str = r#"
+SELECT HOLIDAY_DATE FROM HOLIDAYS_USER_CUSTOM
+WHERE USER_ID = ? AND HOLIDAY_DATE BETWEEN ? AND ?
+"#;
+
+pub const ACCOUNT_TEMPLATE_GET_NONE: &str = r#"
+SELECT TEMPLATE_ID, TEMPLATE_CODE, TEMPLATE_NAME_JA, TEMPLATE_NAME_EN, DISPLAY_ORDER, ENTRY_DT
+FROM ACCOUNT_TEMPLATES
+WHERE TEMPLATE_CODE = 'NONE'
+"#;
+
+pub const ACCOUNT_LIST_ALL: &str = r#"
+SELECT ACCOUNT_ID, USER_ID, ACCOUNT_CODE, ACCOUNT_NAME, TEMPLATE_CODE,
+       INITIAL_BALANCE, DISPLAY_ORDER, IS_DISABLED, ENTRY_DT, UPDATE_DT
+FROM ACCOUNTS
+ORDER BY USER_ID, DISPLAY_ORDER
+"#;
+
+/// Running balance of every active account for `user_id`, counted up to and
+/// including `?` (as_of_date, `YYYY-MM-DD`). Applies actualised
+/// transactions only (`IS_SCHEDULED = 0`):
+///   + INCOME  with TO_ACCOUNT   = a.ACCOUNT_CODE
+///   - EXPENSE with FROM_ACCOUNT = a.ACCOUNT_CODE
+///   + TRANSFER with TO_ACCOUNT  = a.ACCOUNT_CODE
+///   - TRANSFER with FROM_ACCOUNT = a.ACCOUNT_CODE
+///
+/// The single-pass CASE keeps a transfer visible to both source and
+/// destination accounts with sign flipped per side. Bindings: (as_of_date,
+/// user_id).
+pub const ACCOUNT_BALANCES_AS_OF: &str = r#"
+SELECT
+    a.ACCOUNT_CODE,
+    a.ACCOUNT_NAME,
+    a.INITIAL_BALANCE
+        + COALESCE(SUM(CASE
+            WHEN th.CATEGORY1_CODE = 'INCOME'
+                 AND th.TO_ACCOUNT_CODE = a.ACCOUNT_CODE
+                THEN th.TOTAL_AMOUNT
+            WHEN th.CATEGORY1_CODE = 'EXPENSE'
+                 AND th.FROM_ACCOUNT_CODE = a.ACCOUNT_CODE
+                THEN -th.TOTAL_AMOUNT
+            WHEN th.CATEGORY1_CODE = 'TRANSFER'
+                 AND th.TO_ACCOUNT_CODE = a.ACCOUNT_CODE
+                THEN th.TOTAL_AMOUNT
+            WHEN th.CATEGORY1_CODE = 'TRANSFER'
+                 AND th.FROM_ACCOUNT_CODE = a.ACCOUNT_CODE
+                THEN -th.TOTAL_AMOUNT
+            ELSE 0
+        END), 0) AS BALANCE,
+    a.DISPLAY_ORDER
+FROM ACCOUNTS a
+LEFT JOIN TRANSACTIONS_HEADER th
+    ON th.USER_ID = a.USER_ID
+   AND th.IS_SCHEDULED = 0
+   AND DATE(th.TRANSACTION_DATE) <= DATE(?)
+   AND ( th.FROM_ACCOUNT_CODE = a.ACCOUNT_CODE
+      OR th.TO_ACCOUNT_CODE   = a.ACCOUNT_CODE )
+WHERE a.USER_ID = ? AND a.IS_DISABLED = 0
+GROUP BY a.ACCOUNT_CODE, a.ACCOUNT_NAME, a.INITIAL_BALANCE, a.DISPLAY_ORDER
+ORDER BY a.DISPLAY_ORDER
 "#;
 
 // ============================================================================

@@ -71,34 +71,19 @@ pub struct UpdateAccountRequest {
 
 /// Get all account templates
 pub async fn get_account_templates(pool: &SqlitePool) -> Result<Vec<AccountTemplate>, ApiError> {
-    let templates = sqlx::query_as::<_, AccountTemplate>(
-        r#"
-        SELECT TEMPLATE_ID, TEMPLATE_CODE, TEMPLATE_NAME_JA, TEMPLATE_NAME_EN,
-               DISPLAY_ORDER, ENTRY_DT
-        FROM ACCOUNT_TEMPLATES
-        ORDER BY DISPLAY_ORDER
-        "#
-    )
-    .fetch_all(pool)
-    .await?;
+    let templates = sqlx::query_as::<_, AccountTemplate>(sql_queries::ACCOUNT_TEMPLATE_LIST)
+        .fetch_all(pool)
+        .await?;
 
     Ok(templates)
 }
 
 /// Get all accounts for a user
 pub async fn get_accounts(pool: &SqlitePool, user_id: i64) -> Result<Vec<Account>, ApiError> {
-    let accounts = sqlx::query_as::<_, Account>(
-        r#"
-        SELECT ACCOUNT_ID, USER_ID, ACCOUNT_CODE, ACCOUNT_NAME, TEMPLATE_CODE,
-               INITIAL_BALANCE, DISPLAY_ORDER, IS_DISABLED, ENTRY_DT, UPDATE_DT
-        FROM ACCOUNTS
-        WHERE USER_ID = ? AND IS_DISABLED = 0
-        ORDER BY DISPLAY_ORDER, ACCOUNT_CODE
-        "#
-    )
-    .bind(user_id)
-    .fetch_all(pool)
-    .await?;
+    let accounts = sqlx::query_as::<_, Account>(sql_queries::ACCOUNT_LIST_BY_USER)
+        .bind(user_id)
+        .fetch_all(pool)
+        .await?;
 
     Ok(accounts)
 }
@@ -121,82 +106,38 @@ pub async fn get_account_balances_as_of(
     user_id: i64,
     as_of_date: &str,
 ) -> Result<Vec<AccountBalance>, ApiError> {
-    let balances = sqlx::query_as::<_, AccountBalance>(
-        r#"
-        SELECT
-            a.ACCOUNT_CODE,
-            a.ACCOUNT_NAME,
-            a.INITIAL_BALANCE
-                + COALESCE(SUM(CASE
-                    WHEN th.CATEGORY1_CODE = 'INCOME'
-                         AND th.TO_ACCOUNT_CODE = a.ACCOUNT_CODE
-                        THEN th.TOTAL_AMOUNT
-                    WHEN th.CATEGORY1_CODE = 'EXPENSE'
-                         AND th.FROM_ACCOUNT_CODE = a.ACCOUNT_CODE
-                        THEN -th.TOTAL_AMOUNT
-                    WHEN th.CATEGORY1_CODE = 'TRANSFER'
-                         AND th.TO_ACCOUNT_CODE = a.ACCOUNT_CODE
-                        THEN th.TOTAL_AMOUNT
-                    WHEN th.CATEGORY1_CODE = 'TRANSFER'
-                         AND th.FROM_ACCOUNT_CODE = a.ACCOUNT_CODE
-                        THEN -th.TOTAL_AMOUNT
-                    ELSE 0
-                END), 0) AS BALANCE,
-            a.DISPLAY_ORDER
-        FROM ACCOUNTS a
-        LEFT JOIN TRANSACTIONS_HEADER th
-            ON th.USER_ID = a.USER_ID
-           AND th.IS_SCHEDULED = 0
-           AND DATE(th.TRANSACTION_DATE) <= DATE(?)
-           AND ( th.FROM_ACCOUNT_CODE = a.ACCOUNT_CODE
-              OR th.TO_ACCOUNT_CODE   = a.ACCOUNT_CODE )
-        WHERE a.USER_ID = ? AND a.IS_DISABLED = 0
-        GROUP BY a.ACCOUNT_CODE, a.ACCOUNT_NAME, a.INITIAL_BALANCE, a.DISPLAY_ORDER
-        ORDER BY a.DISPLAY_ORDER
-        "#,
-    )
-    .bind(as_of_date)
-    .bind(user_id)
-    .fetch_all(pool)
-    .await?;
+    let balances = sqlx::query_as::<_, AccountBalance>(sql_queries::ACCOUNT_BALANCES_AS_OF)
+        .bind(as_of_date)
+        .bind(user_id)
+        .fetch_all(pool)
+        .await?;
 
     Ok(balances)
 }
 
 /// Get all accounts (for admin users)
 pub async fn get_all_accounts(pool: &SqlitePool) -> Result<Vec<Account>, ApiError> {
-    let accounts = sqlx::query_as::<_, Account>(
-        r#"
-        SELECT ACCOUNT_ID, USER_ID, ACCOUNT_CODE, ACCOUNT_NAME, TEMPLATE_CODE,
-               INITIAL_BALANCE, DISPLAY_ORDER, IS_DISABLED, ENTRY_DT, UPDATE_DT
-        FROM ACCOUNTS
-        ORDER BY USER_ID, DISPLAY_ORDER
-        "#
-    )
-    .fetch_all(pool)
-    .await?;
+    let accounts = sqlx::query_as::<_, Account>(sql_queries::ACCOUNT_LIST_ALL)
+        .fetch_all(pool)
+        .await?;
 
     Ok(accounts)
 }
 
-/// Get a single account by code
+/// Get a single account by code. Kept for module tests only after the
+/// PR3/PR4 Fable-5 #26 refactor removed the delete/update pre-checks;
+/// still useful as a post-write "did the row actually land" probe.
+#[allow(dead_code)]
 pub async fn get_account_by_code(
     pool: &SqlitePool,
     user_id: i64,
     account_code: &str,
 ) -> Result<Option<Account>, ApiError> {
-    let account = sqlx::query_as::<_, Account>(
-        r#"
-        SELECT ACCOUNT_ID, USER_ID, ACCOUNT_CODE, ACCOUNT_NAME, TEMPLATE_CODE,
-               INITIAL_BALANCE, DISPLAY_ORDER, IS_DISABLED, ENTRY_DT, UPDATE_DT
-        FROM ACCOUNTS
-        WHERE USER_ID = ? AND ACCOUNT_CODE = ?
-        "#
-    )
-    .bind(user_id)
-    .bind(account_code)
-    .fetch_optional(pool)
-    .await?;
+    let account = sqlx::query_as::<_, Account>(sql_queries::ACCOUNT_GET_BY_CODE)
+        .bind(user_id)
+        .bind(account_code)
+        .fetch_optional(pool)
+        .await?;
 
     Ok(account)
 }
@@ -282,13 +223,13 @@ pub async fn update_account(
     validation::validate_master_name(NAME_LABEL, &request.account_name)
         .map_err(ApiError::validation)?;
 
-    // Check if account exists
-    get_account_by_code(pool, user_id, &request.account_code)
-        .await?
-        .ok_or_else(|| ApiError::not_found(ENTITY_LABEL))?;
-
-    // Update account
-    sqlx::query(sql_queries::ACCOUNT_UPDATE)
+    // Pre-check `get_account_by_code().ok_or(NotFound)?` was removed here
+    // (Fable-5 review #26): rows_affected from the UPDATE tells us the
+    // same thing in one round-trip instead of two, and it closes the
+    // TOCTOU window where the row could vanish between the pre-check
+    // and the update. shop/manufacturer/product got the same treatment
+    // in PR3 via master_data::ensure_update_affected_one.
+    let affected = sqlx::query(sql_queries::ACCOUNT_UPDATE)
         .bind(&request.account_name)
         .bind(&request.template_code)
         .bind(request.initial_balance)
@@ -296,7 +237,11 @@ pub async fn update_account(
         .bind(user_id)
         .bind(&request.account_code)
         .execute(pool)
-        .await?;
+        .await?
+        .rows_affected();
+    if affected == 0 {
+        return Err(ApiError::not_found(ENTITY_LABEL));
+    }
 
     Ok("Account updated successfully".to_string())
 }
@@ -310,17 +255,19 @@ pub async fn delete_account(
     // Normalize account code to uppercase
     let account_code = normalize_account_code(account_code);
 
-    // Check if account exists
-    get_account_by_code(pool, user_id, &account_code)
-        .await?
-        .ok_or_else(|| ApiError::not_found(ENTITY_LABEL))?;
-
-    // Logical delete
-    sqlx::query(sql_queries::ACCOUNT_DELETE_LOGICAL)
+    // Same rows_affected treatment as delete_shop / delete_manufacturer /
+    // delete_product (PR3, Fable-5 #26): a single logical-delete UPDATE
+    // that maps 0-rows → NotFound eliminates the earlier pre-check +
+    // execute pair and its TOCTOU window.
+    let affected = sqlx::query(sql_queries::ACCOUNT_DELETE_LOGICAL)
         .bind(user_id)
         .bind(&account_code)
         .execute(pool)
-        .await?;
+        .await?
+        .rows_affected();
+    if affected == 0 {
+        return Err(ApiError::not_found(ENTITY_LABEL));
+    }
 
     Ok("Account deleted successfully".to_string())
 }
@@ -333,12 +280,10 @@ pub async fn delete_account(
 /// message here.
 pub async fn initialize_none_account(pool: &SqlitePool, user_id: i64) -> Result<(), String> {
     // Get NONE template
-    let none_template = sqlx::query_as::<_, AccountTemplate>(
-        "SELECT * FROM ACCOUNT_TEMPLATES WHERE TEMPLATE_CODE = 'NONE'"
-    )
-    .fetch_one(pool)
-    .await
-    .map_err(|e| format!("Failed to get NONE template: {}", e))?;
+    let none_template = sqlx::query_as::<_, AccountTemplate>(sql_queries::ACCOUNT_TEMPLATE_GET_NONE)
+        .fetch_one(pool)
+        .await
+        .map_err(|e| format!("Failed to get NONE template: {}", e))?;
 
     // Create NONE account
     let request = AddAccountRequest {

@@ -77,7 +77,7 @@ impl CategoryService {
     /// This will be called when a general user is registered
     pub async fn populate_default_categories(&self, user_id: i64) -> Result<(), CategoryError> {
         // Check if categories already exist for this user (check CATEGORY2, not CATEGORY1)
-        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM CATEGORY2 WHERE USER_ID = ?")
+        let count: i64 = sqlx::query_scalar(sql_queries::CATEGORY2_COUNT_BY_USER)
             .bind(user_id)
             .fetch_one(&self.pool)
             .await?;
@@ -429,13 +429,11 @@ impl CategoryService {
         }
         
         // Generate new category2_code
-        let count: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM CATEGORY2 WHERE USER_ID = ? AND CATEGORY1_CODE = ?"
-        )
-        .bind(user_id)
-        .bind(category1_code)
-        .fetch_one(&self.pool)
-        .await?;
+        let count: i64 = sqlx::query_scalar(sql_queries::CATEGORY2_COUNT_BY_USER_AND_CATEGORY1)
+            .bind(user_id)
+            .bind(category1_code)
+            .fetch_one(&self.pool)
+            .await?;
         
         let category2_code = format!("C2_{}_{}", 
             &category1_code[0..1], 
@@ -552,14 +550,12 @@ impl CategoryService {
         }
         
         // Generate new category3_code
-        let count: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM CATEGORY3 WHERE USER_ID = ? AND CATEGORY1_CODE = ? AND CATEGORY2_CODE = ?"
-        )
-        .bind(user_id)
-        .bind(category1_code)
-        .bind(category2_code)
-        .fetch_one(&self.pool)
-        .await?;
+        let count: i64 = sqlx::query_scalar(sql_queries::CATEGORY3_COUNT_BY_USER_AND_CATEGORY2)
+            .bind(user_id)
+            .bind(category1_code)
+            .bind(category2_code)
+            .fetch_one(&self.pool)
+            .await?;
         
         let category3_code = format!("C3_{}_{}_{}", 
             &category1_code[0..1],

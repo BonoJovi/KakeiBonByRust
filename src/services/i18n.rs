@@ -1,6 +1,7 @@
 use sqlx::sqlite::SqlitePool;
 use std::collections::HashMap;
 use crate::consts::LANG_DEFAULT;
+use crate::sql_queries;
 
 #[derive(Debug)]
 pub enum I18nError {
@@ -36,26 +37,22 @@ impl I18nService {
     
     /// Get a resource value by key and language code
     pub async fn get(&self, key: &str, lang_code: &str) -> Result<String, I18nError> {
-        let result = sqlx::query_scalar::<_, String>(
-            "SELECT RESOURCE_VALUE FROM I18N_RESOURCES WHERE RESOURCE_KEY = ? AND LANG_CODE = ?"
-        )
-        .bind(key)
-        .bind(lang_code)
-        .fetch_optional(&self.pool)
-        .await?;
-        
+        let result = sqlx::query_scalar::<_, String>(sql_queries::I18N_GET_RESOURCE)
+            .bind(key)
+            .bind(lang_code)
+            .fetch_optional(&self.pool)
+            .await?;
+
         match result {
             Some(value) => Ok(value),
             None => {
                 // Fallback to default language
-                let fallback = sqlx::query_scalar::<_, String>(
-                    "SELECT RESOURCE_VALUE FROM I18N_RESOURCES WHERE RESOURCE_KEY = ? AND LANG_CODE = ?"
-                )
-                .bind(key)
-                .bind(LANG_DEFAULT)
-                .fetch_optional(&self.pool)
-                .await?;
-                
+                let fallback = sqlx::query_scalar::<_, String>(sql_queries::I18N_GET_RESOURCE)
+                    .bind(key)
+                    .bind(LANG_DEFAULT)
+                    .fetch_optional(&self.pool)
+                    .await?;
+
                 fallback.ok_or_else(|| I18nError::ResourceNotFound(key.to_string()))
             }
         }
@@ -77,37 +74,31 @@ impl I18nService {
     
     /// Get all resources for a specific language
     pub async fn get_all(&self, lang_code: &str) -> Result<HashMap<String, String>, I18nError> {
-        let rows = sqlx::query_as::<_, (String, String)>(
-            "SELECT RESOURCE_KEY, RESOURCE_VALUE FROM I18N_RESOURCES WHERE LANG_CODE = ?"
-        )
-        .bind(lang_code)
-        .fetch_all(&self.pool)
-        .await?;
-        
+        let rows = sqlx::query_as::<_, (String, String)>(sql_queries::I18N_GET_ALL)
+            .bind(lang_code)
+            .fetch_all(&self.pool)
+            .await?;
+
         Ok(rows.into_iter().collect())
     }
-    
+
     /// Get resources by category
     pub async fn get_by_category(&self, lang_code: &str, category: &str) -> Result<HashMap<String, String>, I18nError> {
-        let rows = sqlx::query_as::<_, (String, String)>(
-            "SELECT RESOURCE_KEY, RESOURCE_VALUE FROM I18N_RESOURCES WHERE LANG_CODE = ? AND CATEGORY = ?"
-        )
-        .bind(lang_code)
-        .bind(category)
-        .fetch_all(&self.pool)
-        .await?;
-        
+        let rows = sqlx::query_as::<_, (String, String)>(sql_queries::I18N_GET_BY_CATEGORY)
+            .bind(lang_code)
+            .bind(category)
+            .fetch_all(&self.pool)
+            .await?;
+
         Ok(rows.into_iter().collect())
     }
-    
+
     /// Get list of available languages
     pub async fn get_available_languages(&self) -> Result<Vec<String>, I18nError> {
-        let rows = sqlx::query_scalar::<_, String>(
-            "SELECT DISTINCT LANG_CODE FROM I18N_RESOURCES ORDER BY LANG_CODE"
-        )
-        .fetch_all(&self.pool)
-        .await?;
-        
+        let rows = sqlx::query_scalar::<_, String>(sql_queries::I18N_GET_AVAILABLE_LANGUAGES)
+            .fetch_all(&self.pool)
+            .await?;
+
         Ok(rows)
     }
 }
