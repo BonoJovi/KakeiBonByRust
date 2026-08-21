@@ -5,6 +5,7 @@ mod security;
 mod crypto;
 mod settings;
 mod sql_queries;
+mod api_error;
 mod services {
     pub mod auth;
     pub mod user_management;
@@ -1675,8 +1676,8 @@ async fn delete_account(
 #[tauri::command]
 async fn get_shops(
     state: tauri::State<'_, AppState>
-) -> Result<Vec<services::shop::Shop>, String> {
-    let user_id = get_session_user_id(&state)?;
+) -> Result<Vec<services::shop::Shop>, api_error::ApiError> {
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
     let db = state.db.lock().await;
     services::shop::get_shops(db.pool(), user_id).await
 }
@@ -1686,8 +1687,8 @@ async fn add_shop(
     shop_name: String,
     memo: Option<String>,
     state: tauri::State<'_, AppState>
-) -> Result<String, String> {
-    let user_id = get_session_user_id(&state)?;
+) -> Result<String, api_error::ApiError> {
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
     let db = state.db.lock().await;
 
     let request = services::shop::AddShopRequest {
@@ -1705,8 +1706,8 @@ async fn update_shop(
     memo: Option<String>,
     display_order: i64,
     state: tauri::State<'_, AppState>
-) -> Result<String, String> {
-    let user_id = get_session_user_id(&state)?;
+) -> Result<String, api_error::ApiError> {
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
     let db = state.db.lock().await;
 
     let request = services::shop::UpdateShopRequest {
@@ -1722,8 +1723,8 @@ async fn update_shop(
 async fn delete_shop(
     shop_id: i64,
     state: tauri::State<'_, AppState>
-) -> Result<String, String> {
-    let user_id = get_session_user_id(&state)?;
+) -> Result<String, api_error::ApiError> {
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
     let db = state.db.lock().await;
     services::shop::delete_shop(db.pool(), user_id, shop_id).await
 }
@@ -1736,8 +1737,8 @@ async fn delete_shop(
 async fn get_manufacturers(
     include_disabled: bool,
     state: tauri::State<'_, AppState>
-) -> Result<Vec<services::manufacturer::Manufacturer>, String> {
-    let user_id = get_session_user_id(&state)?;
+) -> Result<Vec<services::manufacturer::Manufacturer>, api_error::ApiError> {
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
     let db = state.db.lock().await;
     services::manufacturer::get_manufacturers(db.pool(), user_id, include_disabled).await
 }
@@ -1748,8 +1749,8 @@ async fn add_manufacturer(
     memo: Option<String>,
     is_disabled: Option<i64>,
     state: tauri::State<'_, AppState>
-) -> Result<String, String> {
-    let user_id = get_session_user_id(&state)?;
+) -> Result<String, api_error::ApiError> {
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
     let db = state.db.lock().await;
 
     let request = services::manufacturer::AddManufacturerRequest {
@@ -1769,8 +1770,8 @@ async fn update_manufacturer(
     display_order: i64,
     is_disabled: i64,
     state: tauri::State<'_, AppState>
-) -> Result<String, String> {
-    let user_id = get_session_user_id(&state)?;
+) -> Result<String, api_error::ApiError> {
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
     let db = state.db.lock().await;
 
     let request = services::manufacturer::UpdateManufacturerRequest {
@@ -1787,8 +1788,8 @@ async fn update_manufacturer(
 async fn delete_manufacturer(
     manufacturer_id: i64,
     state: tauri::State<'_, AppState>
-) -> Result<String, String> {
-    let user_id = get_session_user_id(&state)?;
+) -> Result<String, api_error::ApiError> {
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
     let db = state.db.lock().await;
     services::manufacturer::delete_manufacturer(db.pool(), user_id, manufacturer_id).await
 }
@@ -1801,8 +1802,8 @@ async fn delete_manufacturer(
 async fn get_products(
     include_disabled: bool,
     state: tauri::State<'_, AppState>
-) -> Result<Vec<services::product::Product>, String> {
-    let user_id = get_session_user_id(&state)?;
+) -> Result<Vec<services::product::Product>, api_error::ApiError> {
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
     let db = state.db.lock().await;
     services::product::get_products(db.pool(), user_id, include_disabled).await
 }
@@ -1814,8 +1815,8 @@ async fn add_product(
     memo: Option<String>,
     is_disabled: Option<i64>,
     state: tauri::State<'_, AppState>
-) -> Result<String, String> {
-    let user_id = get_session_user_id(&state)?;
+) -> Result<String, api_error::ApiError> {
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
     let db = state.db.lock().await;
 
     let request = services::product::AddProductRequest {
@@ -1837,8 +1838,8 @@ async fn update_product(
     display_order: i64,
     is_disabled: i64,
     state: tauri::State<'_, AppState>
-) -> Result<String, String> {
-    let user_id = get_session_user_id(&state)?;
+) -> Result<String, api_error::ApiError> {
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
     let db = state.db.lock().await;
 
     let request = services::product::UpdateProductRequest {
@@ -1856,8 +1857,8 @@ async fn update_product(
 async fn delete_product(
     product_id: i64,
     state: tauri::State<'_, AppState>
-) -> Result<String, String> {
-    let user_id = get_session_user_id(&state)?;
+) -> Result<String, api_error::ApiError> {
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
     let db = state.db.lock().await;
     services::product::delete_product(db.pool(), user_id, product_id).await
 }
@@ -1866,8 +1867,8 @@ async fn delete_product(
 async fn search_products_by_name(
     query: String,
     state: tauri::State<'_, AppState>
-) -> Result<Vec<services::product::Product>, String> {
-    let user_id = get_session_user_id(&state)?;
+) -> Result<Vec<services::product::Product>, api_error::ApiError> {
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
     let db = state.db.lock().await;
     services::product::search_products_by_name(db.pool(), user_id, &query).await
 }

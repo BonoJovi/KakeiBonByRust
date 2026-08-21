@@ -2,8 +2,8 @@
 
 This document provides a complete index of all backend tests implemented in Rust.
 
-**Last Updated**: 2025-12-06 06:45 JST  
-**Total Tests**: 245
+**Last Updated**: 2026-08-21 JST  
+**Total Tests**: 256 (delta-tracked; the full authoritative count from `cargo test --lib` is 501, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -19,6 +19,7 @@ This document provides a complete index of all backend tests implemented in Rust
   - [crypto.rs](#cryptors)
   - [db.rs](#dbrs)
   - [settings.rs](#settingsrs)
+  - [api_error.rs](#api_errorrs)
   - [services/auth.rs](#servicesauthrs)
   - [services/user_management.rs](#servicesuser_managementrs)
   - [services/encryption.rs](#servicesencryptionrs)
@@ -203,6 +204,22 @@ Settings management functionality tests.
 
 **Total**: 12 tests
 
+### api_error.rs
+
+`ApiError` — structured error type serialised into `{ code, message, entity? }` for the Tauri master-CRUD command wrappers. Introduced by Fable-5 review #23/#D4 so the frontend classifier can key off `err.code` instead of substring-matching English messages.
+
+| Test Function | Description | File | Line |
+|---------------|-------------|------|------|
+| `duplicate_name_carries_lowercased_entity_and_stable_code` | `ApiError::duplicate_name("Shop")` → `code="duplicate_name"`, `entity="shop"` | src/api_error.rs | 128 |
+| `not_found_carries_lowercased_entity_and_stable_code` | `ApiError::not_found("Manufacturer")` → `code="not_found"`, `entity="manufacturer"` | src/api_error.rs | 136 |
+| `manufacturer_not_found_has_its_own_code` | `ApiError::manufacturer_not_found()` → `code="manufacturer_not_found"` (distinct from generic `not_found`) | src/api_error.rs | 143 |
+| `validation_carries_message_through_and_omits_entity` | `ApiError::validation(msg)` → `code="validation"`, message passed through, no entity | src/api_error.rs | 150 |
+| `database_from_sqlx_row_not_found` | `sqlx::Error → ApiError::database` via `From<sqlx::Error>` | src/api_error.rs | 158 |
+| `serialises_with_snake_case_code_and_optional_entity` | Serialised JSON has snake_case `code` and populated `entity` field | src/api_error.rs | 165 |
+| `serialises_without_entity_key_when_none` | Serialised JSON omits `entity` when None (via `skip_serializing_if`) | src/api_error.rs | 174 |
+
+**Total**: 7 tests
+
 ### services/auth.rs
 
 Authentication service tests (user registration, login).
@@ -305,19 +322,21 @@ Category management service tests (3-tier category CRUD).
 
 ### services/manufacturer.rs
 
-Manufacturer management service tests.
+Manufacturer management service tests. Empty/duplicate assertion tests renamed to `_returns_validation_code` / `_returns_duplicate_name_code` when migrated to `ApiError` (Fable-5 #23) — behaviour unchanged, only assertion targets.
 
 | Test Function | Description | File | Line |
 |---------------|-------------|------|------|
 | `test_add_manufacturer` | Test manufacturer addition | src/services/manufacturer.rs | 243 |
 | `test_update_manufacturer` | Test manufacturer update | src/services/manufacturer.rs | 261 |
 | `test_delete_manufacturer` | Test manufacturer deletion | src/services/manufacturer.rs | 292 |
-| `test_empty_manufacturer_name` | Empty manufacturer name error | src/services/manufacturer.rs | 316 |
-| `test_add_duplicate_manufacturer` | Duplicate manufacturer name error | src/services/manufacturer.rs | 331 |
-| `test_update_to_duplicate_manufacturer_name` | Duplicate name update error | src/services/manufacturer.rs | 355 |
-| `test_update_same_manufacturer_name` | Same name update (allowed) | src/services/manufacturer.rs | 389 |
+| `test_empty_manufacturer_name_returns_validation_code` | Empty manufacturer name returns `ApiError { code: "validation" }` (Fable-5 #23) | src/services/manufacturer.rs | 316 |
+| `test_add_duplicate_manufacturer_returns_duplicate_name_code` | Duplicate returns `ApiError { code: "duplicate_name", entity: "manufacturer" }` (Fable-5 #23) | src/services/manufacturer.rs | 331 |
+| `test_update_to_duplicate_manufacturer_name_returns_duplicate_name_code` | Update to duplicate returns `ApiError { code: "duplicate_name" }` (Fable-5 #23) | src/services/manufacturer.rs | 355 |
+| `test_update_missing_manufacturer_returns_not_found_code` | Updating a missing manufacturer returns `ApiError { code: "not_found", entity: "manufacturer" }` (Fable-5 #23) | src/services/manufacturer.rs | 383 |
+| `test_delete_missing_manufacturer_returns_not_found_code` | Deleting a missing manufacturer returns `ApiError { code: "not_found" }` (Fable-5 #23) | src/services/manufacturer.rs | 398 |
+| `test_update_same_manufacturer_name` | Same name update (allowed) | src/services/manufacturer.rs | 405 |
 
-**Total**: 7 tests
+**Total**: 9 tests
 
 ### services/product.rs
 
@@ -341,19 +360,21 @@ Product management service tests.
 
 ### services/shop.rs
 
-Shop management service tests.
+Shop management service tests. Empty/duplicate assertion tests renamed to `_returns_validation_code` / `_returns_duplicate_name_code` when migrated to `ApiError` (Fable-5 #23) — behaviour unchanged, only assertion targets.
 
 | Test Function | Description | File | Line |
 |---------------|-------------|------|------|
 | `test_add_shop` | Test shop addition | src/services/shop.rs | 232 |
 | `test_update_shop` | Test shop update | src/services/shop.rs | 249 |
 | `test_delete_shop` | Test shop deletion | src/services/shop.rs | 278 |
-| `test_empty_shop_name` | Empty shop name error | src/services/shop.rs | 301 |
-| `test_add_duplicate_shop` | Duplicate shop name error | src/services/shop.rs | 315 |
-| `test_update_to_duplicate_shop_name` | Duplicate name update error | src/services/shop.rs | 337 |
-| `test_update_same_shop_name` | Same name update (allowed) | src/services/shop.rs | 368 |
+| `test_empty_shop_name_returns_validation_code` | Empty shop name returns `ApiError { code: "validation" }` (Fable-5 #23) | src/services/shop.rs | 301 |
+| `test_add_duplicate_shop_returns_duplicate_name_code` | Duplicate returns `ApiError { code: "duplicate_name", entity: "shop" }` (Fable-5 #23) | src/services/shop.rs | 315 |
+| `test_update_to_duplicate_shop_name_returns_duplicate_name_code` | Update to duplicate returns `ApiError { code: "duplicate_name" }` (Fable-5 #23) | src/services/shop.rs | 337 |
+| `test_update_missing_shop_returns_not_found_code` | Updating a missing shop returns `ApiError { code: "not_found", entity: "shop" }` (Fable-5 #23) | src/services/shop.rs | 363 |
+| `test_delete_missing_shop_returns_not_found_code` | Deleting a missing shop returns `ApiError { code: "not_found" }` (Fable-5 #23) | src/services/shop.rs | 375 |
+| `test_update_same_shop_name` | Same name update (allowed) | src/services/shop.rs | 382 |
 
-**Total**: 7 tests
+**Total**: 9 tests
 
 ### services/transaction.rs
 
@@ -463,27 +484,28 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **222** |
+| **Inline Tests** | **233** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
 | db.rs | 4 |
 | settings.rs | 12 |
+| api_error.rs | 7 |
 | services/auth.rs | 13 |
 | services/user_management.rs | 13 |
 | services/encryption.rs | 8 |
 | services/account.rs | 3 |
 | services/category.rs | 18 |
-| services/manufacturer.rs | 7 |
+| services/manufacturer.rs | 9 |
 | services/product.rs | 11 |
-| services/shop.rs | 7 |
+| services/shop.rs | 9 |
 | services/transaction.rs | 17 |
 | services/aggregation.rs | 6 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 1 |
 | lib.rs | 4 |
-| **Total** | **245** |
+| **Total** | **256** |
 
 ---
 

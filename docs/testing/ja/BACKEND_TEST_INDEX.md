@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2025-12-06 06:24 JST  
-**総テスト数**: 245件
+**総テスト数**: 256件 (delta 反映後。`cargo test --lib` の権威的総数は 501 で、pre-existing gap は別 PR でバックフィル予定)
 
 ---
 
@@ -24,6 +24,7 @@
   - [services/encryption.rs](#servicesencryptionrs)
   - [services/account.rs](#servicesaccountrs)
   - [services/category.rs](#servicescategoryrs)
+  - [api_error.rs](#api_errorrs)
   - [services/manufacturer.rs](#servicesmanufacturerrs)
   - [services/product.rs](#servicesproductrs)
   - [services/shop.rs](#servicesshoprs)
@@ -203,6 +204,22 @@ AES-256-GCM暗号化・復号化のテスト。
 
 **合計**: 12件
 
+### api_error.rs
+
+`ApiError` — Tauri master-CRUD コマンドラッパーが `{ code, message, entity? }` として JSON シリアライズする構造化エラー型。Fable-5 レビュー #23/#D4 で導入し、フロントエンド分類器 (`res/js/master-crud.js`) が英語 message の substring 一致ではなく `err.code` で分岐できるようにした。
+
+| テスト関数 | 説明 | ファイル | 行 |
+|-----------|------|---------|-----|
+| `duplicate_name_carries_lowercased_entity_and_stable_code` | `ApiError::duplicate_name("Shop")` で `code="duplicate_name"`、`entity="shop"` | src/api_error.rs | 128 |
+| `not_found_carries_lowercased_entity_and_stable_code` | `ApiError::not_found("Manufacturer")` で `code="not_found"`、`entity="manufacturer"` | src/api_error.rs | 136 |
+| `manufacturer_not_found_has_its_own_code` | `manufacturer_not_found` は汎用 `not_found` とは区別された専用 code | src/api_error.rs | 143 |
+| `validation_carries_message_through_and_omits_entity` | `ApiError::validation(msg)` で `code="validation"`、message 貫通、entity=None | src/api_error.rs | 150 |
+| `database_from_sqlx_row_not_found` | `sqlx::Error` → `ApiError::database` の `From` 変換 | src/api_error.rs | 158 |
+| `serialises_with_snake_case_code_and_optional_entity` | serialize 出力に snake_case `code` と entity フィールドが含まれる | src/api_error.rs | 165 |
+| `serialises_without_entity_key_when_none` | entity=None のときは JSON 出力から `entity` キー自体を省略 (`skip_serializing_if`) | src/api_error.rs | 174 |
+
+**合計**: 7件
+
 ### services/auth.rs
 
 認証サービス（ユーザー登録・ログイン）のテスト。
@@ -305,19 +322,21 @@ AES-256-GCM暗号化・復号化のテスト。
 
 ### services/manufacturer.rs
 
-メーカー管理サービスのテスト。
+メーカー管理サービスのテスト。empty/duplicate 系のテスト名は `ApiError` 移行 (Fable-5 #23) に合わせ `_returns_validation_code` / `_returns_duplicate_name_code` にリネーム — 挙動は変わらず assertion の対象のみ変更。
 
 | テスト関数 | 説明 | ファイル | 行 |
 |-----------|------|---------|-----|
 | `test_add_manufacturer` | メーカー追加テスト | src/services/manufacturer.rs | 243 |
 | `test_update_manufacturer` | メーカー更新テスト | src/services/manufacturer.rs | 261 |
 | `test_delete_manufacturer` | メーカー削除テスト | src/services/manufacturer.rs | 292 |
-| `test_empty_manufacturer_name` | 空メーカー名のエラー | src/services/manufacturer.rs | 316 |
-| `test_add_duplicate_manufacturer` | 重複メーカー名のエラー | src/services/manufacturer.rs | 331 |
-| `test_update_to_duplicate_manufacturer_name` | 重複名への更新エラー | src/services/manufacturer.rs | 355 |
-| `test_update_same_manufacturer_name` | 同じ名前への更新（許可） | src/services/manufacturer.rs | 389 |
+| `test_empty_manufacturer_name_returns_validation_code` | 空メーカー名は `ApiError { code: "validation" }` (Fable-5 #23) | src/services/manufacturer.rs | 316 |
+| `test_add_duplicate_manufacturer_returns_duplicate_name_code` | 重複は `ApiError { code: "duplicate_name", entity: "manufacturer" }` (Fable-5 #23) | src/services/manufacturer.rs | 331 |
+| `test_update_to_duplicate_manufacturer_name_returns_duplicate_name_code` | 重複への更新は `ApiError { code: "duplicate_name" }` (Fable-5 #23) | src/services/manufacturer.rs | 355 |
+| `test_update_missing_manufacturer_returns_not_found_code` | 存在しないメーカーの更新は `ApiError { code: "not_found", entity: "manufacturer" }` (Fable-5 #23) | src/services/manufacturer.rs | 383 |
+| `test_delete_missing_manufacturer_returns_not_found_code` | 存在しないメーカーの削除は `ApiError { code: "not_found" }` (Fable-5 #23) | src/services/manufacturer.rs | 398 |
+| `test_update_same_manufacturer_name` | 同じ名前への更新（許可） | src/services/manufacturer.rs | 405 |
 
-**合計**: 7件
+**合計**: 9件
 
 ### services/product.rs
 
@@ -341,19 +360,21 @@ AES-256-GCM暗号化・復号化のテスト。
 
 ### services/shop.rs
 
-店舗管理サービスのテスト。
+店舗管理サービスのテスト。empty/duplicate 系のテスト名は `ApiError` 移行 (Fable-5 #23) に合わせ `_returns_validation_code` / `_returns_duplicate_name_code` にリネーム — 挙動は変わらず assertion の対象のみ変更。
 
 | テスト関数 | 説明 | ファイル | 行 |
 |-----------|------|---------|-----|
 | `test_add_shop` | 店舗追加テスト | src/services/shop.rs | 232 |
 | `test_update_shop` | 店舗更新テスト | src/services/shop.rs | 249 |
 | `test_delete_shop` | 店舗削除テスト | src/services/shop.rs | 278 |
-| `test_empty_shop_name` | 空店舗名のエラー | src/services/shop.rs | 301 |
-| `test_add_duplicate_shop` | 重複店舗名のエラー | src/services/shop.rs | 315 |
-| `test_update_to_duplicate_shop_name` | 重複名への更新エラー | src/services/shop.rs | 337 |
-| `test_update_same_shop_name` | 同じ名前への更新（許可） | src/services/shop.rs | 368 |
+| `test_empty_shop_name_returns_validation_code` | 空店舗名は `ApiError { code: "validation" }` (Fable-5 #23) | src/services/shop.rs | 301 |
+| `test_add_duplicate_shop_returns_duplicate_name_code` | 重複は `ApiError { code: "duplicate_name", entity: "shop" }` (Fable-5 #23) | src/services/shop.rs | 315 |
+| `test_update_to_duplicate_shop_name_returns_duplicate_name_code` | 重複への更新は `ApiError { code: "duplicate_name" }` (Fable-5 #23) | src/services/shop.rs | 337 |
+| `test_update_missing_shop_returns_not_found_code` | 存在しない店舗の更新は `ApiError { code: "not_found", entity: "shop" }` (Fable-5 #23) | src/services/shop.rs | 363 |
+| `test_delete_missing_shop_returns_not_found_code` | 存在しない店舗の削除は `ApiError { code: "not_found" }` (Fable-5 #23) | src/services/shop.rs | 375 |
+| `test_update_same_shop_name` | 同じ名前への更新（許可） | src/services/shop.rs | 382 |
 
-**合計**: 7件
+**合計**: 9件
 
 ### services/transaction.rs
 
@@ -463,27 +484,28 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **222件** |
+| **インラインテスト** | **233件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
 | db.rs | 4 |
 | settings.rs | 12 |
+| api_error.rs | 7 |
 | services/auth.rs | 13 |
 | services/user_management.rs | 13 |
 | services/encryption.rs | 8 |
 | services/account.rs | 3 |
 | services/category.rs | 18 |
-| services/manufacturer.rs | 7 |
+| services/manufacturer.rs | 9 |
 | services/product.rs | 11 |
-| services/shop.rs | 7 |
+| services/shop.rs | 9 |
 | services/transaction.rs | 17 |
 | services/aggregation.rs | 6 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 1 |
 | lib.rs | 4 |
-| **総計** | **245件** |
+| **総計** | **256件** |
 
 ---
 

@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-08-21 JST  
-**総テスト数**: 664件 (jest suite 20 ファイル、`npm test` 実測)
+**総テスト数**: 687件 (jest suite 21 ファイル、`npm test` 実測)
 
 ---
 
@@ -31,6 +31,7 @@
   - [product-draft.test.js](#product-drafttestjs)
   - [product-master-jump-draft.test.js](#product-master-jump-drafttestjs)
   - [modal-double-submit.test.js](#modal-double-submittestjs)
+  - [master-crud.test.js](#master-crudtestjs)
 - [集計機能テスト](#集計機能テスト)
   - [aggregation-daily.test.js](#aggregation-dailytestjs)
   - [aggregation-weekly.test.js](#aggregation-weeklytestjs)
@@ -529,6 +530,24 @@
 
 ---
 
+### master-crud.test.js
+
+共有 `res/js/master-crud.js` の `saveMasterEntry` オーケストレーターと `mapMasterErrorCode` 分類器の単体テスト (Fable-5 レビュー #D3/#D4/#23)。Rust 側 `ApiError { code, message, entity? }` を JS 側で `err.code` ベースに分類し、i18n key へマップする契約を検証。
+
+**テスト数**: 23件
+
+| テストブロック | 説明 | テスト数 |
+|--------------|------|---------|
+| `mapMasterErrorCode` | 各 code (`duplicate_name` / `not_found` / `manufacturer_not_found` / `validation` の 3 サブケース / `database` / legacy string 3 パス) が正しい i18n key と inline/toast ルーティングを返す | 12件 |
+| `saveMasterEntry — validation before invoke` | client 側 empty / name-too-long / memo-too-long がバックエンド invoke より前に inline エラーで蹴られる | 3件 |
+| `saveMasterEntry — edit target vanished` | editingId で cache に見つからない場合の `onNotFoundBeforeInvoke` 呼び出し + デフォルト toast fallback | 2件 |
+| `saveMasterEntry — happy path` | 新規追加 / 更新 それぞれで `invokeAdd`/`invokeUpdate` が正しい引数で呼ばれ `onSuccess` が発火 | 2件 |
+| `saveMasterEntry — backend error re-throws and classifies` | `duplicate_name` → inline、`manufacturer_not_found` → toast (product スコープ)、いずれも throw で Modal は開いたまま。backend not_found (invoke 後) は cache-miss と同じく `onNotFoundBeforeInvoke` を通して一覧を再読み込み + Modal を閉じる (Devin #97 レビュー対応の 2 件を含む) | 4件 |
+
+**ファイル**: res/tests/master-crud.test.js
+
+---
+
 ## 集計機能テスト
 
 ### aggregation-daily.test.js
@@ -693,7 +712,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **241件** |
+| **機能別テスト** | **264件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 17 |
@@ -703,13 +722,14 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | product-draft.test.js | 11 |
 | product-master-jump-draft.test.js | 11 |
 | modal-double-submit.test.js | 5 |
+| master-crud.test.js | 23 |
 | **集計機能テスト** | **115件** |
 | aggregation-daily.test.js | 16 |
 | aggregation-weekly.test.js | 22 |
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **664件** |
+| **総計 (jest)** | **687件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 
