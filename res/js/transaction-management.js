@@ -356,7 +356,11 @@ async function loadTransactions() {
     } catch (error) {
         console.error('Failed to load transactions:', error);
         const listContainer = document.getElementById('transaction-list');
-        listContainer.innerHTML = `<div class="error">Failed to load transactions: ${escapeHtml(error)}</div>`;
+        // formatApiError unwraps the { code, message, entity } object
+        // shape that get_transactions returns after the ApiError migration
+        // (PR2b). A bare escapeHtml(error) would render "[object Object]"
+        // here — the sweep missed this site (Devin #104 review).
+        listContainer.innerHTML = `<div class="error">Failed to load transactions: ${escapeHtml(formatApiError(error))}</div>`;
     }
 }
 
