@@ -1,13 +1,19 @@
 use serde::{Deserialize, Serialize};
 use sqlx::{SqlitePool, FromRow};
 use crate::api_error::ApiError;
-use crate::services::master_data;
+use crate::services::master_data::{self, MasterCrudSpec};
 use crate::sql_queries;
 use crate::validation;
 
-const NAME_LABEL: &str = "Manufacturer name";
-const DUPLICATE_LABEL: &str = "manufacturer name";
-const ENTITY_LABEL: &str = "Manufacturer";
+/// Full description of the Manufacturer master's SQL surface + labels.
+/// Fable-5 review #26.
+const SPEC: MasterCrudSpec = MasterCrudSpec {
+    entity_label: "Manufacturer",
+    name_label: "Manufacturer name",
+    check_duplicate_for_add_sql: sql_queries::MANUFACTURER_CHECK_DUPLICATE_FOR_ADD,
+    check_duplicate_for_update_sql: sql_queries::MANUFACTURER_CHECK_DUPLICATE_FOR_UPDATE,
+    delete_logical_sql: sql_queries::MANUFACTURER_DELETE_LOGICAL,
+};
 
 #[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
 #[sqlx(rename_all = "SCREAMING_SNAKE_CASE")]
@@ -53,21 +59,16 @@ pub async fn get_manufacturers(pool: &SqlitePool, user_id: i64, include_disabled
     Ok(manufacturers)
 }
 
-/// Get a single manufacturer by ID
+/// Get a single manufacturer by ID. Kept for module tests only after the
+/// Fable-5 #26 refactor. See shop.rs::get_shop_by_id for rationale.
+#[allow(dead_code)]
 pub async fn get_manufacturer_by_id(
     pool: &SqlitePool,
     user_id: i64,
     manufacturer_id: i64,
 ) -> Result<Option<Manufacturer>, ApiError> {
-    master_data::fetch_by_id(
-        pool,
-        sql_queries::MANUFACTURER_GET_BY_ID,
-        user_id,
-        manufacturer_id,
-        "manufacturer",
-    )
-    .await
-    .map_err(ApiError::database)
+    master_data::fetch_by_id(pool, sql_queries::MANUFACTURER_GET_BY_ID, user_id, manufacturer_id)
+        .await
 }
 
 /// Add a new manufacturer
@@ -76,31 +77,19 @@ pub async fn add_manufacturer(
     user_id: i64,
     request: AddManufacturerRequest,
 ) -> Result<String, ApiError> {
-    validation::validate_master_name(NAME_LABEL, &request.manufacturer_name)
+    validation::validate_master_name(SPEC.name_label, &request.manufacturer_name)
         .map_err(ApiError::validation)?;
     validation::validate_memo("Memo", request.memo.as_ref())
         .map_err(ApiError::validation)?;
 
-    if master_data::value_exists(
-        pool,
-        sql_queries::MANUFACTURER_CHECK_DUPLICATE_FOR_ADD,
-        user_id,
-        &request.manufacturer_name,
-        DUPLICATE_LABEL,
-    )
-    .await
-    .map_err(ApiError::database)?
-    {
-        return Err(ApiError::duplicate_name(ENTITY_LABEL));
-    }
+    master_data::check_duplicate_for_add(&SPEC, pool, user_id, &request.manufacturer_name).await?;
 
     let display_order = master_data::fetch_next_display_order(
         pool,
         sql_queries::MANUFACTURER_GET_NEXT_DISPLAY_ORDER,
         user_id,
     )
-    .await
-    .map_err(ApiError::database)?;
+    .await?;
 
     let is_disabled = request.is_disabled.unwrap_or(0);
 
@@ -123,30 +112,24 @@ pub async fn update_manufacturer(
     manufacturer_id: i64,
     request: UpdateManufacturerRequest,
 ) -> Result<String, ApiError> {
-    validation::validate_master_name(NAME_LABEL, &request.manufacturer_name)
+    validation::validate_master_name(SPEC.name_label, &request.manufacturer_name)
         .map_err(ApiError::validation)?;
     validation::validate_memo("Memo", request.memo.as_ref())
         .map_err(ApiError::validation)?;
 
-    get_manufacturer_by_id(pool, user_id, manufacturer_id)
-        .await?
-        .ok_or_else(|| ApiError::not_found(ENTITY_LABEL))?;
-
-    if master_data::value_exists_excluding(
+    master_data::check_duplicate_for_update(
+        &SPEC,
         pool,
-        sql_queries::MANUFACTURER_CHECK_DUPLICATE_FOR_UPDATE,
         user_id,
-        &request.manufacturer_name,
         manufacturer_id,
-        DUPLICATE_LABEL,
+        &request.manufacturer_name,
     )
-    .await
-    .map_err(ApiError::database)?
-    {
-        return Err(ApiError::duplicate_name(ENTITY_LABEL));
-    }
+    .await?;
 
-    sqlx::query(sql_queries::MANUFACTURER_UPDATE)
+    // Pre-check + not_found is now derived from `rows_affected` on the
+    // UPDATE itself (Fable-5 review #26). See shop.rs::update_shop for
+    // rationale.
+    let affected = sqlx::query(sql_queries::MANUFACTURER_UPDATE)
         .bind(&request.manufacturer_name)
         .bind(&request.memo)
         .bind(request.display_order)
@@ -154,7 +137,9 @@ pub async fn update_manufacturer(
         .bind(user_id)
         .bind(manufacturer_id)
         .execute(pool)
-        .await?;
+        .await?
+        .rows_affected();
+    master_data::ensure_update_affected_one(&SPEC, affected)?;
 
     Ok("Manufacturer updated successfully".to_string())
 }
@@ -165,20 +150,7 @@ pub async fn delete_manufacturer(
     user_id: i64,
     manufacturer_id: i64,
 ) -> Result<String, ApiError> {
-    get_manufacturer_by_id(pool, user_id, manufacturer_id)
-        .await?
-        .ok_or_else(|| ApiError::not_found(ENTITY_LABEL))?;
-
-    master_data::execute_by_id(
-        pool,
-        sql_queries::MANUFACTURER_DELETE_LOGICAL,
-        user_id,
-        manufacturer_id,
-        "delete manufacturer",
-    )
-    .await
-    .map_err(ApiError::database)?;
-
+    master_data::run_delete_expect_one(&SPEC, pool, user_id, manufacturer_id).await?;
     Ok("Manufacturer deleted successfully".to_string())
 }
 

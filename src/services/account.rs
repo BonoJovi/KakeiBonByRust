@@ -212,10 +212,8 @@ async fn check_duplicate_code(
         sql_queries::ACCOUNT_CHECK_DUPLICATE_CODE,
         user_id,
         account_code,
-        "code",
     )
     .await
-    .map_err(ApiError::database)
 }
 
 /// Add a new account (or reactivate if deleted)
@@ -251,8 +249,7 @@ pub async fn add_account(
         sql_queries::ACCOUNT_GET_NEXT_DISPLAY_ORDER,
         user_id,
     )
-    .await
-    .map_err(ApiError::database)?;
+    .await?;
 
     // Upsert account (insert or reactivate if deleted)
     sqlx::query(sql_queries::ACCOUNT_UPSERT)

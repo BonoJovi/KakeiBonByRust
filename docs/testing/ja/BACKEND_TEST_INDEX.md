@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-08-22 JST  
-**総テスト数**: 272件 (delta 反映後。`cargo test --lib` の権威的総数は 517 で、pre-existing gap は別 PR でバックフィル予定)
+**総テスト数**: 274件 (delta 反映後。`cargo test --lib` の権威的総数は 519 で、pre-existing gap は別 PR でバックフィル予定)
 
 ---
 
@@ -25,6 +25,7 @@
   - [services/account.rs](#servicesaccountrs)
   - [services/category.rs](#servicescategoryrs)
   - [api_error.rs](#api_errorrs)
+  - [services/master_data.rs](#servicesmaster_datars)
   - [services/manufacturer.rs](#servicesmanufacturerrs)
   - [services/product.rs](#servicesproductrs)
   - [services/shop.rs](#servicesshoprs)
@@ -221,6 +222,17 @@ AES-256-GCM暗号化・復号化のテスト。
 | `serialises_without_entity_key_when_none` | entity=None のときは JSON 出力から `entity` キー自体を省略 (`skip_serializing_if`) | src/api_error.rs | 174 |
 
 **合計**: 9件
+
+### services/master_data.rs
+
+マスタ CRUD の共通ヘルパー (`MasterCrudSpec` + `ensure_update_affected_one` + `run_delete_expect_one`) のピュア Rust テスト (PR3, Fable-5 #26)。
+
+| テスト関数 | 説明 | ファイル | 行 |
+|-----------|------|---------|-----|
+| `ensure_update_affected_one_maps_zero_to_not_found` | `rows_affected == 0` の UPDATE を spec の entity 付き `ApiError::not_found` にマップ | src/services/master_data.rs | 228 |
+| `ensure_update_affected_one_passes_positive_count` | 正の rows_affected は Ok を返す (境界: 1 / 42) | src/services/master_data.rs | 235 |
+
+**合計**: 2件
 
 ### services/auth.rs
 
@@ -500,13 +512,14 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **249件** |
+| **インラインテスト** | **251件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
 | db.rs | 4 |
 | settings.rs | 12 |
 | api_error.rs | 9 |
+| services/master_data.rs | 2 |
 | services/auth.rs | 13 |
 | services/user_management.rs | 13 |
 | services/encryption.rs | 8 |
@@ -521,7 +534,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/i18n.rs | 8 |
 | services/recurring.rs | 5 |
 | lib.rs | 4 |
-| **総計** | **272件** |
+| **総計** | **274件** |
 
 ---
 

@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-08-22 JST  
-**Total Tests**: 272 (delta-tracked; the full authoritative count from `cargo test --lib` is 517, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 274 (delta-tracked; the full authoritative count from `cargo test --lib` is 519, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -20,6 +20,7 @@ This document provides a complete index of all backend tests implemented in Rust
   - [db.rs](#dbrs)
   - [settings.rs](#settingsrs)
   - [api_error.rs](#api_errorrs)
+  - [services/master_data.rs](#servicesmaster_datars)
   - [services/auth.rs](#servicesauthrs)
   - [services/user_management.rs](#servicesuser_managementrs)
   - [services/encryption.rs](#servicesencryptionrs)
@@ -221,6 +222,17 @@ Settings management functionality tests.
 | `serialises_without_entity_key_when_none` | Serialised JSON omits `entity` when None (via `skip_serializing_if`) | src/api_error.rs | 174 |
 
 **Total**: 9 tests
+
+### services/master_data.rs
+
+Pure-Rust tests for the shared master-CRUD helpers (`MasterCrudSpec` + `ensure_update_affected_one` + `run_delete_expect_one`) introduced in PR3 (Fable-5 #26).
+
+| Test Function | Description | File | Line |
+|---------------|-------------|------|------|
+| `ensure_update_affected_one_maps_zero_to_not_found` | `rows_affected == 0` on an UPDATE maps to `ApiError::not_found(entity)` from the spec | src/services/master_data.rs | 228 |
+| `ensure_update_affected_one_passes_positive_count` | Positive rows_affected returns Ok (boundary: 1, 42) | src/services/master_data.rs | 235 |
+
+**Total**: 2 tests
 
 ### services/auth.rs
 
@@ -500,13 +512,14 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **249** |
+| **Inline Tests** | **251** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
 | db.rs | 4 |
 | settings.rs | 12 |
 | api_error.rs | 9 |
+| services/master_data.rs | 2 |
 | services/auth.rs | 13 |
 | services/user_management.rs | 13 |
 | services/encryption.rs | 8 |
@@ -521,7 +534,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/i18n.rs | 8 |
 | services/recurring.rs | 5 |
 | lib.rs | 4 |
-| **Total** | **272** |
+| **Total** | **274** |
 
 ---
 
