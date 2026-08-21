@@ -2,8 +2,8 @@
 
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
-**最終更新**: 2025-12-06 06:24 JST  
-**総テスト数**: 262件以上
+**最終更新**: 2026-08-21 JST  
+**総テスト数**: 267件以上
 
 ---
 
@@ -26,6 +26,7 @@
   - [transaction-detail-management.test.js](#transaction-detail-managementtestjs)
   - [transaction-detail-tax-calculation.test.js](#transaction-detail-tax-calculationtestjs)
   - [category-management-ui-tests.js](#category-management-ui-testsjs)
+  - [modal-double-submit.test.js](#modal-double-submittestjs)
 - [集計機能テスト](#集計機能テスト)
   - [aggregation-daily.test.js](#aggregation-dailytestjs)
   - [aggregation-weekly.test.js](#aggregation-weeklytestjs)
@@ -424,6 +425,24 @@
 
 ---
 
+### modal-double-submit.test.js
+
+共有 `Modal` クラス (`res/js/modal.js`) の `_handleSave` 再入ガードに対する回帰テスト（Fable-5 レビュー #D2 修正）。Save ボタン連打・Enter 連打で `onSave` が並行発火し、Rust マスタ CRUD 側の SELECT-then-INSERT 重複チェック（TOCTOU）を両方通過して 2 発目が生の `UNIQUE constraint failed` で失敗する経路を防ぐ。
+
+**テスト数**: 5件
+
+| テスト名 | 説明 | 期待結果 |
+|---------|------|---------|
+| `form-submit rapid-fire invokes onSave only once` | フォーム submit を短時間に3回発火 | onSave 呼び出しは1回のみ |
+| `save button is disabled while onSave is pending` | 保存中の Save ボタン状態 | disabled=true → 完了後 false |
+| `after a successful save, a second open+submit fires onSave again` | 保存成功後に再オープン | 2回目の submit で onSave が発火 |
+| `after a failed save, the guard resets and retry fires onSave again` | 保存失敗後のリトライ | ガードが解除されリトライ成功 |
+| `rapid save-button clicks invoke onSave only once` (saveButtonId パス) | Save ボタン ID 経由での連打 | onSave 呼び出しは1回のみ |
+
+**ファイル**: res/tests/modal-double-submit.test.js
+
+---
+
 ## 集計機能テスト
 
 ### aggregation-daily.test.js
@@ -544,18 +563,19 @@
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **118件+** |
+| **機能別テスト** | **123件+** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 6+ (多数) |
 | transaction-detail-tax-calculation.test.js | 0+ (多数) |
 | category-management-ui-tests.js | 0+ (未カウント) |
+| modal-double-submit.test.js | 5 |
 | **集計機能テスト** | **0+ (多数)** |
 | aggregation-daily.test.js | 0+ (多数) |
 | aggregation-weekly.test.js | 0+ (多数) |
 | aggregation-monthly.test.js | 0+ (多数) |
 | aggregation-yearly.test.js | 0+ (多数) |
 | aggregation-period.test.js | 0+ (多数) |
-| **総計** | **262件以上** |
+| **総計** | **267件以上** |
 
 ---
 

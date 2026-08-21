@@ -2,8 +2,8 @@
 
 This document provides a complete index of all frontend tests implemented in JavaScript.
 
-**Last Updated**: 2025-12-06 06:45 JST  
-**Total Tests**: 262+
+**Last Updated**: 2026-08-21 JST  
+**Total Tests**: 267+
 
 ---
 
@@ -25,11 +25,12 @@ For detailed Japanese version with all test cases, see [Japanese Frontend Test I
 - **login.test.js** - Login tests (58)
 - **user-deletion.test.js** - User deletion tests (46)
 
-### Feature-Specific Tests (118+ tests)
+### Feature-Specific Tests (123+ tests)
 - **transaction-edit.test.js** - Transaction edit tests (112)
 - **transaction-detail-management.test.js** - Transaction detail tests
 - **transaction-detail-tax-calculation.test.js** - Tax calculation tests
 - **category-management-ui-tests.js** - Category management UI tests
+- **modal-double-submit.test.js** - Shared `Modal._handleSave` re-entrancy guard tests (5)
 
 ### Aggregation Tests (many tests)
 - **aggregation-daily.test.js** - Daily aggregation
@@ -55,12 +56,13 @@ For detailed Japanese version with all test cases, see [Japanese Frontend Test I
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **Feature-Specific Tests** | **118+** |
+| **Feature-Specific Tests** | **123+** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 6+ |
 | transaction-detail-tax-calculation.test.js | many |
+| modal-double-submit.test.js | 5 |
 | **Aggregation Tests** | **many** |
-| **Total** | **262+** |
+| **Total** | **267+** |
 
 ---
 
