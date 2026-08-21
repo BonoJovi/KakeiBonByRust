@@ -12,7 +12,7 @@ import { createMenuBar, handleLogout, handleQuit } from './menu.js';
 import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
 import { showToast } from './toast.js';
 import { escapeHtml } from './escape-html.js';
-import { mapMasterErrorCode, API_ERROR_CODES } from './master-crud.js';
+import { mapMasterErrorCode, API_ERROR_CODES, formatApiError } from './master-crud.js';
 
 console.log('=== ACCOUNT-MANAGEMENT.JS LOADED - ALL imports enabled ===');
 console.log('invoke:', typeof invoke);
@@ -80,7 +80,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         await fitWindowToScreen();
     } catch (error) {
         console.error('Initialization error:', error);
-        showToast(i18n.t('account_mgmt.failed_to_initialize') + ': ' + error, { variant: 'error' });
+        showToast(i18n.t('account_mgmt.failed_to_initialize') + ': ' + formatApiError(error), { variant: 'error' });
     }
 });
 
@@ -161,7 +161,7 @@ async function loadTemplates() {
         populateTemplateDropdown();
     } catch (error) {
         console.error('Failed to load templates:', error);
-        showToast(i18n.t('account_mgmt.failed_to_load_templates') + ': ' + error, { variant: 'error' });
+        showToast(i18n.t('account_mgmt.failed_to_load_templates') + ': ' + formatApiError(error), { variant: 'error' });
     }
 }
 
@@ -212,7 +212,7 @@ async function loadAccounts() {
         }
     } catch (error) {
         console.error('Failed to load accounts:', error);
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #dc3545;">Error loading accounts: ${escapeHtml(error)}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #dc3545;">Error loading accounts: ${escapeHtml(formatApiError(error))}</td></tr>`;
     } finally {
         loading.style.display = 'none';
     }
@@ -394,7 +394,7 @@ async function deleteAccount(accountCode, accountName) {
         await loadAccounts();
     } catch (error) {
         console.error('Failed to delete account:', error);
-        showToast(i18n.t('account_mgmt.failed_to_delete') + ': ' + error, { variant: 'error' });
+        showToast(i18n.t('account_mgmt.failed_to_delete') + ': ' + formatApiError(error), { variant: 'error' });
     }
 }
 

@@ -55,7 +55,7 @@ jest.unstable_mockModule('../js/validation-display.js', () => ({
 }));
 
 // Import under test AFTER the mocks are set up.
-const { mapMasterErrorCode, saveMasterEntry, API_ERROR_CODES } =
+const { mapMasterErrorCode, saveMasterEntry, formatApiError, API_ERROR_CODES } =
     await import('../js/master-crud.js');
 
 beforeEach(() => {
@@ -165,6 +165,37 @@ describe('mapMasterErrorCode — ApiError code → i18n key', () => {
     test('legacy string that does not match falls back to generic failure', () => {
         const out = mapMasterErrorCode('Something else', shopCtx);
         expect(out.nameMessage).toBe('shop_mgmt.failed_to_save');
+    });
+
+    // Devin review on #99: string concatenation with an ApiError object
+    // renders as "[object Object]" — every unmigrated error-surface site
+    // now goes through formatApiError.
+    describe('formatApiError', () => {
+        test('returns the message string for an ApiError-shaped object', () => {
+            expect(formatApiError({ code: 'not_found', message: 'Account not found', entity: 'account' }))
+                .toBe('Account not found');
+        });
+
+        test('falls back to String(err) for a plain string (unmigrated command)', () => {
+            expect(formatApiError('Legacy error text')).toBe('Legacy error text');
+        });
+
+        test('unwraps .message from an Error instance (same shape as ApiError)', () => {
+            // Error instances have a string .message, so the helper
+            // returns it directly — a nicer default than String(err)
+            // which would prepend "Error:".
+            const s = formatApiError(new Error('boom'));
+            expect(s).toBe('boom');
+        });
+
+        test('falls back to String(err) for an object with no message field', () => {
+            expect(formatApiError({ code: 'weird' })).toBe('[object Object]');
+        });
+
+        test('handles null and undefined', () => {
+            expect(formatApiError(null)).toBe('null');
+            expect(formatApiError(undefined)).toBe('undefined');
+        });
     });
 
     test('API_ERROR_CODES exports the codes the Rust side documents', () => {

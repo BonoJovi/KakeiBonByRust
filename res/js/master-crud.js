@@ -40,6 +40,29 @@ export const API_ERROR_CODES = Object.freeze({
 });
 
 /**
+ * Extract a human-readable string from a Tauri command's rejected error.
+ *
+ * With `Result<T, ApiError>` the frontend receives `{ code, message,
+ * entity? }` — using it in string concatenation (`'…: ' + err`) or
+ * `escapeHtml(err)` stringifies the object to `"[object Object]"`,
+ * which is what the user sees. Every error-surfacing site that used to
+ * work with a raw `String` error therefore needs `formatApiError(err)`
+ * as of the ApiError migration (Fable-5 #23).
+ *
+ * Precedence:
+ *   1. `err.message` when the value is an object with a string message
+ *      (the normal `ApiError` shape).
+ *   2. Otherwise `String(err)` — covers legacy string-typed errors
+ *      from commands not yet migrated and Error instances alike.
+ */
+export function formatApiError(err) {
+    if (err !== null && typeof err === 'object' && typeof err.message === 'string') {
+        return err.message;
+    }
+    return String(err);
+}
+
+/**
  * Classify a backend error into inline / toast messages for the master
  * CRUD save flow. Returns `{ nameMessage, memoMessage, toastMessage }`
  * with any subset populated; caller decides where to route each.
