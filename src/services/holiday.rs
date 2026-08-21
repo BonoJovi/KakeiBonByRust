@@ -8,6 +8,8 @@ use chrono::{Datelike, Days, NaiveDate, Weekday};
 use sqlx::SqlitePool;
 use std::collections::HashSet;
 
+use crate::sql_queries;
+
 /// 休日シフトの方向。
 /// - DB 上は INTEGER (0/1/2) として `RECURRING_RULES.HOLIDAY_SHIFT_TYPE` /
 ///   `USERS.MONTH_PERIOD_HOLIDAY_SHIFT` に格納される。
@@ -103,12 +105,10 @@ pub async fn fetch_holidays(
     start: NaiveDate,
     end: NaiveDate,
 ) -> Result<HashSet<NaiveDate>, sqlx::Error> {
-    let locale: String = sqlx::query_scalar(
-        "SELECT COALESCE(HOLIDAY_LOCALE, 'JP') FROM USERS WHERE USER_ID = ?",
-    )
-    .bind(user_id)
-    .fetch_one(pool)
-    .await?;
+    let locale: String = sqlx::query_scalar(sql_queries::HOLIDAY_GET_USER_LOCALE)
+        .bind(user_id)
+        .fetch_one(pool)
+        .await?;
 
     let widen = Days::new(14);
     let widened_start = start.checked_sub_days(widen).unwrap_or(start);
@@ -118,28 +118,22 @@ pub async fn fetch_holidays(
 
     let mut holidays = HashSet::new();
 
-    let std_rows: Vec<String> = sqlx::query_scalar(
-        "SELECT HOLIDAY_DATE FROM HOLIDAYS_STANDARD \
-         WHERE LOCALE = ? AND HOLIDAY_DATE BETWEEN ? AND ?",
-    )
-    .bind(&locale)
-    .bind(&ws)
-    .bind(&we)
-    .fetch_all(pool)
-    .await?;
+    let std_rows: Vec<String> = sqlx::query_scalar(sql_queries::HOLIDAY_LIST_STANDARD_IN_RANGE)
+        .bind(&locale)
+        .bind(&ws)
+        .bind(&we)
+        .fetch_all(pool)
+        .await?;
     for d_str in std_rows {
         holidays.insert(parse_holiday_date(&d_str, "HOLIDAYS_STANDARD")?);
     }
 
-    let custom_rows: Vec<String> = sqlx::query_scalar(
-        "SELECT HOLIDAY_DATE FROM HOLIDAYS_USER_CUSTOM \
-         WHERE USER_ID = ? AND HOLIDAY_DATE BETWEEN ? AND ?",
-    )
-    .bind(user_id)
-    .bind(&ws)
-    .bind(&we)
-    .fetch_all(pool)
-    .await?;
+    let custom_rows: Vec<String> = sqlx::query_scalar(sql_queries::HOLIDAY_LIST_USER_CUSTOM_IN_RANGE)
+        .bind(user_id)
+        .bind(&ws)
+        .bind(&we)
+        .fetch_all(pool)
+        .await?;
     for d_str in custom_rows {
         holidays.insert(parse_holiday_date(&d_str, "HOLIDAYS_USER_CUSTOM")?);
     }
