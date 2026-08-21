@@ -554,6 +554,15 @@ async function handleUserSave() {
             actualMemoLen: 0,
         });
 
+        if (mapped.nameMessage || mapped.toastMessage) {
+            // Clear the stale "creating.../updating..." progress note
+            // that createUser/updateUser set on the form-message slot;
+            // otherwise the info line stays on top of the inline error
+            // or toast and reads as "still saving" while the classifier
+            // has already announced the failure (Devin review on #100).
+            showMessage('form-message', '', '');
+        }
+
         if (mapped.toastMessage) {
             showToast(mapped.toastMessage, { variant: 'error' });
         }
@@ -563,8 +572,8 @@ async function handleUserSave() {
             // manufacturer / product use for name errors.
             showValidationError(usernameInput, mapped.nameMessage);
         } else if (!mapped.toastMessage) {
-            // Fully unknown error — fall back to the legacy form
-            // message with a properly-unwrapped body.
+            // Fully unknown error — replace the progress note with the
+            // legacy form message and a properly-unwrapped body.
             showMessage('form-message', i18n.t('error.save_user_failed') + ': ' + formatApiError(error), 'error');
         }
         throw error;
