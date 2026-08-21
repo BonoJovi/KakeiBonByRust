@@ -1,13 +1,12 @@
 use serde::{Deserialize, Serialize};
 use sqlx::{SqlitePool, FromRow};
+use crate::api_error::ApiError;
 use crate::services::master_data;
 use crate::sql_queries;
 use crate::validation;
 
 const NAME_LABEL: &str = "Account name";
-
-/// Error returned by `add_account` when an active account already uses the code.
-pub const ERR_ACCOUNT_CODE_EXISTS: &str = "Account code already exists";
+const ENTITY_LABEL: &str = "Account";
 
 /// Normalize account code to uppercase
 fn normalize_account_code(code: &str) -> String {
@@ -71,7 +70,7 @@ pub struct UpdateAccountRequest {
 }
 
 /// Get all account templates
-pub async fn get_account_templates(pool: &SqlitePool) -> Result<Vec<AccountTemplate>, String> {
+pub async fn get_account_templates(pool: &SqlitePool) -> Result<Vec<AccountTemplate>, ApiError> {
     let templates = sqlx::query_as::<_, AccountTemplate>(
         r#"
         SELECT TEMPLATE_ID, TEMPLATE_CODE, TEMPLATE_NAME_JA, TEMPLATE_NAME_EN,
@@ -81,14 +80,13 @@ pub async fn get_account_templates(pool: &SqlitePool) -> Result<Vec<AccountTempl
         "#
     )
     .fetch_all(pool)
-    .await
-    .map_err(|e| format!("Failed to get account templates: {}", e))?;
+    .await?;
 
     Ok(templates)
 }
 
 /// Get all accounts for a user
-pub async fn get_accounts(pool: &SqlitePool, user_id: i64) -> Result<Vec<Account>, String> {
+pub async fn get_accounts(pool: &SqlitePool, user_id: i64) -> Result<Vec<Account>, ApiError> {
     let accounts = sqlx::query_as::<_, Account>(
         r#"
         SELECT ACCOUNT_ID, USER_ID, ACCOUNT_CODE, ACCOUNT_NAME, TEMPLATE_CODE,
@@ -100,8 +98,7 @@ pub async fn get_accounts(pool: &SqlitePool, user_id: i64) -> Result<Vec<Account
     )
     .bind(user_id)
     .fetch_all(pool)
-    .await
-    .map_err(|e| format!("Failed to get accounts: {}", e))?;
+    .await?;
 
     Ok(accounts)
 }
@@ -123,7 +120,7 @@ pub async fn get_account_balances_as_of(
     pool: &SqlitePool,
     user_id: i64,
     as_of_date: &str,
-) -> Result<Vec<AccountBalance>, String> {
+) -> Result<Vec<AccountBalance>, ApiError> {
     let balances = sqlx::query_as::<_, AccountBalance>(
         r#"
         SELECT
@@ -161,14 +158,13 @@ pub async fn get_account_balances_as_of(
     .bind(as_of_date)
     .bind(user_id)
     .fetch_all(pool)
-    .await
-    .map_err(|e| format!("Failed to compute account balances: {}", e))?;
+    .await?;
 
     Ok(balances)
 }
 
 /// Get all accounts (for admin users)
-pub async fn get_all_accounts(pool: &SqlitePool) -> Result<Vec<Account>, String> {
+pub async fn get_all_accounts(pool: &SqlitePool) -> Result<Vec<Account>, ApiError> {
     let accounts = sqlx::query_as::<_, Account>(
         r#"
         SELECT ACCOUNT_ID, USER_ID, ACCOUNT_CODE, ACCOUNT_NAME, TEMPLATE_CODE,
@@ -178,8 +174,7 @@ pub async fn get_all_accounts(pool: &SqlitePool) -> Result<Vec<Account>, String>
         "#
     )
     .fetch_all(pool)
-    .await
-    .map_err(|e| format!("Failed to get all accounts: {}", e))?;
+    .await?;
 
     Ok(accounts)
 }
@@ -189,7 +184,7 @@ pub async fn get_account_by_code(
     pool: &SqlitePool,
     user_id: i64,
     account_code: &str,
-) -> Result<Option<Account>, String> {
+) -> Result<Option<Account>, ApiError> {
     let account = sqlx::query_as::<_, Account>(
         r#"
         SELECT ACCOUNT_ID, USER_ID, ACCOUNT_CODE, ACCOUNT_NAME, TEMPLATE_CODE,
@@ -201,8 +196,7 @@ pub async fn get_account_by_code(
     .bind(user_id)
     .bind(account_code)
     .fetch_optional(pool)
-    .await
-    .map_err(|e| format!("Failed to get account: {}", e))?;
+    .await?;
 
     Ok(account)
 }
@@ -212,7 +206,7 @@ async fn check_duplicate_code(
     pool: &SqlitePool,
     user_id: i64,
     account_code: &str,
-) -> Result<bool, String> {
+) -> Result<bool, ApiError> {
     master_data::value_exists(
         pool,
         sql_queries::ACCOUNT_CHECK_DUPLICATE_CODE,
@@ -221,6 +215,7 @@ async fn check_duplicate_code(
         "code",
     )
     .await
+    .map_err(ApiError::database)
 }
 
 /// Add a new account (or reactivate if deleted)
@@ -228,13 +223,13 @@ pub async fn add_account(
     pool: &SqlitePool,
     user_id: i64,
     mut request: AddAccountRequest,
-) -> Result<String, String> {
+) -> Result<String, ApiError> {
     // Normalize account code to uppercase
     request.account_code = normalize_account_code(&request.account_code);
 
     // Validate account code
     if request.account_code.is_empty() {
-        return Err("Account code cannot be empty".to_string());
+        return Err(ApiError::validation("Account code cannot be empty"));
     }
 
     // `validate_master_name` bundles the non-empty and max-length checks that
@@ -242,11 +237,12 @@ pub async fn add_account(
     // the bare `validate_max_chars`) closes a gap where a request coming in
     // through a direct `invoke` — bypassing the frontend guard at
     // account-management.js:286-288 — could persist an all-whitespace name.
-    validation::validate_master_name(NAME_LABEL, &request.account_name)?;
+    validation::validate_master_name(NAME_LABEL, &request.account_name)
+        .map_err(ApiError::validation)?;
 
     // Check for duplicate code (only active accounts)
     if check_duplicate_code(pool, user_id, &request.account_code).await? {
-        return Err(ERR_ACCOUNT_CODE_EXISTS.to_string());
+        return Err(ApiError::duplicate_code(ENTITY_LABEL));
     }
 
     // Get next display order
@@ -255,7 +251,8 @@ pub async fn add_account(
         sql_queries::ACCOUNT_GET_NEXT_DISPLAY_ORDER,
         user_id,
     )
-    .await?;
+    .await
+    .map_err(ApiError::database)?;
 
     // Upsert account (insert or reactivate if deleted)
     sqlx::query(sql_queries::ACCOUNT_UPSERT)
@@ -266,8 +263,7 @@ pub async fn add_account(
         .bind(request.initial_balance)
         .bind(display_order)
         .execute(pool)
-        .await
-        .map_err(|e| format!("Failed to add account: {}", e))?;
+        .await?;
 
     Ok("Account added successfully".to_string())
 }
@@ -277,7 +273,7 @@ pub async fn update_account(
     pool: &SqlitePool,
     user_id: i64,
     mut request: UpdateAccountRequest,
-) -> Result<String, String> {
+) -> Result<String, ApiError> {
     // Normalize account code to uppercase
     request.account_code = normalize_account_code(&request.account_code);
 
@@ -286,12 +282,13 @@ pub async fn update_account(
     // the bare `validate_max_chars`) closes a gap where a request coming in
     // through a direct `invoke` — bypassing the frontend guard at
     // account-management.js:286-288 — could persist an all-whitespace name.
-    validation::validate_master_name(NAME_LABEL, &request.account_name)?;
+    validation::validate_master_name(NAME_LABEL, &request.account_name)
+        .map_err(ApiError::validation)?;
 
     // Check if account exists
     get_account_by_code(pool, user_id, &request.account_code)
         .await?
-        .ok_or("Account not found")?;
+        .ok_or_else(|| ApiError::not_found(ENTITY_LABEL))?;
 
     // Update account
     sqlx::query(sql_queries::ACCOUNT_UPDATE)
@@ -302,8 +299,7 @@ pub async fn update_account(
         .bind(user_id)
         .bind(&request.account_code)
         .execute(pool)
-        .await
-        .map_err(|e| format!("Failed to update account: {}", e))?;
+        .await?;
 
     Ok("Account updated successfully".to_string())
 }
@@ -313,28 +309,31 @@ pub async fn delete_account(
     pool: &SqlitePool,
     user_id: i64,
     account_code: &str,
-) -> Result<String, String> {
+) -> Result<String, ApiError> {
     // Normalize account code to uppercase
     let account_code = normalize_account_code(account_code);
-    
+
     // Check if account exists
     get_account_by_code(pool, user_id, &account_code)
         .await?
-        .ok_or("Account not found")?;
+        .ok_or_else(|| ApiError::not_found(ENTITY_LABEL))?;
 
     // Logical delete
     sqlx::query(sql_queries::ACCOUNT_DELETE_LOGICAL)
         .bind(user_id)
         .bind(&account_code)
         .execute(pool)
-        .await
-        .map_err(|e| format!("Failed to delete account: {}", e))?;
+        .await?;
 
     Ok("Account deleted successfully".to_string())
 }
 
 /// Initialize NONE account for a new user
-/// This is required for irregular transactions that don't specify an account
+/// This is required for irregular transactions that don't specify an account.
+/// Kept on the old `Result<_, String>` return type because this is called
+/// from `lib.rs` setup (not a Tauri command) and its callers already handle
+/// String errors — the ApiError from `add_account` is unwrapped to its
+/// message here.
 pub async fn initialize_none_account(pool: &SqlitePool, user_id: i64) -> Result<(), String> {
     // Get NONE template
     let none_template = sqlx::query_as::<_, AccountTemplate>(
@@ -343,7 +342,7 @@ pub async fn initialize_none_account(pool: &SqlitePool, user_id: i64) -> Result<
     .fetch_one(pool)
     .await
     .map_err(|e| format!("Failed to get NONE template: {}", e))?;
-    
+
     // Create NONE account
     let request = AddAccountRequest {
         account_code: "NONE".to_string(),
@@ -351,12 +350,13 @@ pub async fn initialize_none_account(pool: &SqlitePool, user_id: i64) -> Result<
         template_code: "NONE".to_string(),
         initial_balance: 0,
     };
-    
+
     // The NONE account may already exist (re-initialization); anything else is
-    // a real failure and must be propagated.
+    // a real failure and must be propagated. Match on the ApiError code, not
+    // the message text.
     match add_account(pool, user_id, request).await {
         Ok(_) => Ok(()),
-        Err(e) if e == ERR_ACCOUNT_CODE_EXISTS => Ok(()),
+        Err(e) if e.code == ApiError::CODE_DUPLICATE_CODE => Ok(()),
         Err(e) => Err(format!("Failed to initialize NONE account: {}", e)),
     }
 }
@@ -493,10 +493,10 @@ mod tests {
         // Add first time - should succeed
         add_account(&pool, 2, request.clone()).await.unwrap();
 
-        // Add second time - should fail
-        let result = add_account(&pool, 2, request).await;
-        assert!(result.is_err());
-        assert!(result.unwrap_err().contains("already exists"));
+        // Add second time - should fail with duplicate_code (not duplicate_name)
+        let err = add_account(&pool, 2, request).await.unwrap_err();
+        assert_eq!(err.code, ApiError::CODE_DUPLICATE_CODE);
+        assert_eq!(err.entity.as_deref(), Some("account"));
     }
 
     // Issue #37 Phase 2-3 — bounded-field length checks must count
@@ -527,8 +527,9 @@ mod tests {
             initial_balance: 0,
         };
         let err = add_account(&pool, 2, request).await.unwrap_err();
-        assert!(err.contains(&consts::MAX_NAME_LEN.to_string()),
-            "error should reference the limit: {}", err);
+        assert_eq!(err.code, ApiError::CODE_VALIDATION);
+        assert!(err.message.contains(&consts::MAX_NAME_LEN.to_string()),
+            "error should reference the limit: {}", err.message);
     }
 
     #[tokio::test]
@@ -574,8 +575,9 @@ mod tests {
             display_order: 1,
         };
         let err = update_account(&pool, 2, update_request).await.unwrap_err();
-        assert!(err.contains(&consts::MAX_NAME_LEN.to_string()),
-            "error should reference the limit: {}", err);
+        assert_eq!(err.code, ApiError::CODE_VALIDATION);
+        assert!(err.message.contains(&consts::MAX_NAME_LEN.to_string()),
+            "error should reference the limit: {}", err.message);
     }
 
     /// Fable-5 review #16 — `add_account` used to call
@@ -596,7 +598,8 @@ mod tests {
             initial_balance: 0,
         };
         let err = add_account(&pool, 2, request).await.unwrap_err();
-        assert!(err.contains("cannot be empty"), "unexpected error: {}", err);
+        assert_eq!(err.code, ApiError::CODE_VALIDATION);
+        assert!(err.message.contains("cannot be empty"), "unexpected error: {}", err.message);
     }
 
     #[tokio::test]
@@ -610,7 +613,8 @@ mod tests {
             initial_balance: 0,
         };
         let err = add_account(&pool, 2, request).await.unwrap_err();
-        assert!(err.contains("cannot be empty"), "unexpected error: {}", err);
+        assert_eq!(err.code, ApiError::CODE_VALIDATION);
+        assert!(err.message.contains("cannot be empty"), "unexpected error: {}", err.message);
     }
 
     #[tokio::test]
@@ -633,7 +637,8 @@ mod tests {
             display_order: 1,
         };
         let err = update_account(&pool, 2, update_request).await.unwrap_err();
-        assert!(err.contains("cannot be empty"), "unexpected error: {}", err);
+        assert_eq!(err.code, ApiError::CODE_VALIDATION);
+        assert!(err.message.contains("cannot be empty"), "unexpected error: {}", err.message);
     }
 
     async fn add_test_account(pool: &SqlitePool, code: &str, initial_balance: i64) {
@@ -759,7 +764,8 @@ mod tests {
         .await
         .unwrap_err();
 
-        assert!(err.contains("empty"), "unexpected error: {}", err);
+        assert_eq!(err.code, ApiError::CODE_VALIDATION);
+        assert!(err.message.contains("empty"), "unexpected error: {}", err.message);
     }
 
     #[tokio::test]
@@ -798,7 +804,8 @@ mod tests {
         .await
         .unwrap_err();
 
-        assert_eq!(err, "Account not found");
+        assert_eq!(err.code, ApiError::CODE_NOT_FOUND);
+        assert_eq!(err.entity.as_deref(), Some("account"));
     }
 
     #[tokio::test]
@@ -807,7 +814,42 @@ mod tests {
 
         let err = delete_account(&pool, 2, "MISSING").await.unwrap_err();
 
-        assert_eq!(err, "Account not found");
+        assert_eq!(err.code, ApiError::CODE_NOT_FOUND);
+        assert_eq!(err.entity.as_deref(), Some("account"));
+    }
+
+    // Post-migration ApiError contract locks: the two "target vanished"
+    // paths must return `code=not_found` with `entity="account"` so the
+    // JS `mapMasterErrorCode` classifier routes them to
+    // `account_mgmt.not_found` instead of the generic failure branch.
+    #[tokio::test]
+    async fn test_update_account_not_found_has_stable_code_and_entity() {
+        let pool = setup_test_db().await;
+
+        let err = update_account(
+            &pool,
+            2,
+            UpdateAccountRequest {
+                account_code: "MISSING".to_string(),
+                account_name: "Missing".to_string(),
+                template_code: "CASH".to_string(),
+                initial_balance: 0,
+                display_order: 1,
+            },
+        )
+        .await
+        .unwrap_err();
+
+        assert_eq!(err.code, ApiError::CODE_NOT_FOUND);
+        assert_eq!(err.entity.as_deref(), Some("account"));
+    }
+
+    #[tokio::test]
+    async fn test_delete_account_not_found_has_stable_code_and_entity() {
+        let pool = setup_test_db().await;
+        let err = delete_account(&pool, 2, "MISSING").await.unwrap_err();
+        assert_eq!(err.code, ApiError::CODE_NOT_FOUND);
+        assert_eq!(err.entity.as_deref(), Some("account"));
     }
 
     #[tokio::test]

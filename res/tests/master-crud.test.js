@@ -86,6 +86,19 @@ describe('mapMasterErrorCode — ApiError code → i18n key', () => {
         expect(out.toastMessage).toBeNull();
     });
 
+    test('duplicate_code → toast (routes to code field, not name), reuses ${prefix}.duplicate_error key', () => {
+        // Account is the current caller: the duplicate check is on the
+        // account CODE column, so the inline error must NOT land on the
+        // name input the saveMasterEntry helper tracks. Routed as a
+        // toast so the calling screen can decide where to display it.
+        const err = { code: 'duplicate_code', message: 'Account code already exists', entity: 'account' };
+        const accountCtx = { ...shopCtx, i18nPrefix: 'account_mgmt', nameFieldI18nKey: 'account_mgmt.account_name' };
+        const out = mapMasterErrorCode(err, accountCtx);
+        expect(out.nameMessage).toBeNull();
+        expect(out.memoMessage).toBeNull();
+        expect(out.toastMessage).toBe('account_mgmt.duplicate_error');
+    });
+
     test('not_found → toast, no inline messages', () => {
         const err = { code: 'not_found', message: 'Shop not found', entity: 'shop' };
         const out = mapMasterErrorCode(err, shopCtx);
@@ -156,6 +169,7 @@ describe('mapMasterErrorCode — ApiError code → i18n key', () => {
 
     test('API_ERROR_CODES exports the codes the Rust side documents', () => {
         expect(API_ERROR_CODES.DUPLICATE_NAME).toBe('duplicate_name');
+        expect(API_ERROR_CODES.DUPLICATE_CODE).toBe('duplicate_code');
         expect(API_ERROR_CODES.NOT_FOUND).toBe('not_found');
         expect(API_ERROR_CODES.MANUFACTURER_NOT_FOUND).toBe('manufacturer_not_found');
         expect(API_ERROR_CODES.VALIDATION).toBe('validation');

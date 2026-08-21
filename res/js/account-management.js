@@ -12,6 +12,7 @@ import { createMenuBar, handleLogout, handleQuit } from './menu.js';
 import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
 import { showToast } from './toast.js';
 import { escapeHtml } from './escape-html.js';
+import { mapMasterErrorCode, API_ERROR_CODES } from './master-crud.js';
 
 console.log('=== ACCOUNT-MANAGEMENT.JS LOADED - ALL imports enabled ===');
 console.log('invoke:', typeof invoke);
@@ -304,20 +305,31 @@ async function saveAccount() {
         return;
     }
 
+    // Resolve the edit target from the local cache BEFORE invoke so a
+    // concurrent delete lands on the dedicated not_found path (toast +
+    // reload + modal close) rather than the generic save-error branch.
+    let accountForUpdate = null;
+    if (editingAccountCode) {
+        accountForUpdate = accounts.find(a => a.account_code === editingAccountCode);
+        if (!accountForUpdate) {
+            showToast(i18n.t('account_mgmt.not_found'), { variant: 'error' });
+            await loadAccounts();
+            accountModal.close();
+            return;
+        }
+    }
+
     try {
         if (editingAccountCode) {
-            // Update existing account
-            const displayOrder = accounts.find(a => a.account_code === editingAccountCode).display_order;
             await invoke('update_account', {
                 accountCode: accountCode,
                 accountName: accountName,
                 templateCode: templateCode,
                 initialBalance: initialBalance,
-                displayOrder: displayOrder
+                displayOrder: accountForUpdate.display_order
             });
             showToast(i18n.t('account_mgmt.update_success'), { variant: 'success' });
         } else {
-            // Add new account
             await invoke('add_account', {
                 accountCode: accountCode,
                 accountName: accountName,
@@ -332,19 +344,36 @@ async function saveAccount() {
     } catch (error) {
         console.error('Failed to save account:', error);
 
-        // Map backend error messages to i18n resources / localized text
-        const errorMessage = error.toString();
-        if (errorMessage.includes('Account name must be')) {
-            // Defense-line trip: frontend max-length check should have caught
-            // this, so use the same i18n message for parity.
-            showValidationError(accountNameInput, i18n.t('validation.max_length', {
-                field: i18n.t('account_mgmt.account_name'),
-                max: MAX_NAME_LEN,
-                actual: [...accountName].length,
-            }));
-        } else {
-            showToast(i18n.t('account_mgmt.failed_to_save') + ': ' + error, { variant: 'error' });
+        // Backend not_found (invoke-after case): reload list + close
+        // modal to match the "list has been reloaded" toast wording,
+        // rather than staying open on top of a stale row.
+        if (error && typeof error === 'object' && error.code === API_ERROR_CODES.NOT_FOUND) {
+            showToast(i18n.t('account_mgmt.not_found'), { variant: 'error' });
+            await loadAccounts();
+            accountModal.close();
+            return;
         }
+
+        // All other backend errors (duplicate_code, validation trip,
+        // database) get classified through the shared helper. Account's
+        // duplicate is on the CODE column so `mapMasterErrorCode`
+        // returns it as `toastMessage`, not an inline `nameMessage`,
+        // because the code input is not the `nameInput` the helper
+        // tracks. Validation trips still route to the name field inline.
+        const mapped = mapMasterErrorCode(error, {
+            i18nPrefix: 'account_mgmt',
+            nameFieldI18nKey: 'account_mgmt.account_name',
+            memoFieldI18nKey: 'account_mgmt.account_name',
+            nameMaxLen: MAX_NAME_LEN,
+            memoMaxLen: MAX_NAME_LEN,
+            actualNameLen: [...accountName].length,
+            actualMemoLen: 0,
+        });
+
+        if (mapped.toastMessage) {
+            showToast(mapped.toastMessage, { variant: 'error' });
+        }
+        if (mapped.nameMessage) showValidationError(accountNameInput, mapped.nameMessage);
     }
 }
 

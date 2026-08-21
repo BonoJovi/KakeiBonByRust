@@ -32,6 +32,7 @@ import { showToast } from './toast.js';
  */
 export const API_ERROR_CODES = Object.freeze({
     DUPLICATE_NAME: 'duplicate_name',
+    DUPLICATE_CODE: 'duplicate_code',
     NOT_FOUND: 'not_found',
     MANUFACTURER_NOT_FOUND: 'manufacturer_not_found',
     VALIDATION: 'validation',
@@ -69,6 +70,18 @@ export function mapMasterErrorCode(err, ctx) {
                 nameMessage: i18n.t(`${ctx.i18nPrefix}.duplicate_error`),
                 memoMessage: null,
                 toastMessage: null,
+            };
+
+        case API_ERROR_CODES.DUPLICATE_CODE:
+            // Same per-screen `${prefix}.duplicate_error` wording as
+            // duplicate_name; screens that key duplicate off a code
+            // column (currently only account) route the inline error
+            // to the code field via `toastMessage`, since the code
+            // input is not the `nameInput` saveMasterEntry tracks.
+            return {
+                nameMessage: null,
+                memoMessage: null,
+                toastMessage: i18n.t(`${ctx.i18nPrefix}.duplicate_error`),
             };
 
         case API_ERROR_CODES.NOT_FOUND:

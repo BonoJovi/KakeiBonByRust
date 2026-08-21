@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2025-12-06 06:24 JST  
-**総テスト数**: 256件 (delta 反映後。`cargo test --lib` の権威的総数は 501 で、pre-existing gap は別 PR でバックフィル予定)
+**総テスト数**: 259件 (delta 反映後。`cargo test --lib` の権威的総数は 504 で、pre-existing gap は別 PR でバックフィル予定)
 
 ---
 
@@ -212,13 +212,14 @@ AES-256-GCM暗号化・復号化のテスト。
 |-----------|------|---------|-----|
 | `duplicate_name_carries_lowercased_entity_and_stable_code` | `ApiError::duplicate_name("Shop")` で `code="duplicate_name"`、`entity="shop"` | src/api_error.rs | 128 |
 | `not_found_carries_lowercased_entity_and_stable_code` | `ApiError::not_found("Manufacturer")` で `code="not_found"`、`entity="manufacturer"` | src/api_error.rs | 136 |
-| `manufacturer_not_found_has_its_own_code` | `manufacturer_not_found` は汎用 `not_found` とは区別された専用 code | src/api_error.rs | 143 |
+| `duplicate_code_carries_lowercased_entity_and_distinct_code` | `ApiError::duplicate_code("Account")` で `code="duplicate_code"` (`duplicate_name` とは区別) | src/api_error.rs | 145 |
+| `manufacturer_not_found_has_its_own_code` | `manufacturer_not_found` は汎用 `not_found` とは区別された専用 code | src/api_error.rs | 154 |
 | `validation_carries_message_through_and_omits_entity` | `ApiError::validation(msg)` で `code="validation"`、message 貫通、entity=None | src/api_error.rs | 150 |
 | `database_from_sqlx_row_not_found` | `sqlx::Error` → `ApiError::database` の `From` 変換 | src/api_error.rs | 158 |
 | `serialises_with_snake_case_code_and_optional_entity` | serialize 出力に snake_case `code` と entity フィールドが含まれる | src/api_error.rs | 165 |
 | `serialises_without_entity_key_when_none` | entity=None のときは JSON 出力から `entity` キー自体を省略 (`skip_serializing_if`) | src/api_error.rs | 174 |
 
-**合計**: 7件
+**合計**: 8件
 
 ### services/auth.rs
 
@@ -283,15 +284,17 @@ AES-256-GCM暗号化・復号化のテスト。
 
 ### services/account.rs
 
-口座管理サービスのテスト。
+口座管理サービスのテスト。empty-name/duplicate-code 系の assertion は `ApiError { code: "validation" | "duplicate_code" }` に移行 (Fable-5 #23); 挙動は不変。
 
 | テスト関数 | 説明 | ファイル | 行 |
 |-----------|------|---------|-----|
-| `test_add_account_rejects_empty_name` | 口座名が空のとき backend で拒否 (Fable-5 #16) | src/services/account.rs | 589 |
-| `test_add_account_rejects_whitespace_only_name` | 空白のみの口座名は backend で拒否 (Fable-5 #16) | src/services/account.rs | 603 |
-| `test_update_account_rejects_empty_name` | 更新で口座名が空のとき backend で拒否 (Fable-5 #16) | src/services/account.rs | 617 |
+| `test_add_account_rejects_empty_name` | 口座名が空のとき `ApiError { code: "validation" }` (Fable-5 #16, #23) | src/services/account.rs | 597 |
+| `test_add_account_rejects_whitespace_only_name` | 空白のみの口座名は `ApiError { code: "validation" }` (Fable-5 #16, #23) | src/services/account.rs | 612 |
+| `test_update_account_rejects_empty_name` | 更新で口座名が空のとき `ApiError { code: "validation" }` (Fable-5 #16, #23) | src/services/account.rs | 627 |
+| `test_update_account_not_found_has_stable_code_and_entity` | 存在しない口座の更新は `ApiError { code: "not_found", entity: "account" }` (Fable-5 #23) | src/services/account.rs | 815 |
+| `test_delete_account_not_found_has_stable_code_and_entity` | 存在しない口座の削除は `ApiError { code: "not_found" }` (Fable-5 #23) | src/services/account.rs | 837 |
 
-**合計**: 3件
+**合計**: 5件
 
 ### services/category.rs
 
@@ -484,17 +487,17 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **233件** |
+| **インラインテスト** | **236件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
 | db.rs | 4 |
 | settings.rs | 12 |
-| api_error.rs | 7 |
+| api_error.rs | 8 |
 | services/auth.rs | 13 |
 | services/user_management.rs | 13 |
 | services/encryption.rs | 8 |
-| services/account.rs | 3 |
+| services/account.rs | 5 |
 | services/category.rs | 18 |
 | services/manufacturer.rs | 9 |
 | services/product.rs | 11 |
@@ -505,7 +508,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/i18n.rs | 8 |
 | services/recurring.rs | 1 |
 | lib.rs | 4 |
-| **総計** | **256件** |
+| **総計** | **259件** |
 
 ---
 
