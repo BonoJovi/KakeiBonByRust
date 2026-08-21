@@ -241,15 +241,18 @@
 | テストカテゴリ | 説明 | テスト数 | 実装方法 |
 |--------------|------|---------|---------|
 | パスワードバリデーション | 共通パスワードテストスイート | 26件 | `runAllPasswordTests()` |
-| 画面固有エッジケース | 管理者登録画面特有のテスト | 3件 | 個別実装 |
+| 画面固有エッジケース | 管理者登録画面特有のテスト | 6件 | 個別実装 (`Admin Setup Specific Edge Cases` describe) |
 
-#### 画面固有テスト (3件)
+#### 画面固有テスト (6件)
 
-| テスト名 | 説明 | 期待結果 | 行 |
-|---------|------|---------|-----|
-| `should accept password with leading/trailing spaces (if matching and >= 16 chars)` | 前後にスペースがあるパスワード（16文字以上、一致）を受け入れ | valid: true | - |
-| `should accept extremely long password (1000 chars)` | 超長いパスワード（1000文字）を受け入れ | valid: true | - |
-| `should accept password with emoji` | 絵文字を含むパスワードを受け入れ | valid: true | - |
+| テスト名 | 説明 | 期待結果 |
+|---------|------|---------|
+| `should handle password with leading/trailing spaces if matching and long enough` | 前後にスペース付き、両者一致・16文字以上 | valid: true |
+| `should accept very long password` | 1000 文字パスワード | valid: true |
+| `should accept password with emojis` | 絵文字を含むパスワード (2 バイト以上文字含む) | valid: true |
+| `should handle password with newlines (not trimmed)` | 改行を含み、確認側で改行が落ちる | valid: false, "Passwords do not match!" |
+| `should handle zero-width space` | ゼロ幅スペース 1 文字 (可視 0 だが `.length` は 1) | valid: false, "at least 16 characters" |
+| `should reject short numeric password` | 6 桁の数字のみ | valid: false, "at least 16 characters" |
 
 **ファイル**: res/tests/admin-setup.test.js
 
@@ -257,16 +260,15 @@
 
 ### user-addition.test.js
 
-ユーザー追加画面のテスト。
+ユーザー追加画面のテスト。共通スイートのみで構成 (画面固有 describe は無し)。
 
-**テスト数**: 46件 (jest 実測、内訳は共通スイート + 画面固有ケース)
+**テスト数**: 46件 (jest 実測、13 + 26 + 7)
 
 | テストカテゴリ | 説明 | テスト数 | 実装方法 |
 |--------------|------|---------|---------|
 | ユーザー名バリデーション | 共通ユーザー名テストスイート | 13件 | `testUsernameValidation()` |
 | パスワードバリデーション | 共通パスワードテストスイート | 26件 | `runAllPasswordTests()` |
 | 組み合わせバリデーション | ユーザー名とパスワードの組み合わせ | 7件 | `testCombinedValidation()` |
-| 画面固有エッジケース | ユーザー追加画面特有のテスト | 3件 | 個別実装 |
 
 **ファイル**: res/tests/user-addition.test.js
 
