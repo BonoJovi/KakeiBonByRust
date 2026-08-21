@@ -9,6 +9,7 @@ import { createMenuBar, setupLanguageMenu, setupLanguageMenuHandlers } from './m
 import { setupTaxCalculationListeners } from './detail-tax-calc.js';
 import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
 import { MAX_RULE_NAME_LEN, MAX_ITEM_NAME_LEN, MAX_MEMO_LEN } from './consts.js';
+import { formatApiError } from './master-crud.js';
 
 console.log('=== RECURRING-RULE.JS LOADED ===');
 
@@ -67,7 +68,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.scrollTo(0, 0);
     } catch (err) {
         console.error('Initialization error:', err);
-        showResult('error', String(err));
+        // formatApiError unwraps the { code, message, entity } object
+        // shape that get_accounts / get_shops (migrated to ApiError in
+        // PR #97/#99) now return; a bare String(err) would render
+        // "[object Object]" here (Devin review on #99).
+        showResult('error', formatApiError(err));
     }
 });
 

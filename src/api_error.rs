@@ -43,6 +43,7 @@ impl ApiError {
     // and the JS side can keep the strings in one shared place.
 
     pub const CODE_DUPLICATE_NAME: &'static str = "duplicate_name";
+    pub const CODE_DUPLICATE_CODE: &'static str = "duplicate_code";
     pub const CODE_NOT_FOUND: &'static str = "not_found";
     pub const CODE_MANUFACTURER_NOT_FOUND: &'static str = "manufacturer_not_found";
     pub const CODE_VALIDATION: &'static str = "validation";
@@ -55,6 +56,20 @@ impl ApiError {
         Self {
             code: Self::CODE_DUPLICATE_NAME.to_string(),
             message: format!("{} name already exists", entity),
+            entity: Some(entity.to_lowercase()),
+        }
+    }
+
+    /// Duplicate master-code row already exists for this user. Distinct
+    /// from `duplicate_name` because Account (and any future
+    /// code-identified master) checks the CODE column, not the NAME
+    /// column, so the inline error should blame the code field, not the
+    /// name field. The i18n key stays `${prefix}.duplicate_error` for
+    /// per-screen wording; only the target field differs.
+    pub fn duplicate_code(entity: &str) -> Self {
+        Self {
+            code: Self::CODE_DUPLICATE_CODE.to_string(),
+            message: format!("{} code already exists", entity),
             entity: Some(entity.to_lowercase()),
         }
     }
@@ -134,6 +149,15 @@ mod tests {
         let err = ApiError::not_found("Manufacturer");
         assert_eq!(err.code, "not_found");
         assert_eq!(err.entity.as_deref(), Some("manufacturer"));
+    }
+
+    #[test]
+    fn duplicate_code_carries_lowercased_entity_and_distinct_code() {
+        let err = ApiError::duplicate_code("Account");
+        assert_eq!(err.code, "duplicate_code");
+        assert_ne!(err.code, ApiError::CODE_DUPLICATE_NAME);
+        assert_eq!(err.entity.as_deref(), Some("account"));
+        assert!(err.message.contains("code already exists"));
     }
 
     #[test]

@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-08-21 JST  
-**Total Tests**: 256 (delta-tracked; the full authoritative count from `cargo test --lib` is 501, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 259 (delta-tracked; the full authoritative count from `cargo test --lib` is 504, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -212,13 +212,14 @@ Settings management functionality tests.
 |---------------|-------------|------|------|
 | `duplicate_name_carries_lowercased_entity_and_stable_code` | `ApiError::duplicate_name("Shop")` → `code="duplicate_name"`, `entity="shop"` | src/api_error.rs | 128 |
 | `not_found_carries_lowercased_entity_and_stable_code` | `ApiError::not_found("Manufacturer")` → `code="not_found"`, `entity="manufacturer"` | src/api_error.rs | 136 |
-| `manufacturer_not_found_has_its_own_code` | `ApiError::manufacturer_not_found()` → `code="manufacturer_not_found"` (distinct from generic `not_found`) | src/api_error.rs | 143 |
+| `duplicate_code_carries_lowercased_entity_and_distinct_code` | `ApiError::duplicate_code("Account")` → `code="duplicate_code"` (distinct from `duplicate_name`) | src/api_error.rs | 145 |
+| `manufacturer_not_found_has_its_own_code` | `ApiError::manufacturer_not_found()` → `code="manufacturer_not_found"` (distinct from generic `not_found`) | src/api_error.rs | 154 |
 | `validation_carries_message_through_and_omits_entity` | `ApiError::validation(msg)` → `code="validation"`, message passed through, no entity | src/api_error.rs | 150 |
 | `database_from_sqlx_row_not_found` | `sqlx::Error → ApiError::database` via `From<sqlx::Error>` | src/api_error.rs | 158 |
 | `serialises_with_snake_case_code_and_optional_entity` | Serialised JSON has snake_case `code` and populated `entity` field | src/api_error.rs | 165 |
 | `serialises_without_entity_key_when_none` | Serialised JSON omits `entity` when None (via `skip_serializing_if`) | src/api_error.rs | 174 |
 
-**Total**: 7 tests
+**Total**: 8 tests
 
 ### services/auth.rs
 
@@ -283,15 +284,17 @@ Encryption service tests (field encryption, re-encryption).
 
 ### services/account.rs
 
-Account management service tests.
+Account management service tests. Assertions on empty-name and duplicate-code paths migrated to `ApiError { code: "validation" | "duplicate_code" }` when moved off `Result<_, String>` (Fable-5 #23); behaviour is unchanged.
 
 | Test Function | Description | File | Line |
 |---------------|-------------|------|------|
-| `test_add_account_rejects_empty_name` | Empty account name is rejected at backend (Fable-5 #16) | src/services/account.rs | 589 |
-| `test_add_account_rejects_whitespace_only_name` | Whitespace-only account name is rejected at backend (Fable-5 #16) | src/services/account.rs | 603 |
-| `test_update_account_rejects_empty_name` | Empty account name via update is rejected at backend (Fable-5 #16) | src/services/account.rs | 617 |
+| `test_add_account_rejects_empty_name` | Empty account name returns `ApiError { code: "validation" }` (Fable-5 #16, #23) | src/services/account.rs | 597 |
+| `test_add_account_rejects_whitespace_only_name` | Whitespace-only account name returns `ApiError { code: "validation" }` (Fable-5 #16, #23) | src/services/account.rs | 612 |
+| `test_update_account_rejects_empty_name` | Empty account name via update returns `ApiError { code: "validation" }` (Fable-5 #16, #23) | src/services/account.rs | 627 |
+| `test_update_account_not_found_has_stable_code_and_entity` | Updating a missing account returns `ApiError { code: "not_found", entity: "account" }` (Fable-5 #23) | src/services/account.rs | 815 |
+| `test_delete_account_not_found_has_stable_code_and_entity` | Deleting a missing account returns `ApiError { code: "not_found" }` (Fable-5 #23) | src/services/account.rs | 837 |
 
-**Total**: 3 tests
+**Total**: 5 tests
 
 ### services/category.rs
 
@@ -484,17 +487,17 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **233** |
+| **Inline Tests** | **236** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
 | db.rs | 4 |
 | settings.rs | 12 |
-| api_error.rs | 7 |
+| api_error.rs | 8 |
 | services/auth.rs | 13 |
 | services/user_management.rs | 13 |
 | services/encryption.rs | 8 |
-| services/account.rs | 3 |
+| services/account.rs | 5 |
 | services/category.rs | 18 |
 | services/manufacturer.rs | 9 |
 | services/product.rs | 11 |
@@ -505,7 +508,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/i18n.rs | 8 |
 | services/recurring.rs | 1 |
 | lib.rs | 4 |
-| **Total** | **256** |
+| **Total** | **259** |
 
 ---
 

@@ -1575,7 +1575,7 @@ async fn delete_transaction(
 #[tauri::command]
 async fn get_account_templates(
     state: tauri::State<'_, AppState>
-) -> Result<Vec<services::account::AccountTemplate>, String> {
+) -> Result<Vec<services::account::AccountTemplate>, api_error::ApiError> {
     let db = state.db.lock().await;
     services::account::get_account_templates(db.pool()).await
 }
@@ -1589,8 +1589,8 @@ async fn get_account_templates(
 async fn get_account_balances_as_of(
     as_of_date: String,
     state: tauri::State<'_, AppState>,
-) -> Result<Vec<services::account::AccountBalance>, String> {
-    let user_id = get_session_user_id(&state)?;
+) -> Result<Vec<services::account::AccountBalance>, api_error::ApiError> {
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
     let db = state.db.lock().await;
     services::account::get_account_balances_as_of(db.pool(), user_id, &as_of_date).await
 }
@@ -1598,14 +1598,14 @@ async fn get_account_balances_as_of(
 #[tauri::command]
 async fn get_accounts(
     state: tauri::State<'_, AppState>
-) -> Result<Vec<services::account::Account>, String> {
+) -> Result<Vec<services::account::Account>, api_error::ApiError> {
     let session_user = state.session.get_user()
-        .ok_or("User not authenticated. Please login first.".to_string())?;
+        .ok_or_else(|| api_error::ApiError::validation("User not authenticated. Please login first."))?;
     let user_id = session_user.user_id;
     let user_role = session_user.role;
-    
+
     let db = state.db.lock().await;
-    
+
     // Admin (role 0) can see all accounts, regular users see only their own
     if user_role == crate::consts::ROLE_ADMIN {
         services::account::get_all_accounts(db.pool()).await
@@ -1621,17 +1621,17 @@ async fn add_account(
     template_code: String,
     initial_balance: i64,
     state: tauri::State<'_, AppState>
-) -> Result<String, String> {
-    let user_id = get_session_user_id(&state)?;
+) -> Result<String, api_error::ApiError> {
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
     let db = state.db.lock().await;
-    
+
     let request = services::account::AddAccountRequest {
         account_code,
         account_name,
         template_code,
         initial_balance,
     };
-    
+
     services::account::add_account(db.pool(), user_id, request).await
 }
 
@@ -1643,10 +1643,10 @@ async fn update_account(
     initial_balance: i64,
     display_order: i64,
     state: tauri::State<'_, AppState>
-) -> Result<String, String> {
-    let user_id = get_session_user_id(&state)?;
+) -> Result<String, api_error::ApiError> {
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
     let db = state.db.lock().await;
-    
+
     let request = services::account::UpdateAccountRequest {
         account_code,
         account_name,
@@ -1654,7 +1654,7 @@ async fn update_account(
         initial_balance,
         display_order,
     };
-    
+
     services::account::update_account(db.pool(), user_id, request).await
 }
 
@@ -1662,10 +1662,10 @@ async fn update_account(
 async fn delete_account(
     account_code: String,
     state: tauri::State<'_, AppState>
-) -> Result<String, String> {
-    let user_id = get_session_user_id(&state)?;
+) -> Result<String, api_error::ApiError> {
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
     let db = state.db.lock().await;
-    
+
     services::account::delete_account(db.pool(), user_id, &account_code).await
 }
 

@@ -55,7 +55,7 @@ jest.unstable_mockModule('../js/validation-display.js', () => ({
 }));
 
 // Import under test AFTER the mocks are set up.
-const { mapMasterErrorCode, saveMasterEntry, API_ERROR_CODES } =
+const { mapMasterErrorCode, saveMasterEntry, formatApiError, API_ERROR_CODES } =
     await import('../js/master-crud.js');
 
 beforeEach(() => {
@@ -84,6 +84,19 @@ describe('mapMasterErrorCode — ApiError code → i18n key', () => {
         expect(out.nameMessage).toBe('shop_mgmt.duplicate_error');
         expect(out.memoMessage).toBeNull();
         expect(out.toastMessage).toBeNull();
+    });
+
+    test('duplicate_code → toast (routes to code field, not name), reuses ${prefix}.duplicate_error key', () => {
+        // Account is the current caller: the duplicate check is on the
+        // account CODE column, so the inline error must NOT land on the
+        // name input the saveMasterEntry helper tracks. Routed as a
+        // toast so the calling screen can decide where to display it.
+        const err = { code: 'duplicate_code', message: 'Account code already exists', entity: 'account' };
+        const accountCtx = { ...shopCtx, i18nPrefix: 'account_mgmt', nameFieldI18nKey: 'account_mgmt.account_name' };
+        const out = mapMasterErrorCode(err, accountCtx);
+        expect(out.nameMessage).toBeNull();
+        expect(out.memoMessage).toBeNull();
+        expect(out.toastMessage).toBe('account_mgmt.duplicate_error');
     });
 
     test('not_found → toast, no inline messages', () => {
@@ -154,8 +167,40 @@ describe('mapMasterErrorCode — ApiError code → i18n key', () => {
         expect(out.nameMessage).toBe('shop_mgmt.failed_to_save');
     });
 
+    // Devin review on #99: string concatenation with an ApiError object
+    // renders as "[object Object]" — every unmigrated error-surface site
+    // now goes through formatApiError.
+    describe('formatApiError', () => {
+        test('returns the message string for an ApiError-shaped object', () => {
+            expect(formatApiError({ code: 'not_found', message: 'Account not found', entity: 'account' }))
+                .toBe('Account not found');
+        });
+
+        test('falls back to String(err) for a plain string (unmigrated command)', () => {
+            expect(formatApiError('Legacy error text')).toBe('Legacy error text');
+        });
+
+        test('unwraps .message from an Error instance (same shape as ApiError)', () => {
+            // Error instances have a string .message, so the helper
+            // returns it directly — a nicer default than String(err)
+            // which would prepend "Error:".
+            const s = formatApiError(new Error('boom'));
+            expect(s).toBe('boom');
+        });
+
+        test('falls back to String(err) for an object with no message field', () => {
+            expect(formatApiError({ code: 'weird' })).toBe('[object Object]');
+        });
+
+        test('handles null and undefined', () => {
+            expect(formatApiError(null)).toBe('null');
+            expect(formatApiError(undefined)).toBe('undefined');
+        });
+    });
+
     test('API_ERROR_CODES exports the codes the Rust side documents', () => {
         expect(API_ERROR_CODES.DUPLICATE_NAME).toBe('duplicate_name');
+        expect(API_ERROR_CODES.DUPLICATE_CODE).toBe('duplicate_code');
         expect(API_ERROR_CODES.NOT_FOUND).toBe('not_found');
         expect(API_ERROR_CODES.MANUFACTURER_NOT_FOUND).toBe('manufacturer_not_found');
         expect(API_ERROR_CODES.VALIDATION).toBe('validation');
