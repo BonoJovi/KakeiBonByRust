@@ -51,7 +51,7 @@ use validation::{validate_password, validate_password_confirmation};
 use crate::consts::{LANG_ENGLISH, LANG_JAPANESE, LANG_DEFAULT, FONT_SIZE_SMALL, FONT_SIZE_MEDIUM, FONT_SIZE_LARGE, FONT_SIZE_DEFAULT};
 
 pub struct AppState {
-    pub db: Arc<Mutex<Database>>,
+    pub db: Arc<Database>,
     pub auth: Arc<Mutex<AuthService>>,
     pub user_mgmt: Arc<Mutex<UserManagementService>>,
     pub encryption: Arc<Mutex<EncryptionService>>,
@@ -290,7 +290,7 @@ fn clear_session(state: tauri::State<'_, AppState>) -> Result<(), String> {
 
 #[tauri::command]
 async fn test_db_connection(state: tauri::State<'_, AppState>) -> Result<String, String> {
-    let db = state.db.lock().await;
+    let db = &state.db;
     match sqlx::query(sql_queries::DB_TEST_CONNECTION)
         .fetch_one(db.pool())
         .await
@@ -809,7 +809,7 @@ async fn get_user_period_settings(
     state: tauri::State<'_, AppState>,
 ) -> Result<serde_json::Value, String> {
     let user_id = get_session_user_id(&state)?;
-    let db = state.db.lock().await;
+    let db = &state.db;
     let (month_day, year_month, year_day, month_shift) =
         fetch_period_settings(db.pool(), user_id).await?;
     Ok(serde_json::json!({
@@ -829,7 +829,7 @@ async fn get_monthly_period_bounds(
     state: tauri::State<'_, AppState>,
 ) -> Result<serde_json::Value, String> {
     let user_id = get_session_user_id(&state)?;
-    let db = state.db.lock().await;
+    let db = &state.db;
     let (month_start_day, _, _, month_shift) =
         fetch_period_settings(db.pool(), user_id).await?;
     let (start, end) = monthly_bounds_with_shift_for(
@@ -862,7 +862,7 @@ async fn update_user_period_settings(
     let month_shift =
         validation::validate_month_period_holiday_shift(month_period_holiday_shift)?;
 
-    let db = state.db.lock().await;
+    let db = &state.db;
     sqlx::query(sql_queries::USER_UPDATE_PERIOD_SETTINGS)
         .bind(month_day as i64)
         .bind(year_month as i64)
@@ -1514,7 +1514,7 @@ async fn delete_transaction(
 async fn get_account_templates(
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::account::AccountTemplate>, api_error::ApiError> {
-    let db = state.db.lock().await;
+    let db = &state.db;
     services::account::get_account_templates(db.pool()).await
 }
 
@@ -1529,7 +1529,7 @@ async fn get_account_balances_as_of(
     state: tauri::State<'_, AppState>,
 ) -> Result<Vec<services::account::AccountBalance>, api_error::ApiError> {
     let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
-    let db = state.db.lock().await;
+    let db = &state.db;
     services::account::get_account_balances_as_of(db.pool(), user_id, &as_of_date).await
 }
 
@@ -1542,7 +1542,7 @@ async fn get_accounts(
     let user_id = session_user.user_id;
     let user_role = session_user.role;
 
-    let db = state.db.lock().await;
+    let db = &state.db;
 
     // Admin (role 0) can see all accounts, regular users see only their own
     if user_role == crate::consts::ROLE_ADMIN {
@@ -1561,7 +1561,7 @@ async fn add_account(
     state: tauri::State<'_, AppState>
 ) -> Result<String, api_error::ApiError> {
     let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
-    let db = state.db.lock().await;
+    let db = &state.db;
 
     let request = services::account::AddAccountRequest {
         account_code,
@@ -1583,7 +1583,7 @@ async fn update_account(
     state: tauri::State<'_, AppState>
 ) -> Result<String, api_error::ApiError> {
     let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
-    let db = state.db.lock().await;
+    let db = &state.db;
 
     let request = services::account::UpdateAccountRequest {
         account_code,
@@ -1602,7 +1602,7 @@ async fn delete_account(
     state: tauri::State<'_, AppState>
 ) -> Result<String, api_error::ApiError> {
     let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
-    let db = state.db.lock().await;
+    let db = &state.db;
 
     services::account::delete_account(db.pool(), user_id, &account_code).await
 }
@@ -1616,7 +1616,7 @@ async fn get_shops(
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::shop::Shop>, api_error::ApiError> {
     let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
-    let db = state.db.lock().await;
+    let db = &state.db;
     services::shop::get_shops(db.pool(), user_id).await
 }
 
@@ -1627,7 +1627,7 @@ async fn add_shop(
     state: tauri::State<'_, AppState>
 ) -> Result<String, api_error::ApiError> {
     let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
-    let db = state.db.lock().await;
+    let db = &state.db;
 
     let request = services::shop::AddShopRequest {
         shop_name,
@@ -1646,7 +1646,7 @@ async fn update_shop(
     state: tauri::State<'_, AppState>
 ) -> Result<String, api_error::ApiError> {
     let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
-    let db = state.db.lock().await;
+    let db = &state.db;
 
     let request = services::shop::UpdateShopRequest {
         shop_name,
@@ -1663,7 +1663,7 @@ async fn delete_shop(
     state: tauri::State<'_, AppState>
 ) -> Result<String, api_error::ApiError> {
     let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
-    let db = state.db.lock().await;
+    let db = &state.db;
     services::shop::delete_shop(db.pool(), user_id, shop_id).await
 }
 
@@ -1677,7 +1677,7 @@ async fn get_manufacturers(
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::manufacturer::Manufacturer>, api_error::ApiError> {
     let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
-    let db = state.db.lock().await;
+    let db = &state.db;
     services::manufacturer::get_manufacturers(db.pool(), user_id, include_disabled).await
 }
 
@@ -1689,7 +1689,7 @@ async fn add_manufacturer(
     state: tauri::State<'_, AppState>
 ) -> Result<String, api_error::ApiError> {
     let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
-    let db = state.db.lock().await;
+    let db = &state.db;
 
     let request = services::manufacturer::AddManufacturerRequest {
         manufacturer_name,
@@ -1710,7 +1710,7 @@ async fn update_manufacturer(
     state: tauri::State<'_, AppState>
 ) -> Result<String, api_error::ApiError> {
     let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
-    let db = state.db.lock().await;
+    let db = &state.db;
 
     let request = services::manufacturer::UpdateManufacturerRequest {
         manufacturer_name,
@@ -1728,7 +1728,7 @@ async fn delete_manufacturer(
     state: tauri::State<'_, AppState>
 ) -> Result<String, api_error::ApiError> {
     let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
-    let db = state.db.lock().await;
+    let db = &state.db;
     services::manufacturer::delete_manufacturer(db.pool(), user_id, manufacturer_id).await
 }
 
@@ -1742,7 +1742,7 @@ async fn get_products(
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::product::Product>, api_error::ApiError> {
     let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
-    let db = state.db.lock().await;
+    let db = &state.db;
     services::product::get_products(db.pool(), user_id, include_disabled).await
 }
 
@@ -1755,7 +1755,7 @@ async fn add_product(
     state: tauri::State<'_, AppState>
 ) -> Result<String, api_error::ApiError> {
     let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
-    let db = state.db.lock().await;
+    let db = &state.db;
 
     let request = services::product::AddProductRequest {
         product_name,
@@ -1778,7 +1778,7 @@ async fn update_product(
     state: tauri::State<'_, AppState>
 ) -> Result<String, api_error::ApiError> {
     let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
-    let db = state.db.lock().await;
+    let db = &state.db;
 
     let request = services::product::UpdateProductRequest {
         product_name,
@@ -1797,7 +1797,7 @@ async fn delete_product(
     state: tauri::State<'_, AppState>
 ) -> Result<String, api_error::ApiError> {
     let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
-    let db = state.db.lock().await;
+    let db = &state.db;
     services::product::delete_product(db.pool(), user_id, product_id).await
 }
 
@@ -1807,7 +1807,7 @@ async fn search_products_by_name(
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::product::Product>, api_error::ApiError> {
     let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
-    let db = state.db.lock().await;
+    let db = &state.db;
     services::product::search_products_by_name(db.pool(), user_id, &query).await
 }
 
@@ -2176,7 +2176,7 @@ async fn get_monthly_aggregation(
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::aggregation::AggregationResult>, String> {
     let user_id = get_session_user_id(&state)?;
-    let db = state.db.lock().await;
+    let db = &state.db;
     let settings = state.settings.lock().await;
     let lang = settings.get_string("language")
         .unwrap_or_else(|_| LANG_DEFAULT.to_string());
@@ -2210,7 +2210,7 @@ async fn get_daily_aggregation(
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::aggregation::AggregationResult>, String> {
     let user_id = get_session_user_id(&state)?;
-    let db = state.db.lock().await;
+    let db = &state.db;
     let settings = state.settings.lock().await;
     let lang = settings.get_string("language")
         .unwrap_or_else(|_| LANG_DEFAULT.to_string());
@@ -2241,7 +2241,7 @@ async fn get_period_aggregation(
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::aggregation::AggregationResult>, String> {
     let user_id = get_session_user_id(&state)?;
-    let db = state.db.lock().await;
+    let db = &state.db;
     let settings = state.settings.lock().await;
     let lang = settings.get_string("language")
         .unwrap_or_else(|_| LANG_DEFAULT.to_string());
@@ -2276,7 +2276,7 @@ async fn get_weekly_aggregation(
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::aggregation::AggregationResult>, String> {
     let user_id = get_session_user_id(&state)?;
-    let db = state.db.lock().await;
+    let db = &state.db;
     let settings = state.settings.lock().await;
     let lang = settings.get_string("language")
         .unwrap_or_else(|_| LANG_DEFAULT.to_string());
@@ -2312,7 +2312,7 @@ async fn get_weekly_aggregation_by_date(
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::aggregation::AggregationResult>, String> {
     let user_id = get_session_user_id(&state)?;
-    let db = state.db.lock().await;
+    let db = &state.db;
     let settings = state.settings.lock().await;
     let lang = settings.get_string("language")
         .unwrap_or_else(|_| LANG_DEFAULT.to_string());
@@ -2350,7 +2350,7 @@ async fn get_yearly_aggregation(
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::aggregation::AggregationResult>, String> {
     let user_id = get_session_user_id(&state)?;
-    let db = state.db.lock().await;
+    let db = &state.db;
     let settings = state.settings.lock().await;
     let lang = settings.get_string("language")
         .unwrap_or_else(|_| LANG_DEFAULT.to_string());
@@ -2385,7 +2385,7 @@ async fn get_monthly_aggregation_by_category(
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::aggregation::AggregationResult>, String> {
     let user_id = get_session_user_id(&state)?;
-    let db = state.db.lock().await;
+    let db = &state.db;
     let settings = state.settings.lock().await;
     let lang = settings.get_string("language")
         .unwrap_or_else(|_| LANG_DEFAULT.to_string());
@@ -2658,7 +2658,7 @@ pub fn run() {
             })?;
 
             app.manage(AppState {
-                db: Arc::new(Mutex::new(db)),
+                db: Arc::new(db),
                 auth: Arc::new(Mutex::new(auth)),
                 user_mgmt: Arc::new(Mutex::new(user_mgmt)),
                 encryption: Arc::new(Mutex::new(encryption)),
