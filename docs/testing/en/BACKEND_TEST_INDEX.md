@@ -2,8 +2,8 @@
 
 This document provides a complete index of all backend tests implemented in Rust.
 
-**Last Updated**: 2026-08-21 JST  
-**Total Tests**: 264 (delta-tracked; the full authoritative count from `cargo test --lib` is 509, and a follow-up pass will backfill the remaining pre-existing gap)
+**Last Updated**: 2026-08-22 JST  
+**Total Tests**: 268 (delta-tracked; the full authoritative count from `cargo test --lib` is 513, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -466,9 +466,13 @@ Recurring transaction rule service tests.
 
 | Test Function | Description | File | Line |
 |---------------|-------------|------|------|
-| `test_delete_rule_returns_not_found_for_missing` | Delete of a missing rule returns NotFound instead of empty-commit fake success (Fable-5 #8) | src/services/recurring.rs | 1783 |
+| `test_delete_rule_returns_not_found_for_missing` | Delete of a missing rule returns NotFound instead of empty-commit fake success (Fable-5 #8) | src/services/recurring.rs | 1811 |
+| `not_found_maps_to_not_found_code_with_recurring_rule_entity` | RecurringError::NotFound maps to ApiError::not_found("recurring rule") (PR2a) | src/services/recurring.rs | 1833 |
+| `validation_preserves_message_and_omits_entity` | RecurringError::Validation maps to ApiError::CODE_VALIDATION with the message preserved (PR2a) | src/services/recurring.rs | 1840 |
+| `database_error_maps_to_database_code` | RecurringError::Database maps to ApiError::CODE_DATABASE (PR2a) | src/services/recurring.rs | 1851 |
+| `field_needle_message_survives_conversion_for_frontend_routing` | Four field needles (`"Rule name must be"` etc.) survive at the head of the wire message so the frontend `startsWith` routing keeps working (PR2a) | src/services/recurring.rs | 1858 |
 
-**Total**: 1 test
+**Total**: 5 tests
 
 ### lib.rs
 
@@ -492,7 +496,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **241** |
+| **Inline Tests** | **245** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -511,9 +515,9 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/aggregation.rs | 6 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
-| services/recurring.rs | 1 |
+| services/recurring.rs | 5 |
 | lib.rs | 4 |
-| **Total** | **264** |
+| **Total** | **268** |
 
 ---
 

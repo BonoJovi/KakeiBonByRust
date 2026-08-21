@@ -2,8 +2,8 @@
 
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
-**最終更新**: 2026-08-21 JST  
-**総テスト数**: 264件 (delta 反映後。`cargo test --lib` の権威的総数は 509 で、pre-existing gap は別 PR でバックフィル予定)
+**最終更新**: 2026-08-22 JST  
+**総テスト数**: 268件 (delta 反映後。`cargo test --lib` の権威的総数は 513 で、pre-existing gap は別 PR でバックフィル予定)
 
 ---
 
@@ -466,9 +466,13 @@ AES-256-GCM暗号化・復号化のテスト。
 
 | テスト関数 | 説明 | ファイル | 行 |
 |-----------|------|---------|-----|
-| `test_delete_rule_returns_not_found_for_missing` | 消失したルールの削除は空コミット偽成功でなく NotFound を返す (Fable-5 #8) | src/services/recurring.rs | 1783 |
+| `test_delete_rule_returns_not_found_for_missing` | 消失したルールの削除は空コミット偽成功でなく NotFound を返す (Fable-5 #8) | src/services/recurring.rs | 1811 |
+| `not_found_maps_to_not_found_code_with_recurring_rule_entity` | RecurringError::NotFound が ApiError::not_found("recurring rule") にマッピングされること (PR2a) | src/services/recurring.rs | 1833 |
+| `validation_preserves_message_and_omits_entity` | RecurringError::Validation が ApiError::CODE_VALIDATION に変換され、メッセージが保持されること (PR2a) | src/services/recurring.rs | 1840 |
+| `database_error_maps_to_database_code` | RecurringError::Database が ApiError::CODE_DATABASE に変換されること (PR2a) | src/services/recurring.rs | 1851 |
+| `field_needle_message_survives_conversion_for_frontend_routing` | 4 つのフィールド needle (`"Rule name must be"` 等) が変換後もそのまま先頭に残り、フロントの `startsWith` ルーティングを維持できること (PR2a) | src/services/recurring.rs | 1858 |
 
-**合計**: 1件
+**合計**: 5件
 
 ### lib.rs
 
@@ -492,7 +496,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **241件** |
+| **インラインテスト** | **245件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -511,9 +515,9 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/aggregation.rs | 6 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
-| services/recurring.rs | 1 |
+| services/recurring.rs | 5 |
 | lib.rs | 4 |
-| **総計** | **264件** |
+| **総計** | **268件** |
 
 ---
 

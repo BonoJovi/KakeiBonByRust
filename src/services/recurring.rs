@@ -6,9 +6,12 @@ use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 use std::collections::HashSet;
 
+use crate::api_error::ApiError;
 use crate::services::holiday::{shift_for_holidays, HolidayShift};
 use crate::services::period::end_of_month;
 use crate::{sql_queries, consts, validation};
+
+const ENTITY_LABEL: &str = "Recurring rule";
 
 /// 周期と起点を一体で表現する。`unit` と「いつ発生するか」のアンカー情報を
 /// バリアントごとに固定することで、不正な組み合わせ（例: Day なのに DayOfMonth が
@@ -549,9 +552,34 @@ impl std::fmt::Display for RecurringError {
     }
 }
 
+impl std::error::Error for RecurringError {}
+
 impl From<sqlx::Error> for RecurringError {
     fn from(err: sqlx::Error) -> Self {
         RecurringError::Database(err)
+    }
+}
+
+/// Map the domain-specific `RecurringError` onto the wire-level `ApiError`
+/// so the tauri command wrappers can `?`-propagate it into a structured
+/// `{ code, message, entity? }` payload for the frontend classifier
+/// (`res/js/recurring-rule.js` — direct `err.code` branching, no substring
+/// matches). Matches the `From<CategoryError>` / `From<UserManagementError>`
+/// shape (PR #100/#101).
+///
+/// Codes:
+///   - `NotFound`        → `not_found` (entity="recurring rule")
+///   - `Validation(msg)` → `validation` (message preserved so the recurring
+///                         screen can still dispatch bounded-field errors to
+///                         the right inline input)
+///   - `Database(e)`     → `database`
+impl From<RecurringError> for ApiError {
+    fn from(err: RecurringError) -> Self {
+        match err {
+            RecurringError::NotFound => ApiError::not_found(ENTITY_LABEL),
+            RecurringError::Validation(msg) => ApiError::validation(msg),
+            RecurringError::Database(e) => ApiError::database(e.to_string()),
+        }
     }
 }
 
@@ -1793,4 +1821,62 @@ mod tests {
         assert!(matches!(result_cascade.unwrap_err(), RecurringError::NotFound));
     }
 
+    // ---- From<RecurringError> for ApiError ------------------------------
+    // These tests pin the wire codes that the frontend classifier
+    // (`res/js/recurring-rule.js` — `err.code` branching) matches on.
+    // If a variant is renamed here or in api_error.rs, the JS side stops
+    // classifying its errors — hence the assertions on the stable
+    // `ApiError::CODE_*` constants. Mirrors the CategoryError /
+    // UserManagementError precedent (PR #100/#101).
+
+    #[test]
+    fn not_found_maps_to_not_found_code_with_recurring_rule_entity() {
+        let err: ApiError = RecurringError::NotFound.into();
+        assert_eq!(err.code, ApiError::CODE_NOT_FOUND);
+        assert_eq!(err.entity.as_deref(), Some("recurring rule"));
+    }
+
+    #[test]
+    fn validation_preserves_message_and_omits_entity() {
+        let err: ApiError = RecurringError::Validation(
+            "Rule name must be 64 characters or less".to_string(),
+        )
+        .into();
+        assert_eq!(err.code, ApiError::CODE_VALIDATION);
+        assert!(err.message.contains("64 characters"));
+        assert!(err.entity.is_none());
+    }
+
+    #[test]
+    fn database_error_maps_to_database_code() {
+        let err: ApiError = RecurringError::Database(sqlx::Error::RowNotFound).into();
+        assert_eq!(err.code, ApiError::CODE_DATABASE);
+        assert!(err.entity.is_none());
+    }
+
+    #[test]
+    fn field_needle_message_survives_conversion_for_frontend_routing() {
+        // The recurring-rule frontend dispatches bounded-field validation
+        // errors to the right input by checking `err.message.startsWith(...)`
+        // after gating on `err.code === 'validation'`. That contract needs
+        // the four leading needles (`"Rule name must be"`, `"Item name must
+        // be"`, `"Header memo must be"`, `"Detail memo must be"`) to reach
+        // the wire verbatim — this test pins that.
+        for needle in [
+            "Rule name must be",
+            "Item name must be",
+            "Header memo must be",
+            "Detail memo must be",
+        ] {
+            let msg = format!("{} 64 characters or less", needle);
+            let err: ApiError = RecurringError::Validation(msg.clone()).into();
+            assert_eq!(err.code, ApiError::CODE_VALIDATION);
+            assert!(
+                err.message.starts_with(needle),
+                "wire message `{}` must start with `{}` for frontend field routing",
+                err.message,
+                needle
+            );
+        }
+    }
 }
