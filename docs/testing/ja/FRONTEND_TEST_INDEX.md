@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-08-21 JST  
-**総テスト数**: 687件 (jest suite 21 ファイル、`npm test` 実測)
+**総テスト数**: 696件 (jest suite 22 ファイル、`npm test` 実測)
 
 ---
 
@@ -32,6 +32,7 @@
   - [product-master-jump-draft.test.js](#product-master-jump-drafttestjs)
   - [modal-double-submit.test.js](#modal-double-submittestjs)
   - [master-crud.test.js](#master-crudtestjs)
+  - [attach-char-counter-ime.test.js](#attach-char-counter-imetestjs)
 - [集計機能テスト](#集計機能テスト)
   - [aggregation-daily.test.js](#aggregation-dailytestjs)
   - [aggregation-weekly.test.js](#aggregation-weeklytestjs)
@@ -548,6 +549,21 @@
 
 ---
 
+### attach-char-counter-ime.test.js
+
+共有ヘルパー `attachCharCounter` (`res/js/validation-display.js`) の IME 変換中ガード回帰テスト (Fable-5 レビュー #D1)。maxlength 撤去で露見した「IME 変換中に `input` イベントで `.value` を切り詰めると変換バッファが壊れる」経路を防ぐ。加えて既存の非 IME 動作 (プレーン typing 切り詰め、コードポイント計数、idempotent detach) の基準テストも含む。
+
+**テスト数**: 8件
+
+| テストブロック | 説明 | テスト数 |
+|--------------|------|---------|
+| 非 IME baseline | 単純タイピング切り詰め / 初期値切り詰め / 表示カウンター描画 | 3件 |
+| IME composition ガード | compositionstart 中は `.value` を書き換えない / compositionend で切り詰め / 連続 composition / idempotent (二重 attach でリスナー累積しない) / detach で全リスナー除去 | 5件 |
+
+**ファイル**: res/tests/attach-char-counter-ime.test.js
+
+---
+
 ## 集計機能テスト
 
 ### aggregation-daily.test.js
@@ -712,7 +728,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **264件** |
+| **機能別テスト** | **273件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 17 |
@@ -721,15 +737,16 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | product-autocomplete.test.js | 10 |
 | product-draft.test.js | 11 |
 | product-master-jump-draft.test.js | 11 |
-| modal-double-submit.test.js | 5 |
+| modal-double-submit.test.js | 6 |
 | master-crud.test.js | 23 |
+| attach-char-counter-ime.test.js | 8 |
 | **集計機能テスト** | **115件** |
 | aggregation-daily.test.js | 16 |
 | aggregation-weekly.test.js | 22 |
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **687件** |
+| **総計 (jest)** | **696件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 

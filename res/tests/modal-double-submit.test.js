@@ -194,6 +194,45 @@ describe('Modal double-submit guard — form submit path', () => {
     });
 });
 
+describe('Modal — save failure does not leak an unhandled promise rejection (Fable-5 #D7)', () => {
+    beforeEach(() => {
+        buildModalDom();
+    });
+
+    afterEach(() => {
+        document.body.innerHTML = '';
+    });
+
+    test('form-submit path swallows an onSave rejection at the listener boundary', async () => {
+        const onSave = jest.fn().mockRejectedValue(new Error('boom'));
+        const modal = new Modal('test-modal', {
+            formId: 'test-form',
+            closeButtonId: 'close-btn',
+            cancelButtonId: 'cancel-btn',
+            onSave,
+        });
+        modal.open('add');
+
+        const unhandled = jest.fn();
+        window.addEventListener('unhandledrejection', unhandled);
+
+        document.getElementById('test-form').dispatchEvent(
+            new Event('submit', { cancelable: true })
+        );
+        await flush();
+        // Give the microtask queue one more tick so any escaped
+        // rejection has had a chance to bubble up to `unhandledrejection`.
+        await flush();
+
+        window.removeEventListener('unhandledrejection', unhandled);
+
+        expect(onSave).toHaveBeenCalledTimes(1);
+        expect(unhandled).not.toHaveBeenCalled();
+        // Modal stayed open (its _handleSave never closes on error).
+        expect(modal.modal.classList.contains('hidden')).toBe(false);
+    });
+});
+
 describe('Modal double-submit guard — saveButtonId path', () => {
     beforeEach(() => {
         buildButtonModalDom();
