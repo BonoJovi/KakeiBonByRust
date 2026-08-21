@@ -2,8 +2,8 @@
 
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
-**最終更新**: 2025-12-06 06:24 JST  
-**総テスト数**: 260件 (delta 反映後。`cargo test --lib` の権威的総数は 505 で、pre-existing gap は別 PR でバックフィル予定)
+**最終更新**: 2026-08-21 JST  
+**総テスト数**: 264件 (delta 反映後。`cargo test --lib` の権威的総数は 509 で、pre-existing gap は別 PR でバックフィル予定)
 
 ---
 
@@ -299,7 +299,7 @@ AES-256-GCM暗号化・復号化のテスト。
 
 ### services/category.rs
 
-カテゴリ管理サービス（3階層カテゴリのCRUD）のテスト。
+カテゴリ管理サービス（3階層カテゴリのCRUD）のテスト。Tauri wrapper 境界で内部の `CategoryError` を `From<CategoryError>` により `ApiError { code, message, entity? }` へマッピング (Fable-5 #23)。
 
 | テスト関数 | 説明 | ファイル | 行 |
 |-----------|------|---------|-----|
@@ -321,8 +321,12 @@ AES-256-GCM暗号化・復号化のテスト。
 | `test_disable_category2_returns_not_found_for_missing` | 消失した中カテゴリ論理削除は NotFound を返す (Fable-5 #7) | src/services/category.rs | 1899 |
 | `test_disable_category3_returns_not_found_for_missing` | 消失した小カテゴリ論理削除は NotFound を返す (Fable-5 #7) | src/services/category.rs | 1910 |
 | `test_disable_category2_succeeds_with_no_children` | 子カテゴリなしの中カテゴリ論理削除は成功する（子スイープは0件許容） | src/services/category.rs | 1926 |
+| `not_found_maps_to_not_found_code_with_category_entity` | `CategoryError::NotFound` → `ApiError { code: "not_found", entity: "category" }` (Fable-5 #23) | src/services/category.rs | 2101 |
+| `duplicate_name_maps_to_duplicate_name_code_with_category_entity` | `CategoryError::DuplicateName(_)` → `ApiError { code: "duplicate_name", entity: "category" }` (Fable-5 #23) | src/services/category.rs | 2108 |
+| `validation_preserves_message_and_omits_entity` | `CategoryError::Validation(msg)` → `ApiError { code: "validation" }` で message を保持 (Fable-5 #23) | src/services/category.rs | 2115 |
+| `database_error_maps_to_database_code` | `CategoryError::DatabaseError(_)` → `ApiError { code: "database" }` (Fable-5 #23) | src/services/category.rs | 2125 |
 
-**合計**: 18件
+**合計**: 22件
 
 ### services/manufacturer.rs
 
@@ -488,7 +492,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **237件** |
+| **インラインテスト** | **241件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -499,7 +503,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/user_management.rs | 13 |
 | services/encryption.rs | 8 |
 | services/account.rs | 5 |
-| services/category.rs | 18 |
+| services/category.rs | 22 |
 | services/manufacturer.rs | 9 |
 | services/product.rs | 11 |
 | services/shop.rs | 9 |
@@ -509,7 +513,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/i18n.rs | 8 |
 | services/recurring.rs | 1 |
 | lib.rs | 4 |
-| **総計** | **260件** |
+| **総計** | **264件** |
 
 ---
 

@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-08-21 JST  
-**Total Tests**: 260 (delta-tracked; the full authoritative count from `cargo test --lib` is 505, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 264 (delta-tracked; the full authoritative count from `cargo test --lib` is 509, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -299,7 +299,7 @@ Account management service tests. Assertions on empty-name and duplicate-code pa
 
 ### services/category.rs
 
-Category management service tests (3-tier category CRUD).
+Category management service tests (3-tier category CRUD). Internal `CategoryError` variants map to `ApiError { code, message, entity? }` at the Tauri wrapper boundary via `From<CategoryError>` (Fable-5 #23).
 
 | Test Function | Description | File | Line |
 |---------------|-------------|------|------|
@@ -321,8 +321,12 @@ Category management service tests (3-tier category CRUD).
 | `test_disable_category2_returns_not_found_for_missing` | Missing CATEGORY2 disable returns NotFound (Fable-5 #7) | src/services/category.rs | 1899 |
 | `test_disable_category3_returns_not_found_for_missing` | Missing CATEGORY3 disable returns NotFound (Fable-5 #7) | src/services/category.rs | 1910 |
 | `test_disable_category2_succeeds_with_no_children` | Leaf CATEGORY2 disable succeeds (child sweep tolerates 0 rows) | src/services/category.rs | 1926 |
+| `not_found_maps_to_not_found_code_with_category_entity` | `CategoryError::NotFound` → `ApiError { code: "not_found", entity: "category" }` (Fable-5 #23) | src/services/category.rs | 2101 |
+| `duplicate_name_maps_to_duplicate_name_code_with_category_entity` | `CategoryError::DuplicateName(_)` → `ApiError { code: "duplicate_name", entity: "category" }` (Fable-5 #23) | src/services/category.rs | 2108 |
+| `validation_preserves_message_and_omits_entity` | `CategoryError::Validation(msg)` → `ApiError { code: "validation" }` with message preserved (Fable-5 #23) | src/services/category.rs | 2115 |
+| `database_error_maps_to_database_code` | `CategoryError::DatabaseError(_)` → `ApiError { code: "database" }` (Fable-5 #23) | src/services/category.rs | 2125 |
 
-**Total**: 18 tests
+**Total**: 22 tests
 
 ### services/manufacturer.rs
 
@@ -488,7 +492,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **237** |
+| **Inline Tests** | **241** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -499,7 +503,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/user_management.rs | 13 |
 | services/encryption.rs | 8 |
 | services/account.rs | 5 |
-| services/category.rs | 18 |
+| services/category.rs | 22 |
 | services/manufacturer.rs | 9 |
 | services/product.rs | 11 |
 | services/shop.rs | 9 |
@@ -509,7 +513,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/i18n.rs | 8 |
 | services/recurring.rs | 1 |
 | lib.rs | 4 |
-| **Total** | **260** |
+| **Total** | **264** |
 
 ---
 

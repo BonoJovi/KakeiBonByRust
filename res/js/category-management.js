@@ -12,6 +12,7 @@ import { showValidationError, clearValidationError, showMaxLengthError, attachCh
 import { showToast } from './toast.js';
 import { MAX_I18N_NAME_LEN } from './consts.js';
 import { escapeHtml } from './escape-html.js';
+import { mapMasterErrorCode, API_ERROR_CODES, formatApiError } from './master-crud.js';
 
 // Category level constants
 const LEVEL_CATEGORY1 = 1;
@@ -318,24 +319,24 @@ async function loadCategories() {
         const treeContainer = document.getElementById('category-tree');
         treeContainer.innerHTML = '<div class="loading" data-i18n="common.loading">Loading...</div>';
         i18n.updateUI();
-        
+
         // Get current language
         const currentLang = i18n.getCurrentLanguage();
-        
+
         console.log('Loading categories with params:', { langCode: currentLang });
-        
+
         // Fetch categories from backend
         categories = await invoke('get_category_tree_all_with_lang', {
             langCode: currentLang
         });
-        
+
         console.log('Loaded categories:', categories);
-        
+
         renderCategoryTree();
     } catch (error) {
         console.error('Failed to load categories:', error);
         const treeContainer = document.getElementById('category-tree');
-        treeContainer.innerHTML = '<div class="error">Failed to load categories: ' + error + '</div>';
+        treeContainer.innerHTML = '<div class="error">Failed to load categories: ' + escapeHtml(formatApiError(error)) + '</div>';
     }
 }
 
@@ -686,7 +687,13 @@ async function openEditModal(categoryCode, category1Code, category2Code, level) 
         // Concurrent removal from another window: show the dedicated
         // not_found toast and refresh the tree so the stale row disappears.
         // Matches the Shop/Product/Manufacturer master-audit contract.
-        if (String(error).includes('not found')) {
+        // Keys off the stable `err.code` returned by ApiError; the legacy
+        // substring inspection is retained as a fallback for any Tauri
+        // path not yet migrated to Result<T, ApiError>.
+        const isBackendNotFound = error !== null
+            && typeof error === 'object'
+            && error.code === API_ERROR_CODES.NOT_FOUND;
+        if (isBackendNotFound || String(error).includes('not found')) {
             showToast(i18n.t('category_mgmt.not_found'), { variant: 'error' });
             await loadCategories();
             return;
@@ -695,7 +702,7 @@ async function openEditModal(categoryCode, category1Code, category2Code, level) 
         const errorMsg = i18n.t('category_mgmt.error_load_category');
         const errorElement = document.getElementById('error-message');
         if (errorElement) {
-            errorElement.textContent = errorMsg + ': ' + error;
+            errorElement.textContent = errorMsg + ': ' + formatApiError(error);
             errorElement.style.display = 'block';
         }
     }
@@ -704,6 +711,57 @@ async function openEditModal(categoryCode, category1Code, category2Code, level) 
 async function handleCategory1Save() {
     // TODO: Implement save logic
     console.log('Save category1');
+}
+
+/**
+ * Route a backend save error from cat2/cat3 modals into inline field
+ * messages or a toast. Tree view has TWO name inputs (ja + en), so
+ * classifier `nameMessage` output is shown on BOTH fields — matching
+ * the pre-existing "both empty" pattern (single-field targeting is
+ * ambiguous in the tree). Also handles the backend `not_found` case by
+ * reloading the tree and closing the modal, matching account /
+ * shop / manufacturer / product master-audit contract (PR #99).
+ *
+ * Returns `true` when the error was handled as not_found (caller
+ * should skip re-throw so the Modal auto-closes); `false` otherwise
+ * (caller should re-throw to keep the Modal open with inline errors).
+ */
+async function handleCategoryModalError(error, modal, nameJaField, nameEnField, ctx) {
+    const isBackendNotFound = error !== null
+        && typeof error === 'object'
+        && error.code === API_ERROR_CODES.NOT_FOUND;
+    if (isBackendNotFound) {
+        showToast(i18n.t('category_mgmt.not_found'), { variant: 'error' });
+        await loadCategories();
+        modal.close();
+        return true;
+    }
+
+    const mapped = mapMasterErrorCode(error, {
+        i18nPrefix: 'category_mgmt',
+        // Category has two name fields (ja+en). The classifier only tracks
+        // a single nameFieldI18nKey/nameMaxLen, so its VALIDATION-branch
+        // "characters or less" wording is not routed here — we surface it
+        // as a toast fallback instead. Empty-name and duplicate-name paths
+        // are unaffected: both produce a nameMessage that we place on
+        // both ja/en fields.
+        nameFieldI18nKey: 'category_mgmt.name_ja',
+        memoFieldI18nKey: 'category_mgmt.name_ja',
+        nameMaxLen: MAX_I18N_NAME_LEN,
+        memoMaxLen: MAX_I18N_NAME_LEN,
+        actualNameLen: ctx.actualNameLen,
+        actualMemoLen: 0,
+    });
+
+    if (mapped.toastMessage) {
+        showToast(mapped.toastMessage, { variant: 'error' });
+    }
+    if (mapped.nameMessage) {
+        // Tree view makes single-field inline errors ambiguous — show on both.
+        showValidationError(nameJaField, mapped.nameMessage);
+        showValidationError(nameEnField, mapped.nameMessage);
+    }
+    return false;
 }
 
 async function handleCategory2Save(formData) {
@@ -761,41 +819,17 @@ async function handleCategory2Save(formData) {
                 nameEn: nameEn
             });
         }
-        
+
         // Reload categories
         await loadCategories();
     } catch (error) {
         console.error('Failed to save category2:', error);
 
-        const errStr = String(error);
-
-        // Defense-line trip from Rust: bounded-field max length.
-        if (errStr.includes('Japanese name must be')) {
-            showValidationError(nameJaField, i18n.t('validation.max_length', {
-                field: i18n.t('category_mgmt.name_ja'),
-                max: MAX_I18N_NAME_LEN,
-                actual: [...nameJa].length,
-            }));
-            throw error;
-        }
-        if (errStr.includes('English name must be')) {
-            showValidationError(nameEnField, i18n.t('validation.max_length', {
-                field: i18n.t('category_mgmt.name_en'),
-                max: MAX_I18N_NAME_LEN,
-                actual: [...nameEn].length,
-            }));
-            throw error;
-        }
-
-        // Check if it's a duplicate name error
-        if (errStr.includes('already exists')) {
-            const match = errStr.match(/Category name '(.+)' already exists/);
-            const duplicateName = match ? match[1] : '';
-            const errorMsg = i18n.t('error.category_duplicate_name').replace('{0}', duplicateName);
-            showToast(errorMsg, { variant: 'warning' });
-        } else {
-            showToast(i18n.t('error.category_save_failed') + ': ' + error, { variant: 'error' });
-        }
+        const handledAsNotFound = await handleCategoryModalError(
+            error, category2Modal, nameJaField, nameEnField,
+            { actualNameLen: Math.max([...nameJa].length, [...nameEn].length) }
+        );
+        if (handledAsNotFound) return;
         throw error; // Re-throw to prevent modal from closing
     } finally {
         // Always restore button state
@@ -862,41 +896,17 @@ async function handleCategory3Save(formData) {
                 nameEn: nameEn
             });
         }
-        
+
         // Reload categories
         await loadCategories();
     } catch (error) {
         console.error('Failed to save category3:', error);
 
-        const errStr = String(error);
-
-        // Defense-line trip from Rust: bounded-field max length.
-        if (errStr.includes('Japanese name must be')) {
-            showValidationError(nameJaField, i18n.t('validation.max_length', {
-                field: i18n.t('category_mgmt.name_ja'),
-                max: MAX_I18N_NAME_LEN,
-                actual: [...nameJa].length,
-            }));
-            throw error;
-        }
-        if (errStr.includes('English name must be')) {
-            showValidationError(nameEnField, i18n.t('validation.max_length', {
-                field: i18n.t('category_mgmt.name_en'),
-                max: MAX_I18N_NAME_LEN,
-                actual: [...nameEn].length,
-            }));
-            throw error;
-        }
-
-        // Check if it's a duplicate name error
-        if (errStr.includes('already exists')) {
-            const match = errStr.match(/Category name '(.+)' already exists/);
-            const duplicateName = match ? match[1] : '';
-            const errorMsg = i18n.t('error.category_duplicate_name').replace('{0}', duplicateName);
-            showToast(errorMsg, { variant: 'warning' });
-        } else {
-            showToast(i18n.t('error.category_save_failed') + ': ' + error, { variant: 'error' });
-        }
+        const handledAsNotFound = await handleCategoryModalError(
+            error, category3Modal, nameJaField, nameEnField,
+            { actualNameLen: Math.max([...nameJa].length, [...nameEn].length) }
+        );
+        if (handledAsNotFound) return;
         throw error; // Re-throw to prevent modal from closing
     } finally {
         // Always restore button state
@@ -933,7 +943,7 @@ async function moveCategoryUp(categoryCode, category1Code, category2Code, level)
         scrollToCategory(categoryCode, level);
     } catch (error) {
         console.error('Failed to move category up:', error);
-        showToast(i18n.t('error.category_move_failed') + ': ' + error, { variant: 'error' });
+        showToast(i18n.t('error.category_move_failed') + ': ' + formatApiError(error), { variant: 'error' });
         
         // Re-enable button on error
         if (button) {
@@ -970,7 +980,7 @@ async function moveCategoryDown(categoryCode, category1Code, category2Code, leve
         scrollToCategory(categoryCode, level);
     } catch (error) {
         console.error('Failed to move category down:', error);
-        showToast(i18n.t('error.category_move_failed') + ': ' + error, { variant: 'error' });
+        showToast(i18n.t('error.category_move_failed') + ': ' + formatApiError(error), { variant: 'error' });
         
         // Re-enable button on error
         if (button) {
@@ -1015,14 +1025,18 @@ async function hideCategory(category1Code, category2Code, category3Code, level, 
 
         // Target was already disabled/deleted in another window: show the
         // dedicated not_found toast and refresh the tree instead of the
-        // generic hide-failure message.
-        if (String(error).includes('not found')) {
+        // generic hide-failure message. Keys off the stable ApiError code
+        // with a legacy substring fallback for any unmigrated path.
+        const isBackendNotFound = error !== null
+            && typeof error === 'object'
+            && error.code === API_ERROR_CODES.NOT_FOUND;
+        if (isBackendNotFound || String(error).includes('not found')) {
             showToast(i18n.t('category_mgmt.not_found'), { variant: 'error' });
             await loadCategories();
             return;
         }
 
-        showToast(i18n.t('category_mgmt.failed_to_hide') + ': ' + error, { variant: 'error' });
+        showToast(i18n.t('category_mgmt.failed_to_hide') + ': ' + formatApiError(error), { variant: 'error' });
     }
 }
 
@@ -1045,7 +1059,7 @@ async function showCategory(category1Code, category2Code, category3Code, level) 
         await loadCategories();
     } catch (error) {
         console.error('Failed to show category:', error);
-        showToast(i18n.t('category_mgmt.failed_to_show') + ': ' + error, { variant: 'error' });
+        showToast(i18n.t('category_mgmt.failed_to_show') + ': ' + formatApiError(error), { variant: 'error' });
     }
 }
 
