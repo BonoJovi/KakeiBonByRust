@@ -1,13 +1,20 @@
 use serde::{Deserialize, Serialize};
 use sqlx::{SqlitePool, FromRow};
 use crate::api_error::ApiError;
-use crate::services::master_data;
+use crate::services::master_data::{self, MasterCrudSpec};
 use crate::sql_queries;
 use crate::validation;
 
-const NAME_LABEL: &str = "Shop name";
-const DUPLICATE_LABEL: &str = "shop name";
-const ENTITY_LABEL: &str = "Shop";
+/// Full description of the Shop master's SQL surface + labels. Consumed by
+/// the generic `master_data` helpers so the shared prelude (duplicate check
+/// + not-found mapping) stays out of this module. Fable-5 review #26.
+const SPEC: MasterCrudSpec = MasterCrudSpec {
+    entity_label: "Shop",
+    name_label: "Shop name",
+    check_duplicate_for_add_sql: sql_queries::SHOP_CHECK_DUPLICATE_FOR_ADD,
+    check_duplicate_for_update_sql: sql_queries::SHOP_CHECK_DUPLICATE_FOR_UPDATE,
+    delete_logical_sql: sql_queries::SHOP_DELETE_LOGICAL,
+};
 
 #[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
 #[sqlx(rename_all = "SCREAMING_SNAKE_CASE")]
@@ -44,15 +51,17 @@ pub async fn get_shops(pool: &SqlitePool, user_id: i64) -> Result<Vec<Shop>, Api
     Ok(shops)
 }
 
-/// Get a single shop by ID
+/// Get a single shop by ID. No longer called from production paths after
+/// the Fable-5 #26 refactor (delete/update now derive not_found from
+/// `rows_affected` rather than a pre-check), but kept because the module
+/// tests still exercise it as a "did the write actually persist?" probe.
+#[allow(dead_code)]
 pub async fn get_shop_by_id(
     pool: &SqlitePool,
     user_id: i64,
     shop_id: i64,
 ) -> Result<Option<Shop>, ApiError> {
-    master_data::fetch_by_id(pool, sql_queries::SHOP_GET_BY_ID, user_id, shop_id, "shop")
-        .await
-        .map_err(ApiError::database)
+    master_data::fetch_by_id(pool, sql_queries::SHOP_GET_BY_ID, user_id, shop_id).await
 }
 
 /// Add a new shop
@@ -61,31 +70,19 @@ pub async fn add_shop(
     user_id: i64,
     request: AddShopRequest,
 ) -> Result<String, ApiError> {
-    validation::validate_master_name(NAME_LABEL, &request.shop_name)
+    validation::validate_master_name(SPEC.name_label, &request.shop_name)
         .map_err(ApiError::validation)?;
     validation::validate_memo("Memo", request.memo.as_ref())
         .map_err(ApiError::validation)?;
 
-    if master_data::value_exists(
-        pool,
-        sql_queries::SHOP_CHECK_DUPLICATE_FOR_ADD,
-        user_id,
-        &request.shop_name,
-        DUPLICATE_LABEL,
-    )
-    .await
-    .map_err(ApiError::database)?
-    {
-        return Err(ApiError::duplicate_name(ENTITY_LABEL));
-    }
+    master_data::check_duplicate_for_add(&SPEC, pool, user_id, &request.shop_name).await?;
 
     let display_order = master_data::fetch_next_display_order(
         pool,
         sql_queries::SHOP_GET_NEXT_DISPLAY_ORDER,
         user_id,
     )
-    .await
-    .map_err(ApiError::database)?;
+    .await?;
 
     sqlx::query(sql_queries::SHOP_INSERT)
         .bind(user_id)
@@ -105,37 +102,29 @@ pub async fn update_shop(
     shop_id: i64,
     request: UpdateShopRequest,
 ) -> Result<String, ApiError> {
-    validation::validate_master_name(NAME_LABEL, &request.shop_name)
+    validation::validate_master_name(SPEC.name_label, &request.shop_name)
         .map_err(ApiError::validation)?;
     validation::validate_memo("Memo", request.memo.as_ref())
         .map_err(ApiError::validation)?;
 
-    get_shop_by_id(pool, user_id, shop_id)
-        .await?
-        .ok_or_else(|| ApiError::not_found(ENTITY_LABEL))?;
+    master_data::check_duplicate_for_update(&SPEC, pool, user_id, shop_id, &request.shop_name)
+        .await?;
 
-    if master_data::value_exists_excluding(
-        pool,
-        sql_queries::SHOP_CHECK_DUPLICATE_FOR_UPDATE,
-        user_id,
-        &request.shop_name,
-        shop_id,
-        DUPLICATE_LABEL,
-    )
-    .await
-    .map_err(ApiError::database)?
-    {
-        return Err(ApiError::duplicate_name(ENTITY_LABEL));
-    }
-
-    sqlx::query(sql_queries::SHOP_UPDATE)
+    // Pre-check `get_shop_by_id().ok_or(NotFound)?` was removed here
+    // (Fable-5 review #26): rows_affected from the UPDATE tells us the
+    // same thing in one round-trip instead of two, and it closes the
+    // TOCTOU window where the row could vanish between the pre-check
+    // and the update. See master_data::ensure_update_affected_one.
+    let affected = sqlx::query(sql_queries::SHOP_UPDATE)
         .bind(&request.shop_name)
         .bind(&request.memo)
         .bind(request.display_order)
         .bind(user_id)
         .bind(shop_id)
         .execute(pool)
-        .await?;
+        .await?
+        .rows_affected();
+    master_data::ensure_update_affected_one(&SPEC, affected)?;
 
     Ok("Shop updated successfully".to_string())
 }
@@ -146,20 +135,7 @@ pub async fn delete_shop(
     user_id: i64,
     shop_id: i64,
 ) -> Result<String, ApiError> {
-    get_shop_by_id(pool, user_id, shop_id)
-        .await?
-        .ok_or_else(|| ApiError::not_found(ENTITY_LABEL))?;
-
-    master_data::execute_by_id(
-        pool,
-        sql_queries::SHOP_DELETE_LOGICAL,
-        user_id,
-        shop_id,
-        "delete shop",
-    )
-    .await
-    .map_err(ApiError::database)?;
-
+    master_data::run_delete_expect_one(&SPEC, pool, user_id, shop_id).await?;
     Ok("Shop deleted successfully".to_string())
 }
 

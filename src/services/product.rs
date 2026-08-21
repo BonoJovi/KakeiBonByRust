@@ -1,13 +1,19 @@
 use serde::{Deserialize, Serialize};
 use sqlx::{SqlitePool, FromRow};
 use crate::api_error::ApiError;
-use crate::services::master_data;
+use crate::services::master_data::{self, MasterCrudSpec};
 use crate::sql_queries;
 use crate::validation;
 
-const NAME_LABEL: &str = "Product name";
-const DUPLICATE_LABEL: &str = "product name";
-const ENTITY_LABEL: &str = "Product";
+/// Full description of the Product master's SQL surface + labels.
+/// Fable-5 review #26.
+const SPEC: MasterCrudSpec = MasterCrudSpec {
+    entity_label: "Product",
+    name_label: "Product name",
+    check_duplicate_for_add_sql: sql_queries::PRODUCT_CHECK_DUPLICATE_FOR_ADD,
+    check_duplicate_for_update_sql: sql_queries::PRODUCT_CHECK_DUPLICATE_FOR_UPDATE,
+    delete_logical_sql: sql_queries::PRODUCT_DELETE_LOGICAL,
+};
 
 #[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
 #[sqlx(rename_all = "SCREAMING_SNAKE_CASE")]
@@ -82,21 +88,15 @@ pub async fn search_products_by_name(
     Ok(products)
 }
 
-/// Get a single product by ID
+/// Get a single product by ID. Kept for module tests only after the
+/// Fable-5 #26 refactor. See shop.rs::get_shop_by_id for rationale.
+#[allow(dead_code)]
 pub async fn get_product_by_id(
     pool: &SqlitePool,
     user_id: i64,
     product_id: i64,
 ) -> Result<Option<Product>, ApiError> {
-    master_data::fetch_by_id(
-        pool,
-        sql_queries::PRODUCT_GET_BY_ID,
-        user_id,
-        product_id,
-        "product",
-    )
-    .await
-    .map_err(ApiError::database)
+    master_data::fetch_by_id(pool, sql_queries::PRODUCT_GET_BY_ID, user_id, product_id).await
 }
 
 /// Add a new product
@@ -105,7 +105,7 @@ pub async fn add_product(
     user_id: i64,
     request: AddProductRequest,
 ) -> Result<String, ApiError> {
-    validation::validate_master_name(NAME_LABEL, &request.product_name)
+    validation::validate_master_name(SPEC.name_label, &request.product_name)
         .map_err(ApiError::validation)?;
     validation::validate_memo("Memo", request.memo.as_ref())
         .map_err(ApiError::validation)?;
@@ -120,26 +120,14 @@ pub async fn add_product(
     // Fable-5 review #13.
     verify_manufacturer_ownership(pool, user_id, request.manufacturer_id).await?;
 
-    if master_data::value_exists(
-        pool,
-        sql_queries::PRODUCT_CHECK_DUPLICATE_FOR_ADD,
-        user_id,
-        &request.product_name,
-        DUPLICATE_LABEL,
-    )
-    .await
-    .map_err(ApiError::database)?
-    {
-        return Err(ApiError::duplicate_name(ENTITY_LABEL));
-    }
+    master_data::check_duplicate_for_add(&SPEC, pool, user_id, &request.product_name).await?;
 
     let display_order = master_data::fetch_next_display_order(
         pool,
         sql_queries::PRODUCT_GET_NEXT_DISPLAY_ORDER,
         user_id,
     )
-    .await
-    .map_err(ApiError::database)?;
+    .await?;
 
     let is_disabled = request.is_disabled.unwrap_or(0);
 
@@ -189,32 +177,26 @@ pub async fn update_product(
     product_id: i64,
     request: UpdateProductRequest,
 ) -> Result<String, ApiError> {
-    validation::validate_master_name(NAME_LABEL, &request.product_name)
+    validation::validate_master_name(SPEC.name_label, &request.product_name)
         .map_err(ApiError::validation)?;
     validation::validate_memo("Memo", request.memo.as_ref())
         .map_err(ApiError::validation)?;
 
     verify_manufacturer_ownership(pool, user_id, request.manufacturer_id).await?;
 
-    get_product_by_id(pool, user_id, product_id)
-        .await?
-        .ok_or_else(|| ApiError::not_found(ENTITY_LABEL))?;
-
-    if master_data::value_exists_excluding(
+    master_data::check_duplicate_for_update(
+        &SPEC,
         pool,
-        sql_queries::PRODUCT_CHECK_DUPLICATE_FOR_UPDATE,
         user_id,
-        &request.product_name,
         product_id,
-        DUPLICATE_LABEL,
+        &request.product_name,
     )
-    .await
-    .map_err(ApiError::database)?
-    {
-        return Err(ApiError::duplicate_name(ENTITY_LABEL));
-    }
+    .await?;
 
-    sqlx::query(sql_queries::PRODUCT_UPDATE)
+    // Pre-check + not_found is now derived from `rows_affected` on the
+    // UPDATE itself (Fable-5 review #26). See shop.rs::update_shop for
+    // rationale.
+    let affected = sqlx::query(sql_queries::PRODUCT_UPDATE)
         .bind(&request.product_name)
         .bind(&request.manufacturer_id)
         .bind(&request.memo)
@@ -223,7 +205,9 @@ pub async fn update_product(
         .bind(user_id)
         .bind(product_id)
         .execute(pool)
-        .await?;
+        .await?
+        .rows_affected();
+    master_data::ensure_update_affected_one(&SPEC, affected)?;
 
     Ok("Product updated successfully".to_string())
 }
@@ -234,20 +218,7 @@ pub async fn delete_product(
     user_id: i64,
     product_id: i64,
 ) -> Result<String, ApiError> {
-    get_product_by_id(pool, user_id, product_id)
-        .await?
-        .ok_or_else(|| ApiError::not_found(ENTITY_LABEL))?;
-
-    master_data::execute_by_id(
-        pool,
-        sql_queries::PRODUCT_DELETE_LOGICAL,
-        user_id,
-        product_id,
-        "delete product",
-    )
-    .await
-    .map_err(ApiError::database)?;
-
+    master_data::run_delete_expect_one(&SPEC, pool, user_id, product_id).await?;
     Ok("Product deleted successfully".to_string())
 }
 
