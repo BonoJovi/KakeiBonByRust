@@ -358,9 +358,10 @@ async function loadTransactions() {
         const listContainer = document.getElementById('transaction-list');
         // formatApiError unwraps the { code, message, entity } object
         // shape that get_transactions returns after the ApiError migration
-        // (PR2b). A bare escapeHtml(error) would render "[object Object]"
-        // here — the sweep missed this site (Devin #104 review).
-        listContainer.innerHTML = `<div class="error">Failed to load transactions: ${escapeHtml(formatApiError(error))}</div>`;
+        // (PR2b, Devin #104 review). The prefix is now i18n (PR2c / P3 #21);
+        // loadTransactions runs downstream of `await i18n.init()`, so
+        // `i18n.t` is guaranteed to resolve to the translated string.
+        listContainer.innerHTML = `<div class="error">${escapeHtml(i18n.t('transaction_mgmt.load_transactions_failed'))}: ${escapeHtml(formatApiError(error))}</div>`;
     }
 }
 
