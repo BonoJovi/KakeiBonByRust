@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-08-22 JST  
-**Total Tests**: 268 (delta-tracked; the full authoritative count from `cargo test --lib` is 513, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 272 (delta-tracked; the full authoritative count from `cargo test --lib` is 517, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -407,8 +407,12 @@ Transaction management service tests.
 | `test_clear_detail_memo_succeeds_under_foreign_keys_on` | Clearing a detail memo must not violate the MEMOS foreign key | src/services/transaction.rs | 3843 |
 | `test_add_detail_rejects_foreign_transaction_id` | Adding a detail against another user's transaction_id must return NotFound (Fable-5 #12) | src/services/transaction.rs | 4109 |
 | `test_add_detail_rejects_nonexistent_transaction_id` | Adding a detail against a missing transaction_id must return NotFound (Fable-5 #12) | src/services/transaction.rs | 4142 |
+| `not_found_maps_to_not_found_code_with_transaction_entity` | TransactionError::NotFound maps to ApiError::not_found("transaction") (PR2b) | src/services/transaction.rs | 4199 |
+| `validation_preserves_message_and_omits_entity` | TransactionError::ValidationError maps to ApiError::CODE_VALIDATION with the message preserved (PR2b) | src/services/transaction.rs | 4206 |
+| `database_error_maps_to_database_code` | TransactionError::DatabaseError maps to ApiError::CODE_DATABASE (PR2b) | src/services/transaction.rs | 4217 |
+| `field_needle_message_survives_conversion_for_frontend_routing` | Two field needles (`"Item name must be"` / `"Memo must be"`) survive at the head of the wire message so the frontend `startsWith` routing keeps working (PR2b) | src/services/transaction.rs | 4224 |
 
-**Total**: 17 tests
+**Total**: 21 tests
 
 ### services/aggregation.rs
 
@@ -496,7 +500,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **245** |
+| **Inline Tests** | **249** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -511,13 +515,13 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/manufacturer.rs | 9 |
 | services/product.rs | 11 |
 | services/shop.rs | 9 |
-| services/transaction.rs | 17 |
+| services/transaction.rs | 21 |
 | services/aggregation.rs | 6 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 5 |
 | lib.rs | 4 |
-| **Total** | **268** |
+| **Total** | **272** |
 
 ---
 

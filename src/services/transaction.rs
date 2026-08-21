@@ -1,6 +1,9 @@
 use sqlx::{SqlitePool, Row};
 use serde::{Serialize, Deserialize};
+use crate::api_error::ApiError;
 use crate::{sql_queries, consts, validation};
+
+const ENTITY_LABEL: &str = "Transaction";
 
 /// Upper bound for page size in paginated transaction listings
 const MAX_PER_PAGE: i64 = 500;
@@ -222,9 +225,38 @@ impl std::fmt::Display for TransactionError {
     }
 }
 
+impl std::error::Error for TransactionError {}
+
 impl From<sqlx::Error> for TransactionError {
     fn from(err: sqlx::Error) -> Self {
         TransactionError::DatabaseError(err.to_string())
+    }
+}
+
+/// Map the domain-specific `TransactionError` onto the wire-level `ApiError`
+/// so the tauri command wrappers can `?`-propagate it into a structured
+/// `{ code, message, entity? }` payload for the frontend classifier
+/// (`res/js/transaction-management.js` / `transaction-detail-management.js`
+/// — direct `err.code` branching, no substring matches). Matches the
+/// `From<RecurringError>` shape (PR2a) and the earlier
+/// `From<CategoryError>` / `From<UserManagementError>` rollouts
+/// (PR #100/#101).
+///
+/// Codes:
+///   - `NotFound`              → `not_found` (entity="transaction")
+///   - `ValidationError(msg)`  → `validation` (message preserved so the
+///                               screens can still dispatch bounded-field
+///                               errors — `"Item name must be …"`,
+///                               `"Memo must be …"` — to the right inline
+///                               input via `startsWith`)
+///   - `DatabaseError(msg)`    → `database`
+impl From<TransactionError> for ApiError {
+    fn from(err: TransactionError) -> Self {
+        match err {
+            TransactionError::NotFound => ApiError::not_found(ENTITY_LABEL),
+            TransactionError::ValidationError(msg) => ApiError::validation(msg),
+            TransactionError::DatabaseError(msg) => ApiError::database(msg),
+        }
     }
 }
 
@@ -4152,6 +4184,61 @@ mod tests {
             "nonexistent parent must return NotFound, got: {:?}",
             attempt
         );
+    }
+
+    // ---- From<TransactionError> for ApiError ----------------------------
+    // These tests pin the wire codes that the frontend classifier
+    // (`res/js/transaction-management.js` / `transaction-detail-management.js`
+    // — `err.code` branching) matches on. If a variant is renamed here or in
+    // api_error.rs, the JS side stops classifying its errors — hence the
+    // assertions on the stable `ApiError::CODE_*` constants. Mirrors the
+    // RecurringError / CategoryError / UserManagementError precedent
+    // (PR #100/#101/#103).
+
+    #[test]
+    fn not_found_maps_to_not_found_code_with_transaction_entity() {
+        let err: ApiError = TransactionError::NotFound.into();
+        assert_eq!(err.code, ApiError::CODE_NOT_FOUND);
+        assert_eq!(err.entity.as_deref(), Some("transaction"));
+    }
+
+    #[test]
+    fn validation_preserves_message_and_omits_entity() {
+        let err: ApiError = TransactionError::ValidationError(
+            "Item name must be 64 characters or less".to_string(),
+        )
+        .into();
+        assert_eq!(err.code, ApiError::CODE_VALIDATION);
+        assert!(err.message.contains("64 characters"));
+        assert!(err.entity.is_none());
+    }
+
+    #[test]
+    fn database_error_maps_to_database_code() {
+        let err: ApiError = TransactionError::DatabaseError("no such table".to_string()).into();
+        assert_eq!(err.code, ApiError::CODE_DATABASE);
+        assert!(err.entity.is_none());
+    }
+
+    #[test]
+    fn field_needle_message_survives_conversion_for_frontend_routing() {
+        // The transaction-management / transaction-detail-management screens
+        // dispatch bounded-field validation errors to the right input by
+        // checking `err.message.startsWith(...)` after gating on
+        // `err.code === 'validation'`. That contract needs the two leading
+        // needles (`"Item name must be"`, `"Memo must be"`) to reach the
+        // wire verbatim — this test pins that.
+        for needle in ["Item name must be", "Memo must be"] {
+            let msg = format!("{} 64 characters or less", needle);
+            let err: ApiError = TransactionError::ValidationError(msg.clone()).into();
+            assert_eq!(err.code, ApiError::CODE_VALIDATION);
+            assert!(
+                err.message.starts_with(needle),
+                "wire message `{}` must start with `{}` for frontend field routing",
+                err.message,
+                needle
+            );
+        }
     }
 }
 

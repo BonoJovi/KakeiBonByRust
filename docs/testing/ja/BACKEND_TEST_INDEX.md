@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-08-22 JST  
-**総テスト数**: 268件 (delta 反映後。`cargo test --lib` の権威的総数は 513 で、pre-existing gap は別 PR でバックフィル予定)
+**総テスト数**: 272件 (delta 反映後。`cargo test --lib` の権威的総数は 517 で、pre-existing gap は別 PR でバックフィル予定)
 
 ---
 
@@ -407,8 +407,12 @@ AES-256-GCM暗号化・復号化のテスト。
 | `test_clear_detail_memo_succeeds_under_foreign_keys_on` | 明細メモのクリアが MEMOS 外部キーに違反しないこと | src/services/transaction.rs | 3843 |
 | `test_add_detail_rejects_foreign_transaction_id` | 他ユーザーの transaction_id で明細追加は NotFound を返す (Fable-5 #12) | src/services/transaction.rs | 4109 |
 | `test_add_detail_rejects_nonexistent_transaction_id` | 存在しない transaction_id で明細追加は NotFound を返す (Fable-5 #12) | src/services/transaction.rs | 4142 |
+| `not_found_maps_to_not_found_code_with_transaction_entity` | TransactionError::NotFound が ApiError::not_found("transaction") にマッピングされること (PR2b) | src/services/transaction.rs | 4199 |
+| `validation_preserves_message_and_omits_entity` | TransactionError::ValidationError が ApiError::CODE_VALIDATION に変換され、メッセージが保持されること (PR2b) | src/services/transaction.rs | 4206 |
+| `database_error_maps_to_database_code` | TransactionError::DatabaseError が ApiError::CODE_DATABASE に変換されること (PR2b) | src/services/transaction.rs | 4217 |
+| `field_needle_message_survives_conversion_for_frontend_routing` | 2 つのフィールド needle (`"Item name must be"` / `"Memo must be"`) が変換後もそのまま先頭に残り、フロントの `startsWith` ルーティングを維持できること (PR2b) | src/services/transaction.rs | 4224 |
 
-**合計**: 17件
+**合計**: 21件
 
 ### services/aggregation.rs
 
@@ -496,7 +500,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **245件** |
+| **インラインテスト** | **249件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -511,13 +515,13 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/manufacturer.rs | 9 |
 | services/product.rs | 11 |
 | services/shop.rs | 9 |
-| services/transaction.rs | 17 |
+| services/transaction.rs | 21 |
 | services/aggregation.rs | 6 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 5 |
 | lib.rs | 4 |
-| **総計** | **268件** |
+| **総計** | **272件** |
 
 ---
 
