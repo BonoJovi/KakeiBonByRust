@@ -1204,26 +1204,20 @@ fn fit_window_to_monitor_windows(_width: f64, _height: f64, _window: tauri::Wind
 async fn get_category_tree_with_lang(
     lang_code: String,
     state: tauri::State<'_, AppState>
-) -> Result<serde_json::Value, String> {
-    let user_id = get_session_user_id(&state)?;
+) -> Result<serde_json::Value, api_error::ApiError> {
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
     let category = state.category.lock().await;
-    
-    category.get_category_tree(user_id, &lang_code)
-        .await
-        .map_err(|e| format!("Failed to get category tree: {}", e))
+    Ok(category.get_category_tree(user_id, &lang_code).await?)
 }
 
 #[tauri::command]
 async fn get_category_tree_all_with_lang(
     lang_code: String,
     state: tauri::State<'_, AppState>
-) -> Result<serde_json::Value, String> {
-    let user_id = get_session_user_id(&state)?;
+) -> Result<serde_json::Value, api_error::ApiError> {
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
     let category = state.category.lock().await;
-
-    category.get_category_tree_all(user_id, &lang_code)
-        .await
-        .map_err(|e| format!("Failed to get category tree: {}", e))
+    Ok(category.get_category_tree_all(user_id, &lang_code).await?)
 }
 
 #[tauri::command]
@@ -1231,12 +1225,10 @@ async fn enable_category2(
     category1_code: String,
     category2_code: String,
     state: tauri::State<'_, AppState>
-) -> Result<(), String> {
-    let user_id = get_session_user_id(&state)?;
+) -> Result<(), api_error::ApiError> {
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
     let category = state.category.lock().await;
-    category.enable_category2(user_id, &category1_code, &category2_code)
-        .await
-        .map_err(|e| format!("Failed to enable category2: {}", e))
+    Ok(category.enable_category2(user_id, &category1_code, &category2_code).await?)
 }
 
 #[tauri::command]
@@ -1245,12 +1237,10 @@ async fn enable_category3(
     category2_code: String,
     category3_code: String,
     state: tauri::State<'_, AppState>
-) -> Result<(), String> {
-    let user_id = get_session_user_id(&state)?;
+) -> Result<(), api_error::ApiError> {
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
     let category = state.category.lock().await;
-    category.enable_category3(user_id, &category1_code, &category2_code, &category3_code)
-        .await
-        .map_err(|e| format!("Failed to enable category3: {}", e))
+    Ok(category.enable_category3(user_id, &category1_code, &category2_code, &category3_code).await?)
 }
 
 #[tauri::command]
@@ -1259,13 +1249,10 @@ async fn add_category2(
     name_ja: String,
     name_en: String,
     state: tauri::State<'_, AppState>
-) -> Result<String, String> {
-    let user_id = get_session_user_id(&state)?;
+) -> Result<String, api_error::ApiError> {
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
     let category = state.category.lock().await;
-    
-    category.add_category2(user_id, &category1_code, &name_ja, &name_en)
-        .await
-        .map_err(|e| format!("Failed to add category2: {}", e))
+    Ok(category.add_category2(user_id, &category1_code, &name_ja, &name_en).await?)
 }
 
 #[tauri::command]
@@ -1275,13 +1262,10 @@ async fn add_category3(
     name_ja: String,
     name_en: String,
     state: tauri::State<'_, AppState>
-) -> Result<String, String> {
-    let user_id = get_session_user_id(&state)?;
+) -> Result<String, api_error::ApiError> {
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
     let category = state.category.lock().await;
-    
-    category.add_category3(user_id, &category1_code, &category2_code, &name_ja, &name_en)
-        .await
-        .map_err(|e| format!("Failed to add category3: {}", e))
+    Ok(category.add_category3(user_id, &category1_code, &category2_code, &name_ja, &name_en).await?)
 }
 
 #[tauri::command]
@@ -1289,12 +1273,10 @@ async fn get_category2_for_edit(
     category1_code: String,
     category2_code: String,
     state: tauri::State<'_, AppState>
-) -> Result<services::category::CategoryForEdit, String> {
-    let user_id = get_session_user_id(&state)?;
+) -> Result<services::category::CategoryForEdit, api_error::ApiError> {
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
     let category = state.category.lock().await;
-    category.get_category2_for_edit(user_id, &category1_code, &category2_code)
-        .await
-        .map_err(|e| format!("Failed to get category2: {}", e))
+    Ok(category.get_category2_for_edit(user_id, &category1_code, &category2_code).await?)
 }
 
 #[tauri::command]
@@ -1303,12 +1285,10 @@ async fn get_category3_for_edit(
     category2_code: String,
     category3_code: String,
     state: tauri::State<'_, AppState>
-) -> Result<services::category::CategoryForEdit, String> {
-    let user_id = get_session_user_id(&state)?;
+) -> Result<services::category::CategoryForEdit, api_error::ApiError> {
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
     let category = state.category.lock().await;
-    category.get_category3_for_edit(user_id, &category1_code, &category2_code, &category3_code)
-        .await
-        .map_err(|e| format!("Failed to get category3: {}", e))
+    Ok(category.get_category3_for_edit(user_id, &category1_code, &category2_code, &category3_code).await?)
 }
 
 #[tauri::command]
@@ -1318,12 +1298,10 @@ async fn update_category2(
     name_ja: String,
     name_en: String,
     state: tauri::State<'_, AppState>
-) -> Result<(), String> {
-    let user_id = get_session_user_id(&state)?;
+) -> Result<(), api_error::ApiError> {
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
     let category = state.category.lock().await;
-    category.update_category2_i18n(user_id, &category1_code, &category2_code, &name_ja, &name_en)
-        .await
-        .map_err(|e| format!("Failed to update category2: {}", e))
+    Ok(category.update_category2_i18n(user_id, &category1_code, &category2_code, &name_ja, &name_en).await?)
 }
 
 #[tauri::command]
@@ -1334,12 +1312,10 @@ async fn update_category3(
     name_ja: String,
     name_en: String,
     state: tauri::State<'_, AppState>
-) -> Result<(), String> {
-    let user_id = get_session_user_id(&state)?;
+) -> Result<(), api_error::ApiError> {
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
     let category = state.category.lock().await;
-    category.update_category3_i18n(user_id, &category1_code, &category2_code, &category3_code, &name_ja, &name_en)
-        .await
-        .map_err(|e| format!("Failed to update category3: {}", e))
+    Ok(category.update_category3_i18n(user_id, &category1_code, &category2_code, &category3_code, &name_ja, &name_en).await?)
 }
 
 #[tauri::command]
@@ -1347,12 +1323,10 @@ async fn move_category2_up(
     category1_code: String,
     category2_code: String,
     state: tauri::State<'_, AppState>
-) -> Result<(), String> {
-    let user_id = get_session_user_id(&state)?;
+) -> Result<(), api_error::ApiError> {
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
     let category = state.category.lock().await;
-    category.move_category2_up(user_id, &category1_code, &category2_code)
-        .await
-        .map_err(|e| format!("Failed to move category2 up: {}", e))
+    Ok(category.move_category2_up(user_id, &category1_code, &category2_code).await?)
 }
 
 #[tauri::command]
@@ -1360,12 +1334,10 @@ async fn move_category2_down(
     category1_code: String,
     category2_code: String,
     state: tauri::State<'_, AppState>
-) -> Result<(), String> {
-    let user_id = get_session_user_id(&state)?;
+) -> Result<(), api_error::ApiError> {
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
     let category = state.category.lock().await;
-    category.move_category2_down(user_id, &category1_code, &category2_code)
-        .await
-        .map_err(|e| format!("Failed to move category2 down: {}", e))
+    Ok(category.move_category2_down(user_id, &category1_code, &category2_code).await?)
 }
 
 #[tauri::command]
@@ -1374,12 +1346,10 @@ async fn move_category3_up(
     category2_code: String,
     category3_code: String,
     state: tauri::State<'_, AppState>
-) -> Result<(), String> {
-    let user_id = get_session_user_id(&state)?;
+) -> Result<(), api_error::ApiError> {
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
     let category = state.category.lock().await;
-    category.move_category3_up(user_id, &category1_code, &category2_code, &category3_code)
-        .await
-        .map_err(|e| format!("Failed to move category3 up: {}", e))
+    Ok(category.move_category3_up(user_id, &category1_code, &category2_code, &category3_code).await?)
 }
 
 #[tauri::command]
@@ -1388,12 +1358,10 @@ async fn move_category3_down(
     category2_code: String,
     category3_code: String,
     state: tauri::State<'_, AppState>
-) -> Result<(), String> {
-    let user_id = get_session_user_id(&state)?;
+) -> Result<(), api_error::ApiError> {
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
     let category = state.category.lock().await;
-    category.move_category3_down(user_id, &category1_code, &category2_code, &category3_code)
-        .await
-        .map_err(|e| format!("Failed to move category3 down: {}", e))
+    Ok(category.move_category3_down(user_id, &category1_code, &category2_code, &category3_code).await?)
 }
 
 #[tauri::command]
@@ -1401,12 +1369,10 @@ async fn disable_category2(
     category1_code: String,
     category2_code: String,
     state: tauri::State<'_, AppState>
-) -> Result<(), String> {
-    let user_id = get_session_user_id(&state)?;
+) -> Result<(), api_error::ApiError> {
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
     let category = state.category.lock().await;
-    category.disable_category2(user_id, &category1_code, &category2_code)
-        .await
-        .map_err(|e| format!("Failed to disable category2: {}", e))
+    Ok(category.disable_category2(user_id, &category1_code, &category2_code).await?)
 }
 
 #[tauri::command]
@@ -1415,12 +1381,10 @@ async fn disable_category3(
     category2_code: String,
     category3_code: String,
     state: tauri::State<'_, AppState>
-) -> Result<(), String> {
-    let user_id = get_session_user_id(&state)?;
+) -> Result<(), api_error::ApiError> {
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
     let category = state.category.lock().await;
-    category.disable_category3(user_id, &category1_code, &category2_code, &category3_code)
-        .await
-        .map_err(|e| format!("Failed to disable category3: {}", e))
+    Ok(category.disable_category3(user_id, &category1_code, &category2_code, &category3_code).await?)
 }
 
 // ============================================================================

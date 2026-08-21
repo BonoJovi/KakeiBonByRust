@@ -1,6 +1,9 @@
 use sqlx::sqlite::SqlitePool;
 use sqlx::Row;
+use crate::api_error::ApiError;
 use crate::{sql_queries, consts};
+
+const ENTITY_LABEL: &str = "Category";
 
 #[derive(Debug)]
 pub enum CategoryError {
@@ -26,6 +29,30 @@ impl std::error::Error for CategoryError {}
 impl From<sqlx::Error> for CategoryError {
     fn from(err: sqlx::Error) -> Self {
         CategoryError::DatabaseError(err)
+    }
+}
+
+/// Map the domain-specific `CategoryError` onto the wire-level `ApiError`
+/// so tauri command wrappers can `?`-propagate it into a structured
+/// `{ code, message, entity? }` payload for the frontend classifier
+/// (`res/js/master-crud.js::mapMasterErrorCode`). Kept as `From` (rather
+/// than a bespoke `.map_err`) so wrapper bodies stay one-line — the
+/// mapping happens implicitly at the `?` boundary. Matches the
+/// `From<UserManagementError>` shape (PR #100).
+///
+/// Codes:
+///   - `NotFound`            → `not_found` (entity="category")
+///   - `DuplicateName(_)`    → `duplicate_name` (entity="category")
+///   - `Validation(msg)`     → `validation` (message preserved for logs)
+///   - `DatabaseError(e)`    → `database`
+impl From<CategoryError> for ApiError {
+    fn from(err: CategoryError) -> Self {
+        match err {
+            CategoryError::NotFound => ApiError::not_found(ENTITY_LABEL),
+            CategoryError::DuplicateName(_) => ApiError::duplicate_name(ENTITY_LABEL),
+            CategoryError::Validation(msg) => ApiError::validation(msg),
+            CategoryError::DatabaseError(e) => ApiError::database(e.to_string()),
+        }
     }
 }
 
@@ -2061,5 +2088,43 @@ mod tests {
         let msg = err.to_string();
         assert!(msg.contains(&consts::MAX_I18N_NAME_LEN.to_string()),
             "error should reference the limit: {}", msg);
+    }
+
+    // ---- From<CategoryError> for ApiError -------------------------------
+    // These tests pin the wire codes that the frontend classifier
+    // (`res/js/master-crud.js::mapMasterErrorCode`) matches on. If a
+    // variant is renamed here or in api_error.rs, the JS side stops
+    // classifying its errors — hence the assertions on the stable
+    // `ApiError::CODE_*` constants.
+
+    #[test]
+    fn not_found_maps_to_not_found_code_with_category_entity() {
+        let err: ApiError = CategoryError::NotFound.into();
+        assert_eq!(err.code, ApiError::CODE_NOT_FOUND);
+        assert_eq!(err.entity.as_deref(), Some("category"));
+    }
+
+    #[test]
+    fn duplicate_name_maps_to_duplicate_name_code_with_category_entity() {
+        let err: ApiError = CategoryError::DuplicateName("食費".to_string()).into();
+        assert_eq!(err.code, ApiError::CODE_DUPLICATE_NAME);
+        assert_eq!(err.entity.as_deref(), Some("category"));
+    }
+
+    #[test]
+    fn validation_preserves_message_and_omits_entity() {
+        let err: ApiError = CategoryError::Validation(
+            "Japanese name must be 128 characters or less".to_string()
+        ).into();
+        assert_eq!(err.code, ApiError::CODE_VALIDATION);
+        assert!(err.message.contains("128 characters"));
+        assert!(err.entity.is_none());
+    }
+
+    #[test]
+    fn database_error_maps_to_database_code() {
+        let err: ApiError = CategoryError::DatabaseError(sqlx::Error::RowNotFound).into();
+        assert_eq!(err.code, ApiError::CODE_DATABASE);
+        assert!(err.entity.is_none());
     }
 }
