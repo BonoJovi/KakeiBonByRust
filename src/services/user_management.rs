@@ -1,9 +1,12 @@
 use sqlx::sqlite::SqlitePool;
 use sqlx::Row;
+use crate::api_error::ApiError;
 use crate::security::{generate_encryption_salt, hash_password, verify_password, SecurityError};
 use crate::consts::{self, ROLE_ADMIN, ROLE_USER};
 use crate::sql_queries;
 use super::encryption::EncryptionService;
+
+const ENTITY_LABEL: &str = "User";
 
 #[derive(Debug, Clone)]
 pub struct UserInfo {
@@ -57,6 +60,34 @@ impl From<sqlx::Error> for UserManagementError {
 impl From<SecurityError> for UserManagementError {
     fn from(err: SecurityError) -> Self {
         UserManagementError::SecurityError(err)
+    }
+}
+
+/// Map the domain-specific `UserManagementError` onto the wire-level
+/// `ApiError` so tauri command wrappers can `?`-propagate it into a
+/// structured `{ code, message, entity? }` payload for the frontend
+/// classifier (`res/js/master-crud.js`). Kept as `From` (rather than
+/// a bespoke `.map_err`) so wrapper bodies stay one-line — the
+/// mapping happens implicitly at the `?` boundary.
+///
+/// Codes:
+///   - `UserNotFound`               → `not_found` (entity="user")
+///   - `AdminUserCannotBeDeleted`   → `admin_protected` (entity="user")
+///   - `DuplicateUsername`          → `duplicate_name` (entity="user")
+///   - `InvalidRole`, `SecurityError`, `Validation(...)` → `validation`
+///     (with a message that keeps the original English text for logs)
+///   - `DatabaseError`              → `database`
+impl From<UserManagementError> for ApiError {
+    fn from(err: UserManagementError) -> Self {
+        match err {
+            UserManagementError::UserNotFound => ApiError::not_found(ENTITY_LABEL),
+            UserManagementError::AdminUserCannotBeDeleted => ApiError::admin_protected(ENTITY_LABEL),
+            UserManagementError::DuplicateUsername => ApiError::duplicate_name(ENTITY_LABEL),
+            UserManagementError::InvalidRole => ApiError::validation("Invalid role"),
+            UserManagementError::Validation(msg) => ApiError::validation(msg),
+            UserManagementError::SecurityError(e) => ApiError::validation(e.to_string()),
+            UserManagementError::DatabaseError(e) => ApiError::database(e.to_string()),
+        }
     }
 }
 

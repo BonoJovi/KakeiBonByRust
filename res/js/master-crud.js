@@ -35,6 +35,7 @@ export const API_ERROR_CODES = Object.freeze({
     DUPLICATE_CODE: 'duplicate_code',
     NOT_FOUND: 'not_found',
     MANUFACTURER_NOT_FOUND: 'manufacturer_not_found',
+    ADMIN_PROTECTED: 'admin_protected',
     VALIDATION: 'validation',
     DATABASE: 'database',
 });
@@ -119,6 +120,18 @@ export function mapMasterErrorCode(err, ctx) {
                 nameMessage: null,
                 memoMessage: null,
                 toastMessage: i18n.t('product_mgmt.manufacturer_not_found'),
+            };
+
+        case API_ERROR_CODES.ADMIN_PROTECTED:
+            // Currently only user_management surfaces this (admin
+            // account is protected from deletion / general-user
+            // conversion). Routed as toast with a per-screen key
+            // (`${prefix}.admin_protected`) so future callers can
+            // provide their own wording.
+            return {
+                nameMessage: null,
+                memoMessage: null,
+                toastMessage: i18n.t(`${ctx.i18nPrefix}.admin_protected`),
             };
 
         case API_ERROR_CODES.VALIDATION: {

@@ -313,54 +313,47 @@ fn validate_passwords_frontend(password: String, password_confirm: String) -> Re
 }
 
 #[tauri::command]
-async fn list_users(state: tauri::State<'_, AppState>) -> Result<Vec<serde_json::Value>, String> {
-    let session_user = get_session_user(&state)?;
+async fn list_users(state: tauri::State<'_, AppState>) -> Result<Vec<serde_json::Value>, api_error::ApiError> {
+    let session_user = get_session_user(&state).map_err(api_error::ApiError::validation)?;
     let is_admin = session_user.role == consts::ROLE_ADMIN;
     let user_mgmt = state.user_mgmt.lock().await;
-    
-    match user_mgmt.list_users().await {
-        Ok(users) => {
-            // Non-admin sessions may only see their own account
-            let json_users: Vec<serde_json::Value> = users.into_iter()
-                .filter(|u| is_admin || u.user_id == session_user.user_id)
-                .map(|u| {
-                    serde_json::json!({
-                        "user_id": u.user_id,
-                        "name": u.name,
-                        "role": u.role,
-                        "entry_dt": u.entry_dt,
-                        "update_dt": u.update_dt,
-                    })
-                }).collect();
-            Ok(json_users)
-        }
-        Err(e) => Err(format!("Failed to list users: {}", e)),
-    }
+
+    let users = user_mgmt.list_users().await?;
+    // Non-admin sessions may only see their own account
+    let json_users: Vec<serde_json::Value> = users.into_iter()
+        .filter(|u| is_admin || u.user_id == session_user.user_id)
+        .map(|u| {
+            serde_json::json!({
+                "user_id": u.user_id,
+                "name": u.name,
+                "role": u.role,
+                "entry_dt": u.entry_dt,
+                "update_dt": u.update_dt,
+            })
+        }).collect();
+    Ok(json_users)
 }
 
 #[tauri::command]
 async fn get_user(
     user_id: i64,
     state: tauri::State<'_, AppState>
-) -> Result<serde_json::Value, String> {
+) -> Result<serde_json::Value, api_error::ApiError> {
     // Admins may query any user; other sessions only themselves
-    let session_user = get_session_user(&state)?;
+    let session_user = get_session_user(&state).map_err(api_error::ApiError::validation)?;
     if session_user.role != consts::ROLE_ADMIN && session_user.user_id != user_id {
-        return Err("Administrator privileges are required for this operation.".to_string());
+        return Err(api_error::ApiError::validation("Administrator privileges are required for this operation."));
     }
-    
+
     let user_mgmt = state.user_mgmt.lock().await;
-    
-    match user_mgmt.get_user(user_id).await {
-        Ok(user) => Ok(serde_json::json!({
-            "user_id": user.user_id,
-            "name": user.name,
-            "role": user.role,
-            "entry_dt": user.entry_dt,
-            "update_dt": user.update_dt,
-        })),
-        Err(e) => Err(format!("Failed to get user: {}", e)),
-    }
+    let user = user_mgmt.get_user(user_id).await?;
+    Ok(serde_json::json!({
+        "user_id": user.user_id,
+        "name": user.name,
+        "role": user.role,
+        "entry_dt": user.entry_dt,
+        "update_dt": user.update_dt,
+    }))
 }
 
 #[tauri::command]
@@ -368,24 +361,20 @@ async fn create_general_user(
     username: String,
     password: String,
     state: tauri::State<'_, AppState>
-) -> Result<i64, String> {
-    require_admin_session(&state)?;
-    validate_password(&password)?;
-    
+) -> Result<i64, api_error::ApiError> {
+    require_admin_session(&state).map_err(api_error::ApiError::validation)?;
+    validate_password(&password).map_err(api_error::ApiError::validation)?;
+
     let user_mgmt = state.user_mgmt.lock().await;
     let category = state.category.lock().await;
-    
-    match user_mgmt.register_general_user(&username, &password).await {
-        Ok(user_id) => {
-            // Populate default categories for the new user
-            if let Err(e) = category.populate_default_categories(user_id).await {
-                eprintln!("Warning: Failed to populate default categories for user: {}", e);
-                // Continue even if category population fails
-            }
-            Ok(user_id)
-        },
-        Err(e) => Err(format!("Failed to create user: {}", e)),
+
+    let user_id = user_mgmt.register_general_user(&username, &password).await?;
+    // Populate default categories for the new user
+    if let Err(e) = category.populate_default_categories(user_id).await {
+        eprintln!("Warning: Failed to populate default categories for user: {}", e);
+        // Continue even if category population fails
     }
+    Ok(user_id)
 }
 
 #[tauri::command]
@@ -393,22 +382,19 @@ async fn update_general_user_info(
     username: Option<String>,
     password: Option<String>,
     state: tauri::State<'_, AppState>
-) -> Result<(), String> {
-    let user_id = get_session_user_id(&state)?;
+) -> Result<(), api_error::ApiError> {
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
     if let Some(ref pwd) = password {
-        validate_password(pwd)?;
+        validate_password(pwd).map_err(api_error::ApiError::validation)?;
     }
-    
+
     let user_mgmt = state.user_mgmt.lock().await;
-    
-    match user_mgmt.update_general_user(
+    user_mgmt.update_general_user(
         user_id,
         username.as_deref(),
         password.as_deref()
-    ).await {
-        Ok(_) => Ok(()),
-        Err(e) => Err(format!("Failed to update user: {}", e)),
-    }
+    ).await?;
+    Ok(())
 }
 
 #[tauri::command]
@@ -417,23 +403,20 @@ async fn update_general_user_with_reencryption(
     username: Option<String>,
     new_password: Option<String>,
     state: tauri::State<'_, AppState>
-) -> Result<(), String> {
-    let user_id = get_session_user_id(&state)?;
+) -> Result<(), api_error::ApiError> {
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
     if let Some(ref pwd) = new_password {
-        validate_password(pwd)?;
+        validate_password(pwd).map_err(api_error::ApiError::validation)?;
     }
-    
+
     let user_mgmt = state.user_mgmt.lock().await;
-    
-    match user_mgmt.update_general_user_with_password(
+    user_mgmt.update_general_user_with_password(
         user_id,
         &old_password,
         username.as_deref(),
         new_password.as_deref()
-    ).await {
-        Ok(_) => Ok(()),
-        Err(e) => Err(format!("Failed to update user: {}", e)),
-    }
+    ).await?;
+    Ok(())
 }
 
 #[tauri::command]
@@ -441,22 +424,19 @@ async fn update_admin_user_info(
     username: Option<String>,
     password: Option<String>,
     state: tauri::State<'_, AppState>
-) -> Result<(), String> {
-    let user_id = get_session_user_id(&state)?;
+) -> Result<(), api_error::ApiError> {
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
     if let Some(ref pwd) = password {
-        validate_password(pwd)?;
+        validate_password(pwd).map_err(api_error::ApiError::validation)?;
     }
-    
+
     let user_mgmt = state.user_mgmt.lock().await;
-    
-    match user_mgmt.update_admin_user(
+    user_mgmt.update_admin_user(
         user_id,
         username.as_deref(),
         password.as_deref()
-    ).await {
-        Ok(_) => Ok(()),
-        Err(e) => Err(format!("Failed to update admin user: {}", e)),
-    }
+    ).await?;
+    Ok(())
 }
 
 #[tauri::command]
@@ -465,37 +445,31 @@ async fn update_admin_user_with_reencryption(
     username: Option<String>,
     new_password: Option<String>,
     state: tauri::State<'_, AppState>
-) -> Result<(), String> {
-    let user_id = get_session_user_id(&state)?;
+) -> Result<(), api_error::ApiError> {
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
     if let Some(ref pwd) = new_password {
-        validate_password(pwd)?;
+        validate_password(pwd).map_err(api_error::ApiError::validation)?;
     }
-    
+
     let user_mgmt = state.user_mgmt.lock().await;
-    
-    match user_mgmt.update_admin_user_with_password(
+    user_mgmt.update_admin_user_with_password(
         user_id,
         &old_password,
         username.as_deref(),
         new_password.as_deref()
-    ).await {
-        Ok(_) => Ok(()),
-        Err(e) => Err(format!("Failed to update admin user: {}", e)),
-    }
+    ).await?;
+    Ok(())
 }
 
 #[tauri::command]
 async fn delete_general_user_info(
     user_id: i64,
     state: tauri::State<'_, AppState>
-) -> Result<(), String> {
-    require_admin_session(&state)?;
+) -> Result<(), api_error::ApiError> {
+    require_admin_session(&state).map_err(api_error::ApiError::validation)?;
     let user_mgmt = state.user_mgmt.lock().await;
-    
-    match user_mgmt.delete_general_user(user_id).await {
-        Ok(_) => Ok(()),
-        Err(e) => Err(format!("Failed to delete user: {}", e)),
-    }
+    user_mgmt.delete_general_user(user_id).await?;
+    Ok(())
 }
 
 #[tauri::command]
