@@ -2438,13 +2438,10 @@ async fn get_monthly_aggregation_by_category(
 async fn create_recurring_rule(
     request: services::recurring::SaveRecurringRuleRequest,
     state: tauri::State<'_, AppState>,
-) -> Result<services::recurring::CreateRecurringRuleResult, String> {
-    let user_id = get_session_user_id(&state)?;
+) -> Result<services::recurring::CreateRecurringRuleResult, api_error::ApiError> {
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
     let recurring = state.recurring.lock().await;
-    recurring
-        .create_rule_with_instances(user_id, request)
-        .await
-        .map_err(|e| e.to_string())
+    Ok(recurring.create_rule_with_instances(user_id, request).await?)
 }
 
 /// Delete a recurring rule. `cascade = true` also removes every
@@ -2455,13 +2452,10 @@ async fn delete_recurring_rule(
     rule_id: i64,
     cascade: bool,
     state: tauri::State<'_, AppState>,
-) -> Result<(), String> {
-    let user_id = get_session_user_id(&state)?;
+) -> Result<(), api_error::ApiError> {
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
     let recurring = state.recurring.lock().await;
-    recurring
-        .delete_rule(user_id, rule_id, cascade)
-        .await
-        .map_err(|e| e.to_string())
+    Ok(recurring.delete_rule(user_id, rule_id, cascade).await?)
 }
 
 /// List the recurring rules the current user has registered.
@@ -2470,13 +2464,10 @@ async fn delete_recurring_rule(
 #[tauri::command]
 async fn list_recurring_rules(
     state: tauri::State<'_, AppState>,
-) -> Result<Vec<services::recurring::RecurringRuleSummary>, String> {
-    let user_id = get_session_user_id(&state)?;
+) -> Result<Vec<services::recurring::RecurringRuleSummary>, api_error::ApiError> {
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
     let recurring = state.recurring.lock().await;
-    recurring
-        .list_rules(user_id)
-        .await
-        .map_err(|e| e.to_string())
+    Ok(recurring.list_rules(user_id).await?)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
