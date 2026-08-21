@@ -536,6 +536,15 @@ async function handleUserSave() {
     } catch (error) {
         console.error('Failed to save user:', error);
 
+        // Backend not_found means the edit target was deleted between
+        // load and save. Reload the list so the "the list has been
+        // reloaded" wording on `user_mgmt.not_found` matches what the
+        // user actually sees on screen — same fix as saveMasterEntry's
+        // backend-not_found path (Devin review on #97, extended to
+        // #100 for the standalone user-management save flow).
+        const isBackendNotFound = error && typeof error === 'object'
+            && error.code === API_ERROR_CODES.NOT_FOUND;
+
         // Route through the shared classifier so `duplicate_name`
         // (username taken) surfaces as an inline error under the
         // username input via `user_mgmt.duplicate_error`, validation
@@ -576,6 +585,14 @@ async function handleUserSave() {
             // legacy form message and a properly-unwrapped body.
             showMessage('form-message', i18n.t('error.save_user_failed') + ': ' + formatApiError(error), 'error');
         }
+
+        // Fire the actual reload the not_found toast promises. Done
+        // after the toast/inline error so those messages remain
+        // visible during the async reload.
+        if (isBackendNotFound) {
+            await loadUsers();
+        }
+
         throw error;
     }
 }
