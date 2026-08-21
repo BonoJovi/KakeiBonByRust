@@ -46,7 +46,13 @@ class Modal {
         this.data = null;
         this.previousActiveElement = null;
         this.focusableElements = [];
-        
+        // Re-entrancy guard for _handleSave. Prevents concurrent onSave calls
+        // when the user rapid-clicks Save or hits Enter while a save is in-flight.
+        // Without this, the SELECT-then-INSERT duplicate check in Rust services
+        // (TOCTOU) lets both invokes through and the second fails with the raw
+        // UNIQUE constraint message.
+        this._isSaving = false;
+
         this._setupEventListeners();
     }
     
@@ -255,6 +261,13 @@ class Modal {
      * @private
      */
     async _handleSave() {
+        // Re-entrancy guard: swallow rapid double-clicks / Enter-repeats
+        // while a previous save is still awaiting.
+        if (this._isSaving) {
+            return;
+        }
+        this._isSaving = true;
+
         // Collect form data when a form is associated. Confirmation-style
         // modals (e.g. delete confirm) have no form — they rely on `this.data`
         // populated by `open(mode, data)`.
@@ -268,6 +281,7 @@ class Modal {
             Object.assign(data, this.data);
         }
 
+        this.showLoading();
         try {
             // Call onSave callback
             await this.options.onSave(data);
@@ -278,7 +292,26 @@ class Modal {
             console.error('Error saving:', error);
             // Don't close modal on error
             throw error;
+        } finally {
+            this.hideLoading();
+            this._isSaving = false;
         }
+    }
+
+    /**
+     * Resolve the save button. Prefers the explicit saveButtonId; falls back
+     * to the form's type="submit" button when the modal is wired via a form.
+     * @private
+     * @returns {HTMLElement|null}
+     */
+    _getSaveButton() {
+        if (this.options.saveButtonId) {
+            return document.getElementById(this.options.saveButtonId);
+        }
+        if (this.form) {
+            return this.form.querySelector('button[type="submit"], input[type="submit"]');
+        }
+        return null;
     }
     
     /**
@@ -333,32 +366,24 @@ class Modal {
     }
     
     /**
-     * Show loading state
+     * Show loading state — disables the save button so a second click cannot
+     * fire while the first save is still awaiting. Text is left unchanged;
+     * screens that want a "saving" label can toggle it via their own onSave.
      */
     showLoading() {
-        if (this.options.saveButtonId) {
-            const saveBtn = document.getElementById(this.options.saveButtonId);
-            if (saveBtn) {
-                saveBtn.disabled = true;
-                saveBtn.dataset.originalText = saveBtn.textContent;
-                saveBtn.textContent = 'Saving...';
-            }
+        const saveBtn = this._getSaveButton();
+        if (saveBtn) {
+            saveBtn.disabled = true;
         }
     }
-    
+
     /**
-     * Hide loading state
+     * Hide loading state — re-enables the save button.
      */
     hideLoading() {
-        if (this.options.saveButtonId) {
-            const saveBtn = document.getElementById(this.options.saveButtonId);
-            if (saveBtn) {
-                saveBtn.disabled = false;
-                if (saveBtn.dataset.originalText) {
-                    saveBtn.textContent = saveBtn.dataset.originalText;
-                    delete saveBtn.dataset.originalText;
-                }
-            }
+        const saveBtn = this._getSaveButton();
+        if (saveBtn) {
+            saveBtn.disabled = false;
         }
     }
 }
