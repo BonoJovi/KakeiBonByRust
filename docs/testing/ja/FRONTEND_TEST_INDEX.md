@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-08-21 JST  
-**総テスト数**: 267件以上
+**総テスト数**: 664件 (jest suite 20 ファイル、`npm test` 実測)
 
 ---
 
@@ -25,7 +25,11 @@
   - [transaction-edit.test.js](#transaction-edittestjs)
   - [transaction-detail-management.test.js](#transaction-detail-managementtestjs)
   - [transaction-detail-tax-calculation.test.js](#transaction-detail-tax-calculationtestjs)
-  - [category-management-ui-tests.js](#category-management-ui-testsjs)
+  - [toast.test.js](#toasttestjs)
+  - [tax-calc.test.js](#tax-calctestjs)
+  - [product-autocomplete.test.js](#product-autocompletetestjs)
+  - [product-draft.test.js](#product-drafttestjs)
+  - [product-master-jump-draft.test.js](#product-master-jump-drafttestjs)
   - [modal-double-submit.test.js](#modal-double-submittestjs)
 - [集計機能テスト](#集計機能テスト)
   - [aggregation-daily.test.js](#aggregation-dailytestjs)
@@ -33,6 +37,12 @@
   - [aggregation-monthly.test.js](#aggregation-monthlytestjs)
   - [aggregation-yearly.test.js](#aggregation-yearlytestjs)
   - [aggregation-period.test.js](#aggregation-periodtestjs)
+- [ブラウザ / スタンドアロン (jest 総計に含めない)](#ブラウザ--スタンドアロン-jest-総計に含めない)
+  - [category-management-ui-tests.js](#category-management-ui-testsjs)
+  - [tax-rounding-tests.js](#tax-rounding-testsjs)
+  - [backend-validation-standalone.js](#backend-validation-standalonejs)
+  - [login-test-standalone.js](#login-test-standalonejs)
+  - [aggregation-test-helpers.js](#aggregation-test-helpersjs)
 
 ---
 
@@ -226,7 +236,7 @@
 
 管理者登録画面のテスト。
 
-**テスト数**: 29件（共通26件 + 画面固有3件）
+**テスト数**: 32件（共通26件 + 画面固有6件、jest 実測）
 
 | テストカテゴリ | 説明 | テスト数 | 実装方法 |
 |--------------|------|---------|---------|
@@ -249,7 +259,7 @@
 
 ユーザー追加画面のテスト。
 
-**テスト数**: 49件（ユーザー名13件 + パスワード26件 + 組み合わせ7件 + 画面固有3件）
+**テスト数**: 46件 (jest 実測、内訳は共通スイート + 画面固有ケース)
 
 | テストカテゴリ | 説明 | テスト数 | 実装方法 |
 |--------------|------|---------|---------|
@@ -381,7 +391,7 @@
 
 取引明細管理機能のテスト。
 
-**テスト数**: 6件（describe blocks、内部のテストケースを含めると多数）
+**テスト数**: 51件 (jest 実測)
 
 | テストカテゴリ | 説明 |
 |--------------|------|
@@ -403,7 +413,7 @@
 
 取引明細の税計算機能のテスト。
 
-**テスト数**: 0件（describe blocks、内部のテストケースを含めると多数）
+**テスト数**: 17件 (jest 実測)
 
 | テストカテゴリ | 説明 |
 |--------------|------|
@@ -417,11 +427,85 @@
 
 ---
 
-### category-management-ui-tests.js
+### toast.test.js
 
-カテゴリ管理UIのテスト（テストケース未カウント）。
+共有 `toast.js` (bottom-right transient notification) の動作テスト。マウント処理・レンダリング・variant 分岐・自動消去タイマー。
 
-**ファイル**: res/tests/category-management-ui-tests.js
+**テスト数**: 14件
+
+| テストカテゴリ | 説明 |
+|--------------|------|
+| マウント | style/container の自己マウント、多重マウント抑止 |
+| レンダリング | メッセージ表示、variant クラス、複数トーストの並び |
+| クリア | `clearAllToasts()` の挙動、setTimeout との整合 |
+
+**ファイル**: res/tests/toast.test.js
+
+---
+
+### tax-calc.test.js
+
+税計算ユーティリティのテスト (`tax-calc.js`)。税抜⇔税込変換、丸めモード。
+
+**テスト数**: 10件
+
+| テストカテゴリ | 説明 |
+|--------------|------|
+| 税抜→税込 | 8%/10% での加算計算 |
+| 税込→税抜 | 8%/10% での逆算 |
+| 丸め処理 | floor / round / ceil の 3 モード |
+| エッジケース | 0円、端数 |
+
+**ファイル**: res/tests/tax-calc.test.js
+
+---
+
+### product-autocomplete.test.js
+
+商品オートコンプリート UI のテスト。マスタからの候補提示・キーボード操作・選択確定。
+
+**テスト数**: 10件
+
+| テストカテゴリ | 説明 |
+|--------------|------|
+| 候補表示 | 入力キーワードに応じた suggestion 一覧 |
+| キーボード操作 | 上下キー・Enter での選択 |
+| 選択確定 | フォーム反映と autocomplete 閉じ |
+| クリア | 入力クリア時の suggestion 消去 |
+
+**ファイル**: res/tests/product-autocomplete.test.js
+
+---
+
+### product-draft.test.js
+
+商品マスタの下書き (draft) 状態管理テスト。未保存商品の一時保持と復元。
+
+**テスト数**: 11件
+
+| テストカテゴリ | 説明 |
+|--------------|------|
+| draft 保存 | sessionStorage への draft 書き込み |
+| draft 復元 | 遷移復帰時の form 再構築 |
+| draft 破棄 | 保存成功後 / 明示キャンセル時の cleanup |
+
+**ファイル**: res/tests/product-draft.test.js
+
+---
+
+### product-master-jump-draft.test.js
+
+入出金画面から商品マスタへの側訪 (jump) と、戻り時の draft 引き継ぎテスト。
+
+**テスト数**: 11件
+
+| テストカテゴリ | 説明 |
+|--------------|------|
+| jump | 入出金画面から商品マスタへの遷移と source 記録 |
+| 新規商品作成 | マスタ側で保存した商品を入出金 draft に紐付け |
+| 復帰 | source 画面へ戻った際の draft 復元 |
+
+**ファイル**: res/tests/product-master-jump-draft.test.js
 
 ---
 
@@ -449,7 +533,7 @@
 
 日次集計機能のテスト。
 
-**テスト数**: 0件（describe blocks、内部のテストケースを含めると多数）
+**テスト数**: 16件 (jest 実測)
 
 | テストカテゴリ | 説明 |
 |--------------|------|
@@ -468,7 +552,7 @@
 
 週次集計機能のテスト。
 
-**テスト数**: 0件（describe blocks、内部のテストケースを含めると多数）
+**テスト数**: 22件 (jest 実測)
 
 | テストカテゴリ | 説明 |
 |--------------|------|
@@ -489,7 +573,7 @@
 
 月次集計機能のテスト。
 
-**テスト数**: 0件（describe blocks、内部のテストケースを含めると多数）
+**テスト数**: 33件 (jest 実測)
 
 | テストカテゴリ | 説明 |
 |--------------|------|
@@ -511,7 +595,7 @@
 
 年次集計機能のテスト。
 
-**テスト数**: 0件（describe blocks、内部のテストケースを含めると多数）
+**テスト数**: 21件 (jest 実測)
 
 | テストカテゴリ | 説明 |
 |--------------|------|
@@ -532,7 +616,7 @@
 
 期間集計機能のテスト。
 
-**テスト数**: 0件（describe blocks、内部のテストケースを含めると多数）
+**テスト数**: 23件 (jest 実測)
 
 | テストカテゴリ | 説明 |
 |--------------|------|
@@ -548,34 +632,84 @@
 
 ---
 
+## ブラウザ / スタンドアロン (jest 総計に含めない)
+
+jest では走らない (`node --experimental-vm-modules ... jest.js` の pick 対象外)。ブラウザ上または `node` 直接実行で走らせる補助テスト・ヘルパー群。
+
+### category-management-ui-tests.js
+
+カテゴリ管理 UI の DOM ベーステスト。`console.log`/`console.error` によるアサーション形式で、ブラウザで対象ページを開いたセッションから直接 `<script>` として読み込んで走らせる想定。
+
+**ファイル**: res/tests/category-management-ui-tests.js
+
+---
+
+### tax-rounding-tests.js
+
+`tax-rounding-tests.html` のコンパニオン。純関数 (`applyTaxRounding` 等) の入出力を HTML ページ経由で網羅的に叩く手動テスト。
+
+**ファイル**: res/tests/tax-rounding-tests.js
+
+---
+
+### backend-validation-standalone.js
+
+Tauri 不要な validation ロジック単体テスト。`node backend-validation-standalone.js` で実行。
+
+**ファイル**: res/tests/backend-validation-standalone.js
+
+---
+
+### login-test-standalone.js
+
+Tauri 不要な login ロジック単体テスト。`node login-test-standalone.js` で実行。
+
+**ファイル**: res/tests/login-test-standalone.js
+
+---
+
+### aggregation-test-helpers.js
+
+集計機能テスト (aggregation-*.test.js) が共通で import する mock / fixture ヘルパー。単体でテストとして走ることはない。
+
+**ファイル**: res/tests/aggregation-test-helpers.js
+
+---
+
 ## テスト統計サマリー
 
 | カテゴリ | テスト数 |
 |---------|---------|
-| **共通テストスイート** | **56件** |
+| **共通テストスイート** (ヘルパー — 画面別テストの中で invoke されるため総計には別計上しない) | 56件 |
 | password-validation-tests.js | 26 |
 | username-validation-tests.js | 20 (13 + 7) |
 | user-edit-validation-tests.js | 23 |
-| **画面別テスト** | **206件** |
-| admin-setup.test.js | 29 |
-| user-addition.test.js | 49 |
+| **画面別テスト** | **308件** |
+| admin-setup.test.js | 32 |
+| user-addition.test.js | 46 |
 | admin-edit.test.js | 63 |
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **123件+** |
+| **機能別テスト** | **241件** |
 | transaction-edit.test.js | 112 |
-| transaction-detail-management.test.js | 6+ (多数) |
-| transaction-detail-tax-calculation.test.js | 0+ (多数) |
-| category-management-ui-tests.js | 0+ (未カウント) |
+| transaction-detail-management.test.js | 51 |
+| transaction-detail-tax-calculation.test.js | 17 |
+| toast.test.js | 14 |
+| tax-calc.test.js | 10 |
+| product-autocomplete.test.js | 10 |
+| product-draft.test.js | 11 |
+| product-master-jump-draft.test.js | 11 |
 | modal-double-submit.test.js | 5 |
-| **集計機能テスト** | **0+ (多数)** |
-| aggregation-daily.test.js | 0+ (多数) |
-| aggregation-weekly.test.js | 0+ (多数) |
-| aggregation-monthly.test.js | 0+ (多数) |
-| aggregation-yearly.test.js | 0+ (多数) |
-| aggregation-period.test.js | 0+ (多数) |
-| **総計** | **267件以上** |
+| **集計機能テスト** | **115件** |
+| aggregation-daily.test.js | 16 |
+| aggregation-weekly.test.js | 22 |
+| aggregation-monthly.test.js | 33 |
+| aggregation-yearly.test.js | 21 |
+| aggregation-period.test.js | 23 |
+| **総計 (jest)** | **664件** |
+
+総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 
 ---
 
@@ -614,6 +748,19 @@ npm run test:coverage
 ```bash
 node login-test-standalone.js
 node backend-validation-standalone.js
+```
+
+### 権威的なカウントを再取得する
+
+`--json` を付けて jest を走らせ、per-file の実測値を採取。統計サマリー更新時はこれをソースに。`--silent` は付けない (assertion 数が 0 になる)。
+
+```bash
+cd res/tests
+node --experimental-vm-modules node_modules/jest/bin/jest.js --json > /tmp/jest.json
+node -e "const j=JSON.parse(require('fs').readFileSync('/tmp/jest.json','utf8')); \
+  j.testResults.map(r=>({f:r.name.replace(/^.*\\//,''),n:r.assertionResults.length})) \
+  .sort((a,b)=>a.f.localeCompare(b.f)).forEach(r=>console.log(String(r.n).padStart(4)+'  '+r.f)); \
+  console.log('total:',j.numTotalTests);"
 ```
 
 ---
