@@ -14,6 +14,7 @@ import { calculateRecommendedTotal } from './tax-calc.js';
 import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
 import { showToast } from './toast.js';
 import { escapeHtml } from './escape-html.js';
+import { formatApiError } from './master-crud.js';
 
 let currentUserId = null;
 let currentUserRole = null;
@@ -811,7 +812,7 @@ async function loadAccountsForModal() {
         
     } catch (error) {
         console.error('Failed to load accounts:', error);
-        showToast(i18n.t('error.load_accounts_failed') + ': ' + error, { variant: 'error' });
+        showToast(i18n.t('error.load_accounts_failed') + ': ' + formatApiError(error), { variant: 'error' });
     }
 }
 
@@ -842,7 +843,7 @@ async function loadShopsForModal() {
 
     } catch (error) {
         console.error('Failed to load shops:', error);
-        showToast(i18n.t('error.load_shops_failed') + ': ' + error, { variant: 'error' });
+        showToast(i18n.t('error.load_shops_failed') + ': ' + formatApiError(error), { variant: 'error' });
     }
 }
 
