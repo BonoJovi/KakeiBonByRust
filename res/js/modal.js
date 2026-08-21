@@ -77,12 +77,23 @@ class Modal {
             }
         }
         
-        // Save button
+        // Save button. `_handleSave` re-throws on onSave failure so the
+        // modal stays open and its inline error remains visible; that
+        // rejection has already been logged there (`console.error` in
+        // the catch) and the inline state has been rendered. Swallow
+        // the rejection at the listener boundary so it does not surface
+        // as a browser-level "unhandled promise rejection" — nothing
+        // downstream consumes it, and re-throwing here would leak one
+        // warning per failed save (Fable-5 review #D7).
         if (this.options.saveButtonId) {
             const saveBtn = document.getElementById(this.options.saveButtonId);
             if (saveBtn) {
                 saveBtn.addEventListener('click', async () => {
-                    await this._handleSave();
+                    try {
+                        await this._handleSave();
+                    } catch (_err) {
+                        /* already handled inside _handleSave / onSave */
+                    }
                 });
             }
         }
@@ -104,11 +115,16 @@ class Modal {
             });
         }
         
-        // Form submit
+        // Form submit — same swallow-at-boundary treatment as the save
+        // button above. See that block for the reasoning (Fable-5 #D7).
         if (this.form) {
             this.form.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                await this._handleSave();
+                try {
+                    await this._handleSave();
+                } catch (_err) {
+                    /* already handled inside _handleSave / onSave */
+                }
             });
         }
         
