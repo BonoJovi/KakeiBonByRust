@@ -354,4 +354,53 @@ describe('saveMasterEntry — backend error re-throws and classifies', () => {
 
         expect(toastSpy).toHaveBeenCalledWith('product_mgmt.manufacturer_not_found', { variant: 'error' });
     });
+
+    // Devin review on #97 flagged that the toast wording says "the list has
+    // been reloaded" but the invoke-time not_found path did not actually
+    // reload. saveMasterEntry now routes backend-not_found through the
+    // same onNotFoundBeforeInvoke hook the cache-miss path uses, so the
+    // list is refreshed AND the modal closes (mode: skip).
+    test('backend not_found routes through onNotFoundBeforeInvoke and returns { mode: "skip" }', async () => {
+        const err = { code: 'not_found', message: 'Shop not found', entity: 'shop' };
+        const cached = { shop_id: 7, display_order: 3 };
+        const invokeUpdate = jest.fn().mockRejectedValue(err);
+        const onNotFoundBeforeInvoke = jest.fn().mockResolvedValue(undefined);
+
+        const result = await saveMasterEntry({
+            nameInput: makeInput('renamed'),
+            memoInput: makeInput(''),
+            editingId: 7,
+            findInCacheById: (id) => (id === 7 ? cached : null),
+            invokeAdd: jest.fn(),
+            invokeUpdate,
+            onNotFoundBeforeInvoke,
+            ...commonCtx,
+        });
+
+        expect(result).toEqual({ mode: 'skip' });
+        expect(invokeUpdate).toHaveBeenCalledTimes(1);
+        expect(onNotFoundBeforeInvoke).toHaveBeenCalledTimes(1);
+        // No inline error fires — the classifier's toast path is bypassed
+        // in favour of the caller's reload hook.
+        expect(showValidationErrorSpy).not.toHaveBeenCalled();
+    });
+
+    test('backend not_found with NO onNotFoundBeforeInvoke shows the default not_found toast', async () => {
+        const err = { code: 'not_found', message: 'Shop not found', entity: 'shop' };
+        const cached = { shop_id: 7 };
+        const invokeUpdate = jest.fn().mockRejectedValue(err);
+
+        const result = await saveMasterEntry({
+            nameInput: makeInput('renamed'),
+            memoInput: makeInput(''),
+            editingId: 7,
+            findInCacheById: (id) => (id === 7 ? cached : null),
+            invokeAdd: jest.fn(),
+            invokeUpdate,
+            ...commonCtx,
+        });
+
+        expect(result).toEqual({ mode: 'skip' });
+        expect(toastSpy).toHaveBeenCalledWith('shop_mgmt.not_found', { variant: 'error' });
+    });
 });

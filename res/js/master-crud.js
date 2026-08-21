@@ -264,6 +264,25 @@ export async function saveMasterEntry({
     } catch (err) {
         console.error(`Failed to save (${i18nPrefix}):`, err);
 
+        // Backend-reported not_found means the target vanished BETWEEN
+        // the cache read and the invoke — behave like the cache-miss
+        // path above (reload the list so the toast's "the list has been
+        // reloaded" wording matches reality, close the modal because
+        // there is nothing left to edit). Without this branch the
+        // classifier's toast fired without any actual reload, so the
+        // list kept showing the stale row (Devin review on #97).
+        const isBackendNotFound = err !== null
+            && typeof err === 'object'
+            && err.code === API_ERROR_CODES.NOT_FOUND;
+        if (isBackendNotFound) {
+            if (onNotFoundBeforeInvoke) {
+                await onNotFoundBeforeInvoke();
+            } else {
+                showToast(i18n.t(`${i18nPrefix}.not_found`), { variant: 'error' });
+            }
+            return { mode: 'skip' };
+        }
+
         const mapped = mapMasterErrorCode(err, {
             i18nPrefix,
             nameFieldI18nKey,
