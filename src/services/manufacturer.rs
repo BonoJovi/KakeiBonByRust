@@ -1,11 +1,13 @@
 use serde::{Deserialize, Serialize};
 use sqlx::{SqlitePool, FromRow};
+use crate::api_error::ApiError;
 use crate::services::master_data;
 use crate::sql_queries;
 use crate::validation;
 
 const NAME_LABEL: &str = "Manufacturer name";
 const DUPLICATE_LABEL: &str = "manufacturer name";
+const ENTITY_LABEL: &str = "Manufacturer";
 
 #[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
 #[sqlx(rename_all = "SCREAMING_SNAKE_CASE")]
@@ -36,7 +38,7 @@ pub struct UpdateManufacturerRequest {
 }
 
 /// Get all manufacturers for a user
-pub async fn get_manufacturers(pool: &SqlitePool, user_id: i64, include_disabled: bool) -> Result<Vec<Manufacturer>, String> {
+pub async fn get_manufacturers(pool: &SqlitePool, user_id: i64, include_disabled: bool) -> Result<Vec<Manufacturer>, ApiError> {
     let query = if include_disabled {
         sql_queries::MANUFACTURER_GET_ALL_INCLUDING_DISABLED
     } else {
@@ -46,8 +48,7 @@ pub async fn get_manufacturers(pool: &SqlitePool, user_id: i64, include_disabled
     let manufacturers = sqlx::query_as::<_, Manufacturer>(query)
         .bind(user_id)
         .fetch_all(pool)
-        .await
-        .map_err(|e| format!("Failed to get manufacturers: {}", e))?;
+        .await?;
 
     Ok(manufacturers)
 }
@@ -57,7 +58,7 @@ pub async fn get_manufacturer_by_id(
     pool: &SqlitePool,
     user_id: i64,
     manufacturer_id: i64,
-) -> Result<Option<Manufacturer>, String> {
+) -> Result<Option<Manufacturer>, ApiError> {
     master_data::fetch_by_id(
         pool,
         sql_queries::MANUFACTURER_GET_BY_ID,
@@ -66,6 +67,7 @@ pub async fn get_manufacturer_by_id(
         "manufacturer",
     )
     .await
+    .map_err(ApiError::database)
 }
 
 /// Add a new manufacturer
@@ -73,11 +75,12 @@ pub async fn add_manufacturer(
     pool: &SqlitePool,
     user_id: i64,
     request: AddManufacturerRequest,
-) -> Result<String, String> {
-    validation::validate_master_name(NAME_LABEL, &request.manufacturer_name)?;
-    validation::validate_memo("Memo", request.memo.as_ref())?;
+) -> Result<String, ApiError> {
+    validation::validate_master_name(NAME_LABEL, &request.manufacturer_name)
+        .map_err(ApiError::validation)?;
+    validation::validate_memo("Memo", request.memo.as_ref())
+        .map_err(ApiError::validation)?;
 
-    // Check for duplicate manufacturer name
     if master_data::value_exists(
         pool,
         sql_queries::MANUFACTURER_CHECK_DUPLICATE_FOR_ADD,
@@ -85,23 +88,22 @@ pub async fn add_manufacturer(
         &request.manufacturer_name,
         DUPLICATE_LABEL,
     )
-    .await?
+    .await
+    .map_err(ApiError::database)?
     {
-        return Err("Manufacturer name already exists".to_string());
+        return Err(ApiError::duplicate_name(ENTITY_LABEL));
     }
 
-    // Get next display order
     let display_order = master_data::fetch_next_display_order(
         pool,
         sql_queries::MANUFACTURER_GET_NEXT_DISPLAY_ORDER,
         user_id,
     )
-    .await?;
+    .await
+    .map_err(ApiError::database)?;
 
-    // Get is_disabled value (default to 0)
     let is_disabled = request.is_disabled.unwrap_or(0);
 
-    // Insert manufacturer
     sqlx::query(sql_queries::MANUFACTURER_INSERT)
         .bind(user_id)
         .bind(&request.manufacturer_name)
@@ -109,8 +111,7 @@ pub async fn add_manufacturer(
         .bind(display_order)
         .bind(is_disabled)
         .execute(pool)
-        .await
-        .map_err(|e| format!("Failed to add manufacturer: {}", e))?;
+        .await?;
 
     Ok("Manufacturer added successfully".to_string())
 }
@@ -121,16 +122,16 @@ pub async fn update_manufacturer(
     user_id: i64,
     manufacturer_id: i64,
     request: UpdateManufacturerRequest,
-) -> Result<String, String> {
-    validation::validate_master_name(NAME_LABEL, &request.manufacturer_name)?;
-    validation::validate_memo("Memo", request.memo.as_ref())?;
+) -> Result<String, ApiError> {
+    validation::validate_master_name(NAME_LABEL, &request.manufacturer_name)
+        .map_err(ApiError::validation)?;
+    validation::validate_memo("Memo", request.memo.as_ref())
+        .map_err(ApiError::validation)?;
 
-    // Check if manufacturer exists
     get_manufacturer_by_id(pool, user_id, manufacturer_id)
         .await?
-        .ok_or("Manufacturer not found")?;
+        .ok_or_else(|| ApiError::not_found(ENTITY_LABEL))?;
 
-    // Check for duplicate manufacturer name
     if master_data::value_exists_excluding(
         pool,
         sql_queries::MANUFACTURER_CHECK_DUPLICATE_FOR_UPDATE,
@@ -139,12 +140,12 @@ pub async fn update_manufacturer(
         manufacturer_id,
         DUPLICATE_LABEL,
     )
-    .await?
+    .await
+    .map_err(ApiError::database)?
     {
-        return Err("Manufacturer name already exists".to_string());
+        return Err(ApiError::duplicate_name(ENTITY_LABEL));
     }
 
-    // Update manufacturer
     sqlx::query(sql_queries::MANUFACTURER_UPDATE)
         .bind(&request.manufacturer_name)
         .bind(&request.memo)
@@ -153,8 +154,7 @@ pub async fn update_manufacturer(
         .bind(user_id)
         .bind(manufacturer_id)
         .execute(pool)
-        .await
-        .map_err(|e| format!("Failed to update manufacturer: {}", e))?;
+        .await?;
 
     Ok("Manufacturer updated successfully".to_string())
 }
@@ -164,13 +164,11 @@ pub async fn delete_manufacturer(
     pool: &SqlitePool,
     user_id: i64,
     manufacturer_id: i64,
-) -> Result<String, String> {
-    // Check if manufacturer exists
+) -> Result<String, ApiError> {
     get_manufacturer_by_id(pool, user_id, manufacturer_id)
         .await?
-        .ok_or("Manufacturer not found")?;
+        .ok_or_else(|| ApiError::not_found(ENTITY_LABEL))?;
 
-    // Logical delete
     master_data::execute_by_id(
         pool,
         sql_queries::MANUFACTURER_DELETE_LOGICAL,
@@ -178,7 +176,8 @@ pub async fn delete_manufacturer(
         manufacturer_id,
         "delete manufacturer",
     )
-    .await?;
+    .await
+    .map_err(ApiError::database)?;
 
     Ok("Manufacturer deleted successfully".to_string())
 }
@@ -292,7 +291,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_empty_manufacturer_name() {
+    async fn test_empty_manufacturer_name_returns_validation_code() {
         let pool = setup_test_db().await;
 
         let request = AddManufacturerRequest {
@@ -301,16 +300,15 @@ mod tests {
             is_disabled: None,
         };
 
-        let result = add_manufacturer(&pool, 2, request).await;
-        assert!(result.is_err());
-        assert!(result.unwrap_err().contains("cannot be empty"));
+        let err = add_manufacturer(&pool, 2, request).await.unwrap_err();
+        assert_eq!(err.code, ApiError::CODE_VALIDATION);
+        assert!(err.message.contains("cannot be empty"));
     }
 
     #[tokio::test]
-    async fn test_add_duplicate_manufacturer() {
+    async fn test_add_duplicate_manufacturer_returns_duplicate_name_code() {
         let pool = setup_test_db().await;
 
-        // Add first manufacturer
         let request1 = AddManufacturerRequest {
             manufacturer_name: "ニッスイ".to_string(),
             memo: None,
@@ -319,22 +317,20 @@ mod tests {
         let result1 = add_manufacturer(&pool, 2, request1).await;
         assert!(result1.is_ok());
 
-        // Try to add duplicate manufacturer
         let request2 = AddManufacturerRequest {
             manufacturer_name: "ニッスイ".to_string(),
             memo: Some("異なるメモ".to_string()),
             is_disabled: None,
         };
-        let result2 = add_manufacturer(&pool, 2, request2).await;
-        assert!(result2.is_err());
-        assert!(result2.unwrap_err().contains("already exists"));
+        let err = add_manufacturer(&pool, 2, request2).await.unwrap_err();
+        assert_eq!(err.code, ApiError::CODE_DUPLICATE_NAME);
+        assert_eq!(err.entity.as_deref(), Some("manufacturer"));
     }
 
     #[tokio::test]
-    async fn test_update_to_duplicate_manufacturer_name() {
+    async fn test_update_to_duplicate_manufacturer_name_returns_duplicate_name_code() {
         let pool = setup_test_db().await;
 
-        // Add two manufacturers
         let request1 = AddManufacturerRequest {
             manufacturer_name: "ニッスイ".to_string(),
             memo: None,
@@ -350,18 +346,38 @@ mod tests {
         add_manufacturer(&pool, 2, request2).await.unwrap();
 
         let manufacturers = get_manufacturers(&pool, 2, false).await.unwrap();
-        let manufacturer_id = manufacturers[1].manufacturer_id; // マルハニチロ
+        let manufacturer_id = manufacturers[1].manufacturer_id;
 
-        // Try to update to existing name
         let update_request = UpdateManufacturerRequest {
             manufacturer_name: "ニッスイ".to_string(),
             memo: None,
             display_order: 1,
             is_disabled: 0,
         };
-        let result = update_manufacturer(&pool, 2, manufacturer_id, update_request).await;
-        assert!(result.is_err());
-        assert!(result.unwrap_err().contains("already exists"));
+        let err = update_manufacturer(&pool, 2, manufacturer_id, update_request).await.unwrap_err();
+        assert_eq!(err.code, ApiError::CODE_DUPLICATE_NAME);
+    }
+
+    #[tokio::test]
+    async fn test_update_missing_manufacturer_returns_not_found_code() {
+        let pool = setup_test_db().await;
+
+        let update_request = UpdateManufacturerRequest {
+            manufacturer_name: "存在しない".to_string(),
+            memo: None,
+            display_order: 1,
+            is_disabled: 0,
+        };
+        let err = update_manufacturer(&pool, 2, 9999, update_request).await.unwrap_err();
+        assert_eq!(err.code, ApiError::CODE_NOT_FOUND);
+        assert_eq!(err.entity.as_deref(), Some("manufacturer"));
+    }
+
+    #[tokio::test]
+    async fn test_delete_missing_manufacturer_returns_not_found_code() {
+        let pool = setup_test_db().await;
+        let err = delete_manufacturer(&pool, 2, 9999).await.unwrap_err();
+        assert_eq!(err.code, ApiError::CODE_NOT_FOUND);
     }
 
     #[tokio::test]
@@ -420,8 +436,9 @@ mod tests {
             is_disabled: None,
         };
         let err = add_manufacturer(&pool, 2, request).await.unwrap_err();
-        assert!(err.contains(&consts::MAX_NAME_LEN.to_string()),
-            "error should reference the limit: {}", err);
+        assert_eq!(err.code, ApiError::CODE_VALIDATION);
+        assert!(err.message.contains(&consts::MAX_NAME_LEN.to_string()),
+            "error should reference the limit: {}", err.message);
     }
 
     #[tokio::test]
@@ -447,8 +464,9 @@ mod tests {
             is_disabled: None,
         };
         let err = add_manufacturer(&pool, 2, request).await.unwrap_err();
-        assert!(err.contains(&consts::MAX_MEMO_LEN.to_string()),
-            "error should reference the limit: {}", err);
+        assert_eq!(err.code, ApiError::CODE_VALIDATION);
+        assert!(err.message.contains(&consts::MAX_MEMO_LEN.to_string()),
+            "error should reference the limit: {}", err.message);
     }
 
     #[tokio::test]
@@ -471,8 +489,9 @@ mod tests {
             is_disabled: 0,
         };
         let err = update_manufacturer(&pool, 2, manufacturer_id, update_request).await.unwrap_err();
-        assert!(err.contains(&consts::MAX_NAME_LEN.to_string()),
-            "error should reference the limit: {}", err);
+        assert_eq!(err.code, ApiError::CODE_VALIDATION);
+        assert!(err.message.contains(&consts::MAX_NAME_LEN.to_string()),
+            "error should reference the limit: {}", err.message);
     }
 
     #[tokio::test]
@@ -495,7 +514,8 @@ mod tests {
             is_disabled: 0,
         };
         let err = update_manufacturer(&pool, 2, manufacturer_id, update_request).await.unwrap_err();
-        assert!(err.contains(&consts::MAX_MEMO_LEN.to_string()),
-            "error should reference the limit: {}", err);
+        assert_eq!(err.code, ApiError::CODE_VALIDATION);
+        assert!(err.message.contains(&consts::MAX_MEMO_LEN.to_string()),
+            "error should reference the limit: {}", err.message);
     }
 }

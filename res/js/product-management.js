@@ -8,10 +8,11 @@ import { Modal } from './modal.js';
 import { setupIndicators } from './indicators.js';
 import { getCurrentSessionUser } from './session.js';
 import { createMenuBar, handleLogout, handleQuit } from './menu.js';
-import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
+import { clearValidationError, attachCharCounter } from './validation-display.js';
 import { showToast } from './toast.js';
 import { MAX_NAME_LEN, MAX_MEMO_LEN } from './consts.js';
 import { escapeHtml } from './escape-html.js';
+import { saveMasterEntry } from './master-crud.js';
 
 console.log('=== PRODUCT-MANAGEMENT.JS LOADED ===');
 
@@ -425,118 +426,57 @@ function renderProducts() {
 }
 
 async function saveProduct() {
+    clearErrors();
+
     const productNameInput = document.getElementById('product-name');
     const productMemoInput = document.getElementById('product-memo');
-    const productName = productNameInput.value.trim();
     const manufacturerIdValue = document.getElementById('product-manufacturer').value;
     const manufacturerId = manufacturerIdValue ? parseInt(manufacturerIdValue) : null;
-    const memo = productMemoInput.value.trim();
     const isDisabled = document.getElementById('product-is-disabled').checked ? 1 : 0;
 
-    // Clear previous errors
-    clearErrors();
-    clearValidationError(productNameInput);
-    clearValidationError(productMemoInput);
-
-    // Validation — empty name
-    if (!productName) {
-        showValidationError(productNameInput, i18n.t('product_mgmt.empty_name'));
-        throw new Error('Validation error: empty product name');
-    }
-
-    // Validation — max length (mirrors Rust defense in src/services/product.rs)
-    if ([...productName].length > MAX_NAME_LEN) {
-        showMaxLengthError(productNameInput, i18n.t('product_mgmt.name'), MAX_NAME_LEN);
-        throw new Error('Validation error: product name too long');
-    }
-    if (memo && [...memo].length > MAX_MEMO_LEN) {
-        showMaxLengthError(productMemoInput, i18n.t('product_mgmt.memo'), MAX_MEMO_LEN);
-        throw new Error('Validation error: memo too long');
-    }
-
-    // Resolve the edit target BEFORE the invoke try/catch so a missing
-    // entry is not routed through the generic save-error mapping (which
-    // would layer a `product_mgmt.failed_to_save` inline error under the
-    // dedicated `not_found` toast). Modal closes on return since there
-    // is nothing left to edit.
-    let productForUpdate = null;
-    if (editingProductId !== null) {
-        productForUpdate = products.find(p => p.product_id === editingProductId);
-        if (!productForUpdate) {
+    const result = await saveMasterEntry({
+        nameInput: productNameInput,
+        memoInput: productMemoInput,
+        editingId: editingProductId,
+        findInCacheById: (id) => products.find(p => p.product_id === id) || null,
+        invokeAdd: (name, memo) => invoke('add_product', {
+            productName: name,
+            manufacturerId,
+            memo,
+            isDisabled: isDisabled === 1 ? isDisabled : null,
+        }),
+        invokeUpdate: (target, name, memo) => invoke('update_product', {
+            productId: editingProductId,
+            productName: name,
+            manufacturerId,
+            memo,
+            displayOrder: target.display_order,
+            isDisabled,
+        }),
+        i18nPrefix: 'product_mgmt',
+        nameFieldI18nKey: 'product_mgmt.name',
+        memoFieldI18nKey: 'product_mgmt.memo',
+        nameMaxLen: MAX_NAME_LEN,
+        memoMaxLen: MAX_MEMO_LEN,
+        onNotFoundBeforeInvoke: async () => {
             showToast(i18n.t('product_mgmt.not_found'), { variant: 'error' });
             await loadProducts();
-            return;
-        }
-    }
+        },
+    });
 
-    try {
-        if (editingProductId !== null) {
-            await invoke('update_product', {
-                productId: editingProductId,
-                productName: productName,
-                manufacturerId: manufacturerId,
-                memo: memo || null,
-                displayOrder: productForUpdate.display_order,
-                isDisabled: isDisabled
-            });
-            console.log('Product updated successfully');
-        } else {
-            // Add new product
-            await invoke('add_product', {
-                productName: productName,
-                manufacturerId: manufacturerId,
-                memo: memo || null,
-                isDisabled: isDisabled === 1 ? isDisabled : null
-            });
-            console.log('Product added successfully');
-        }
-    } catch (error) {
-        console.error('Failed to save product:', error);
-
-        // Map backend error messages to i18n resources / localized text
-        const errorMessage = error.toString();
-        let nameMessage = null;
-        let memoMessage = null;
-
-        if (errorMessage.includes('already exists')) {
-            nameMessage = i18n.t('product_mgmt.duplicate_error');
-        } else if (errorMessage.includes('Product name must be')) {
-            // Defense-line trip: frontend max-length check should have caught
-            // this, so use the same i18n message for parity.
-            nameMessage = i18n.t('validation.max_length', {
-                field: i18n.t('product_mgmt.name'),
-                max: MAX_NAME_LEN,
-                actual: [...productName].length,
-            });
-        } else if (errorMessage.includes('Memo must be')) {
-            memoMessage = i18n.t('validation.max_length', {
-                field: i18n.t('product_mgmt.memo'),
-                max: MAX_MEMO_LEN,
-                actual: [...memo].length,
-            });
-        } else if (errorMessage.includes('cannot be empty')) {
-            nameMessage = i18n.t('product_mgmt.empty_name');
-        } else {
-            // Unrecognized backend error: show a localized generic message
-            // (details stay in the console) instead of the raw error
-            nameMessage = i18n.t('product_mgmt.failed_to_save');
-        }
-
-        if (nameMessage) showValidationError(productNameInput, nameMessage);
-        if (memoMessage) showValidationError(productMemoInput, memoMessage);
-
-        // Re-throw error to prevent modal from closing
-        throw error;
+    if (result.mode === 'skip') {
+        return;
     }
 
     // Save succeeded: failures past this point (detail-draft link, list
-    // reload) must not be reported as a failed save
-    if (returnToTransactionId && editingProductId === null) {
+    // reload) must not be reported as a failed save.
+    const savedName = productNameInput.value.trim();
+    if (result.mode === 'add' && returnToTransactionId) {
         // If this add was triggered by the detail-jump flow, look up the
         // new product by name and stamp its id into the persisted draft
         // so the user returns to the detail modal with the new master
         // entry already selected (canonicalizing the item name too).
-        await linkNewProductToDraft(productName);
+        await linkNewProductToDraft(savedName);
     }
 
     // Reload products list (modal will be closed by Modal class)

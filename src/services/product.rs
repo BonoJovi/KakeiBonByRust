@@ -1,11 +1,13 @@
 use serde::{Deserialize, Serialize};
 use sqlx::{SqlitePool, FromRow};
+use crate::api_error::ApiError;
 use crate::services::master_data;
 use crate::sql_queries;
 use crate::validation;
 
 const NAME_LABEL: &str = "Product name";
 const DUPLICATE_LABEL: &str = "product name";
+const ENTITY_LABEL: &str = "Product";
 
 #[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
 #[sqlx(rename_all = "SCREAMING_SNAKE_CASE")]
@@ -40,7 +42,7 @@ pub struct UpdateProductRequest {
 }
 
 /// Get all products for a user
-pub async fn get_products(pool: &SqlitePool, user_id: i64, include_disabled: bool) -> Result<Vec<Product>, String> {
+pub async fn get_products(pool: &SqlitePool, user_id: i64, include_disabled: bool) -> Result<Vec<Product>, ApiError> {
     let query = if include_disabled {
         sql_queries::PRODUCT_GET_ALL_INCLUDING_DISABLED
     } else {
@@ -49,9 +51,8 @@ pub async fn get_products(pool: &SqlitePool, user_id: i64, include_disabled: boo
 
     let products = sqlx::query_as::<_, Product>(query)
         .bind(user_id)
-    .fetch_all(pool)
-    .await
-    .map_err(|e| format!("Failed to get products: {}", e))?;
+        .fetch_all(pool)
+        .await?;
 
     Ok(products)
 }
@@ -64,7 +65,7 @@ pub async fn search_products_by_name(
     pool: &SqlitePool,
     user_id: i64,
     query: &str,
-) -> Result<Vec<Product>, String> {
+) -> Result<Vec<Product>, ApiError> {
     let trimmed = query.trim();
     if trimmed.is_empty() {
         return Ok(Vec::new());
@@ -76,8 +77,7 @@ pub async fn search_products_by_name(
         .bind(user_id)
         .bind(&pattern)
         .fetch_all(pool)
-        .await
-        .map_err(|e| format!("Failed to search products: {}", e))?;
+        .await?;
 
     Ok(products)
 }
@@ -87,7 +87,7 @@ pub async fn get_product_by_id(
     pool: &SqlitePool,
     user_id: i64,
     product_id: i64,
-) -> Result<Option<Product>, String> {
+) -> Result<Option<Product>, ApiError> {
     master_data::fetch_by_id(
         pool,
         sql_queries::PRODUCT_GET_BY_ID,
@@ -96,6 +96,7 @@ pub async fn get_product_by_id(
         "product",
     )
     .await
+    .map_err(ApiError::database)
 }
 
 /// Add a new product
@@ -103,9 +104,11 @@ pub async fn add_product(
     pool: &SqlitePool,
     user_id: i64,
     request: AddProductRequest,
-) -> Result<String, String> {
-    validation::validate_master_name(NAME_LABEL, &request.product_name)?;
-    validation::validate_memo("Memo", request.memo.as_ref())?;
+) -> Result<String, ApiError> {
+    validation::validate_master_name(NAME_LABEL, &request.product_name)
+        .map_err(ApiError::validation)?;
+    validation::validate_memo("Memo", request.memo.as_ref())
+        .map_err(ApiError::validation)?;
 
     // Verify manufacturer ownership. PRODUCTS.MANUFACTURER_ID's FK only
     // enforces "some manufacturer row exists" — it does not check that
@@ -117,7 +120,6 @@ pub async fn add_product(
     // Fable-5 review #13.
     verify_manufacturer_ownership(pool, user_id, request.manufacturer_id).await?;
 
-    // Check for duplicate product name
     if master_data::value_exists(
         pool,
         sql_queries::PRODUCT_CHECK_DUPLICATE_FOR_ADD,
@@ -125,23 +127,22 @@ pub async fn add_product(
         &request.product_name,
         DUPLICATE_LABEL,
     )
-    .await?
+    .await
+    .map_err(ApiError::database)?
     {
-        return Err("Product name already exists".to_string());
+        return Err(ApiError::duplicate_name(ENTITY_LABEL));
     }
 
-    // Get next display order
     let display_order = master_data::fetch_next_display_order(
         pool,
         sql_queries::PRODUCT_GET_NEXT_DISPLAY_ORDER,
         user_id,
     )
-    .await?;
+    .await
+    .map_err(ApiError::database)?;
 
-    // Get is_disabled value (default to 0)
     let is_disabled = request.is_disabled.unwrap_or(0);
 
-    // Insert product
     sqlx::query(sql_queries::PRODUCT_INSERT)
         .bind(user_id)
         .bind(&request.product_name)
@@ -150,22 +151,23 @@ pub async fn add_product(
         .bind(display_order)
         .bind(is_disabled)
         .execute(pool)
-        .await
-        .map_err(|e| format!("Failed to add product: {}", e))?;
+        .await?;
 
     Ok("Product added successfully".to_string())
 }
 
 /// If `manufacturer_id` is `Some`, confirm the manufacturer exists AND
-/// belongs to `user_id`. Returns `"Manufacturer not found"` otherwise,
-/// mirroring the string the frontend already maps for missing-master
-/// scenarios. `None` (no manufacturer) is always OK — products can be
-/// registered without a manufacturer.
+/// belongs to `user_id`. Returns `ApiError::manufacturer_not_found()`
+/// otherwise, which the frontend classifier maps to a specific "選択した
+/// メーカーが見つかりません" toast rather than the generic
+/// "保存失敗" — because the failure blames the manufacturer field, not
+/// the product row. `None` (no manufacturer) is always OK — products can
+/// be registered without a manufacturer.
 async fn verify_manufacturer_ownership(
     pool: &SqlitePool,
     user_id: i64,
     manufacturer_id: Option<i64>,
-) -> Result<(), String> {
+) -> Result<(), ApiError> {
     let Some(id) = manufacturer_id else {
         return Ok(());
     };
@@ -173,10 +175,9 @@ async fn verify_manufacturer_ownership(
         .bind(id)
         .bind(user_id)
         .fetch_optional(pool)
-        .await
-        .map_err(|e| format!("Failed to verify manufacturer: {}", e))?;
+        .await?;
     if exists.is_none() {
-        return Err("Manufacturer not found".to_string());
+        return Err(ApiError::manufacturer_not_found());
     }
     Ok(())
 }
@@ -187,20 +188,18 @@ pub async fn update_product(
     user_id: i64,
     product_id: i64,
     request: UpdateProductRequest,
-) -> Result<String, String> {
-    validation::validate_master_name(NAME_LABEL, &request.product_name)?;
-    validation::validate_memo("Memo", request.memo.as_ref())?;
+) -> Result<String, ApiError> {
+    validation::validate_master_name(NAME_LABEL, &request.product_name)
+        .map_err(ApiError::validation)?;
+    validation::validate_memo("Memo", request.memo.as_ref())
+        .map_err(ApiError::validation)?;
 
-    // Verify manufacturer ownership before touching the row — same
-    // reasoning as `add_product`. Fable-5 review #13.
     verify_manufacturer_ownership(pool, user_id, request.manufacturer_id).await?;
 
-    // Check if product exists
     get_product_by_id(pool, user_id, product_id)
         .await?
-        .ok_or("Product not found")?;
+        .ok_or_else(|| ApiError::not_found(ENTITY_LABEL))?;
 
-    // Check for duplicate product name
     if master_data::value_exists_excluding(
         pool,
         sql_queries::PRODUCT_CHECK_DUPLICATE_FOR_UPDATE,
@@ -209,12 +208,12 @@ pub async fn update_product(
         product_id,
         DUPLICATE_LABEL,
     )
-    .await?
+    .await
+    .map_err(ApiError::database)?
     {
-        return Err("Product name already exists".to_string());
+        return Err(ApiError::duplicate_name(ENTITY_LABEL));
     }
 
-    // Update product
     sqlx::query(sql_queries::PRODUCT_UPDATE)
         .bind(&request.product_name)
         .bind(&request.manufacturer_id)
@@ -224,8 +223,7 @@ pub async fn update_product(
         .bind(user_id)
         .bind(product_id)
         .execute(pool)
-        .await
-        .map_err(|e| format!("Failed to update product: {}", e))?;
+        .await?;
 
     Ok("Product updated successfully".to_string())
 }
@@ -235,13 +233,11 @@ pub async fn delete_product(
     pool: &SqlitePool,
     user_id: i64,
     product_id: i64,
-) -> Result<String, String> {
-    // Check if product exists
+) -> Result<String, ApiError> {
     get_product_by_id(pool, user_id, product_id)
         .await?
-        .ok_or("Product not found")?;
+        .ok_or_else(|| ApiError::not_found(ENTITY_LABEL))?;
 
-    // Logical delete
     master_data::execute_by_id(
         pool,
         sql_queries::PRODUCT_DELETE_LOGICAL,
@@ -249,7 +245,8 @@ pub async fn delete_product(
         product_id,
         "delete product",
     )
-    .await?;
+    .await
+    .map_err(ApiError::database)?;
 
     Ok("Product deleted successfully".to_string())
 }
@@ -418,13 +415,13 @@ mod tests {
             is_disabled: None,
         };
 
-        let result = add_product(&pool, 2, request).await;
-        assert!(result.is_err());
-        assert!(result.unwrap_err().contains("cannot be empty"));
+        let err = add_product(&pool, 2, request).await.unwrap_err();
+        assert_eq!(err.code, ApiError::CODE_VALIDATION);
+        assert!(err.message.contains("cannot be empty"));
     }
 
     #[tokio::test]
-    async fn test_add_duplicate_product() {
+    async fn test_add_duplicate_product_returns_duplicate_name_code() {
         let pool = setup_test_db().await;
 
         // Add first product
@@ -444,9 +441,9 @@ mod tests {
             memo: Some("異なるメモ".to_string()),
             is_disabled: None,
         };
-        let result2 = add_product(&pool, 2, request2).await;
-        assert!(result2.is_err());
-        assert!(result2.unwrap_err().contains("already exists"));
+        let err = add_product(&pool, 2, request2).await.unwrap_err();
+        assert_eq!(err.code, ApiError::CODE_DUPLICATE_NAME);
+        assert_eq!(err.entity.as_deref(), Some("product"));
     }
 
     #[tokio::test]
@@ -511,8 +508,9 @@ mod tests {
             is_disabled: None,
         };
         let err = add_product(&pool, 2, request).await.unwrap_err();
-        assert!(err.contains(&consts::MAX_NAME_LEN.to_string()),
-            "error should reference the limit: {}", err);
+        assert_eq!(err.code, ApiError::CODE_VALIDATION);
+        assert!(err.message.contains(&consts::MAX_NAME_LEN.to_string()),
+            "error should reference the limit: {}", err.message);
     }
 
     #[tokio::test]
@@ -540,8 +538,9 @@ mod tests {
             is_disabled: None,
         };
         let err = add_product(&pool, 2, request).await.unwrap_err();
-        assert!(err.contains(&consts::MAX_MEMO_LEN.to_string()),
-            "error should reference the limit: {}", err);
+        assert_eq!(err.code, ApiError::CODE_VALIDATION);
+        assert!(err.message.contains(&consts::MAX_MEMO_LEN.to_string()),
+            "error should reference the limit: {}", err.message);
     }
 
     #[tokio::test]
@@ -566,8 +565,9 @@ mod tests {
             is_disabled: 0,
         };
         let err = update_product(&pool, 2, product_id, update_request).await.unwrap_err();
-        assert!(err.contains(&consts::MAX_NAME_LEN.to_string()),
-            "error should reference the limit: {}", err);
+        assert_eq!(err.code, ApiError::CODE_VALIDATION);
+        assert!(err.message.contains(&consts::MAX_NAME_LEN.to_string()),
+            "error should reference the limit: {}", err.message);
     }
 
     #[tokio::test]
@@ -592,8 +592,9 @@ mod tests {
             is_disabled: 0,
         };
         let err = update_product(&pool, 2, product_id, update_request).await.unwrap_err();
-        assert!(err.contains(&consts::MAX_MEMO_LEN.to_string()),
-            "error should reference the limit: {}", err);
+        assert_eq!(err.code, ApiError::CODE_VALIDATION);
+        assert!(err.message.contains(&consts::MAX_MEMO_LEN.to_string()),
+            "error should reference the limit: {}", err.message);
     }
 
     // v2.6.0 autocomplete: search_products_by_name
@@ -750,7 +751,7 @@ mod tests {
         .await;
 
         assert!(
-            attempt.as_ref().is_err_and(|e| e.contains("Manufacturer not found")),
+            attempt.as_ref().is_err_and(|e| e.code == ApiError::CODE_MANUFACTURER_NOT_FOUND),
             "cross-owner manufacturer_id must be rejected: {:?}",
             attempt
         );
@@ -780,7 +781,7 @@ mod tests {
         .await;
 
         assert!(
-            attempt.as_ref().is_err_and(|e| e.contains("Manufacturer not found")),
+            attempt.as_ref().is_err_and(|e| e.code == ApiError::CODE_MANUFACTURER_NOT_FOUND),
             "nonexistent manufacturer_id must be rejected: {:?}",
             attempt
         );
@@ -842,7 +843,7 @@ mod tests {
         .await;
 
         assert!(
-            attempt.as_ref().is_err_and(|e| e.contains("Manufacturer not found")),
+            attempt.as_ref().is_err_and(|e| e.code == ApiError::CODE_MANUFACTURER_NOT_FOUND),
             "cross-owner manufacturer_id must be rejected on update: {:?}",
             attempt
         );

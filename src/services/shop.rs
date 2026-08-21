@@ -1,11 +1,13 @@
 use serde::{Deserialize, Serialize};
 use sqlx::{SqlitePool, FromRow};
+use crate::api_error::ApiError;
 use crate::services::master_data;
 use crate::sql_queries;
 use crate::validation;
 
 const NAME_LABEL: &str = "Shop name";
 const DUPLICATE_LABEL: &str = "shop name";
+const ENTITY_LABEL: &str = "Shop";
 
 #[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
 #[sqlx(rename_all = "SCREAMING_SNAKE_CASE")]
@@ -34,15 +36,11 @@ pub struct UpdateShopRequest {
 }
 
 /// Get all shops for a user
-pub async fn get_shops(pool: &SqlitePool, user_id: i64) -> Result<Vec<Shop>, String> {
-    let shops = sqlx::query_as::<_, Shop>(
-        sql_queries::SHOP_GET_ALL
-    )
-    .bind(user_id)
-    .fetch_all(pool)
-    .await
-    .map_err(|e| format!("Failed to get shops: {}", e))?;
-
+pub async fn get_shops(pool: &SqlitePool, user_id: i64) -> Result<Vec<Shop>, ApiError> {
+    let shops = sqlx::query_as::<_, Shop>(sql_queries::SHOP_GET_ALL)
+        .bind(user_id)
+        .fetch_all(pool)
+        .await?;
     Ok(shops)
 }
 
@@ -51,8 +49,10 @@ pub async fn get_shop_by_id(
     pool: &SqlitePool,
     user_id: i64,
     shop_id: i64,
-) -> Result<Option<Shop>, String> {
-    master_data::fetch_by_id(pool, sql_queries::SHOP_GET_BY_ID, user_id, shop_id, "shop").await
+) -> Result<Option<Shop>, ApiError> {
+    master_data::fetch_by_id(pool, sql_queries::SHOP_GET_BY_ID, user_id, shop_id, "shop")
+        .await
+        .map_err(ApiError::database)
 }
 
 /// Add a new shop
@@ -60,11 +60,12 @@ pub async fn add_shop(
     pool: &SqlitePool,
     user_id: i64,
     request: AddShopRequest,
-) -> Result<String, String> {
-    validation::validate_master_name(NAME_LABEL, &request.shop_name)?;
-    validation::validate_memo("Memo", request.memo.as_ref())?;
+) -> Result<String, ApiError> {
+    validation::validate_master_name(NAME_LABEL, &request.shop_name)
+        .map_err(ApiError::validation)?;
+    validation::validate_memo("Memo", request.memo.as_ref())
+        .map_err(ApiError::validation)?;
 
-    // Check for duplicate shop name
     if master_data::value_exists(
         pool,
         sql_queries::SHOP_CHECK_DUPLICATE_FOR_ADD,
@@ -72,28 +73,27 @@ pub async fn add_shop(
         &request.shop_name,
         DUPLICATE_LABEL,
     )
-    .await?
+    .await
+    .map_err(ApiError::database)?
     {
-        return Err("Shop name already exists".to_string());
+        return Err(ApiError::duplicate_name(ENTITY_LABEL));
     }
 
-    // Get next display order
     let display_order = master_data::fetch_next_display_order(
         pool,
         sql_queries::SHOP_GET_NEXT_DISPLAY_ORDER,
         user_id,
     )
-    .await?;
+    .await
+    .map_err(ApiError::database)?;
 
-    // Insert shop
     sqlx::query(sql_queries::SHOP_INSERT)
         .bind(user_id)
         .bind(&request.shop_name)
         .bind(&request.memo)
         .bind(display_order)
         .execute(pool)
-        .await
-        .map_err(|e| format!("Failed to add shop: {}", e))?;
+        .await?;
 
     Ok("Shop added successfully".to_string())
 }
@@ -104,16 +104,16 @@ pub async fn update_shop(
     user_id: i64,
     shop_id: i64,
     request: UpdateShopRequest,
-) -> Result<String, String> {
-    validation::validate_master_name(NAME_LABEL, &request.shop_name)?;
-    validation::validate_memo("Memo", request.memo.as_ref())?;
+) -> Result<String, ApiError> {
+    validation::validate_master_name(NAME_LABEL, &request.shop_name)
+        .map_err(ApiError::validation)?;
+    validation::validate_memo("Memo", request.memo.as_ref())
+        .map_err(ApiError::validation)?;
 
-    // Check if shop exists
     get_shop_by_id(pool, user_id, shop_id)
         .await?
-        .ok_or("Shop not found")?;
+        .ok_or_else(|| ApiError::not_found(ENTITY_LABEL))?;
 
-    // Check for duplicate shop name
     if master_data::value_exists_excluding(
         pool,
         sql_queries::SHOP_CHECK_DUPLICATE_FOR_UPDATE,
@@ -122,12 +122,12 @@ pub async fn update_shop(
         shop_id,
         DUPLICATE_LABEL,
     )
-    .await?
+    .await
+    .map_err(ApiError::database)?
     {
-        return Err("Shop name already exists".to_string());
+        return Err(ApiError::duplicate_name(ENTITY_LABEL));
     }
 
-    // Update shop
     sqlx::query(sql_queries::SHOP_UPDATE)
         .bind(&request.shop_name)
         .bind(&request.memo)
@@ -135,8 +135,7 @@ pub async fn update_shop(
         .bind(user_id)
         .bind(shop_id)
         .execute(pool)
-        .await
-        .map_err(|e| format!("Failed to update shop: {}", e))?;
+        .await?;
 
     Ok("Shop updated successfully".to_string())
 }
@@ -146,13 +145,11 @@ pub async fn delete_shop(
     pool: &SqlitePool,
     user_id: i64,
     shop_id: i64,
-) -> Result<String, String> {
-    // Check if shop exists
+) -> Result<String, ApiError> {
     get_shop_by_id(pool, user_id, shop_id)
         .await?
-        .ok_or("Shop not found")?;
+        .ok_or_else(|| ApiError::not_found(ENTITY_LABEL))?;
 
-    // Logical delete
     master_data::execute_by_id(
         pool,
         sql_queries::SHOP_DELETE_LOGICAL,
@@ -160,7 +157,8 @@ pub async fn delete_shop(
         shop_id,
         "delete shop",
     )
-    .await?;
+    .await
+    .map_err(ApiError::database)?;
 
     Ok("Shop deleted successfully".to_string())
 }
@@ -174,19 +172,16 @@ mod tests {
     async fn setup_test_db() -> SqlitePool {
         let pool = init_db(TEST_DB_URL).await.unwrap();
 
-        // Create USERS table
         sqlx::query(sql_queries::TEST_CREATE_USERS_TABLE)
             .execute(&pool)
             .await
             .unwrap();
 
-        // Create SHOPS table
         sqlx::query(sql_queries::TEST_SHOP_CREATE_TABLE)
             .execute(&pool)
             .await
             .unwrap();
 
-        // Insert test users
         sqlx::query(sql_queries::TEST_INSERT_USER_ADMIN)
             .execute(&pool)
             .await
@@ -221,7 +216,6 @@ mod tests {
     async fn test_update_shop() {
         let pool = setup_test_db().await;
 
-        // Add shop first
         let add_request = AddShopRequest {
             shop_name: "イオン新宿店".to_string(),
             memo: None,
@@ -231,7 +225,6 @@ mod tests {
         let shops = get_shops(&pool, 2).await.unwrap();
         let shop_id = shops[0].shop_id;
 
-        // Update shop
         let update_request = UpdateShopRequest {
             shop_name: "イオン祇園店".to_string(),
             memo: Some("更新後メモ".to_string()),
@@ -250,7 +243,6 @@ mod tests {
     async fn test_delete_shop() {
         let pool = setup_test_db().await;
 
-        // Add shop first
         let request = AddShopRequest {
             shop_name: "イオン新宿店".to_string(),
             memo: None,
@@ -260,17 +252,15 @@ mod tests {
         let shops = get_shops(&pool, 2).await.unwrap();
         let shop_id = shops[0].shop_id;
 
-        // Delete shop
         let result = delete_shop(&pool, 2, shop_id).await;
         assert!(result.is_ok());
 
-        // Verify shop is disabled
         let shops = get_shops(&pool, 2).await.unwrap();
         assert_eq!(shops.len(), 0);
     }
 
     #[tokio::test]
-    async fn test_empty_shop_name() {
+    async fn test_empty_shop_name_returns_validation_code() {
         let pool = setup_test_db().await;
 
         let request = AddShopRequest {
@@ -278,38 +268,34 @@ mod tests {
             memo: None,
         };
 
-        let result = add_shop(&pool, 2, request).await;
-        assert!(result.is_err());
-        assert!(result.unwrap_err().contains("cannot be empty"));
+        let err = add_shop(&pool, 2, request).await.unwrap_err();
+        assert_eq!(err.code, ApiError::CODE_VALIDATION);
+        assert!(err.message.contains("cannot be empty"));
     }
 
     #[tokio::test]
-    async fn test_add_duplicate_shop() {
+    async fn test_add_duplicate_shop_returns_duplicate_name_code() {
         let pool = setup_test_db().await;
 
-        // Add first shop
         let request1 = AddShopRequest {
             shop_name: "イオン新宿店".to_string(),
             memo: None,
         };
-        let result1 = add_shop(&pool, 2, request1).await;
-        assert!(result1.is_ok());
+        add_shop(&pool, 2, request1).await.unwrap();
 
-        // Try to add duplicate shop
         let request2 = AddShopRequest {
             shop_name: "イオン新宿店".to_string(),
             memo: Some("異なるメモ".to_string()),
         };
-        let result2 = add_shop(&pool, 2, request2).await;
-        assert!(result2.is_err());
-        assert!(result2.unwrap_err().contains("already exists"));
+        let err = add_shop(&pool, 2, request2).await.unwrap_err();
+        assert_eq!(err.code, ApiError::CODE_DUPLICATE_NAME);
+        assert_eq!(err.entity.as_deref(), Some("shop"));
     }
 
     #[tokio::test]
-    async fn test_update_to_duplicate_shop_name() {
+    async fn test_update_to_duplicate_shop_name_returns_duplicate_name_code() {
         let pool = setup_test_db().await;
 
-        // Add two shops
         let request1 = AddShopRequest {
             shop_name: "イオン新宿店".to_string(),
             memo: None,
@@ -323,24 +309,42 @@ mod tests {
         add_shop(&pool, 2, request2).await.unwrap();
 
         let shops = get_shops(&pool, 2).await.unwrap();
-        let shop_id = shops[1].shop_id; // セブンイレブン
+        let shop_id = shops[1].shop_id;
 
-        // Try to update to existing name
         let update_request = UpdateShopRequest {
             shop_name: "イオン新宿店".to_string(),
             memo: None,
             display_order: 1,
         };
-        let result = update_shop(&pool, 2, shop_id, update_request).await;
-        assert!(result.is_err());
-        assert!(result.unwrap_err().contains("already exists"));
+        let err = update_shop(&pool, 2, shop_id, update_request).await.unwrap_err();
+        assert_eq!(err.code, ApiError::CODE_DUPLICATE_NAME);
+    }
+
+    #[tokio::test]
+    async fn test_update_missing_shop_returns_not_found_code() {
+        let pool = setup_test_db().await;
+
+        let update_request = UpdateShopRequest {
+            shop_name: "存在しない".to_string(),
+            memo: None,
+            display_order: 1,
+        };
+        let err = update_shop(&pool, 2, 9999, update_request).await.unwrap_err();
+        assert_eq!(err.code, ApiError::CODE_NOT_FOUND);
+        assert_eq!(err.entity.as_deref(), Some("shop"));
+    }
+
+    #[tokio::test]
+    async fn test_delete_missing_shop_returns_not_found_code() {
+        let pool = setup_test_db().await;
+        let err = delete_shop(&pool, 2, 9999).await.unwrap_err();
+        assert_eq!(err.code, ApiError::CODE_NOT_FOUND);
     }
 
     #[tokio::test]
     async fn test_update_same_shop_name() {
         let pool = setup_test_db().await;
 
-        // Add shop
         let request = AddShopRequest {
             shop_name: "イオン新宿店".to_string(),
             memo: Some("元のメモ".to_string()),
@@ -350,7 +354,6 @@ mod tests {
         let shops = get_shops(&pool, 2).await.unwrap();
         let shop_id = shops[0].shop_id;
 
-        // Update with same name (should succeed)
         let update_request = UpdateShopRequest {
             shop_name: "イオン新宿店".to_string(),
             memo: Some("新しいメモ".to_string()),
@@ -359,7 +362,6 @@ mod tests {
         let result = update_shop(&pool, 2, shop_id, update_request).await;
         assert!(result.is_ok());
 
-        // Verify memo was updated
         let shop = get_shop_by_id(&pool, 2, shop_id).await.unwrap().unwrap();
         assert_eq!(shop.memo, Some("新しいメモ".to_string()));
     }
@@ -388,8 +390,9 @@ mod tests {
             memo: None,
         };
         let err = add_shop(&pool, 2, request).await.unwrap_err();
-        assert!(err.contains(&consts::MAX_NAME_LEN.to_string()),
-            "error should reference the limit: {}", err);
+        assert_eq!(err.code, ApiError::CODE_VALIDATION);
+        assert!(err.message.contains(&consts::MAX_NAME_LEN.to_string()),
+            "error should reference the limit: {}", err.message);
     }
 
     #[tokio::test]
@@ -413,8 +416,9 @@ mod tests {
             memo: Some("メ".repeat(consts::MAX_MEMO_LEN + 1)),
         };
         let err = add_shop(&pool, 2, request).await.unwrap_err();
-        assert!(err.contains(&consts::MAX_MEMO_LEN.to_string()),
-            "error should reference the limit: {}", err);
+        assert_eq!(err.code, ApiError::CODE_VALIDATION);
+        assert!(err.message.contains(&consts::MAX_MEMO_LEN.to_string()),
+            "error should reference the limit: {}", err.message);
     }
 
     #[tokio::test]
@@ -435,8 +439,9 @@ mod tests {
             display_order: 1,
         };
         let err = update_shop(&pool, 2, shop_id, update_request).await.unwrap_err();
-        assert!(err.contains(&consts::MAX_NAME_LEN.to_string()),
-            "error should reference the limit: {}", err);
+        assert_eq!(err.code, ApiError::CODE_VALIDATION);
+        assert!(err.message.contains(&consts::MAX_NAME_LEN.to_string()),
+            "error should reference the limit: {}", err.message);
     }
 
     #[tokio::test]
@@ -457,7 +462,8 @@ mod tests {
             display_order: 1,
         };
         let err = update_shop(&pool, 2, shop_id, update_request).await.unwrap_err();
-        assert!(err.contains(&consts::MAX_MEMO_LEN.to_string()),
-            "error should reference the limit: {}", err);
+        assert_eq!(err.code, ApiError::CODE_VALIDATION);
+        assert!(err.message.contains(&consts::MAX_MEMO_LEN.to_string()),
+            "error should reference the limit: {}", err.message);
     }
 }

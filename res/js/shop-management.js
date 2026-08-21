@@ -8,9 +8,10 @@ import { Modal } from './modal.js';
 import { setupIndicators } from './indicators.js';
 import { getCurrentSessionUser, getSessionSourceScreen, clearSessionSourceScreen, clearSessionModalState, clearSessionCategory1Code } from './session.js';
 import { createMenuBar, handleLogout, handleQuit } from './menu.js';
-import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
+import { clearValidationError, attachCharCounter } from './validation-display.js';
 import { showToast } from './toast.js';
 import { MAX_NAME_LEN, MAX_MEMO_LEN, SOURCE_SCREEN_TRANSACTION_MGMT } from './consts.js';
+import { saveMasterEntry } from './master-crud.js';
 
 console.log('=== SHOP-MANAGEMENT.JS LOADED ===');
 
@@ -269,105 +270,45 @@ function renderShops() {
 }
 
 async function saveShop() {
+    // Clear "top of form" error area kept for legacy fallbacks; per-field
+    // errors are cleared inside saveMasterEntry via clearValidationError.
+    clearErrors();
+
     const shopNameInput = document.getElementById('shop-name');
     const memoInput = document.getElementById('shop-memo');
-    const shopName = shopNameInput.value.trim();
-    const memo = memoInput.value.trim();
 
-    // Clear previous errors
-    clearErrors();
-    clearValidationError(shopNameInput);
-    clearValidationError(memoInput);
-
-    // Validation — empty name
-    if (!shopName) {
-        showValidationError(shopNameInput, i18n.t('shop_mgmt.empty_name'));
-        throw new Error('Validation error: empty shop name');
-    }
-
-    // Validation — max length (mirrors Rust defense in src/services/shop.rs)
-    if ([...shopName].length > MAX_NAME_LEN) {
-        showMaxLengthError(shopNameInput, i18n.t('shop_mgmt.shop_name'), MAX_NAME_LEN);
-        throw new Error('Validation error: shop name too long');
-    }
-    if (memo && [...memo].length > MAX_MEMO_LEN) {
-        showMaxLengthError(memoInput, i18n.t('shop_mgmt.memo'), MAX_MEMO_LEN);
-        throw new Error('Validation error: memo too long');
-    }
-
-    // Resolve the edit target BEFORE the invoke try/catch so a missing
-    // entry is not routed through the generic save-error mapping (which
-    // would layer a `shop_mgmt.failed_to_save` inline error under the
-    // dedicated `not_found` toast). Modal closes on return since there
-    // is nothing left to edit.
-    let shopForUpdate = null;
-    if (editingShopId !== null) {
-        shopForUpdate = shops.find(s => s.shop_id === editingShopId);
-        if (!shopForUpdate) {
+    const result = await saveMasterEntry({
+        nameInput: shopNameInput,
+        memoInput,
+        editingId: editingShopId,
+        findInCacheById: (id) => shops.find(s => s.shop_id === id) || null,
+        invokeAdd: (name, memo) => invoke('add_shop', {
+            shopName: name,
+            memo,
+        }),
+        invokeUpdate: (target, name, memo) => invoke('update_shop', {
+            shopId: editingShopId,
+            shopName: name,
+            memo,
+            displayOrder: target.display_order,
+        }),
+        i18nPrefix: 'shop_mgmt',
+        nameFieldI18nKey: 'shop_mgmt.shop_name',
+        memoFieldI18nKey: 'shop_mgmt.memo',
+        nameMaxLen: MAX_NAME_LEN,
+        memoMaxLen: MAX_MEMO_LEN,
+        onNotFoundBeforeInvoke: async () => {
             showToast(i18n.t('shop_mgmt.not_found'), { variant: 'error' });
             await loadShops();
-            return;
-        }
-    }
+        },
+    });
 
-    try {
-        if (editingShopId !== null) {
-            await invoke('update_shop', {
-                shopId: editingShopId,
-                shopName: shopName,
-                memo: memo || null,
-                displayOrder: shopForUpdate.display_order
-            });
-            console.log('Shop updated successfully');
-        } else {
-            // Add new shop
-            await invoke('add_shop', {
-                shopName: shopName,
-                memo: memo || null
-            });
-            console.log('Shop added successfully');
-        }
-    } catch (error) {
-        console.error('Failed to save shop:', error);
-
-        // Map backend error messages to i18n resources / localized text
-        const errorMessage = error.toString();
-        let nameMessage = null;
-        let memoMessage = null;
-
-        if (errorMessage.includes('already exists')) {
-            nameMessage = i18n.t('shop_mgmt.duplicate_error');
-        } else if (errorMessage.includes('Shop name must be')) {
-            // Defense-line trip: frontend max-length check should have caught
-            // this, so use the same i18n message for parity.
-            nameMessage = i18n.t('validation.max_length', {
-                field: i18n.t('shop_mgmt.shop_name'),
-                max: MAX_NAME_LEN,
-                actual: [...shopName].length,
-            });
-        } else if (errorMessage.includes('Memo must be')) {
-            memoMessage = i18n.t('validation.max_length', {
-                field: i18n.t('shop_mgmt.memo'),
-                max: MAX_MEMO_LEN,
-                actual: [...memo].length,
-            });
-        } else if (errorMessage.includes('cannot be empty')) {
-            nameMessage = i18n.t('shop_mgmt.empty_name');
-        } else {
-            // Unrecognized backend error: show a localized generic message
-            // (details stay in the console) instead of the raw error
-            nameMessage = i18n.t('shop_mgmt.failed_to_save');
-        }
-
-        if (nameMessage) showValidationError(shopNameInput, nameMessage);
-        if (memoMessage) showValidationError(memoInput, memoMessage);
-
-        // Re-throw error to prevent modal from closing
-        throw error;
+    if (result.mode === 'skip') {
+        return;
     }
 
     // Save succeeded: failures past this point (list reload, side-trip
-    // return) must not be reported as a failed save
+    // return) must not be reported as a failed save.
     await loadShops();
 
     if (sideTripSource === SOURCE_SCREEN_TRANSACTION_MGMT) {

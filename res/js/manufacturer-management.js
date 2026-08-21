@@ -8,10 +8,11 @@ import { Modal } from './modal.js';
 import { setupIndicators } from './indicators.js';
 import { getCurrentSessionUser } from './session.js';
 import { createMenuBar, handleLogout, handleQuit } from './menu.js';
-import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
+import { clearValidationError, attachCharCounter } from './validation-display.js';
 import { showToast } from './toast.js';
 import { MAX_NAME_LEN, MAX_MEMO_LEN } from './consts.js';
 import { escapeHtml } from './escape-html.js';
+import { saveMasterEntry } from './master-crud.js';
 
 console.log('=== MANUFACTURER-MANAGEMENT.JS LOADED ===');
 
@@ -348,115 +349,54 @@ function linkNewManufacturerToProductDraft(manufacturerName) {
 }
 
 async function saveManufacturer() {
+    clearErrors();
+
     const manufacturerNameInput = document.getElementById('manufacturer-name');
     const manufacturerMemoInput = document.getElementById('manufacturer-memo');
-    const manufacturerName = manufacturerNameInput.value.trim();
-    const memo = manufacturerMemoInput.value.trim();
     const isDisabled = document.getElementById('manufacturer-is-disabled').checked ? 1 : 0;
 
-    // Clear previous errors
-    clearErrors();
-    clearValidationError(manufacturerNameInput);
-    clearValidationError(manufacturerMemoInput);
-
-    // Validation — empty name
-    if (!manufacturerName) {
-        showValidationError(manufacturerNameInput, i18n.t('manufacturer_mgmt.empty_name'));
-        throw new Error('Validation error: empty manufacturer name');
-    }
-
-    // Validation — max length (mirrors Rust defense in src/services/manufacturer.rs)
-    if ([...manufacturerName].length > MAX_NAME_LEN) {
-        showMaxLengthError(manufacturerNameInput, i18n.t('manufacturer_mgmt.name'), MAX_NAME_LEN);
-        throw new Error('Validation error: manufacturer name too long');
-    }
-    if (memo && [...memo].length > MAX_MEMO_LEN) {
-        showMaxLengthError(manufacturerMemoInput, i18n.t('manufacturer_mgmt.memo'), MAX_MEMO_LEN);
-        throw new Error('Validation error: memo too long');
-    }
-
-    // Resolve the edit target BEFORE the invoke try/catch so a missing
-    // entry is not routed through the generic save-error mapping (which
-    // would layer a `manufacturer_mgmt.failed_to_save` inline error under
-    // the dedicated `not_found` toast). Modal closes on return since
-    // there is nothing left to edit.
-    let manufacturerForUpdate = null;
-    if (editingManufacturerId !== null) {
-        manufacturerForUpdate = manufacturers.find(m => m.manufacturer_id === editingManufacturerId);
-        if (!manufacturerForUpdate) {
+    const result = await saveMasterEntry({
+        nameInput: manufacturerNameInput,
+        memoInput: manufacturerMemoInput,
+        editingId: editingManufacturerId,
+        findInCacheById: (id) => manufacturers.find(m => m.manufacturer_id === id) || null,
+        invokeAdd: (name, memo) => invoke('add_manufacturer', {
+            manufacturerName: name,
+            memo,
+            isDisabled: isDisabled === 1 ? isDisabled : null,
+        }),
+        invokeUpdate: (target, name, memo) => invoke('update_manufacturer', {
+            manufacturerId: editingManufacturerId,
+            manufacturerName: name,
+            memo,
+            displayOrder: target.display_order,
+            isDisabled,
+        }),
+        i18nPrefix: 'manufacturer_mgmt',
+        nameFieldI18nKey: 'manufacturer_mgmt.name',
+        memoFieldI18nKey: 'manufacturer_mgmt.memo',
+        nameMaxLen: MAX_NAME_LEN,
+        memoMaxLen: MAX_MEMO_LEN,
+        onNotFoundBeforeInvoke: async () => {
             showToast(i18n.t('manufacturer_mgmt.not_found'), { variant: 'error' });
             await loadManufacturers();
-            return;
-        }
-    }
+        },
+    });
 
-    try {
-        if (editingManufacturerId !== null) {
-            await invoke('update_manufacturer', {
-                manufacturerId: editingManufacturerId,
-                manufacturerName: manufacturerName,
-                memo: memo || null,
-                displayOrder: manufacturerForUpdate.display_order,
-                isDisabled: isDisabled
-            });
-            console.log('Manufacturer updated successfully');
-        } else {
-            // Add new manufacturer
-            await invoke('add_manufacturer', {
-                manufacturerName: manufacturerName,
-                memo: memo || null,
-                isDisabled: isDisabled === 1 ? isDisabled : null
-            });
-            console.log('Manufacturer added successfully');
-        }
-    } catch (error) {
-        console.error('Failed to save manufacturer:', error);
-
-        // Map backend error messages to i18n resources / localized text
-        const errorMessage = error.toString();
-        let nameMessage = null;
-        let memoMessage = null;
-
-        if (errorMessage.includes('already exists')) {
-            nameMessage = i18n.t('manufacturer_mgmt.duplicate_error');
-        } else if (errorMessage.includes('Manufacturer name must be')) {
-            // Defense-line trip: frontend max-length check should have caught
-            // this, so use the same i18n message for parity.
-            nameMessage = i18n.t('validation.max_length', {
-                field: i18n.t('manufacturer_mgmt.name'),
-                max: MAX_NAME_LEN,
-                actual: [...manufacturerName].length,
-            });
-        } else if (errorMessage.includes('Memo must be')) {
-            memoMessage = i18n.t('validation.max_length', {
-                field: i18n.t('manufacturer_mgmt.memo'),
-                max: MAX_MEMO_LEN,
-                actual: [...memo].length,
-            });
-        } else if (errorMessage.includes('cannot be empty')) {
-            nameMessage = i18n.t('manufacturer_mgmt.empty_name');
-        } else {
-            // Unrecognized backend error: show a localized generic message
-            // (details stay in the console) instead of the raw error
-            nameMessage = i18n.t('manufacturer_mgmt.failed_to_save');
-        }
-
-        if (nameMessage) showValidationError(manufacturerNameInput, nameMessage);
-        if (memoMessage) showValidationError(manufacturerMemoInput, memoMessage);
-
-        // Re-throw error to prevent modal from closing
-        throw error;
+    if (result.mode === 'skip') {
+        return;
     }
 
     // Save succeeded: failures past this point (list reload, side-trip
-    // link) must not be reported as a failed save
+    // link) must not be reported as a failed save.
     await loadManufacturers();
 
     // If this add was the product-side trip, stamp the new manufacturer
     // id into the persisted product draft so the user resumes with it
     // already selected after "Back to product entry".
-    if (returnToProduct && editingManufacturerId === null) {
-        linkNewManufacturerToProductDraft(manufacturerName);
+    if (result.mode === 'add' && returnToProduct) {
+        const savedName = manufacturerNameInput.value.trim();
+        linkNewManufacturerToProductDraft(savedName);
     }
 }
 
