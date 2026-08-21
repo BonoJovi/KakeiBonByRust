@@ -80,17 +80,25 @@ export function clearDraft() {
 }
 
 document.addEventListener('DOMContentLoaded', async function() {
-    
+
     // Create menu bar
     createMenuBar('transaction-detail');
     try {
+        // Initialize i18n FIRST (PR2c / D5): `get_user_settings` does not
+        // require a session, and the initialiser has its own silent
+        // Japanese-fallback catch, so calling it before the session /
+        // transaction_id guards guarantees every downstream showMessage()
+        // gets a translated string instead of a raw resource-key toast.
+        await i18n.init();
+        i18n.updateUI();
+
         // Check session authentication
         if (!await isSessionAuthenticated()) {
             console.error('Not authenticated, redirecting to login');
             window.location.href = HTML_FILES.INDEX;
             return;
         }
-        
+
         // Get current user info
         const user = await getCurrentSessionUser();
         if (!user) {
@@ -98,24 +106,20 @@ document.addEventListener('DOMContentLoaded', async function() {
             window.location.href = HTML_FILES.INDEX;
             return;
         }
-        
+
         currentUserId = user.user_id;
         currentUserRole = user.role;
         console.log(`Logged in as: ${user.name} (ID: ${currentUserId}, Role: ${currentUserRole})`);
-        
+
         // Get transaction ID from URL parameters
         const urlParams = new URLSearchParams(window.location.search);
         transactionId = urlParams.get('transaction_id');
-        
+
         if (!transactionId) {
             console.error('No transaction ID provided');
-            showMessage('error', 'No transaction ID provided');
+            showMessage('error', i18n.t('detail_mgmt.error_no_transaction_id'));
             return;
         }
-        
-        // Initialize i18n
-        await i18n.init();
-        i18n.updateUI();
 
         // Check if user is admin - admin cannot access transaction detail management
         if (currentUserRole === ROLE_ADMIN) {
@@ -171,7 +175,16 @@ document.addEventListener('DOMContentLoaded', async function() {
         
     } catch (error) {
         console.error('Failed to initialize:', error);
-        showMessage('error', `Initialization failed: ${formatApiError(error)}`);
+        // `i18n.init()` is now the first await in this try (PR2c / D5),
+        // and its own catch resolves to a Japanese fallback, so it never
+        // throws — by the time we land here, i18n.initialized is true.
+        // But defence-in-depth: if some future refactor changes that
+        // ordering, fall back to raw English so the user is not shown
+        // the literal key `detail_mgmt.error_initialization_failed`.
+        const prefix = i18n.initialized
+            ? i18n.t('detail_mgmt.error_initialization_failed')
+            : 'Initialization failed';
+        showMessage('error', `${prefix}: ${formatApiError(error)}`);
     }
 });
 
@@ -411,7 +424,7 @@ async function loadCategoryDropdowns() {
     
     if (!category1Code) {
         console.error('category1Code is not set yet');
-        showMessage('error', 'Category code not loaded. Please refresh the page.');
+        showMessage('error', i18n.t('detail_mgmt.error_category_not_loaded'));
         return;
     }
     
@@ -457,7 +470,7 @@ async function loadCategoryDropdowns() {
         
     } catch (error) {
         console.error('Failed to load categories:', error);
-        showMessage('error', `Failed to load categories: ${formatApiError(error)}`);
+        showMessage('error', `${i18n.t('detail_mgmt.error_load_categories_failed')}: ${formatApiError(error)}`);
     }
 }
 
@@ -550,7 +563,7 @@ async function loadTransactionHeader() {
         console.log('Transaction header loaded successfully, CATEGORY1_CODE:', category1Code, 'TAX_ROUNDING_TYPE:', taxRoundingType);
     } catch (error) {
         console.error('Failed to load transaction header:', error);
-        showMessage('error', `Failed to load transaction header: ${formatApiError(error)}`);
+        showMessage('error', `${i18n.t('detail_mgmt.error_load_header_failed')}: ${formatApiError(error)}`);
     }
 }
 
@@ -1060,7 +1073,7 @@ async function editDetail(detailId) {
         // Find the detail to edit
         const detail = details.find(d => d.detail_id === detailId);
         if (!detail) {
-            showMessage('error', 'Detail not found');
+            showMessage('error', i18n.t('detail_mgmt.error_detail_not_found'));
             return;
         }
         
@@ -1069,7 +1082,7 @@ async function editDetail(detailId) {
         
     } catch (error) {
         console.error('Failed to load detail for editing:', error);
-        showMessage('error', `Failed to load detail: ${formatApiError(error)}`);
+        showMessage('error', `${i18n.t('detail_mgmt.error_load_detail_failed')}: ${formatApiError(error)}`);
     }
 }
 
@@ -1086,7 +1099,7 @@ async function confirmDeleteDetail(detailId) {
         // Find the detail to delete
         const detail = details.find(d => d.detail_id === detailId);
         if (!detail) {
-            showMessage('error', 'Detail not found');
+            showMessage('error', i18n.t('detail_mgmt.error_detail_not_found'));
             return;
         }
         
@@ -1095,7 +1108,7 @@ async function confirmDeleteDetail(detailId) {
         
     } catch (error) {
         console.error('Failed to load detail for deletion:', error);
-        showMessage('error', `Failed to load detail: ${formatApiError(error)}`);
+        showMessage('error', `${i18n.t('detail_mgmt.error_load_detail_failed')}: ${formatApiError(error)}`);
     }
 }
 
