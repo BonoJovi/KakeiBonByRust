@@ -107,6 +107,18 @@ describe('mapMasterErrorCode — ApiError code → i18n key', () => {
         expect(out.toastMessage).toBe('shop_mgmt.not_found');
     });
 
+    test('admin_protected → per-screen toast via ${prefix}.admin_protected', () => {
+        // Introduced by the user_management migration: UserManagementError
+        // ::AdminUserCannotBeDeleted maps to ApiError::admin_protected("User"),
+        // which the classifier routes to `user_mgmt.admin_protected`.
+        const err = { code: 'admin_protected', message: 'Admin user cannot be modified this way', entity: 'user' };
+        const userCtx = { ...shopCtx, i18nPrefix: 'user_mgmt', nameFieldI18nKey: 'user_mgmt.username' };
+        const out = mapMasterErrorCode(err, userCtx);
+        expect(out.nameMessage).toBeNull();
+        expect(out.memoMessage).toBeNull();
+        expect(out.toastMessage).toBe('user_mgmt.admin_protected');
+    });
+
     test('manufacturer_not_found → product-scoped toast regardless of the caller prefix', () => {
         const err = { code: 'manufacturer_not_found', message: 'Manufacturer not found', entity: 'manufacturer' };
         // Even if invoked from a shop context, this code is product-scoped.
@@ -203,6 +215,7 @@ describe('mapMasterErrorCode — ApiError code → i18n key', () => {
         expect(API_ERROR_CODES.DUPLICATE_CODE).toBe('duplicate_code');
         expect(API_ERROR_CODES.NOT_FOUND).toBe('not_found');
         expect(API_ERROR_CODES.MANUFACTURER_NOT_FOUND).toBe('manufacturer_not_found');
+        expect(API_ERROR_CODES.ADMIN_PROTECTED).toBe('admin_protected');
         expect(API_ERROR_CODES.VALIDATION).toBe('validation');
         expect(API_ERROR_CODES.DATABASE).toBe('database');
     });

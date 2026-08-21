@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-08-21 JST  
-**Total Tests**: 259 (delta-tracked; the full authoritative count from `cargo test --lib` is 504, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 260 (delta-tracked; the full authoritative count from `cargo test --lib` is 505, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -213,13 +213,14 @@ Settings management functionality tests.
 | `duplicate_name_carries_lowercased_entity_and_stable_code` | `ApiError::duplicate_name("Shop")` → `code="duplicate_name"`, `entity="shop"` | src/api_error.rs | 128 |
 | `not_found_carries_lowercased_entity_and_stable_code` | `ApiError::not_found("Manufacturer")` → `code="not_found"`, `entity="manufacturer"` | src/api_error.rs | 136 |
 | `duplicate_code_carries_lowercased_entity_and_distinct_code` | `ApiError::duplicate_code("Account")` → `code="duplicate_code"` (distinct from `duplicate_name`) | src/api_error.rs | 145 |
-| `manufacturer_not_found_has_its_own_code` | `ApiError::manufacturer_not_found()` → `code="manufacturer_not_found"` (distinct from generic `not_found`) | src/api_error.rs | 154 |
+| `admin_protected_carries_lowercased_entity_and_stable_code` | `ApiError::admin_protected("User")` → `code="admin_protected"` (for user-management delete guard) | src/api_error.rs | 154 |
+| `manufacturer_not_found_has_its_own_code` | `ApiError::manufacturer_not_found()` → `code="manufacturer_not_found"` (distinct from generic `not_found`) | src/api_error.rs | 163 |
 | `validation_carries_message_through_and_omits_entity` | `ApiError::validation(msg)` → `code="validation"`, message passed through, no entity | src/api_error.rs | 150 |
 | `database_from_sqlx_row_not_found` | `sqlx::Error → ApiError::database` via `From<sqlx::Error>` | src/api_error.rs | 158 |
 | `serialises_with_snake_case_code_and_optional_entity` | Serialised JSON has snake_case `code` and populated `entity` field | src/api_error.rs | 165 |
 | `serialises_without_entity_key_when_none` | Serialised JSON omits `entity` when None (via `skip_serializing_if`) | src/api_error.rs | 174 |
 
-**Total**: 8 tests
+**Total**: 9 tests
 
 ### services/auth.rs
 
@@ -487,13 +488,13 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **236** |
+| **Inline Tests** | **237** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
 | db.rs | 4 |
 | settings.rs | 12 |
-| api_error.rs | 8 |
+| api_error.rs | 9 |
 | services/auth.rs | 13 |
 | services/user_management.rs | 13 |
 | services/encryption.rs | 8 |
@@ -508,7 +509,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/i18n.rs | 8 |
 | services/recurring.rs | 1 |
 | lib.rs | 4 |
-| **Total** | **259** |
+| **Total** | **260** |
 
 ---
 

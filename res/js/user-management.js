@@ -11,6 +11,7 @@ import { showValidationError, clearValidationError, showMaxLengthError, attachCh
 import { invalidatePeriodSettingsCache } from './period.js';
 import { fitWindowToScreen } from './window-fit.js';
 import { showToast } from './toast.js';
+import { mapMasterErrorCode, API_ERROR_CODES, formatApiError } from './master-crud.js';
 
 let currentUsers = [];
 let editingUserId = null;
@@ -442,7 +443,9 @@ async function loadUsers() {
         showMessage('user-list-message', '', '');
     } catch (error) {
         console.error('Failed to load users:', error);
-        showMessage('user-list-message', i18n.t('error.load_users_failed') + ': ' + error, 'error');
+        // formatApiError unwraps the { code, message, entity } object
+        // shape that list_users (migrated to ApiError) now returns.
+        showMessage('user-list-message', i18n.t('error.load_users_failed') + ': ' + formatApiError(error), 'error');
     }
 }
 
@@ -533,18 +536,63 @@ async function handleUserSave() {
     } catch (error) {
         console.error('Failed to save user:', error);
 
-        // Defense-line trip from Rust: bounded-field max length.
-        const errStr = String(error);
-        if (errStr.includes('Username must be')) {
-            showValidationError(usernameInput, i18n.t('validation.max_length', {
-                field: i18n.t('user_mgmt.username'),
-                max: MAX_NAME_LEN,
-                actual: [...username].length,
-            }));
-            throw error;
+        // Backend not_found means the edit target was deleted between
+        // load and save. Reload the list so the "the list has been
+        // reloaded" wording on `user_mgmt.not_found` matches what the
+        // user actually sees on screen — same fix as saveMasterEntry's
+        // backend-not_found path (Devin review on #97, extended to
+        // #100 for the standalone user-management save flow).
+        const isBackendNotFound = error && typeof error === 'object'
+            && error.code === API_ERROR_CODES.NOT_FOUND;
+
+        // Route through the shared classifier so `duplicate_name`
+        // (username taken) surfaces as an inline error under the
+        // username input via `user_mgmt.duplicate_error`, validation
+        // trips (username too long) reuse the shared
+        // `validation.max_length` template, and admin_protected
+        // pops as its own toast rather than the generic form message.
+        // No more `errStr.includes('Username must be')` substring
+        // classification.
+        const mapped = mapMasterErrorCode(error, {
+            i18nPrefix: 'user_mgmt',
+            nameFieldI18nKey: 'user_mgmt.username',
+            memoFieldI18nKey: 'user_mgmt.username',
+            nameMaxLen: MAX_NAME_LEN,
+            memoMaxLen: MAX_NAME_LEN,
+            actualNameLen: [...username].length,
+            actualMemoLen: 0,
+        });
+
+        if (mapped.nameMessage || mapped.toastMessage) {
+            // Clear the stale "creating.../updating..." progress note
+            // that createUser/updateUser set on the form-message slot;
+            // otherwise the info line stays on top of the inline error
+            // or toast and reads as "still saving" while the classifier
+            // has already announced the failure (Devin review on #100).
+            showMessage('form-message', '', '');
         }
 
-        showMessage('form-message', i18n.t('error.save_user_failed') + ': ' + error, 'error');
+        if (mapped.toastMessage) {
+            showToast(mapped.toastMessage, { variant: 'error' });
+        }
+        if (mapped.nameMessage) {
+            // Username-scoped errors (duplicate / too long) surface
+            // inline next to the input, matching the shape shop /
+            // manufacturer / product use for name errors.
+            showValidationError(usernameInput, mapped.nameMessage);
+        } else if (!mapped.toastMessage) {
+            // Fully unknown error — replace the progress note with the
+            // legacy form message and a properly-unwrapped body.
+            showMessage('form-message', i18n.t('error.save_user_failed') + ': ' + formatApiError(error), 'error');
+        }
+
+        // Fire the actual reload the not_found toast promises. Done
+        // after the toast/inline error so those messages remain
+        // visible during the async reload.
+        if (isBackendNotFound) {
+            await loadUsers();
+        }
+
         throw error;
     }
 }
@@ -599,7 +647,13 @@ async function handleUserDelete(userId) {
         showToast(i18n.t('user_mgmt.user_deleted'), { variant: 'success' });
         await loadUsers();
     } catch (error) {
-        showToast(i18n.t('error.delete_user_failed') + ': ' + error, { variant: 'error' });
+        // admin_protected → dedicated wording; anything else → generic
+        // failure message with a properly-unwrapped body.
+        if (error && typeof error === 'object' && error.code === API_ERROR_CODES.ADMIN_PROTECTED) {
+            showToast(i18n.t('user_mgmt.admin_protected'), { variant: 'error' });
+        } else {
+            showToast(i18n.t('error.delete_user_failed') + ': ' + formatApiError(error), { variant: 'error' });
+        }
         throw error;
     }
 }

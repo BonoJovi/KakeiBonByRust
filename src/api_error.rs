@@ -46,6 +46,7 @@ impl ApiError {
     pub const CODE_DUPLICATE_CODE: &'static str = "duplicate_code";
     pub const CODE_NOT_FOUND: &'static str = "not_found";
     pub const CODE_MANUFACTURER_NOT_FOUND: &'static str = "manufacturer_not_found";
+    pub const CODE_ADMIN_PROTECTED: &'static str = "admin_protected";
     pub const CODE_VALIDATION: &'static str = "validation";
     pub const CODE_DATABASE: &'static str = "database";
 
@@ -80,6 +81,20 @@ impl ApiError {
         Self {
             code: Self::CODE_NOT_FOUND.to_string(),
             message: format!("{} not found", entity),
+            entity: Some(entity.to_lowercase()),
+        }
+    }
+
+    /// Operation refused because the target is the admin user, which
+    /// the app protects from deletion / role change / etc. Distinct
+    /// from a generic validation error because the UI needs its own
+    /// dedicated "administrator cannot be removed" wording, and
+    /// separate from `not_found` because the row was located and is
+    /// intentionally off-limits.
+    pub fn admin_protected(entity: &str) -> Self {
+        Self {
+            code: Self::CODE_ADMIN_PROTECTED.to_string(),
+            message: format!("Admin {} cannot be modified this way", entity.to_lowercase()),
             entity: Some(entity.to_lowercase()),
         }
     }
@@ -158,6 +173,14 @@ mod tests {
         assert_ne!(err.code, ApiError::CODE_DUPLICATE_NAME);
         assert_eq!(err.entity.as_deref(), Some("account"));
         assert!(err.message.contains("code already exists"));
+    }
+
+    #[test]
+    fn admin_protected_carries_lowercased_entity_and_stable_code() {
+        let err = ApiError::admin_protected("User");
+        assert_eq!(err.code, "admin_protected");
+        assert_eq!(err.entity.as_deref(), Some("user"));
+        assert!(err.message.contains("Admin"));
     }
 
     #[test]
