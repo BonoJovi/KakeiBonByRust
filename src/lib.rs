@@ -1401,10 +1401,10 @@ async fn add_transaction(
     description: Option<String>,
     memo: Option<String>,
     state: tauri::State<'_, AppState>
-) -> Result<i64, String> {
-    let user_id = get_session_user_id(&state)?;
+) -> Result<i64, api_error::ApiError> {
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
     let transaction = state.transaction.lock().await;
-    transaction.add_transaction(
+    Ok(transaction.add_transaction(
         user_id,
         &transaction_date,
         &category1_code,
@@ -1414,20 +1414,17 @@ async fn add_transaction(
         description.as_deref(),
         memo.as_deref(),
     )
-    .await
-    .map_err(|e| format!("Failed to add transaction: {}", e))
+    .await?)
 }
 
 #[tauri::command]
 async fn get_transaction(
     transaction_id: i64,
     state: tauri::State<'_, AppState>
-) -> Result<services::transaction::Transaction, String> {
-    let user_id = get_session_user_id(&state)?;
+) -> Result<services::transaction::Transaction, api_error::ApiError> {
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
     let transaction = state.transaction.lock().await;
-    transaction.get_transaction(user_id, transaction_id)
-        .await
-        .map_err(|e| format!("Failed to get transaction: {}", e))
+    Ok(transaction.get_transaction(user_id, transaction_id).await?)
 }
 
 #[tauri::command]
@@ -1444,10 +1441,10 @@ async fn get_transactions(
     page: i64,
     per_page: i64,
     state: tauri::State<'_, AppState>
-) -> Result<services::transaction::TransactionListResponse, String> {
-    let user_id = get_session_user_id(&state)?;
+) -> Result<services::transaction::TransactionListResponse, api_error::ApiError> {
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
     let transaction = state.transaction.lock().await;
-    transaction.get_transactions(
+    Ok(transaction.get_transactions(
         user_id,
         start_date.as_deref(),
         end_date.as_deref(),
@@ -1461,8 +1458,7 @@ async fn get_transactions(
         page,
         per_page,
     )
-    .await
-    .map_err(|e| format!("Failed to get transactions: {}", e))
+    .await?)
 }
 
 #[tauri::command]
@@ -1476,10 +1472,10 @@ async fn update_transaction(
     description: Option<String>,
     memo: Option<String>,
     state: tauri::State<'_, AppState>
-) -> Result<(), String> {
-    let user_id = get_session_user_id(&state)?;
+) -> Result<(), api_error::ApiError> {
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
     let transaction = state.transaction.lock().await;
-    transaction.update_transaction(
+    Ok(transaction.update_transaction(
         user_id,
         transaction_id,
         &transaction_date,
@@ -1490,20 +1486,17 @@ async fn update_transaction(
         description.as_deref(),
         memo.as_deref(),
     )
-    .await
-    .map_err(|e| format!("Failed to update transaction: {}", e))
+    .await?)
 }
 
 #[tauri::command]
 async fn delete_transaction(
     transaction_id: i64,
     state: tauri::State<'_, AppState>
-) -> Result<(), String> {
-    let user_id = get_session_user_id(&state)?;
+) -> Result<(), api_error::ApiError> {
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
     let transaction = state.transaction.lock().await;
-    transaction.delete_transaction(user_id, transaction_id)
-        .await
-        .map_err(|e| format!("Failed to delete transaction: {}", e))
+    Ok(transaction.delete_transaction(user_id, transaction_id).await?)
 }
 
 // ============================================================================
@@ -1828,8 +1821,8 @@ async fn save_transaction_header(
     memo: Option<String>,
     is_scheduled: Option<i64>,
     state: tauri::State<'_, AppState>
-) -> Result<i64, String> {
-    let user_id = get_session_user_id(&state)?;
+) -> Result<i64, api_error::ApiError> {
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
     let transaction = state.transaction.lock().await;
 
     let request = services::transaction::SaveTransactionRequest {
@@ -1845,22 +1838,18 @@ async fn save_transaction_header(
         is_scheduled,
     };
 
-    transaction.save_transaction_header(user_id, request).await
-        .map_err(|e| e.to_string())
+    Ok(transaction.save_transaction_header(user_id, request).await?)
 }
 
 #[tauri::command]
 async fn get_transaction_header(
     transaction_id: i64,
     state: tauri::State<'_, AppState>
-) -> Result<serde_json::Value, String> {
+) -> Result<serde_json::Value, api_error::ApiError> {
     let transaction = state.transaction.lock().await;
-    // Get user_id from session
-    // Get user_id from session
-    let user_id = get_session_user_id(&state)?;
-    
-    let (header, memo_text) = transaction.get_transaction_header_with_memo(user_id, transaction_id).await
-        .map_err(|e| e.to_string())?;
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
+
+    let (header, memo_text) = transaction.get_transaction_header_with_memo(user_id, transaction_id).await?;
     
     Ok(serde_json::json!({
         "transaction_id": header.transaction_id,
@@ -1886,12 +1875,10 @@ async fn get_transaction_header(
 async fn select_transaction_headers(
     transaction_ids: Vec<i64>,
     state: tauri::State<'_, AppState>
-) -> Result<Vec<services::transaction::TransactionHeader>, String> {
+) -> Result<Vec<services::transaction::TransactionHeader>, api_error::ApiError> {
     let transaction = state.transaction.lock().await;
-    // Get user_id from session
-    // Get user_id from session
-    let user_id = get_session_user_id(&state)?;
-    
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
+
     let mut headers = Vec::new();
     for transaction_id in transaction_ids {
         match transaction.get_transaction_header(user_id, transaction_id).await {
@@ -1899,7 +1886,7 @@ async fn select_transaction_headers(
             // Ids the user no longer owns are skipped, but a database failure
             // must not be reported as an incomplete-but-successful selection.
             Err(services::transaction::TransactionError::NotFound) => continue,
-            Err(e) => return Err(e.to_string()),
+            Err(e) => return Err(e.into()),
         }
     }
     Ok(headers)
@@ -1919,10 +1906,9 @@ async fn update_transaction_header(
     memo: Option<String>,
     is_scheduled: Option<i64>,
     state: tauri::State<'_, AppState>
-) -> Result<(), String> {
+) -> Result<(), api_error::ApiError> {
     let transaction = state.transaction.lock().await;
-    // Get user_id from session
-    let user_id = get_session_user_id(&state)?;
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
 
     let request = services::transaction::SaveTransactionRequest {
         shop_id,
@@ -1937,19 +1923,17 @@ async fn update_transaction_header(
         is_scheduled,
     };
 
-    transaction.update_transaction_header(user_id, transaction_id, request).await
-        .map_err(|e| e.to_string())
+    Ok(transaction.update_transaction_header(user_id, transaction_id, request).await?)
 }
 
 #[tauri::command]
 async fn confirm_scheduled_transaction(
     transaction_id: i64,
     state: tauri::State<'_, AppState>
-) -> Result<(), String> {
-    let user_id = get_session_user_id(&state)?;
+) -> Result<(), api_error::ApiError> {
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
     let transaction = state.transaction.lock().await;
-    transaction.confirm_scheduled_transaction(user_id, transaction_id).await
-        .map_err(|e| e.to_string())
+    Ok(transaction.confirm_scheduled_transaction(user_id, transaction_id).await?)
 }
 
 // ============================================================================
@@ -1960,26 +1944,22 @@ async fn confirm_scheduled_transaction(
 async fn get_transaction_header_with_info(
     transaction_id: i64,
     state: tauri::State<'_, AppState>
-) -> Result<services::transaction::TransactionHeaderWithInfo, String> {
+) -> Result<services::transaction::TransactionHeaderWithInfo, api_error::ApiError> {
     let transaction = state.transaction.lock().await;
-    // Get user_id from session
-    let user_id = get_session_user_id(&state)?;
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
 
-    transaction.get_transaction_header_with_info(user_id, transaction_id).await
-        .map_err(|e| e.to_string())
+    Ok(transaction.get_transaction_header_with_info(user_id, transaction_id).await?)
 }
 
 #[tauri::command]
 async fn get_transaction_details(
     transaction_id: i64,
     state: tauri::State<'_, AppState>
-) -> Result<Vec<services::transaction::TransactionDetailWithInfo>, String> {
+) -> Result<Vec<services::transaction::TransactionDetailWithInfo>, api_error::ApiError> {
     let transaction = state.transaction.lock().await;
-    // Get user_id from session
-    let user_id = get_session_user_id(&state)?;
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
 
-    transaction.get_transaction_details(user_id, transaction_id).await
-        .map_err(|e| e.to_string())
+    Ok(transaction.get_transaction_details(user_id, transaction_id).await?)
 }
 
 #[tauri::command]
@@ -1996,10 +1976,9 @@ async fn add_transaction_detail(
     product_id: Option<i64>,
     memo: Option<String>,
     state: tauri::State<'_, AppState>
-) -> Result<i64, String> {
+) -> Result<i64, api_error::ApiError> {
     let transaction = state.transaction.lock().await;
-    // Get user_id from session
-    let user_id = get_session_user_id(&state)?;
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
 
     let request = services::transaction::SaveTransactionDetailRequest {
         detail_id: None,
@@ -2015,8 +1994,7 @@ async fn add_transaction_detail(
         memo,
     };
 
-    transaction.add_transaction_detail(user_id, transaction_id, request).await
-        .map_err(|e| e.to_string())
+    Ok(transaction.add_transaction_detail(user_id, transaction_id, request).await?)
 }
 
 #[tauri::command]
@@ -2033,10 +2011,9 @@ async fn update_transaction_detail(
     product_id: Option<i64>,
     memo: Option<String>,
     state: tauri::State<'_, AppState>
-) -> Result<(), String> {
+) -> Result<(), api_error::ApiError> {
     let transaction = state.transaction.lock().await;
-    // Get user_id from session
-    let user_id = get_session_user_id(&state)?;
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
 
     let request = services::transaction::SaveTransactionDetailRequest {
         detail_id: Some(detail_id),
@@ -2052,21 +2029,18 @@ async fn update_transaction_detail(
         memo,
     };
 
-    transaction.update_transaction_detail(user_id, detail_id, request).await
-        .map_err(|e| e.to_string())
+    Ok(transaction.update_transaction_detail(user_id, detail_id, request).await?)
 }
 
 #[tauri::command]
 async fn delete_transaction_detail(
     detail_id: i64,
     state: tauri::State<'_, AppState>
-) -> Result<(), String> {
+) -> Result<(), api_error::ApiError> {
     let transaction = state.transaction.lock().await;
-    // Get user_id from session
-    let user_id = get_session_user_id(&state)?;
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
 
-    transaction.delete_transaction_detail(user_id, detail_id).await
-        .map_err(|e| e.to_string())
+    Ok(transaction.delete_transaction_detail(user_id, detail_id).await?)
 }
 
 /// Compute the TOTAL_AMOUNT a transaction header *should* have based on its
@@ -2077,14 +2051,13 @@ async fn delete_transaction_detail(
 async fn compute_recommended_transaction_total(
     transaction_id: i64,
     state: tauri::State<'_, AppState>,
-) -> Result<i64, String> {
+) -> Result<i64, api_error::ApiError> {
     let transaction = state.transaction.lock().await;
-    let user_id = get_session_user_id(&state)?;
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
 
-    transaction
+    Ok(transaction
         .compute_recommended_total(user_id, transaction_id)
-        .await
-        .map_err(|e| e.to_string())
+        .await?)
 }
 
 /// Overwrite a transaction header's TOTAL_AMOUNT without touching other
@@ -2096,14 +2069,13 @@ async fn update_transaction_header_total(
     transaction_id: i64,
     total_amount: i64,
     state: tauri::State<'_, AppState>,
-) -> Result<(), String> {
+) -> Result<(), api_error::ApiError> {
     let transaction = state.transaction.lock().await;
-    let user_id = get_session_user_id(&state)?;
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
 
-    transaction
+    Ok(transaction
         .update_transaction_header_total(user_id, transaction_id, total_amount)
-        .await
-        .map_err(|e| e.to_string())
+        .await?)
 }
 
 /// Walk every transaction header for the current user, recompute its
@@ -2114,14 +2086,13 @@ async fn update_transaction_header_total(
 #[tauri::command]
 async fn recalculate_all_transaction_totals(
     state: tauri::State<'_, AppState>,
-) -> Result<services::transaction::RecalcSummary, String> {
+) -> Result<services::transaction::RecalcSummary, api_error::ApiError> {
     let transaction = state.transaction.lock().await;
-    let user_id = get_session_user_id(&state)?;
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
 
-    transaction
+    Ok(transaction
         .recalculate_all_transaction_totals(user_id)
-        .await
-        .map_err(|e| e.to_string())
+        .await?)
 }
 
 /// Roll back the `TOTAL_AMOUNT` column of every header for the current user
@@ -2135,14 +2106,13 @@ async fn recalculate_all_transaction_totals(
 async fn restore_totals_from_backup(
     backup_path: String,
     state: tauri::State<'_, AppState>,
-) -> Result<services::transaction::RestoreSummary, String> {
+) -> Result<services::transaction::RestoreSummary, api_error::ApiError> {
     let transaction = state.transaction.lock().await;
-    let user_id = get_session_user_id(&state)?;
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
 
-    transaction
+    Ok(transaction
         .restore_totals_from_backup(user_id, &backup_path)
-        .await
-        .map_err(|e| e.to_string())
+        .await?)
 }
 
 // =============================================================================

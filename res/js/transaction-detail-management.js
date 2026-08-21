@@ -12,7 +12,7 @@ import { applyHeaderRecalculationPrompt } from './header-recalc.js';
 import { setupTaxCalculationListeners } from './detail-tax-calc.js';
 import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
 import { showToast } from './toast.js';
-import { formatApiError } from './master-crud.js';
+import { formatApiError, API_ERROR_CODES } from './master-crud.js';
 
 let currentUserId = null;
 let currentUserRole = null;
@@ -171,7 +171,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         
     } catch (error) {
         console.error('Failed to initialize:', error);
-        showMessage('error', `Initialization failed: ${error.message}`);
+        showMessage('error', `Initialization failed: ${formatApiError(error)}`);
     }
 });
 
@@ -457,7 +457,7 @@ async function loadCategoryDropdowns() {
         
     } catch (error) {
         console.error('Failed to load categories:', error);
-        showMessage('error', `Failed to load categories: ${error.message}`);
+        showMessage('error', `Failed to load categories: ${formatApiError(error)}`);
     }
 }
 
@@ -550,7 +550,7 @@ async function loadTransactionHeader() {
         console.log('Transaction header loaded successfully, CATEGORY1_CODE:', category1Code, 'TAX_ROUNDING_TYPE:', taxRoundingType);
     } catch (error) {
         console.error('Failed to load transaction header:', error);
-        showMessage('error', `Failed to load transaction header: ${error.message}`);
+        showMessage('error', `Failed to load transaction header: ${formatApiError(error)}`);
     }
 }
 
@@ -626,7 +626,7 @@ async function loadDetails() {
             detailList.innerHTML = `
                 <tr>
                     <td colspan="5" style="text-align: center; padding: 40px; color: #d32f2f;">
-                        ${escapeHtml(i18n.t('common.error'))}: ${escapeHtml(error.message)}
+                        ${escapeHtml(i18n.t('common.error'))}: ${escapeHtml(formatApiError(error))}
                     </td>
                 </tr>
             `;
@@ -1015,27 +1015,35 @@ async function handleDetailFormSubmit(event) {
     } catch (error) {
         console.error('Failed to save detail:', error);
 
-        // Map backend error messages to i18n resources / localized text.
-        // Rust defense line for bounded fields (src/services/transaction.rs).
-        const errorMessage = error.toString();
-        if (errorMessage.includes('Item name must be')) {
-            showValidationError(itemNameInput, i18n.t('validation.max_length', {
-                field: i18n.t('detail_mgmt.item_name'),
-                max: MAX_ITEM_NAME_LEN,
-                actual: [...itemName].length,
-            }));
-            return;
-        }
-        if (errorMessage.includes('Memo must be')) {
-            showValidationError(memoInput, i18n.t('validation.max_length', {
-                field: i18n.t('detail_mgmt.memo'),
-                max: MAX_MEMO_LEN,
-                actual: [...memo].length,
-            }));
-            return;
+        // Map bounded-field validation errors to the offending input.
+        // The Rust side now emits a structured `ApiError { code:
+        // 'validation', message: '...' }` (PR2b); the `code === 'validation'`
+        // gate scopes the message-substring lookup so a generic database
+        // error can never accidentally land on the wrong input.
+        const isValidation = error
+            && typeof error === 'object'
+            && error.code === API_ERROR_CODES.VALIDATION;
+        if (isValidation) {
+            const message = String(error.message || '');
+            if (message.startsWith('Item name must be')) {
+                showValidationError(itemNameInput, i18n.t('validation.max_length', {
+                    field: i18n.t('detail_mgmt.item_name'),
+                    max: MAX_ITEM_NAME_LEN,
+                    actual: [...itemName].length,
+                }));
+                return;
+            }
+            if (message.startsWith('Memo must be')) {
+                showValidationError(memoInput, i18n.t('validation.max_length', {
+                    field: i18n.t('detail_mgmt.memo'),
+                    max: MAX_MEMO_LEN,
+                    actual: [...memo].length,
+                }));
+                return;
+            }
         }
 
-        showMessage('error', `${i18n.t('detail_mgmt.save_error')}: ${error.message}`);
+        showMessage('error', `${i18n.t('detail_mgmt.save_error')}: ${formatApiError(error)}`);
     }
 }
 
@@ -1061,7 +1069,7 @@ async function editDetail(detailId) {
         
     } catch (error) {
         console.error('Failed to load detail for editing:', error);
-        showMessage('error', `Failed to load detail: ${error.message}`);
+        showMessage('error', `Failed to load detail: ${formatApiError(error)}`);
     }
 }
 
@@ -1087,7 +1095,7 @@ async function confirmDeleteDetail(detailId) {
         
     } catch (error) {
         console.error('Failed to load detail for deletion:', error);
-        showMessage('error', `Failed to load detail: ${error.message}`);
+        showMessage('error', `Failed to load detail: ${formatApiError(error)}`);
     }
 }
 
@@ -1135,7 +1143,7 @@ async function handleDeleteConfirm() {
         
     } catch (error) {
         console.error('Failed to delete detail:', error);
-        showMessage('error', `${i18n.t('detail_mgmt.delete_error')}: ${error.message}`);
+        showMessage('error', `${i18n.t('detail_mgmt.delete_error')}: ${formatApiError(error)}`);
     }
 }
 

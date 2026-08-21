@@ -14,7 +14,7 @@ import { calculateRecommendedTotal } from './tax-calc.js';
 import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
 import { showToast } from './toast.js';
 import { escapeHtml } from './escape-html.js';
-import { formatApiError } from './master-crud.js';
+import { formatApiError, API_ERROR_CODES } from './master-crud.js';
 
 let currentUserId = null;
 let currentUserRole = null;
@@ -565,7 +565,7 @@ async function confirmScheduledTransaction(transactionId) {
         await loadTransactions();
     } catch (error) {
         console.error('Failed to confirm scheduled transaction:', error);
-        showToast(i18n.t('transaction_mgmt.confirm_error') + ': ' + error, { variant: 'error' });
+        showToast(i18n.t('transaction_mgmt.confirm_error') + ': ' + formatApiError(error), { variant: 'error' });
     }
 }
 
@@ -588,7 +588,7 @@ async function deleteTransaction(transactionId) {
         
     } catch (error) {
         console.error('Failed to delete transaction:', error);
-        showToast(i18n.t('transaction_mgmt.delete_error') + ': ' + error, { variant: 'error' });
+        showToast(i18n.t('transaction_mgmt.delete_error') + ': ' + formatApiError(error), { variant: 'error' });
     }
 }
 
@@ -1020,19 +1020,27 @@ async function handleTransactionSubmit(event) {
     } catch (error) {
         console.error('Failed to save transaction:', error);
 
-        // Map backend error messages to i18n resources / localized text.
-        // Rust defense line for bounded fields (src/services/transaction.rs).
-        const errorMessage = error.toString();
-        if (errorMessage.includes('Memo must be')) {
-            showValidationError(memoInput, i18n.t('validation.max_length', {
-                field: i18n.t('transaction_mgmt.memo'),
-                max: MAX_MEMO_LEN,
-                actual: [...memoRaw].length,
-            }));
-            throw error;
+        // Route bounded-field validation errors to the offending input.
+        // Rust now emits a structured `ApiError { code: 'validation',
+        // message: '...' }` (PR2b); the `code === 'validation'` gate
+        // scopes the message-substring lookup so a generic database
+        // error can never accidentally match the memo needle.
+        const isValidation = error
+            && typeof error === 'object'
+            && error.code === API_ERROR_CODES.VALIDATION;
+        if (isValidation) {
+            const message = String(error.message || '');
+            if (message.startsWith('Memo must be')) {
+                showValidationError(memoInput, i18n.t('validation.max_length', {
+                    field: i18n.t('transaction_mgmt.memo'),
+                    max: MAX_MEMO_LEN,
+                    actual: [...memoRaw].length,
+                }));
+                throw error;
+            }
         }
 
-        showToast(i18n.t('transaction_mgmt.failed_to_save') + ': ' + error, { variant: 'error' });
+        showToast(i18n.t('transaction_mgmt.failed_to_save') + ': ' + formatApiError(error), { variant: 'error' });
     }
 }
 
@@ -1068,7 +1076,7 @@ async function loadTransactionData(transactionId) {
         
     } catch (error) {
         console.error('Failed to load transaction:', error);
-        showToast(i18n.t('transaction_mgmt.failed_to_load') + ': ' + error, { variant: 'error' });
+        showToast(i18n.t('transaction_mgmt.failed_to_load') + ': ' + formatApiError(error), { variant: 'error' });
     }
 }
 
