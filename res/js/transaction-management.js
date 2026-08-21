@@ -324,7 +324,7 @@ async function loadCategoriesForFilter() {
         
     } catch (error) {
         console.error('Failed to load categories:', error);
-        showToast(i18n.t('error.category_load_failed') + ': ' + error, { variant: 'error' });
+        showToast(i18n.t('error.category_load_failed') + ': ' + formatApiError(error), { variant: 'error' });
     }
 }
 
@@ -766,7 +766,7 @@ async function loadCategoriesForModal() {
         
     } catch (error) {
         console.error('Failed to load categories:', error);
-        showToast(i18n.t('error.category_load_failed') + ': ' + error, { variant: 'error' });
+        showToast(i18n.t('error.category_load_failed') + ': ' + formatApiError(error), { variant: 'error' });
     }
 }
 
