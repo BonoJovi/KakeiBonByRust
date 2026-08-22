@@ -207,18 +207,20 @@ function initDeleteModal() {
     });
 
     // Confirm delete button
+    // PR13 (Fable-5 D8/D9): `deleteProduct` now returns a boolean so
+    // the success/failure contract lives in one place. The old shape
+    // was throw-to-swallow + `confirmDeleteBtn.disabled` re-check as
+    // a synthetic re-entry guard — but `disabled = true` is set
+    // synchronously before the first await, so a disabled button
+    // never dispatches click and the re-check was unreachable.
     const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
     confirmDeleteBtn.addEventListener('click', async () => {
-        if (!productToDelete || confirmDeleteBtn.disabled) return;
+        if (!productToDelete) return;
         confirmDeleteBtn.disabled = true;
-        try {
-            await deleteProduct(productToDelete.product_id);
-            deleteModal.close();
-        } catch (error) {
-            // Keep the confirmation modal open so the user can retry or cancel
-        } finally {
-            confirmDeleteBtn.disabled = false;
-        }
+        const ok = await deleteProduct(productToDelete.product_id);
+        confirmDeleteBtn.disabled = false;
+        if (ok) deleteModal.close();
+        // else: keep the confirmation modal open so the user can retry
     });
 }
 
@@ -470,17 +472,21 @@ async function saveProduct() {
 
     // Save succeeded: failures past this point (detail-draft link, list
     // reload) must not be reported as a failed save.
+    // PR13 (Fable-5 D10): `linkNewProductToDraft` (sessionStorage +
+    // read-only search_products_by_name) and `loadProducts` (products
+    // array reassignment) are independent and each self-handles its
+    // errors — running them concurrently halves the wait before the
+    // Modal auto-close without any behavioural change.
     const savedName = productNameInput.value.trim();
+    const tasks = [loadProducts()];
     if (result.mode === 'add' && returnToTransactionId) {
         // If this add was triggered by the detail-jump flow, look up the
         // new product by name and stamp its id into the persisted draft
         // so the user returns to the detail modal with the new master
         // entry already selected (canonicalizing the item name too).
-        await linkNewProductToDraft(savedName);
+        tasks.push(linkNewProductToDraft(savedName));
     }
-
-    // Reload products list (modal will be closed by Modal class)
-    await loadProducts();
+    await Promise.all(tasks);
 }
 
 // Snapshot the product modal's current inputs so the user can step out to
@@ -537,6 +543,11 @@ async function linkNewProductToDraft(productName) {
     }
 }
 
+/// Delete a product. Returns `true` on success (the confirmation
+/// modal should close) or `false` on failure (the modal stays open
+/// so the user can retry). PR13 (Fable-5 D8) replaced the old
+/// throw-into-empty-catch pattern with an explicit boolean return
+/// so the caller reads as `if (await deleteProduct(id)) modal.close()`.
 async function deleteProduct(productId) {
     try {
         await invoke('delete_product', {
@@ -544,10 +555,11 @@ async function deleteProduct(productId) {
         });
         console.log('Product deleted successfully');
         await loadProducts();
+        return true;
     } catch (error) {
         console.error('Failed to delete product:', error);
         showToast(i18n.t('product_mgmt.failed_to_delete'), { variant: 'error' });
-        throw error;
+        return false;
     }
 }
 

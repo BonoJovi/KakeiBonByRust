@@ -320,6 +320,18 @@ export async function saveMasterEntry({
         // there is nothing left to edit). Without this branch the
         // classifier's toast fired without any actual reload, so the
         // list kept showing the stale row (Devin review on #97).
+        //
+        // PR13 (Fable-5 D6) — CONFIRMED POLICY: the not_found path
+        // returns `mode: 'skip'` which resolves cleanly, so Modal's
+        // `_handleSave` closes the confirmation window. Any in-progress
+        // edits are discarded. This is the intentional shape shared by
+        // every master screen (shop/manufacturer/product/account/user/
+        // category) post the PR2b–PR6 audit rollout — "if the edit
+        // target no longer exists there is nothing left to edit, so
+        // close and show the toast" is the whole-app answer. If a
+        // screen ever wants to keep the modal open for retry from the
+        // saved-form state, it must throw from `onNotFoundBeforeInvoke`
+        // (currently unused).
         const isBackendNotFound = err !== null
             && typeof err === 'object'
             && err.code === API_ERROR_CODES.NOT_FOUND;

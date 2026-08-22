@@ -167,18 +167,16 @@ function initDeleteModal() {
     });
 
     // Confirm delete button
+    // PR13 (Fable-5 D8/D9): `deleteManufacturer` now returns a boolean
+    // and the dead `confirmDeleteBtn.disabled` re-entry check is gone —
+    // see product-management.js for the shared rationale.
     const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
     confirmDeleteBtn.addEventListener('click', async () => {
-        if (!manufacturerToDelete || confirmDeleteBtn.disabled) return;
+        if (!manufacturerToDelete) return;
         confirmDeleteBtn.disabled = true;
-        try {
-            await deleteManufacturer(manufacturerToDelete.manufacturer_id);
-            deleteModal.close();
-        } catch (error) {
-            // Keep the confirmation modal open so the user can retry or cancel
-        } finally {
-            confirmDeleteBtn.disabled = false;
-        }
+        const ok = await deleteManufacturer(manufacturerToDelete.manufacturer_id);
+        confirmDeleteBtn.disabled = false;
+        if (ok) deleteModal.close();
     });
 }
 
@@ -400,6 +398,10 @@ async function saveManufacturer() {
     }
 }
 
+/// Delete a manufacturer. Returns `true` on success (the confirmation
+/// modal should close) or `false` on failure (the modal stays open so
+/// the user can retry). PR13 (Fable-5 D8) — see product-management.js
+/// for the shared rationale.
 async function deleteManufacturer(manufacturerId) {
     try {
         await invoke('delete_manufacturer', {
@@ -407,10 +409,11 @@ async function deleteManufacturer(manufacturerId) {
         });
         console.log('Manufacturer deleted successfully');
         await loadManufacturers();
+        return true;
     } catch (error) {
         console.error('Failed to delete manufacturer:', error);
         showToast(i18n.t('manufacturer_mgmt.failed_to_delete'), { variant: 'error' });
-        throw error;
+        return false;
     }
 }
 
