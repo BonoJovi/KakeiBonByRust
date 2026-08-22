@@ -1014,18 +1014,28 @@ WHERE m.type = 'index'
   ) = 'USER_ID,SHOP_NAME'
 "#;
 
-/// Repoint every TRANSACTIONS_HEADER.SHOP_ID that references a duplicate
-/// SHOPS row to the earliest (surviving) SHOP_ID within the same
-/// (USER_ID, SHOP_NAME) group. Idempotent: rows already pointing at the
-/// minimum id are a no-op.
+/// Repoint every TRANSACTIONS_HEADER.SHOP_ID that references a
+/// non-survivor SHOPS row onto the survivor of its (USER_ID, SHOP_NAME)
+/// group. Devin #118 review: shops are soft-deleted (SHOP_DELETE_LOGICAL
+/// sets IS_DISABLED=1), and the add-time dedup check only counts
+/// IS_DISABLED=0 rows, so a legitimate DB can carry a disabled old row
+/// (smaller id) and an active re-created row (larger id). The survivor
+/// prefers `IS_DISABLED=0` first, then smallest `SHOP_ID` — so the
+/// currently-visible shop always wins and only-disabled groups fall
+/// back to the smallest id.
 pub const MIGRATE_SHOPS_UNIQUE_REPOINT_HEADER: &str = r#"
 UPDATE TRANSACTIONS_HEADER
 SET SHOP_ID = (
-    SELECT MIN(s2.SHOP_ID)
-    FROM SHOPS s2, SHOPS s1
-    WHERE s1.SHOP_ID = TRANSACTIONS_HEADER.SHOP_ID
-      AND s2.USER_ID = s1.USER_ID
-      AND s2.SHOP_NAME = s1.SHOP_NAME
+    SELECT s_survivor.SHOP_ID
+    FROM SHOPS s_survivor
+    WHERE s_survivor.USER_ID = (
+              SELECT USER_ID FROM SHOPS WHERE SHOP_ID = TRANSACTIONS_HEADER.SHOP_ID
+          )
+      AND s_survivor.SHOP_NAME = (
+              SELECT SHOP_NAME FROM SHOPS WHERE SHOP_ID = TRANSACTIONS_HEADER.SHOP_ID
+          )
+    ORDER BY s_survivor.IS_DISABLED ASC, s_survivor.SHOP_ID ASC
+    LIMIT 1
 )
 WHERE SHOP_ID IN (
     SELECT s.SHOP_ID FROM SHOPS s
@@ -1033,22 +1043,27 @@ WHERE SHOP_ID IN (
         SELECT 1 FROM SHOPS s2
         WHERE s2.USER_ID = s.USER_ID
           AND s2.SHOP_NAME = s.SHOP_NAME
-          AND s2.SHOP_ID < s.SHOP_ID
+          AND (s2.IS_DISABLED < s.IS_DISABLED
+               OR (s2.IS_DISABLED = s.IS_DISABLED AND s2.SHOP_ID < s.SHOP_ID))
     )
 )
 "#;
 
 /// Same shape as [`MIGRATE_SHOPS_UNIQUE_REPOINT_HEADER`] for the
-/// recurring-rule table. RULE_ID rows survive; only the shop pointer
-/// moves to the surviving id.
+/// recurring-rule table — including the active-preferred survivor rule.
 pub const MIGRATE_SHOPS_UNIQUE_REPOINT_RECURRING: &str = r#"
 UPDATE RECURRING_RULES
 SET SHOP_ID = (
-    SELECT MIN(s2.SHOP_ID)
-    FROM SHOPS s2, SHOPS s1
-    WHERE s1.SHOP_ID = RECURRING_RULES.SHOP_ID
-      AND s2.USER_ID = s1.USER_ID
-      AND s2.SHOP_NAME = s1.SHOP_NAME
+    SELECT s_survivor.SHOP_ID
+    FROM SHOPS s_survivor
+    WHERE s_survivor.USER_ID = (
+              SELECT USER_ID FROM SHOPS WHERE SHOP_ID = RECURRING_RULES.SHOP_ID
+          )
+      AND s_survivor.SHOP_NAME = (
+              SELECT SHOP_NAME FROM SHOPS WHERE SHOP_ID = RECURRING_RULES.SHOP_ID
+          )
+    ORDER BY s_survivor.IS_DISABLED ASC, s_survivor.SHOP_ID ASC
+    LIMIT 1
 )
 WHERE SHOP_ID IN (
     SELECT s.SHOP_ID FROM SHOPS s
@@ -1056,21 +1071,24 @@ WHERE SHOP_ID IN (
         SELECT 1 FROM SHOPS s2
         WHERE s2.USER_ID = s.USER_ID
           AND s2.SHOP_NAME = s.SHOP_NAME
-          AND s2.SHOP_ID < s.SHOP_ID
+          AND (s2.IS_DISABLED < s.IS_DISABLED
+               OR (s2.IS_DISABLED = s.IS_DISABLED AND s2.SHOP_ID < s.SHOP_ID))
     )
 )
 "#;
 
-/// Delete duplicate SHOPS rows, keeping the smallest SHOP_ID per
-/// (USER_ID, SHOP_NAME) group. Safe to run after the repoint steps
-/// above — no live reference is left pointing at the doomed rows.
+/// Delete non-survivor SHOPS rows within each (USER_ID, SHOP_NAME)
+/// group, using the same active-preferred ordering as the repoint
+/// steps above. Safe to run after the repoint — no live reference is
+/// left pointing at the doomed rows.
 pub const MIGRATE_SHOPS_UNIQUE_DELETE_DUPLICATES: &str = r#"
 DELETE FROM SHOPS
 WHERE EXISTS (
     SELECT 1 FROM SHOPS s2
     WHERE s2.USER_ID = SHOPS.USER_ID
       AND s2.SHOP_NAME = SHOPS.SHOP_NAME
-      AND s2.SHOP_ID < SHOPS.SHOP_ID
+      AND (s2.IS_DISABLED < SHOPS.IS_DISABLED
+           OR (s2.IS_DISABLED = SHOPS.IS_DISABLED AND s2.SHOP_ID < SHOPS.SHOP_ID))
 )
 "#;
 

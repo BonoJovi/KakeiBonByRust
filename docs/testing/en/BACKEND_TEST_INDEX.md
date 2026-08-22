@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-08-22 JST  
-**Total Tests**: 289 (delta-tracked; the full authoritative count from `cargo test --lib` is 534, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 290 (delta-tracked; the full authoritative count from `cargo test --lib` is 535, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -184,8 +184,9 @@ Database initialization and migration tests.
 | `migrate_shops_unique_dedupes_and_repoints_references` | End-to-end proof that duplicate SHOPS rows collapse onto the smallest SHOP_ID, TRANSACTIONS_HEADER + RECURRING_RULES references are repointed, the unique index is created, and further duplicate inserts are rejected (PR15, Fable-5 #20) | src/db.rs | 1373 |
 | `migrate_shops_unique_is_idempotent` | A second run of a successful migration is a no-op and leaves the data untouched (PR15, Fable-5 #20) | src/db.rs | 1424 |
 | `migrate_shops_unique_scopes_per_user` | User A and User B may each own a shop with the same SHOP_NAME — the uniqueness scope is per-user (PR15, Fable-5 #20) | src/db.rs | 1437 |
+| `migrate_shops_unique_keeps_active_row_over_soft_deleted_older_id` | When a soft-deleted old shop (smaller SHOP_ID, `IS_DISABLED=1`) coexists with a re-created active shop of the same name (larger SHOP_ID, `IS_DISABLED=0`), the migration keeps the active row as survivor and repoints legacy transaction references onto it (PR15, Devin #118 review) | src/db.rs | 1459 |
 
-**Total**: 7 tests
+**Total**: 8 tests
 
 ### settings.rs
 
@@ -527,11 +528,11 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **266** |
+| **Inline Tests** | **267** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
-| db.rs | 7 |
+| db.rs | 8 |
 | settings.rs | 12 |
 | api_error.rs | 9 |
 | services/master_data.rs | 2 |
@@ -549,7 +550,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/i18n.rs | 8 |
 | services/recurring.rs | 5 |
 | lib.rs | 6 |
-| **Total** | **289** |
+| **Total** | **290** |
 
 ---
 

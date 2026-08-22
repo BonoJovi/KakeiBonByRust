@@ -1445,4 +1445,55 @@ mod tests {
         db.migrate_shops_unique().await.expect("migration");
         assert_eq!(shop_ids(&db).await, vec![1, 2], "cross-user names must not be treated as duplicates");
     }
+
+    /// Regression pin for the Devin #118 review. A user can legitimately
+    /// end up with a soft-deleted old shop (small SHOP_ID, IS_DISABLED=1)
+    /// alongside a re-created active shop with the same name (larger
+    /// SHOP_ID, IS_DISABLED=0) because `SHOP_CHECK_DUPLICATE_FOR_ADD`
+    /// only counts IS_DISABLED=0 rows. Before this fix the migration
+    /// picked the smallest SHOP_ID unconditionally — repointing
+    /// transactions onto the disabled row and deleting the active one,
+    /// so the shop vanished from the (IS_DISABLED=0 filtered)
+    /// `get_shops` listing. The survivor rule now prefers active rows.
+    #[tokio::test]
+    async fn migrate_shops_unique_keeps_active_row_over_soft_deleted_older_id() {
+        let db = setup_legacy_shops_db().await;
+
+        // SHOP_ID=1: old "AEON", soft-deleted after use.
+        sqlx::query("INSERT INTO SHOPS (SHOP_ID, USER_ID, SHOP_NAME, IS_DISABLED) VALUES (1, 1, 'AEON', 1)")
+            .execute(db.pool()).await.unwrap();
+        // SHOP_ID=42: user re-added "AEON" and is using it now.
+        sqlx::query("INSERT INTO SHOPS (SHOP_ID, USER_ID, SHOP_NAME, IS_DISABLED) VALUES (42, 1, 'AEON', 0)")
+            .execute(db.pool()).await.unwrap();
+
+        // Old transaction pointed at the now-disabled row; a new
+        // transaction was recorded against the current active row.
+        sqlx::query("INSERT INTO TRANSACTIONS_HEADER (TRANSACTION_ID, SHOP_ID) VALUES (500, 1)")
+            .execute(db.pool()).await.unwrap();
+        sqlx::query("INSERT INTO TRANSACTIONS_HEADER (TRANSACTION_ID, SHOP_ID) VALUES (501, 42)")
+            .execute(db.pool()).await.unwrap();
+
+        db.migrate_shops_unique().await.expect("migration");
+
+        // The active SHOP_ID=42 must survive; the disabled 1 gets removed.
+        assert_eq!(shop_ids(&db).await, vec![42], "active row (larger id) must be the survivor when the smaller id is disabled");
+
+        // Every reference now points at the active survivor — nothing
+        // is left pointing at the deleted (disabled) 1.
+        let hdr_shop: Vec<i64> = sqlx::query_scalar(
+            "SELECT SHOP_ID FROM TRANSACTIONS_HEADER ORDER BY TRANSACTION_ID",
+        )
+        .fetch_all(db.pool())
+        .await
+        .unwrap();
+        assert_eq!(hdr_shop, vec![42, 42], "old txn must be repointed to the active row: {:?}", hdr_shop);
+
+        // And the surviving row is active — future `get_shops` (which
+        // filters IS_DISABLED=0) will still show it.
+        let is_disabled: i64 = sqlx::query_scalar("SELECT IS_DISABLED FROM SHOPS WHERE SHOP_ID = 42")
+            .fetch_one(db.pool())
+            .await
+            .unwrap();
+        assert_eq!(is_disabled, 0, "the surviving shop must still be active");
+    }
 }
