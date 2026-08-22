@@ -670,7 +670,12 @@ CREATE TABLE IF NOT EXISTS SHOPS (
     IS_DISABLED INTEGER DEFAULT 0,
     ENTRY_DT DATETIME NOT NULL DEFAULT (datetime('now')),
     UPDATE_DT DATETIME,
-    FOREIGN KEY (USER_ID) REFERENCES USERS(USER_ID)
+    FOREIGN KEY (USER_ID) REFERENCES USERS(USER_ID),
+    -- PR15 (Fable-5 #20): match the sibling MANUFACTURERS / PRODUCTS
+    -- constraint. Fresh DBs get the auto-index directly; existing DBs
+    -- get an equivalent unique index via `Database::migrate_shops_unique`
+    -- after dedup + reference repoint.
+    UNIQUE(USER_ID, SHOP_NAME)
 );
 
 -- Create indexes for SHOPS

@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-08-22 JST  
-**総テスト数**: 286件 (delta 反映後。`cargo test --lib` の権威的総数は 531 で、pre-existing gap は別 PR でバックフィル予定)
+**総テスト数**: 290件 (delta 反映後。`cargo test --lib` の権威的総数は 535 で、pre-existing gap は別 PR でバックフィル予定)
 
 ---
 
@@ -181,8 +181,12 @@ AES-256-GCM暗号化・復号化のテスト。
 | `test_transactions_detail_migration` | transactions_detailテーブルのマイグレーション | src/db.rs | 217 |
 | `test_migrate_survives_orphaned_memo_reference` | 旧DBの孤児MEMO_ID参照でも migration が成功 (Fable-5 #11) | src/db.rs | 1032 |
 | `test_migrate_leaves_foreign_keys_on` | migration 後に PRAGMA foreign_keys が ON に復元されている (Fable-5 #11) | src/db.rs | 1137 |
+| `migrate_shops_unique_dedupes_and_repoints_references` | SHOPS の重複行を smallest SHOP_ID に集約、TRANSACTIONS_HEADER + RECURRING_RULES の参照も repoint、unique index 作成、追加 INSERT が拒否されることを end-to-end で確認 (PR15, Fable-5 #20) | src/db.rs | 1373 |
+| `migrate_shops_unique_is_idempotent` | 一度成功した migration の 2 回目実行が no-op で行数を変えない (PR15, Fable-5 #20) | src/db.rs | 1424 |
+| `migrate_shops_unique_scopes_per_user` | user A と user B が同じ SHOP_NAME を持つケースは重複扱いしない (constraint は per-user scope) (PR15, Fable-5 #20) | src/db.rs | 1437 |
+| `migrate_shops_unique_keeps_active_row_over_soft_deleted_older_id` | 論理削除された古い店舗 (小さい SHOP_ID) と再作成された有効な同名店舗 (大きい SHOP_ID) が並存するとき、有効な行が survivor に選ばれ、旧 transaction 参照も active row に repoint される (PR15, Devin #118 review) | src/db.rs | 1459 |
 
-**合計**: 4件
+**合計**: 8件
 
 ### settings.rs
 
@@ -524,11 +528,11 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **263件** |
+| **インラインテスト** | **267件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
-| db.rs | 4 |
+| db.rs | 8 |
 | settings.rs | 12 |
 | api_error.rs | 9 |
 | services/master_data.rs | 2 |
@@ -546,7 +550,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/i18n.rs | 8 |
 | services/recurring.rs | 5 |
 | lib.rs | 6 |
-| **総計** | **286件** |
+| **総計** | **290件** |
 
 ---
 

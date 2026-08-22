@@ -2541,6 +2541,12 @@ pub fn run() {
                 database.migrate_encryption_salt().await
                     .map_err(|e| format!("Failed to migrate encryption salt column: {}", e))?;
 
+                // PR15 (Fable-5 #20) — dedupe SHOPS and add UNIQUE(USER_ID,
+                // SHOP_NAME). No-op after the first successful run and on
+                // fresh installs (they get the inline UNIQUE via dbaccess.sql).
+                database.migrate_shops_unique().await
+                    .map_err(|e| format!("Failed to migrate SHOPS unique constraint: {}", e))?;
+
                 let auth_service = AuthService::new(database.pool().clone());
                 let user_mgmt_service = UserManagementService::new(database.pool().clone());
                 let encryption_service = EncryptionService::new(database.pool().clone());
