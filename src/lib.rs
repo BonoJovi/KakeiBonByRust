@@ -1478,18 +1478,19 @@ async fn get_account_balances_as_of(
 async fn get_accounts(
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::account::Account>, api_error::ApiError> {
-    let session_user = state.session.get_user()
-        .ok_or_else(|| api_error::ApiError::validation("User not authenticated. Please login first."))?;
-    let user_id = session_user.user_id;
-    let user_role = session_user.role;
-
+    // PR10 (Fable-5 #33): route through the shared `get_session_user`
+    // helper instead of duplicating the session-lookup inline. This was
+    // the last command that read `state.session.get_user()` directly
+    // — every other tauri command in this file uses `get_session_user`
+    // or `get_session_user_id`.
+    let session_user = get_session_user(&state).map_err(api_error::ApiError::validation)?;
     let db = &state.db;
 
-    // Admin (role 0) can see all accounts, regular users see only their own
-    if user_role == crate::consts::ROLE_ADMIN {
+    // Admin (role 0) can see all accounts, regular users see only their own.
+    if session_user.role == crate::consts::ROLE_ADMIN {
         services::account::get_all_accounts(db.pool()).await
     } else {
-        services::account::get_accounts(db.pool(), user_id).await
+        services::account::get_accounts(db.pool(), session_user.user_id).await
     }
 }
 
