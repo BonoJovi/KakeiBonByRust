@@ -72,6 +72,232 @@ impl CategoryService {
     pub fn new(pool: SqlitePool) -> Self {
         Self { pool }
     }
+
+    // -----------------------------------------------------------------
+    // PR9 (Fable-5 #28): shared bilingual-duplicate checkers
+    //
+    // Both add and update paths for CATEGORY2 / CATEGORY3 need the same
+    // 4-way check against CATEGORY{2,3}_I18N: the incoming JA / EN
+    // names must not already exist in either lang column, in either
+    // direction (`ja in ja`, `en in en`, `ja in en`, `en in ja`). The
+    // original code duplicated that block 16 times (4 checks × 4
+    // callers) with subtly different bind orders between the ADD and
+    // EXCLUDING SQL constants — a bug waiting to happen the next time
+    // one of the four SQL clauses was extended.
+    //
+    // The helpers below take `exclude_code: Option<&str>` and dispatch
+    // to the matching SQL: `None` → ADD variant (add flow), `Some(code)`
+    // → EXCLUDING variant (update flow, exclude the row being edited).
+    // Bind order per SQL is encoded once inside the helper so the
+    // callers can never get it wrong.
+
+    /// Return `Err(DuplicateName(name))` if either of the two incoming
+    /// CATEGORY2 names collides with any existing CATEGORY2_I18N row
+    /// in the (user, cat1) scope, across either lang. Pass
+    /// `exclude_code = Some(cat2)` from the update path.
+    async fn check_category2_bilingual_duplicate(
+        &self,
+        user_id: i64,
+        category1_code: &str,
+        exclude_code: Option<&str>,
+        name_ja: &str,
+        name_en: &str,
+    ) -> Result<(), CategoryError> {
+        for (name, lang) in [
+            (name_ja, "ja"),
+            (name_en, "en"),
+            (name_ja, "en"),
+            (name_en, "ja"),
+        ] {
+            let count: i64 = match exclude_code {
+                None => sqlx::query_scalar(sql_queries::CATEGORY2_CHECK_DUPLICATE_NAME)
+                    .bind(user_id)
+                    .bind(category1_code)
+                    .bind(name)
+                    .bind(lang)
+                    .fetch_one(&self.pool)
+                    .await?,
+                Some(code) => {
+                    // CATEGORY2_CHECK_DUPLICATE_NAME_EXCLUDING binds
+                    // `(user_id, cat1, exclude_code, lang, name)` — the
+                    // LANG / NAME columns are ordered differently to
+                    // the ADD constant, so keep the bind order fenced
+                    // in here rather than at each call site.
+                    sqlx::query_scalar(sql_queries::CATEGORY2_CHECK_DUPLICATE_NAME_EXCLUDING)
+                        .bind(user_id)
+                        .bind(category1_code)
+                        .bind(code)
+                        .bind(lang)
+                        .bind(name)
+                        .fetch_one(&self.pool)
+                        .await?
+                }
+            };
+            if count > 0 {
+                return Err(CategoryError::DuplicateName(name.to_string()));
+            }
+        }
+        Ok(())
+    }
+
+    /// Same shape as [`check_category2_bilingual_duplicate`] for the
+    /// CATEGORY3 level. The extra `category2_code` bind lives in both
+    /// SQL constants so it's threaded through explicitly.
+    async fn check_category3_bilingual_duplicate(
+        &self,
+        user_id: i64,
+        category1_code: &str,
+        category2_code: &str,
+        exclude_code: Option<&str>,
+        name_ja: &str,
+        name_en: &str,
+    ) -> Result<(), CategoryError> {
+        for (name, lang) in [
+            (name_ja, "ja"),
+            (name_en, "en"),
+            (name_ja, "en"),
+            (name_en, "ja"),
+        ] {
+            let count: i64 = match exclude_code {
+                None => sqlx::query_scalar(sql_queries::CATEGORY3_CHECK_DUPLICATE_NAME)
+                    .bind(user_id)
+                    .bind(category1_code)
+                    .bind(category2_code)
+                    .bind(name)
+                    .bind(lang)
+                    .fetch_one(&self.pool)
+                    .await?,
+                Some(code) => sqlx::query_scalar(sql_queries::CATEGORY3_CHECK_DUPLICATE_NAME_EXCLUDING)
+                    .bind(user_id)
+                    .bind(category1_code)
+                    .bind(category2_code)
+                    .bind(code)
+                    .bind(lang)
+                    .bind(name)
+                    .fetch_one(&self.pool)
+                    .await?,
+            };
+            if count > 0 {
+                return Err(CategoryError::DuplicateName(name.to_string()));
+            }
+        }
+        Ok(())
+    }
+
+    // -----------------------------------------------------------------
+    // PR9 (Fable-5 #27): shared display-order swap helpers
+    //
+    // The 4 `move_category{2,3}_{up,down}` publics were structural
+    // clones: fetch current order, add ±1, look up the sibling at
+    // that target, and if one exists, run two UPDATEs inside a tx.
+    // The `<= 1` guard on the `_up` variants was redundant — when
+    // current_order is 1 the target is 0 and the sibling lookup
+    // returns None, which the `if let Some(...)` arm already
+    // treats as a no-op. Two internal helpers below (one per level)
+    // consume `delta = ±1`, and the 4 publics each collapse to a
+    // one-line wrapper.
+
+    async fn swap_category2_with_sibling(
+        &self,
+        user_id: i64,
+        category1_code: &str,
+        category2_code: &str,
+        delta: i64,
+    ) -> Result<(), CategoryError> {
+        let current_order: i64 = sqlx::query_scalar(sql_queries::CATEGORY2_GET_ORDER)
+            .bind(user_id)
+            .bind(category1_code)
+            .bind(category2_code)
+            .fetch_one(&self.pool)
+            .await?;
+
+        let target_order = current_order + delta;
+
+        // A missing sibling means there is nothing to swap with
+        // (no-op). Any other database error must reach the caller
+        // instead of being reported as success.
+        let sibling_code: Option<String> =
+            sqlx::query_scalar(sql_queries::CATEGORY2_GET_SIBLING_BY_ORDER)
+                .bind(user_id)
+                .bind(category1_code)
+                .bind(target_order)
+                .fetch_optional(&self.pool)
+                .await?;
+
+        if let Some(sibling_code) = sibling_code {
+            let mut tx = self.pool.begin().await?;
+            // Move current to target.
+            sqlx::query(sql_queries::CATEGORY2_UPDATE_ORDER)
+                .bind(target_order)
+                .bind(user_id)
+                .bind(category1_code)
+                .bind(category2_code)
+                .execute(&mut *tx)
+                .await?;
+            // Move sibling to the old current position.
+            sqlx::query(sql_queries::CATEGORY2_UPDATE_ORDER)
+                .bind(current_order)
+                .bind(user_id)
+                .bind(category1_code)
+                .bind(&sibling_code)
+                .execute(&mut *tx)
+                .await?;
+            tx.commit().await?;
+        }
+
+        Ok(())
+    }
+
+    async fn swap_category3_with_sibling(
+        &self,
+        user_id: i64,
+        category1_code: &str,
+        category2_code: &str,
+        category3_code: &str,
+        delta: i64,
+    ) -> Result<(), CategoryError> {
+        let current_order: i64 = sqlx::query_scalar(sql_queries::CATEGORY3_GET_ORDER)
+            .bind(user_id)
+            .bind(category1_code)
+            .bind(category2_code)
+            .bind(category3_code)
+            .fetch_one(&self.pool)
+            .await?;
+
+        let target_order = current_order + delta;
+
+        let sibling_code: Option<String> =
+            sqlx::query_scalar(sql_queries::CATEGORY3_GET_SIBLING_BY_ORDER)
+                .bind(user_id)
+                .bind(category1_code)
+                .bind(category2_code)
+                .bind(target_order)
+                .fetch_optional(&self.pool)
+                .await?;
+
+        if let Some(sibling_code) = sibling_code {
+            let mut tx = self.pool.begin().await?;
+            sqlx::query(sql_queries::CATEGORY3_UPDATE_ORDER)
+                .bind(target_order)
+                .bind(user_id)
+                .bind(category1_code)
+                .bind(category2_code)
+                .bind(category3_code)
+                .execute(&mut *tx)
+                .await?;
+            sqlx::query(sql_queries::CATEGORY3_UPDATE_ORDER)
+                .bind(current_order)
+                .bind(user_id)
+                .bind(category1_code)
+                .bind(category2_code)
+                .bind(&sibling_code)
+                .execute(&mut *tx)
+                .await?;
+            tx.commit().await?;
+        }
+
+        Ok(())
+    }
     
     /// Populate default categories for a new user
     /// This will be called when a general user is registered
@@ -376,58 +602,16 @@ impl CategoryService {
         validate_i18n_name_length(category2_name_ja, "Japanese name")?;
         validate_i18n_name_length(category2_name_en, "English name")?;
 
-        // Check for duplicate Japanese name
-        let count_ja: i64 = sqlx::query_scalar(sql_queries::CATEGORY2_CHECK_DUPLICATE_NAME)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(category2_name_ja)
-            .bind("ja")
-            .fetch_one(&self.pool)
-            .await?;
-        
-        if count_ja > 0 {
-            return Err(CategoryError::DuplicateName(category2_name_ja.to_string()));
-        }
-        
-        // Check for duplicate English name
-        let count_en: i64 = sqlx::query_scalar(sql_queries::CATEGORY2_CHECK_DUPLICATE_NAME)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(category2_name_en)
-            .bind("en")
-            .fetch_one(&self.pool)
-            .await?;
-        
-        if count_en > 0 {
-            return Err(CategoryError::DuplicateName(category2_name_en.to_string()));
-        }
-        
-        // Also check if Japanese name exists in English names
-        let count_ja_in_en: i64 = sqlx::query_scalar(sql_queries::CATEGORY2_CHECK_DUPLICATE_NAME)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(category2_name_ja)
-            .bind("en")
-            .fetch_one(&self.pool)
-            .await?;
-        
-        if count_ja_in_en > 0 {
-            return Err(CategoryError::DuplicateName(category2_name_ja.to_string()));
-        }
-        
-        // Also check if English name exists in Japanese names
-        let count_en_in_ja: i64 = sqlx::query_scalar(sql_queries::CATEGORY2_CHECK_DUPLICATE_NAME)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(category2_name_en)
-            .bind("ja")
-            .fetch_one(&self.pool)
-            .await?;
-        
-        if count_en_in_ja > 0 {
-            return Err(CategoryError::DuplicateName(category2_name_en.to_string()));
-        }
-        
+        // Bilingual dedup (PR9, Fable-5 #28) — 16 blocks collapsed to 1 call.
+        self.check_category2_bilingual_duplicate(
+            user_id,
+            category1_code,
+            None,
+            category2_name_ja,
+            category2_name_en,
+        )
+        .await?;
+
         // Generate new category2_code
         let count: i64 = sqlx::query_scalar(sql_queries::CATEGORY2_COUNT_BY_USER_AND_CATEGORY1)
             .bind(user_id)
@@ -493,62 +677,18 @@ impl CategoryService {
         validate_i18n_name_length(category3_name_ja, "Japanese name")?;
         validate_i18n_name_length(category3_name_en, "English name")?;
 
-        // Check for duplicate Japanese name
-        let count_ja: i64 = sqlx::query_scalar(sql_queries::CATEGORY3_CHECK_DUPLICATE_NAME)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(category2_code)
-            .bind(category3_name_ja)
-            .bind("ja")
-            .fetch_one(&self.pool)
-            .await?;
-        
-        if count_ja > 0 {
-            return Err(CategoryError::DuplicateName(category3_name_ja.to_string()));
-        }
-        
-        // Check for duplicate English name
-        let count_en: i64 = sqlx::query_scalar(sql_queries::CATEGORY3_CHECK_DUPLICATE_NAME)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(category2_code)
-            .bind(category3_name_en)
-            .bind("en")
-            .fetch_one(&self.pool)
-            .await?;
-        
-        if count_en > 0 {
-            return Err(CategoryError::DuplicateName(category3_name_en.to_string()));
-        }
-        
-        // Also check if Japanese name exists in English names
-        let count_ja_in_en: i64 = sqlx::query_scalar(sql_queries::CATEGORY3_CHECK_DUPLICATE_NAME)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(category2_code)
-            .bind(category3_name_ja)
-            .bind("en")
-            .fetch_one(&self.pool)
-            .await?;
-        
-        if count_ja_in_en > 0 {
-            return Err(CategoryError::DuplicateName(category3_name_ja.to_string()));
-        }
-        
-        // Also check if English name exists in Japanese names
-        let count_en_in_ja: i64 = sqlx::query_scalar(sql_queries::CATEGORY3_CHECK_DUPLICATE_NAME)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(category2_code)
-            .bind(category3_name_en)
-            .bind("ja")
-            .fetch_one(&self.pool)
-            .await?;
-        
-        if count_en_in_ja > 0 {
-            return Err(CategoryError::DuplicateName(category3_name_en.to_string()));
-        }
-        
+        // Bilingual dedup (PR9, Fable-5 #28) — see the CATEGORY2 add
+        // caller above; identical 4-check contract via the shared helper.
+        self.check_category3_bilingual_duplicate(
+            user_id,
+            category1_code,
+            category2_code,
+            None,
+            category3_name_ja,
+            category3_name_en,
+        )
+        .await?;
+
         // Generate new category3_code
         let count: i64 = sqlx::query_scalar(sql_queries::CATEGORY3_COUNT_BY_USER_AND_CATEGORY2)
             .bind(user_id)
@@ -673,62 +813,18 @@ impl CategoryService {
         validate_i18n_name_length(name_ja, "Japanese name")?;
         validate_i18n_name_length(name_en, "English name")?;
 
-        // Check for duplicate Japanese name (excluding current category)
-        let count_ja: i64 = sqlx::query_scalar(sql_queries::CATEGORY2_CHECK_DUPLICATE_NAME_EXCLUDING)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(category2_code)
-            .bind("ja")
-            .bind(name_ja)
-            .fetch_one(&self.pool)
-            .await?;
-        
-        if count_ja > 0 {
-            return Err(CategoryError::DuplicateName(name_ja.to_string()));
-        }
-        
-        // Check for duplicate English name (excluding current category)
-        let count_en: i64 = sqlx::query_scalar(sql_queries::CATEGORY2_CHECK_DUPLICATE_NAME_EXCLUDING)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(category2_code)
-            .bind("en")
-            .bind(name_en)
-            .fetch_one(&self.pool)
-            .await?;
-        
-        if count_en > 0 {
-            return Err(CategoryError::DuplicateName(name_en.to_string()));
-        }
-        
-        // Also check if Japanese name exists in English names
-        let count_ja_in_en: i64 = sqlx::query_scalar(sql_queries::CATEGORY2_CHECK_DUPLICATE_NAME_EXCLUDING)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(category2_code)
-            .bind("en")
-            .bind(name_ja)
-            .fetch_one(&self.pool)
-            .await?;
-        
-        if count_ja_in_en > 0 {
-            return Err(CategoryError::DuplicateName(name_ja.to_string()));
-        }
-        
-        // Also check if English name exists in Japanese names
-        let count_en_in_ja: i64 = sqlx::query_scalar(sql_queries::CATEGORY2_CHECK_DUPLICATE_NAME_EXCLUDING)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(category2_code)
-            .bind("ja")
-            .bind(name_en)
-            .fetch_one(&self.pool)
-            .await?;
-        
-        if count_en_in_ja > 0 {
-            return Err(CategoryError::DuplicateName(name_en.to_string()));
-        }
-        
+        // Bilingual dedup (PR9, Fable-5 #28) — 16 blocks collapsed
+        // to 1 call. `Some(category2_code)` excludes the row being
+        // edited.
+        self.check_category2_bilingual_duplicate(
+            user_id,
+            category1_code,
+            Some(category2_code),
+            name_ja,
+            name_en,
+        )
+        .await?;
+
         // Update Japanese name
         sqlx::query(sql_queries::CATEGORY2_I18N_UPDATE)
             .bind(name_ja)
@@ -765,66 +861,18 @@ impl CategoryService {
         validate_i18n_name_length(name_ja, "Japanese name")?;
         validate_i18n_name_length(name_en, "English name")?;
 
-        // Check for duplicate Japanese name (excluding current category)
-        let count_ja: i64 = sqlx::query_scalar(sql_queries::CATEGORY3_CHECK_DUPLICATE_NAME_EXCLUDING)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(category2_code)
-            .bind(category3_code)
-            .bind("ja")
-            .bind(name_ja)
-            .fetch_one(&self.pool)
-            .await?;
-        
-        if count_ja > 0 {
-            return Err(CategoryError::DuplicateName(name_ja.to_string()));
-        }
-        
-        // Check for duplicate English name (excluding current category)
-        let count_en: i64 = sqlx::query_scalar(sql_queries::CATEGORY3_CHECK_DUPLICATE_NAME_EXCLUDING)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(category2_code)
-            .bind(category3_code)
-            .bind("en")
-            .bind(name_en)
-            .fetch_one(&self.pool)
-            .await?;
-        
-        if count_en > 0 {
-            return Err(CategoryError::DuplicateName(name_en.to_string()));
-        }
-        
-        // Also check if Japanese name exists in English names
-        let count_ja_in_en: i64 = sqlx::query_scalar(sql_queries::CATEGORY3_CHECK_DUPLICATE_NAME_EXCLUDING)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(category2_code)
-            .bind(category3_code)
-            .bind("en")
-            .bind(name_ja)
-            .fetch_one(&self.pool)
-            .await?;
-        
-        if count_ja_in_en > 0 {
-            return Err(CategoryError::DuplicateName(name_ja.to_string()));
-        }
-        
-        // Also check if English name exists in Japanese names
-        let count_en_in_ja: i64 = sqlx::query_scalar(sql_queries::CATEGORY3_CHECK_DUPLICATE_NAME_EXCLUDING)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(category2_code)
-            .bind(category3_code)
-            .bind("ja")
-            .bind(name_en)
-            .fetch_one(&self.pool)
-            .await?;
-        
-        if count_en_in_ja > 0 {
-            return Err(CategoryError::DuplicateName(name_en.to_string()));
-        }
-        
+        // Bilingual dedup (PR9, Fable-5 #28) — see update_category2_i18n
+        // above; identical contract.
+        self.check_category3_bilingual_duplicate(
+            user_id,
+            category1_code,
+            category2_code,
+            Some(category3_code),
+            name_ja,
+            name_en,
+        )
+        .await?;
+
         // Update Japanese name
         sqlx::query(sql_queries::CATEGORY3_I18N_UPDATE)
             .bind(name_ja)
@@ -850,124 +898,33 @@ impl CategoryService {
         Ok(())
     }
     
-    /// Move a CATEGORY2 up in the display order
+    /// Move a CATEGORY2 up in the display order. PR9 (Fable-5 #27):
+    /// one-line wrapper over the shared swap helper. The old
+    /// `current_order <= 1` early-return was redundant because the
+    /// sibling lookup at `target_order = 0` returns None and the
+    /// helper's `if let Some(...)` arm already treats that as a no-op.
     pub async fn move_category2_up(
         &self,
         user_id: i64,
         category1_code: &str,
         category2_code: &str,
     ) -> Result<(), CategoryError> {
-        // Get current order
-        let current_order: i64 = sqlx::query_scalar(sql_queries::CATEGORY2_GET_ORDER)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(category2_code)
-            .fetch_one(&self.pool)
-            .await?;
-        
-        // Cannot move up if already at the top
-        if current_order <= 1 {
-            return Ok(());
-        }
-        
-        let target_order = current_order - 1;
-        
-        // Get the sibling category at the target position. A missing sibling
-        // means there is nothing to swap with (no-op); any other database
-        // error must reach the caller instead of being reported as success.
-        let sibling_code: Option<String> =
-            sqlx::query_scalar(sql_queries::CATEGORY2_GET_SIBLING_BY_ORDER)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(target_order)
-            .fetch_optional(&self.pool)
-            .await?;
-        
-        if let Some(sibling_code) = sibling_code {
-            // Swap orders using a transaction
-            let mut tx = self.pool.begin().await?;
-            
-            // Move current to target
-            sqlx::query(sql_queries::CATEGORY2_UPDATE_ORDER)
-                .bind(target_order)
-                .bind(user_id)
-                .bind(category1_code)
-                .bind(category2_code)
-                .execute(&mut *tx)
-                .await?;
-            
-            // Move sibling to current position
-            sqlx::query(sql_queries::CATEGORY2_UPDATE_ORDER)
-                .bind(current_order)
-                .bind(user_id)
-                .bind(category1_code)
-                .bind(&sibling_code)
-                .execute(&mut *tx)
-                .await?;
-            
-            tx.commit().await?;
-        }
-        
-        Ok(())
+        self.swap_category2_with_sibling(user_id, category1_code, category2_code, -1)
+            .await
     }
-    
-    /// Move a CATEGORY2 down in the display order
+
+    /// Move a CATEGORY2 down in the display order.
     pub async fn move_category2_down(
         &self,
         user_id: i64,
         category1_code: &str,
         category2_code: &str,
     ) -> Result<(), CategoryError> {
-        // Get current order
-        let current_order: i64 = sqlx::query_scalar(sql_queries::CATEGORY2_GET_ORDER)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(category2_code)
-            .fetch_one(&self.pool)
-            .await?;
-        
-        let target_order = current_order + 1;
-        
-        // Get the sibling category at the target position. A missing sibling
-        // means there is nothing to swap with (no-op); any other database
-        // error must reach the caller instead of being reported as success.
-        let sibling_code: Option<String> =
-            sqlx::query_scalar(sql_queries::CATEGORY2_GET_SIBLING_BY_ORDER)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(target_order)
-            .fetch_optional(&self.pool)
-            .await?;
-        
-        if let Some(sibling_code) = sibling_code {
-            // Swap orders using a transaction
-            let mut tx = self.pool.begin().await?;
-            
-            // Move current to target
-            sqlx::query(sql_queries::CATEGORY2_UPDATE_ORDER)
-                .bind(target_order)
-                .bind(user_id)
-                .bind(category1_code)
-                .bind(category2_code)
-                .execute(&mut *tx)
-                .await?;
-            
-            // Move sibling to current position
-            sqlx::query(sql_queries::CATEGORY2_UPDATE_ORDER)
-                .bind(current_order)
-                .bind(user_id)
-                .bind(category1_code)
-                .bind(&sibling_code)
-                .execute(&mut *tx)
-                .await?;
-            
-            tx.commit().await?;
-        }
-        
-        Ok(())
+        self.swap_category2_with_sibling(user_id, category1_code, category2_code, 1)
+            .await
     }
-    
-    /// Move a CATEGORY3 up in the display order
+
+    /// Move a CATEGORY3 up in the display order.
     pub async fn move_category3_up(
         &self,
         user_id: i64,
@@ -975,65 +932,17 @@ impl CategoryService {
         category2_code: &str,
         category3_code: &str,
     ) -> Result<(), CategoryError> {
-        // Get current order
-        let current_order: i64 = sqlx::query_scalar(sql_queries::CATEGORY3_GET_ORDER)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(category2_code)
-            .bind(category3_code)
-            .fetch_one(&self.pool)
-            .await?;
-        
-        // Cannot move up if already at the top
-        if current_order <= 1 {
-            return Ok(());
-        }
-        
-        let target_order = current_order - 1;
-        
-        // Get the sibling category at the target position. A missing sibling
-        // means there is nothing to swap with (no-op); any other database
-        // error must reach the caller instead of being reported as success.
-        let sibling_code: Option<String> =
-            sqlx::query_scalar(sql_queries::CATEGORY3_GET_SIBLING_BY_ORDER)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(category2_code)
-            .bind(target_order)
-            .fetch_optional(&self.pool)
-            .await?;
-        
-        if let Some(sibling_code) = sibling_code {
-            // Swap orders using a transaction
-            let mut tx = self.pool.begin().await?;
-            
-            // Move current to target
-            sqlx::query(sql_queries::CATEGORY3_UPDATE_ORDER)
-                .bind(target_order)
-                .bind(user_id)
-                .bind(category1_code)
-                .bind(category2_code)
-                .bind(category3_code)
-                .execute(&mut *tx)
-                .await?;
-            
-            // Move sibling to current position
-            sqlx::query(sql_queries::CATEGORY3_UPDATE_ORDER)
-                .bind(current_order)
-                .bind(user_id)
-                .bind(category1_code)
-                .bind(category2_code)
-                .bind(&sibling_code)
-                .execute(&mut *tx)
-                .await?;
-            
-            tx.commit().await?;
-        }
-        
-        Ok(())
+        self.swap_category3_with_sibling(
+            user_id,
+            category1_code,
+            category2_code,
+            category3_code,
+            -1,
+        )
+        .await
     }
-    
-    /// Move a CATEGORY3 down in the display order
+
+    /// Move a CATEGORY3 down in the display order.
     pub async fn move_category3_down(
         &self,
         user_id: i64,
@@ -1041,57 +950,14 @@ impl CategoryService {
         category2_code: &str,
         category3_code: &str,
     ) -> Result<(), CategoryError> {
-        // Get current order
-        let current_order: i64 = sqlx::query_scalar(sql_queries::CATEGORY3_GET_ORDER)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(category2_code)
-            .bind(category3_code)
-            .fetch_one(&self.pool)
-            .await?;
-        
-        let target_order = current_order + 1;
-        
-        // Get the sibling category at the target position. A missing sibling
-        // means there is nothing to swap with (no-op); any other database
-        // error must reach the caller instead of being reported as success.
-        let sibling_code: Option<String> =
-            sqlx::query_scalar(sql_queries::CATEGORY3_GET_SIBLING_BY_ORDER)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(category2_code)
-            .bind(target_order)
-            .fetch_optional(&self.pool)
-            .await?;
-        
-        if let Some(sibling_code) = sibling_code {
-            // Swap orders using a transaction
-            let mut tx = self.pool.begin().await?;
-            
-            // Move current to target
-            sqlx::query(sql_queries::CATEGORY3_UPDATE_ORDER)
-                .bind(target_order)
-                .bind(user_id)
-                .bind(category1_code)
-                .bind(category2_code)
-                .bind(category3_code)
-                .execute(&mut *tx)
-                .await?;
-            
-            // Move sibling to current position
-            sqlx::query(sql_queries::CATEGORY3_UPDATE_ORDER)
-                .bind(current_order)
-                .bind(user_id)
-                .bind(category1_code)
-                .bind(category2_code)
-                .bind(&sibling_code)
-                .execute(&mut *tx)
-                .await?;
-            
-            tx.commit().await?;
-        }
-
-        Ok(())
+        self.swap_category3_with_sibling(
+            user_id,
+            category1_code,
+            category2_code,
+            category3_code,
+            1,
+        )
+        .await
     }
 
     /// Disable (hide) a CATEGORY2 and its child CATEGORY3 entries
