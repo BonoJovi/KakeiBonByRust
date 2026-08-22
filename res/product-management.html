@@ -67,7 +67,8 @@
                     <div class="form-group">
                         <label for="product-name" data-i18n="product_mgmt.name">Product Name:</label>
                         <div class="input-wrapper">
-                            <input type="text" id="product-name" name="product-name" maxlength="128" required />
+                            <!-- Length limit enforced in JS by code points (attachCharCounter), not maxlength (UTF-16 units) -->
+                            <input type="text" id="product-name" name="product-name" required />
                         </div>
                     </div>
 
@@ -86,7 +87,7 @@
                     <div class="form-group">
                         <label for="product-memo" data-i18n="product_mgmt.memo">Memo:</label>
                         <div class="input-wrapper">
-                            <textarea id="product-memo" name="product-memo" rows="3" maxlength="1000"></textarea>
+                            <textarea id="product-memo" name="product-memo" rows="3"></textarea>
                         </div>
                     </div>
 

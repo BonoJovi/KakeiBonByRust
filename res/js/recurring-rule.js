@@ -9,6 +9,7 @@ import { createMenuBar, setupLanguageMenu, setupLanguageMenuHandlers } from './m
 import { setupTaxCalculationListeners } from './detail-tax-calc.js';
 import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
 import { MAX_RULE_NAME_LEN, MAX_ITEM_NAME_LEN, MAX_MEMO_LEN } from './consts.js';
+import { formatApiError, API_ERROR_CODES } from './master-crud.js';
 
 console.log('=== RECURRING-RULE.JS LOADED ===');
 
@@ -67,7 +68,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.scrollTo(0, 0);
     } catch (err) {
         console.error('Initialization error:', err);
-        showResult('error', String(err));
+        // formatApiError unwraps the { code, message, entity } object
+        // shape that get_accounts / get_shops (migrated to ApiError in
+        // PR #97/#99) now return; a bare String(err) would render
+        // "[object Object]" here (Devin review on #99).
+        showResult('error', formatApiError(err));
     }
 });
 
@@ -359,27 +364,37 @@ function setupFormSubmit() {
         } catch (err) {
             console.error('create_recurring_rule failed:', err);
 
-            // Map Rust bounded-field errors back to inline validation messages.
-            const errStr = String(err);
-            const map = [
-                ['Rule name must be', ruleNameInput, 'recurring_rule.rule_name', MAX_RULE_NAME_LEN, ruleName],
-                ['Item name must be', itemNameInput, 'recurring_rule.item_name', MAX_ITEM_NAME_LEN, itemName],
-                ['Header memo must be', headerMemoInput, 'recurring_rule.header_memo', MAX_MEMO_LEN, headerMemo],
-                ['Detail memo must be', detailMemoInput, 'recurring_rule.detail_memo', MAX_MEMO_LEN, detailMemo],
-            ];
-            for (const [needle, input, fieldKey, max, value] of map) {
-                if (input && errStr.includes(needle)) {
-                    showValidationError(input, i18n.t('validation.max_length', {
-                        field: i18n.t(fieldKey),
-                        max,
-                        actual: [...value].length,
-                    }));
-                    return;
+            // Map bounded-field validation errors back to the inline
+            // message on the offending input. The Rust side emits a
+            // structured `ApiError { code: 'validation', message: '...' }`
+            // (PR2a); the `code === 'validation'` gate scopes the
+            // message-substring lookup so a generic database error can
+            // never accidentally match one of the field needles below.
+            const isValidation = err
+                && typeof err === 'object'
+                && err.code === API_ERROR_CODES.VALIDATION;
+            if (isValidation) {
+                const message = String(err.message || '');
+                const map = [
+                    ['Rule name must be', ruleNameInput, 'recurring_rule.rule_name', MAX_RULE_NAME_LEN, ruleName],
+                    ['Item name must be', itemNameInput, 'recurring_rule.item_name', MAX_ITEM_NAME_LEN, itemName],
+                    ['Header memo must be', headerMemoInput, 'recurring_rule.header_memo', MAX_MEMO_LEN, headerMemo],
+                    ['Detail memo must be', detailMemoInput, 'recurring_rule.detail_memo', MAX_MEMO_LEN, detailMemo],
+                ];
+                for (const [needle, input, fieldKey, max, value] of map) {
+                    if (input && message.startsWith(needle)) {
+                        showValidationError(input, i18n.t('validation.max_length', {
+                            field: i18n.t(fieldKey),
+                            max,
+                            actual: [...value].length,
+                        }));
+                        return;
+                    }
                 }
             }
 
             const prefix = i18n.t('recurring_rule.create_failed') || 'Failed to create rule:';
-            showResult('error', `${prefix} ${err}`);
+            showResult('error', `${prefix} ${formatApiError(err)}`);
         }
     });
 }
@@ -537,8 +552,27 @@ async function deleteRule(cascade) {
         await loadRules();
     } catch (err) {
         console.error('delete_recurring_rule failed:', err);
+
+        // Target rule was removed by another window (or a stale rule_id):
+        // surface the dedicated not_found message and refresh the list so
+        // the phantom row disappears — matches the Shop/Product/Manufacturer/
+        // Category master-audit contract (PR #75/#76/#77/#83). Now gated on
+        // the stable `err.code` returned by `Result<_, ApiError>` (PR2a)
+        // instead of the previous English message substring; a French /
+        // localised sqlx error text can no longer accidentally match.
+        const isNotFound = err
+            && typeof err === 'object'
+            && err.code === API_ERROR_CODES.NOT_FOUND;
+        if (isNotFound) {
+            const notFoundMsg = i18n.t('recurring_rule.not_found') ||
+                'Recurring rule not found. The list has been reloaded.';
+            showResult('error', notFoundMsg);
+            await loadRules();
+            return;
+        }
+
         const prefix = i18n.t('recurring_rule.delete_failed') || 'Failed to delete rule:';
-        showResult('error', `${prefix} ${err}`);
+        showResult('error', `${prefix} ${formatApiError(err)}`);
     }
 }
 

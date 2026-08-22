@@ -2,6 +2,65 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v2.7.0] - 2026-08-22
+
+Internal-quality, reliability, and performance release driven by the Fable-5 code review (2026-08-19, 43 items). No user-facing new features; the release lands as 14 PRs' worth of concentrated cleanup of the "would hurt when it hit but works today" class of latent bugs and structural fragility across the whole app. User-visible changes are limited to three: (1) an aggregation panic path that could occasionally down the backend thread is closed, (2) startup is slightly faster, and (3) any long-standing duplicate rows in the shop list are consolidated.
+
+### Bug fixes (user-facing)
+
+- **Monthly transaction screens could crash the backend when `month = 13` reached period.rs** (Fable-5 #22): the `.expect()` in `services::period::end_of_month` panicked the tauri command thread. `monthly_bounds_with_shift_for` now validates `1..=12` at the entry point and short-circuits with `Err` for out-of-range input.
+- **Account aggregation silently dropped category filters** (Fable-5 #18): `build_account_aggregation_query` rebuilt its WHERE from scratch and threw away `request.filter.category`. The category condition now reaches all four UNION ALL branches.
+- **Category 2 / 3 filters would fail with `no such column: th.CATEGORY2_CODE`** (Fable-5 #17): fixed to target the detail-scope `td.CATEGORY2_CODE`, so a future drilldown UI wiring will not blow up.
+- **Shop list could accumulate duplicate rows over time** (Fable-5 #20): `SHOPS` now carries `UNIQUE(USER_ID, SHOP_NAME)` (matching `MANUFACTURERS` / `PRODUCTS`). Existing databases are consolidated at startup by `Database::migrate_shops_unique`; when a soft-deleted old row and an active re-created row of the same name coexist, the active row is kept as the survivor and transaction references are repointed onto it.
+
+### Security & data protection
+
+- **All aggregation SQL parameterised** (Fable-5 #25): every value — category codes, language codes, user ids, dates, amounts, shop ids, LIMIT — now goes through `.bind()`. The old `format!()` + hand-rolled `escape_sql_literal` helper is gone; a future filter that skips the escape helper is no longer an injection site on its first use.
+- **Argon2 encryption salt is per-user random**, replacing the earlier predictable `user_id.to_le_bytes()` shape (Fable-5 #15, started in the previous release).
+- **Settings file writes are atomic** via the `tmp + rename` pattern (Fable-5 #10, started in the previous release).
+
+### Performance
+
+- **Category-tree N+1 collapsed** (Fable-5 #31): `get_category_tree` / `get_category_tree_all` went from `1 + N + N×M` queries (34 queries for the default new-user layout) to **3 flat queries + Rust HashMap grouping**. Speeds up the category dropdown initialisation on the transaction form.
+- **Recalc-all N+1 collapsed** (Fable-5 #32): `recalculate_all_transaction_totals` went from one SELECT per header (1001 queries at 1000 headers) to **1 + 1 queries**. Dashboard recalc is now essentially independent of header count.
+- **`dbaccess.sql` startup batched into one transaction** (Fable-5 #30): `~500 fsync → 1 fsync`. Most visible on the first launch after install / version upgrade when the whole i18n resource pack is being seeded.
+
+### Unified error-handling contract (`ApiError` migration)
+
+- Five Rust services (`recurring` / `transaction` / `account` / `user_management` / `category` / `auth`) plus every master-CRUD service now return `Result<_, ApiError>`. The frontend classifies on `err.code` (a stable machine constant) instead of substring-matching on English messages (`.includes('not found')` etc. — all gone).
+- New codes: `not_found` / `duplicate_name` / `duplicate_code` / `manufacturer_not_found` / `admin_protected` / `auth_invalid_credentials` / `auth_setup_completed` / `validation` / `database`.
+- The login / setup screens no longer show a Japanese label followed by an English error (\"ログインに失敗しました: Invalid username or password\"): the localised message is picked from the code (Fable-5 #21).
+
+### Internal refactoring
+
+- **Master-CRUD abstraction** (Fable-5 #26): `MasterCrudSpec` + the `master_data` shared helpers give shop / manufacturer / product / account a consistent shape. `rows_affected` based `NotFound` detection removes 6 TOCTOU pre-checks.
+- **Category-order move helpers consolidated** (Fable-5 #27): four `move_category{2,3}_{up,down}` clones (~60 lines each) collapse into 2 swap helpers + 4 one-line wrappers; the redundant `current_order <= 1` guard is absorbed by the sibling-none path.
+- **Bilingual duplicate check consolidated** (Fable-5 #28): the 16-block category i18n dedup (4 callers × 4 checks) becomes 2 helpers + 4 one-line calls, and the ADD/EXCLUDING bind-order drift is now fenced inside the helper.
+- **16 inline SQL sites moved into `sql_queries.rs`** (Fable-5 #24): i18n / holiday / category / account. Project rule 5 compliance.
+- **Legacy `TRANSACTIONS` (singular) commands deleted** (Fable-5 #19): four functions targeting a table no migration ever created, plus the placeholder-vs-bind broken `add_transaction_header`. Net −281 lines of dead code.
+- **`aggregation` unreachable arms guarded with `unreachable!()`** (Fable-5 #33): future refactors that reroute Category2/3/Product/Account through `build_header_query` will fail loudly instead of silently generating wrong SQL.
+
+### Schema / migrations
+
+- **SHOPS `UNIQUE(USER_ID, SHOP_NAME)`**: fresh installs get the constraint from the inline CREATE TABLE declaration; existing databases get the equivalent constraint via a startup migration that repoints transaction / recurring-rule references onto the surviving row (preferring the active row over a soft-deleted older one), deletes duplicates, then creates the unique index — all inside one transaction.
+- **20 new i18n resources** (2415..2434): retire the English hardcoded fallbacks in the transaction / detail-management screens and back the structured auth error codes.
+- Data is preserved end-to-end. Every migration is idempotent — second and later startups are no-ops.
+
+### Tests
+
+- Rust: **535 total, all pass** (v2.6.0 was 509, so +26). Additions include the `From<XxxError> for ApiError` pins across five services, an end-to-end SQL-injection safety pin (`EXPENSE' OR '1'='1` payload → 0 rows), the month=13 panic-prevention pin, four SHOPS-dedup scenarios (dedupe+repoint / idempotency / per-user scope / soft-deleted-vs-active), three category-tree N+1 regression pins (parent/child grouping / display order preservation / disabled flag), and the `MasterCrudSpec::ensure_update_affected_one` mapping pins.
+- JavaScript (Jest): 703 tests, all pass (no delta — the changes are backend + small frontend refactors).
+
+### Internal metrics
+
+- 14 machine-authored PRs + 3 Devin-review follow-up commits.
+- Rough diff footprint: +2,300 / −1,700 (net +600 lines), mostly new tests + docblocks; refactoring net-negatives sit around 400 lines.
+- `sql_queries.rs` new constants: 15 (auth / migration / N+1 fix / category-count paths).
+- `ApiError::CODE_*` additions: 2 (`auth_invalid_credentials` / `auth_setup_completed`).
+- `I18N_RESOURCES` additions: 20 (RESOURCE_ID 2415..2434; dev MAX = 2434).
+
+---
+
 ## [v2.6.0] - 2026-05-30
 
 Feature release that integrates the product / manufacturer master into the transaction-entry flow (#65 Phase 1). The master management screens have shipped since the v1.x line, but no part of the transaction flow ever referenced them — this release wires the last gap of that work-in-progress feature, so users can normalize spelling drift in item names by linking each detail line to a master entry.

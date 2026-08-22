@@ -20,6 +20,11 @@ pub const FONT_SIZE_MEDIUM: &str = "medium";
 pub const FONT_SIZE_LARGE: &str = "large";
 pub const FONT_SIZE_DEFAULT: &str = FONT_SIZE_MEDIUM;
 
+// Session source_screen values accepted for the side-trip pattern
+// (must match res/js/consts.js SOURCE_SCREEN_*)
+pub const SOURCE_SCREEN_TRANSACTION_MGMT: &str = "transaction_mgmt";
+pub const VALID_SOURCE_SCREENS: &[&str] = &[SOURCE_SCREEN_TRANSACTION_MGMT];
+
 // Tax rounding mode constants
 pub const TAX_ROUND_DOWN: i64 = 0;
 pub const TAX_ROUND_HALF_UP: i64 = 1;
@@ -57,3 +62,11 @@ pub const MAX_ITEM_NAME_LEN: usize = 200;     // TRANSACTIONS_DETAIL.ITEM_NAME, 
 #[allow(dead_code)]
 pub const MAX_RULE_NAME_LEN: usize = 200;     // RECURRING_RULES.RULE_NAME
 pub const MAX_MEMO_LEN: usize = 1000;         // MEMOS.MEMO_TEXT (used by transactions and recurring rules)
+
+// Minimum password length in Unicode scalar values (chars), not bytes.
+// The frontend counts UTF-16 code units via String.prototype.length, which
+// matches char count for BMP input (including all Japanese kana/kanji), so
+// the backend must count chars too — otherwise a 6-char Japanese password
+// reaches 16 bytes and slips through the length gate while the frontend
+// (correctly) rejects it. See `validation::validate_password`.
+pub const MIN_PASSWORD_LENGTH: usize = 16;

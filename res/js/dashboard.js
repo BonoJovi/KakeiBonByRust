@@ -7,6 +7,7 @@ import { HTML_FILES } from './html-files.js';
 import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
 import { createMenuBar } from './menu.js';
 import { getPeriodSettings, formatMonthlyPeriodLabel, formatMonthlyPeriodBaseLabel, fetchMonthlyPeriodBounds } from './period.js';
+import { showToast } from './toast.js';
 
 console.log('dashboard.js loaded');
 
@@ -633,16 +634,21 @@ function setupMenuHandlers() {
 
     // Toggle dropdowns on click
     if (fileMenu && fileDropdown) {
-        fileMenu.addEventListener('click', (e) => {
-            e.stopPropagation();
-            fileDropdown.classList.toggle('show');
-            if (adminDropdown) adminDropdown.classList.remove('show');
-        });
+        // The toggle may already be wired by menu.js; the items are only wired here
+        if (fileMenu.dataset.initialized !== 'true') {
+            fileMenu.addEventListener('click', (e) => {
+                e.stopPropagation();
+                fileDropdown.classList.toggle('show');
+                if (adminDropdown) adminDropdown.classList.remove('show');
+            });
 
-        // Prevent clicks inside dropdown from closing it immediately
-        fileDropdown.addEventListener('click', (e) => {
-            e.stopPropagation();
-        });
+            // Prevent clicks inside dropdown from closing it immediately
+            fileDropdown.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+
+            fileMenu.dataset.initialized = 'true';
+        }
 
         // File menu items for management pages
         // Structure: Back to Main, separator, Logout, Quit
@@ -677,6 +683,7 @@ function setupMenuHandlers() {
                     window.location.href = HTML_FILES.INDEX;
                 } catch (error) {
                     console.error('Logout failed:', error);
+                    showToast(i18n.t('error.logout_failed') + ': ' + error, { variant: 'error' });
                 }
             });
         } else {
@@ -692,6 +699,7 @@ function setupMenuHandlers() {
                     await invoke('handle_quit');
                 } catch (error) {
                     console.error('Quit failed:', error);
+                    showToast(i18n.t('error.quit_failed') + ': ' + error, { variant: 'error' });
                 }
             });
         }
@@ -699,12 +707,18 @@ function setupMenuHandlers() {
         console.error('[setupMenuHandlers] fileMenu or fileDropdown NOT FOUND!');
     }
 
-    if (adminMenu && adminDropdown) {
+    // Same semantics as the shared toggle in menu.js, so it does not matter
+    // which of the two registers first (see dataset.initialized guard).
+    if (adminMenu && adminDropdown && adminMenu.dataset.initialized !== 'true') {
         adminMenu.addEventListener('click', (e) => {
             e.stopPropagation();
-            adminDropdown.classList.toggle('show');
-            if (fileDropdown) fileDropdown.classList.remove('show');
+            const isShown = adminDropdown.classList.contains('show');
+            document.querySelectorAll('.dropdown').forEach((d) => {
+                if (d !== adminDropdown) d.classList.remove('show');
+            });
+            adminDropdown.classList.toggle('show', !isShown);
         });
+        adminMenu.dataset.initialized = 'true';
     }
 
     // Close dropdowns when clicking outside
@@ -732,6 +746,7 @@ async function handleMenuClick(menuKey) {
                 window.location.href = HTML_FILES.INDEX;
             } catch (error) {
                 console.error('Logout failed:', error);
+                showToast(i18n.t('error.logout_failed') + ': ' + error, { variant: 'error' });
             }
             break;
         case 'menu.quit':
@@ -739,6 +754,7 @@ async function handleMenuClick(menuKey) {
                 await invoke('handle_quit');
             } catch (error) {
                 console.error('Quit failed:', error);
+                showToast(i18n.t('error.quit_failed') + ': ' + error, { variant: 'error' });
             }
             break;
         case 'menu.user_management':

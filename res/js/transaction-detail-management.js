@@ -11,6 +11,8 @@ import { createMenuBar } from './menu.js';
 import { applyHeaderRecalculationPrompt } from './header-recalc.js';
 import { setupTaxCalculationListeners } from './detail-tax-calc.js';
 import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
+import { showToast } from './toast.js';
+import { formatApiError, API_ERROR_CODES } from './master-crud.js';
 
 let currentUserId = null;
 let currentUserRole = null;
@@ -78,17 +80,25 @@ export function clearDraft() {
 }
 
 document.addEventListener('DOMContentLoaded', async function() {
-    
+
     // Create menu bar
     createMenuBar('transaction-detail');
     try {
+        // Initialize i18n FIRST (PR2c / D5): `get_user_settings` does not
+        // require a session, and the initialiser has its own silent
+        // Japanese-fallback catch, so calling it before the session /
+        // transaction_id guards guarantees every downstream showMessage()
+        // gets a translated string instead of a raw resource-key toast.
+        await i18n.init();
+        i18n.updateUI();
+
         // Check session authentication
         if (!await isSessionAuthenticated()) {
             console.error('Not authenticated, redirecting to login');
             window.location.href = HTML_FILES.INDEX;
             return;
         }
-        
+
         // Get current user info
         const user = await getCurrentSessionUser();
         if (!user) {
@@ -96,24 +106,20 @@ document.addEventListener('DOMContentLoaded', async function() {
             window.location.href = HTML_FILES.INDEX;
             return;
         }
-        
+
         currentUserId = user.user_id;
         currentUserRole = user.role;
         console.log(`Logged in as: ${user.name} (ID: ${currentUserId}, Role: ${currentUserRole})`);
-        
+
         // Get transaction ID from URL parameters
         const urlParams = new URLSearchParams(window.location.search);
         transactionId = urlParams.get('transaction_id');
-        
+
         if (!transactionId) {
             console.error('No transaction ID provided');
-            showMessage('error', 'No transaction ID provided');
+            showMessage('error', i18n.t('detail_mgmt.error_no_transaction_id'));
             return;
         }
-        
-        // Initialize i18n
-        await i18n.init();
-        i18n.updateUI();
 
         // Check if user is admin - admin cannot access transaction detail management
         if (currentUserRole === ROLE_ADMIN) {
@@ -169,7 +175,16 @@ document.addEventListener('DOMContentLoaded', async function() {
         
     } catch (error) {
         console.error('Failed to initialize:', error);
-        showMessage('error', `Initialization failed: ${error.message}`);
+        // `i18n.init()` is now the first await in this try (PR2c / D5),
+        // and its own catch resolves to a Japanese fallback, so it never
+        // throws — by the time we land here, i18n.initialized is true.
+        // But defence-in-depth: if some future refactor changes that
+        // ordering, fall back to raw English so the user is not shown
+        // the literal key `detail_mgmt.error_initialization_failed`.
+        const prefix = i18n.initialized
+            ? i18n.t('detail_mgmt.error_initialization_failed')
+            : 'Initialization failed';
+        showMessage('error', `${prefix}: ${formatApiError(error)}`);
     }
 });
 
@@ -179,10 +194,14 @@ function setupMenuHandlers() {
     const fileDropdown = document.getElementById('file-dropdown');
     
     if (fileMenu && fileDropdown) {
-        fileMenu.addEventListener('click', (e) => {
-            e.stopPropagation();
-            fileDropdown.classList.toggle('show');
-        });
+        // The toggle may already be wired by menu.js; the items are only wired here
+        if (fileMenu.dataset.initialized !== 'true') {
+            fileMenu.addEventListener('click', (e) => {
+                e.stopPropagation();
+                fileDropdown.classList.toggle('show');
+            });
+            fileMenu.dataset.initialized = 'true';
+        }
         
         // Back to transactions
         const backToTransactionsItem = fileDropdown.querySelector('[data-i18n="menu.back_to_transactions"]');
@@ -405,7 +424,7 @@ async function loadCategoryDropdowns() {
     
     if (!category1Code) {
         console.error('category1Code is not set yet');
-        showMessage('error', 'Category code not loaded. Please refresh the page.');
+        showMessage('error', i18n.t('detail_mgmt.error_category_not_loaded'));
         return;
     }
     
@@ -451,7 +470,7 @@ async function loadCategoryDropdowns() {
         
     } catch (error) {
         console.error('Failed to load categories:', error);
-        showMessage('error', `Failed to load categories: ${error.message}`);
+        showMessage('error', `${i18n.t('detail_mgmt.error_load_categories_failed')}: ${formatApiError(error)}`);
     }
 }
 
@@ -496,6 +515,7 @@ async function loadCategory3Options(category2Code) {
         
     } catch (error) {
         console.error('Failed to load category3 options:', error);
+        showToast(i18n.t('error.category_load_failed') + ': ' + formatApiError(error), { variant: 'error' });
     }
 }
 
@@ -543,7 +563,7 @@ async function loadTransactionHeader() {
         console.log('Transaction header loaded successfully, CATEGORY1_CODE:', category1Code, 'TAX_ROUNDING_TYPE:', taxRoundingType);
     } catch (error) {
         console.error('Failed to load transaction header:', error);
-        showMessage('error', `Failed to load transaction header: ${error.message}`);
+        showMessage('error', `${i18n.t('detail_mgmt.error_load_header_failed')}: ${formatApiError(error)}`);
     }
 }
 
@@ -619,7 +639,7 @@ async function loadDetails() {
             detailList.innerHTML = `
                 <tr>
                     <td colspan="5" style="text-align: center; padding: 40px; color: #d32f2f;">
-                        ${i18n.t('common.error')}: ${error.message}
+                        ${escapeHtml(i18n.t('common.error'))}: ${escapeHtml(formatApiError(error))}
                     </td>
                 </tr>
             `;
@@ -1008,27 +1028,35 @@ async function handleDetailFormSubmit(event) {
     } catch (error) {
         console.error('Failed to save detail:', error);
 
-        // Map backend error messages to i18n resources / localized text.
-        // Rust defense line for bounded fields (src/services/transaction.rs).
-        const errorMessage = error.toString();
-        if (errorMessage.includes('Item name must be')) {
-            showValidationError(itemNameInput, i18n.t('validation.max_length', {
-                field: i18n.t('detail_mgmt.item_name'),
-                max: MAX_ITEM_NAME_LEN,
-                actual: [...itemName].length,
-            }));
-            return;
-        }
-        if (errorMessage.includes('Memo must be')) {
-            showValidationError(memoInput, i18n.t('validation.max_length', {
-                field: i18n.t('detail_mgmt.memo'),
-                max: MAX_MEMO_LEN,
-                actual: [...memo].length,
-            }));
-            return;
+        // Map bounded-field validation errors to the offending input.
+        // The Rust side now emits a structured `ApiError { code:
+        // 'validation', message: '...' }` (PR2b); the `code === 'validation'`
+        // gate scopes the message-substring lookup so a generic database
+        // error can never accidentally land on the wrong input.
+        const isValidation = error
+            && typeof error === 'object'
+            && error.code === API_ERROR_CODES.VALIDATION;
+        if (isValidation) {
+            const message = String(error.message || '');
+            if (message.startsWith('Item name must be')) {
+                showValidationError(itemNameInput, i18n.t('validation.max_length', {
+                    field: i18n.t('detail_mgmt.item_name'),
+                    max: MAX_ITEM_NAME_LEN,
+                    actual: [...itemName].length,
+                }));
+                return;
+            }
+            if (message.startsWith('Memo must be')) {
+                showValidationError(memoInput, i18n.t('validation.max_length', {
+                    field: i18n.t('detail_mgmt.memo'),
+                    max: MAX_MEMO_LEN,
+                    actual: [...memo].length,
+                }));
+                return;
+            }
         }
 
-        showMessage('error', `${i18n.t('detail_mgmt.save_error')}: ${error.message}`);
+        showMessage('error', `${i18n.t('detail_mgmt.save_error')}: ${formatApiError(error)}`);
     }
 }
 
@@ -1045,7 +1073,7 @@ async function editDetail(detailId) {
         // Find the detail to edit
         const detail = details.find(d => d.detail_id === detailId);
         if (!detail) {
-            showMessage('error', 'Detail not found');
+            showMessage('error', i18n.t('detail_mgmt.error_detail_not_found'));
             return;
         }
         
@@ -1054,7 +1082,7 @@ async function editDetail(detailId) {
         
     } catch (error) {
         console.error('Failed to load detail for editing:', error);
-        showMessage('error', `Failed to load detail: ${error.message}`);
+        showMessage('error', `${i18n.t('detail_mgmt.error_load_detail_failed')}: ${formatApiError(error)}`);
     }
 }
 
@@ -1071,7 +1099,7 @@ async function confirmDeleteDetail(detailId) {
         // Find the detail to delete
         const detail = details.find(d => d.detail_id === detailId);
         if (!detail) {
-            showMessage('error', 'Detail not found');
+            showMessage('error', i18n.t('detail_mgmt.error_detail_not_found'));
             return;
         }
         
@@ -1080,7 +1108,7 @@ async function confirmDeleteDetail(detailId) {
         
     } catch (error) {
         console.error('Failed to load detail for deletion:', error);
-        showMessage('error', `Failed to load detail: ${error.message}`);
+        showMessage('error', `${i18n.t('detail_mgmt.error_load_detail_failed')}: ${formatApiError(error)}`);
     }
 }
 
@@ -1128,7 +1156,7 @@ async function handleDeleteConfirm() {
         
     } catch (error) {
         console.error('Failed to delete detail:', error);
-        showMessage('error', `${i18n.t('detail_mgmt.delete_error')}: ${error.message}`);
+        showMessage('error', `${i18n.t('detail_mgmt.delete_error')}: ${formatApiError(error)}`);
     }
 }
 

@@ -6,9 +6,12 @@ use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 use std::collections::HashSet;
 
+use crate::api_error::ApiError;
 use crate::services::holiday::{shift_for_holidays, HolidayShift};
 use crate::services::period::end_of_month;
-use crate::{sql_queries, consts};
+use crate::{sql_queries, consts, validation};
+
+const ENTITY_LABEL: &str = "Recurring rule";
 
 /// 周期と起点を一体で表現する。`unit` と「いつ発生するか」のアンカー情報を
 /// バリアントごとに固定することで、不正な組み合わせ（例: Day なのに DayOfMonth が
@@ -536,6 +539,7 @@ fn columns_to_monthly_rule(cols: &CycleColumns) -> Result<MonthlyDayRule, String
 pub enum RecurringError {
     Database(sqlx::Error),
     Validation(String),
+    NotFound,
 }
 
 impl std::fmt::Display for RecurringError {
@@ -543,13 +547,39 @@ impl std::fmt::Display for RecurringError {
         match self {
             RecurringError::Database(e) => write!(f, "Database error: {}", e),
             RecurringError::Validation(msg) => write!(f, "Validation error: {}", msg),
+            RecurringError::NotFound => write!(f, "Recurring rule not found"),
         }
     }
 }
 
+impl std::error::Error for RecurringError {}
+
 impl From<sqlx::Error> for RecurringError {
     fn from(err: sqlx::Error) -> Self {
         RecurringError::Database(err)
+    }
+}
+
+/// Map the domain-specific `RecurringError` onto the wire-level `ApiError`
+/// so the tauri command wrappers can `?`-propagate it into a structured
+/// `{ code, message, entity? }` payload for the frontend classifier
+/// (`res/js/recurring-rule.js` — direct `err.code` branching, no substring
+/// matches). Matches the `From<CategoryError>` / `From<UserManagementError>`
+/// shape (PR #100/#101).
+///
+/// Codes:
+///   - `NotFound`        → `not_found` (entity="recurring rule")
+///   - `Validation(msg)` → `validation` (message preserved so the recurring
+///                         screen can still dispatch bounded-field errors to
+///                         the right inline input)
+///   - `Database(e)`     → `database`
+impl From<RecurringError> for ApiError {
+    fn from(err: RecurringError) -> Self {
+        match err {
+            RecurringError::NotFound => ApiError::not_found(ENTITY_LABEL),
+            RecurringError::Validation(msg) => ApiError::validation(msg),
+            RecurringError::Database(e) => ApiError::database(e.to_string()),
+        }
     }
 }
 
@@ -664,36 +694,22 @@ impl RecurringService {
         }
 
         // Bounded-field length checks (Issue #37 Phase 2-3, character count).
-        if let Some(rule_name) = &request.rule_name {
-            if rule_name.chars().count() > consts::MAX_RULE_NAME_LEN {
-                return Err(RecurringError::Validation(format!(
-                    "Rule name must be {} characters or less",
-                    consts::MAX_RULE_NAME_LEN
-                )));
-            }
-        }
-        if request.detail.item_name.chars().count() > consts::MAX_ITEM_NAME_LEN {
-            return Err(RecurringError::Validation(format!(
-                "Item name must be {} characters or less",
-                consts::MAX_ITEM_NAME_LEN
-            )));
-        }
-        if let Some(memo) = &request.header_memo {
-            if memo.chars().count() > consts::MAX_MEMO_LEN {
-                return Err(RecurringError::Validation(format!(
-                    "Header memo must be {} characters or less",
-                    consts::MAX_MEMO_LEN
-                )));
-            }
-        }
-        if let Some(memo) = &request.detail.detail_memo {
-            if memo.chars().count() > consts::MAX_MEMO_LEN {
-                return Err(RecurringError::Validation(format!(
-                    "Detail memo must be {} characters or less",
-                    consts::MAX_MEMO_LEN
-                )));
-            }
-        }
+        validation::validate_optional_max_chars(
+            "Rule name",
+            request.rule_name.as_ref(),
+            consts::MAX_RULE_NAME_LEN,
+        )
+        .map_err(RecurringError::Validation)?;
+        validation::validate_max_chars(
+            "Item name",
+            &request.detail.item_name,
+            consts::MAX_ITEM_NAME_LEN,
+        )
+        .map_err(RecurringError::Validation)?;
+        validation::validate_memo("Header memo", request.header_memo.as_ref())
+            .map_err(RecurringError::Validation)?;
+        validation::validate_memo("Detail memo", request.detail.detail_memo.as_ref())
+            .map_err(RecurringError::Validation)?;
 
         let anchor_date = match &request.anchor_date {
             Some(s) => Some(
@@ -910,11 +926,21 @@ impl RecurringService {
                 .await?;
         }
 
-        sqlx::query(sql_queries::RECURRING_RULES_DELETE)
+        // The rule delete itself must hit exactly one row. Zero means the
+        // rule was already removed (concurrent op from another window, or
+        // a stale/foreign rule_id) — return NotFound instead of committing
+        // an empty transaction and showing a fake success toast. The prior
+        // cascade/detach step tolerates zero rows because a fresh rule can
+        // legitimately have no materialized occurrences.
+        let result = sqlx::query(sql_queries::RECURRING_RULES_DELETE)
             .bind(rule_id)
             .bind(user_id)
             .execute(&mut *tx)
             .await?;
+
+        if result.rows_affected() == 0 {
+            return Err(RecurringError::NotFound);
+        }
 
         tx.commit().await?;
         Ok(())
@@ -1773,5 +1799,84 @@ mod tests {
         let msg = err.to_string();
         assert!(msg.contains(&consts::MAX_MEMO_LEN.to_string()),
             "error should reference the limit: {}", msg);
+    }
+
+    // Fable-5 review #8 — deleting a rule that no longer exists (concurrent
+    // removal from another window, foreign or stale rule_id) must return
+    // NotFound so the frontend shows a targeted toast instead of a fake
+    // "deleted" success. Matches the Shop/Manufacturer/Product master-audit
+    // contract (PR #75/#76/#77) and the category not_found rollout
+    // (PR #83).
+    #[tokio::test]
+    async fn test_delete_rule_returns_not_found_for_missing() {
+        let pool = crate::test_helpers::database::setup_test_db().await;
+        let service = RecurringService::new(pool);
+
+        let result = service.delete_rule(2, 99999, false).await;
+        assert!(matches!(result.unwrap_err(), RecurringError::NotFound));
+
+        // cascade variant must behave identically — a rule that was never
+        // there cannot have any generated occurrences to sweep.
+        let result_cascade = service.delete_rule(2, 99999, true).await;
+        assert!(matches!(result_cascade.unwrap_err(), RecurringError::NotFound));
+    }
+
+    // ---- From<RecurringError> for ApiError ------------------------------
+    // These tests pin the wire codes that the frontend classifier
+    // (`res/js/recurring-rule.js` — `err.code` branching) matches on.
+    // If a variant is renamed here or in api_error.rs, the JS side stops
+    // classifying its errors — hence the assertions on the stable
+    // `ApiError::CODE_*` constants. Mirrors the CategoryError /
+    // UserManagementError precedent (PR #100/#101).
+
+    #[test]
+    fn not_found_maps_to_not_found_code_with_recurring_rule_entity() {
+        let err: ApiError = RecurringError::NotFound.into();
+        assert_eq!(err.code, ApiError::CODE_NOT_FOUND);
+        assert_eq!(err.entity.as_deref(), Some("recurring rule"));
+    }
+
+    #[test]
+    fn validation_preserves_message_and_omits_entity() {
+        let err: ApiError = RecurringError::Validation(
+            "Rule name must be 64 characters or less".to_string(),
+        )
+        .into();
+        assert_eq!(err.code, ApiError::CODE_VALIDATION);
+        assert!(err.message.contains("64 characters"));
+        assert!(err.entity.is_none());
+    }
+
+    #[test]
+    fn database_error_maps_to_database_code() {
+        let err: ApiError = RecurringError::Database(sqlx::Error::RowNotFound).into();
+        assert_eq!(err.code, ApiError::CODE_DATABASE);
+        assert!(err.entity.is_none());
+    }
+
+    #[test]
+    fn field_needle_message_survives_conversion_for_frontend_routing() {
+        // The recurring-rule frontend dispatches bounded-field validation
+        // errors to the right input by checking `err.message.startsWith(...)`
+        // after gating on `err.code === 'validation'`. That contract needs
+        // the four leading needles (`"Rule name must be"`, `"Item name must
+        // be"`, `"Header memo must be"`, `"Detail memo must be"`) to reach
+        // the wire verbatim — this test pins that.
+        for needle in [
+            "Rule name must be",
+            "Item name must be",
+            "Header memo must be",
+            "Detail memo must be",
+        ] {
+            let msg = format!("{} 64 characters or less", needle);
+            let err: ApiError = RecurringError::Validation(msg.clone()).into();
+            assert_eq!(err.code, ApiError::CODE_VALIDATION);
+            assert!(
+                err.message.starts_with(needle),
+                "wire message `{}` must start with `{}` for frontend field routing",
+                err.message,
+                needle
+            );
+        }
     }
 }

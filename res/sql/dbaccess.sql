@@ -1,4 +1,11 @@
 -- SQL_10000001: Create USERS table
+--
+-- ENCRYPTION_SALT: 16-byte cryptographically-random salt for the user's
+-- Argon2 encryption-key derivation (used by services::encryption). Stored
+-- per user so an attacker with a stolen DB cannot pre-compute a rainbow
+-- table shared across every install — see Fable-5 review #15.
+-- Column is BLOB and nullable so ALTER TABLE on legacy DBs succeeds;
+-- the migration path backfills every existing row with a fresh salt.
 CREATE TABLE IF NOT EXISTS USERS (
     USER_ID INTEGER NOT NULL,
     NAME VARCHAR(128) NOT NULL UNIQUE,
@@ -10,6 +17,7 @@ CREATE TABLE IF NOT EXISTS USERS (
     MONTH_PERIOD_HOLIDAY_SHIFT INTEGER DEFAULT 0,
     YEAR_PERIOD_START_MONTH INTEGER DEFAULT 1,
     YEAR_PERIOD_START_DAY INTEGER DEFAULT 1,
+    ENCRYPTION_SALT BLOB,
     ENTRY_DT DATETIME NOT NULL,
     UPDATE_DT DATETIME,
     PRIMARY KEY(USER_ID)
@@ -662,7 +670,12 @@ CREATE TABLE IF NOT EXISTS SHOPS (
     IS_DISABLED INTEGER DEFAULT 0,
     ENTRY_DT DATETIME NOT NULL DEFAULT (datetime('now')),
     UPDATE_DT DATETIME,
-    FOREIGN KEY (USER_ID) REFERENCES USERS(USER_ID)
+    FOREIGN KEY (USER_ID) REFERENCES USERS(USER_ID),
+    -- PR15 (Fable-5 #20): match the sibling MANUFACTURERS / PRODUCTS
+    -- constraint. Fresh DBs get the auto-index directly; existing DBs
+    -- get an equivalent unique index via `Database::migrate_shops_unique`
+    -- after dedup + reference repoint.
+    UNIQUE(USER_ID, SHOP_NAME)
 );
 
 -- Create indexes for SHOPS
@@ -1793,3 +1806,81 @@ INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESO
 INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2371, 'manufacturer_mgmt.back_to_product', 'en', '← Back to product entry', 'manufacturer_mgmt', 'Button: return to the product master modal after registering a manufacturer', datetime('now'));
 INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2372, 'manufacturer_mgmt.back_to_product', 'ja', '← 商品入力に戻る', 'manufacturer_mgmt', 'メーカー登録後に商品マスタモーダルへ戻るためのボタン', datetime('now'));
 
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2373, 'error.logout_failed', 'en', 'Logout failed', 'error', 'Logout failure message', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2374, 'error.logout_failed', 'ja', 'ログアウトに失敗しました', 'error', 'ログアウト失敗メッセージ', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2375, 'error.quit_failed', 'en', 'Failed to quit the application', 'error', 'Quit failure message', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2376, 'error.quit_failed', 'ja', 'アプリケーションの終了に失敗しました', 'error', '終了失敗メッセージ', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2377, 'error.load_accounts_failed', 'en', 'Failed to load accounts', 'error', 'Account load error', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2378, 'error.load_accounts_failed', 'ja', '口座の読み込みに失敗しました', 'error', '口座読み込みエラー', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2379, 'error.load_shops_failed', 'en', 'Failed to load shops', 'error', 'Shop load error', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2380, 'error.load_shops_failed', 'ja', '店舗の読み込みに失敗しました', 'error', '店舗読み込みエラー', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2381, 'shop_mgmt.failed_to_save', 'en', 'Failed to save shop', 'shop_mgmt', 'Save failure message', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2382, 'shop_mgmt.failed_to_save', 'ja', '店舗の保存に失敗しました', 'shop_mgmt', '保存失敗メッセージ', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2383, 'shop_mgmt.not_found', 'en', 'Shop not found. The list has been reloaded.', 'shop_mgmt', 'Stale edit target message', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2384, 'shop_mgmt.not_found', 'ja', '店舗が見つかりません。一覧を再読み込みしました。', 'shop_mgmt', '編集対象消失メッセージ', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2385, 'manufacturer_mgmt.failed_to_save', 'en', 'Failed to save manufacturer', 'manufacturer_mgmt', 'Save failure message', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2386, 'manufacturer_mgmt.failed_to_save', 'ja', 'メーカーの保存に失敗しました', 'manufacturer_mgmt', '保存失敗メッセージ', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2387, 'manufacturer_mgmt.not_found', 'en', 'Manufacturer not found. The list has been reloaded.', 'manufacturer_mgmt', 'Stale edit target message', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2388, 'manufacturer_mgmt.not_found', 'ja', 'メーカーが見つかりません。一覧を再読み込みしました。', 'manufacturer_mgmt', '編集対象消失メッセージ', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2389, 'product_mgmt.failed_to_save', 'en', 'Failed to save product', 'product_mgmt', 'Save failure message', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2390, 'product_mgmt.failed_to_save', 'ja', '商品の保存に失敗しました', 'product_mgmt', '保存失敗メッセージ', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2391, 'product_mgmt.not_found', 'en', 'Product not found. The list has been reloaded.', 'product_mgmt', 'Stale edit target message', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2392, 'product_mgmt.not_found', 'ja', '商品が見つかりません。一覧を再読み込みしました。', 'product_mgmt', '編集対象消失メッセージ', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2393, 'category_mgmt.not_found', 'en', 'Category not found. The tree has been reloaded.', 'category_mgmt', 'Stale edit target message', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2394, 'category_mgmt.not_found', 'ja', '費目が見つかりません。ツリーを再読み込みしました。', 'category_mgmt', '編集対象消失メッセージ', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2395, 'recurring_rule.not_found', 'en', 'Recurring rule not found. The list has been reloaded.', 'recurring_rule', 'Stale delete target message', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2396, 'recurring_rule.not_found', 'ja', '繰り返しルールが見つかりません。一覧を再読み込みしました。', 'recurring_rule', '削除対象消失メッセージ', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2397, 'product_mgmt.manufacturer_not_found', 'en', 'The selected manufacturer could not be found. It may have been removed.', 'product_mgmt', 'Manufacturer ownership check failed', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2398, 'product_mgmt.manufacturer_not_found', 'ja', '選択されたメーカーが見つかりません。削除された可能性があります。', 'product_mgmt', 'メーカー所有権チェック失敗', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2399, 'account_mgmt.not_found', 'en', 'Account not found. The list has been reloaded.', 'account_mgmt', 'Stale edit target message', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2400, 'account_mgmt.not_found', 'ja', '口座が見つかりません。一覧を再読み込みしました。', 'account_mgmt', '編集対象消失メッセージ', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2401, 'account_mgmt.duplicate_error', 'en', 'This account code already exists.', 'account_mgmt', 'Duplicate account code error', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2402, 'account_mgmt.duplicate_error', 'ja', 'この口座コードは既に登録されています。', 'account_mgmt', '重複口座コードエラー', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2403, 'user_mgmt.not_found', 'en', 'User not found. The list has been reloaded.', 'user_mgmt', 'Stale edit target message', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2404, 'user_mgmt.not_found', 'ja', 'ユーザーが見つかりません。一覧を再読み込みしました。', 'user_mgmt', '編集対象消失メッセージ', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2405, 'user_mgmt.duplicate_error', 'en', 'This username is already taken.', 'user_mgmt', 'Duplicate username error', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2406, 'user_mgmt.duplicate_error', 'ja', 'このユーザー名は既に使用されています。', 'user_mgmt', '重複ユーザー名エラー', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2407, 'user_mgmt.admin_protected', 'en', 'The administrator account cannot be removed.', 'user_mgmt', 'Admin protected message', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2408, 'user_mgmt.admin_protected', 'ja', '管理者アカウントは削除できません。', 'user_mgmt', '管理者保護メッセージ', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2409, 'user_mgmt.failed_to_save', 'en', 'Failed to save user', 'user_mgmt', 'Save failure message', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2410, 'user_mgmt.failed_to_save', 'ja', 'ユーザーの保存に失敗しました', 'user_mgmt', '保存失敗メッセージ', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2411, 'category_mgmt.duplicate_error', 'en', 'This category name already exists.', 'category_mgmt', 'Duplicate category name error', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2412, 'category_mgmt.duplicate_error', 'ja', 'この費目名は既に存在します。', 'category_mgmt', '重複費目名エラー', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2413, 'category_mgmt.failed_to_save', 'en', 'Failed to save category', 'category_mgmt', 'Save failure message', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2414, 'category_mgmt.failed_to_save', 'ja', '費目の保存に失敗しました', 'category_mgmt', '保存失敗メッセージ', datetime('now'));
+
+-- PR2c: P3 #21 — replace hardcoded English strings in transaction /
+-- transaction-detail management screens with i18n resources. Every key
+-- registered here is the message *prefix* only; when a screen displays
+-- "prefix: <backend detail>", the JS concatenates ": " + formatApiError(err)
+-- at the call site (matches the existing transaction_mgmt.confirm_error /
+-- delete_error / failed_to_load pattern), so keys stay simple and no
+-- `{placeholder}` interpolation is needed.
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2415, 'transaction_mgmt.load_transactions_failed', 'en', 'Failed to load transactions', 'transaction_mgmt', 'Transaction list load failure prefix (PR2c)', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2416, 'transaction_mgmt.load_transactions_failed', 'ja', '取引一覧の読み込みに失敗しました', 'transaction_mgmt', '取引一覧読み込み失敗プレフィックス (PR2c)', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2417, 'detail_mgmt.error_no_transaction_id', 'en', 'No transaction ID provided', 'detail_mgmt', 'Missing transaction_id query param (PR2c)', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2418, 'detail_mgmt.error_no_transaction_id', 'ja', '取引IDが指定されていません', 'detail_mgmt', 'transaction_id クエリパラメータ欠落 (PR2c)', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2419, 'detail_mgmt.error_initialization_failed', 'en', 'Initialization failed', 'detail_mgmt', 'Outer catch prefix on the detail screen (PR2c)', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2420, 'detail_mgmt.error_initialization_failed', 'ja', '初期化に失敗しました', 'detail_mgmt', '明細画面の外側 catch プレフィックス (PR2c)', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2421, 'detail_mgmt.error_category_not_loaded', 'en', 'Category code not loaded. Please refresh the page.', 'detail_mgmt', 'category1_code missing when opening the modal (PR2c)', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2422, 'detail_mgmt.error_category_not_loaded', 'ja', 'カテゴリコードが読み込まれていません。ページを更新してください。', 'detail_mgmt', 'モーダルを開いた時点で category1_code 未設定 (PR2c)', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2423, 'detail_mgmt.error_load_categories_failed', 'en', 'Failed to load categories', 'detail_mgmt', 'get_category_tree_with_lang failure prefix (PR2c)', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2424, 'detail_mgmt.error_load_categories_failed', 'ja', 'カテゴリの読み込みに失敗しました', 'detail_mgmt', 'get_category_tree_with_lang 失敗プレフィックス (PR2c)', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2425, 'detail_mgmt.error_load_header_failed', 'en', 'Failed to load transaction header', 'detail_mgmt', 'get_transaction_header_with_info failure prefix (PR2c)', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2426, 'detail_mgmt.error_load_header_failed', 'ja', '取引ヘッダーの読み込みに失敗しました', 'detail_mgmt', 'get_transaction_header_with_info 失敗プレフィックス (PR2c)', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2427, 'detail_mgmt.error_load_detail_failed', 'en', 'Failed to load detail', 'detail_mgmt', 'edit/delete detail load failure prefix (PR2c)', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2428, 'detail_mgmt.error_load_detail_failed', 'ja', '明細の読み込みに失敗しました', 'detail_mgmt', '編集/削除時の明細読み込み失敗プレフィックス (PR2c)', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2429, 'detail_mgmt.error_detail_not_found', 'en', 'Detail not found', 'detail_mgmt', 'Stale detail_id passed to edit/delete flow (PR2c)', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2430, 'detail_mgmt.error_detail_not_found', 'ja', '明細が見つかりません', 'detail_mgmt', '編集/削除時に detail_id が既に無効 (PR2c)', datetime('now'));
+
+-- PR14 (Fable-5 #21) — auth-specific error resources for the
+-- login/setup screens. Previously the frontend concatenated
+-- `i18n.t('error.login_failed') + ': ' + error` where `error` was the
+-- raw English string from the backend, producing a mixed-language
+-- toast. The auth commands now return structured ApiError codes
+-- (`auth_invalid_credentials` / `auth_setup_completed`) and the
+-- frontend maps them to these keys directly.
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2431, 'error.invalid_credentials', 'en', 'Invalid username or password.', 'error', 'Login failed: wrong credentials (PR14)', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2432, 'error.invalid_credentials', 'ja', 'ユーザー名またはパスワードが正しくありません。', 'error', 'ログイン失敗: 認証情報不正 (PR14)', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2433, 'error.setup_completed', 'en', 'Setup has already been completed.', 'error', 'Registration refused: setup done (PR14)', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2434, 'error.setup_completed', 'ja', 'セットアップは既に完了しています。', 'error', '登録拒否: セットアップ済み (PR14)', datetime('now'));

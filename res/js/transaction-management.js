@@ -5,7 +5,7 @@ import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontS
 import { fitWindowToScreen } from './window-fit.js';
 import { setupLanguageMenuHandlers, setupLanguageMenu, handleLogout, handleQuit } from './menu.js';
 import { HTML_FILES } from './html-files.js';
-import { TAX_ROUND_DOWN, TAX_ROUND_HALF_UP, TAX_ROUND_UP, ROLE_ADMIN, ROLE_USER, MAX_MEMO_LEN } from './consts.js';
+import { TAX_ROUND_DOWN, TAX_ROUND_HALF_UP, TAX_ROUND_UP, ROLE_ADMIN, ROLE_USER, MAX_MEMO_LEN, SOURCE_SCREEN_TRANSACTION_MGMT } from './consts.js';
 import { Modal } from './modal.js';
 import { getCurrentSessionUser, isSessionAuthenticated, setSessionSourceScreen, getSessionModalState, setSessionModalState, clearSessionModalState } from './session.js';
 import { createMenuBar } from './menu.js';
@@ -13,6 +13,8 @@ import { applyHeaderRecalculationPrompt } from './header-recalc.js';
 import { calculateRecommendedTotal } from './tax-calc.js';
 import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
 import { showToast } from './toast.js';
+import { escapeHtml } from './escape-html.js';
+import { formatApiError, API_ERROR_CODES } from './master-crud.js';
 
 let currentUserId = null;
 let currentUserRole = null;
@@ -115,10 +117,14 @@ function setupMenuHandlers() {
     const fileDropdown = document.getElementById('file-dropdown');
     
     if (fileMenu && fileDropdown) {
-        fileMenu.addEventListener('click', (e) => {
-            e.stopPropagation();
-            fileDropdown.classList.toggle('show');
-        });
+        // The toggle may already be wired by menu.js; the items are only wired here
+        if (fileMenu.dataset.initialized !== 'true') {
+            fileMenu.addEventListener('click', (e) => {
+                e.stopPropagation();
+                fileDropdown.classList.toggle('show');
+            });
+            fileMenu.dataset.initialized = 'true';
+        }
         
         // Back to main
         const backToMainItem = fileDropdown.querySelector('[data-i18n="menu.back_to_main"]');
@@ -318,6 +324,7 @@ async function loadCategoriesForFilter() {
         
     } catch (error) {
         console.error('Failed to load categories:', error);
+        showToast(i18n.t('error.category_load_failed') + ': ' + formatApiError(error), { variant: 'error' });
     }
 }
 
@@ -349,7 +356,12 @@ async function loadTransactions() {
     } catch (error) {
         console.error('Failed to load transactions:', error);
         const listContainer = document.getElementById('transaction-list');
-        listContainer.innerHTML = `<div class="error">Failed to load transactions: ${error}</div>`;
+        // formatApiError unwraps the { code, message, entity } object
+        // shape that get_transactions returns after the ApiError migration
+        // (PR2b, Devin #104 review). The prefix is now i18n (PR2c / P3 #21);
+        // loadTransactions runs downstream of `await i18n.init()`, so
+        // `i18n.t` is guaranteed to resolve to the translated string.
+        listContainer.innerHTML = `<div class="error">${escapeHtml(i18n.t('transaction_mgmt.load_transactions_failed'))}: ${escapeHtml(formatApiError(error))}</div>`;
     }
 }
 
@@ -558,7 +570,7 @@ async function confirmScheduledTransaction(transactionId) {
         await loadTransactions();
     } catch (error) {
         console.error('Failed to confirm scheduled transaction:', error);
-        showToast(i18n.t('transaction_mgmt.confirm_error') + ': ' + error, { variant: 'error' });
+        showToast(i18n.t('transaction_mgmt.confirm_error') + ': ' + formatApiError(error), { variant: 'error' });
     }
 }
 
@@ -581,7 +593,7 @@ async function deleteTransaction(transactionId) {
         
     } catch (error) {
         console.error('Failed to delete transaction:', error);
-        showToast(i18n.t('transaction_mgmt.delete_error') + ': ' + error, { variant: 'error' });
+        showToast(i18n.t('transaction_mgmt.delete_error') + ': ' + formatApiError(error), { variant: 'error' });
     }
 }
 
@@ -698,7 +710,7 @@ function initializeTransactionModal() {
             // Save modal state before navigation
             await saveModalState();
             // Set caller screen in session
-            await setSessionSourceScreen('transaction_mgmt');
+            await setSessionSourceScreen(SOURCE_SCREEN_TRANSACTION_MGMT);
             window.location.href = HTML_FILES.SHOP_MANAGEMENT;
         });
     }
@@ -759,6 +771,7 @@ async function loadCategoriesForModal() {
         
     } catch (error) {
         console.error('Failed to load categories:', error);
+        showToast(i18n.t('error.category_load_failed') + ': ' + formatApiError(error), { variant: 'error' });
     }
 }
 
@@ -804,6 +817,7 @@ async function loadAccountsForModal() {
         
     } catch (error) {
         console.error('Failed to load accounts:', error);
+        showToast(i18n.t('error.load_accounts_failed') + ': ' + formatApiError(error), { variant: 'error' });
     }
 }
 
@@ -834,6 +848,7 @@ async function loadShopsForModal() {
 
     } catch (error) {
         console.error('Failed to load shops:', error);
+        showToast(i18n.t('error.load_shops_failed') + ': ' + formatApiError(error), { variant: 'error' });
     }
 }
 
@@ -1010,19 +1025,27 @@ async function handleTransactionSubmit(event) {
     } catch (error) {
         console.error('Failed to save transaction:', error);
 
-        // Map backend error messages to i18n resources / localized text.
-        // Rust defense line for bounded fields (src/services/transaction.rs).
-        const errorMessage = error.toString();
-        if (errorMessage.includes('Memo must be')) {
-            showValidationError(memoInput, i18n.t('validation.max_length', {
-                field: i18n.t('transaction_mgmt.memo'),
-                max: MAX_MEMO_LEN,
-                actual: [...memoRaw].length,
-            }));
-            throw error;
+        // Route bounded-field validation errors to the offending input.
+        // Rust now emits a structured `ApiError { code: 'validation',
+        // message: '...' }` (PR2b); the `code === 'validation'` gate
+        // scopes the message-substring lookup so a generic database
+        // error can never accidentally match the memo needle.
+        const isValidation = error
+            && typeof error === 'object'
+            && error.code === API_ERROR_CODES.VALIDATION;
+        if (isValidation) {
+            const message = String(error.message || '');
+            if (message.startsWith('Memo must be')) {
+                showValidationError(memoInput, i18n.t('validation.max_length', {
+                    field: i18n.t('transaction_mgmt.memo'),
+                    max: MAX_MEMO_LEN,
+                    actual: [...memoRaw].length,
+                }));
+                throw error;
+            }
         }
 
-        showToast(i18n.t('transaction_mgmt.failed_to_save') + ': ' + error, { variant: 'error' });
+        showToast(i18n.t('transaction_mgmt.failed_to_save') + ': ' + formatApiError(error), { variant: 'error' });
     }
 }
 
@@ -1058,7 +1081,7 @@ async function loadTransactionData(transactionId) {
         
     } catch (error) {
         console.error('Failed to load transaction:', error);
-        showToast(i18n.t('transaction_mgmt.failed_to_load') + ': ' + error, { variant: 'error' });
+        showToast(i18n.t('transaction_mgmt.failed_to_load') + ': ' + formatApiError(error), { variant: 'error' });
     }
 }
 

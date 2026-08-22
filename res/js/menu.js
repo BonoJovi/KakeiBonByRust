@@ -2,8 +2,40 @@ import { invoke } from '@tauri-apps/api/core';
 import i18n from './i18n.js';
 import { setupIndicators } from './indicators.js';
 import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers } from './font-size.js';
+import { setupLanguageMenuHandlers, setupLanguageMenu } from './language-menu.js';
 import * as session from './session.js';
 import { showToast } from './toast.js';
+import { HTML_FILES } from './html-files.js';
+import { formatApiError, API_ERROR_CODES } from './master-crud.js';
+
+// PR14 (Fable-5 #21): map an auth-error object from the backend to a
+// localised toast. Auth commands return structured `ApiError { code,
+// message }` objects; the codes below identify each user-facing
+// outcome. `validation` further inspects the message so the existing
+// `error.password_empty` / `error.password_too_short` keys keep
+// working for the two check paths in `validate_password`. Returns
+// `null` for unclassified errors so the caller can fall back to a
+// generic prefix + `formatApiError(err)`.
+const AUTH_ERROR_CODE_AUTH_INVALID_CREDENTIALS = 'auth_invalid_credentials';
+const AUTH_ERROR_CODE_AUTH_SETUP_COMPLETED = 'auth_setup_completed';
+
+function mapAuthErrorCode(err) {
+    if (!err || typeof err !== 'object') return null;
+    switch (err.code) {
+        case AUTH_ERROR_CODE_AUTH_INVALID_CREDENTIALS:
+            return i18n.t('error.invalid_credentials');
+        case AUTH_ERROR_CODE_AUTH_SETUP_COMPLETED:
+            return i18n.t('error.setup_completed');
+        case API_ERROR_CODES.VALIDATION: {
+            const msg = String(err.message || '');
+            if (msg.includes('cannot be empty')) return i18n.t('error.password_empty');
+            if (msg.includes('at least')) return i18n.t('error.password_too_short');
+            return null;
+        }
+        default:
+            return null;
+    }
+}
 
 let isLoggedIn = false;
 
@@ -103,8 +135,6 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
-import { HTML_FILES } from './html-files.js';
-
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('DOM loaded');
 
@@ -179,9 +209,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 });
                 
                 // Toggle this dropdown
-                if (!isShown) {
-                    fileDropdown.classList.add('show');
-                }
+                fileDropdown.classList.toggle('show', !isShown);
                 
                 console.log('After toggle - classes:', fileDropdown.className);
                 console.log('Computed display style:', window.getComputedStyle(fileDropdown).display);
@@ -247,24 +275,25 @@ document.addEventListener('DOMContentLoaded', async function() {
     const adminDropdown = document.getElementById('admin-dropdown');
     
     if (adminMenu && adminDropdown) {
-        adminMenu.addEventListener('click', function(e) {
-            console.log('Admin menu clicked');
-            e.stopPropagation();
-            
-            const isShown = adminDropdown.classList.contains('show');
-            
-            // Close all other dropdowns
-            document.querySelectorAll('.dropdown').forEach(d => {
-                if (d !== adminDropdown) {
-                    d.classList.remove('show');
-                }
+        if (adminMenu.dataset.initialized !== 'true') {
+            adminMenu.addEventListener('click', function(e) {
+                console.log('Admin menu clicked');
+                e.stopPropagation();
+
+                const isShown = adminDropdown.classList.contains('show');
+
+                // Close all other dropdowns
+                document.querySelectorAll('.dropdown').forEach(d => {
+                    if (d !== adminDropdown) {
+                        d.classList.remove('show');
+                    }
+                });
+
+                adminDropdown.classList.toggle('show', !isShown);
             });
-            
-            // Toggle this dropdown
-            if (!isShown) {
-                adminDropdown.classList.add('show');
-            }
-        });
+
+            adminMenu.dataset.initialized = 'true';
+        }
         
         adminDropdown.addEventListener('click', function(e) {
             // Allow submenu items to close the dropdown
@@ -456,9 +485,18 @@ async function checkSetupNeeded() {
             appContent.classList.add('hidden');
         } else {
             adminSetup.classList.add('hidden');
-            loginForm.classList.remove('hidden');
-            appContent.classList.add('hidden');
-            document.getElementById('username')?.focus();
+            // A session may still be active (e.g. "Back to Main" from a
+            // management screen): show the app instead of the login form
+            const authenticated = await session.isSessionAuthenticated().catch(() => false);
+            if (authenticated) {
+                isLoggedIn = true;
+                loginForm.classList.add('hidden');
+                appContent.classList.remove('hidden');
+            } else {
+                loginForm.classList.remove('hidden');
+                appContent.classList.add('hidden');
+                document.getElementById('username')?.focus();
+            }
         }
     } catch (error) {
         console.error('Failed to check setup status:', error);
@@ -466,106 +504,6 @@ async function checkSetupNeeded() {
         adminSetup.classList.remove('hidden');
         loginForm.classList.add('hidden');
         appContent.classList.add('hidden');
-    }
-}
-
-function setupLanguageMenuHandlers() {
-    const languageMenu = document.getElementById('language-menu');
-    const languageDropdown = document.getElementById('language-dropdown');
-    
-    if (!languageMenu || !languageDropdown) {
-        console.error('Language menu elements not found');
-        return;
-    }
-    
-    // Check if already initialized
-    if (languageMenu.dataset.initialized === 'true') {
-        console.log('[setupLanguageMenuHandlers] Already initialized, skipping');
-        return;
-    }
-    
-    // Setup dropdown toggle - only once
-    languageMenu.addEventListener('click', function(e) {
-        console.log('Language menu clicked');
-        e.stopPropagation();
-        
-        const isShown = languageDropdown.classList.contains('show');
-        
-        // Close all other dropdowns
-        document.querySelectorAll('.dropdown').forEach(dropdown => {
-            if (dropdown !== languageDropdown) {
-                dropdown.classList.remove('show');
-            }
-        });
-        
-        // Toggle this dropdown
-        if (!isShown) {
-            languageDropdown.classList.add('show');
-        }
-        
-        console.log('Language dropdown toggled, show class:', languageDropdown.classList.contains('show'));
-    });
-    
-    // Mark as initialized
-    languageMenu.dataset.initialized = 'true';
-}
-
-async function setupLanguageMenu() {
-    try {
-        // Fetch language names from backend. Each entry is shown in its own
-        // native script (English / 日本語 / ...) regardless of the current UI
-        // language, so users can always recognize the language they want.
-        const languageNames = await invoke('get_language_names');
-        const currentLang = i18n.getCurrentLanguage();
-
-        const languageDropdown = document.getElementById('language-dropdown');
-        if (!languageDropdown) {
-            console.error('Language dropdown not found');
-            return;
-        }
-
-        languageDropdown.innerHTML = '';
-
-        for (const [langCode, langName] of languageNames) {
-            const item = document.createElement('div');
-            item.className = 'dropdown-item';
-            item.textContent = langName;
-            item.dataset.langCode = langCode;
-
-            // Mark current language with active class (shows filled circle)
-            if (langCode === currentLang) {
-                item.classList.add('active');
-            }
-
-            item.addEventListener('click', async function(e) {
-                e.stopPropagation();
-                await handleLanguageChange(langCode);
-                languageDropdown.classList.remove('show');
-            });
-
-            languageDropdown.appendChild(item);
-        }
-
-    } catch (error) {
-        console.error('Failed to setup language menu:', error);
-    }
-}
-
-async function handleLanguageChange(langCode) {
-    try {
-        console.log('Changing language to:', langCode);
-        await i18n.setLanguage(langCode);
-
-        // Reload menus whose items are generated dynamically.
-        // i18n.updateUI() only refreshes elements with data-i18n attributes,
-        // so menus built via textContent (Language, Font Size) need an explicit redraw.
-        await setupLanguageMenu();
-        await setupFontSizeMenu();
-
-        console.log('Language changed successfully');
-    } catch (error) {
-        console.error('Failed to change language:', error);
-        showToast(i18n.t('error.language_change_failed') + ': ' + error, { variant: 'error' });
     }
 }
 
@@ -614,7 +552,15 @@ async function handleAdminSetup(e) {
         
     } catch (error) {
         console.error('Admin registration error:', error);
-        messageDiv.textContent = i18n.t('error.registration_failed') + ': ' + error;
+        // PR14 (Fable-5 #21): render the localised message the
+        // structured ApiError maps to. Fall back to the generic
+        // "registration failed" prefix + `formatApiError` when the
+        // error is not one of the classified auth codes (mostly the
+        // `database` code — the message text stays in the console
+        // for triage but the user sees a clean localised toast).
+        messageDiv.textContent =
+            mapAuthErrorCode(error)
+            || `${i18n.t('error.registration_failed')}: ${formatApiError(error)}`;
         messageDiv.className = 'message error';
     }
 }
@@ -663,7 +609,9 @@ async function handleUserSetup(e) {
         
     } catch (error) {
         console.error('User registration error:', error);
-        messageDiv.textContent = i18n.t('error.registration_failed') + ': ' + error;
+        messageDiv.textContent =
+            mapAuthErrorCode(error)
+            || `${i18n.t('error.registration_failed')}: ${formatApiError(error)}`;
         messageDiv.className = 'message error';
     }
 }
@@ -709,7 +657,9 @@ async function handleLoginSubmit(e) {
         
     } catch (error) {
         console.error('Login error:', error);
-        messageDiv.textContent = i18n.t('error.login_failed') + ': ' + error;
+        messageDiv.textContent =
+            mapAuthErrorCode(error)
+            || `${i18n.t('error.login_failed')}: ${formatApiError(error)}`;
         messageDiv.className = 'message error';
     }
 }
@@ -722,7 +672,11 @@ async function handleLogout() {
         await session.clearSession();
         console.log('Session cleared');
     } catch (error) {
+        // The backend session is still authenticated, so do not present the
+        // user with a logged-out UI.
         console.error('Failed to clear session:', error);
+        showToast(i18n.t('error.logout_failed') + ': ' + error, { variant: 'error' });
+        return;
     }
     
     isLoggedIn = false;
@@ -745,9 +699,14 @@ async function handleLogout() {
     }
 }
 
-function handleQuit() {
+async function handleQuit() {
     console.log('Quit clicked');
-    invoke('handle_quit');
+    try {
+        await invoke('handle_quit');
+    } catch (error) {
+        console.error('Quit failed:', error);
+        showToast(i18n.t('error.quit_failed') + ': ' + error, { variant: 'error' });
+    }
 }
 
 function setupCustomValidationMessages() {
@@ -779,6 +738,10 @@ function setupCustomValidationMessages() {
  * Pages used to duplicate this wiring inline; aggregation pages were missing the
  * submenu listeners entirely, so submenu clicks were silently dropped (v2.4.0 fix).
  * Submenu items are resolved by `data-i18n` key so DOM order changes don't break wiring.
+ *
+ * The toggle and the submenu items are guarded by separate flags: this runs after the
+ * `DOMContentLoaded` handler above may already have wired the toggle, while the submenu
+ * items are only ever wired here.
  */
 export function setupFileMenuHandlers() {
     const fileMenu = document.getElementById('file-menu');
@@ -788,16 +751,25 @@ export function setupFileMenuHandlers() {
         return;
     }
 
-    fileMenu.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const isShown = fileDropdown.classList.contains('show');
-        document.querySelectorAll('.dropdown').forEach((d) => {
-            if (d !== fileDropdown) d.classList.remove('show');
+    if (fileMenu.dataset.initialized !== 'true') {
+        fileMenu.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isShown = fileDropdown.classList.contains('show');
+            document.querySelectorAll('.dropdown').forEach((d) => {
+                if (d !== fileDropdown) d.classList.remove('show');
+            });
+            fileDropdown.classList.toggle('show', !isShown);
         });
-        fileDropdown.classList.toggle('show', !isShown);
-    });
 
-    fileDropdown.addEventListener('click', (e) => e.stopPropagation());
+        fileDropdown.addEventListener('click', (e) => e.stopPropagation());
+
+        fileMenu.dataset.initialized = 'true';
+    }
+
+    if (fileDropdown.dataset.itemsInitialized === 'true') {
+        return;
+    }
+    fileDropdown.dataset.itemsInitialized = 'true';
 
     const backToMainItem = fileDropdown.querySelector('[data-i18n="menu.back_to_main"]');
     const logoutItem = fileDropdown.querySelector('[data-i18n="menu.logout"]');
@@ -820,6 +792,7 @@ export function setupFileMenuHandlers() {
                 window.location.href = HTML_FILES.INDEX;
             } catch (error) {
                 console.error('Logout failed:', error);
+                showToast(i18n.t('error.logout_failed') + ': ' + error, { variant: 'error' });
             }
         });
     }
@@ -832,16 +805,18 @@ export function setupFileMenuHandlers() {
                 await invoke('handle_quit');
             } catch (error) {
                 console.error('Quit failed:', error);
+                showToast(i18n.t('error.quit_failed') + ': ' + error, { variant: 'error' });
             }
         });
     }
 }
 
-// Export functions for use in other modules
+// Export functions for use in other modules.
+// The language menu implementation lives in language-menu.js; it is
+// re-exported here for pages that import it from menu.js.
 export {
     setupLanguageMenuHandlers,
     setupLanguageMenu,
-    handleLanguageChange,
     handleLogout,
     handleQuit,
     setupCustomValidationMessages

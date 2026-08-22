@@ -77,16 +77,35 @@ export function showMaxLengthError(inputEl, fieldLabel, max, actual) {
  * input/textarea. Updates on every `input` event. Counts Unicode code
  * points via `[...str].length` so the displayed count matches the
  * backend's `chars().count()` validation (surrogate pairs count as one).
+ * Input beyond `max` code points is truncated, replacing the HTML
+ * `maxlength` attribute (which counts UTF-16 code units, not code points).
  *
- * Idempotent: calling twice on the same element reuses the existing
- * counter and replaces the listener.
+ * IME composition guard (Fable-5 review #D1): pre-conversion IME input
+ * (kana/kanji, hangul, pinyin) fires `input` events for every candidate
+ * keystroke. Writing back to `inputEl.value` mid-composition — as the
+ * truncation branch does — cancels or corrupts the IME buffer, breaking
+ * Japanese input around the boundary. This helper tracks
+ * `compositionstart` / `compositionend` and skips truncation while a
+ * composition is active; truncation is applied once the composition
+ * commits. Before this fix a stray `maxlength=128` attribute masked the
+ * bug by keeping input under the boundary; removing the attribute
+ * (product-management.html:70, shop-management.html:65,
+ * manufacturer-management.html:69) exposed it.
+ *
+ * Idempotent: calling twice on the same element detaches the prior
+ * listeners first.
  *
  * @param {HTMLElement} inputEl - <input> or <textarea> element
  * @param {number} max - limit in characters (same value as backend bound)
- * @returns {() => void} detach — removes the listener and counter element
+ * @returns {() => void} detach — removes the listeners and counter element
  */
 export function attachCharCounter(inputEl, max) {
     if (!inputEl) return () => {};
+
+    // Idempotent: detach any prior attachment so we don't stack listeners.
+    if (inputEl.__charCounterDetach) {
+        inputEl.__charCounterDetach();
+    }
 
     let counterEl = findCounterElement(inputEl);
     if (!counterEl) {
@@ -96,26 +115,42 @@ export function attachCharCounter(inputEl, max) {
         inputEl.insertAdjacentElement('afterend', counterEl);
     }
 
-    // Replace any prior listener attached by an earlier call.
-    if (inputEl.__charCounterHandler) {
-        inputEl.removeEventListener('input', inputEl.__charCounterHandler);
-    }
+    let isComposing = false;
 
     const update = () => {
-        const count = [...(inputEl.value || '')].length;
-        counterEl.textContent = `${count} / ${max}`;
+        const chars = [...(inputEl.value || '')];
+        if (!isComposing && chars.length > max) {
+            inputEl.value = chars.slice(0, max).join('');
+        }
+        counterEl.textContent = `${[...(inputEl.value || '')].length} / ${max}`;
     };
-    inputEl.__charCounterHandler = update;
+    const onCompositionStart = () => {
+        isComposing = true;
+    };
+    const onCompositionEnd = () => {
+        // Composition committed: apply any truncation the composing
+        // branch skipped and refresh the counter with the final value.
+        isComposing = false;
+        update();
+    };
+
     inputEl.addEventListener('input', update);
+    inputEl.addEventListener('compositionstart', onCompositionStart);
+    inputEl.addEventListener('compositionend', onCompositionEnd);
     update();
 
-    return () => {
+    const detach = () => {
         inputEl.removeEventListener('input', update);
-        if (inputEl.__charCounterHandler === update) {
-            delete inputEl.__charCounterHandler;
+        inputEl.removeEventListener('compositionstart', onCompositionStart);
+        inputEl.removeEventListener('compositionend', onCompositionEnd);
+        if (inputEl.__charCounterDetach === detach) {
+            delete inputEl.__charCounterDetach;
         }
         counterEl.remove();
     };
+    inputEl.__charCounterDetach = detach;
+
+    return detach;
 }
 
 function findErrorElement(inputEl) {

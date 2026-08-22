@@ -1,5 +1,11 @@
 use serde::{Deserialize, Serialize};
-use std::sync::Mutex;
+use std::sync::{Mutex, MutexGuard};
+
+/// Locks a mutex, recovering the data if a previous holder panicked.
+/// Session state stays usable instead of panicking on a poisoned lock.
+fn lock_recover<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
+    mutex.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+}
 
 #[derive(Default, Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct User {
@@ -27,60 +33,60 @@ impl SessionState {
     }
 
     pub fn set_user(&self, user: User) {
-        *self.current_user.lock().unwrap() = Some(user);
+        *lock_recover(&self.current_user) = Some(user);
     }
 
     pub fn get_user(&self) -> Option<User> {
-        self.current_user.lock().unwrap().clone()
+        lock_recover(&self.current_user).clone()
     }
 
     pub fn clear_user(&self) {
-        *self.current_user.lock().unwrap() = None;
+        *lock_recover(&self.current_user) = None;
     }
 
     pub fn is_authenticated(&self) -> bool {
-        self.current_user.lock().unwrap().is_some()
+        lock_recover(&self.current_user).is_some()
     }
 
     pub fn set_source_screen(&self, source_screen: String) {
-        self.session_info.lock().unwrap().source_screen = Some(source_screen);
+        lock_recover(&self.session_info).source_screen = Some(source_screen);
     }
 
     pub fn get_source_screen(&self) -> Option<String> {
-        self.session_info.lock().unwrap().source_screen.clone()
+        lock_recover(&self.session_info).source_screen.clone()
     }
 
     pub fn clear_source_screen(&self) {
-        self.session_info.lock().unwrap().source_screen = None;
+        lock_recover(&self.session_info).source_screen = None;
     }
 
     pub fn set_category1_code(&self, category1_code: String) {
-        self.session_info.lock().unwrap().category1_code = Some(category1_code);
+        lock_recover(&self.session_info).category1_code = Some(category1_code);
     }
 
     pub fn get_category1_code(&self) -> Option<String> {
-        self.session_info.lock().unwrap().category1_code.clone()
+        lock_recover(&self.session_info).category1_code.clone()
     }
 
     pub fn clear_category1_code(&self) {
-        self.session_info.lock().unwrap().category1_code = None;
+        lock_recover(&self.session_info).category1_code = None;
     }
 
     pub fn set_modal_state(&self, modal_state: String) {
-        self.session_info.lock().unwrap().modal_state = Some(modal_state);
+        lock_recover(&self.session_info).modal_state = Some(modal_state);
     }
 
     pub fn get_modal_state(&self) -> Option<String> {
-        self.session_info.lock().unwrap().modal_state.clone()
+        lock_recover(&self.session_info).modal_state.clone()
     }
 
     pub fn clear_modal_state(&self) {
-        self.session_info.lock().unwrap().modal_state = None;
+        lock_recover(&self.session_info).modal_state = None;
     }
 
     pub fn clear_all(&self) {
         self.clear_user();
-        *self.session_info.lock().unwrap() = SessionInfo::default();
+        *lock_recover(&self.session_info) = SessionInfo::default();
     }
 }
 

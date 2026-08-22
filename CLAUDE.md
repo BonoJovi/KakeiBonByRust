@@ -12,7 +12,7 @@
 1. **All code changes on `dev` branch** — merge to `main` for releases only
 2. **Bilingual**: All user-facing text via i18n (never hardcode strings)
 3. **i18n RESOURCE_ID**: Always check MAX ID before adding — `INSERT OR IGNORE` silently skips duplicates (use `/i18n-add`)
-4. **Release**: Update 3 version files (Cargo.toml, tauri.conf.json, package.json) + run `check-release.sh` (use `/release`)
+4. **Release**: Edit 3 version files manually (Cargo.toml, tauri.conf.json, package.json); `Cargo.lock` is the 4th, rewritten automatically by `cargo build` — stage the diff. Then run `check-release.sh` (use `/release`)
 5. **SQL**: All queries in `src/sql_queries.rs`, prepared statements only
 6. **No `unwrap()` in production Rust** — always use `Result<T, E>`
 7. **ES Modules**: Include `.js` extension in imports

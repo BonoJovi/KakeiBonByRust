@@ -1,12 +1,16 @@
 use sqlx::sqlite::SqlitePool;
 use sqlx::Row;
+use crate::api_error::ApiError;
 use crate::{sql_queries, consts};
+
+const ENTITY_LABEL: &str = "Category";
 
 #[derive(Debug)]
 pub enum CategoryError {
     DatabaseError(sqlx::Error),
     DuplicateName(String),
     Validation(String),
+    NotFound,
 }
 
 impl std::fmt::Display for CategoryError {
@@ -15,6 +19,7 @@ impl std::fmt::Display for CategoryError {
             CategoryError::DatabaseError(e) => write!(f, "Database error: {}", e),
             CategoryError::DuplicateName(name) => write!(f, "Category name '{}' already exists", name),
             CategoryError::Validation(msg) => write!(f, "{}", msg),
+            CategoryError::NotFound => write!(f, "Category not found"),
         }
     }
 }
@@ -27,18 +32,36 @@ impl From<sqlx::Error> for CategoryError {
     }
 }
 
+/// Map the domain-specific `CategoryError` onto the wire-level `ApiError`
+/// so tauri command wrappers can `?`-propagate it into a structured
+/// `{ code, message, entity? }` payload for the frontend classifier
+/// (`res/js/master-crud.js::mapMasterErrorCode`). Kept as `From` (rather
+/// than a bespoke `.map_err`) so wrapper bodies stay one-line — the
+/// mapping happens implicitly at the `?` boundary. Matches the
+/// `From<UserManagementError>` shape (PR #100).
+///
+/// Codes:
+///   - `NotFound`            → `not_found` (entity="category")
+///   - `DuplicateName(_)`    → `duplicate_name` (entity="category")
+///   - `Validation(msg)`     → `validation` (message preserved for logs)
+///   - `DatabaseError(e)`    → `database`
+impl From<CategoryError> for ApiError {
+    fn from(err: CategoryError) -> Self {
+        match err {
+            CategoryError::NotFound => ApiError::not_found(ENTITY_LABEL),
+            CategoryError::DuplicateName(_) => ApiError::duplicate_name(ENTITY_LABEL),
+            CategoryError::Validation(msg) => ApiError::validation(msg),
+            CategoryError::DatabaseError(e) => ApiError::database(e.to_string()),
+        }
+    }
+}
+
 /// Issue #37 Phase 2-3 — bounded-field length guard for category i18n
 /// name columns (`CATEGORY*_I18N.*_NAME_I18N`). Counts characters, not
 /// bytes, so Japanese input is not implicitly clipped to ~85 chars.
 fn validate_i18n_name_length(name: &str, label: &str) -> Result<(), CategoryError> {
-    if name.chars().count() > consts::MAX_I18N_NAME_LEN {
-        return Err(CategoryError::Validation(format!(
-            "{} must be {} characters or less",
-            label,
-            consts::MAX_I18N_NAME_LEN
-        )));
-    }
-    Ok(())
+    crate::validation::validate_max_chars(label, name, consts::MAX_I18N_NAME_LEN)
+        .map_err(CategoryError::Validation)
 }
 
 pub struct CategoryService {
@@ -49,12 +72,238 @@ impl CategoryService {
     pub fn new(pool: SqlitePool) -> Self {
         Self { pool }
     }
+
+    // -----------------------------------------------------------------
+    // PR9 (Fable-5 #28): shared bilingual-duplicate checkers
+    //
+    // Both add and update paths for CATEGORY2 / CATEGORY3 need the same
+    // 4-way check against CATEGORY{2,3}_I18N: the incoming JA / EN
+    // names must not already exist in either lang column, in either
+    // direction (`ja in ja`, `en in en`, `ja in en`, `en in ja`). The
+    // original code duplicated that block 16 times (4 checks × 4
+    // callers) with subtly different bind orders between the ADD and
+    // EXCLUDING SQL constants — a bug waiting to happen the next time
+    // one of the four SQL clauses was extended.
+    //
+    // The helpers below take `exclude_code: Option<&str>` and dispatch
+    // to the matching SQL: `None` → ADD variant (add flow), `Some(code)`
+    // → EXCLUDING variant (update flow, exclude the row being edited).
+    // Bind order per SQL is encoded once inside the helper so the
+    // callers can never get it wrong.
+
+    /// Return `Err(DuplicateName(name))` if either of the two incoming
+    /// CATEGORY2 names collides with any existing CATEGORY2_I18N row
+    /// in the (user, cat1) scope, across either lang. Pass
+    /// `exclude_code = Some(cat2)` from the update path.
+    async fn check_category2_bilingual_duplicate(
+        &self,
+        user_id: i64,
+        category1_code: &str,
+        exclude_code: Option<&str>,
+        name_ja: &str,
+        name_en: &str,
+    ) -> Result<(), CategoryError> {
+        for (name, lang) in [
+            (name_ja, "ja"),
+            (name_en, "en"),
+            (name_ja, "en"),
+            (name_en, "ja"),
+        ] {
+            let count: i64 = match exclude_code {
+                None => sqlx::query_scalar(sql_queries::CATEGORY2_CHECK_DUPLICATE_NAME)
+                    .bind(user_id)
+                    .bind(category1_code)
+                    .bind(name)
+                    .bind(lang)
+                    .fetch_one(&self.pool)
+                    .await?,
+                Some(code) => {
+                    // CATEGORY2_CHECK_DUPLICATE_NAME_EXCLUDING binds
+                    // `(user_id, cat1, exclude_code, lang, name)` — the
+                    // LANG / NAME columns are ordered differently to
+                    // the ADD constant, so keep the bind order fenced
+                    // in here rather than at each call site.
+                    sqlx::query_scalar(sql_queries::CATEGORY2_CHECK_DUPLICATE_NAME_EXCLUDING)
+                        .bind(user_id)
+                        .bind(category1_code)
+                        .bind(code)
+                        .bind(lang)
+                        .bind(name)
+                        .fetch_one(&self.pool)
+                        .await?
+                }
+            };
+            if count > 0 {
+                return Err(CategoryError::DuplicateName(name.to_string()));
+            }
+        }
+        Ok(())
+    }
+
+    /// Same shape as [`check_category2_bilingual_duplicate`] for the
+    /// CATEGORY3 level. The extra `category2_code` bind lives in both
+    /// SQL constants so it's threaded through explicitly.
+    async fn check_category3_bilingual_duplicate(
+        &self,
+        user_id: i64,
+        category1_code: &str,
+        category2_code: &str,
+        exclude_code: Option<&str>,
+        name_ja: &str,
+        name_en: &str,
+    ) -> Result<(), CategoryError> {
+        for (name, lang) in [
+            (name_ja, "ja"),
+            (name_en, "en"),
+            (name_ja, "en"),
+            (name_en, "ja"),
+        ] {
+            let count: i64 = match exclude_code {
+                None => sqlx::query_scalar(sql_queries::CATEGORY3_CHECK_DUPLICATE_NAME)
+                    .bind(user_id)
+                    .bind(category1_code)
+                    .bind(category2_code)
+                    .bind(name)
+                    .bind(lang)
+                    .fetch_one(&self.pool)
+                    .await?,
+                Some(code) => sqlx::query_scalar(sql_queries::CATEGORY3_CHECK_DUPLICATE_NAME_EXCLUDING)
+                    .bind(user_id)
+                    .bind(category1_code)
+                    .bind(category2_code)
+                    .bind(code)
+                    .bind(lang)
+                    .bind(name)
+                    .fetch_one(&self.pool)
+                    .await?,
+            };
+            if count > 0 {
+                return Err(CategoryError::DuplicateName(name.to_string()));
+            }
+        }
+        Ok(())
+    }
+
+    // -----------------------------------------------------------------
+    // PR9 (Fable-5 #27): shared display-order swap helpers
+    //
+    // The 4 `move_category{2,3}_{up,down}` publics were structural
+    // clones: fetch current order, add ±1, look up the sibling at
+    // that target, and if one exists, run two UPDATEs inside a tx.
+    // The `<= 1` guard on the `_up` variants was redundant — when
+    // current_order is 1 the target is 0 and the sibling lookup
+    // returns None, which the `if let Some(...)` arm already
+    // treats as a no-op. Two internal helpers below (one per level)
+    // consume `delta = ±1`, and the 4 publics each collapse to a
+    // one-line wrapper.
+
+    async fn swap_category2_with_sibling(
+        &self,
+        user_id: i64,
+        category1_code: &str,
+        category2_code: &str,
+        delta: i64,
+    ) -> Result<(), CategoryError> {
+        let current_order: i64 = sqlx::query_scalar(sql_queries::CATEGORY2_GET_ORDER)
+            .bind(user_id)
+            .bind(category1_code)
+            .bind(category2_code)
+            .fetch_one(&self.pool)
+            .await?;
+
+        let target_order = current_order + delta;
+
+        // A missing sibling means there is nothing to swap with
+        // (no-op). Any other database error must reach the caller
+        // instead of being reported as success.
+        let sibling_code: Option<String> =
+            sqlx::query_scalar(sql_queries::CATEGORY2_GET_SIBLING_BY_ORDER)
+                .bind(user_id)
+                .bind(category1_code)
+                .bind(target_order)
+                .fetch_optional(&self.pool)
+                .await?;
+
+        if let Some(sibling_code) = sibling_code {
+            let mut tx = self.pool.begin().await?;
+            // Move current to target.
+            sqlx::query(sql_queries::CATEGORY2_UPDATE_ORDER)
+                .bind(target_order)
+                .bind(user_id)
+                .bind(category1_code)
+                .bind(category2_code)
+                .execute(&mut *tx)
+                .await?;
+            // Move sibling to the old current position.
+            sqlx::query(sql_queries::CATEGORY2_UPDATE_ORDER)
+                .bind(current_order)
+                .bind(user_id)
+                .bind(category1_code)
+                .bind(&sibling_code)
+                .execute(&mut *tx)
+                .await?;
+            tx.commit().await?;
+        }
+
+        Ok(())
+    }
+
+    async fn swap_category3_with_sibling(
+        &self,
+        user_id: i64,
+        category1_code: &str,
+        category2_code: &str,
+        category3_code: &str,
+        delta: i64,
+    ) -> Result<(), CategoryError> {
+        let current_order: i64 = sqlx::query_scalar(sql_queries::CATEGORY3_GET_ORDER)
+            .bind(user_id)
+            .bind(category1_code)
+            .bind(category2_code)
+            .bind(category3_code)
+            .fetch_one(&self.pool)
+            .await?;
+
+        let target_order = current_order + delta;
+
+        let sibling_code: Option<String> =
+            sqlx::query_scalar(sql_queries::CATEGORY3_GET_SIBLING_BY_ORDER)
+                .bind(user_id)
+                .bind(category1_code)
+                .bind(category2_code)
+                .bind(target_order)
+                .fetch_optional(&self.pool)
+                .await?;
+
+        if let Some(sibling_code) = sibling_code {
+            let mut tx = self.pool.begin().await?;
+            sqlx::query(sql_queries::CATEGORY3_UPDATE_ORDER)
+                .bind(target_order)
+                .bind(user_id)
+                .bind(category1_code)
+                .bind(category2_code)
+                .bind(category3_code)
+                .execute(&mut *tx)
+                .await?;
+            sqlx::query(sql_queries::CATEGORY3_UPDATE_ORDER)
+                .bind(current_order)
+                .bind(user_id)
+                .bind(category1_code)
+                .bind(category2_code)
+                .bind(&sibling_code)
+                .execute(&mut *tx)
+                .await?;
+            tx.commit().await?;
+        }
+
+        Ok(())
+    }
     
     /// Populate default categories for a new user
     /// This will be called when a general user is registered
     pub async fn populate_default_categories(&self, user_id: i64) -> Result<(), CategoryError> {
         // Check if categories already exist for this user (check CATEGORY2, not CATEGORY1)
-        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM CATEGORY2 WHERE USER_ID = ?")
+        let count: i64 = sqlx::query_scalar(sql_queries::CATEGORY2_COUNT_BY_USER)
             .bind(user_id)
             .fetch_one(&self.pool)
             .await?;
@@ -162,148 +411,170 @@ impl CategoryService {
         Ok(rows)
     }
     
-    /// Get category tree with internationalization
+    /// Get category tree with internationalization.
+    ///
+    /// PR11 (Fable-5 #31): rewritten from a 1 + N + N×M nested-query
+    /// loop into 3 flat queries followed by Rust-side HashMap
+    /// grouping. A new user with the default 3 CATEGORY1 × ~10
+    /// CATEGORY2 × ~5 CATEGORY3 layout would previously issue
+    /// 1 + 3 + 30 = 34 queries every time the transaction form loaded
+    /// its category dropdowns; now it issues 3.
     pub async fn get_category_tree(&self, user_id: i64, lang_code: &str) -> Result<serde_json::Value, CategoryError> {
         use serde_json::json;
-        
-        // Get all category1
+        use std::collections::HashMap;
+
+        // 3 flat queries. Both cat2 and cat3 rows are pre-ordered by
+        // (parent code, DISPLAY_ORDER) so downstream grouping preserves
+        // the display order per parent without re-sorting.
         let cat1_rows = sqlx::query(sql_queries::CATEGORY1_TREE)
             .bind(lang_code)
             .bind(user_id)
             .fetch_all(&self.pool)
             .await?;
-        
-        let mut categories = Vec::new();
-        
-        for row in cat1_rows {
+        let cat2_rows = sqlx::query(sql_queries::CATEGORY2_TREE)
+            .bind(lang_code)
+            .bind(user_id)
+            .fetch_all(&self.pool)
+            .await?;
+        let cat3_rows = sqlx::query(sql_queries::CATEGORY3_TREE)
+            .bind(lang_code)
+            .bind(user_id)
+            .fetch_all(&self.pool)
+            .await?;
+
+        // Bucket cat3 by (cat1_code, cat2_code) — this is the join key
+        // the outer loop consumes. We build the JSON leaves eagerly so
+        // the inner loop below is a plain HashMap lookup.
+        let mut cat3_by_parent: HashMap<(String, String), Vec<serde_json::Value>> = HashMap::new();
+        for row in &cat3_rows {
             let cat1_code: String = row.get("CATEGORY1_CODE");
-            let cat1_name: String = row.get("name");
-            let cat1_order: i64 = row.get("DISPLAY_ORDER");
-            
-            // Get category2 for this category1
-            let cat2_rows = sqlx::query(sql_queries::CATEGORY2_TREE)
-                .bind(lang_code)
-                .bind(user_id)
-                .bind(&cat1_code)
-                .fetch_all(&self.pool)
-                .await?;
-            
-            let mut cat2_list = Vec::new();
-            
-            for cat2_row in cat2_rows {
-                let cat2_code: String = cat2_row.get("CATEGORY2_CODE");
-                let cat2_name: String = cat2_row.get("name");
-                let cat2_order: i64 = cat2_row.get("DISPLAY_ORDER");
-                
-                // Get category3 for this category2
-                let cat3_rows = sqlx::query(sql_queries::CATEGORY3_TREE)
-                    .bind(lang_code)
-                    .bind(user_id)
-                    .bind(&cat1_code)
-                    .bind(&cat2_code)
-                    .fetch_all(&self.pool)
-                    .await?;
-                
-                let cat3_list: Vec<_> = cat3_rows.iter().map(|row| {
-                    json!({
-                        "category3_code": row.get::<String, _>("CATEGORY3_CODE"),
-                        "category3_name_i18n": row.get::<String, _>("name"),
-                        "display_order": row.get::<i64, _>("DISPLAY_ORDER")
-                    })
-                }).collect();
-                
-                cat2_list.push(json!({
-                    "category2": {
-                        "category2_code": cat2_code,
-                        "category2_name_i18n": cat2_name,
-                        "display_order": cat2_order
-                    },
-                    "children": cat3_list
-                }));
-            }
-            
-            categories.push(json!({
-                "category1": {
-                    "category1_code": cat1_code,
-                    "category1_name_i18n": cat1_name,
-                    "display_order": cat1_order
+            let cat2_code: String = row.get("CATEGORY2_CODE");
+            let leaf = json!({
+                "category3_code": row.get::<String, _>("CATEGORY3_CODE"),
+                "category3_name_i18n": row.get::<String, _>("name"),
+                "display_order": row.get::<i64, _>("DISPLAY_ORDER")
+            });
+            cat3_by_parent.entry((cat1_code, cat2_code)).or_default().push(leaf);
+        }
+
+        // Bucket cat2 by cat1_code, emitting the fully assembled
+        // {category2, children} nodes.
+        let mut cat2_by_parent: HashMap<String, Vec<serde_json::Value>> = HashMap::new();
+        for row in &cat2_rows {
+            let cat1_code: String = row.get("CATEGORY1_CODE");
+            let cat2_code: String = row.get("CATEGORY2_CODE");
+            let cat2_name: String = row.get("name");
+            let cat2_order: i64 = row.get("DISPLAY_ORDER");
+            let children = cat3_by_parent
+                .remove(&(cat1_code.clone(), cat2_code.clone()))
+                .unwrap_or_default();
+            cat2_by_parent.entry(cat1_code).or_default().push(json!({
+                "category2": {
+                    "category2_code": cat2_code,
+                    "category2_name_i18n": cat2_name,
+                    "display_order": cat2_order
                 },
-                "children": cat2_list
+                "children": children
             }));
         }
-        
+
+        // Walk cat1 in its display order (already sorted by the SQL) and
+        // attach the matching cat2 bucket.
+        let categories: Vec<_> = cat1_rows
+            .iter()
+            .map(|row| {
+                let cat1_code: String = row.get("CATEGORY1_CODE");
+                let cat1_name: String = row.get("name");
+                let cat1_order: i64 = row.get("DISPLAY_ORDER");
+                let children = cat2_by_parent.remove(&cat1_code).unwrap_or_default();
+                json!({
+                    "category1": {
+                        "category1_code": cat1_code,
+                        "category1_name_i18n": cat1_name,
+                        "display_order": cat1_order
+                    },
+                    "children": children
+                })
+            })
+            .collect();
+
         Ok(json!(categories))
     }
 
-    /// Get category tree including disabled items (for management screen)
+    /// Get category tree including disabled items (for management screen).
+    /// Same 3-flat-queries shape as [`get_category_tree`] plus the
+    /// `is_disabled` fields the management UI needs.
     pub async fn get_category_tree_all(&self, user_id: i64, lang_code: &str) -> Result<serde_json::Value, CategoryError> {
         use serde_json::json;
+        use std::collections::HashMap;
 
         let cat1_rows = sqlx::query(sql_queries::CATEGORY1_TREE)
             .bind(lang_code)
             .bind(user_id)
             .fetch_all(&self.pool)
             .await?;
+        let cat2_rows = sqlx::query(sql_queries::CATEGORY2_TREE_ALL)
+            .bind(lang_code)
+            .bind(user_id)
+            .fetch_all(&self.pool)
+            .await?;
+        let cat3_rows = sqlx::query(sql_queries::CATEGORY3_TREE_ALL)
+            .bind(lang_code)
+            .bind(user_id)
+            .fetch_all(&self.pool)
+            .await?;
 
-        let mut categories = Vec::new();
-
-        for row in cat1_rows {
+        let mut cat3_by_parent: HashMap<(String, String), Vec<serde_json::Value>> = HashMap::new();
+        for row in &cat3_rows {
             let cat1_code: String = row.get("CATEGORY1_CODE");
-            let cat1_name: String = row.get("name");
-            let cat1_order: i64 = row.get("DISPLAY_ORDER");
+            let cat2_code: String = row.get("CATEGORY2_CODE");
+            let leaf = json!({
+                "category3_code": row.get::<String, _>("CATEGORY3_CODE"),
+                "category3_name_i18n": row.get::<String, _>("name"),
+                "display_order": row.get::<i64, _>("DISPLAY_ORDER"),
+                "is_disabled": row.get::<i64, _>("IS_DISABLED")
+            });
+            cat3_by_parent.entry((cat1_code, cat2_code)).or_default().push(leaf);
+        }
 
-            let cat2_rows = sqlx::query(sql_queries::CATEGORY2_TREE_ALL)
-                .bind(lang_code)
-                .bind(user_id)
-                .bind(&cat1_code)
-                .fetch_all(&self.pool)
-                .await?;
-
-            let mut cat2_list = Vec::new();
-
-            for cat2_row in cat2_rows {
-                let cat2_code: String = cat2_row.get("CATEGORY2_CODE");
-                let cat2_name: String = cat2_row.get("name");
-                let cat2_order: i64 = cat2_row.get("DISPLAY_ORDER");
-                let cat2_disabled: i64 = cat2_row.get("IS_DISABLED");
-
-                let cat3_rows = sqlx::query(sql_queries::CATEGORY3_TREE_ALL)
-                    .bind(lang_code)
-                    .bind(user_id)
-                    .bind(&cat1_code)
-                    .bind(&cat2_code)
-                    .fetch_all(&self.pool)
-                    .await?;
-
-                let cat3_list: Vec<_> = cat3_rows.iter().map(|row| {
-                    json!({
-                        "category3_code": row.get::<String, _>("CATEGORY3_CODE"),
-                        "category3_name_i18n": row.get::<String, _>("name"),
-                        "display_order": row.get::<i64, _>("DISPLAY_ORDER"),
-                        "is_disabled": row.get::<i64, _>("IS_DISABLED")
-                    })
-                }).collect();
-
-                cat2_list.push(json!({
-                    "category2": {
-                        "category2_code": cat2_code,
-                        "category2_name_i18n": cat2_name,
-                        "display_order": cat2_order,
-                        "is_disabled": cat2_disabled
-                    },
-                    "children": cat3_list
-                }));
-            }
-
-            categories.push(json!({
-                "category1": {
-                    "category1_code": cat1_code,
-                    "category1_name_i18n": cat1_name,
-                    "display_order": cat1_order
+        let mut cat2_by_parent: HashMap<String, Vec<serde_json::Value>> = HashMap::new();
+        for row in &cat2_rows {
+            let cat1_code: String = row.get("CATEGORY1_CODE");
+            let cat2_code: String = row.get("CATEGORY2_CODE");
+            let cat2_name: String = row.get("name");
+            let cat2_order: i64 = row.get("DISPLAY_ORDER");
+            let cat2_disabled: i64 = row.get("IS_DISABLED");
+            let children = cat3_by_parent
+                .remove(&(cat1_code.clone(), cat2_code.clone()))
+                .unwrap_or_default();
+            cat2_by_parent.entry(cat1_code).or_default().push(json!({
+                "category2": {
+                    "category2_code": cat2_code,
+                    "category2_name_i18n": cat2_name,
+                    "display_order": cat2_order,
+                    "is_disabled": cat2_disabled
                 },
-                "children": cat2_list
+                "children": children
             }));
         }
+
+        let categories: Vec<_> = cat1_rows
+            .iter()
+            .map(|row| {
+                let cat1_code: String = row.get("CATEGORY1_CODE");
+                let cat1_name: String = row.get("name");
+                let cat1_order: i64 = row.get("DISPLAY_ORDER");
+                let children = cat2_by_parent.remove(&cat1_code).unwrap_or_default();
+                json!({
+                    "category1": {
+                        "category1_code": cat1_code,
+                        "category1_name_i18n": cat1_name,
+                        "display_order": cat1_order
+                    },
+                    "children": children
+                })
+            })
+            .collect();
 
         Ok(json!(categories))
     }
@@ -353,66 +624,22 @@ impl CategoryService {
         validate_i18n_name_length(category2_name_ja, "Japanese name")?;
         validate_i18n_name_length(category2_name_en, "English name")?;
 
-        // Check for duplicate Japanese name
-        let count_ja: i64 = sqlx::query_scalar(sql_queries::CATEGORY2_CHECK_DUPLICATE_NAME)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(category2_name_ja)
-            .bind("ja")
-            .fetch_one(&self.pool)
-            .await?;
-        
-        if count_ja > 0 {
-            return Err(CategoryError::DuplicateName(category2_name_ja.to_string()));
-        }
-        
-        // Check for duplicate English name
-        let count_en: i64 = sqlx::query_scalar(sql_queries::CATEGORY2_CHECK_DUPLICATE_NAME)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(category2_name_en)
-            .bind("en")
-            .fetch_one(&self.pool)
-            .await?;
-        
-        if count_en > 0 {
-            return Err(CategoryError::DuplicateName(category2_name_en.to_string()));
-        }
-        
-        // Also check if Japanese name exists in English names
-        let count_ja_in_en: i64 = sqlx::query_scalar(sql_queries::CATEGORY2_CHECK_DUPLICATE_NAME)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(category2_name_ja)
-            .bind("en")
-            .fetch_one(&self.pool)
-            .await?;
-        
-        if count_ja_in_en > 0 {
-            return Err(CategoryError::DuplicateName(category2_name_ja.to_string()));
-        }
-        
-        // Also check if English name exists in Japanese names
-        let count_en_in_ja: i64 = sqlx::query_scalar(sql_queries::CATEGORY2_CHECK_DUPLICATE_NAME)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(category2_name_en)
-            .bind("ja")
-            .fetch_one(&self.pool)
-            .await?;
-        
-        if count_en_in_ja > 0 {
-            return Err(CategoryError::DuplicateName(category2_name_en.to_string()));
-        }
-        
-        // Generate new category2_code
-        let count: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM CATEGORY2 WHERE USER_ID = ? AND CATEGORY1_CODE = ?"
+        // Bilingual dedup (PR9, Fable-5 #28) — 16 blocks collapsed to 1 call.
+        self.check_category2_bilingual_duplicate(
+            user_id,
+            category1_code,
+            None,
+            category2_name_ja,
+            category2_name_en,
         )
-        .bind(user_id)
-        .bind(category1_code)
-        .fetch_one(&self.pool)
         .await?;
+
+        // Generate new category2_code
+        let count: i64 = sqlx::query_scalar(sql_queries::CATEGORY2_COUNT_BY_USER_AND_CATEGORY1)
+            .bind(user_id)
+            .bind(category1_code)
+            .fetch_one(&self.pool)
+            .await?;
         
         let category2_code = format!("C2_{}_{}", 
             &category1_code[0..1], 
@@ -472,71 +699,25 @@ impl CategoryService {
         validate_i18n_name_length(category3_name_ja, "Japanese name")?;
         validate_i18n_name_length(category3_name_en, "English name")?;
 
-        // Check for duplicate Japanese name
-        let count_ja: i64 = sqlx::query_scalar(sql_queries::CATEGORY3_CHECK_DUPLICATE_NAME)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(category2_code)
-            .bind(category3_name_ja)
-            .bind("ja")
-            .fetch_one(&self.pool)
-            .await?;
-        
-        if count_ja > 0 {
-            return Err(CategoryError::DuplicateName(category3_name_ja.to_string()));
-        }
-        
-        // Check for duplicate English name
-        let count_en: i64 = sqlx::query_scalar(sql_queries::CATEGORY3_CHECK_DUPLICATE_NAME)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(category2_code)
-            .bind(category3_name_en)
-            .bind("en")
-            .fetch_one(&self.pool)
-            .await?;
-        
-        if count_en > 0 {
-            return Err(CategoryError::DuplicateName(category3_name_en.to_string()));
-        }
-        
-        // Also check if Japanese name exists in English names
-        let count_ja_in_en: i64 = sqlx::query_scalar(sql_queries::CATEGORY3_CHECK_DUPLICATE_NAME)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(category2_code)
-            .bind(category3_name_ja)
-            .bind("en")
-            .fetch_one(&self.pool)
-            .await?;
-        
-        if count_ja_in_en > 0 {
-            return Err(CategoryError::DuplicateName(category3_name_ja.to_string()));
-        }
-        
-        // Also check if English name exists in Japanese names
-        let count_en_in_ja: i64 = sqlx::query_scalar(sql_queries::CATEGORY3_CHECK_DUPLICATE_NAME)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(category2_code)
-            .bind(category3_name_en)
-            .bind("ja")
-            .fetch_one(&self.pool)
-            .await?;
-        
-        if count_en_in_ja > 0 {
-            return Err(CategoryError::DuplicateName(category3_name_en.to_string()));
-        }
-        
-        // Generate new category3_code
-        let count: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM CATEGORY3 WHERE USER_ID = ? AND CATEGORY1_CODE = ? AND CATEGORY2_CODE = ?"
+        // Bilingual dedup (PR9, Fable-5 #28) — see the CATEGORY2 add
+        // caller above; identical 4-check contract via the shared helper.
+        self.check_category3_bilingual_duplicate(
+            user_id,
+            category1_code,
+            category2_code,
+            None,
+            category3_name_ja,
+            category3_name_en,
         )
-        .bind(user_id)
-        .bind(category1_code)
-        .bind(category2_code)
-        .fetch_one(&self.pool)
         .await?;
+
+        // Generate new category3_code
+        let count: i64 = sqlx::query_scalar(sql_queries::CATEGORY3_COUNT_BY_USER_AND_CATEGORY2)
+            .bind(user_id)
+            .bind(category1_code)
+            .bind(category2_code)
+            .fetch_one(&self.pool)
+            .await?;
         
         let category3_code = format!("C3_{}_{}_{}", 
             &category1_code[0..1],
@@ -590,6 +771,12 @@ impl CategoryService {
     }
     
     /// Get category2 data for editing
+    ///
+    /// Uses `fetch_optional` so a concurrently disabled/deleted row surfaces
+    /// as `CategoryError::NotFound` (mapped by the frontend to a dedicated
+    /// `not_found` toast) instead of leaking a raw sqlx `RowNotFound` string
+    /// through the generic save-error path — matching the Shop/Product/
+    /// Manufacturer master-audit pattern (PR #75/#76/#77).
     pub async fn get_category2_for_edit(
         &self,
         user_id: i64,
@@ -600,17 +787,19 @@ impl CategoryService {
             .bind(user_id)
             .bind(category1_code)
             .bind(category2_code)
-            .fetch_one(&self.pool)
-            .await?;
-        
+            .fetch_optional(&self.pool)
+            .await?
+            .ok_or(CategoryError::NotFound)?;
+
         Ok(CategoryForEdit {
             code: row.get("CATEGORY2_CODE"),
             name_ja: row.get("name_ja"),
             name_en: row.get("name_en"),
         })
     }
-    
-    /// Get category3 data for editing
+
+    /// Get category3 data for editing (see `get_category2_for_edit` for the
+    /// not-found handling rationale).
     pub async fn get_category3_for_edit(
         &self,
         user_id: i64,
@@ -623,9 +812,10 @@ impl CategoryService {
             .bind(category1_code)
             .bind(category2_code)
             .bind(category3_code)
-            .fetch_one(&self.pool)
-            .await?;
-        
+            .fetch_optional(&self.pool)
+            .await?
+            .ok_or(CategoryError::NotFound)?;
+
         Ok(CategoryForEdit {
             code: row.get("CATEGORY3_CODE"),
             name_ja: row.get("name_ja"),
@@ -645,62 +835,18 @@ impl CategoryService {
         validate_i18n_name_length(name_ja, "Japanese name")?;
         validate_i18n_name_length(name_en, "English name")?;
 
-        // Check for duplicate Japanese name (excluding current category)
-        let count_ja: i64 = sqlx::query_scalar(sql_queries::CATEGORY2_CHECK_DUPLICATE_NAME_EXCLUDING)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(category2_code)
-            .bind("ja")
-            .bind(name_ja)
-            .fetch_one(&self.pool)
-            .await?;
-        
-        if count_ja > 0 {
-            return Err(CategoryError::DuplicateName(name_ja.to_string()));
-        }
-        
-        // Check for duplicate English name (excluding current category)
-        let count_en: i64 = sqlx::query_scalar(sql_queries::CATEGORY2_CHECK_DUPLICATE_NAME_EXCLUDING)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(category2_code)
-            .bind("en")
-            .bind(name_en)
-            .fetch_one(&self.pool)
-            .await?;
-        
-        if count_en > 0 {
-            return Err(CategoryError::DuplicateName(name_en.to_string()));
-        }
-        
-        // Also check if Japanese name exists in English names
-        let count_ja_in_en: i64 = sqlx::query_scalar(sql_queries::CATEGORY2_CHECK_DUPLICATE_NAME_EXCLUDING)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(category2_code)
-            .bind("en")
-            .bind(name_ja)
-            .fetch_one(&self.pool)
-            .await?;
-        
-        if count_ja_in_en > 0 {
-            return Err(CategoryError::DuplicateName(name_ja.to_string()));
-        }
-        
-        // Also check if English name exists in Japanese names
-        let count_en_in_ja: i64 = sqlx::query_scalar(sql_queries::CATEGORY2_CHECK_DUPLICATE_NAME_EXCLUDING)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(category2_code)
-            .bind("ja")
-            .bind(name_en)
-            .fetch_one(&self.pool)
-            .await?;
-        
-        if count_en_in_ja > 0 {
-            return Err(CategoryError::DuplicateName(name_en.to_string()));
-        }
-        
+        // Bilingual dedup (PR9, Fable-5 #28) — 16 blocks collapsed
+        // to 1 call. `Some(category2_code)` excludes the row being
+        // edited.
+        self.check_category2_bilingual_duplicate(
+            user_id,
+            category1_code,
+            Some(category2_code),
+            name_ja,
+            name_en,
+        )
+        .await?;
+
         // Update Japanese name
         sqlx::query(sql_queries::CATEGORY2_I18N_UPDATE)
             .bind(name_ja)
@@ -737,66 +883,18 @@ impl CategoryService {
         validate_i18n_name_length(name_ja, "Japanese name")?;
         validate_i18n_name_length(name_en, "English name")?;
 
-        // Check for duplicate Japanese name (excluding current category)
-        let count_ja: i64 = sqlx::query_scalar(sql_queries::CATEGORY3_CHECK_DUPLICATE_NAME_EXCLUDING)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(category2_code)
-            .bind(category3_code)
-            .bind("ja")
-            .bind(name_ja)
-            .fetch_one(&self.pool)
-            .await?;
-        
-        if count_ja > 0 {
-            return Err(CategoryError::DuplicateName(name_ja.to_string()));
-        }
-        
-        // Check for duplicate English name (excluding current category)
-        let count_en: i64 = sqlx::query_scalar(sql_queries::CATEGORY3_CHECK_DUPLICATE_NAME_EXCLUDING)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(category2_code)
-            .bind(category3_code)
-            .bind("en")
-            .bind(name_en)
-            .fetch_one(&self.pool)
-            .await?;
-        
-        if count_en > 0 {
-            return Err(CategoryError::DuplicateName(name_en.to_string()));
-        }
-        
-        // Also check if Japanese name exists in English names
-        let count_ja_in_en: i64 = sqlx::query_scalar(sql_queries::CATEGORY3_CHECK_DUPLICATE_NAME_EXCLUDING)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(category2_code)
-            .bind(category3_code)
-            .bind("en")
-            .bind(name_ja)
-            .fetch_one(&self.pool)
-            .await?;
-        
-        if count_ja_in_en > 0 {
-            return Err(CategoryError::DuplicateName(name_ja.to_string()));
-        }
-        
-        // Also check if English name exists in Japanese names
-        let count_en_in_ja: i64 = sqlx::query_scalar(sql_queries::CATEGORY3_CHECK_DUPLICATE_NAME_EXCLUDING)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(category2_code)
-            .bind(category3_code)
-            .bind("ja")
-            .bind(name_en)
-            .fetch_one(&self.pool)
-            .await?;
-        
-        if count_en_in_ja > 0 {
-            return Err(CategoryError::DuplicateName(name_en.to_string()));
-        }
-        
+        // Bilingual dedup (PR9, Fable-5 #28) — see update_category2_i18n
+        // above; identical contract.
+        self.check_category3_bilingual_duplicate(
+            user_id,
+            category1_code,
+            category2_code,
+            Some(category3_code),
+            name_ja,
+            name_en,
+        )
+        .await?;
+
         // Update Japanese name
         sqlx::query(sql_queries::CATEGORY3_I18N_UPDATE)
             .bind(name_ja)
@@ -822,120 +920,33 @@ impl CategoryService {
         Ok(())
     }
     
-    /// Move a CATEGORY2 up in the display order
+    /// Move a CATEGORY2 up in the display order. PR9 (Fable-5 #27):
+    /// one-line wrapper over the shared swap helper. The old
+    /// `current_order <= 1` early-return was redundant because the
+    /// sibling lookup at `target_order = 0` returns None and the
+    /// helper's `if let Some(...)` arm already treats that as a no-op.
     pub async fn move_category2_up(
         &self,
         user_id: i64,
         category1_code: &str,
         category2_code: &str,
     ) -> Result<(), CategoryError> {
-        // Get current order
-        let current_order: i64 = sqlx::query_scalar(sql_queries::CATEGORY2_GET_ORDER)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(category2_code)
-            .fetch_one(&self.pool)
-            .await?;
-        
-        // Cannot move up if already at the top
-        if current_order <= 1 {
-            return Ok(());
-        }
-        
-        let target_order = current_order - 1;
-        
-        // Get the sibling category at the target position
-        let sibling_result: Result<String, sqlx::Error> = 
-            sqlx::query_scalar(sql_queries::CATEGORY2_GET_SIBLING_BY_ORDER)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(target_order)
-            .fetch_one(&self.pool)
-            .await;
-        
-        if let Ok(sibling_code) = sibling_result {
-            // Swap orders using a transaction
-            let mut tx = self.pool.begin().await?;
-            
-            // Move current to target
-            sqlx::query(sql_queries::CATEGORY2_UPDATE_ORDER)
-                .bind(target_order)
-                .bind(user_id)
-                .bind(category1_code)
-                .bind(category2_code)
-                .execute(&mut *tx)
-                .await?;
-            
-            // Move sibling to current position
-            sqlx::query(sql_queries::CATEGORY2_UPDATE_ORDER)
-                .bind(current_order)
-                .bind(user_id)
-                .bind(category1_code)
-                .bind(&sibling_code)
-                .execute(&mut *tx)
-                .await?;
-            
-            tx.commit().await?;
-        }
-        
-        Ok(())
+        self.swap_category2_with_sibling(user_id, category1_code, category2_code, -1)
+            .await
     }
-    
-    /// Move a CATEGORY2 down in the display order
+
+    /// Move a CATEGORY2 down in the display order.
     pub async fn move_category2_down(
         &self,
         user_id: i64,
         category1_code: &str,
         category2_code: &str,
     ) -> Result<(), CategoryError> {
-        // Get current order
-        let current_order: i64 = sqlx::query_scalar(sql_queries::CATEGORY2_GET_ORDER)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(category2_code)
-            .fetch_one(&self.pool)
-            .await?;
-        
-        let target_order = current_order + 1;
-        
-        // Get the sibling category at the target position
-        let sibling_result: Result<String, sqlx::Error> = 
-            sqlx::query_scalar(sql_queries::CATEGORY2_GET_SIBLING_BY_ORDER)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(target_order)
-            .fetch_one(&self.pool)
-            .await;
-        
-        if let Ok(sibling_code) = sibling_result {
-            // Swap orders using a transaction
-            let mut tx = self.pool.begin().await?;
-            
-            // Move current to target
-            sqlx::query(sql_queries::CATEGORY2_UPDATE_ORDER)
-                .bind(target_order)
-                .bind(user_id)
-                .bind(category1_code)
-                .bind(category2_code)
-                .execute(&mut *tx)
-                .await?;
-            
-            // Move sibling to current position
-            sqlx::query(sql_queries::CATEGORY2_UPDATE_ORDER)
-                .bind(current_order)
-                .bind(user_id)
-                .bind(category1_code)
-                .bind(&sibling_code)
-                .execute(&mut *tx)
-                .await?;
-            
-            tx.commit().await?;
-        }
-        
-        Ok(())
+        self.swap_category2_with_sibling(user_id, category1_code, category2_code, 1)
+            .await
     }
-    
-    /// Move a CATEGORY3 up in the display order
+
+    /// Move a CATEGORY3 up in the display order.
     pub async fn move_category3_up(
         &self,
         user_id: i64,
@@ -943,63 +954,17 @@ impl CategoryService {
         category2_code: &str,
         category3_code: &str,
     ) -> Result<(), CategoryError> {
-        // Get current order
-        let current_order: i64 = sqlx::query_scalar(sql_queries::CATEGORY3_GET_ORDER)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(category2_code)
-            .bind(category3_code)
-            .fetch_one(&self.pool)
-            .await?;
-        
-        // Cannot move up if already at the top
-        if current_order <= 1 {
-            return Ok(());
-        }
-        
-        let target_order = current_order - 1;
-        
-        // Get the sibling category at the target position
-        let sibling_result: Result<String, sqlx::Error> = 
-            sqlx::query_scalar(sql_queries::CATEGORY3_GET_SIBLING_BY_ORDER)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(category2_code)
-            .bind(target_order)
-            .fetch_one(&self.pool)
-            .await;
-        
-        if let Ok(sibling_code) = sibling_result {
-            // Swap orders using a transaction
-            let mut tx = self.pool.begin().await?;
-            
-            // Move current to target
-            sqlx::query(sql_queries::CATEGORY3_UPDATE_ORDER)
-                .bind(target_order)
-                .bind(user_id)
-                .bind(category1_code)
-                .bind(category2_code)
-                .bind(category3_code)
-                .execute(&mut *tx)
-                .await?;
-            
-            // Move sibling to current position
-            sqlx::query(sql_queries::CATEGORY3_UPDATE_ORDER)
-                .bind(current_order)
-                .bind(user_id)
-                .bind(category1_code)
-                .bind(category2_code)
-                .bind(&sibling_code)
-                .execute(&mut *tx)
-                .await?;
-            
-            tx.commit().await?;
-        }
-        
-        Ok(())
+        self.swap_category3_with_sibling(
+            user_id,
+            category1_code,
+            category2_code,
+            category3_code,
+            -1,
+        )
+        .await
     }
-    
-    /// Move a CATEGORY3 down in the display order
+
+    /// Move a CATEGORY3 down in the display order.
     pub async fn move_category3_down(
         &self,
         user_id: i64,
@@ -1007,58 +972,23 @@ impl CategoryService {
         category2_code: &str,
         category3_code: &str,
     ) -> Result<(), CategoryError> {
-        // Get current order
-        let current_order: i64 = sqlx::query_scalar(sql_queries::CATEGORY3_GET_ORDER)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(category2_code)
-            .bind(category3_code)
-            .fetch_one(&self.pool)
-            .await?;
-        
-        let target_order = current_order + 1;
-        
-        // Get the sibling category at the target position
-        let sibling_result: Result<String, sqlx::Error> = 
-            sqlx::query_scalar(sql_queries::CATEGORY3_GET_SIBLING_BY_ORDER)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(category2_code)
-            .bind(target_order)
-            .fetch_one(&self.pool)
-            .await;
-        
-        if let Ok(sibling_code) = sibling_result {
-            // Swap orders using a transaction
-            let mut tx = self.pool.begin().await?;
-            
-            // Move current to target
-            sqlx::query(sql_queries::CATEGORY3_UPDATE_ORDER)
-                .bind(target_order)
-                .bind(user_id)
-                .bind(category1_code)
-                .bind(category2_code)
-                .bind(category3_code)
-                .execute(&mut *tx)
-                .await?;
-            
-            // Move sibling to current position
-            sqlx::query(sql_queries::CATEGORY3_UPDATE_ORDER)
-                .bind(current_order)
-                .bind(user_id)
-                .bind(category1_code)
-                .bind(category2_code)
-                .bind(&sibling_code)
-                .execute(&mut *tx)
-                .await?;
-            
-            tx.commit().await?;
-        }
-
-        Ok(())
+        self.swap_category3_with_sibling(
+            user_id,
+            category1_code,
+            category2_code,
+            category3_code,
+            1,
+        )
+        .await
     }
 
     /// Disable (hide) a CATEGORY2 and its child CATEGORY3 entries
+    ///
+    /// The CATEGORY3 disable can legitimately touch zero rows (a leaf
+    /// category), so its `rows_affected` is not checked. The CATEGORY2
+    /// disable itself must hit exactly one row — zero means the target was
+    /// removed by another window and we return `NotFound` (matches
+    /// Shop/Product/Manufacturer master-audit contract, PR #75/#76/#77).
     pub async fn disable_category2(
         &self,
         user_id: i64,
@@ -1067,7 +997,7 @@ impl CategoryService {
     ) -> Result<(), CategoryError> {
         let mut tx = self.pool.begin().await?;
 
-        // Disable all child CATEGORY3 entries
+        // Disable all child CATEGORY3 entries (may be zero — that is fine)
         sqlx::query(sql_queries::CATEGORY3_DISABLE_BY_CATEGORY2)
             .bind(user_id)
             .bind(category1_code)
@@ -1075,19 +1005,27 @@ impl CategoryService {
             .execute(&mut *tx)
             .await?;
 
-        // Disable the CATEGORY2 itself
-        sqlx::query(sql_queries::CATEGORY2_DELETE_LOGICAL)
+        // Disable the CATEGORY2 itself — must hit exactly one row
+        let result = sqlx::query(sql_queries::CATEGORY2_DELETE_LOGICAL)
             .bind(user_id)
             .bind(category1_code)
             .bind(category2_code)
             .execute(&mut *tx)
             .await?;
 
+        if result.rows_affected() == 0 {
+            return Err(CategoryError::NotFound);
+        }
+
         tx.commit().await?;
         Ok(())
     }
 
     /// Disable (hide) a CATEGORY3
+    ///
+    /// Returns `NotFound` when the target row is already gone (concurrent
+    /// removal from another window), so the frontend can show the dedicated
+    /// `not_found` toast and reload the tree.
     pub async fn disable_category3(
         &self,
         user_id: i64,
@@ -1095,13 +1033,17 @@ impl CategoryService {
         category2_code: &str,
         category3_code: &str,
     ) -> Result<(), CategoryError> {
-        sqlx::query(sql_queries::CATEGORY3_DELETE_LOGICAL)
+        let result = sqlx::query(sql_queries::CATEGORY3_DELETE_LOGICAL)
             .bind(user_id)
             .bind(category1_code)
             .bind(category2_code)
             .bind(category3_code)
             .execute(&self.pool)
             .await?;
+
+        if result.rows_affected() == 0 {
+            return Err(CategoryError::NotFound);
+        }
 
         Ok(())
     }
@@ -1834,6 +1776,75 @@ mod tests {
         assert_eq!(cat3_edit.name_en, "Rice");
     }
 
+    // Fable-5 review #6 — a stale edit target (row removed from another
+    // window between list load and edit-modal open) must surface as
+    // `CategoryError::NotFound`, not as a raw sqlx `RowNotFound` string
+    // being displayed on screen through the generic error path.
+    #[tokio::test]
+    async fn test_get_category2_for_edit_returns_not_found_for_missing() {
+        let pool = setup_test_db().await;
+        let service = CategoryService::new(pool.clone());
+        let user_id: i64 = 1;
+        setup_category1(&pool, user_id).await;
+
+        let result = service.get_category2_for_edit(user_id, "EXPENSE", "NONEXISTENT").await;
+        assert!(matches!(result.unwrap_err(), CategoryError::NotFound));
+    }
+
+    #[tokio::test]
+    async fn test_get_category3_for_edit_returns_not_found_for_missing() {
+        let pool = setup_test_db().await;
+        let service = CategoryService::new(pool.clone());
+        let user_id: i64 = 1;
+        setup_category1(&pool, user_id).await;
+        let cat2_code = service.add_category2(user_id, "EXPENSE", "食費", "Food").await.unwrap();
+
+        let result = service.get_category3_for_edit(user_id, "EXPENSE", &cat2_code, "NONEXISTENT").await;
+        assert!(matches!(result.unwrap_err(), CategoryError::NotFound));
+    }
+
+    // Fable-5 review #7 — logical delete of a category that is already gone
+    // (concurrent removal from another window) must return NotFound so the
+    // frontend shows the dedicated not_found toast, not a silent success.
+    #[tokio::test]
+    async fn test_disable_category2_returns_not_found_for_missing() {
+        let pool = setup_test_db().await;
+        let service = CategoryService::new(pool.clone());
+        let user_id: i64 = 1;
+        setup_category1(&pool, user_id).await;
+
+        let result = service.disable_category2(user_id, "EXPENSE", "NONEXISTENT").await;
+        assert!(matches!(result.unwrap_err(), CategoryError::NotFound));
+    }
+
+    #[tokio::test]
+    async fn test_disable_category3_returns_not_found_for_missing() {
+        let pool = setup_test_db().await;
+        let service = CategoryService::new(pool.clone());
+        let user_id: i64 = 1;
+        setup_category1(&pool, user_id).await;
+        let cat2_code = service.add_category2(user_id, "EXPENSE", "食費", "Food").await.unwrap();
+
+        let result = service.disable_category3(user_id, "EXPENSE", &cat2_code, "NONEXISTENT").await;
+        assert!(matches!(result.unwrap_err(), CategoryError::NotFound));
+    }
+
+    // Fable-5 review #7 — the CATEGORY3 disable inside `disable_category2`
+    // sweeps children and may legitimately hit zero rows (leaf CATEGORY2);
+    // that must not be treated as NotFound as long as the CATEGORY2 itself
+    // is disabled successfully.
+    #[tokio::test]
+    async fn test_disable_category2_succeeds_with_no_children() {
+        let pool = setup_test_db().await;
+        let service = CategoryService::new(pool.clone());
+        let user_id: i64 = 1;
+        setup_category1(&pool, user_id).await;
+        let cat2_code = service.add_category2(user_id, "EXPENSE", "食費", "Food").await.unwrap();
+
+        let result = service.disable_category2(user_id, "EXPENSE", &cat2_code).await;
+        assert!(result.is_ok(), "leaf CATEGORY2 disable should succeed: {:?}", result.err());
+    }
+
     // Issue #37 Phase 2-3 — bounded-field length checks must count
     // characters (not bytes). CATEGORY*_I18N.*_NAME_I18N is VARCHAR(256).
 
@@ -1961,5 +1972,189 @@ mod tests {
         let msg = err.to_string();
         assert!(msg.contains(&consts::MAX_I18N_NAME_LEN.to_string()),
             "error should reference the limit: {}", msg);
+    }
+
+    // ---- From<CategoryError> for ApiError -------------------------------
+    // These tests pin the wire codes that the frontend classifier
+    // (`res/js/master-crud.js::mapMasterErrorCode`) matches on. If a
+    // variant is renamed here or in api_error.rs, the JS side stops
+    // classifying its errors — hence the assertions on the stable
+    // `ApiError::CODE_*` constants.
+
+    #[test]
+    fn not_found_maps_to_not_found_code_with_category_entity() {
+        let err: ApiError = CategoryError::NotFound.into();
+        assert_eq!(err.code, ApiError::CODE_NOT_FOUND);
+        assert_eq!(err.entity.as_deref(), Some("category"));
+    }
+
+    #[test]
+    fn duplicate_name_maps_to_duplicate_name_code_with_category_entity() {
+        let err: ApiError = CategoryError::DuplicateName("食費".to_string()).into();
+        assert_eq!(err.code, ApiError::CODE_DUPLICATE_NAME);
+        assert_eq!(err.entity.as_deref(), Some("category"));
+    }
+
+    #[test]
+    fn validation_preserves_message_and_omits_entity() {
+        let err: ApiError = CategoryError::Validation(
+            "Japanese name must be 128 characters or less".to_string()
+        ).into();
+        assert_eq!(err.code, ApiError::CODE_VALIDATION);
+        assert!(err.message.contains("128 characters"));
+        assert!(err.entity.is_none());
+    }
+
+    #[test]
+    fn database_error_maps_to_database_code() {
+        let err: ApiError = CategoryError::DatabaseError(sqlx::Error::RowNotFound).into();
+        assert_eq!(err.code, ApiError::CODE_DATABASE);
+        assert!(err.entity.is_none());
+    }
+
+    // PR11 (Fable-5 #31) — regression pins for the get_category_tree
+    // and get_category_tree_all refactor from 1+N+N×M queries to a
+    // 3-flat-queries + Rust HashMap grouping. Assert the JSON shape
+    // preserves the (cat1 → cat2 → cat3) parent/child pairing and
+    // per-parent display order.
+
+    #[tokio::test]
+    async fn test_get_category_tree_groups_children_under_parent() {
+        let pool = setup_test_db().await;
+        let service = CategoryService::new(pool.clone());
+        let user_id = 1;
+        setup_category1(&pool, user_id).await;
+
+        // Two CATEGORY2 rows under EXPENSE, each with its own CATEGORY3
+        // child. If the HashMap grouping ever confused parent scope, a
+        // child would land on the wrong cat2.
+        let food = service
+            .add_category2(user_id, "EXPENSE", "食費", "Food")
+            .await
+            .unwrap();
+        let transport = service
+            .add_category2(user_id, "EXPENSE", "交通費", "Transport")
+            .await
+            .unwrap();
+        let rice = service
+            .add_category3(user_id, "EXPENSE", &food, "米", "Rice")
+            .await
+            .unwrap();
+        let train = service
+            .add_category3(user_id, "EXPENSE", &transport, "電車", "Train")
+            .await
+            .unwrap();
+
+        let tree = service.get_category_tree(user_id, "ja").await.unwrap();
+        let root = tree.as_array().expect("tree root is a JSON array");
+        // `setup_category1` seeds EXPENSE + INCOME + TRANSFER; we only
+        // populated EXPENSE, so the other two exist with empty children.
+        let expense = root
+            .iter()
+            .find(|n| n["category1"]["category1_code"] == "EXPENSE")
+            .expect("EXPENSE cat1 node missing");
+        let cat2 = expense["children"].as_array().expect("cat2 children array");
+        assert_eq!(cat2.len(), 2, "two cat2 rows expected: {:?}", cat2);
+
+        let food_node = cat2
+            .iter()
+            .find(|n| n["category2"]["category2_code"] == food.as_str())
+            .expect("food cat2 node missing");
+        let food_children = food_node["children"].as_array().unwrap();
+        assert_eq!(food_children.len(), 1, "food should have 1 cat3");
+        assert_eq!(food_children[0]["category3_code"], rice);
+
+        let transport_node = cat2
+            .iter()
+            .find(|n| n["category2"]["category2_code"] == transport.as_str())
+            .expect("transport cat2 node missing");
+        let transport_children = transport_node["children"].as_array().unwrap();
+        assert_eq!(transport_children.len(), 1, "transport should have 1 cat3");
+        assert_eq!(transport_children[0]["category3_code"], train);
+    }
+
+    #[tokio::test]
+    async fn test_get_category_tree_preserves_display_order() {
+        let pool = setup_test_db().await;
+        let service = CategoryService::new(pool.clone());
+        let user_id = 1;
+        setup_category1(&pool, user_id).await;
+
+        // Add three CATEGORY2 rows; they get DISPLAY_ORDER 1, 2, 3.
+        let a = service.add_category2(user_id, "EXPENSE", "A_ja", "A").await.unwrap();
+        let b = service.add_category2(user_id, "EXPENSE", "B_ja", "B").await.unwrap();
+        let c = service.add_category2(user_id, "EXPENSE", "C_ja", "C").await.unwrap();
+
+        // Move B up so the display order becomes: B, A, C (1, 2, 3).
+        service.move_category2_up(user_id, "EXPENSE", &b).await.unwrap();
+
+        let tree = service.get_category_tree(user_id, "ja").await.unwrap();
+        let expense = tree.as_array().unwrap()
+            .iter()
+            .find(|n| n["category1"]["category1_code"] == "EXPENSE")
+            .unwrap();
+        let cat2 = expense["children"].as_array().unwrap();
+        let order: Vec<&str> = cat2
+            .iter()
+            .map(|n| n["category2"]["category2_code"].as_str().unwrap())
+            .collect();
+        assert_eq!(order, vec![b.as_str(), a.as_str(), c.as_str()],
+                   "display order must survive the flat-query grouping");
+    }
+
+    #[tokio::test]
+    async fn test_get_category_tree_all_includes_disabled_flags() {
+        let pool = setup_test_db().await;
+        let service = CategoryService::new(pool.clone());
+        let user_id = 1;
+        setup_category1(&pool, user_id).await;
+
+        let food = service
+            .add_category2(user_id, "EXPENSE", "食費", "Food")
+            .await
+            .unwrap();
+        let rice = service
+            .add_category3(user_id, "EXPENSE", &food, "米", "Rice")
+            .await
+            .unwrap();
+
+        // Disable both to confirm `_all` shows them.
+        service.disable_category3(user_id, "EXPENSE", &food, &rice).await.unwrap();
+        service.disable_category2(user_id, "EXPENSE", &food).await.unwrap();
+
+        let tree_all = service.get_category_tree_all(user_id, "ja").await.unwrap();
+        let expense_all = tree_all.as_array().unwrap()
+            .iter()
+            .find(|n| n["category1"]["category1_code"] == "EXPENSE")
+            .unwrap();
+        let cat2 = expense_all["children"].as_array().unwrap();
+        let food_node = cat2
+            .iter()
+            .find(|n| n["category2"]["category2_code"] == food.as_str())
+            .expect("disabled cat2 must still appear in _all");
+        assert_eq!(
+            food_node["category2"]["is_disabled"].as_i64(),
+            Some(1),
+            "disabled cat2 must carry is_disabled=1 in _all"
+        );
+        let cat3_children = food_node["children"].as_array().unwrap();
+        assert_eq!(cat3_children.len(), 1);
+        assert_eq!(
+            cat3_children[0]["is_disabled"].as_i64(),
+            Some(1),
+            "disabled cat3 must carry is_disabled=1 in _all"
+        );
+
+        // Sanity: the visible-only tree filters them out.
+        let visible = service.get_category_tree(user_id, "ja").await.unwrap();
+        let visible_expense = visible.as_array().unwrap()
+            .iter()
+            .find(|n| n["category1"]["category1_code"] == "EXPENSE")
+            .unwrap();
+        let visible_cat2 = visible_expense["children"].as_array().unwrap();
+        assert!(
+            !visible_cat2.iter().any(|n| n["category2"]["category2_code"] == food.as_str()),
+            "disabled cat2 must NOT appear in get_category_tree"
+        );
     }
 }

@@ -1,15 +1,17 @@
 import { invoke } from '@tauri-apps/api/core';
 import { HTML_FILES } from './html-files.js';
 import i18n from './i18n.js';
+import { setupLanguageMenu, setupLanguageMenuHandlers } from './language-menu.js';
 import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers } from './font-size.js';
 import { fitWindowToScreen } from './window-fit.js';
 import { Modal } from './modal.js';
 import { setupIndicators } from './indicators.js';
-import { getCurrentSessionUser, isSessionAuthenticated, getSessionSourceScreen, clearSessionSourceScreen } from './session.js';
-import { createMenuBar } from './menu.js';
-import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
+import { getCurrentSessionUser, getSessionSourceScreen, clearSessionSourceScreen, clearSessionModalState, clearSessionCategory1Code } from './session.js';
+import { createMenuBar, handleLogout, handleQuit } from './menu.js';
+import { clearValidationError, attachCharCounter } from './validation-display.js';
 import { showToast } from './toast.js';
-import { MAX_NAME_LEN, MAX_MEMO_LEN } from './consts.js';
+import { MAX_NAME_LEN, MAX_MEMO_LEN, SOURCE_SCREEN_TRANSACTION_MGMT } from './consts.js';
+import { saveMasterEntry } from './master-crud.js';
 
 console.log('=== SHOP-MANAGEMENT.JS LOADED ===');
 
@@ -22,6 +24,9 @@ let editingShopId = null;
 let shopModal = null;
 let deleteModal = null;
 let shopToDelete = null;
+// Screen that side-tripped here (captured once at load, cleared from the
+// session immediately so it cannot go stale if the user leaves without saving)
+let sideTripSource = null;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
@@ -30,17 +35,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     createMenuBar('management');
     console.log('DOMContentLoaded fired');
     try {
-        // Check session authentication
-        if (!await isSessionAuthenticated()) {
-            console.error('Not authenticated, redirecting to login');
-            window.location.href = HTML_FILES.INDEX;
-            return;
-        }
-        
-        // Get current user info
+        // Check session authentication and get user info in a single call
         const user = await getCurrentSessionUser();
         if (!user) {
-            console.error('Failed to get user info, redirecting to login');
+            console.error('Not authenticated, redirecting to login');
             window.location.href = HTML_FILES.INDEX;
             return;
         }
@@ -48,6 +46,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         currentUserId = user.user_id;
         currentUserRole = user.role;
         console.log(`Logged in as: ${user.name} (ID: ${currentUserId}, Role: ${currentUserRole})`);
+        
+        sideTripSource = await getSessionSourceScreen();
+        if (sideTripSource) {
+            await clearSessionSourceScreen();
+        }
         
         await i18n.init();
         console.log('i18n initialized:', i18n.initialized);
@@ -58,7 +61,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         setupMenuHandlers();
         
         // Setup language and font size menus
-        await setupLanguageMenu();
+        await setupLanguageMenu(loadShops);
         setupLanguageMenuHandlers();
         
         setupFontSizeMenuHandlers();
@@ -76,7 +79,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         await fitWindowToScreen();
     } catch (error) {
         console.error('Initialization error:', error);
-        showToast(i18n.t('shop_mgmt.failed_to_initialize') + ': ' + error, { variant: 'error' });
+        showToast(i18n.t('shop_mgmt.failed_to_initialize'), { variant: 'error' });
     }
 });
 
@@ -141,11 +144,16 @@ function initDeleteModal() {
     });
 
     // Confirm delete button
-    document.getElementById('confirm-delete-btn').addEventListener('click', async () => {
-        if (shopToDelete) {
-            await deleteShop(shopToDelete.shop_id);
-            deleteModal.close();
-        }
+    // PR13 (Fable-5 D8/D9): `deleteShop` now returns a boolean and the
+    // dead `confirmDeleteBtn.disabled` re-entry check is gone —
+    // see product-management.js for the shared rationale.
+    const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+    confirmDeleteBtn.addEventListener('click', async () => {
+        if (!shopToDelete) return;
+        confirmDeleteBtn.disabled = true;
+        const ok = await deleteShop(shopToDelete.shop_id);
+        confirmDeleteBtn.disabled = false;
+        if (ok) deleteModal.close();
     });
 }
 
@@ -198,7 +206,7 @@ async function loadShops() {
         table.style.display = 'table';
     } catch (error) {
         console.error('Failed to load shops:', error);
-        loading.textContent = i18n.t('shop_mgmt.failed_to_load') + ': ' + error;
+        loading.textContent = i18n.t('shop_mgmt.failed_to_load');
     }
 }
 
@@ -260,101 +268,56 @@ function renderShops() {
 }
 
 async function saveShop() {
+    // Clear "top of form" error area kept for legacy fallbacks; per-field
+    // errors are cleared inside saveMasterEntry via clearValidationError.
+    clearErrors();
+
     const shopNameInput = document.getElementById('shop-name');
     const memoInput = document.getElementById('shop-memo');
-    const shopName = shopNameInput.value.trim();
-    const memo = memoInput.value.trim();
 
-    // Clear previous errors
-    clearErrors();
-    clearValidationError(shopNameInput);
-    clearValidationError(memoInput);
+    const result = await saveMasterEntry({
+        nameInput: shopNameInput,
+        memoInput,
+        editingId: editingShopId,
+        findInCacheById: (id) => shops.find(s => s.shop_id === id) || null,
+        invokeAdd: (name, memo) => invoke('add_shop', {
+            shopName: name,
+            memo,
+        }),
+        invokeUpdate: (target, name, memo) => invoke('update_shop', {
+            shopId: editingShopId,
+            shopName: name,
+            memo,
+            displayOrder: target.display_order,
+        }),
+        i18nPrefix: 'shop_mgmt',
+        nameFieldI18nKey: 'shop_mgmt.shop_name',
+        memoFieldI18nKey: 'shop_mgmt.memo',
+        nameMaxLen: MAX_NAME_LEN,
+        memoMaxLen: MAX_MEMO_LEN,
+        onNotFoundBeforeInvoke: async () => {
+            showToast(i18n.t('shop_mgmt.not_found'), { variant: 'error' });
+            await loadShops();
+        },
+    });
 
-    // Validation — empty name
-    if (!shopName) {
-        showValidationError(shopNameInput, i18n.t('shop_mgmt.empty_name'));
-        throw new Error('Validation error: empty shop name');
+    if (result.mode === 'skip') {
+        return;
     }
 
-    // Validation — max length (mirrors Rust defense in src/services/shop.rs)
-    if ([...shopName].length > MAX_NAME_LEN) {
-        showMaxLengthError(shopNameInput, i18n.t('shop_mgmt.shop_name'), MAX_NAME_LEN);
-        throw new Error('Validation error: shop name too long');
-    }
-    if (memo && [...memo].length > MAX_MEMO_LEN) {
-        showMaxLengthError(memoInput, i18n.t('shop_mgmt.memo'), MAX_MEMO_LEN);
-        throw new Error('Validation error: memo too long');
-    }
+    // Save succeeded: failures past this point (list reload, side-trip
+    // return) must not be reported as a failed save.
+    await loadShops();
 
-    try {
-        if (editingShopId) {
-            // Update existing shop
-            const shop = shops.find(s => s.shop_id === editingShopId);
-            await invoke('update_shop', {
-                shopId: editingShopId,
-                shopName: shopName,
-                memo: memo || null,
-                displayOrder: shop.display_order
-            });
-            console.log('Shop updated successfully');
-        } else {
-            // Add new shop
-            await invoke('add_shop', {
-                shopName: shopName,
-                memo: memo || null
-            });
-            console.log('Shop added successfully');
-        }
-
-        // Reload shops list (modal will be closed by Modal class)
-        await loadShops();
-        
-        // Check if called from another screen
-        const callerScreen = await getSessionSourceScreen();
-        if (callerScreen) {
-            // Clear session and return to caller screen
-            await clearSessionSourceScreen();
-            window.location.href = HTML_FILES.TRANSACTION_MANAGEMENT;
-        }
-    } catch (error) {
-        console.error('Failed to save shop:', error);
-
-        // Map backend error messages to i18n resources / localized text
-        const errorMessage = error.toString();
-        let nameMessage = null;
-        let memoMessage = null;
-
-        if (errorMessage.includes('already exists')) {
-            nameMessage = i18n.t('shop_mgmt.duplicate_error');
-        } else if (errorMessage.includes('Shop name must be')) {
-            // Defense-line trip: frontend max-length check should have caught
-            // this, so use the same i18n message for parity.
-            nameMessage = i18n.t('validation.max_length', {
-                field: i18n.t('shop_mgmt.shop_name'),
-                max: MAX_NAME_LEN,
-                actual: [...shopName].length,
-            });
-        } else if (errorMessage.includes('Memo must be')) {
-            memoMessage = i18n.t('validation.max_length', {
-                field: i18n.t('shop_mgmt.memo'),
-                max: MAX_MEMO_LEN,
-                actual: [...memo].length,
-            });
-        } else if (errorMessage.includes('cannot be empty')) {
-            nameMessage = i18n.t('shop_mgmt.empty_name');
-        } else {
-            // Fallback to original error message on the name field
-            nameMessage = errorMessage;
-        }
-
-        if (nameMessage) showValidationError(shopNameInput, nameMessage);
-        if (memoMessage) showValidationError(memoInput, memoMessage);
-
-        // Re-throw error to prevent modal from closing
-        throw error;
+    if (sideTripSource === SOURCE_SCREEN_TRANSACTION_MGMT) {
+        window.location.href = HTML_FILES.TRANSACTION_MANAGEMENT;
     }
 }
 
+/// Delete a shop. Returns `true` on success (the confirmation modal
+/// should close) or `false` on failure (the modal stays open so the
+/// user can retry). PR13 (Fable-5 D8) — see product-management.js
+/// for the shared rationale.
 async function deleteShop(shopId) {
     try {
         await invoke('delete_shop', {
@@ -362,9 +325,11 @@ async function deleteShop(shopId) {
         });
         console.log('Shop deleted successfully');
         await loadShops();
+        return true;
     } catch (error) {
         console.error('Failed to delete shop:', error);
-        showToast(i18n.t('shop_mgmt.failed_to_delete') + ': ' + error, { variant: 'error' });
+        showToast(i18n.t('shop_mgmt.failed_to_delete'), { variant: 'error' });
+        return false;
     }
 }
 
@@ -374,39 +339,51 @@ function setupMenuHandlers() {
     const fileDropdown = document.getElementById('file-dropdown');
     
     if (fileMenu && fileDropdown) {
-        if (fileMenu.dataset.initialized === 'true') {
+        if (fileMenu.dataset.initialized !== 'true') {
+            fileMenu.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const isShown = fileDropdown.classList.contains('show');
+                document.querySelectorAll('.dropdown').forEach(d => {
+                    if (d !== fileDropdown) d.classList.remove('show');
+                });
+                fileDropdown.classList.toggle('show', !isShown);
+            });
+
+            fileDropdown.addEventListener('click', function(e) {
+                e.stopPropagation();
+            });
+
+            fileMenu.dataset.initialized = 'true';
+        }
+
+        if (fileDropdown.dataset.itemsInitialized === 'true') {
             return;
         }
-        
-        fileMenu.addEventListener('click', function(e) {
-            e.stopPropagation();
-            const isShown = fileDropdown.classList.contains('show');
-            document.querySelectorAll('.dropdown').forEach(d => {
-                if (d !== fileDropdown) d.classList.remove('show');
-            });
-            if (!isShown) fileDropdown.classList.add('show');
-        });
-        
-        fileDropdown.addEventListener('click', function(e) {
-            e.stopPropagation();
-        });
-        
+        fileDropdown.dataset.itemsInitialized = 'true';
+
         const dropdownItems = fileDropdown.querySelectorAll('.dropdown-item');
-        dropdownItems[0]?.addEventListener('click', () => {
+        dropdownItems[0]?.addEventListener('click', async () => {
+            fileDropdown.classList.remove('show');
+            if (sideTripSource) {
+                // Leaving without saving abandons the side-trip: drop the
+                // caller's saved modal state so it is not restored later
+                try {
+                    await clearSessionModalState();
+                    await clearSessionCategory1Code();
+                } catch (error) {
+                    console.error('Failed to clear side-trip state:', error);
+                }
+            }
             window.location.href = HTML_FILES.INDEX;
-            fileDropdown.classList.remove('show');
         });
-        dropdownItems[1]?.addEventListener('click', async () => {
-            await invoke('logout');
-            window.location.href = HTML_FILES.INDEX;
+        dropdownItems[1]?.addEventListener('click', () => {
             fileDropdown.classList.remove('show');
+            handleLogout();
         });
-        dropdownItems[2]?.addEventListener('click', async () => {
-            await invoke('quit_app');
+        dropdownItems[2]?.addEventListener('click', () => {
             fileDropdown.classList.remove('show');
+            handleQuit();
         });
-        
-        fileMenu.dataset.initialized = 'true';
     }
     
     if (!document.body.dataset.globalClickHandlerInitialized) {
@@ -422,71 +399,4 @@ function setupMenuHandlers() {
     }
 }
 
-function setupLanguageMenuHandlers() {
-    const languageMenu = document.getElementById('language-menu');
-    const languageDropdown = document.getElementById('language-dropdown');
-    
-    if (!languageMenu || !languageDropdown) return;
-    if (languageMenu.dataset.initialized === 'true') return;
-    
-    languageMenu.addEventListener('click', function(e) {
-        e.stopPropagation();
-        const isShown = languageDropdown.classList.contains('show');
-        document.querySelectorAll('.dropdown').forEach(d => {
-            if (d !== languageDropdown) d.classList.remove('show');
-        });
-        if (!isShown) languageDropdown.classList.add('show');
-    });
-    
-    languageDropdown.addEventListener('click', function(e) {
-        e.stopPropagation();
-    });
-    
-    languageMenu.dataset.initialized = 'true';
-}
 
-async function setupLanguageMenu() {
-    try {
-        const languageNames = await invoke('get_language_names');
-        const currentLang = i18n.getCurrentLanguage();
-        const languageDropdown = document.getElementById('language-dropdown');
-        
-        if (!languageDropdown) return;
-        
-        languageDropdown.innerHTML = '';
-        
-        for (const [langCode, langName] of languageNames) {
-            const item = document.createElement('div');
-            item.className = 'dropdown-item';
-            item.textContent = langName;
-            item.dataset.langCode = langCode;
-            
-            if (langCode === currentLang) {
-                item.classList.add('active');
-            }
-            
-            item.addEventListener('click', async function(e) {
-                e.stopPropagation();
-                await handleLanguageChange(langCode);
-                languageDropdown.classList.remove('show');
-            });
-            
-            languageDropdown.appendChild(item);
-        }
-    } catch (error) {
-        console.error('Failed to setup language menu:', error);
-    }
-}
-
-async function handleLanguageChange(langCode) {
-    try {
-        await i18n.setLanguage(langCode);
-        await setupLanguageMenu();
-        // Font Size submenu items are built via textContent (no data-i18n),
-        // so an explicit redraw is needed after language change.
-        await setupFontSizeMenu();
-        await loadShops();
-    } catch (error) {
-        console.error('Failed to change language:', error);
-    }
-}

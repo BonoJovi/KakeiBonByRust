@@ -29,6 +29,10 @@ export const FONT_SIZE_OPTIONS = [
     { code: FONT_SIZE_CUSTOM, key: I18N_FONT_SIZE_CUSTOM, action: 'modal' }
 ];
 
+// Session source_screen values for the side-trip pattern
+// (must match src/consts.rs VALID_SOURCE_SCREENS)
+export const SOURCE_SCREEN_TRANSACTION_MGMT = 'transaction_mgmt';
+
 // Tax rounding mode constants (must match src/consts.rs)
 export const TAX_ROUND_DOWN = 0;
 export const TAX_ROUND_HALF_UP = 1;

@@ -1,15 +1,18 @@
 import { invoke } from '@tauri-apps/api/core';
 import { HTML_FILES } from './html-files.js';
 import i18n from './i18n.js';
+import { setupLanguageMenu, setupLanguageMenuHandlers } from './language-menu.js';
 import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers } from './font-size.js';
 import { fitWindowToScreen } from './window-fit.js';
 import { Modal } from './modal.js';
 import { setupIndicators } from './indicators.js';
-import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
-import { createMenuBar } from './menu.js';
-import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
+import { getCurrentSessionUser } from './session.js';
+import { createMenuBar, handleLogout, handleQuit } from './menu.js';
+import { clearValidationError, attachCharCounter } from './validation-display.js';
 import { showToast } from './toast.js';
 import { MAX_NAME_LEN, MAX_MEMO_LEN } from './consts.js';
+import { escapeHtml } from './escape-html.js';
+import { saveMasterEntry } from './master-crud.js';
 
 console.log('=== MANUFACTURER-MANAGEMENT.JS LOADED ===');
 
@@ -38,17 +41,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     createMenuBar('management');
     console.log('DOMContentLoaded fired');
     try {
-        // Check session authentication
-        if (!await isSessionAuthenticated()) {
-            console.error('Not authenticated, redirecting to login');
-            window.location.href = HTML_FILES.INDEX;
-            return;
-        }
-        
-        // Get current user info
+        // Check session authentication and get user info in a single call
         const user = await getCurrentSessionUser();
         if (!user) {
-            console.error('Failed to get user info, redirecting to login');
+            console.error('Not authenticated, redirecting to login');
             window.location.href = HTML_FILES.INDEX;
             return;
         }
@@ -66,7 +62,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         setupMenuHandlers();
         
         // Setup language and font size menus
-        await setupLanguageMenu();
+        await setupLanguageMenu(loadManufacturers);
         setupLanguageMenuHandlers();
         
         setupFontSizeMenuHandlers();
@@ -104,7 +100,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         await fitWindowToScreen();
     } catch (error) {
         console.error('Initialization error:', error);
-        showToast(i18n.t('manufacturer_mgmt.failed_to_initialize') + ': ' + error, { variant: 'error' });
+        showToast(i18n.t('manufacturer_mgmt.failed_to_initialize'), { variant: 'error' });
     }
 });
 
@@ -171,11 +167,16 @@ function initDeleteModal() {
     });
 
     // Confirm delete button
-    document.getElementById('confirm-delete-btn').addEventListener('click', async () => {
-        if (manufacturerToDelete) {
-            await deleteManufacturer(manufacturerToDelete.manufacturer_id);
-            deleteModal.close();
-        }
+    // PR13 (Fable-5 D8/D9): `deleteManufacturer` now returns a boolean
+    // and the dead `confirmDeleteBtn.disabled` re-entry check is gone —
+    // see product-management.js for the shared rationale.
+    const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+    confirmDeleteBtn.addEventListener('click', async () => {
+        if (!manufacturerToDelete) return;
+        confirmDeleteBtn.disabled = true;
+        const ok = await deleteManufacturer(manufacturerToDelete.manufacturer_id);
+        confirmDeleteBtn.disabled = false;
+        if (ok) deleteModal.close();
     });
 }
 
@@ -248,7 +249,7 @@ async function loadManufacturers() {
         table.style.display = 'table';
     } catch (error) {
         console.error('Failed to load manufacturers:', error);
-        loading.textContent = i18n.t('manufacturer_mgmt.failed_to_load') + ': ' + error;
+        loading.textContent = i18n.t('manufacturer_mgmt.failed_to_load');
     }
 }
 
@@ -283,7 +284,7 @@ function renderManufacturers() {
         if (isDisabled) {
             // Add [非表示] badge for disabled items
             const badge = `<span style="color: #ffc107; font-weight: bold; margin-left: 8px;">[${i18n.t('common.disabled_label')}]</span>`;
-            nameCell.innerHTML = `<span style="color: #ffffff;">${manufacturer.manufacturer_name}</span>${badge}`;
+            nameCell.innerHTML = `<span style="color: #ffffff;">${escapeHtml(manufacturer.manufacturer_name)}</span>${badge}`;
         } else {
             nameCell.textContent = manufacturer.manufacturer_name;
         }
@@ -346,105 +347,61 @@ function linkNewManufacturerToProductDraft(manufacturerName) {
 }
 
 async function saveManufacturer() {
+    clearErrors();
+
     const manufacturerNameInput = document.getElementById('manufacturer-name');
     const manufacturerMemoInput = document.getElementById('manufacturer-memo');
-    const manufacturerName = manufacturerNameInput.value.trim();
-    const memo = manufacturerMemoInput.value.trim();
     const isDisabled = document.getElementById('manufacturer-is-disabled').checked ? 1 : 0;
 
-    // Clear previous errors
-    clearErrors();
-    clearValidationError(manufacturerNameInput);
-    clearValidationError(manufacturerMemoInput);
+    const result = await saveMasterEntry({
+        nameInput: manufacturerNameInput,
+        memoInput: manufacturerMemoInput,
+        editingId: editingManufacturerId,
+        findInCacheById: (id) => manufacturers.find(m => m.manufacturer_id === id) || null,
+        invokeAdd: (name, memo) => invoke('add_manufacturer', {
+            manufacturerName: name,
+            memo,
+            isDisabled: isDisabled === 1 ? isDisabled : null,
+        }),
+        invokeUpdate: (target, name, memo) => invoke('update_manufacturer', {
+            manufacturerId: editingManufacturerId,
+            manufacturerName: name,
+            memo,
+            displayOrder: target.display_order,
+            isDisabled,
+        }),
+        i18nPrefix: 'manufacturer_mgmt',
+        nameFieldI18nKey: 'manufacturer_mgmt.name',
+        memoFieldI18nKey: 'manufacturer_mgmt.memo',
+        nameMaxLen: MAX_NAME_LEN,
+        memoMaxLen: MAX_MEMO_LEN,
+        onNotFoundBeforeInvoke: async () => {
+            showToast(i18n.t('manufacturer_mgmt.not_found'), { variant: 'error' });
+            await loadManufacturers();
+        },
+    });
 
-    // Validation — empty name
-    if (!manufacturerName) {
-        showValidationError(manufacturerNameInput, i18n.t('manufacturer_mgmt.empty_name'));
-        throw new Error('Validation error: empty manufacturer name');
+    if (result.mode === 'skip') {
+        return;
     }
 
-    // Validation — max length (mirrors Rust defense in src/services/manufacturer.rs)
-    if ([...manufacturerName].length > MAX_NAME_LEN) {
-        showMaxLengthError(manufacturerNameInput, i18n.t('manufacturer_mgmt.name'), MAX_NAME_LEN);
-        throw new Error('Validation error: manufacturer name too long');
-    }
-    if (memo && [...memo].length > MAX_MEMO_LEN) {
-        showMaxLengthError(manufacturerMemoInput, i18n.t('manufacturer_mgmt.memo'), MAX_MEMO_LEN);
-        throw new Error('Validation error: memo too long');
-    }
+    // Save succeeded: failures past this point (list reload, side-trip
+    // link) must not be reported as a failed save.
+    await loadManufacturers();
 
-    try {
-        if (editingManufacturerId) {
-            // Update existing manufacturer
-            const manufacturer = manufacturers.find(m => m.manufacturer_id === editingManufacturerId);
-            await invoke('update_manufacturer', {
-                manufacturerId: editingManufacturerId,
-                manufacturerName: manufacturerName,
-                memo: memo || null,
-                displayOrder: manufacturer.display_order,
-                isDisabled: isDisabled
-            });
-            console.log('Manufacturer updated successfully');
-        } else {
-            // Add new manufacturer
-            await invoke('add_manufacturer', {
-                manufacturerName: manufacturerName,
-                memo: memo || null,
-                isDisabled: isDisabled === 1 ? isDisabled : null
-            });
-            console.log('Manufacturer added successfully');
-        }
-
-        // Reload manufacturers list (modal will be closed by Modal class).
-        // This also refreshes the in-memory `manufacturers` array, which we
-        // need to look up the newly added one by name below.
-        await loadManufacturers();
-
-        // If this add was the product-side trip, stamp the new manufacturer
-        // id into the persisted product draft so the user resumes with it
-        // already selected after "Back to product entry".
-        if (returnToProduct && !editingManufacturerId) {
-            linkNewManufacturerToProductDraft(manufacturerName);
-        }
-    } catch (error) {
-        console.error('Failed to save manufacturer:', error);
-
-        // Map backend error messages to i18n resources / localized text
-        const errorMessage = error.toString();
-        let nameMessage = null;
-        let memoMessage = null;
-
-        if (errorMessage.includes('already exists')) {
-            nameMessage = i18n.t('manufacturer_mgmt.duplicate_error');
-        } else if (errorMessage.includes('Manufacturer name must be')) {
-            // Defense-line trip: frontend max-length check should have caught
-            // this, so use the same i18n message for parity.
-            nameMessage = i18n.t('validation.max_length', {
-                field: i18n.t('manufacturer_mgmt.name'),
-                max: MAX_NAME_LEN,
-                actual: [...manufacturerName].length,
-            });
-        } else if (errorMessage.includes('Memo must be')) {
-            memoMessage = i18n.t('validation.max_length', {
-                field: i18n.t('manufacturer_mgmt.memo'),
-                max: MAX_MEMO_LEN,
-                actual: [...memo].length,
-            });
-        } else if (errorMessage.includes('cannot be empty')) {
-            nameMessage = i18n.t('manufacturer_mgmt.empty_name');
-        } else {
-            // Fallback to original error message on the name field
-            nameMessage = errorMessage;
-        }
-
-        if (nameMessage) showValidationError(manufacturerNameInput, nameMessage);
-        if (memoMessage) showValidationError(manufacturerMemoInput, memoMessage);
-
-        // Re-throw error to prevent modal from closing
-        throw error;
+    // If this add was the product-side trip, stamp the new manufacturer
+    // id into the persisted product draft so the user resumes with it
+    // already selected after "Back to product entry".
+    if (result.mode === 'add' && returnToProduct) {
+        const savedName = manufacturerNameInput.value.trim();
+        linkNewManufacturerToProductDraft(savedName);
     }
 }
 
+/// Delete a manufacturer. Returns `true` on success (the confirmation
+/// modal should close) or `false` on failure (the modal stays open so
+/// the user can retry). PR13 (Fable-5 D8) — see product-management.js
+/// for the shared rationale.
 async function deleteManufacturer(manufacturerId) {
     try {
         await invoke('delete_manufacturer', {
@@ -452,9 +409,11 @@ async function deleteManufacturer(manufacturerId) {
         });
         console.log('Manufacturer deleted successfully');
         await loadManufacturers();
+        return true;
     } catch (error) {
         console.error('Failed to delete manufacturer:', error);
-        showToast(i18n.t('manufacturer_mgmt.failed_to_delete') + ': ' + error, { variant: 'error' });
+        showToast(i18n.t('manufacturer_mgmt.failed_to_delete'), { variant: 'error' });
+        return false;
     }
 }
 
@@ -464,39 +423,41 @@ function setupMenuHandlers() {
     const fileDropdown = document.getElementById('file-dropdown');
     
     if (fileMenu && fileDropdown) {
-        if (fileMenu.dataset.initialized === 'true') {
+        if (fileMenu.dataset.initialized !== 'true') {
+            fileMenu.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const isShown = fileDropdown.classList.contains('show');
+                document.querySelectorAll('.dropdown').forEach(d => {
+                    if (d !== fileDropdown) d.classList.remove('show');
+                });
+                fileDropdown.classList.toggle('show', !isShown);
+            });
+
+            fileDropdown.addEventListener('click', function(e) {
+                e.stopPropagation();
+            });
+
+            fileMenu.dataset.initialized = 'true';
+        }
+
+        if (fileDropdown.dataset.itemsInitialized === 'true') {
             return;
         }
-        
-        fileMenu.addEventListener('click', function(e) {
-            e.stopPropagation();
-            const isShown = fileDropdown.classList.contains('show');
-            document.querySelectorAll('.dropdown').forEach(d => {
-                if (d !== fileDropdown) d.classList.remove('show');
-            });
-            if (!isShown) fileDropdown.classList.add('show');
-        });
-        
-        fileDropdown.addEventListener('click', function(e) {
-            e.stopPropagation();
-        });
-        
+        fileDropdown.dataset.itemsInitialized = 'true';
+
         const dropdownItems = fileDropdown.querySelectorAll('.dropdown-item');
         dropdownItems[0]?.addEventListener('click', () => {
             window.location.href = HTML_FILES.INDEX;
             fileDropdown.classList.remove('show');
         });
-        dropdownItems[1]?.addEventListener('click', async () => {
-            await invoke('logout');
-            window.location.href = HTML_FILES.INDEX;
+        dropdownItems[1]?.addEventListener('click', () => {
             fileDropdown.classList.remove('show');
+            handleLogout();
         });
-        dropdownItems[2]?.addEventListener('click', async () => {
-            await invoke('quit_app');
+        dropdownItems[2]?.addEventListener('click', () => {
             fileDropdown.classList.remove('show');
+            handleQuit();
         });
-        
-        fileMenu.dataset.initialized = 'true';
     }
     
     if (!document.body.dataset.globalClickHandlerInitialized) {
@@ -512,71 +473,4 @@ function setupMenuHandlers() {
     }
 }
 
-function setupLanguageMenuHandlers() {
-    const languageMenu = document.getElementById('language-menu');
-    const languageDropdown = document.getElementById('language-dropdown');
-    
-    if (!languageMenu || !languageDropdown) return;
-    if (languageMenu.dataset.initialized === 'true') return;
-    
-    languageMenu.addEventListener('click', function(e) {
-        e.stopPropagation();
-        const isShown = languageDropdown.classList.contains('show');
-        document.querySelectorAll('.dropdown').forEach(d => {
-            if (d !== languageDropdown) d.classList.remove('show');
-        });
-        if (!isShown) languageDropdown.classList.add('show');
-    });
-    
-    languageDropdown.addEventListener('click', function(e) {
-        e.stopPropagation();
-    });
-    
-    languageMenu.dataset.initialized = 'true';
-}
 
-async function setupLanguageMenu() {
-    try {
-        const languageNames = await invoke('get_language_names');
-        const currentLang = i18n.getCurrentLanguage();
-        const languageDropdown = document.getElementById('language-dropdown');
-        
-        if (!languageDropdown) return;
-        
-        languageDropdown.innerHTML = '';
-        
-        for (const [langCode, langName] of languageNames) {
-            const item = document.createElement('div');
-            item.className = 'dropdown-item';
-            item.textContent = langName;
-            item.dataset.langCode = langCode;
-            
-            if (langCode === currentLang) {
-                item.classList.add('active');
-            }
-            
-            item.addEventListener('click', async function(e) {
-                e.stopPropagation();
-                await handleLanguageChange(langCode);
-                languageDropdown.classList.remove('show');
-            });
-            
-            languageDropdown.appendChild(item);
-        }
-    } catch (error) {
-        console.error('Failed to setup language menu:', error);
-    }
-}
-
-async function handleLanguageChange(langCode) {
-    try {
-        await i18n.setLanguage(langCode);
-        await setupLanguageMenu();
-        // Font Size submenu items are built via textContent (no data-i18n),
-        // so an explicit redraw is needed after language change.
-        await setupFontSizeMenu();
-        await loadManufacturers();
-    } catch (error) {
-        console.error('Failed to change language:', error);
-    }
-}

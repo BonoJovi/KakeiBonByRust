@@ -1,15 +1,18 @@
 import { invoke } from '@tauri-apps/api/core';
 import i18n from './i18n.js';
+import { setupLanguageMenu, setupLanguageMenuHandlers } from './language-menu.js';
 import { setupIndicators } from './indicators.js';
 import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers } from './font-size.js';
 import { fitWindowToScreen } from './window-fit.js';
 import { Modal } from './modal.js';
 import { HTML_FILES } from './html-files.js';
 import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
-import { createMenuBar } from './menu.js';
+import { createMenuBar, handleLogout, handleQuit } from './menu.js';
 import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
 import { showToast } from './toast.js';
 import { MAX_I18N_NAME_LEN } from './consts.js';
+import { escapeHtml } from './escape-html.js';
+import { mapMasterErrorCode, API_ERROR_CODES, formatApiError } from './master-crud.js';
 
 // Category level constants
 const LEVEL_CATEGORY1 = 1;
@@ -64,7 +67,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     // Setup language and font size menus
     console.log('[DOMContentLoaded] Setting up language menu');
-    await setupLanguageMenu();
+    await setupLanguageMenu(loadCategories);
     setupLanguageMenuHandlers();
     
     console.log('[DOMContentLoaded] Setting up font size menu');
@@ -221,24 +224,27 @@ function setupMenuHandlers() {
     const fileDropdown = document.getElementById('file-dropdown');
     
     if (fileMenu && fileDropdown) {
-        fileMenu.addEventListener('click', function(e) {
-            e.stopPropagation();
-            const isShown = fileDropdown.classList.contains('show');
-            
-            document.querySelectorAll('.dropdown').forEach(d => {
-                if (d !== fileDropdown) {
-                    d.classList.remove('show');
-                }
+        // The toggle may already be wired by menu.js; the items are only wired here
+        if (fileMenu.dataset.initialized !== 'true') {
+            fileMenu.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const isShown = fileDropdown.classList.contains('show');
+
+                document.querySelectorAll('.dropdown').forEach(d => {
+                    if (d !== fileDropdown) {
+                        d.classList.remove('show');
+                    }
+                });
+
+                fileDropdown.classList.toggle('show', !isShown);
             });
-            
-            if (!isShown) {
-                fileDropdown.classList.add('show');
-            }
-        });
-        
-        fileDropdown.addEventListener('click', function(e) {
-            e.stopPropagation();
-        });
+
+            fileDropdown.addEventListener('click', function(e) {
+                e.stopPropagation();
+            });
+
+            fileMenu.dataset.initialized = 'true';
+        }
         
         // Back to main
         const backToMainItem = fileDropdown.querySelector('.dropdown-item:nth-child(1)');
@@ -252,8 +258,8 @@ function setupMenuHandlers() {
         const logoutItem = fileDropdown.querySelector('.dropdown-item:nth-child(3)');
         if (logoutItem) {
             logoutItem.addEventListener('click', function() {
-                // TODO: Implement logout
-                window.location.href = HTML_FILES.INDEX;
+                fileDropdown.classList.remove('show');
+                handleLogout();
             });
         }
         
@@ -261,7 +267,8 @@ function setupMenuHandlers() {
         const quitItem = fileDropdown.querySelector('.dropdown-item:nth-child(4)');
         if (quitItem) {
             quitItem.addEventListener('click', function() {
-                invoke('handle_quit');
+                fileDropdown.classList.remove('show');
+                handleQuit();
             });
         }
     }
@@ -277,93 +284,6 @@ function setupMenuHandlers() {
     }
 }
 
-function setupLanguageMenuHandlers() {
-    const languageMenu = document.getElementById('language-menu');
-    const languageDropdown = document.getElementById('language-dropdown');
-    
-    if (!languageMenu || !languageDropdown) {
-        return;
-    }
-    
-    if (languageMenu.dataset.initialized === 'true') {
-        return;
-    }
-    
-    languageMenu.addEventListener('click', function(e) {
-        e.stopPropagation();
-        
-        const isShown = languageDropdown.classList.contains('show');
-        
-        document.querySelectorAll('.dropdown').forEach(d => {
-            if (d !== languageDropdown) {
-                d.classList.remove('show');
-            }
-        });
-        
-        if (!isShown) {
-            languageDropdown.classList.add('show');
-        }
-    });
-    
-    languageDropdown.addEventListener('click', function(e) {
-        e.stopPropagation();
-    });
-    
-    languageMenu.dataset.initialized = 'true';
-}
-
-async function setupLanguageMenu() {
-    try {
-        // Fetch language names from backend. Each entry is shown in its own
-        // native script (English / 日本語 / ...) regardless of the current UI
-        // language, so users can always recognize the language they want.
-        const languageNames = await invoke('get_language_names');
-        const currentLang = i18n.currentLanguage;
-
-        const languageDropdown = document.getElementById('language-dropdown');
-        if (!languageDropdown) {
-            return;
-        }
-
-        languageDropdown.innerHTML = '';
-
-        for (const [langCode, langName] of languageNames) {
-            const item = document.createElement('div');
-            item.className = 'dropdown-item';
-            item.textContent = langName;
-            item.dataset.langCode = langCode;
-
-            if (langCode === currentLang) {
-                item.classList.add('active');
-            }
-
-            item.addEventListener('click', async function(e) {
-                e.stopPropagation();
-                await handleLanguageChange(langCode);
-                languageDropdown.classList.remove('show');
-            });
-
-            languageDropdown.appendChild(item);
-        }
-    } catch (error) {
-        console.error('Failed to setup language menu:', error);
-    }
-}
-
-async function handleLanguageChange(langCode) {
-    try {
-        await i18n.setLanguage(langCode);
-        await setupLanguageMenu();
-        // Font Size submenu items are built via textContent (no data-i18n),
-        // so an explicit redraw is needed after language change.
-        await setupFontSizeMenu();
-
-        // Reload categories to get translated names
-        await loadCategories();
-    } catch (error) {
-        console.error('Failed to change language:', error);
-    }
-}
 
 function setupModalHandlers() {
     // Category1 modal handlers (not yet migrated to Modal class)
@@ -399,24 +319,24 @@ async function loadCategories() {
         const treeContainer = document.getElementById('category-tree');
         treeContainer.innerHTML = '<div class="loading" data-i18n="common.loading">Loading...</div>';
         i18n.updateUI();
-        
+
         // Get current language
         const currentLang = i18n.getCurrentLanguage();
-        
+
         console.log('Loading categories with params:', { langCode: currentLang });
-        
+
         // Fetch categories from backend
         categories = await invoke('get_category_tree_all_with_lang', {
             langCode: currentLang
         });
-        
+
         console.log('Loaded categories:', categories);
-        
+
         renderCategoryTree();
     } catch (error) {
         console.error('Failed to load categories:', error);
         const treeContainer = document.getElementById('category-tree');
-        treeContainer.innerHTML = '<div class="error">Failed to load categories: ' + error + '</div>';
+        treeContainer.innerHTML = '<div class="error">Failed to load categories: ' + escapeHtml(formatApiError(error)) + '</div>';
     }
 }
 
@@ -452,11 +372,11 @@ function renderCategory1(categoryTree, index, total) {
     
     div.innerHTML = `
         <div class="category-header">
-            <span class="expand-icon ${hasChildren ? (isExpanded ? 'expanded expandable' : 'collapsed expandable') : 'empty'}" data-category-code="${category.category1_code}"></span>
-            <span class="category-name ${hasChildren ? 'expandable' : ''}">${categoryName}</span>
+            <span class="expand-icon ${hasChildren ? (isExpanded ? 'expanded expandable' : 'collapsed expandable') : 'empty'}" data-category-code="${escapeHtml(category.category1_code)}"></span>
+            <span class="category-name ${hasChildren ? 'expandable' : ''}">${escapeHtml(categoryName)}</span>
             <span class="category-order">${i18n.t('category_mgmt.order')}: ${category.display_order}</span>
             <div class="category-actions">
-                <button class="btn-icon btn-add" data-action="add-child" data-category-code="${category.category1_code}" data-category1-code="${category.category1_code}" data-level="1">
+                <button class="btn-icon btn-add" data-action="add-child" data-category-code="${escapeHtml(category.category1_code)}" data-category1-code="${escapeHtml(category.category1_code)}" data-level="1">
                     ${i18n.t('category_mgmt.add_sub')}
                 </button>
             </div>
@@ -513,10 +433,10 @@ function renderCategory2(cat2Tree, parent1Code, index, total) {
         div.innerHTML = `
             <div class="category-header">
                 <span class="expand-icon empty"></span>
-                <span class="category-name disabled-name">${categoryName}</span>
+                <span class="category-name disabled-name">${escapeHtml(categoryName)}</span>
                 <span class="category-badge-hidden">${i18n.t('category_mgmt.hidden')}</span>
                 <div class="category-actions">
-                    <button class="btn-icon btn-show" data-action="show" data-category1-code="${parent1Code}" data-category2-code="${category.category2_code}" data-level="2">
+                    <button class="btn-icon btn-show" data-action="show" data-category1-code="${escapeHtml(parent1Code)}" data-category2-code="${escapeHtml(category.category2_code)}" data-level="2">
                         ${i18n.t('common.show')}
                     </button>
                 </div>
@@ -525,23 +445,23 @@ function renderCategory2(cat2Tree, parent1Code, index, total) {
     } else {
         div.innerHTML = `
             <div class="category-header">
-                <span class="expand-icon ${hasChildren ? (isExpanded ? 'expanded expandable' : 'collapsed expandable') : 'empty'}" data-category-code="${category.category2_code}"></span>
-                <span class="category-name ${hasChildren ? 'expandable' : ''}">${categoryName}</span>
+                <span class="expand-icon ${hasChildren ? (isExpanded ? 'expanded expandable' : 'collapsed expandable') : 'empty'}" data-category-code="${escapeHtml(category.category2_code)}"></span>
+                <span class="category-name ${hasChildren ? 'expandable' : ''}">${escapeHtml(categoryName)}</span>
                 <span class="category-order">${i18n.t('category_mgmt.order')}: ${category.display_order}</span>
                 <div class="category-actions">
-                    <button class="btn-icon btn-add" data-action="add-child" data-category-code="${category.category2_code}" data-category1-code="${parent1Code}" data-category2-code="${category.category2_code}" data-level="2">
+                    <button class="btn-icon btn-add" data-action="add-child" data-category-code="${escapeHtml(category.category2_code)}" data-category1-code="${escapeHtml(parent1Code)}" data-category2-code="${escapeHtml(category.category2_code)}" data-level="2">
                         ${i18n.t('category_mgmt.add_sub')}
                     </button>
-                    <button class="btn-icon btn-edit" data-action="edit" data-category-code="${category.category2_code}" data-category1-code="${parent1Code}" data-category2-code="${category.category2_code}" data-level="2">
+                    <button class="btn-icon btn-edit" data-action="edit" data-category-code="${escapeHtml(category.category2_code)}" data-category1-code="${escapeHtml(parent1Code)}" data-category2-code="${escapeHtml(category.category2_code)}" data-level="2">
                         ${i18n.t('common.edit')}
                     </button>
-                    <button class="btn-icon btn-up" data-action="move-up" data-category-code="${category.category2_code}" data-category1-code="${parent1Code}" data-category2-code="${category.category2_code}" data-level="2" ${index === 0 ? 'disabled' : ''}>
+                    <button class="btn-icon btn-up" data-action="move-up" data-category-code="${escapeHtml(category.category2_code)}" data-category1-code="${escapeHtml(parent1Code)}" data-category2-code="${escapeHtml(category.category2_code)}" data-level="2" ${index === 0 ? 'disabled' : ''}>
                         ↑
                     </button>
-                    <button class="btn-icon btn-down" data-action="move-down" data-category-code="${category.category2_code}" data-category1-code="${parent1Code}" data-category2-code="${category.category2_code}" data-level="2" ${index === total - 1 ? 'disabled' : ''}>
+                    <button class="btn-icon btn-down" data-action="move-down" data-category-code="${escapeHtml(category.category2_code)}" data-category1-code="${escapeHtml(parent1Code)}" data-category2-code="${escapeHtml(category.category2_code)}" data-level="2" ${index === total - 1 ? 'disabled' : ''}>
                         ↓
                     </button>
-                    <button class="btn-icon btn-hide" data-action="hide" data-category-code="${category.category2_code}" data-category1-code="${parent1Code}" data-category2-code="${category.category2_code}" data-level="2" data-has-children="${hasChildren}">
+                    <button class="btn-icon btn-hide" data-action="hide" data-category-code="${escapeHtml(category.category2_code)}" data-category1-code="${escapeHtml(parent1Code)}" data-category2-code="${escapeHtml(category.category2_code)}" data-level="2" data-has-children="${hasChildren}">
                         ${i18n.t('common.hide')}
                     </button>
                 </div>
@@ -596,10 +516,10 @@ function renderCategory3(category, parent1Code, parent2Code, index, total) {
         div.innerHTML = `
             <div class="category-header">
                 <span class="expand-icon empty"></span>
-                <span class="category-name disabled-name">${categoryName}</span>
+                <span class="category-name disabled-name">${escapeHtml(categoryName)}</span>
                 <span class="category-badge-hidden">${i18n.t('category_mgmt.hidden')}</span>
                 <div class="category-actions">
-                    <button class="btn-icon btn-show" data-action="show" data-category1-code="${parent1Code}" data-category2-code="${parent2Code}" data-category3-code="${category.category3_code}" data-level="3">
+                    <button class="btn-icon btn-show" data-action="show" data-category1-code="${escapeHtml(parent1Code)}" data-category2-code="${escapeHtml(parent2Code)}" data-category3-code="${escapeHtml(category.category3_code)}" data-level="3">
                         ${i18n.t('common.show')}
                     </button>
                 </div>
@@ -609,19 +529,19 @@ function renderCategory3(category, parent1Code, parent2Code, index, total) {
         div.innerHTML = `
             <div class="category-header">
                 <span class="expand-icon empty"></span>
-                <span class="category-name">${categoryName}</span>
+                <span class="category-name">${escapeHtml(categoryName)}</span>
                 <span class="category-order">${i18n.t('category_mgmt.order')}: ${category.display_order}</span>
                 <div class="category-actions">
-                    <button class="btn-icon btn-edit" data-action="edit" data-category-code="${category.category3_code}" data-category1-code="${parent1Code}" data-category2-code="${parent2Code}" data-category3-code="${category.category3_code}" data-level="3">
+                    <button class="btn-icon btn-edit" data-action="edit" data-category-code="${escapeHtml(category.category3_code)}" data-category1-code="${escapeHtml(parent1Code)}" data-category2-code="${escapeHtml(parent2Code)}" data-category3-code="${escapeHtml(category.category3_code)}" data-level="3">
                         ${i18n.t('common.edit')}
                     </button>
-                    <button class="btn-icon btn-up" data-action="move-up" data-category-code="${category.category3_code}" data-category1-code="${parent1Code}" data-category2-code="${parent2Code}" data-category3-code="${category.category3_code}" data-level="3" ${index === 0 ? 'disabled' : ''}>
+                    <button class="btn-icon btn-up" data-action="move-up" data-category-code="${escapeHtml(category.category3_code)}" data-category1-code="${escapeHtml(parent1Code)}" data-category2-code="${escapeHtml(parent2Code)}" data-category3-code="${escapeHtml(category.category3_code)}" data-level="3" ${index === 0 ? 'disabled' : ''}>
                         ↑
                     </button>
-                    <button class="btn-icon btn-down" data-action="move-down" data-category-code="${category.category3_code}" data-category1-code="${parent1Code}" data-category2-code="${parent2Code}" data-category3-code="${category.category3_code}" data-level="3" ${index === total - 1 ? 'disabled' : ''}>
+                    <button class="btn-icon btn-down" data-action="move-down" data-category-code="${escapeHtml(category.category3_code)}" data-category1-code="${escapeHtml(parent1Code)}" data-category2-code="${escapeHtml(parent2Code)}" data-category3-code="${escapeHtml(category.category3_code)}" data-level="3" ${index === total - 1 ? 'disabled' : ''}>
                         ↓
                     </button>
-                    <button class="btn-icon btn-hide" data-action="hide" data-category-code="${category.category3_code}" data-category1-code="${parent1Code}" data-category2-code="${parent2Code}" data-category3-code="${category.category3_code}" data-level="3">
+                    <button class="btn-icon btn-hide" data-action="hide" data-category-code="${escapeHtml(category.category3_code)}" data-category1-code="${escapeHtml(parent1Code)}" data-category2-code="${escapeHtml(parent2Code)}" data-category3-code="${escapeHtml(category.category3_code)}" data-level="3">
                         ${i18n.t('common.hide')}
                     </button>
                 </div>
@@ -763,10 +683,26 @@ async function openEditModal(categoryCode, category1Code, category2Code, level) 
         }
     } catch (error) {
         console.error('Failed to load category data for edit:', error);
+
+        // Concurrent removal from another window: show the dedicated
+        // not_found toast and refresh the tree so the stale row disappears.
+        // Matches the Shop/Product/Manufacturer master-audit contract.
+        // Keys off the stable `err.code` returned by ApiError; the legacy
+        // substring inspection is retained as a fallback for any Tauri
+        // path not yet migrated to Result<T, ApiError>.
+        const isBackendNotFound = error !== null
+            && typeof error === 'object'
+            && error.code === API_ERROR_CODES.NOT_FOUND;
+        if (isBackendNotFound || String(error).includes('not found')) {
+            showToast(i18n.t('category_mgmt.not_found'), { variant: 'error' });
+            await loadCategories();
+            return;
+        }
+
         const errorMsg = i18n.t('category_mgmt.error_load_category');
         const errorElement = document.getElementById('error-message');
         if (errorElement) {
-            errorElement.textContent = errorMsg + ': ' + error;
+            errorElement.textContent = errorMsg + ': ' + formatApiError(error);
             errorElement.style.display = 'block';
         }
     }
@@ -775,6 +711,57 @@ async function openEditModal(categoryCode, category1Code, category2Code, level) 
 async function handleCategory1Save() {
     // TODO: Implement save logic
     console.log('Save category1');
+}
+
+/**
+ * Route a backend save error from cat2/cat3 modals into inline field
+ * messages or a toast. Tree view has TWO name inputs (ja + en), so
+ * classifier `nameMessage` output is shown on BOTH fields — matching
+ * the pre-existing "both empty" pattern (single-field targeting is
+ * ambiguous in the tree). Also handles the backend `not_found` case by
+ * reloading the tree and closing the modal, matching account /
+ * shop / manufacturer / product master-audit contract (PR #99).
+ *
+ * Returns `true` when the error was handled as not_found (caller
+ * should skip re-throw so the Modal auto-closes); `false` otherwise
+ * (caller should re-throw to keep the Modal open with inline errors).
+ */
+async function handleCategoryModalError(error, modal, nameJaField, nameEnField, ctx) {
+    const isBackendNotFound = error !== null
+        && typeof error === 'object'
+        && error.code === API_ERROR_CODES.NOT_FOUND;
+    if (isBackendNotFound) {
+        showToast(i18n.t('category_mgmt.not_found'), { variant: 'error' });
+        await loadCategories();
+        modal.close();
+        return true;
+    }
+
+    const mapped = mapMasterErrorCode(error, {
+        i18nPrefix: 'category_mgmt',
+        // Category has two name fields (ja+en). The classifier only tracks
+        // a single nameFieldI18nKey/nameMaxLen, so its VALIDATION-branch
+        // "characters or less" wording is not routed here — we surface it
+        // as a toast fallback instead. Empty-name and duplicate-name paths
+        // are unaffected: both produce a nameMessage that we place on
+        // both ja/en fields.
+        nameFieldI18nKey: 'category_mgmt.name_ja',
+        memoFieldI18nKey: 'category_mgmt.name_ja',
+        nameMaxLen: MAX_I18N_NAME_LEN,
+        memoMaxLen: MAX_I18N_NAME_LEN,
+        actualNameLen: ctx.actualNameLen,
+        actualMemoLen: 0,
+    });
+
+    if (mapped.toastMessage) {
+        showToast(mapped.toastMessage, { variant: 'error' });
+    }
+    if (mapped.nameMessage) {
+        // Tree view makes single-field inline errors ambiguous — show on both.
+        showValidationError(nameJaField, mapped.nameMessage);
+        showValidationError(nameEnField, mapped.nameMessage);
+    }
+    return false;
 }
 
 async function handleCategory2Save(formData) {
@@ -832,41 +819,17 @@ async function handleCategory2Save(formData) {
                 nameEn: nameEn
             });
         }
-        
+
         // Reload categories
         await loadCategories();
     } catch (error) {
         console.error('Failed to save category2:', error);
 
-        const errStr = String(error);
-
-        // Defense-line trip from Rust: bounded-field max length.
-        if (errStr.includes('Japanese name must be')) {
-            showValidationError(nameJaField, i18n.t('validation.max_length', {
-                field: i18n.t('category_mgmt.name_ja'),
-                max: MAX_I18N_NAME_LEN,
-                actual: [...nameJa].length,
-            }));
-            throw error;
-        }
-        if (errStr.includes('English name must be')) {
-            showValidationError(nameEnField, i18n.t('validation.max_length', {
-                field: i18n.t('category_mgmt.name_en'),
-                max: MAX_I18N_NAME_LEN,
-                actual: [...nameEn].length,
-            }));
-            throw error;
-        }
-
-        // Check if it's a duplicate name error
-        if (errStr.includes('already exists')) {
-            const match = errStr.match(/Category name '(.+)' already exists/);
-            const duplicateName = match ? match[1] : '';
-            const errorMsg = i18n.t('error.category_duplicate_name').replace('{0}', duplicateName);
-            showToast(errorMsg, { variant: 'warning' });
-        } else {
-            showToast(i18n.t('error.category_save_failed') + ': ' + error, { variant: 'error' });
-        }
+        const handledAsNotFound = await handleCategoryModalError(
+            error, category2Modal, nameJaField, nameEnField,
+            { actualNameLen: Math.max([...nameJa].length, [...nameEn].length) }
+        );
+        if (handledAsNotFound) return;
         throw error; // Re-throw to prevent modal from closing
     } finally {
         // Always restore button state
@@ -933,41 +896,17 @@ async function handleCategory3Save(formData) {
                 nameEn: nameEn
             });
         }
-        
+
         // Reload categories
         await loadCategories();
     } catch (error) {
         console.error('Failed to save category3:', error);
 
-        const errStr = String(error);
-
-        // Defense-line trip from Rust: bounded-field max length.
-        if (errStr.includes('Japanese name must be')) {
-            showValidationError(nameJaField, i18n.t('validation.max_length', {
-                field: i18n.t('category_mgmt.name_ja'),
-                max: MAX_I18N_NAME_LEN,
-                actual: [...nameJa].length,
-            }));
-            throw error;
-        }
-        if (errStr.includes('English name must be')) {
-            showValidationError(nameEnField, i18n.t('validation.max_length', {
-                field: i18n.t('category_mgmt.name_en'),
-                max: MAX_I18N_NAME_LEN,
-                actual: [...nameEn].length,
-            }));
-            throw error;
-        }
-
-        // Check if it's a duplicate name error
-        if (errStr.includes('already exists')) {
-            const match = errStr.match(/Category name '(.+)' already exists/);
-            const duplicateName = match ? match[1] : '';
-            const errorMsg = i18n.t('error.category_duplicate_name').replace('{0}', duplicateName);
-            showToast(errorMsg, { variant: 'warning' });
-        } else {
-            showToast(i18n.t('error.category_save_failed') + ': ' + error, { variant: 'error' });
-        }
+        const handledAsNotFound = await handleCategoryModalError(
+            error, category3Modal, nameJaField, nameEnField,
+            { actualNameLen: Math.max([...nameJa].length, [...nameEn].length) }
+        );
+        if (handledAsNotFound) return;
         throw error; // Re-throw to prevent modal from closing
     } finally {
         // Always restore button state
@@ -1004,7 +943,7 @@ async function moveCategoryUp(categoryCode, category1Code, category2Code, level)
         scrollToCategory(categoryCode, level);
     } catch (error) {
         console.error('Failed to move category up:', error);
-        showToast(i18n.t('error.category_move_failed') + ': ' + error, { variant: 'error' });
+        showToast(i18n.t('error.category_move_failed') + ': ' + formatApiError(error), { variant: 'error' });
         
         // Re-enable button on error
         if (button) {
@@ -1041,7 +980,7 @@ async function moveCategoryDown(categoryCode, category1Code, category2Code, leve
         scrollToCategory(categoryCode, level);
     } catch (error) {
         console.error('Failed to move category down:', error);
-        showToast(i18n.t('error.category_move_failed') + ': ' + error, { variant: 'error' });
+        showToast(i18n.t('error.category_move_failed') + ': ' + formatApiError(error), { variant: 'error' });
         
         // Re-enable button on error
         if (button) {
@@ -1083,7 +1022,21 @@ async function hideCategory(category1Code, category2Code, category3Code, level, 
         await loadCategories();
     } catch (error) {
         console.error('Failed to hide category:', error);
-        showToast(i18n.t('category_mgmt.failed_to_hide') + ': ' + error, { variant: 'error' });
+
+        // Target was already disabled/deleted in another window: show the
+        // dedicated not_found toast and refresh the tree instead of the
+        // generic hide-failure message. Keys off the stable ApiError code
+        // with a legacy substring fallback for any unmigrated path.
+        const isBackendNotFound = error !== null
+            && typeof error === 'object'
+            && error.code === API_ERROR_CODES.NOT_FOUND;
+        if (isBackendNotFound || String(error).includes('not found')) {
+            showToast(i18n.t('category_mgmt.not_found'), { variant: 'error' });
+            await loadCategories();
+            return;
+        }
+
+        showToast(i18n.t('category_mgmt.failed_to_hide') + ': ' + formatApiError(error), { variant: 'error' });
     }
 }
 
@@ -1106,7 +1059,7 @@ async function showCategory(category1Code, category2Code, category3Code, level) 
         await loadCategories();
     } catch (error) {
         console.error('Failed to show category:', error);
-        showToast(i18n.t('category_mgmt.failed_to_show') + ': ' + error, { variant: 'error' });
+        showToast(i18n.t('category_mgmt.failed_to_show') + ': ' + formatApiError(error), { variant: 'error' });
     }
 }
 

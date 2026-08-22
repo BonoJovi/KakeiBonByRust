@@ -1,4 +1,5 @@
 use sqlx::sqlite::SqlitePool;
+use sqlx::Acquire; // for `PoolConnection::begin`
 use std::path::PathBuf;
 use crate::consts::{DB_DIR_NAME, DB_FILE_NAME};
 use crate::sql_queries;
@@ -58,6 +59,18 @@ impl Database {
         &self.pool
     }
     
+    /// Run every statement in `res/sql/dbaccess.sql` in a single
+    /// transaction. Fable-5 review #30: the previous shape autocommitted
+    /// each of the ~500 CREATE / INSERT / CREATE INDEX statements
+    /// separately, which meant one fsync per statement on cold startup.
+    /// Batching into one transaction turns ~500 fsyncs into 1 — a
+    /// noticeable startup improvement on the desktop app, most visible
+    /// on the first launch after a version upgrade when the whole i18n
+    /// resource pack is being seeded. Every statement in dbaccess.sql
+    /// is transaction-safe (CREATE TABLE, CREATE INDEX, and INSERT are
+    /// all fine inside a tx — no PRAGMA / VACUUM / ATTACH lives there),
+    /// and `INSERT OR IGNORE` keeps re-runs idempotent so a mid-tx
+    /// failure on a subsequent boot still recovers cleanly.
     pub async fn initialize(&self) -> Result<(), sqlx::Error> {
         // Remove comment lines first
         let cleaned_sql: Vec<&str> = INIT_SQL
@@ -65,17 +78,16 @@ impl Database {
             .filter(|line| !line.trim().starts_with("--") && !line.trim().is_empty())
             .collect();
         let sql_without_comments = cleaned_sql.join("\n");
-        
-        // Execute each SQL statement
+
+        let mut tx = self.pool.begin().await?;
         for statement in sql_without_comments.split(';') {
             let trimmed = statement.trim();
             if !trimmed.is_empty() {
-                sqlx::query(trimmed)
-                    .execute(&self.pool)
-                    .await?;
+                sqlx::query(trimmed).execute(&mut *tx).await?;
             }
         }
-        
+        tx.commit().await?;
+
         Ok(())
     }
     
@@ -170,44 +182,64 @@ impl Database {
         Ok(has_user_id == 0)
     }
 
-    /// Migrate TRANSACTIONS_DETAIL table from old schema to new schema
+    /// Migrate TRANSACTIONS_DETAIL table from old schema to new schema.
+    ///
+    /// `PRAGMA foreign_keys` is a connection-local setting in SQLite, and
+    /// its value cannot be changed inside a transaction — the engine
+    /// silently ignores the write mid-transaction. The previous shape
+    /// (begin → `PRAGMA foreign_keys = OFF` on the tx → COPY → commit)
+    /// therefore ran COPY_DATA with FK still ON, so a DB carrying any
+    /// orphaned rows from earlier builds would fail with
+    /// `FOREIGN KEY constraint failed` and the app would refuse to
+    /// start. Additionally, running the final `PRAGMA ... = ON` against
+    /// `self.pool` grabbed *some* pooled connection — not necessarily
+    /// the one that had FK turned off — so the state fix was also
+    /// unreliable.
+    ///
+    /// Fix (Fable-5 review #11): pin one connection with `pool.acquire`,
+    /// flip the PRAGMA on that connection *outside* any transaction,
+    /// run the migration in a transaction on the same connection,
+    /// commit, then restore the PRAGMA on the same connection before it
+    /// returns to the pool. On error, best-effort restore FK to avoid
+    /// leaking a FK-off connection back into circulation.
     async fn migrate_transactions_detail_table(&self) -> Result<(), sqlx::Error> {
-        // Begin transaction
-        let mut tx = self.pool.begin().await?;
+        let mut conn = self.pool.acquire().await?;
 
-        // Disable foreign key constraints temporarily
+        // PRAGMA outside any transaction, on the same connection that
+        // will run the migration. Any transaction bounded by BEGIN/COMMIT
+        // opened after this point inherits FK = OFF.
         sqlx::query("PRAGMA foreign_keys = OFF")
-            .execute(&mut *tx)
+            .execute(&mut *conn)
             .await?;
 
-        // Create new table with updated schema
-        sqlx::query(sql_queries::MIGRATE_TRANSACTIONS_DETAIL_CREATE_NEW)
-            .execute(&mut *tx)
-            .await?;
+        let migration = async {
+            let mut tx = conn.begin().await?;
+            sqlx::query(sql_queries::MIGRATE_TRANSACTIONS_DETAIL_CREATE_NEW)
+                .execute(&mut *tx)
+                .await?;
+            sqlx::query(sql_queries::MIGRATE_TRANSACTIONS_DETAIL_COPY_DATA)
+                .execute(&mut *tx)
+                .await?;
+            sqlx::query(sql_queries::MIGRATE_TRANSACTIONS_DETAIL_DROP_OLD)
+                .execute(&mut *tx)
+                .await?;
+            sqlx::query(sql_queries::MIGRATE_TRANSACTIONS_DETAIL_RENAME_NEW)
+                .execute(&mut *tx)
+                .await?;
+            tx.commit().await
+        }
+        .await;
 
-        // Copy data from old table to new table
-        sqlx::query(sql_queries::MIGRATE_TRANSACTIONS_DETAIL_COPY_DATA)
-            .execute(&mut *tx)
-            .await?;
+        // Restore FK on the SAME connection, regardless of migration
+        // outcome — otherwise a mid-migration failure would return a
+        // FK-off connection to the pool and every later borrower would
+        // silently skip cascade deletes.
+        let restore = sqlx::query("PRAGMA foreign_keys = ON")
+            .execute(&mut *conn)
+            .await;
 
-        // Drop old table
-        sqlx::query(sql_queries::MIGRATE_TRANSACTIONS_DETAIL_DROP_OLD)
-            .execute(&mut *tx)
-            .await?;
-
-        // Rename new table to original name
-        sqlx::query(sql_queries::MIGRATE_TRANSACTIONS_DETAIL_RENAME_NEW)
-            .execute(&mut *tx)
-            .await?;
-
-        // Commit transaction
-        tx.commit().await?;
-
-        // Re-enable foreign key constraints
-        sqlx::query("PRAGMA foreign_keys = ON")
-            .execute(&self.pool)
-            .await?;
-
+        migration?;
+        restore?;
         Ok(())
     }
 
@@ -234,35 +266,40 @@ impl Database {
             return Ok(());
         }
 
-        // Recreate table with nullable CATEGORY2_CODE and CATEGORY3_CODE
-        let mut tx = self.pool.begin().await?;
+        // Recreate table with nullable CATEGORY2_CODE and CATEGORY3_CODE.
+        // Same PRAGMA-outside-tx / same-connection dance as
+        // `migrate_transactions_detail_table` above — see that function
+        // for the full rationale.
+        let mut conn = self.pool.acquire().await?;
 
         sqlx::query("PRAGMA foreign_keys = OFF")
-            .execute(&mut *tx)
+            .execute(&mut *conn)
             .await?;
 
-        sqlx::query(sql_queries::MIGRATE_TRANSACTIONS_DETAIL_CREATE_NEW)
-            .execute(&mut *tx)
-            .await?;
+        let migration = async {
+            let mut tx = conn.begin().await?;
+            sqlx::query(sql_queries::MIGRATE_TRANSACTIONS_DETAIL_CREATE_NEW)
+                .execute(&mut *tx)
+                .await?;
+            sqlx::query(sql_queries::MIGRATE_NULLABLE_CATEGORY_COPY_DATA)
+                .execute(&mut *tx)
+                .await?;
+            sqlx::query(sql_queries::MIGRATE_TRANSACTIONS_DETAIL_DROP_OLD)
+                .execute(&mut *tx)
+                .await?;
+            sqlx::query(sql_queries::MIGRATE_TRANSACTIONS_DETAIL_RENAME_NEW)
+                .execute(&mut *tx)
+                .await?;
+            tx.commit().await
+        }
+        .await;
 
-        sqlx::query(sql_queries::MIGRATE_NULLABLE_CATEGORY_COPY_DATA)
-            .execute(&mut *tx)
-            .await?;
+        let restore = sqlx::query("PRAGMA foreign_keys = ON")
+            .execute(&mut *conn)
+            .await;
 
-        sqlx::query(sql_queries::MIGRATE_TRANSACTIONS_DETAIL_DROP_OLD)
-            .execute(&mut *tx)
-            .await?;
-
-        sqlx::query(sql_queries::MIGRATE_TRANSACTIONS_DETAIL_RENAME_NEW)
-            .execute(&mut *tx)
-            .await?;
-
-        tx.commit().await?;
-
-        sqlx::query("PRAGMA foreign_keys = ON")
-            .execute(&self.pool)
-            .await?;
-
+        migration?;
+        restore?;
         Ok(())
     }
 
@@ -456,6 +493,104 @@ impl Database {
                 .execute(&self.pool)
                 .await?;
         }
+        Ok(())
+    }
+
+    /// Fable-5 review #15 — per-user random salt for Argon2 key derivation.
+    ///
+    /// Adds `ENCRYPTION_SALT BLOB` to USERS if the column is absent, then
+    /// backfills every legacy row that has `ENCRYPTION_SALT IS NULL` with
+    /// a fresh cryptographically-random 16-byte salt. Safe on live DBs
+    /// because `ENCRYPTED_FIELDS` is unseeded in production and no
+    /// frontend path invokes `encrypt_field` / `decrypt_field` /
+    /// `re_encrypt_user_data`, so there is no existing ciphertext whose
+    /// old (predictable) salt we would have to preserve.
+    pub async fn migrate_encryption_salt(&self) -> Result<(), sqlx::Error> {
+        // Add the column (idempotent).
+        let has_column: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM pragma_table_info('USERS') WHERE name = 'ENCRYPTION_SALT'"
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        if has_column == 0 {
+            sqlx::query("ALTER TABLE USERS ADD COLUMN ENCRYPTION_SALT BLOB")
+                .execute(&self.pool)
+                .await?;
+        }
+
+        // Backfill any row whose salt is still NULL (new column, or a row
+        // that skipped the register path somehow). One UPDATE per row so
+        // every user ends up with a *different* salt — the whole point of
+        // the fix is that attackers can't share a rainbow table across
+        // users.
+        let user_ids: Vec<i64> = sqlx::query_scalar(
+            "SELECT USER_ID FROM USERS WHERE ENCRYPTION_SALT IS NULL"
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        for user_id in user_ids {
+            let salt = crate::security::generate_encryption_salt();
+            sqlx::query("UPDATE USERS SET ENCRYPTION_SALT = ? WHERE USER_ID = ?")
+                .bind(salt.as_slice())
+                .bind(user_id)
+                .execute(&self.pool)
+                .await?;
+        }
+
+        Ok(())
+    }
+
+    /// PR15 (Fable-5 #20): make SHOPS.SHOP_NAME unique per user.
+    ///
+    /// Fresh DBs pick up `UNIQUE(USER_ID, SHOP_NAME)` from the CREATE
+    /// TABLE clause in dbaccess.sql, which auto-creates the underlying
+    /// index. Existing DBs may already carry duplicate rows because the
+    /// old code path only ran a race-vulnerable SELECT-then-INSERT
+    /// dedup check — this migration walks each duplicate group, moves
+    /// live references (TRANSACTIONS_HEADER.SHOP_ID,
+    /// RECURRING_RULES.SHOP_ID) onto the surviving smallest SHOP_ID,
+    /// deletes the losers, then creates a manually-named UNIQUE index
+    /// so the constraint is enforced going forward.
+    ///
+    /// Everything after the initial no-op probe runs inside a single
+    /// transaction so a mid-migration failure rolls back. The migration
+    /// is idempotent: re-running after success is a no-op because the
+    /// probe finds the index and returns early.
+    pub async fn migrate_shops_unique(&self) -> Result<(), sqlx::Error> {
+        let has_unique: i64 = sqlx::query_scalar(sql_queries::SHOPS_HAS_UNIQUE_USER_NAME_INDEX)
+            .fetch_one(&self.pool)
+            .await?;
+        if has_unique > 0 {
+            // Fresh installs (auto-index from the inline UNIQUE) and DBs
+            // that already went through this migration both take this
+            // branch.
+            return Ok(());
+        }
+
+        let mut tx = self.pool.begin().await?;
+
+        // 1. Move any transaction / recurring-rule reference off the
+        //    doomed duplicate rows and onto the surviving smallest id.
+        sqlx::query(sql_queries::MIGRATE_SHOPS_UNIQUE_REPOINT_HEADER)
+            .execute(&mut *tx)
+            .await?;
+        sqlx::query(sql_queries::MIGRATE_SHOPS_UNIQUE_REPOINT_RECURRING)
+            .execute(&mut *tx)
+            .await?;
+
+        // 2. Drop the duplicate SHOPS rows.
+        sqlx::query(sql_queries::MIGRATE_SHOPS_UNIQUE_DELETE_DUPLICATES)
+            .execute(&mut *tx)
+            .await?;
+
+        // 3. Create the unique index that will refuse future duplicates.
+        sqlx::query(sql_queries::MIGRATE_SHOPS_UNIQUE_CREATE_INDEX)
+            .execute(&mut *tx)
+            .await?;
+
+        tx.commit().await?;
         Ok(())
     }
 
@@ -781,5 +916,584 @@ mod tests {
 
         drop(db);
         let _ = std::fs::remove_file(&test_db_path);
+    }
+
+    /// In-memory database, no schema. Migrations only touch `self.pool`, so
+    /// `sqlite::memory:` is enough and keeps the tests file-system free.
+    async fn memory_db() -> Database {
+        let pool = connect_db(crate::test_helpers::database::TEST_DB_URL)
+            .await
+            .expect("Failed to connect to in-memory database");
+        Database { pool }
+    }
+
+    async fn column_count(db: &Database, table: &str, column: &str) -> i64 {
+        sqlx::query_scalar(sql_queries::TEST_DB_COUNT_TABLE_COLUMN)
+            .bind(table)
+            .bind(column)
+            .fetch_one(db.pool())
+            .await
+            .expect("Failed to query pragma_table_info")
+    }
+
+    async fn table_count(db: &Database, table: &str) -> i64 {
+        sqlx::query_scalar(sql_queries::TEST_DB_COUNT_TABLE)
+            .bind(table)
+            .fetch_one(db.pool())
+            .await
+            .expect("Failed to query sqlite_master")
+    }
+
+    #[tokio::test]
+    async fn test_initialize_creates_core_schema() {
+        let db = memory_db().await;
+
+        db.initialize().await.expect("initialize should succeed");
+
+        for table in [
+            "USERS",
+            "CATEGORY1",
+            "CATEGORY2",
+            "CATEGORY3",
+            "ACCOUNTS",
+            "ACCOUNT_TEMPLATES",
+            "TRANSACTIONS_HEADER",
+            "TRANSACTIONS_DETAIL",
+            "RECURRING_RULES",
+            "HOLIDAYS_STANDARD",
+        ] {
+            assert_eq!(table_count(&db, table).await, 1, "{} should be created", table);
+        }
+
+        // Re-running on an existing database must stay a no-op (every statement
+        // in dbaccess.sql is IF NOT EXISTS / INSERT OR IGNORE).
+        db.initialize().await.expect("initialize should be idempotent");
+    }
+
+    #[tokio::test]
+    async fn test_migrate_transactions_creates_current_schema() {
+        let db = memory_db().await;
+        db.initialize().await.expect("initialize");
+
+        db.migrate_transactions().await.expect("first run");
+
+        assert_eq!(table_count(&db, "MEMOS").await, 1);
+        for column in ["AMOUNT_INCLUDING_TAX", "PRODUCT_ID"] {
+            assert_eq!(
+                column_count(&db, "TRANSACTIONS_DETAIL", column).await,
+                1,
+                "TRANSACTIONS_DETAIL.{} should exist",
+                column
+            );
+        }
+        assert_eq!(
+            column_count(&db, "TRANSACTIONS_HEADER", "IS_SCHEDULED").await,
+            1
+        );
+
+        db.migrate_transactions().await.expect("second run");
+    }
+
+    #[tokio::test]
+    async fn test_check_transactions_detail_needs_migration_transitions() {
+        // No TRANSACTIONS_DETAIL table at all
+        let db = memory_db().await;
+        assert!(!db
+            .check_transactions_detail_needs_migration()
+            .await
+            .expect("missing table"));
+
+        // dbaccess.sql still ships the pre-USER_ID detail schema, so a freshly
+        // initialized database needs the migration...
+        db.initialize().await.expect("initialize");
+        assert!(db
+            .check_transactions_detail_needs_migration()
+            .await
+            .expect("fresh schema"));
+
+        // ...and stops needing it once migrate_transactions has run.
+        db.migrate_transactions().await.expect("migrate");
+        assert!(!db
+            .check_transactions_detail_needs_migration()
+            .await
+            .expect("migrated schema"));
+    }
+
+    #[tokio::test]
+    async fn test_migrate_recurring_upgrades_legacy_schema() {
+        let db = memory_db().await;
+        sqlx::query(sql_queries::TEST_DB_CREATE_LEGACY_USERS_TABLE)
+            .execute(db.pool())
+            .await
+            .expect("legacy USERS");
+        sqlx::query(sql_queries::TEST_DB_CREATE_LEGACY_HEADER_TABLE)
+            .execute(db.pool())
+            .await
+            .expect("legacy TRANSACTIONS_HEADER");
+
+        db.migrate_recurring().await.expect("first run");
+
+        assert_eq!(column_count(&db, "TRANSACTIONS_HEADER", "RULE_ID").await, 1);
+        for column in ["HOLIDAY_LOCALE", "WEEK_START_DAY"] {
+            assert_eq!(column_count(&db, "USERS", column).await, 1, "USERS.{}", column);
+        }
+        for table in [
+            "RECURRING_RULES",
+            "RECURRING_RULE_DETAILS",
+            "HOLIDAYS_STANDARD",
+            "HOLIDAYS_USER_CUSTOM",
+        ] {
+            assert_eq!(table_count(&db, table).await, 1, "{} should be created", table);
+        }
+
+        // The obsolete linked-list columns from the unreleased dev build are gone
+        assert_eq!(column_count(&db, "TRANSACTIONS_HEADER", "GROUP_HEAD").await, 0);
+        assert_eq!(
+            column_count(&db, "TRANSACTIONS_HEADER", "NEXT_TRANSACTION_ID").await,
+            0
+        );
+
+        let seeded: i64 = sqlx::query_scalar(sql_queries::TEST_DB_COUNT_STANDARD_HOLIDAYS)
+            .fetch_one(db.pool())
+            .await
+            .expect("count seeded holidays");
+        assert!(seeded > 0, "Japanese holidays should be seeded");
+
+        db.migrate_recurring().await.expect("second run");
+
+        let seeded_after: i64 = sqlx::query_scalar(sql_queries::TEST_DB_COUNT_STANDARD_HOLIDAYS)
+            .fetch_one(db.pool())
+            .await
+            .expect("count seeded holidays after rerun");
+        assert_eq!(
+            seeded, seeded_after,
+            "re-seeding must not duplicate holidays"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_migrate_period_customization_adds_columns_idempotently() {
+        let db = memory_db().await;
+        sqlx::query(sql_queries::TEST_DB_CREATE_LEGACY_USERS_TABLE)
+            .execute(db.pool())
+            .await
+            .expect("legacy USERS");
+
+        db.migrate_period_customization().await.expect("first run");
+        db.migrate_period_customization().await.expect("second run");
+
+        for column in [
+            "MONTH_PERIOD_START_DAY",
+            "YEAR_PERIOD_START_MONTH",
+            "YEAR_PERIOD_START_DAY",
+        ] {
+            assert_eq!(column_count(&db, "USERS", column).await, 1, "USERS.{}", column);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_migrate_period_holiday_shift_adds_column_idempotently() {
+        let db = memory_db().await;
+        sqlx::query(sql_queries::TEST_DB_CREATE_LEGACY_USERS_TABLE)
+            .execute(db.pool())
+            .await
+            .expect("legacy USERS");
+
+        db.migrate_period_holiday_shift().await.expect("first run");
+        db.migrate_period_holiday_shift().await.expect("second run");
+
+        assert_eq!(
+            column_count(&db, "USERS", "MONTH_PERIOD_HOLIDAY_SHIFT").await,
+            1
+        );
+    }
+
+    #[test]
+    fn test_get_db_path_points_at_app_directory() {
+        let path = get_db_path();
+
+        assert_eq!(
+            path.file_name().and_then(|n| n.to_str()),
+            Some(DB_FILE_NAME)
+        );
+        assert_eq!(
+            path.parent().and_then(|p| p.file_name()).and_then(|n| n.to_str()),
+            Some(DB_DIR_NAME)
+        );
+    }
+
+    /// Fable-5 review #11 — reproduce the "orphaned MEMO_ID crashes the
+    /// upgrade" case Fable described. Legacy DBs from earlier builds
+    /// occasionally carry TRANSACTIONS_DETAIL rows whose MEMO_ID points
+    /// at a memo row that no longer exists. The new schema declares
+    /// `FOREIGN KEY (MEMO_ID) REFERENCES MEMOS(MEMO_ID)`, so with FK
+    /// enforcement ON the COPY_DATA step would fail with
+    /// `FOREIGN KEY constraint failed` and the app would refuse to
+    /// start.
+    ///
+    /// The pre-fix `migrate_transactions_detail_table` tried to disable
+    /// FK enforcement with `PRAGMA foreign_keys = OFF` executed *inside*
+    /// the transaction — SQLite silently ignores mid-tx PRAGMA writes,
+    /// so FK stayed ON and the migration blew up. The fix pins one
+    /// connection with `pool.acquire`, flips PRAGMA outside the tx on
+    /// that same connection, and only then begins the tx.
+    #[tokio::test]
+    async fn test_migrate_survives_orphaned_memo_reference() {
+        let temp_dir = std::env::temp_dir();
+        let test_db_name = format!("test_migrate_orphan_memo_{}.db", std::process::id());
+        let test_db_path = temp_dir.join(&test_db_name);
+        let _ = std::fs::remove_file(&test_db_path);
+
+        let db_url = format!("sqlite://{}?mode=rwc", test_db_path.display());
+        let pool = connect_db(&db_url).await.expect("connect");
+
+        // FK ON — this is the production default, and also the state the
+        // migration path must cope with (pre-fix code assumed it could
+        // flip it off mid-tx, which is a no-op).
+        sqlx::query("PRAGMA foreign_keys = ON")
+            .execute(&pool)
+            .await
+            .expect("enable fk");
+
+        // Seed the minimum schema the migration touches: users,
+        // categories, memos, accounts, transactions_header, plus the
+        // MANUFACTURERS/PRODUCTS tables referenced by the new schema's
+        // FOREIGN KEY clauses.
+        sqlx::query(sql_queries::TEST_CREATE_USERS_TABLE).execute(&pool).await.unwrap();
+        sqlx::query(sql_queries::TEST_INSERT_USER_ADMIN).execute(&pool).await.unwrap();
+
+        sqlx::query(sql_queries::TEST_CREATE_CATEGORY1_TABLE).execute(&pool).await.unwrap();
+        sqlx::query(sql_queries::TEST_INSERT_CATEGORY1).execute(&pool).await.unwrap();
+
+        sqlx::query(sql_queries::CREATE_MEMOS_TABLE).execute(&pool).await.unwrap();
+
+        sqlx::query(sql_queries::TEST_ACCOUNT_CREATE_TEMPLATES_TABLE).execute(&pool).await.unwrap();
+        sqlx::query(
+            "INSERT INTO ACCOUNT_TEMPLATES (TEMPLATE_CODE, TEMPLATE_NAME_JA, TEMPLATE_NAME_EN, DISPLAY_ORDER) \
+             VALUES ('CASH', '現金', 'Cash', 1)"
+        ).execute(&pool).await.unwrap();
+
+        sqlx::query(sql_queries::TEST_TRANSACTION_CREATE_ACCOUNTS_TABLE).execute(&pool).await.unwrap();
+        sqlx::query(
+            "INSERT INTO ACCOUNTS (USER_ID, ACCOUNT_CODE, ACCOUNT_NAME, TEMPLATE_CODE) \
+             VALUES (1, 'NONE', 'None', 'CASH')"
+        ).execute(&pool).await.unwrap();
+
+        sqlx::query(sql_queries::CREATE_TRANSACTIONS_HEADER_TABLE).execute(&pool).await.unwrap();
+        sqlx::query(sql_queries::TEST_INSERT_TRANSACTION_HEADER).execute(&pool).await.unwrap();
+
+        sqlx::query(sql_queries::TEST_MANUFACTURER_CREATE_TABLE).execute(&pool).await.unwrap();
+        sqlx::query(sql_queries::TEST_PRODUCT_CREATE_TABLE).execute(&pool).await.unwrap();
+
+        sqlx::query(sql_queries::TEST_CREATE_OLD_TRANSACTIONS_DETAIL_TABLE)
+            .execute(&pool).await.unwrap();
+
+        // The core provocation: a detail row whose MEMO_ID does NOT
+        // resolve to any memo. Old schema declares the FK but with
+        // PRAGMA foreign_keys = OFF the row is insertable; production
+        // DBs from earlier builds can contain rows like this.
+        //
+        // Pin one connection for the PRAGMA-off / INSERT / PRAGMA-on
+        // sequence so all three land on the same connection. Running
+        // them via the pool would distribute across connections and
+        // the INSERT would arrive on a fresh (FK-on-by-default) one.
+        {
+            let mut seed_conn = pool.acquire().await.unwrap();
+            sqlx::query("PRAGMA foreign_keys = OFF")
+                .execute(&mut *seed_conn).await.unwrap();
+            sqlx::query(
+                "INSERT INTO TRANSACTIONS_DETAIL \
+                 (DETAIL_ID, TRANSACTION_ID, CATEGORY2_CODE, CATEGORY3_CODE, ITEM_NAME, AMOUNT, MEMO_ID) \
+                 VALUES (1, 1, 'SALARY', 'MONTHLY', 'Test Item', 1000, 9999)"
+            ).execute(&mut *seed_conn).await.unwrap();
+            sqlx::query("PRAGMA foreign_keys = ON")
+                .execute(&mut *seed_conn).await.unwrap();
+        }
+
+        let db = Database { pool };
+
+        // The migration must succeed even though the seeded detail's
+        // MEMO_ID references a nonexistent memo.
+        db.migrate_transactions_detail_table()
+            .await
+            .expect("migration must survive orphaned MEMO_ID references");
+
+        // Post-check: the row landed in the new table with its dangling
+        // MEMO_ID intact (the app is expected to null it out at read
+        // time or ignore missing memos — the migration itself is not
+        // in the data-cleanup business).
+        let memo_id: Option<i64> = sqlx::query_scalar(
+            "SELECT MEMO_ID FROM TRANSACTIONS_DETAIL WHERE DETAIL_ID = 1",
+        )
+        .fetch_one(db.pool())
+        .await
+        .expect("select migrated row");
+        assert_eq!(memo_id, Some(9999));
+
+        drop(db);
+        let _ = std::fs::remove_file(&test_db_path);
+    }
+
+    /// Fable-5 review #11 — the pre-fix code called `PRAGMA
+    /// foreign_keys = ON` on `self.pool` after commit, which grabbed
+    /// whatever connection the pool handed out (not necessarily the one
+    /// that ran the PRAGMA OFF). With the fix, the OFF/ON pair runs on
+    /// the same acquired connection, and by the time the connection
+    /// returns to the pool FK enforcement is ON again. Test that any
+    /// pool connection returns `1` for `PRAGMA foreign_keys` after
+    /// `migrate_transactions_detail_table` finishes.
+    #[tokio::test]
+    async fn test_migrate_leaves_foreign_keys_on() {
+        let temp_dir = std::env::temp_dir();
+        let test_db_name = format!("test_migrate_fk_on_{}.db", std::process::id());
+        let test_db_path = temp_dir.join(&test_db_name);
+        let _ = std::fs::remove_file(&test_db_path);
+
+        let db_url = format!("sqlite://{}?mode=rwc", test_db_path.display());
+        let pool = connect_db(&db_url).await.expect("connect");
+
+        sqlx::query("PRAGMA foreign_keys = ON")
+            .execute(&pool)
+            .await
+            .expect("enable fk");
+
+        sqlx::query(sql_queries::TEST_CREATE_USERS_TABLE).execute(&pool).await.unwrap();
+        sqlx::query(sql_queries::TEST_INSERT_USER_ADMIN).execute(&pool).await.unwrap();
+        sqlx::query(sql_queries::TEST_CREATE_CATEGORY1_TABLE).execute(&pool).await.unwrap();
+        sqlx::query(sql_queries::TEST_INSERT_CATEGORY1).execute(&pool).await.unwrap();
+        sqlx::query(sql_queries::CREATE_MEMOS_TABLE).execute(&pool).await.unwrap();
+        sqlx::query(sql_queries::TEST_ACCOUNT_CREATE_TEMPLATES_TABLE).execute(&pool).await.unwrap();
+        sqlx::query(
+            "INSERT INTO ACCOUNT_TEMPLATES (TEMPLATE_CODE, TEMPLATE_NAME_JA, TEMPLATE_NAME_EN, DISPLAY_ORDER) \
+             VALUES ('CASH', '現金', 'Cash', 1)"
+        ).execute(&pool).await.unwrap();
+        sqlx::query(sql_queries::TEST_TRANSACTION_CREATE_ACCOUNTS_TABLE).execute(&pool).await.unwrap();
+        sqlx::query(
+            "INSERT INTO ACCOUNTS (USER_ID, ACCOUNT_CODE, ACCOUNT_NAME, TEMPLATE_CODE) \
+             VALUES (1, 'NONE', 'None', 'CASH')"
+        ).execute(&pool).await.unwrap();
+        sqlx::query(sql_queries::CREATE_TRANSACTIONS_HEADER_TABLE).execute(&pool).await.unwrap();
+        sqlx::query(sql_queries::TEST_INSERT_TRANSACTION_HEADER).execute(&pool).await.unwrap();
+        sqlx::query(sql_queries::TEST_MANUFACTURER_CREATE_TABLE).execute(&pool).await.unwrap();
+        sqlx::query(sql_queries::TEST_PRODUCT_CREATE_TABLE).execute(&pool).await.unwrap();
+        sqlx::query(sql_queries::TEST_CREATE_OLD_TRANSACTIONS_DETAIL_TABLE)
+            .execute(&pool).await.unwrap();
+        sqlx::query(sql_queries::TEST_INSERT_TRANSACTION_DETAIL)
+            .execute(&pool).await.unwrap();
+
+        let db = Database { pool };
+
+        db.migrate_transactions_detail_table()
+            .await
+            .expect("migration");
+
+        // Sample many pool connections to catch a "some connection has
+        // FK OFF" regression. The pool default is 10 connections in
+        // sqlx-sqlite; sampling 20 exercises each at least once.
+        for i in 0..20 {
+            let fk: i64 = sqlx::query_scalar("PRAGMA foreign_keys")
+                .fetch_one(db.pool())
+                .await
+                .expect("read pragma");
+            assert_eq!(
+                fk, 1,
+                "iteration {}: connection returned to pool must have FK enforcement ON",
+                i,
+            );
+        }
+
+        drop(db);
+        let _ = std::fs::remove_file(&test_db_path);
+    }
+
+    // ---- PR15 / Fable-5 #20 — migrate_shops_unique tests ----
+    //
+    // Fresh installs pick up the inline `UNIQUE(USER_ID, SHOP_NAME)`
+    // constraint from dbaccess.sql and its auto-index; existing DBs
+    // reach here without either. These tests spin up the pre-#20
+    // schema (SHOPS with no UNIQUE + the two tables that carry live
+    // SHOP_ID references), insert duplicate + referenced rows, and
+    // confirm the migration dedupes, repoints, and pins the constraint.
+
+    /// SHOPS DDL as it shipped BEFORE the PR15 inline UNIQUE — no
+    /// constraint, so the migration is the one that adds it.
+    const LEGACY_SHOPS_DDL: &str = r#"
+        CREATE TABLE SHOPS (
+            SHOP_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+            USER_ID INTEGER NOT NULL,
+            SHOP_NAME TEXT NOT NULL,
+            MEMO TEXT,
+            DISPLAY_ORDER INTEGER NOT NULL DEFAULT 0,
+            IS_DISABLED INTEGER DEFAULT 0,
+            ENTRY_DT DATETIME NOT NULL DEFAULT (datetime('now')),
+            UPDATE_DT DATETIME
+        )
+    "#;
+
+    async fn setup_legacy_shops_db() -> Database {
+        let db = memory_db().await;
+        sqlx::query(LEGACY_SHOPS_DDL)
+            .execute(db.pool())
+            .await
+            .expect("legacy SHOPS");
+        // Minimal TRANSACTIONS_HEADER + RECURRING_RULES with just the
+        // columns the migration touches — the full schemas are noisier
+        // than the migration cares about.
+        sqlx::query(
+            "CREATE TABLE TRANSACTIONS_HEADER (TRANSACTION_ID INTEGER PRIMARY KEY, SHOP_ID INTEGER)",
+        )
+        .execute(db.pool())
+        .await
+        .expect("legacy TRANSACTIONS_HEADER");
+        sqlx::query(
+            "CREATE TABLE RECURRING_RULES (RULE_ID INTEGER PRIMARY KEY, SHOP_ID INTEGER)",
+        )
+        .execute(db.pool())
+        .await
+        .expect("legacy RECURRING_RULES");
+        db
+    }
+
+    async fn shop_ids(db: &Database) -> Vec<i64> {
+        sqlx::query_scalar::<_, i64>("SELECT SHOP_ID FROM SHOPS ORDER BY SHOP_ID")
+            .fetch_all(db.pool())
+            .await
+            .expect("SHOPS scan")
+    }
+
+    async fn unique_index_present(db: &Database) -> bool {
+        let count: i64 = sqlx::query_scalar(sql_queries::SHOPS_HAS_UNIQUE_USER_NAME_INDEX)
+            .fetch_one(db.pool())
+            .await
+            .expect("index probe");
+        count > 0
+    }
+
+    #[tokio::test]
+    async fn migrate_shops_unique_dedupes_and_repoints_references() {
+        let db = setup_legacy_shops_db().await;
+
+        // 3 SHOPS: (1, "AEON") and (1, "AEON") — duplicate pair; plus (1, "LAWSON").
+        // SHOP_IDs 1, 2, 3 respectively.
+        sqlx::query("INSERT INTO SHOPS (USER_ID, SHOP_NAME) VALUES (1, 'AEON')")
+            .execute(db.pool()).await.unwrap();
+        sqlx::query("INSERT INTO SHOPS (USER_ID, SHOP_NAME) VALUES (1, 'AEON')")
+            .execute(db.pool()).await.unwrap();
+        sqlx::query("INSERT INTO SHOPS (USER_ID, SHOP_NAME) VALUES (1, 'LAWSON')")
+            .execute(db.pool()).await.unwrap();
+
+        // Two TRANSACTIONS_HEADER rows: one points at the duplicate id (2),
+        // one at the surviving id (1). After migration both must point at 1.
+        sqlx::query("INSERT INTO TRANSACTIONS_HEADER (TRANSACTION_ID, SHOP_ID) VALUES (100, 1)")
+            .execute(db.pool()).await.unwrap();
+        sqlx::query("INSERT INTO TRANSACTIONS_HEADER (TRANSACTION_ID, SHOP_ID) VALUES (101, 2)")
+            .execute(db.pool()).await.unwrap();
+        // A RECURRING_RULES row also pointing at the doomed 2.
+        sqlx::query("INSERT INTO RECURRING_RULES (RULE_ID, SHOP_ID) VALUES (200, 2)")
+            .execute(db.pool()).await.unwrap();
+
+        db.migrate_shops_unique().await.expect("migration");
+
+        // Duplicate SHOP_ID=2 is gone; 1 (AEON) and 3 (LAWSON) survive.
+        assert_eq!(shop_ids(&db).await, vec![1, 3]);
+
+        // References previously on 2 now sit on the surviving 1.
+        let hdr_shop: Vec<i64> = sqlx::query_scalar(
+            "SELECT SHOP_ID FROM TRANSACTIONS_HEADER ORDER BY TRANSACTION_ID",
+        )
+        .fetch_all(db.pool())
+        .await
+        .unwrap();
+        assert_eq!(hdr_shop, vec![1, 1], "duplicate ref must be repointed: {:?}", hdr_shop);
+
+        let rule_shop: Vec<i64> = sqlx::query_scalar("SELECT SHOP_ID FROM RECURRING_RULES")
+            .fetch_all(db.pool()).await.unwrap();
+        assert_eq!(rule_shop, vec![1]);
+
+        // The unique index is in place.
+        assert!(unique_index_present(&db).await, "unique index must be created");
+
+        // Inserting a new duplicate is rejected.
+        let dup = sqlx::query("INSERT INTO SHOPS (USER_ID, SHOP_NAME) VALUES (1, 'AEON')")
+            .execute(db.pool())
+            .await;
+        assert!(dup.is_err(), "post-migration duplicate insert must be rejected");
+    }
+
+    #[tokio::test]
+    async fn migrate_shops_unique_is_idempotent() {
+        let db = setup_legacy_shops_db().await;
+        sqlx::query("INSERT INTO SHOPS (USER_ID, SHOP_NAME) VALUES (1, 'AEON')")
+            .execute(db.pool()).await.unwrap();
+
+        db.migrate_shops_unique().await.expect("first run");
+        assert!(unique_index_present(&db).await);
+        // Second run finds the index already present and returns early.
+        db.migrate_shops_unique().await.expect("second run must be a no-op");
+        assert_eq!(shop_ids(&db).await, vec![1], "no data should be touched");
+    }
+
+    #[tokio::test]
+    async fn migrate_shops_unique_scopes_per_user() {
+        let db = setup_legacy_shops_db().await;
+        // Two users each have a shop named "AEON" — that's NOT a duplicate.
+        sqlx::query("INSERT INTO SHOPS (USER_ID, SHOP_NAME) VALUES (1, 'AEON')")
+            .execute(db.pool()).await.unwrap();
+        sqlx::query("INSERT INTO SHOPS (USER_ID, SHOP_NAME) VALUES (2, 'AEON')")
+            .execute(db.pool()).await.unwrap();
+
+        db.migrate_shops_unique().await.expect("migration");
+        assert_eq!(shop_ids(&db).await, vec![1, 2], "cross-user names must not be treated as duplicates");
+    }
+
+    /// Regression pin for the Devin #118 review. A user can legitimately
+    /// end up with a soft-deleted old shop (small SHOP_ID, IS_DISABLED=1)
+    /// alongside a re-created active shop with the same name (larger
+    /// SHOP_ID, IS_DISABLED=0) because `SHOP_CHECK_DUPLICATE_FOR_ADD`
+    /// only counts IS_DISABLED=0 rows. Before this fix the migration
+    /// picked the smallest SHOP_ID unconditionally — repointing
+    /// transactions onto the disabled row and deleting the active one,
+    /// so the shop vanished from the (IS_DISABLED=0 filtered)
+    /// `get_shops` listing. The survivor rule now prefers active rows.
+    #[tokio::test]
+    async fn migrate_shops_unique_keeps_active_row_over_soft_deleted_older_id() {
+        let db = setup_legacy_shops_db().await;
+
+        // SHOP_ID=1: old "AEON", soft-deleted after use.
+        sqlx::query("INSERT INTO SHOPS (SHOP_ID, USER_ID, SHOP_NAME, IS_DISABLED) VALUES (1, 1, 'AEON', 1)")
+            .execute(db.pool()).await.unwrap();
+        // SHOP_ID=42: user re-added "AEON" and is using it now.
+        sqlx::query("INSERT INTO SHOPS (SHOP_ID, USER_ID, SHOP_NAME, IS_DISABLED) VALUES (42, 1, 'AEON', 0)")
+            .execute(db.pool()).await.unwrap();
+
+        // Old transaction pointed at the now-disabled row; a new
+        // transaction was recorded against the current active row.
+        sqlx::query("INSERT INTO TRANSACTIONS_HEADER (TRANSACTION_ID, SHOP_ID) VALUES (500, 1)")
+            .execute(db.pool()).await.unwrap();
+        sqlx::query("INSERT INTO TRANSACTIONS_HEADER (TRANSACTION_ID, SHOP_ID) VALUES (501, 42)")
+            .execute(db.pool()).await.unwrap();
+
+        db.migrate_shops_unique().await.expect("migration");
+
+        // The active SHOP_ID=42 must survive; the disabled 1 gets removed.
+        assert_eq!(shop_ids(&db).await, vec![42], "active row (larger id) must be the survivor when the smaller id is disabled");
+
+        // Every reference now points at the active survivor — nothing
+        // is left pointing at the deleted (disabled) 1.
+        let hdr_shop: Vec<i64> = sqlx::query_scalar(
+            "SELECT SHOP_ID FROM TRANSACTIONS_HEADER ORDER BY TRANSACTION_ID",
+        )
+        .fetch_all(db.pool())
+        .await
+        .unwrap();
+        assert_eq!(hdr_shop, vec![42, 42], "old txn must be repointed to the active row: {:?}", hdr_shop);
+
+        // And the surviving row is active — future `get_shops` (which
+        // filters IS_DISABLED=0) will still show it.
+        let is_disabled: i64 = sqlx::query_scalar("SELECT IS_DISABLED FROM SHOPS WHERE SHOP_ID = 42")
+            .fetch_one(db.pool())
+            .await
+            .unwrap();
+        assert_eq!(is_disabled, 0, "the surviving shop must still be active");
     }
 }

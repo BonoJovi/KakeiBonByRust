@@ -2,6 +2,65 @@
 
 このファイルには、プロジェクトのすべての重要な変更が記録されます。
 
+## [v2.7.0] - 2026-08-22
+
+Fable-5 コードレビュー (2026-08-19、全 43 項目) をきっかけとした、内部品質・信頼性・パフォーマンスの一括改善リリース。ユーザー向けの新機能追加はなく、既存の全画面が持っていた 「起きたら痛いが今は動いている」 系の潜在バグと構造的な脆さを、14 個の PR に分けて集中的に潰しました。ユーザーとして直接体感できる変化は、①一部の入出金画面で稀にバックエンドスレッドがパニックし得たケースの解消、②起動が僅かに速くなる、③店舗一覧に長期的に混入し得る重複行の整理、の 3 点です。
+
+### バグ修正 (ユーザー影響のあるもの)
+
+- **月次入出金画面で `month=13` などが渡るとバックエンドがクラッシュ** (Fable-5 #22): `services::period::end_of_month` の `.expect()` に到達してタウリコマンドスレッドがパニックしていた。`monthly_bounds_with_shift_for` の入口で 1..=12 を検証、無効な月は Err で早期リターン
+- **集計画面の口座別集計でカテゴリフィルタが無視される潜在バグ** (Fable-5 #18): `build_account_aggregation_query` が独自に WHERE を再構築していて `request.filter.category` を silent drop していた。4 分岐の UNION ALL すべてにカテゴリ条件を反映
+- **カテゴリ 2/3 でフィルタすると `no such column: th.CATEGORY2_CODE` で全体失敗する潜在バグ** (Fable-5 #17): 参照先を `td.CATEGORY2_CODE` (detail 側の実在列) に修正。ドリルダウン機能が今後 wire したときに壊れない
+- **店舗一覧に同名の重複行が混入しうる** (Fable-5 #20): SHOPS テーブルに `UNIQUE(USER_ID, SHOP_NAME)` 制約を追加 (`MANUFACTURERS` / `PRODUCTS` は元々あった)。既存 DB は起動時マイグレーション (`Database::migrate_shops_unique`) で重複を解消 — 論理削除済みの古い行と有効な同名新行が並存するケースでは、有効な行を残して transaction 参照も active row に repoint する
+
+### セキュリティ / データ保護
+
+- **集計 SQL を `format!()` + 手製 escape から `.bind()` パラメータ化に全面移行** (Fable-5 #25): カテゴリコード・言語コード・ユーザー ID・日付・金額・店舗 ID・LIMIT すべてがバインドパラメータになった。既存の `escape_sql_literal` を通さない新規フィルタが将来追加されても、即座に SQL インジェクションにはならない
+- **`Argon2` の暗号化ソルトが `user_id.to_le_bytes()` で予測可能だった件** (Fable-5 #15、前バージョンから継続): `USERS.ENCRYPTION_SALT` カラム + 起動時マイグレーションでユーザー毎ランダム salt を持たせる (v2.6.x 以前の設定は残置、次回の暗号化操作から新 salt を使用)
+- **設定ファイルの書き込みが非アトミック** (Fable-5 #10、前バージョンから継続): `settings.json` の保存を `tmp + rename` パターンに変更、書き込み中断で設定が空になるリスクを解消
+
+### パフォーマンス
+
+- **カテゴリツリー取得の N+1 撲滅** (Fable-5 #31): `get_category_tree` / `get_category_tree_all` の `1 + N + N×M` クエリ (デフォルト新規ユーザーで 34 クエリ) を **3 flat クエリ + Rust HashMap グルーピング** に。取引フォームのカテゴリドロップダウン初期化が加速
+- **全履歴再計算の N+1 撲滅** (Fable-5 #32): `recalculate_all_transaction_totals` の header 毎 1 SELECT (1000 header で 1001 クエリ) を **1 + 1 クエリ** に。ダッシュボードのメンテナンスパネルの再計算がヘッダー数にほぼ依存しない一定時間に
+- **起動時の `dbaccess.sql` ~500 statement を 1 トランザクションに集約** (Fable-5 #30): `~500 fsync → 1 fsync` に圧縮。初回起動 / バージョンアップ後の i18n リソース再シードで最も効く
+
+### エラー処理契約の統一 (`ApiError` 移行)
+
+- Rust バックエンドの 5 サービス (`recurring` / `transaction` / `account` / `user_management` / `category` / `auth`) と全 Master 系サービスが `Result<_, ApiError>` に統一。フロントエンドは `err.code` (安定 machine constant) で分岐し、英語メッセージ substring マッチ (`.includes('not found')` 等) は全撤去
+- 新規 code: `not_found` / `duplicate_name` / `duplicate_code` / `manufacturer_not_found` / `admin_protected` / `auth_invalid_credentials` / `auth_setup_completed` / `validation` / `database`
+- ログイン / セットアップ画面で英語エラーが日本語ラベルの後にそのまま出ていた問題 (「ログインに失敗しました: Invalid username or password」) を解消 (Fable-5 #21)
+
+### 内部リファクタリング
+
+- **マスタ CRUD の抽象化** (Fable-5 #26): `MasterCrudSpec` + `master_data` 共通ヘルパーを導入、shop/manufacturer/product/account の add/update/delete が結果として構造化。`rows_affected` ベースの `NotFound` 判定で 6 つの TOCTOU pre-check を撤去
+- **カテゴリ移動 4 関数統合** (Fable-5 #27): `move_category{2,3}_{up,down}` (~60 行 × 4 クローン) を 2 swap ヘルパー + 4 one-line wrapper に、冗長な `current_order <= 1` ガードは sibling None 経路で自然に吸収
+- **二言語重複チェックの集約** (Fable-5 #28): カテゴリ i18n の 4-way dedup を 16 blocks (4 callers × 4 checks) → 2 helpers + 4 one-line calls に、ADD/EXCLUDING SQL のバインド順食い違いをヘルパー内に閉じ込め
+- **インライン SQL 16 サイトを `sql_queries.rs` に集約** (Fable-5 #24): i18n / holiday / category / account の直書き SQL を全て定数化、プロジェクトルール準拠
+- **`TRANSACTIONS` (singular) を参照するレガシーコマンド 4 関数削除** (Fable-5 #19): テーブルが存在せず呼べば必ず失敗する dead code + プレースホルダ数不一致の broken 関数を除去 (net -281 行)
+- **aggregation の `to_select_clause` / `build_join_clauses` の到達不能アームを `unreachable!()` 化** (Fable-5 #33): future の rerouting が silent 誤 SQL 生成でなく loud fail するように
+
+### スキーマ / マイグレーション
+
+- **SHOPS `UNIQUE(USER_ID, SHOP_NAME)`**: 新規インストールは `CREATE TABLE` のインライン制約で auto-index を取得。既存 DB は起動時 `migrate_shops_unique` が冪等に対応 (probe → transactions/rules の SHOP_ID を有効側に repoint → 重複削除 → `CREATE UNIQUE INDEX`、全 1 トランザクション)
+- **i18n リソース 20 個追加** (2415..2434): 入出金 / 明細管理画面の英語ハードコード fallback を i18n 化、auth 画面の構造化エラーコード対応
+- 既存データは非破壊。マイグレーションはすべて冪等 (二度目以降の起動は no-op)
+
+### テスト
+
+- Rust: **535 件全 PASS** (v2.6.0 時 509 → +26)。追加項目: `From<XxxError> for ApiError` の変換ピン (5 サービス × 3-4 テスト)、injection-safety end-to-end pin (`EXPENSE' OR '1'='1` payload → 0 rows)、month=13 パニック防止、SHOPS 重複マイグレーションの 4 シナリオ (dedupe+repoint / idempotency / per-user scope / soft-deleted vs active)、カテゴリツリー N+1 refactor の 3 regression pin (parent/child grouping / display order preservation / disabled flag)、`MasterCrudSpec::ensure_update_affected_one` の 0 rows → NotFound マッピング等
+- JavaScript (Jest): 703 件全 PASS (delta なし、変更は Rust 側 + フロント small refactors)
+
+### 内部指標
+
+- コミット数: 14 個のマシン生成 PR + 3 個の Devin レビュー追試 commit
+- 総 diff: 概算 +2,300 / -1,700 (net +600 行、大半は新規テスト + docblock、リファクタで削減された行は 400 行程度)
+- `sql_queries.rs` 新規定数: 15 個 (auth / migration / N+1 fix / category count 系)
+- `ApiError::CODE_*` 新規: 2 個 (`auth_invalid_credentials` / `auth_setup_completed`)
+- I18N_RESOURCES 追加: 20 個 (RESOURCE_ID 2415..2434、dev MAX = 2434)
+
+---
+
 ## [v2.6.0] - 2026-05-30
 
 商品・メーカーマスタを入出金フローへ統合した機能リリース (#65 Phase 1)。v1.x 系でマスタ管理画面までは完成していたものの、入出金本流から参照されていなかった「仕掛り機能」を完成させ、明細入力時にマスタ照合で表記揺れを吸収できるようになりました。

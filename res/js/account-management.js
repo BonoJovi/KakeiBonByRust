@@ -1,15 +1,18 @@
 import { invoke } from '@tauri-apps/api/core';
 import { HTML_FILES } from './html-files.js';
 import i18n from './i18n.js';
+import { setupLanguageMenu, setupLanguageMenuHandlers } from './language-menu.js';
 import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers } from './font-size.js';
 import { fitWindowToScreen } from './window-fit.js';
 import { ROLE_ADMIN, ROLE_USER, MAX_NAME_LEN } from './consts.js';
 import { Modal } from './modal.js';
 import { setupIndicators } from './indicators.js';
 import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
-import { createMenuBar } from './menu.js';
+import { createMenuBar, handleLogout, handleQuit } from './menu.js';
 import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
 import { showToast } from './toast.js';
+import { escapeHtml } from './escape-html.js';
+import { mapMasterErrorCode, API_ERROR_CODES, formatApiError } from './master-crud.js';
 
 console.log('=== ACCOUNT-MANAGEMENT.JS LOADED - ALL imports enabled ===');
 console.log('invoke:', typeof invoke);
@@ -59,7 +62,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         setupMenuHandlers();
         
         // Setup language and font size menus
-        await setupLanguageMenu();
+        await setupLanguageMenu(loadAccounts);
         setupLanguageMenuHandlers();
         
         setupFontSizeMenuHandlers();
@@ -77,7 +80,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         await fitWindowToScreen();
     } catch (error) {
         console.error('Initialization error:', error);
-        showToast(i18n.t('account_mgmt.failed_to_initialize') + ': ' + error, { variant: 'error' });
+        showToast(i18n.t('account_mgmt.failed_to_initialize') + ': ' + formatApiError(error), { variant: 'error' });
     }
 });
 
@@ -158,7 +161,7 @@ async function loadTemplates() {
         populateTemplateDropdown();
     } catch (error) {
         console.error('Failed to load templates:', error);
-        showToast(i18n.t('account_mgmt.failed_to_load_templates') + ': ' + error, { variant: 'error' });
+        showToast(i18n.t('account_mgmt.failed_to_load_templates') + ': ' + formatApiError(error), { variant: 'error' });
     }
 }
 
@@ -209,7 +212,7 @@ async function loadAccounts() {
         }
     } catch (error) {
         console.error('Failed to load accounts:', error);
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #dc3545;">Error loading accounts: ${error}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #dc3545;">Error loading accounts: ${escapeHtml(formatApiError(error))}</td></tr>`;
     } finally {
         loading.style.display = 'none';
     }
@@ -302,20 +305,31 @@ async function saveAccount() {
         return;
     }
 
+    // Resolve the edit target from the local cache BEFORE invoke so a
+    // concurrent delete lands on the dedicated not_found path (toast +
+    // reload + modal close) rather than the generic save-error branch.
+    let accountForUpdate = null;
+    if (editingAccountCode) {
+        accountForUpdate = accounts.find(a => a.account_code === editingAccountCode);
+        if (!accountForUpdate) {
+            showToast(i18n.t('account_mgmt.not_found'), { variant: 'error' });
+            await loadAccounts();
+            accountModal.close();
+            return;
+        }
+    }
+
     try {
         if (editingAccountCode) {
-            // Update existing account
-            const displayOrder = accounts.find(a => a.account_code === editingAccountCode).display_order;
             await invoke('update_account', {
                 accountCode: accountCode,
                 accountName: accountName,
                 templateCode: templateCode,
                 initialBalance: initialBalance,
-                displayOrder: displayOrder
+                displayOrder: accountForUpdate.display_order
             });
             showToast(i18n.t('account_mgmt.update_success'), { variant: 'success' });
         } else {
-            // Add new account
             await invoke('add_account', {
                 accountCode: accountCode,
                 accountName: accountName,
@@ -330,19 +344,36 @@ async function saveAccount() {
     } catch (error) {
         console.error('Failed to save account:', error);
 
-        // Map backend error messages to i18n resources / localized text
-        const errorMessage = error.toString();
-        if (errorMessage.includes('Account name must be')) {
-            // Defense-line trip: frontend max-length check should have caught
-            // this, so use the same i18n message for parity.
-            showValidationError(accountNameInput, i18n.t('validation.max_length', {
-                field: i18n.t('account_mgmt.account_name'),
-                max: MAX_NAME_LEN,
-                actual: [...accountName].length,
-            }));
-        } else {
-            showToast(i18n.t('account_mgmt.failed_to_save') + ': ' + error, { variant: 'error' });
+        // Backend not_found (invoke-after case): reload list + close
+        // modal to match the "list has been reloaded" toast wording,
+        // rather than staying open on top of a stale row.
+        if (error && typeof error === 'object' && error.code === API_ERROR_CODES.NOT_FOUND) {
+            showToast(i18n.t('account_mgmt.not_found'), { variant: 'error' });
+            await loadAccounts();
+            accountModal.close();
+            return;
         }
+
+        // All other backend errors (duplicate_code, validation trip,
+        // database) get classified through the shared helper. Account's
+        // duplicate is on the CODE column so `mapMasterErrorCode`
+        // returns it as `toastMessage`, not an inline `nameMessage`,
+        // because the code input is not the `nameInput` the helper
+        // tracks. Validation trips still route to the name field inline.
+        const mapped = mapMasterErrorCode(error, {
+            i18nPrefix: 'account_mgmt',
+            nameFieldI18nKey: 'account_mgmt.account_name',
+            memoFieldI18nKey: 'account_mgmt.account_name',
+            nameMaxLen: MAX_NAME_LEN,
+            memoMaxLen: MAX_NAME_LEN,
+            actualNameLen: [...accountName].length,
+            actualMemoLen: 0,
+        });
+
+        if (mapped.toastMessage) {
+            showToast(mapped.toastMessage, { variant: 'error' });
+        }
+        if (mapped.nameMessage) showValidationError(accountNameInput, mapped.nameMessage);
     }
 }
 
@@ -363,7 +394,7 @@ async function deleteAccount(accountCode, accountName) {
         await loadAccounts();
     } catch (error) {
         console.error('Failed to delete account:', error);
-        showToast(i18n.t('account_mgmt.failed_to_delete') + ': ' + error, { variant: 'error' });
+        showToast(i18n.t('account_mgmt.failed_to_delete') + ': ' + formatApiError(error), { variant: 'error' });
     }
 }
 
@@ -380,51 +411,47 @@ function clearErrors() {
     });
 }
 
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
 // Menu handlers
 function setupMenuHandlers() {
     const fileMenu = document.getElementById('file-menu');
     const fileDropdown = document.getElementById('file-dropdown');
     
     if (fileMenu && fileDropdown) {
-        if (fileMenu.dataset.initialized === 'true') {
+        if (fileMenu.dataset.initialized !== 'true') {
+            fileMenu.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const isShown = fileDropdown.classList.contains('show');
+                document.querySelectorAll('.dropdown').forEach(d => {
+                    if (d !== fileDropdown) d.classList.remove('show');
+                });
+                fileDropdown.classList.toggle('show', !isShown);
+            });
+
+            fileDropdown.addEventListener('click', function(e) {
+                e.stopPropagation();
+            });
+
+            fileMenu.dataset.initialized = 'true';
+        }
+
+        if (fileDropdown.dataset.itemsInitialized === 'true') {
             return;
         }
-        
-        fileMenu.addEventListener('click', function(e) {
-            e.stopPropagation();
-            const isShown = fileDropdown.classList.contains('show');
-            document.querySelectorAll('.dropdown').forEach(d => {
-                if (d !== fileDropdown) d.classList.remove('show');
-            });
-            if (!isShown) fileDropdown.classList.add('show');
-        });
-        
-        fileDropdown.addEventListener('click', function(e) {
-            e.stopPropagation();
-        });
-        
+        fileDropdown.dataset.itemsInitialized = 'true';
+
         const dropdownItems = fileDropdown.querySelectorAll('.dropdown-item');
         dropdownItems[0]?.addEventListener('click', () => {
             window.location.href = HTML_FILES.INDEX;
             fileDropdown.classList.remove('show');
         });
-        dropdownItems[1]?.addEventListener('click', async () => {
-            await invoke('logout');
-            window.location.href = HTML_FILES.INDEX;
+        dropdownItems[1]?.addEventListener('click', () => {
             fileDropdown.classList.remove('show');
+            handleLogout();
         });
-        dropdownItems[2]?.addEventListener('click', async () => {
-            await invoke('quit_app');
+        dropdownItems[2]?.addEventListener('click', () => {
             fileDropdown.classList.remove('show');
+            handleQuit();
         });
-        
-        fileMenu.dataset.initialized = 'true';
     }
     
     if (!document.body.dataset.globalClickHandlerInitialized) {
@@ -440,71 +467,4 @@ function setupMenuHandlers() {
     }
 }
 
-function setupLanguageMenuHandlers() {
-    const languageMenu = document.getElementById('language-menu');
-    const languageDropdown = document.getElementById('language-dropdown');
-    
-    if (!languageMenu || !languageDropdown) return;
-    if (languageMenu.dataset.initialized === 'true') return;
-    
-    languageMenu.addEventListener('click', function(e) {
-        e.stopPropagation();
-        const isShown = languageDropdown.classList.contains('show');
-        document.querySelectorAll('.dropdown').forEach(d => {
-            if (d !== languageDropdown) d.classList.remove('show');
-        });
-        if (!isShown) languageDropdown.classList.add('show');
-    });
-    
-    languageDropdown.addEventListener('click', function(e) {
-        e.stopPropagation();
-    });
-    
-    languageMenu.dataset.initialized = 'true';
-}
 
-async function setupLanguageMenu() {
-    try {
-        const languageNames = await invoke('get_language_names');
-        const currentLang = i18n.getCurrentLanguage();
-        const languageDropdown = document.getElementById('language-dropdown');
-        
-        if (!languageDropdown) return;
-        
-        languageDropdown.innerHTML = '';
-        
-        for (const [langCode, langName] of languageNames) {
-            const item = document.createElement('div');
-            item.className = 'dropdown-item';
-            item.textContent = langName;
-            item.dataset.langCode = langCode;
-            
-            if (langCode === currentLang) {
-                item.classList.add('active');
-            }
-            
-            item.addEventListener('click', async function(e) {
-                e.stopPropagation();
-                await handleLanguageChange(langCode);
-                languageDropdown.classList.remove('show');
-            });
-            
-            languageDropdown.appendChild(item);
-        }
-    } catch (error) {
-        console.error('Failed to setup language menu:', error);
-    }
-}
-
-async function handleLanguageChange(langCode) {
-    try {
-        await i18n.setLanguage(langCode);
-        await setupLanguageMenu();
-        // Font Size submenu items are built via textContent (no data-i18n),
-        // so an explicit redraw is needed after language change.
-        await setupFontSizeMenu();
-        await loadAccounts();
-    } catch (error) {
-        console.error('Failed to change language:', error);
-    }
-}

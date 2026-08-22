@@ -35,4 +35,12 @@ VALUES
 (713, 'error.font_size_apply_failed', 'en', 'Failed to apply font size', 'error', 'Font size apply error', datetime('now')),
 (714, 'error.font_size_apply_failed', 'ja', 'フォントサイズの適用に失敗しました', 'error', 'フォントサイズ適用エラー', datetime('now')),
 (719, 'error.category_duplicate_name', 'en', 'Category name "{0}" already exists', 'error', 'Duplicate category name error', datetime('now')),
-(720, 'error.category_duplicate_name', 'ja', '費目名「{0}」は既に存在します', 'error', '重複費目名エラー', datetime('now'));
+(720, 'error.category_duplicate_name', 'ja', '費目名「{0}」は既に存在します', 'error', '重複費目名エラー', datetime('now')),
+(2373, 'error.logout_failed', 'en', 'Logout failed', 'error', 'Logout failure message', datetime('now')),
+(2374, 'error.logout_failed', 'ja', 'ログアウトに失敗しました', 'error', 'ログアウト失敗メッセージ', datetime('now')),
+(2375, 'error.quit_failed', 'en', 'Failed to quit the application', 'error', 'Quit failure message', datetime('now')),
+(2376, 'error.quit_failed', 'ja', 'アプリケーションの終了に失敗しました', 'error', '終了失敗メッセージ', datetime('now')),
+(2377, 'error.load_accounts_failed', 'en', 'Failed to load accounts', 'error', 'Account load error', datetime('now')),
+(2378, 'error.load_accounts_failed', 'ja', '口座の読み込みに失敗しました', 'error', '口座読み込みエラー', datetime('now')),
+(2379, 'error.load_shops_failed', 'en', 'Failed to load shops', 'error', 'Shop load error', datetime('now')),
+(2380, 'error.load_shops_failed', 'ja', '店舗の読み込みに失敗しました', 'error', '店舗読み込みエラー', datetime('now'));

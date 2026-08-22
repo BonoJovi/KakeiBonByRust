@@ -1,6 +1,12 @@
 use sqlx::{SqlitePool, Row};
 use serde::{Serialize, Deserialize};
-use crate::{sql_queries, consts};
+use crate::api_error::ApiError;
+use crate::{sql_queries, consts, validation};
+
+const ENTITY_LABEL: &str = "Transaction";
+
+/// Upper bound for page size in paginated transaction listings
+const MAX_PER_PAGE: i64 = 500;
 
 /// Transaction header data structure
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
@@ -219,10 +225,58 @@ impl std::fmt::Display for TransactionError {
     }
 }
 
+impl std::error::Error for TransactionError {}
+
 impl From<sqlx::Error> for TransactionError {
     fn from(err: sqlx::Error) -> Self {
         TransactionError::DatabaseError(err.to_string())
     }
+}
+
+/// Map the domain-specific `TransactionError` onto the wire-level `ApiError`
+/// so the tauri command wrappers can `?`-propagate it into a structured
+/// `{ code, message, entity? }` payload for the frontend classifier
+/// (`res/js/transaction-management.js` / `transaction-detail-management.js`
+/// — direct `err.code` branching, no substring matches). Matches the
+/// `From<RecurringError>` shape (PR2a) and the earlier
+/// `From<CategoryError>` / `From<UserManagementError>` rollouts
+/// (PR #100/#101).
+///
+/// Codes:
+///   - `NotFound`              → `not_found` (entity="transaction")
+///   - `ValidationError(msg)`  → `validation` (message preserved so the
+///                               screens can still dispatch bounded-field
+///                               errors — `"Item name must be …"`,
+///                               `"Memo must be …"` — to the right inline
+///                               input via `startsWith`)
+///   - `DatabaseError(msg)`    → `database`
+impl From<TransactionError> for ApiError {
+    fn from(err: TransactionError) -> Self {
+        match err {
+            TransactionError::NotFound => ApiError::not_found(ENTITY_LABEL),
+            TransactionError::ValidationError(msg) => ApiError::validation(msg),
+            TransactionError::DatabaseError(msg) => ApiError::database(msg),
+        }
+    }
+}
+
+/// MEMOS.MEMO_TEXT length guard, shared by the header and detail paths.
+fn validate_memo_length(memo_text: &str) -> Result<(), TransactionError> {
+    validation::validate_max_chars("Memo", memo_text, consts::MAX_MEMO_LEN)
+        .map_err(TransactionError::ValidationError)
+}
+
+/// TRANSACTIONS_DETAIL.ITEM_NAME length guard.
+fn validate_item_name_length(item_name: &str) -> Result<(), TransactionError> {
+    validation::validate_max_chars("Item name", item_name, consts::MAX_ITEM_NAME_LEN)
+        .map_err(TransactionError::ValidationError)
+}
+
+/// Escape SQL LIKE metacharacters so user-supplied text matches literally.
+/// Paired with `LIKE ? ESCAPE '\'` in the query. Backslash must be escaped
+/// first so we do not re-escape the escapes we just added.
+fn escape_like_pattern(s: &str) -> String {
+    s.replace('\\', "\\\\").replace('%', "\\%").replace('_', "\\_")
 }
 
 /// Result of `recalculate_all_transaction_totals`. The frontend uses this to
@@ -445,11 +499,7 @@ impl TransactionService {
         // Save memo if provided
         let memo_id = if let Some(text) = &request.memo {
             if !text.trim().is_empty() {
-                if text.chars().count() > consts::MAX_MEMO_LEN {
-                    return Err(TransactionError::ValidationError(
-                        format!("Memo must be {} characters or less", consts::MAX_MEMO_LEN),
-                    ));
-                }
+                validate_memo_length(text)?;
                 let result = sqlx::query(sql_queries::MEMO_INSERT)
                     .bind(user_id)
                     .bind(text)
@@ -476,85 +526,6 @@ impl TransactionService {
             .bind(request.tax_included_type)
             .bind(memo_id)
             .bind(request.is_scheduled.unwrap_or(0))
-            .execute(&self.pool)
-            .await?;
-
-        Ok(result.last_insert_rowid())
-    }
-
-    /// Add a new transaction header
-    pub async fn add_transaction_header(
-        &self,
-        user_id: i64,
-        transaction_date: &str,
-        category1_code: &str,
-        from_account_code: &str,
-        to_account_code: &str,
-        total_amount: i64,
-        tax_rate: i32,
-        tax_rounding: &str,
-        memo_text: Option<&str>,
-    ) -> Result<i64, TransactionError> {
-        // Validate datetime format (YYYY-MM-DD HH:MM:SS)
-        if transaction_date.len() != 19 {
-            return Err(TransactionError::ValidationError(
-                "Invalid datetime format. Use YYYY-MM-DD HH:MM:SS".to_string(),
-            ));
-        }
-
-        // Validate amount (0 is allowed)
-        if total_amount < 0 || total_amount > 999_999_999 {
-            return Err(TransactionError::ValidationError(
-                "Amount must be between 0 and 999,999,999".to_string(),
-            ));
-        }
-
-        // Validate tax rate (typically 8% or 10% in Japan)
-        if tax_rate < 0 || tax_rate > 100 {
-            return Err(TransactionError::ValidationError(
-                "Tax rate must be between 0 and 100".to_string(),
-            ));
-        }
-
-        // Validate tax rounding method
-        if !["ROUND_UP", "ROUND_DOWN", "ROUND_HALF"].contains(&tax_rounding) {
-            return Err(TransactionError::ValidationError(
-                "Invalid tax rounding method".to_string(),
-            ));
-        }
-
-        // Save memo if provided
-        let memo_id = if let Some(text) = memo_text {
-            if !text.trim().is_empty() {
-                if text.chars().count() > consts::MAX_MEMO_LEN {
-                    return Err(TransactionError::ValidationError(
-                        format!("Memo must be {} characters or less", consts::MAX_MEMO_LEN),
-                    ));
-                }
-                let result = sqlx::query(sql_queries::MEMO_INSERT)
-                    .bind(user_id)
-                    .bind(text)
-                    .execute(&self.pool)
-                    .await?;
-                Some(result.last_insert_rowid())
-            } else {
-                None
-            }
-        } else {
-            None
-        };
-
-        // Insert transaction header
-        let result = sqlx::query(sql_queries::TRANSACTION_HEADER_INSERT)
-            .bind(user_id)
-            .bind(transaction_date)
-            .bind(category1_code)
-            .bind(from_account_code)
-            .bind(to_account_code)
-            .bind(total_amount)
-            .bind(tax_rate)
-            .bind(tax_rounding)
-            .bind(memo_id)
             .execute(&self.pool)
             .await?;
 
@@ -613,90 +584,6 @@ impl TransactionService {
         }
     }
 
-    /// Add a new transaction (legacy method for backward compatibility)
-    pub async fn add_transaction(
-        &self,
-        user_id: i64,
-        transaction_date: &str,
-        category1_code: &str,
-        category2_code: &str,
-        category3_code: &str,
-        amount: i64,
-        description: Option<&str>,
-        memo: Option<&str>,
-    ) -> Result<i64, TransactionError> {
-        // Validate amount
-        if amount < 1 || amount > 999_999_999 {
-            return Err(TransactionError::ValidationError(
-                "Amount must be between 1 and 999,999,999".to_string(),
-            ));
-        }
-
-        // Validate datetime format (YYYY-MM-DD HH:MM:SS)
-        if transaction_date.len() != 19 {
-            return Err(TransactionError::ValidationError(
-                "Invalid datetime format. Use YYYY-MM-DD HH:MM:SS".to_string(),
-            ));
-        }
-
-        // Validate description length
-        if let Some(desc) = description {
-            if desc.trim().is_empty() {
-                return Err(TransactionError::ValidationError(
-                    "Description cannot be empty or whitespace only".to_string(),
-                ));
-            }
-            if desc.chars().count() > 500 {
-                return Err(TransactionError::ValidationError(
-                    "Description must be 500 characters or less".to_string(),
-                ));
-            }
-        }
-
-        // Validate memo length
-        if let Some(m) = memo {
-            if m.trim().is_empty() {
-                return Err(TransactionError::ValidationError(
-                    "Memo cannot be empty or whitespace only".to_string(),
-                ));
-            }
-            if m.chars().count() > consts::MAX_MEMO_LEN {
-                return Err(TransactionError::ValidationError(
-                    format!("Memo must be {} characters or less", consts::MAX_MEMO_LEN),
-                ));
-            }
-        }
-
-        let result = sqlx::query(sql_queries::TRANSACTION_INSERT)
-            .bind(user_id)
-            .bind(transaction_date)
-            .bind(category1_code)
-            .bind(category2_code)
-            .bind(category3_code)
-            .bind(amount)
-            .bind(description)
-            .bind(memo)
-            .execute(&self.pool)
-            .await?;
-
-        Ok(result.last_insert_rowid())
-    }
-
-    /// Get a single transaction by ID
-    pub async fn get_transaction(
-        &self,
-        user_id: i64,
-        transaction_id: i64,
-    ) -> Result<Transaction, TransactionError> {
-        let transaction = sqlx::query_as::<_, Transaction>(sql_queries::TRANSACTION_SELECT_BY_ID)
-            .bind(user_id)
-            .bind(transaction_id)
-            .fetch_optional(&self.pool)
-            .await?;
-
-        transaction.ok_or(TransactionError::NotFound)
-    }
-
     /// Get transactions with filters and pagination
     pub async fn get_transactions(
         &self,
@@ -713,6 +600,11 @@ impl TransactionService {
         page: i64,
         per_page: i64,
     ) -> Result<TransactionListResponse, TransactionError> {
+        // Clamp pagination input: per_page = 0 would divide by zero below and
+        // negative values would produce a negative OFFSET.
+        let page = page.max(1);
+        let per_page = per_page.clamp(1, MAX_PER_PAGE);
+
         // Build WHERE clauses (with table alias 't.')
         let mut where_clauses = vec!["t.USER_ID = ?".to_string()];
         let mut params: Vec<String> = vec![user_id.to_string()];
@@ -735,7 +627,16 @@ impl TransactionService {
 
         if let Some(end) = end_date {
             where_clauses.push("t.TRANSACTION_DATE <= ?".to_string());
-            params.push(end.to_string());
+            // TRANSACTION_DATE is stored as 'YYYY-MM-DD HH:MM:SS' but the UI's
+            // <input type="date"> sends bare 'YYYY-MM-DD', which under string
+            // comparison drops every same-day timestamp. Anchor to end-of-day
+            // so the boundary day is included.
+            let normalized = if end.len() == 10 {
+                format!("{} 23:59:59", end)
+            } else {
+                end.to_string()
+            };
+            params.push(normalized);
         }
 
         if let Some(cat1) = category1_code {
@@ -783,9 +684,18 @@ impl TransactionService {
             params.push(max.to_string());
         }
 
-        // Note: DESCRIPTION and MEMO are not in HEADER
-        // Keyword search is not implemented for header-only queries
-        let _ = keyword; // Suppress unused warning
+        // Keyword: substring match against memo text on the header row and on
+        // any detail row of the same header. MEMO_TEXT is user-supplied so we
+        // escape LIKE metacharacters and bind the same pattern twice.
+        if let Some(kw) = keyword {
+            let kw = kw.trim();
+            if !kw.is_empty() {
+                let pattern = format!("%{}%", escape_like_pattern(kw));
+                where_clauses.push(sql_queries::TRANSACTION_KEYWORD_MEMO_FILTER.to_string());
+                params.push(pattern.clone());
+                params.push(pattern);
+            }
+        }
 
         let where_clause = where_clauses.join(" AND ");
 
@@ -827,53 +737,6 @@ impl TransactionService {
             per_page,
             total_pages,
         })
-    }
-
-    /// Update a transaction
-    pub async fn update_transaction(
-        &self,
-        user_id: i64,
-        transaction_id: i64,
-        transaction_date: &str,
-        category1_code: &str,
-        category2_code: &str,
-        category3_code: &str,
-        amount: i64,
-        description: Option<&str>,
-        memo: Option<&str>,
-    ) -> Result<(), TransactionError> {
-        // Validate amount
-        if amount < 1 || amount > 999_999_999 {
-            return Err(TransactionError::ValidationError(
-                "Amount must be between 1 and 999,999,999".to_string(),
-            ));
-        }
-
-        // Validate datetime format (YYYY-MM-DD HH:MM:SS)
-        if transaction_date.len() != 19 {
-            return Err(TransactionError::ValidationError(
-                "Invalid datetime format. Use YYYY-MM-DD HH:MM:SS".to_string(),
-            ));
-        }
-
-        let result = sqlx::query(sql_queries::TRANSACTION_UPDATE)
-            .bind(transaction_date)
-            .bind(category1_code)
-            .bind(category2_code)
-            .bind(category3_code)
-            .bind(amount)
-            .bind(description)
-            .bind(memo)
-            .bind(user_id)
-            .bind(transaction_id)
-            .execute(&self.pool)
-            .await?;
-
-        if result.rows_affected() == 0 {
-            return Err(TransactionError::NotFound);
-        }
-
-        Ok(())
     }
 
     /// Delete a transaction
@@ -931,12 +794,7 @@ impl TransactionService {
             return Ok(None);
         }
 
-        // Validate memo length
-        if memo_text.chars().count() > consts::MAX_MEMO_LEN {
-            return Err(TransactionError::ValidationError(
-                format!("Memo must be {} characters or less", consts::MAX_MEMO_LEN),
-            ));
-        }
+        validate_memo_length(memo_text)?;
 
         // Check if memo with same text already exists
         let existing_memo = sqlx::query(sql_queries::MEMO_FIND_BY_TEXT)
@@ -958,6 +816,22 @@ impl TransactionService {
         }
     }
 
+    /// Total references to a memo across TRANSACTIONS_HEADER,
+    /// TRANSACTIONS_DETAIL, RECURRING_RULES, and RECURRING_RULE_DETAILS.
+    /// A memo is considered shared when this exceeds the caller's own
+    /// reference (typically shared > 1 for updates, or leftover > 0 after
+    /// the caller already released its reference).
+    async fn memo_usage_count(&self, memo_id: i64) -> Result<i64, TransactionError> {
+        let count: i64 = sqlx::query_scalar(sql_queries::MEMO_COUNT_USAGE)
+            .bind(memo_id)
+            .bind(memo_id)
+            .bind(memo_id)
+            .bind(memo_id)
+            .fetch_one(&self.pool)
+            .await?;
+        Ok(count)
+    }
+
     /// Helper function to get memo_id for update (handles shared memo_id case)
     async fn get_memo_id_for_update(
         &self,
@@ -975,20 +849,11 @@ impl TransactionService {
             return Ok(None);
         }
 
-        // Validate memo length
-        if memo_text.chars().count() > consts::MAX_MEMO_LEN {
-            return Err(TransactionError::ValidationError(
-                format!("Memo must be {} characters or less", consts::MAX_MEMO_LEN),
-            ));
-        }
+        validate_memo_length(memo_text)?;
 
         // Check if current memo_id is shared with other transactions
         let is_shared = if let Some(memo_id) = current_memo_id {
-            let count: i64 = sqlx::query_scalar(sql_queries::MEMO_COUNT_USAGE)
-                .bind(memo_id)
-                .fetch_one(&self.pool)
-                .await?;
-            count > 1
+            self.memo_usage_count(memo_id).await? > 1
         } else {
             false
         };
@@ -1188,11 +1053,7 @@ impl TransactionService {
             ));
         }
 
-        if request.item_name.chars().count() > consts::MAX_ITEM_NAME_LEN {
-            return Err(TransactionError::ValidationError(
-                format!("Item name must be {} characters or less", consts::MAX_ITEM_NAME_LEN),
-            ));
-        }
+        validate_item_name_length(&request.item_name)?;
 
         // Validate amount
         if request.amount < 0 || request.amount > 999_999_999 {
@@ -1215,14 +1076,31 @@ impl TransactionService {
             ));
         }
 
+        // Verify the parent header exists AND belongs to this user. The FK
+        // on TRANSACTIONS_DETAIL.TRANSACTION_ID only checks that some header
+        // row exists — it does not enforce ownership. Without this guard, a
+        // request coming through direct `invoke` (bypassing the frontend
+        // form) with another user's transaction_id would attach the new
+        // detail to that other user's header. `update_transaction_detail` /
+        // `delete_transaction_detail` already do the equivalent check via
+        // `fetch_optional` on the existing detail row (see below); this
+        // brings `add` to the same standard so the three CRUD paths are
+        // symmetric. Runs before MEMO_INSERT so a rejected add cannot leave
+        // an orphaned MEMOS row behind.
+        let parent_exists: Option<i64> =
+            sqlx::query_scalar(sql_queries::TRANSACTION_HEADER_EXISTS_FOR_USER)
+                .bind(transaction_id)
+                .bind(user_id)
+                .fetch_optional(&self.pool)
+                .await?;
+        if parent_exists.is_none() {
+            return Err(TransactionError::NotFound);
+        }
+
         // Save memo if provided
         let memo_id = if let Some(text) = &request.memo {
             if !text.trim().is_empty() {
-                if text.chars().count() > consts::MAX_MEMO_LEN {
-                    return Err(TransactionError::ValidationError(
-                        format!("Memo must be {} characters or less", consts::MAX_MEMO_LEN),
-                    ));
-                }
+                validate_memo_length(text)?;
                 let result = sqlx::query(sql_queries::MEMO_INSERT)
                     .bind(user_id)
                     .bind(text)
@@ -1270,11 +1148,7 @@ impl TransactionService {
             ));
         }
 
-        if request.item_name.chars().count() > consts::MAX_ITEM_NAME_LEN {
-            return Err(TransactionError::ValidationError(
-                format!("Item name must be {} characters or less", consts::MAX_ITEM_NAME_LEN),
-            ));
-        }
+        validate_item_name_length(&request.item_name)?;
 
         // Validate amount
         if request.amount < 0 || request.amount > 999_999_999 {
@@ -1308,44 +1182,48 @@ impl TransactionService {
 
         let existing_detail = existing.ok_or(TransactionError::NotFound)?;
 
-        // Handle memo update
-        let memo_id = if let Some(text) = &request.memo {
+        // Handle memo update. The old code mutated / deleted the referenced
+        // memo row directly, which corrupts any header or sibling detail that
+        // shared the same MEMO_ID via MEMO_FIND_BY_TEXT reuse. Gate every
+        // destructive step on a share check.
+        //
+        // Note: `deferred_memo_delete` carries the old MEMO_ID out to *after*
+        // the DETAIL update. Deleting a memo row while the detail still
+        // references it violates the MEMOS FK under production settings
+        // (PRAGMA foreign_keys = ON), so the delete must run only once the
+        // reference has been released.
+        let (memo_id, deferred_memo_delete) = if let Some(text) = &request.memo {
             if !text.trim().is_empty() {
-                if text.chars().count() > consts::MAX_MEMO_LEN {
-                    return Err(TransactionError::ValidationError(
-                        format!("Memo must be {} characters or less", consts::MAX_MEMO_LEN),
-                    ));
-                }
-                
-                if let Some(old_memo_id) = existing_detail.memo_id {
-                    // Update existing memo
-                    sqlx::query(sql_queries::MEMO_UPDATE)
-                        .bind(text)
-                        .bind(old_memo_id)
-                        .execute(&self.pool)
-                        .await?;
-                    Some(old_memo_id)
+                validate_memo_length(text)?;
+
+                let resolved = if let Some(old_memo_id) = existing_detail.memo_id {
+                    let shared = self.memo_usage_count(old_memo_id).await? > 1;
+                    if shared {
+                        // Old memo has other references — must not mutate it.
+                        // Point this detail at a fresh/reused memo instead.
+                        self.get_or_create_memo_id(user_id, Some(text)).await?
+                    } else {
+                        // Only this detail uses the old memo — safe in place.
+                        sqlx::query(sql_queries::MEMO_UPDATE)
+                            .bind(text)
+                            .bind(old_memo_id)
+                            .execute(&self.pool)
+                            .await?;
+                        Some(old_memo_id)
+                    }
                 } else {
-                    // Create new memo
-                    let result = sqlx::query(sql_queries::MEMO_INSERT)
-                        .bind(user_id)
-                        .bind(text)
-                        .execute(&self.pool)
-                        .await?;
-                    Some(result.last_insert_rowid())
-                }
+                    // No prior memo — find-or-create to avoid duplicate rows
+                    // when the same text already lives in MEMOS.
+                    self.get_or_create_memo_id(user_id, Some(text)).await?
+                };
+                (resolved, None)
             } else {
-                // Delete old memo if exists
-                if let Some(old_memo_id) = existing_detail.memo_id {
-                    sqlx::query(sql_queries::MEMO_DELETE)
-                        .bind(old_memo_id)
-                        .execute(&self.pool)
-                        .await?;
-                }
-                None
+                // Text cleared — defer the old memo's cleanup until after
+                // the DETAIL update has released its reference.
+                (None, existing_detail.memo_id)
             }
         } else {
-            existing_detail.memo_id
+            (existing_detail.memo_id, None)
         };
 
         // Update detail
@@ -1367,6 +1245,18 @@ impl TransactionService {
 
         if result.rows_affected() == 0 {
             return Err(TransactionError::NotFound);
+        }
+
+        // Now that the detail's MEMO_ID has been released (or overwritten),
+        // clean up the old memo row if the user cleared the memo text and
+        // nothing else still points at it.
+        if let Some(old_memo_id) = deferred_memo_delete {
+            if self.memo_usage_count(old_memo_id).await? == 0 {
+                sqlx::query(sql_queries::MEMO_DELETE)
+                    .bind(old_memo_id)
+                    .execute(&self.pool)
+                    .await?;
+            }
         }
 
         Ok(())
@@ -1403,12 +1293,17 @@ impl TransactionService {
             return Err(TransactionError::NotFound);
         }
 
-        // Delete memo if exists (after detail is deleted)
+        // Delete memo only when the detail we just removed held the last
+        // reference. Header rows and sibling details can also point at this
+        // MEMO_ID (via MEMO_FIND_BY_TEXT reuse); dropping it unconditionally
+        // would leave those references dangling.
         if let Some(memo_id) = memo_id {
-            sqlx::query(sql_queries::MEMO_DELETE)
-                .bind(memo_id)
-                .execute(&self.pool)
-                .await?;
+            if self.memo_usage_count(memo_id).await? == 0 {
+                sqlx::query(sql_queries::MEMO_DELETE)
+                    .bind(memo_id)
+                    .execute(&self.pool)
+                    .await?;
+            }
         }
 
         Ok(())
@@ -1496,6 +1391,29 @@ impl TransactionService {
         .fetch_all(&mut *tx)
         .await?;
 
+        // PR12 (Fable-5 #32): fetch every detail row for the user in
+        // one query and bucket by TRANSACTION_ID before the loop below,
+        // instead of running one SELECT per header. On a database with
+        // 1000 headers this collapses 1001 queries to 2. The SQL's
+        // `ORDER BY TRANSACTION_ID, DETAIL_ID` preserves the in-detail
+        // ordering the single-transaction query used to give us, so
+        // `detail_amounts` and the tax-recompute inputs are identical.
+        let all_detail_rows =
+            sqlx::query(sql_queries::TRANSACTION_DETAIL_GET_ALL_FOR_USER_RECALC)
+                .bind(user_id)
+                .fetch_all(&mut *tx)
+                .await?;
+        let mut details_by_txn: std::collections::HashMap<i64, Vec<DetailForRecalc>> =
+            std::collections::HashMap::new();
+        for row in all_detail_rows {
+            let txn_id: i64 = row.get("TRANSACTION_ID");
+            details_by_txn.entry(txn_id).or_default().push(DetailForRecalc {
+                amount: row.get("AMOUNT"),
+                amount_including_tax: row.get("AMOUNT_INCLUDING_TAX"),
+                tax_rate: row.get("TAX_RATE"),
+            });
+        }
+
         let total_headers = header_rows.len() as i64;
         let mut settings_corrected = 0i64;
         let mut total_overwritten = 0i64;
@@ -1509,20 +1427,10 @@ impl TransactionService {
             let included_before: i64 = header_row.get("TAX_INCLUDED_TYPE");
             let total_before: i64 = header_row.get("TOTAL_AMOUNT");
 
-            let detail_rows = sqlx::query(sql_queries::TRANSACTION_DETAIL_GET_FOR_RECALC)
-                .bind(txn_id)
-                .bind(user_id)
-                .fetch_all(&mut *tx)
-                .await?;
-
-            let details: Vec<DetailForRecalc> = detail_rows
-                .iter()
-                .map(|r| DetailForRecalc {
-                    amount: r.get("AMOUNT"),
-                    amount_including_tax: r.get("AMOUNT_INCLUDING_TAX"),
-                    tax_rate: r.get("TAX_RATE"),
-                })
-                .collect();
+            // Take the pre-loaded details for this header (removing to
+            // release memory as we go); a header with no detail rows
+            // yields an empty Vec, matching the prior fetch behaviour.
+            let details = details_by_txn.remove(&txn_id).unwrap_or_default();
             let detail_amounts: Vec<i64> = details.iter().map(|d| d.amount).collect();
 
             // First, prefer to keep the user-entered TOTAL_AMOUNT verbatim by
@@ -1632,9 +1540,17 @@ impl TransactionService {
             .ok_or_else(|| {
                 TransactionError::DatabaseError("DB path has no parent directory".to_string())
             })?;
-        let backup_dir = backup.parent().map(|p| p.to_path_buf()).ok_or_else(|| {
-            TransactionError::ValidationError("Backup path has no parent directory".to_string())
-        })?;
+        // Canonicalize both sides so `..` segments and symlinks cannot be used
+        // to point ATTACH at a file outside the DB directory.
+        let main_dir = main_dir.canonicalize().unwrap_or(main_dir);
+        let backup_dir = backup
+            .parent()
+            .map(|p| p.canonicalize().unwrap_or_else(|_| p.to_path_buf()))
+            .ok_or_else(|| {
+                TransactionError::ValidationError(
+                    "Backup path has no parent directory".to_string(),
+                )
+            })?;
         if backup_dir != main_dir {
             return Err(TransactionError::ValidationError(format!(
                 "Backup must live in the kakeibon DB directory ({:?})",
@@ -1944,6 +1860,32 @@ mod tests {
             .await
             .unwrap();
 
+        // Recurring rule tables. MEMO_COUNT_USAGE queries these to detect
+        // memos shared with recurring rules; without them, every UPDATE /
+        // DELETE path that touches a memo would fail with "no such table"
+        // even when the test itself does not exercise recurring rules.
+        sqlx::query(sql_queries::CREATE_RECURRING_RULES_TABLE)
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query(sql_queries::CREATE_RECURRING_RULE_DETAILS_TABLE)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        pool
+    }
+
+    /// Same in-memory schema as `setup_test_db`, plus `PRAGMA foreign_keys
+    /// = ON` so tests can exercise production-equivalent FK enforcement
+    /// (needed for regression tests around MEMO_DELETE ordering, since the
+    /// bug only surfaces when the MEMOS FK is actually enforced).
+    async fn setup_test_db_with_foreign_keys() -> SqlitePool {
+        let pool = setup_test_db().await;
+        sqlx::query("PRAGMA foreign_keys = ON")
+            .execute(&pool)
+            .await
+            .unwrap();
         pool
     }
 
@@ -3261,6 +3203,187 @@ mod tests {
         assert_eq!(empty.total_count, 2);
     }
 
+    /// Regression: an end-date filter of 'YYYY-MM-DD' used to string-compare
+    /// against 'YYYY-MM-DD HH:MM:SS' in TRANSACTION_DATE and silently drop
+    /// every same-day timestamp. The boundary day must be inclusive.
+    #[tokio::test]
+    async fn test_get_transactions_end_date_includes_boundary_day() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+
+        let mut request = SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "EXPENSE".to_string(),
+            from_account_code: "CASH".to_string(),
+            to_account_code: "BANK".to_string(),
+            transaction_date: "2024-05-10 09:00:00".to_string(),
+            total_amount: 1000,
+            tax_rounding_type: consts::TAX_ROUND_DOWN,
+            tax_included_type: consts::TAX_EXCLUDED,
+            memo: None,
+            is_scheduled: None,
+        };
+        service.save_transaction_header(2, request.clone()).await.unwrap();
+
+        request.transaction_date = "2024-05-15 12:00:00".to_string();
+        service.save_transaction_header(2, request.clone()).await.unwrap();
+
+        request.transaction_date = "2024-05-15 23:30:00".to_string();
+        service.save_transaction_header(2, request.clone()).await.unwrap();
+
+        request.transaction_date = "2024-05-16 08:00:00".to_string();
+        service.save_transaction_header(2, request).await.unwrap();
+
+        // end=2024-05-15 must include both same-day rows (12:00 and 23:30).
+        let result = service
+            .get_transactions(
+                2,
+                Some("2024-05-10"),
+                Some("2024-05-15"),
+                None, None, None, None, None, None,
+                false, 1, 50,
+            )
+            .await
+            .unwrap();
+        assert_eq!(result.total_count, 3);
+
+        // Bare same-day range must return the two rows on that day.
+        let single_day = service
+            .get_transactions(
+                2,
+                Some("2024-05-15"),
+                Some("2024-05-15"),
+                None, None, None, None, None, None,
+                false, 1, 50,
+            )
+            .await
+            .unwrap();
+        assert_eq!(single_day.total_count, 2);
+
+        // Datetime-form end must still work unchanged.
+        let datetime_end = service
+            .get_transactions(
+                2,
+                None,
+                Some("2024-05-15 12:00:00"),
+                None, None, None, None, None, None,
+                false, 1, 50,
+            )
+            .await
+            .unwrap();
+        assert_eq!(datetime_end.total_count, 2);
+    }
+
+    /// Regression: the keyword parameter used to be discarded (`let _ = keyword`),
+    /// leaving the search box a silent no-op. Keyword must substring-match
+    /// against memos on the header row and on any detail row of the header.
+    #[tokio::test]
+    async fn test_get_transactions_keyword_matches_header_and_detail_memo() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+
+        // Header A: memo on header only.
+        let header_a = SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "EXPENSE".to_string(),
+            from_account_code: "CASH".to_string(),
+            to_account_code: "BANK".to_string(),
+            transaction_date: "2024-06-01 10:00:00".to_string(),
+            total_amount: 1000,
+            tax_rounding_type: consts::TAX_ROUND_DOWN,
+            tax_included_type: consts::TAX_EXCLUDED,
+            memo: Some("駅前スーパーの牛乳".to_string()),
+            is_scheduled: None,
+        };
+        let id_a = service.save_transaction_header(2, header_a).await.unwrap();
+
+        // Header B: memo on detail only.
+        let header_b = SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "EXPENSE".to_string(),
+            from_account_code: "CASH".to_string(),
+            to_account_code: "BANK".to_string(),
+            transaction_date: "2024-06-02 10:00:00".to_string(),
+            total_amount: 500,
+            tax_rounding_type: consts::TAX_ROUND_DOWN,
+            tax_included_type: consts::TAX_EXCLUDED,
+            memo: None,
+            is_scheduled: None,
+        };
+        let id_b = service.save_transaction_header(2, header_b).await.unwrap();
+        let mut detail = basic_detail_request();
+        detail.memo = Some("ヨーグルト特売".to_string());
+        service.add_transaction_detail(2, id_b, detail).await.unwrap();
+
+        // Header C: no memo at all — must never match.
+        let header_c = SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "EXPENSE".to_string(),
+            from_account_code: "CASH".to_string(),
+            to_account_code: "BANK".to_string(),
+            transaction_date: "2024-06-03 10:00:00".to_string(),
+            total_amount: 300,
+            tax_rounding_type: consts::TAX_ROUND_DOWN,
+            tax_included_type: consts::TAX_EXCLUDED,
+            memo: None,
+            is_scheduled: None,
+        };
+        service.save_transaction_header(2, header_c).await.unwrap();
+
+        // Keyword hits header memo only.
+        let hit_header = service
+            .get_transactions(
+                2, None, None, None, None, None, None, None,
+                Some("牛乳"), false, 1, 50,
+            )
+            .await
+            .unwrap();
+        assert_eq!(hit_header.total_count, 1);
+        assert_eq!(hit_header.transactions[0].transaction_id, id_a);
+
+        // Keyword hits detail memo only.
+        let hit_detail = service
+            .get_transactions(
+                2, None, None, None, None, None, None, None,
+                Some("特売"), false, 1, 50,
+            )
+            .await
+            .unwrap();
+        assert_eq!(hit_detail.total_count, 1);
+        assert_eq!(hit_detail.transactions[0].transaction_id, id_b);
+
+        // No match returns no rows.
+        let miss = service
+            .get_transactions(
+                2, None, None, None, None, None, None, None,
+                Some("ダミー"), false, 1, 50,
+            )
+            .await
+            .unwrap();
+        assert_eq!(miss.total_count, 0);
+
+        // Whitespace-only keyword is treated as no filter.
+        let whitespace = service
+            .get_transactions(
+                2, None, None, None, None, None, None, None,
+                Some("   "), false, 1, 50,
+            )
+            .await
+            .unwrap();
+        assert_eq!(whitespace.total_count, 3);
+
+        // LIKE metacharacter '%' must be escaped — it should match literally,
+        // not as a wildcard.
+        let percent_miss = service
+            .get_transactions(
+                2, None, None, None, None, None, None, None,
+                Some("%"), false, 1, 50,
+            )
+            .await
+            .unwrap();
+        assert_eq!(percent_miss.total_count, 0);
+    }
+
     #[tokio::test]
     async fn test_get_transactions_excludes_scheduled_by_default() {
         let pool = setup_test_db().await;
@@ -3472,6 +3595,461 @@ mod tests {
         service.update_transaction_detail(2, detail_id, unlinked).await.unwrap();
         let after_unlink = service.get_transaction_details(2, transaction_id).await.unwrap();
         assert_eq!(after_unlink[0].product_id, None);
+    }
+
+    /// Set up a Header/Detail pair that share a MEMO_ID because
+    /// `get_memo_id_for_update` reused the detail's memo row via
+    /// `MEMO_FIND_BY_TEXT`. Returns (header_a_id, detail_a_id, header_b_id,
+    /// shared_memo_id).
+    async fn seed_shared_memo(
+        service: &TransactionService,
+        text: &str,
+    ) -> (i64, i64, i64, i64) {
+        let header_a_id = create_test_header(service).await;
+        let mut detail_req = basic_detail_request();
+        detail_req.memo = Some(text.to_string());
+        let detail_a_id = service
+            .add_transaction_detail(2, header_a_id, detail_req)
+            .await
+            .unwrap();
+        let shared_memo_id = service
+            .get_transaction_details(2, header_a_id)
+            .await
+            .unwrap()[0]
+            .memo_id
+            .unwrap();
+
+        let header_b_id = create_test_header(service).await;
+        let update_req = SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "EXPENSE".to_string(),
+            from_account_code: "CASH".to_string(),
+            to_account_code: "BANK".to_string(),
+            transaction_date: "2024-01-01 10:00:00".to_string(),
+            total_amount: 10000,
+            tax_rounding_type: consts::TAX_ROUND_DOWN,
+            tax_included_type: consts::TAX_EXCLUDED,
+            memo: Some(text.to_string()),
+            is_scheduled: None,
+        };
+        service
+            .update_transaction_header(2, header_b_id, update_req)
+            .await
+            .unwrap();
+        let header_b = service
+            .get_transaction_header_with_info(2, header_b_id)
+            .await
+            .unwrap();
+        assert_eq!(header_b.memo_id, Some(shared_memo_id),
+            "sanity: header update must reuse detail's memo row");
+
+        (header_a_id, detail_a_id, header_b_id, shared_memo_id)
+    }
+
+    /// Regression for Fable 5 review item 5. When a header and a detail
+    /// share the same MEMO_ID (via MEMO_FIND_BY_TEXT reuse on header
+    /// update), editing the detail's memo used to mutate the row in place
+    /// and silently change the header's memo too.
+    #[tokio::test]
+    async fn test_update_detail_memo_does_not_corrupt_shared_header_memo() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let (header_a_id, detail_a_id, header_b_id, shared_memo_id) =
+            seed_shared_memo(&service, "shared_text").await;
+
+        let mut edit = basic_detail_request();
+        edit.memo = Some("changed_by_detail".to_string());
+        service
+            .update_transaction_detail(2, detail_a_id, edit)
+            .await
+            .unwrap();
+
+        // Header B's memo must not have moved.
+        let header_b_after = service
+            .get_transaction_header_with_info(2, header_b_id)
+            .await
+            .unwrap();
+        assert_eq!(header_b_after.memo_id, Some(shared_memo_id));
+        assert_eq!(header_b_after.memo_text.as_deref(), Some("shared_text"));
+
+        // Detail A's memo must have been redirected to a fresh row.
+        let details_a_after = service
+            .get_transaction_details(2, header_a_id)
+            .await
+            .unwrap();
+        assert_eq!(details_a_after[0].memo_text.as_deref(), Some("changed_by_detail"));
+        assert_ne!(details_a_after[0].memo_id.unwrap(), shared_memo_id);
+    }
+
+    /// Regression for Fable 5 review item 5. Deleting a detail whose
+    /// MEMO_ID is shared with a header used to unconditionally DELETE
+    /// the memo row and leave the header's MEMO_ID dangling.
+    #[tokio::test]
+    async fn test_delete_detail_preserves_memo_still_referenced_by_header() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool.clone());
+        let (_header_a_id, detail_a_id, header_b_id, shared_memo_id) =
+            seed_shared_memo(&service, "shared").await;
+
+        service.delete_transaction_detail(2, detail_a_id).await.unwrap();
+
+        let still_there: Option<String> =
+            sqlx::query_scalar("SELECT MEMO_TEXT FROM MEMOS WHERE MEMO_ID = ?")
+                .bind(shared_memo_id)
+                .fetch_optional(&pool)
+                .await
+                .unwrap();
+        assert_eq!(still_there.as_deref(), Some("shared"));
+
+        let header_b_after = service
+            .get_transaction_header_with_info(2, header_b_id)
+            .await
+            .unwrap();
+        assert_eq!(header_b_after.memo_text.as_deref(), Some("shared"));
+    }
+
+    /// A memo used only by one detail (no sharing) must still be updated
+    /// in place — the sharing check should not force a redundant row.
+    #[tokio::test]
+    async fn test_update_detail_memo_updates_in_place_when_not_shared() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+
+        let header_id = create_test_header(&service).await;
+        let mut detail_req = basic_detail_request();
+        detail_req.memo = Some("first".to_string());
+        let detail_id = service
+            .add_transaction_detail(2, header_id, detail_req)
+            .await
+            .unwrap();
+        let original_memo_id = service
+            .get_transaction_details(2, header_id)
+            .await
+            .unwrap()[0]
+            .memo_id
+            .unwrap();
+
+        let mut edit = basic_detail_request();
+        edit.memo = Some("second".to_string());
+        service.update_transaction_detail(2, detail_id, edit).await.unwrap();
+
+        let after = service.get_transaction_details(2, header_id).await.unwrap();
+        assert_eq!(after[0].memo_text.as_deref(), Some("second"));
+        assert_eq!(after[0].memo_id, Some(original_memo_id));
+    }
+
+    /// A memo used only by one detail must be deleted when the detail
+    /// is removed (no orphaned rows).
+    #[tokio::test]
+    async fn test_delete_detail_removes_orphaned_memo() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool.clone());
+
+        let header_id = create_test_header(&service).await;
+        let mut detail_req = basic_detail_request();
+        detail_req.memo = Some("lonely".to_string());
+        let detail_id = service
+            .add_transaction_detail(2, header_id, detail_req)
+            .await
+            .unwrap();
+        let memo_id = service
+            .get_transaction_details(2, header_id)
+            .await
+            .unwrap()[0]
+            .memo_id
+            .unwrap();
+
+        service.delete_transaction_detail(2, detail_id).await.unwrap();
+
+        let leftover: Option<String> =
+            sqlx::query_scalar("SELECT MEMO_TEXT FROM MEMOS WHERE MEMO_ID = ?")
+                .bind(memo_id)
+                .fetch_optional(&pool)
+                .await
+                .unwrap();
+        assert!(leftover.is_none(), "orphaned memo should have been deleted");
+    }
+
+    /// Clearing a shared detail's memo must release only this detail's
+    /// reference — the header that shares the MEMO_ID must keep its text.
+    #[tokio::test]
+    async fn test_clear_detail_memo_does_not_delete_memo_still_used_by_header() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool.clone());
+        let (_header_a_id, detail_a_id, header_b_id, shared_memo_id) =
+            seed_shared_memo(&service, "keep_me").await;
+
+        let mut cleared = basic_detail_request();
+        cleared.memo = Some("".to_string());
+        service
+            .update_transaction_detail(2, detail_a_id, cleared)
+            .await
+            .unwrap();
+
+        let still_there: Option<String> =
+            sqlx::query_scalar("SELECT MEMO_TEXT FROM MEMOS WHERE MEMO_ID = ?")
+                .bind(shared_memo_id)
+                .fetch_optional(&pool)
+                .await
+                .unwrap();
+        assert_eq!(still_there.as_deref(), Some("keep_me"));
+
+        let header_b_after = service
+            .get_transaction_header_with_info(2, header_b_id)
+            .await
+            .unwrap();
+        assert_eq!(header_b_after.memo_text.as_deref(), Some("keep_me"));
+    }
+
+    /// Insert a minimal RECURRING_RULES row that references `memo_id`.
+    /// Used to reproduce sharing between a recurring rule and a
+    /// transaction detail — MEMO_COUNT_USAGE must count this row.
+    async fn seed_recurring_rule_referencing_memo(pool: &SqlitePool, memo_id: i64) -> i64 {
+        let result = sqlx::query(
+            "INSERT INTO RECURRING_RULES (
+                USER_ID, PERIOD_UNIT, PERIOD_INTERVAL,
+                START_DATE, END_DATE,
+                CATEGORY1_CODE, FROM_ACCOUNT_CODE, TO_ACCOUNT_CODE,
+                TOTAL_AMOUNT, TAX_INCLUDED_TYPE, MEMO_ID
+            ) VALUES (2, 'MONTHLY', 1, '2024-01-01', '2024-12-31',
+                      'EXPENSE', 'CASH', 'BANK', 1000, 1, ?)",
+        )
+        .bind(memo_id)
+        .execute(pool)
+        .await
+        .unwrap();
+        result.last_insert_rowid()
+    }
+
+    /// Regression for Devin review of PR #82. When a detail's MEMO_ID is
+    /// shared with a RECURRING_RULES row (which happens naturally because
+    /// generated occurrences copy the rule's MEMO_ID), editing the detail's
+    /// memo used to rewrite the recurring rule's memo too — MEMO_COUNT_USAGE
+    /// only counted TRANSACTIONS_HEADER / _DETAIL and missed the rule.
+    #[tokio::test]
+    async fn test_update_detail_memo_does_not_corrupt_recurring_rule_memo() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool.clone());
+
+        let header_id = create_test_header(&service).await;
+        let mut detail_req = basic_detail_request();
+        detail_req.memo = Some("shared_with_recurring".to_string());
+        let detail_id = service
+            .add_transaction_detail(2, header_id, detail_req)
+            .await
+            .unwrap();
+        let shared_memo_id = service
+            .get_transaction_details(2, header_id)
+            .await
+            .unwrap()[0]
+            .memo_id
+            .unwrap();
+
+        // Recurring rule also references this memo.
+        seed_recurring_rule_referencing_memo(&pool, shared_memo_id).await;
+
+        let mut edit = basic_detail_request();
+        edit.memo = Some("edited_via_detail".to_string());
+        service.update_transaction_detail(2, detail_id, edit).await.unwrap();
+
+        // The recurring rule's memo text must remain untouched.
+        let rule_memo: Option<String> =
+            sqlx::query_scalar("SELECT MEMO_TEXT FROM MEMOS WHERE MEMO_ID = ?")
+                .bind(shared_memo_id)
+                .fetch_optional(&pool)
+                .await
+                .unwrap();
+        assert_eq!(rule_memo.as_deref(), Some("shared_with_recurring"));
+
+        // Detail has been redirected to a fresh memo.
+        let after = service.get_transaction_details(2, header_id).await.unwrap();
+        assert_eq!(after[0].memo_text.as_deref(), Some("edited_via_detail"));
+        assert_ne!(after[0].memo_id.unwrap(), shared_memo_id);
+    }
+
+    /// Regression for Devin review of PR #82. Deleting a detail whose
+    /// MEMO_ID is shared with a RECURRING_RULES row used to unconditionally
+    /// DELETE the memo row (and under production FK enforcement, blow up
+    /// with FOREIGN KEY constraint failed).
+    #[tokio::test]
+    async fn test_delete_detail_preserves_memo_still_referenced_by_recurring_rule() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool.clone());
+
+        let header_id = create_test_header(&service).await;
+        let mut detail_req = basic_detail_request();
+        detail_req.memo = Some("keep_for_rule".to_string());
+        let detail_id = service
+            .add_transaction_detail(2, header_id, detail_req)
+            .await
+            .unwrap();
+        let shared_memo_id = service
+            .get_transaction_details(2, header_id)
+            .await
+            .unwrap()[0]
+            .memo_id
+            .unwrap();
+
+        seed_recurring_rule_referencing_memo(&pool, shared_memo_id).await;
+
+        service.delete_transaction_detail(2, detail_id).await.unwrap();
+
+        let still_there: Option<String> =
+            sqlx::query_scalar("SELECT MEMO_TEXT FROM MEMOS WHERE MEMO_ID = ?")
+                .bind(shared_memo_id)
+                .fetch_optional(&pool)
+                .await
+                .unwrap();
+        assert_eq!(still_there.as_deref(), Some("keep_for_rule"));
+    }
+
+    /// Regression for Devin review of PR #82. Under production settings
+    /// (`PRAGMA foreign_keys = ON`), clearing a detail's memo used to fail
+    /// with FOREIGN KEY constraint failed because MEMO_DELETE ran before
+    /// the DETAIL UPDATE released the reference. Prior tests missed this
+    /// because the default test schema did not declare the MEMOS FK and
+    /// FK enforcement was off.
+    #[tokio::test]
+    async fn test_clear_detail_memo_succeeds_under_foreign_keys_on() {
+        let pool = setup_test_db_with_foreign_keys().await;
+        let service = TransactionService::new(pool);
+
+        let header_id = create_test_header(&service).await;
+        let mut with_memo = basic_detail_request();
+        with_memo.memo = Some("to_clear".to_string());
+        let detail_id = service
+            .add_transaction_detail(2, header_id, with_memo)
+            .await
+            .unwrap();
+
+        let mut cleared = basic_detail_request();
+        cleared.memo = Some("".to_string());
+        service
+            .update_transaction_detail(2, detail_id, cleared)
+            .await
+            .expect("clearing memo must not violate the MEMOS foreign key");
+
+        let after = service.get_transaction_details(2, header_id).await.unwrap();
+        assert!(after[0].memo_id.is_none());
+        assert!(after[0].memo_text.is_none());
+    }
+
+    /// Fable-5 review #12 — before the fix, `add_transaction_detail` did
+    /// not check that the parent `transaction_id` belonged to `user_id`.
+    /// The FK on TRANSACTIONS_DETAIL.TRANSACTION_ID only requires the
+    /// header row to exist; a direct `invoke` from user B with user A's
+    /// transaction_id would attach B's detail to A's header. Now `add`
+    /// mirrors the fetch+ok_or(NotFound) contract that update/delete
+    /// already used.
+    ///
+    /// Note: this test uses `setup_test_db()`, whose schema does not
+    /// enforce the TRANSACTIONS_DETAIL → TRANSACTIONS_HEADER foreign
+    /// key. That's the exact condition under which the pre-fix code
+    /// would have happily inserted a foreign-owned detail — production
+    /// enforces the FK but only on the shape of the reference, not on
+    /// USER_ID, so the same cross-owner attach happens there too.
+    #[tokio::test]
+    async fn test_add_detail_rejects_foreign_transaction_id() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+
+        // create_test_header seeds user_id = 2.
+        let header_id_of_user_2 = create_test_header(&service).await;
+
+        // A different user (user_id = 3) tries to attach a detail to user
+        // 2's header. Must be rejected as NotFound before any INSERT or
+        // MEMO_INSERT runs.
+        let attempt = service
+            .add_transaction_detail(3, header_id_of_user_2, basic_detail_request())
+            .await;
+
+        assert!(
+            matches!(attempt, Err(TransactionError::NotFound)),
+            "cross-owner attach must return NotFound, got: {:?}",
+            attempt
+        );
+
+        // User 2 (the actual owner) can still add a detail to the same
+        // header, confirming the ownership check does not over-block.
+        service
+            .add_transaction_detail(2, header_id_of_user_2, basic_detail_request())
+            .await
+            .expect("owner should be able to add a detail to their own header");
+    }
+
+    /// Attempting to add a detail to a transaction_id that does not exist
+    /// at all must also return NotFound rather than surface a generic
+    /// sqlx error (the pre-fix code would trip the FK later, giving a
+    /// less legible message; without any FK, it would insert silently).
+    #[tokio::test]
+    async fn test_add_detail_rejects_nonexistent_transaction_id() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+
+        let attempt = service
+            .add_transaction_detail(2, 999_999, basic_detail_request())
+            .await;
+
+        assert!(
+            matches!(attempt, Err(TransactionError::NotFound)),
+            "nonexistent parent must return NotFound, got: {:?}",
+            attempt
+        );
+    }
+
+    // ---- From<TransactionError> for ApiError ----------------------------
+    // These tests pin the wire codes that the frontend classifier
+    // (`res/js/transaction-management.js` / `transaction-detail-management.js`
+    // — `err.code` branching) matches on. If a variant is renamed here or in
+    // api_error.rs, the JS side stops classifying its errors — hence the
+    // assertions on the stable `ApiError::CODE_*` constants. Mirrors the
+    // RecurringError / CategoryError / UserManagementError precedent
+    // (PR #100/#101/#103).
+
+    #[test]
+    fn not_found_maps_to_not_found_code_with_transaction_entity() {
+        let err: ApiError = TransactionError::NotFound.into();
+        assert_eq!(err.code, ApiError::CODE_NOT_FOUND);
+        assert_eq!(err.entity.as_deref(), Some("transaction"));
+    }
+
+    #[test]
+    fn validation_preserves_message_and_omits_entity() {
+        let err: ApiError = TransactionError::ValidationError(
+            "Item name must be 64 characters or less".to_string(),
+        )
+        .into();
+        assert_eq!(err.code, ApiError::CODE_VALIDATION);
+        assert!(err.message.contains("64 characters"));
+        assert!(err.entity.is_none());
+    }
+
+    #[test]
+    fn database_error_maps_to_database_code() {
+        let err: ApiError = TransactionError::DatabaseError("no such table".to_string()).into();
+        assert_eq!(err.code, ApiError::CODE_DATABASE);
+        assert!(err.entity.is_none());
+    }
+
+    #[test]
+    fn field_needle_message_survives_conversion_for_frontend_routing() {
+        // The transaction-management / transaction-detail-management screens
+        // dispatch bounded-field validation errors to the right input by
+        // checking `err.message.startsWith(...)` after gating on
+        // `err.code === 'validation'`. That contract needs the two leading
+        // needles (`"Item name must be"`, `"Memo must be"`) to reach the
+        // wire verbatim — this test pins that.
+        for needle in ["Item name must be", "Memo must be"] {
+            let msg = format!("{} 64 characters or less", needle);
+            let err: ApiError = TransactionError::ValidationError(msg.clone()).into();
+            assert_eq!(err.code, ApiError::CODE_VALIDATION);
+            assert!(
+                err.message.starts_with(needle),
+                "wire message `{}` must start with `{}` for frontend field routing",
+                err.message,
+                needle
+            );
+        }
     }
 }
 

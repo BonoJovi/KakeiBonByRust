@@ -1,9 +1,12 @@
 use sqlx::sqlite::SqlitePool;
 use sqlx::Row;
-use crate::security::{hash_password, verify_password, SecurityError};
+use crate::api_error::ApiError;
+use crate::security::{generate_encryption_salt, hash_password, verify_password, SecurityError};
 use crate::consts::{self, ROLE_ADMIN, ROLE_USER};
 use crate::sql_queries;
 use super::encryption::EncryptionService;
+
+const ENTITY_LABEL: &str = "User";
 
 #[derive(Debug, Clone)]
 pub struct UserInfo {
@@ -42,13 +45,8 @@ impl std::fmt::Display for UserManagementError {
 /// Issue #37 Phase 2-3 — USERS.NAME length guard. Counts characters, not
 /// bytes, mirroring the frontend `maxlength` and char counter.
 fn validate_username_length(username: &str) -> Result<(), UserManagementError> {
-    if username.chars().count() > consts::MAX_NAME_LEN {
-        return Err(UserManagementError::Validation(format!(
-            "Username must be {} characters or less",
-            consts::MAX_NAME_LEN
-        )));
-    }
-    Ok(())
+    crate::validation::validate_max_chars("Username", username, consts::MAX_NAME_LEN)
+        .map_err(UserManagementError::Validation)
 }
 
 impl std::error::Error for UserManagementError {}
@@ -62,6 +60,34 @@ impl From<sqlx::Error> for UserManagementError {
 impl From<SecurityError> for UserManagementError {
     fn from(err: SecurityError) -> Self {
         UserManagementError::SecurityError(err)
+    }
+}
+
+/// Map the domain-specific `UserManagementError` onto the wire-level
+/// `ApiError` so tauri command wrappers can `?`-propagate it into a
+/// structured `{ code, message, entity? }` payload for the frontend
+/// classifier (`res/js/master-crud.js`). Kept as `From` (rather than
+/// a bespoke `.map_err`) so wrapper bodies stay one-line — the
+/// mapping happens implicitly at the `?` boundary.
+///
+/// Codes:
+///   - `UserNotFound`               → `not_found` (entity="user")
+///   - `AdminUserCannotBeDeleted`   → `admin_protected` (entity="user")
+///   - `DuplicateUsername`          → `duplicate_name` (entity="user")
+///   - `InvalidRole`, `SecurityError`, `Validation(...)` → `validation`
+///     (with a message that keeps the original English text for logs)
+///   - `DatabaseError`              → `database`
+impl From<UserManagementError> for ApiError {
+    fn from(err: UserManagementError) -> Self {
+        match err {
+            UserManagementError::UserNotFound => ApiError::not_found(ENTITY_LABEL),
+            UserManagementError::AdminUserCannotBeDeleted => ApiError::admin_protected(ENTITY_LABEL),
+            UserManagementError::DuplicateUsername => ApiError::duplicate_name(ENTITY_LABEL),
+            UserManagementError::InvalidRole => ApiError::validation("Invalid role"),
+            UserManagementError::Validation(msg) => ApiError::validation(msg),
+            UserManagementError::SecurityError(e) => ApiError::validation(e.to_string()),
+            UserManagementError::DatabaseError(e) => ApiError::database(e.to_string()),
+        }
     }
 }
 
@@ -134,24 +160,28 @@ impl UserManagementService {
         }
 
         let password_hash = hash_password(password)?;
-        
+
+        // Per-user Argon2 encryption salt (Fable-5 review #15).
+        let encryption_salt = generate_encryption_salt();
+
         let result = sqlx::query(sql_queries::USER_GET_NEXT_ID)
             .fetch_one(&self.pool)
             .await?;
         let next_id: i64 = result.get(0);
-        
+
         sqlx::query(sql_queries::USER_INSERT)
             .bind(next_id)
             .bind(username)
             .bind(password_hash)
             .bind(ROLE_USER)
+            .bind(encryption_salt.as_slice())
             .bind(now)
             .execute(&self.pool)
             .await?;
-        
+
         // Insert "Unspecified" master data for the new user
         self.insert_unspecified_data(next_id).await?;
-        
+
         Ok(next_id)
     }
 

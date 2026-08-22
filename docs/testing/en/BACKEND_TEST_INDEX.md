@@ -2,8 +2,8 @@
 
 This document provides a complete index of all backend tests implemented in Rust.
 
-**Last Updated**: 2025-12-06 06:45 JST  
-**Total Tests**: 201
+**Last Updated**: 2026-08-22 JST  
+**Total Tests**: 290 (delta-tracked; the full authoritative count from `cargo test --lib` is 535, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -19,9 +19,12 @@ This document provides a complete index of all backend tests implemented in Rust
   - [crypto.rs](#cryptors)
   - [db.rs](#dbrs)
   - [settings.rs](#settingsrs)
+  - [api_error.rs](#api_errorrs)
+  - [services/master_data.rs](#servicesmaster_datars)
   - [services/auth.rs](#servicesauthrs)
   - [services/user_management.rs](#servicesuser_managementrs)
   - [services/encryption.rs](#servicesencryptionrs)
+  - [services/account.rs](#servicesaccountrs)
   - [services/category.rs](#servicescategoryrs)
   - [services/manufacturer.rs](#servicesmanufacturerrs)
   - [services/product.rs](#servicesproductrs)
@@ -30,6 +33,8 @@ This document provides a complete index of all backend tests implemented in Rust
   - [services/aggregation.rs](#servicesaggregationrs)
   - [services/session.rs](#servicessessionrs)
   - [services/i18n.rs](#servicesi18nrs)
+  - [services/recurring.rs](#servicesrecurringrs)
+  - [lib.rs](#librs)
 
 ---
 
@@ -102,7 +107,9 @@ Password validation logic tests.
 | `test_password_more_than_16_characters` | Accept 16+ character password | src/validation.rs | 130 |
 | `test_password_with_spaces` | Accept password with spaces | src/validation.rs | 137 |
 | `test_password_with_special_characters` | Accept password with special characters | src/validation.rs | 144 |
-| `test_password_with_unicode` | Accept password with Unicode characters | src/validation.rs | 151 |
+| `test_password_with_unicode` | Accept password with Unicode characters (16 BMP JA chars) | src/validation.rs | 236 |
+| `test_multibyte_password_below_min_length_rejected` | Reject 15-char JA password despite byte count >= 16 (Fable-5 #9 regression guard) | src/validation.rs | 249 |
+| `test_multibyte_password_at_min_length_accepted` | Accept 16-char JA password at Unicode-scalar boundary | src/validation.rs | 262 |
 | `test_very_long_password` | Accept very long password (128 chars) | src/validation.rs | 158 |
 | `test_password_confirmation_matching` | Test password confirmation match | src/validation.rs | 164 |
 | `test_password_confirmation_not_matching` | Test password confirmation mismatch | src/validation.rs | 173 |
@@ -116,7 +123,7 @@ Password validation logic tests.
 | `test_numeric_password` | Numeric-only password | src/validation.rs | 242 |
 | `test_password_boundary_cases` | Boundary cases (15, 16, 17 chars) | src/validation.rs | 248 |
 
-**Total**: 23 tests
+**Total**: 25 tests
 
 ### security.rs
 
@@ -172,8 +179,14 @@ Database initialization and migration tests.
 |---------------|-------------|------|------|
 | `test_wal_mode_enabled` | Verify WAL mode is enabled | src/db.rs | 187 |
 | `test_transactions_detail_migration` | Test transactions_detail table migration | src/db.rs | 217 |
+| `test_migrate_survives_orphaned_memo_reference` | Migration cope with FK-orphaned MEMO_ID from legacy DBs (Fable-5 #11) | src/db.rs | 1032 |
+| `test_migrate_leaves_foreign_keys_on` | PRAGMA foreign_keys is restored to ON on the acquired connection after migration (Fable-5 #11) | src/db.rs | 1137 |
+| `migrate_shops_unique_dedupes_and_repoints_references` | End-to-end proof that duplicate SHOPS rows collapse onto the smallest SHOP_ID, TRANSACTIONS_HEADER + RECURRING_RULES references are repointed, the unique index is created, and further duplicate inserts are rejected (PR15, Fable-5 #20) | src/db.rs | 1373 |
+| `migrate_shops_unique_is_idempotent` | A second run of a successful migration is a no-op and leaves the data untouched (PR15, Fable-5 #20) | src/db.rs | 1424 |
+| `migrate_shops_unique_scopes_per_user` | User A and User B may each own a shop with the same SHOP_NAME — the uniqueness scope is per-user (PR15, Fable-5 #20) | src/db.rs | 1437 |
+| `migrate_shops_unique_keeps_active_row_over_soft_deleted_older_id` | When a soft-deleted old shop (smaller SHOP_ID, `IS_DISABLED=1`) coexists with a re-created active shop of the same name (larger SHOP_ID, `IS_DISABLED=0`), the migration keeps the active row as survivor and repoints legacy transaction references onto it (PR15, Devin #118 review) | src/db.rs | 1459 |
 
-**Total**: 2 tests
+**Total**: 8 tests
 
 ### settings.rs
 
@@ -190,8 +203,40 @@ Settings management functionality tests.
 | `test_entry_not_found` | Error handling for non-existent entry | src/settings.rs | 273 |
 | `test_complex_type` | Save and retrieve complex types (JSON) | src/settings.rs | 289 |
 | `test_keys_list` | Retrieve keys list | src/settings.rs | 315 |
+| `test_save_leaves_no_tmp_sibling_and_target_is_parseable` | Successful save renames tmp away and leaves target valid (Fable-5 #10) | src/settings.rs | 345 |
+| `test_repeated_saves_do_not_accumulate_tmp_files` | Repeated saves keep the filesystem clean (Fable-5 #10) | src/settings.rs | 378 |
+| `test_stale_tmp_file_is_not_loaded` | A leftover `.tmp` from a crashed save is inert; real target still loads (Fable-5 #10) | src/settings.rs | 404 |
+
+**Total**: 12 tests
+
+### api_error.rs
+
+`ApiError` — structured error type serialised into `{ code, message, entity? }` for the Tauri master-CRUD command wrappers. Introduced by Fable-5 review #23/#D4 so the frontend classifier can key off `err.code` instead of substring-matching English messages.
+
+| Test Function | Description | File | Line |
+|---------------|-------------|------|------|
+| `duplicate_name_carries_lowercased_entity_and_stable_code` | `ApiError::duplicate_name("Shop")` → `code="duplicate_name"`, `entity="shop"` | src/api_error.rs | 128 |
+| `not_found_carries_lowercased_entity_and_stable_code` | `ApiError::not_found("Manufacturer")` → `code="not_found"`, `entity="manufacturer"` | src/api_error.rs | 136 |
+| `duplicate_code_carries_lowercased_entity_and_distinct_code` | `ApiError::duplicate_code("Account")` → `code="duplicate_code"` (distinct from `duplicate_name`) | src/api_error.rs | 145 |
+| `admin_protected_carries_lowercased_entity_and_stable_code` | `ApiError::admin_protected("User")` → `code="admin_protected"` (for user-management delete guard) | src/api_error.rs | 154 |
+| `manufacturer_not_found_has_its_own_code` | `ApiError::manufacturer_not_found()` → `code="manufacturer_not_found"` (distinct from generic `not_found`) | src/api_error.rs | 163 |
+| `validation_carries_message_through_and_omits_entity` | `ApiError::validation(msg)` → `code="validation"`, message passed through, no entity | src/api_error.rs | 150 |
+| `database_from_sqlx_row_not_found` | `sqlx::Error → ApiError::database` via `From<sqlx::Error>` | src/api_error.rs | 158 |
+| `serialises_with_snake_case_code_and_optional_entity` | Serialised JSON has snake_case `code` and populated `entity` field | src/api_error.rs | 165 |
+| `serialises_without_entity_key_when_none` | Serialised JSON omits `entity` when None (via `skip_serializing_if`) | src/api_error.rs | 174 |
 
 **Total**: 9 tests
+
+### services/master_data.rs
+
+Pure-Rust tests for the shared master-CRUD helpers (`MasterCrudSpec` + `ensure_update_affected_one` + `run_delete_expect_one`) introduced in PR3 (Fable-5 #26).
+
+| Test Function | Description | File | Line |
+|---------------|-------------|------|------|
+| `ensure_update_affected_one_maps_zero_to_not_found` | `rows_affected == 0` on an UPDATE maps to `ApiError::not_found(entity)` from the spec | src/services/master_data.rs | 228 |
+| `ensure_update_affected_one_passes_positive_count` | Positive rows_affected returns Ok (boundary: 1, 42) | src/services/master_data.rs | 235 |
+
+**Total**: 2 tests
 
 ### services/auth.rs
 
@@ -212,8 +257,11 @@ Authentication service tests (user registration, login).
 | `test_unicode_credentials` | Test Unicode in credentials | src/services/auth.rs | 402 |
 | `test_role_constants_values` | Verify role constant values | src/services/auth.rs | 417 |
 | `test_role_constants_uniqueness` | Verify role constant uniqueness | src/services/auth.rs | 425 |
+| `invalid_credentials_maps_to_auth_invalid_credentials_code` | `AuthError::InvalidCredentials` → `ApiError { code: "auth_invalid_credentials" }` (PR14, Fable-5 #21) | src/services/auth.rs | 577 |
+| `database_error_maps_to_database_code` | `AuthError::DatabaseError` → `ApiError { code: "database" }` (PR14, Fable-5 #21) | src/services/auth.rs | 585 |
+| `security_error_maps_to_validation_code_with_message` | `AuthError::SecurityError` → `ApiError { code: "validation" }` with message preserved (PR14, Fable-5 #21) | src/services/auth.rs | 593 |
 
-**Total**: 13 tests
+**Total**: 16 tests
 
 ### services/user_management.rs
 
@@ -247,12 +295,30 @@ Encryption service tests (field encryption, re-encryption).
 | `test_encrypt_decrypt_field` | Test field encryption/decryption | src/services/encryption.rs | 304 |
 | `test_re_encrypt_user_data` | Test user data re-encryption | src/services/encryption.rs | 326 |
 | `test_decrypt_with_wrong_password_fails` | Decryption fails with wrong password | src/services/encryption.rs | 380 |
+| `test_re_encrypt_user_data_preserves_per_row_plaintext` | Multi-row re-encryption keeps each row's own plaintext (Fable-5 #14) | src/services/encryption.rs | 473 |
+| `test_encrypt_uses_per_user_salt_not_user_id` | Same password/plaintext produces distinct ciphertext across users (Fable-5 #15) | src/services/encryption.rs | 657 |
+| `test_encrypt_decrypt_salt_survives_service_reconstruction` | Salt is refetched from DB so a new service instance round-trips ciphertext (Fable-5 #15) | src/services/encryption.rs | 703 |
+| `test_encrypt_errors_when_user_missing` | Missing USERS row errors loudly instead of falling back to user_id salt (Fable-5 #15) | src/services/encryption.rs | 722 |
 
-**Total**: 4 tests
+**Total**: 8 tests
+
+### services/account.rs
+
+Account management service tests. Assertions on empty-name and duplicate-code paths migrated to `ApiError { code: "validation" | "duplicate_code" }` when moved off `Result<_, String>` (Fable-5 #23); behaviour is unchanged.
+
+| Test Function | Description | File | Line |
+|---------------|-------------|------|------|
+| `test_add_account_rejects_empty_name` | Empty account name returns `ApiError { code: "validation" }` (Fable-5 #16, #23) | src/services/account.rs | 597 |
+| `test_add_account_rejects_whitespace_only_name` | Whitespace-only account name returns `ApiError { code: "validation" }` (Fable-5 #16, #23) | src/services/account.rs | 612 |
+| `test_update_account_rejects_empty_name` | Empty account name via update returns `ApiError { code: "validation" }` (Fable-5 #16, #23) | src/services/account.rs | 627 |
+| `test_update_account_not_found_has_stable_code_and_entity` | Updating a missing account returns `ApiError { code: "not_found", entity: "account" }` (Fable-5 #23) | src/services/account.rs | 815 |
+| `test_delete_account_not_found_has_stable_code_and_entity` | Deleting a missing account returns `ApiError { code: "not_found" }` (Fable-5 #23) | src/services/account.rs | 837 |
+
+**Total**: 5 tests
 
 ### services/category.rs
 
-Category management service tests (3-tier category CRUD).
+Category management service tests (3-tier category CRUD). Internal `CategoryError` variants map to `ApiError { code, message, entity? }` at the Tauri wrapper boundary via `From<CategoryError>` (Fable-5 #23).
 
 | Test Function | Description | File | Line |
 |---------------|-------------|------|------|
@@ -269,24 +335,38 @@ Category management service tests (3-tier category CRUD).
 | `test_update_category2_duplicate_name` | Medium category duplicate name update error | src/services/category.rs | 1552 |
 | `test_move_category2_boundary` | Medium category boundary value move test | src/services/category.rs | 1571 |
 | `test_get_category_for_edit` | Get category info for editing | src/services/category.rs | 1623 |
+| `test_get_category2_for_edit_returns_not_found_for_missing` | Missing CATEGORY2 edit fetch returns NotFound (Fable-5 #6) | src/services/category.rs | 1873 |
+| `test_get_category3_for_edit_returns_not_found_for_missing` | Missing CATEGORY3 edit fetch returns NotFound (Fable-5 #6) | src/services/category.rs | 1884 |
+| `test_disable_category2_returns_not_found_for_missing` | Missing CATEGORY2 disable returns NotFound (Fable-5 #7) | src/services/category.rs | 1899 |
+| `test_disable_category3_returns_not_found_for_missing` | Missing CATEGORY3 disable returns NotFound (Fable-5 #7) | src/services/category.rs | 1910 |
+| `test_disable_category2_succeeds_with_no_children` | Leaf CATEGORY2 disable succeeds (child sweep tolerates 0 rows) | src/services/category.rs | 1926 |
+| `not_found_maps_to_not_found_code_with_category_entity` | `CategoryError::NotFound` → `ApiError { code: "not_found", entity: "category" }` (Fable-5 #23) | src/services/category.rs | 2101 |
+| `duplicate_name_maps_to_duplicate_name_code_with_category_entity` | `CategoryError::DuplicateName(_)` → `ApiError { code: "duplicate_name", entity: "category" }` (Fable-5 #23) | src/services/category.rs | 2108 |
+| `validation_preserves_message_and_omits_entity` | `CategoryError::Validation(msg)` → `ApiError { code: "validation" }` with message preserved (Fable-5 #23) | src/services/category.rs | 2115 |
+| `database_error_maps_to_database_code` | `CategoryError::DatabaseError(_)` → `ApiError { code: "database" }` (Fable-5 #23) | src/services/category.rs | 2125 |
+| `test_get_category_tree_groups_children_under_parent` | Regression pin for the 3-flat-queries + HashMap grouping shape: cat1 → cat2 → cat3 parent/child pairing is preserved (PR11, Fable-5 #31) | src/services/category.rs | 2022 |
+| `test_get_category_tree_preserves_display_order` | Confirms that a `move_category2_up` reorder survives the flat-query regrouping (PR11, Fable-5 #31) | src/services/category.rs | 2077 |
+| `test_get_category_tree_all_includes_disabled_flags` | `get_category_tree_all` still includes disabled rows and their `is_disabled` fields; the visible-only `get_category_tree` filters them out (PR11, Fable-5 #31) | src/services/category.rs | 2106 |
 
-**Total**: 13 tests
+**Total**: 25 tests
 
 ### services/manufacturer.rs
 
-Manufacturer management service tests.
+Manufacturer management service tests. Empty/duplicate assertion tests renamed to `_returns_validation_code` / `_returns_duplicate_name_code` when migrated to `ApiError` (Fable-5 #23) — behaviour unchanged, only assertion targets.
 
 | Test Function | Description | File | Line |
 |---------------|-------------|------|------|
 | `test_add_manufacturer` | Test manufacturer addition | src/services/manufacturer.rs | 243 |
 | `test_update_manufacturer` | Test manufacturer update | src/services/manufacturer.rs | 261 |
 | `test_delete_manufacturer` | Test manufacturer deletion | src/services/manufacturer.rs | 292 |
-| `test_empty_manufacturer_name` | Empty manufacturer name error | src/services/manufacturer.rs | 316 |
-| `test_add_duplicate_manufacturer` | Duplicate manufacturer name error | src/services/manufacturer.rs | 331 |
-| `test_update_to_duplicate_manufacturer_name` | Duplicate name update error | src/services/manufacturer.rs | 355 |
-| `test_update_same_manufacturer_name` | Same name update (allowed) | src/services/manufacturer.rs | 389 |
+| `test_empty_manufacturer_name_returns_validation_code` | Empty manufacturer name returns `ApiError { code: "validation" }` (Fable-5 #23) | src/services/manufacturer.rs | 316 |
+| `test_add_duplicate_manufacturer_returns_duplicate_name_code` | Duplicate returns `ApiError { code: "duplicate_name", entity: "manufacturer" }` (Fable-5 #23) | src/services/manufacturer.rs | 331 |
+| `test_update_to_duplicate_manufacturer_name_returns_duplicate_name_code` | Update to duplicate returns `ApiError { code: "duplicate_name" }` (Fable-5 #23) | src/services/manufacturer.rs | 355 |
+| `test_update_missing_manufacturer_returns_not_found_code` | Updating a missing manufacturer returns `ApiError { code: "not_found", entity: "manufacturer" }` (Fable-5 #23) | src/services/manufacturer.rs | 383 |
+| `test_delete_missing_manufacturer_returns_not_found_code` | Deleting a missing manufacturer returns `ApiError { code: "not_found" }` (Fable-5 #23) | src/services/manufacturer.rs | 398 |
+| `test_update_same_manufacturer_name` | Same name update (allowed) | src/services/manufacturer.rs | 405 |
 
-**Total**: 7 tests
+**Total**: 9 tests
 
 ### services/product.rs
 
@@ -301,24 +381,30 @@ Product management service tests.
 | `test_empty_product_name` | Empty product name error | src/services/product.rs | 367 |
 | `test_add_duplicate_product` | Duplicate product name error | src/services/product.rs | 383 |
 | `test_manufacturer_deletion_sets_product_manufacturer_to_null` | Manufacturer deletion impact on products (CASCADE NULL) | src/services/product.rs | 409 |
+| `test_add_product_rejects_foreign_manufacturer_id` | Cross-owner manufacturer_id on add returns "Manufacturer not found" (Fable-5 #13) | src/services/product.rs | 716 |
+| `test_add_product_rejects_nonexistent_manufacturer_id` | Nonexistent manufacturer_id on add returns "Manufacturer not found" (Fable-5 #13) | src/services/product.rs | 767 |
+| `test_update_product_rejects_foreign_manufacturer_id` | Cross-owner manufacturer_id on update returns "Manufacturer not found" (Fable-5 #13) | src/services/product.rs | 792 |
+| `test_product_join_scopes_manufacturer_by_user_id` | PRODUCT_GET_* JOIN must not leak another user's manufacturer name (Fable-5 #13) | src/services/product.rs | 871 |
 
-**Total**: 7 tests
+**Total**: 11 tests
 
 ### services/shop.rs
 
-Shop management service tests.
+Shop management service tests. Empty/duplicate assertion tests renamed to `_returns_validation_code` / `_returns_duplicate_name_code` when migrated to `ApiError` (Fable-5 #23) — behaviour unchanged, only assertion targets.
 
 | Test Function | Description | File | Line |
 |---------------|-------------|------|------|
 | `test_add_shop` | Test shop addition | src/services/shop.rs | 232 |
 | `test_update_shop` | Test shop update | src/services/shop.rs | 249 |
 | `test_delete_shop` | Test shop deletion | src/services/shop.rs | 278 |
-| `test_empty_shop_name` | Empty shop name error | src/services/shop.rs | 301 |
-| `test_add_duplicate_shop` | Duplicate shop name error | src/services/shop.rs | 315 |
-| `test_update_to_duplicate_shop_name` | Duplicate name update error | src/services/shop.rs | 337 |
-| `test_update_same_shop_name` | Same name update (allowed) | src/services/shop.rs | 368 |
+| `test_empty_shop_name_returns_validation_code` | Empty shop name returns `ApiError { code: "validation" }` (Fable-5 #23) | src/services/shop.rs | 301 |
+| `test_add_duplicate_shop_returns_duplicate_name_code` | Duplicate returns `ApiError { code: "duplicate_name", entity: "shop" }` (Fable-5 #23) | src/services/shop.rs | 315 |
+| `test_update_to_duplicate_shop_name_returns_duplicate_name_code` | Update to duplicate returns `ApiError { code: "duplicate_name" }` (Fable-5 #23) | src/services/shop.rs | 337 |
+| `test_update_missing_shop_returns_not_found_code` | Updating a missing shop returns `ApiError { code: "not_found", entity: "shop" }` (Fable-5 #23) | src/services/shop.rs | 363 |
+| `test_delete_missing_shop_returns_not_found_code` | Deleting a missing shop returns `ApiError { code: "not_found" }` (Fable-5 #23) | src/services/shop.rs | 375 |
+| `test_update_same_shop_name` | Same name update (allowed) | src/services/shop.rs | 382 |
 
-**Total**: 7 tests
+**Total**: 9 tests
 
 ### services/transaction.rs
 
@@ -331,8 +417,24 @@ Transaction management service tests.
 | `test_update_transaction_header_tax_type` | Update transaction header tax type | src/services/transaction.rs | 1309 |
 | `test_default_tax_type_is_excluded` | Verify default tax type is excluded | src/services/transaction.rs | 1351 |
 | `test_tax_type_validation_values` | Verify valid tax type values | src/services/transaction.rs | 1375 |
+| `test_get_transactions_end_date_includes_boundary_day` | End-date filter must include same-day timestamps (bare 'YYYY-MM-DD' anchored to 23:59:59) | src/services/transaction.rs | 3293 |
+| `test_get_transactions_keyword_matches_header_and_detail_memo` | Keyword must substring-match memo text on both header and detail rows | src/services/transaction.rs | 3364 |
+| `test_update_detail_memo_does_not_corrupt_shared_header_memo` | Detail memo edit must not clobber header memo sharing MEMO_ID | src/services/transaction.rs | 3584 |
+| `test_delete_detail_preserves_memo_still_referenced_by_header` | Detail delete must keep memo row when header still references it | src/services/transaction.rs | 3618 |
+| `test_update_detail_memo_updates_in_place_when_not_shared` | Solo-referenced memo still updates in place | src/services/transaction.rs | 3644 |
+| `test_delete_detail_removes_orphaned_memo` | Solo-referenced memo is deleted when detail removed | src/services/transaction.rs | 3674 |
+| `test_clear_detail_memo_does_not_delete_memo_still_used_by_header` | Clearing shared detail memo must not delete memo row used by header | src/services/transaction.rs | 3706 |
+| `test_update_detail_memo_does_not_corrupt_recurring_rule_memo` | Detail memo edit must not overwrite memo shared with a recurring rule | src/services/transaction.rs | 3760 |
+| `test_delete_detail_preserves_memo_still_referenced_by_recurring_rule` | Detail delete must keep memo row still referenced by a recurring rule | src/services/transaction.rs | 3805 |
+| `test_clear_detail_memo_succeeds_under_foreign_keys_on` | Clearing a detail memo must not violate the MEMOS foreign key | src/services/transaction.rs | 3843 |
+| `test_add_detail_rejects_foreign_transaction_id` | Adding a detail against another user's transaction_id must return NotFound (Fable-5 #12) | src/services/transaction.rs | 4109 |
+| `test_add_detail_rejects_nonexistent_transaction_id` | Adding a detail against a missing transaction_id must return NotFound (Fable-5 #12) | src/services/transaction.rs | 4142 |
+| `not_found_maps_to_not_found_code_with_transaction_entity` | TransactionError::NotFound maps to ApiError::not_found("transaction") (PR2b) | src/services/transaction.rs | 4199 |
+| `validation_preserves_message_and_omits_entity` | TransactionError::ValidationError maps to ApiError::CODE_VALIDATION with the message preserved (PR2b) | src/services/transaction.rs | 4206 |
+| `database_error_maps_to_database_code` | TransactionError::DatabaseError maps to ApiError::CODE_DATABASE (PR2b) | src/services/transaction.rs | 4217 |
+| `field_needle_message_survives_conversion_for_frontend_routing` | Two field needles (`"Item name must be"` / `"Memo must be"`) survive at the head of the wire message so the frontend `startsWith` routing keeps working (PR2b) | src/services/transaction.rs | 4224 |
 
-**Total**: 5 tests
+**Total**: 21 tests
 
 ### services/aggregation.rs
 
@@ -342,8 +444,16 @@ Aggregation service tests.
 |---------------|-------------|------|------|
 | `test_monthly_aggregation_current_month` | Monthly aggregation for current month | src/services/aggregation.rs | 1554 |
 | `test_monthly_aggregation_next_month` | Monthly aggregation for next month | src/services/aggregation.rs | 1563 |
+| `test_detail_query_grosses_up_null_tax_included_row` | NULL AMOUNT_INCLUDING_TAX at TAX_RATE>0 is grossed up, not dropped (Fable-5 #3) | src/services/aggregation.rs | 2343 |
+| `test_detail_query_grosses_up_zero_tax_included_row` | AMOUNT_INCLUDING_TAX=0 (frontend empty-input sentinel) is treated as pre-tax (Fable-5 #3) | src/services/aggregation.rs | 2367 |
+| `test_detail_query_avg_matches_total_over_count_with_mixed_rates` | avg × count == total holds for a mixed-rate transaction (Fable-5 #4) | src/services/aggregation.rs | 2398 |
+| `test_detail_query_avg_multi_transaction_arithmetic` | avg = total / txn_count over 2 transactions (Fable-5 #4) | src/services/aggregation.rs | 2430 |
+| `test_detail_query_binds_category_filter_no_injection` | End-to-end proof that a category filter's value is bound, not inlined: an `EXPENSE' OR '1'='1` payload returns 0 rows (PR5, Fable-5 #25) | src/services/aggregation.rs | 2673 |
+| `test_category_filter_category2_targets_detail_column` | Category2 filter now targets the existent `td.CATEGORY2_CODE` (detail scope) instead of the non-existent `th.CATEGORY2_CODE` (PR6, Fable-5 #17) | src/services/aggregation.rs | 2766 |
+| `test_category_filter_category3_targets_detail_column` | Category3 filter targets `td.CATEGORY2/3_CODE` (PR6, Fable-5 #17) | src/services/aggregation.rs | 2782 |
+| `test_account_query_applies_category_filter_to_all_union_branches` | Account UNION ALL query now applies the category filter to all 4 branches and binds the value 4x — regression pin for the silent drop (PR6, Fable-5 #18) | src/services/aggregation.rs | 2807 |
 
-**Total**: 2 tests
+**Total**: 10 tests
 
 ### services/session.rs
 
@@ -380,6 +490,35 @@ Internationalization (i18n) service tests.
 
 **Total**: 8 tests
 
+### services/recurring.rs
+
+Recurring transaction rule service tests.
+
+| Test Function | Description | File | Line |
+|---------------|-------------|------|------|
+| `test_delete_rule_returns_not_found_for_missing` | Delete of a missing rule returns NotFound instead of empty-commit fake success (Fable-5 #8) | src/services/recurring.rs | 1811 |
+| `not_found_maps_to_not_found_code_with_recurring_rule_entity` | RecurringError::NotFound maps to ApiError::not_found("recurring rule") (PR2a) | src/services/recurring.rs | 1833 |
+| `validation_preserves_message_and_omits_entity` | RecurringError::Validation maps to ApiError::CODE_VALIDATION with the message preserved (PR2a) | src/services/recurring.rs | 1840 |
+| `database_error_maps_to_database_code` | RecurringError::Database maps to ApiError::CODE_DATABASE (PR2a) | src/services/recurring.rs | 1851 |
+| `field_needle_message_survives_conversion_for_frontend_routing` | Four field needles (`"Rule name must be"` etc.) survive at the head of the wire message so the frontend `startsWith` routing keeps working (PR2a) | src/services/recurring.rs | 1858 |
+
+**Total**: 5 tests
+
+### lib.rs
+
+Settings value validation used by the `set_language` / `set_font_size` / `update_user_settings` commands.
+
+| Test Function | Description | File | Line |
+|---------------|-------------|------|------|
+| `normalize_language_accepts_names_and_codes` | Accept language names and codes (en/English/ja/日本語/Japanese) | src/lib.rs | 2733 |
+| `normalize_language_rejects_unknown_values` | Reject unknown language values | src/lib.rs | 2742 |
+| `normalize_font_size_accepts_keywords_and_percentages` | Accept size keywords and percentages in 50-200 | src/lib.rs | 2748 |
+| `normalize_font_size_rejects_out_of_range_and_garbage` | Reject out-of-range percentages and invalid strings | src/lib.rs | 2757 |
+| `monthly_bounds_with_shift_rejects_out_of_range_month` | month=0/13/100 short-circuits to Err before reaching `services::period::end_of_month` — prevents the backend thread crash (PR6, Fable-5 #22) | src/lib.rs | 2695 |
+| `monthly_bounds_with_shift_accepts_boundary_months` | month=1/12 boundaries still accepted (PR6, Fable-5 #22) | src/lib.rs | 2722 |
+
+**Total**: 6 tests
+
 ---
 
 ## Test Statistics Summary
@@ -389,24 +528,29 @@ Internationalization (i18n) service tests.
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **178** |
-| validation.rs | 23 |
+| **Inline Tests** | **267** |
+| validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
-| db.rs | 2 |
-| settings.rs | 9 |
-| services/auth.rs | 13 |
+| db.rs | 8 |
+| settings.rs | 12 |
+| api_error.rs | 9 |
+| services/master_data.rs | 2 |
+| services/auth.rs | 16 |
 | services/user_management.rs | 13 |
-| services/encryption.rs | 4 |
-| services/category.rs | 13 |
-| services/manufacturer.rs | 7 |
-| services/product.rs | 7 |
-| services/shop.rs | 7 |
-| services/transaction.rs | 5 |
-| services/aggregation.rs | 2 |
+| services/encryption.rs | 8 |
+| services/account.rs | 5 |
+| services/category.rs | 25 |
+| services/manufacturer.rs | 9 |
+| services/product.rs | 11 |
+| services/shop.rs | 9 |
+| services/transaction.rs | 21 |
+| services/aggregation.rs | 10 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
-| **Total** | **201** |
+| services/recurring.rs | 5 |
+| lib.rs | 6 |
+| **Total** | **290** |
 
 ---
 

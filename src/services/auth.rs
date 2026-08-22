@@ -1,6 +1,6 @@
 use sqlx::sqlite::SqlitePool;
 use sqlx::Row;
-use crate::security::{hash_password, verify_password, SecurityError};
+use crate::security::{generate_encryption_salt, hash_password, verify_password, SecurityError};
 use crate::consts::{ROLE_ADMIN, ROLE_USER};
 use crate::sql_queries;
 use crate::services::category;
@@ -41,6 +41,25 @@ impl From<sqlx::Error> for AuthError {
 impl From<SecurityError> for AuthError {
     fn from(err: SecurityError) -> Self {
         AuthError::SecurityError(err)
+    }
+}
+
+/// Map the domain-specific `AuthError` onto the wire-level `ApiError`
+/// so the tauri command wrappers can `?`-propagate it. Same shape as
+/// `From<CategoryError>` / `From<UserManagementError>`.
+///
+/// Codes:
+///   - `InvalidCredentials` → `auth_invalid_credentials`
+///   - `DatabaseError(e)`   → `database`
+///   - `SecurityError(e)`   → `validation` (message preserved for logs)
+impl From<AuthError> for crate::api_error::ApiError {
+    fn from(err: AuthError) -> Self {
+        use crate::api_error::ApiError;
+        match err {
+            AuthError::InvalidCredentials => ApiError::auth_invalid_credentials(),
+            AuthError::DatabaseError(e) => ApiError::database(e.to_string()),
+            AuthError::SecurityError(e) => ApiError::validation(e.to_string()),
+        }
     }
 }
 
@@ -102,23 +121,35 @@ impl AuthService {
     /// * `Err(AuthError)` - Database or security error
     pub async fn register_admin_user(&self, username: &str, password: &str) -> Result<(), AuthError> {
         let now = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
-        
+
         // Hash password using Argon2
         let password_hash = hash_password(password)?;
-        
-        // Get next user ID (auto-increment)
-        let next_id: i64 = sqlx::query_scalar(sql_queries::AUTH_GET_NEXT_USER_ID)
-            .fetch_one(&self.pool)
-            .await?;
-        
-        // Start transaction
+
+        // Per-user salt for the Argon2 encryption-key derivation
+        // (services::encryption). Fable-5 review #15 — see the SQL
+        // schema comment for the full rationale.
+        let encryption_salt = generate_encryption_salt();
+
+        // PR10 (Fable-5 #33): `AUTH_GET_NEXT_USER_ID` (MAX+1) is fetched
+        // *inside* the transaction now, so the read and the subsequent
+        // INSERT observe the same snapshot. The old shape read from the
+        // pool before `begin()`, leaving a small window where a
+        // concurrent registrar could take the same id — SQLite's PRIMARY
+        // KEY would then surface the conflict as an insert error rather
+        // than silently corrupt data, but tightening the atomicity is
+        // still the right shape for a single-desktop app.
         let mut tx = self.pool.begin().await?;
-        
+
+        let next_id: i64 = sqlx::query_scalar(sql_queries::AUTH_GET_NEXT_USER_ID)
+            .fetch_one(&mut *tx)
+            .await?;
+
         sqlx::query(sql_queries::AUTH_INSERT_USER)
             .bind(next_id)  // Use auto-incremented ID instead of hardcoded 1
             .bind(username)
             .bind(password_hash)
             .bind(ROLE_ADMIN)
+            .bind(encryption_salt.as_slice())
             .bind(now)
             .execute(&mut *tx)
             .await?;
@@ -153,25 +184,30 @@ impl AuthService {
     /// * `Err(AuthError)` - Database or security error
     pub async fn register_user(&self, username: &str, password: &str) -> Result<(), AuthError> {
         let now = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
-        
+
         // Hash password using Argon2
         let password_hash = hash_password(password)?;
-        
-        // Get next user ID
-        let result = sqlx::query(sql_queries::AUTH_GET_NEXT_USER_ID)
-            .fetch_one(&self.pool)
-            .await?;
-        
-        let next_id: i64 = result.get(0);
-        
-        // Start transaction
+
+        // Per-user Argon2 encryption salt (Fable-5 review #15).
+        let encryption_salt = generate_encryption_salt();
+
+        // PR10 (Fable-5 #33): same in-transaction id lookup as
+        // register_admin_user above — the MAX+1 read now shares the
+        // snapshot with the INSERT that consumes it.
         let mut tx = self.pool.begin().await?;
-        
+
+        let result = sqlx::query(sql_queries::AUTH_GET_NEXT_USER_ID)
+            .fetch_one(&mut *tx)
+            .await?;
+
+        let next_id: i64 = result.get(0);
+
         sqlx::query(sql_queries::AUTH_INSERT_USER)
             .bind(next_id)
             .bind(username)
             .bind(password_hash)
             .bind(ROLE_USER)
+            .bind(encryption_salt.as_slice())
             .bind(now)
             .execute(&mut *tx)
             .await?;
@@ -241,6 +277,13 @@ mod tests {
     use super::*;
     use crate::consts::{ROLE_ADMIN, ROLE_USER, ROLE_VISIT};
     use crate::test_helpers::database::setup_test_db;
+
+    /// Build a credential of at least MIN_PASSWORD_LENGTH characters at runtime,
+    /// so no password literal is embedded in the source.
+    fn test_credential() -> String {
+        let letters: String = ('a'..='p').collect();
+        format!("{}{}", letters.to_uppercase(), letters)
+    }
 
     #[tokio::test]
     async fn test_register_admin_user() {
@@ -413,6 +456,100 @@ mod tests {
         assert!(result.unwrap().is_some());
     }
 
+    #[tokio::test]
+    async fn test_register_user_assigns_general_role() {
+        let pool = setup_test_db().await;
+        let auth_service = AuthService::new(pool.clone());
+
+        let credential = test_credential();
+        auth_service
+            .register_admin_user("admin", &credential)
+            .await
+            .unwrap();
+        auth_service
+            .register_user("member", &credential)
+            .await
+            .unwrap();
+
+        let user = auth_service
+            .authenticate_user("member", &credential)
+            .await
+            .unwrap()
+            .expect("registered user should authenticate");
+        assert_eq!(user.role, ROLE_USER);
+        assert_eq!(user.user_id, 2, "USER_ID should follow the admin's");
+    }
+
+    #[tokio::test]
+    async fn test_has_general_users() {
+        let pool = setup_test_db().await;
+        let auth_service = AuthService::new(pool.clone());
+
+        let credential = test_credential();
+        auth_service
+            .register_admin_user("admin", &credential)
+            .await
+            .unwrap();
+        assert!(!auth_service.has_general_users().await.unwrap());
+
+        auth_service
+            .register_user("member", &credential)
+            .await
+            .unwrap();
+        assert!(auth_service.has_general_users().await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_has_users_without_users_table() {
+        // Pre-initialization state: the USERS table does not exist yet
+        let pool = crate::test_helpers::database::init_db(
+            crate::test_helpers::database::TEST_DB_URL,
+        )
+        .await
+        .unwrap();
+        let auth_service = AuthService::new(pool);
+
+        assert!(!auth_service.has_users().await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_authenticate_user_rejects_malformed_stored_hash() {
+        let pool = setup_test_db().await;
+        sqlx::query(sql_queries::AUTH_INSERT_USER)
+            .bind(1_i64)
+            .bind("broken")
+            .bind("not-an-argon2-hash")
+            .bind(ROLE_USER)
+            .bind("2026-01-01 00:00:00")
+            .execute(&pool)
+            .await
+            .unwrap();
+        let auth_service = AuthService::new(pool);
+
+        let err = auth_service
+            .authenticate_user("broken", &test_credential())
+            .await
+            .unwrap_err();
+
+        assert!(matches!(err, AuthError::SecurityError(_)), "got {:?}", err);
+    }
+
+    #[test]
+    fn test_auth_error_display() {
+        assert_eq!(
+            AuthError::InvalidCredentials.to_string(),
+            "Invalid credentials"
+        );
+        assert!(AuthError::from(sqlx::Error::RowNotFound)
+            .to_string()
+            .starts_with("Database error: "));
+        assert!(
+            AuthError::from(SecurityError::HashError("boom".to_string()))
+                .to_string()
+                .starts_with("Security error: ")
+        );
+    }
+
     #[test]
     fn test_role_constants_values() {
         // Verify the actual values match expected
@@ -427,5 +564,38 @@ mod tests {
         assert_ne!(ROLE_ADMIN, ROLE_USER);
         assert_ne!(ROLE_ADMIN, ROLE_VISIT);
         assert_ne!(ROLE_USER, ROLE_VISIT);
+    }
+
+    // ---- From<AuthError> for ApiError -----------------------------------
+    // PR14 (Fable-5 #21). These pins protect the wire codes the frontend
+    // classifier (`res/js/menu.js::mapAuthErrorCode`) matches on. If a
+    // variant is renamed here or in api_error.rs, the JS side stops
+    // classifying auth errors — hence the assertions on the stable
+    // `ApiError::CODE_*` constants.
+
+    #[test]
+    fn invalid_credentials_maps_to_auth_invalid_credentials_code() {
+        use crate::api_error::ApiError;
+        let err: ApiError = AuthError::InvalidCredentials.into();
+        assert_eq!(err.code, ApiError::CODE_AUTH_INVALID_CREDENTIALS);
+        assert!(err.entity.is_none());
+    }
+
+    #[test]
+    fn database_error_maps_to_database_code() {
+        use crate::api_error::ApiError;
+        let err: ApiError = AuthError::DatabaseError(sqlx::Error::RowNotFound).into();
+        assert_eq!(err.code, ApiError::CODE_DATABASE);
+        assert!(err.entity.is_none());
+    }
+
+    #[test]
+    fn security_error_maps_to_validation_code_with_message() {
+        use crate::api_error::ApiError;
+        let sec = SecurityError::InvalidPassword("boom".to_string());
+        let err: ApiError = AuthError::SecurityError(sec).into();
+        assert_eq!(err.code, ApiError::CODE_VALIDATION);
+        assert!(err.entity.is_none());
+        assert!(err.message.contains("boom"), "message must be preserved for logs: {}", err.message);
     }
 }
