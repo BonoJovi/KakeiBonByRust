@@ -263,7 +263,15 @@ pub enum GroupBy {
 }
 
 impl GroupBy {
-    /// Generate SELECT clause fields for grouping
+    /// Generate SELECT clause fields for grouping. Called only from
+    /// `build_header_query`, which the top-level dispatcher
+    /// `build_query` only reaches for `Category1` / `Shop` / `Date` —
+    /// `Category2` / `Category3` / `Product` go through
+    /// `build_detail_query::build_detail_group_pieces` and `Account`
+    /// goes through `build_account_aggregation_query`. The four dead
+    /// arms panic with `unreachable!()` (PR10, Fable-5 #33) so a future
+    /// caller that reroutes them to `build_header_query` fails loudly
+    /// instead of assembling wrong SQL against non-existent columns.
     pub fn to_select_clause(&self) -> String {
         match self {
             GroupBy::Category1 => {
@@ -271,29 +279,9 @@ impl GroupBy {
                  COALESCE(c1i.CATEGORY1_NAME_I18N, c1.CATEGORY1_NAME) as group_name"
                     .to_string()
             }
-            GroupBy::Category2 => {
-                "td.CATEGORY1_CODE || '/' || td.CATEGORY2_CODE as group_key, \
-                 COALESCE(c2i.CATEGORY2_NAME_I18N, c2.CATEGORY2_NAME) as group_name"
-                    .to_string()
-            }
-            GroupBy::Category3 => {
-                "td.CATEGORY1_CODE || '/' || td.CATEGORY2_CODE || '/' || td.CATEGORY3_CODE as group_key, \
-                 COALESCE(c3i.CATEGORY3_NAME_I18N, c3.CATEGORY3_NAME) as group_name"
-                    .to_string()
-            }
-            GroupBy::Account => {
-                "COALESCE(th.FROM_ACCOUNT_CODE, th.TO_ACCOUNT_CODE, 'NONE') as group_key, \
-                 COALESCE(a.ACCOUNT_NAME, '指定なし') as group_name"
-                    .to_string()
-            }
             GroupBy::Shop => {
                 "CAST(COALESCE(th.SHOP_ID, 0) AS TEXT) as group_key, \
                  COALESCE(s.SHOP_NAME, '指定なし') as group_name"
-                    .to_string()
-            }
-            GroupBy::Product => {
-                "CAST(COALESCE(td.PRODUCT_ID, 0) AS TEXT) as group_key, \
-                 COALESCE(p.PRODUCT_NAME, '指定なし') as group_name"
                     .to_string()
             }
             GroupBy::Date => {
@@ -301,21 +289,36 @@ impl GroupBy {
                  DATE(th.TRANSACTION_DATE) as group_name"
                     .to_string()
             }
+            GroupBy::Category2
+            | GroupBy::Category3
+            | GroupBy::Product
+            | GroupBy::Account => unreachable!(
+                "to_select_clause is only called from build_header_query \
+                 (Category1/Shop/Date); {:?} must go through its dedicated \
+                 builder — build_detail_query for Category2/3/Product, \
+                 build_account_aggregation_query for Account.",
+                self
+            ),
         }
     }
 
-    /// Generate GROUP BY clause
+    /// Generate GROUP BY clause. Same reachability contract as
+    /// [`to_select_clause`]: only Category1/Shop/Date land here from
+    /// production. PR10 (Fable-5 #33).
     pub fn to_group_by_clause(&self) -> String {
         match self {
             GroupBy::Category1 => "th.CATEGORY1_CODE".to_string(),
-            GroupBy::Category2 => "td.CATEGORY1_CODE, td.CATEGORY2_CODE".to_string(),
-            GroupBy::Category3 => {
-                "td.CATEGORY1_CODE, td.CATEGORY2_CODE, td.CATEGORY3_CODE".to_string()
-            }
-            GroupBy::Account => "COALESCE(th.FROM_ACCOUNT_CODE, th.TO_ACCOUNT_CODE, 'NONE')".to_string(),
             GroupBy::Shop => "COALESCE(th.SHOP_ID, 0)".to_string(),
-            GroupBy::Product => "COALESCE(td.PRODUCT_ID, 0)".to_string(),
             GroupBy::Date => "DATE(th.TRANSACTION_DATE)".to_string(),
+            GroupBy::Category2
+            | GroupBy::Category3
+            | GroupBy::Product
+            | GroupBy::Account => unreachable!(
+                "to_group_by_clause is only called from build_header_query \
+                 (Category1/Shop/Date); {:?} must go through its dedicated \
+                 builder.",
+                self
+            ),
         }
     }
 
@@ -1109,9 +1112,13 @@ ORDER BY {order_field} {sort_order}
     (sql, binds)
 }
 
-/// Build JOIN clauses based on grouping. Returns the SQL fragment and the
-/// bind values that fragment expects (only the CATEGORY*_I18N joins bind a
-/// value — the `lang` code — so most branches return an empty Vec).
+/// Build JOIN clauses based on grouping. Returns the SQL fragment and
+/// the bind values that fragment expects (only the CATEGORY1_I18N join
+/// binds a value — the `lang` code). Same reachability contract as
+/// [`GroupBy::to_select_clause`]: called only from `build_header_query`
+/// (Category1/Shop/Date). The four dead arms panic with `unreachable!()`
+/// (PR10, Fable-5 #33) so a rerouting caller fails loudly instead of
+/// producing a subtly-wrong join graph.
 fn build_join_clauses(group_by: &GroupBy, _user_id: i64, lang: &str) -> (String, Vec<BindValue>) {
     match group_by {
         GroupBy::Category1 => (
@@ -1122,31 +1129,6 @@ LEFT JOIN CATEGORY1_I18N c1i ON c1.USER_ID = c1i.USER_ID AND c1.CATEGORY1_CODE =
             .to_string(),
             vec![BindValue::Str(lang.to_string())],
         ),
-        GroupBy::Category2 => (
-            r#"
-INNER JOIN TRANSACTIONS_DETAIL td ON th.USER_ID = td.USER_ID AND th.TRANSACTION_ID = td.TRANSACTION_ID
-LEFT JOIN CATEGORY2 c2 ON td.USER_ID = c2.USER_ID AND td.CATEGORY1_CODE = c2.CATEGORY1_CODE AND td.CATEGORY2_CODE = c2.CATEGORY2_CODE
-LEFT JOIN CATEGORY2_I18N c2i ON c2.USER_ID = c2i.USER_ID AND c2.CATEGORY1_CODE = c2i.CATEGORY1_CODE AND c2.CATEGORY2_CODE = c2i.CATEGORY2_CODE AND c2i.LANG_CODE = ?
-"#
-            .to_string(),
-            vec![BindValue::Str(lang.to_string())],
-        ),
-        GroupBy::Category3 => (
-            r#"
-INNER JOIN TRANSACTIONS_DETAIL td ON th.USER_ID = td.USER_ID AND th.TRANSACTION_ID = td.TRANSACTION_ID
-LEFT JOIN CATEGORY3 c3 ON td.USER_ID = c3.USER_ID AND td.CATEGORY1_CODE = c3.CATEGORY1_CODE AND td.CATEGORY2_CODE = c3.CATEGORY2_CODE AND td.CATEGORY3_CODE = c3.CATEGORY3_CODE
-LEFT JOIN CATEGORY3_I18N c3i ON c3.USER_ID = c3i.USER_ID AND c3.CATEGORY1_CODE = c3i.CATEGORY1_CODE AND c3.CATEGORY2_CODE = c3i.CATEGORY2_CODE AND c3.CATEGORY3_CODE = c3i.CATEGORY3_CODE AND c3i.LANG_CODE = ?
-"#
-            .to_string(),
-            vec![BindValue::Str(lang.to_string())],
-        ),
-        GroupBy::Account => (
-            r#"
-LEFT JOIN ACCOUNTS a ON th.USER_ID = a.USER_ID AND COALESCE(th.FROM_ACCOUNT_CODE, th.TO_ACCOUNT_CODE) = a.ACCOUNT_CODE
-"#
-            .to_string(),
-            Vec::new(),
-        ),
         GroupBy::Shop => (
             r#"
 LEFT JOIN SHOPS s ON th.USER_ID = s.USER_ID AND th.SHOP_ID = s.SHOP_ID
@@ -1154,15 +1136,17 @@ LEFT JOIN SHOPS s ON th.USER_ID = s.USER_ID AND th.SHOP_ID = s.SHOP_ID
             .to_string(),
             Vec::new(),
         ),
-        GroupBy::Product => (
-            r#"
-LEFT JOIN TRANSACTIONS_DETAIL td ON th.USER_ID = td.USER_ID AND th.TRANSACTION_ID = td.TRANSACTION_ID
-LEFT JOIN PRODUCTS p ON td.USER_ID = p.USER_ID AND td.PRODUCT_ID = p.PRODUCT_ID
-"#
-            .to_string(),
-            Vec::new(),
-        ),
         GroupBy::Date => (String::new(), Vec::new()),
+        GroupBy::Category2
+        | GroupBy::Category3
+        | GroupBy::Product
+        | GroupBy::Account => unreachable!(
+            "build_join_clauses is only called from build_header_query \
+             (Category1/Shop/Date); {:?} must go through its dedicated \
+             builder — build_detail_query for Category2/3/Product, \
+             build_account_aggregation_query for Account.",
+            group_by
+        ),
     }
 }
 

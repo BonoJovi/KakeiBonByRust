@@ -111,13 +111,19 @@ impl AuthService {
         // schema comment for the full rationale.
         let encryption_salt = generate_encryption_salt();
 
-        // Get next user ID (auto-increment)
-        let next_id: i64 = sqlx::query_scalar(sql_queries::AUTH_GET_NEXT_USER_ID)
-            .fetch_one(&self.pool)
-            .await?;
-
-        // Start transaction
+        // PR10 (Fable-5 #33): `AUTH_GET_NEXT_USER_ID` (MAX+1) is fetched
+        // *inside* the transaction now, so the read and the subsequent
+        // INSERT observe the same snapshot. The old shape read from the
+        // pool before `begin()`, leaving a small window where a
+        // concurrent registrar could take the same id — SQLite's PRIMARY
+        // KEY would then surface the conflict as an insert error rather
+        // than silently corrupt data, but tightening the atomicity is
+        // still the right shape for a single-desktop app.
         let mut tx = self.pool.begin().await?;
+
+        let next_id: i64 = sqlx::query_scalar(sql_queries::AUTH_GET_NEXT_USER_ID)
+            .fetch_one(&mut *tx)
+            .await?;
 
         sqlx::query(sql_queries::AUTH_INSERT_USER)
             .bind(next_id)  // Use auto-incremented ID instead of hardcoded 1
@@ -166,15 +172,16 @@ impl AuthService {
         // Per-user Argon2 encryption salt (Fable-5 review #15).
         let encryption_salt = generate_encryption_salt();
 
-        // Get next user ID
+        // PR10 (Fable-5 #33): same in-transaction id lookup as
+        // register_admin_user above — the MAX+1 read now shares the
+        // snapshot with the INSERT that consumes it.
+        let mut tx = self.pool.begin().await?;
+
         let result = sqlx::query(sql_queries::AUTH_GET_NEXT_USER_ID)
-            .fetch_one(&self.pool)
+            .fetch_one(&mut *tx)
             .await?;
 
         let next_id: i64 = result.get(0);
-
-        // Start transaction
-        let mut tx = self.pool.begin().await?;
 
         sqlx::query(sql_queries::AUTH_INSERT_USER)
             .bind(next_id)
