@@ -1404,42 +1404,6 @@ async fn disable_category3(
 // ============================================================================
 
 #[tauri::command]
-async fn add_transaction(
-    transaction_date: String,
-    category1_code: String,
-    category2_code: String,
-    category3_code: String,
-    amount: i64,
-    description: Option<String>,
-    memo: Option<String>,
-    state: tauri::State<'_, AppState>
-) -> Result<i64, api_error::ApiError> {
-    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
-    let transaction = state.transaction.lock().await;
-    Ok(transaction.add_transaction(
-        user_id,
-        &transaction_date,
-        &category1_code,
-        &category2_code,
-        &category3_code,
-        amount,
-        description.as_deref(),
-        memo.as_deref(),
-    )
-    .await?)
-}
-
-#[tauri::command]
-async fn get_transaction(
-    transaction_id: i64,
-    state: tauri::State<'_, AppState>
-) -> Result<services::transaction::Transaction, api_error::ApiError> {
-    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
-    let transaction = state.transaction.lock().await;
-    Ok(transaction.get_transaction(user_id, transaction_id).await?)
-}
-
-#[tauri::command]
 async fn get_transactions(
     start_date: Option<String>,
     end_date: Option<String>,
@@ -1469,34 +1433,6 @@ async fn get_transactions(
         include_scheduled.unwrap_or(false),
         page,
         per_page,
-    )
-    .await?)
-}
-
-#[tauri::command]
-async fn update_transaction(
-    transaction_id: i64,
-    transaction_date: String,
-    category1_code: String,
-    category2_code: String,
-    category3_code: String,
-    amount: i64,
-    description: Option<String>,
-    memo: Option<String>,
-    state: tauri::State<'_, AppState>
-) -> Result<(), api_error::ApiError> {
-    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
-    let transaction = state.transaction.lock().await;
-    Ok(transaction.update_transaction(
-        user_id,
-        transaction_id,
-        &transaction_date,
-        &category1_code,
-        &category2_code,
-        &category3_code,
-        amount,
-        description.as_deref(),
-        memo.as_deref(),
     )
     .await?)
 }
@@ -2529,10 +2465,7 @@ pub fn run() {
             move_category3_down,
             disable_category2,
             disable_category3,
-            add_transaction,
-            get_transaction,
             get_transactions,
-            update_transaction,
             delete_transaction,
             get_account_templates,
             get_accounts,

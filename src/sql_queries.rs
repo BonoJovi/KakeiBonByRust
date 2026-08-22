@@ -815,25 +815,13 @@ pub const TEST_USER_GET_PASSWORD_BY_ID: &str = "SELECT PAW FROM USERS WHERE USER
 // ============================================================================
 
 // Transaction CRUD operations
-pub const TRANSACTION_INSERT: &str = r#"
-INSERT INTO TRANSACTIONS 
-(USER_ID, TRANSACTION_DATE, CATEGORY1_CODE, CATEGORY2_CODE, CATEGORY3_CODE, AMOUNT, DESCRIPTION, MEMO, ENTRY_DT)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
-"#;
-
-pub const TRANSACTION_SELECT_BY_ID: &str = r#"
-SELECT TRANSACTION_ID, USER_ID, TRANSACTION_DATE, CATEGORY1_CODE, CATEGORY2_CODE, CATEGORY3_CODE, 
-       AMOUNT, DESCRIPTION, MEMO, ENTRY_DT, UPDATE_DT
-FROM TRANSACTIONS 
-WHERE USER_ID = ? AND TRANSACTION_ID = ?
-"#;
-
-pub const TRANSACTION_UPDATE: &str = r#"
-UPDATE TRANSACTIONS 
-SET TRANSACTION_DATE = ?, CATEGORY1_CODE = ?, CATEGORY2_CODE = ?, CATEGORY3_CODE = ?, 
-    AMOUNT = ?, DESCRIPTION = ?, MEMO = ?, UPDATE_DT = datetime('now')
-WHERE USER_ID = ? AND TRANSACTION_ID = ?
-"#;
+// PR7 (Fable-5 #19): the legacy `TRANSACTION_INSERT` / `_SELECT_BY_ID`
+// / `_UPDATE` constants targeted a `TRANSACTIONS` table that no
+// migration ever created. The three service methods that used them
+// (`add_transaction` / `get_transaction` / `update_transaction`) were
+// unreachable from any Tauri command and have been deleted alongside
+// this comment. `TRANSACTION_DELETE` below is kept because it targets
+// the live `TRANSACTIONS_HEADER` table and backs `delete_transaction`.
 
 pub const TRANSACTION_DELETE: &str = r#"
 DELETE FROM TRANSACTIONS_HEADER 
