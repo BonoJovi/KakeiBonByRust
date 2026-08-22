@@ -1325,6 +1325,20 @@ FROM TRANSACTIONS_DETAIL
 WHERE TRANSACTION_ID = ? AND USER_ID = ?
 "#;
 
+/// PR12 (Fable-5 #32): every detail row for a user in one SELECT,
+/// consumed by `recalculate_all_transaction_totals` after grouping by
+/// `TRANSACTION_ID` in Rust. Prior shape ran the single-transaction
+/// query above once per header (N+1); this version replaces the whole
+/// loop's fetch with a single scan. The DETAIL_ID tie-breaker in ORDER
+/// BY is inherited from the schema so callers get the same in-detail
+/// order as the older per-transaction query.
+pub const TRANSACTION_DETAIL_GET_ALL_FOR_USER_RECALC: &str = r#"
+SELECT TRANSACTION_ID, AMOUNT, AMOUNT_INCLUDING_TAX, TAX_RATE
+FROM TRANSACTIONS_DETAIL
+WHERE USER_ID = ?
+ORDER BY TRANSACTION_ID, DETAIL_ID
+"#;
+
 pub const TRANSACTION_DETAIL_UPDATE: &str = r#"
 UPDATE TRANSACTIONS_DETAIL
 SET CATEGORY2_CODE = ?, CATEGORY3_CODE = ?, ITEM_NAME = ?,
