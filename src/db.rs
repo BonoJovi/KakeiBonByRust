@@ -59,6 +59,18 @@ impl Database {
         &self.pool
     }
     
+    /// Run every statement in `res/sql/dbaccess.sql` in a single
+    /// transaction. Fable-5 review #30: the previous shape autocommitted
+    /// each of the ~500 CREATE / INSERT / CREATE INDEX statements
+    /// separately, which meant one fsync per statement on cold startup.
+    /// Batching into one transaction turns ~500 fsyncs into 1 — a
+    /// noticeable startup improvement on the desktop app, most visible
+    /// on the first launch after a version upgrade when the whole i18n
+    /// resource pack is being seeded. Every statement in dbaccess.sql
+    /// is transaction-safe (CREATE TABLE, CREATE INDEX, and INSERT are
+    /// all fine inside a tx — no PRAGMA / VACUUM / ATTACH lives there),
+    /// and `INSERT OR IGNORE` keeps re-runs idempotent so a mid-tx
+    /// failure on a subsequent boot still recovers cleanly.
     pub async fn initialize(&self) -> Result<(), sqlx::Error> {
         // Remove comment lines first
         let cleaned_sql: Vec<&str> = INIT_SQL
@@ -66,17 +78,16 @@ impl Database {
             .filter(|line| !line.trim().starts_with("--") && !line.trim().is_empty())
             .collect();
         let sql_without_comments = cleaned_sql.join("\n");
-        
-        // Execute each SQL statement
+
+        let mut tx = self.pool.begin().await?;
         for statement in sql_without_comments.split(';') {
             let trimmed = statement.trim();
             if !trimmed.is_empty() {
-                sqlx::query(trimmed)
-                    .execute(&self.pool)
-                    .await?;
+                sqlx::query(trimmed).execute(&mut *tx).await?;
             }
         }
-        
+        tx.commit().await?;
+
         Ok(())
     }
     
