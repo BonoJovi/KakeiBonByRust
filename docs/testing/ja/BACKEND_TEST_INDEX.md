@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-08-22 JST  
-**総テスト数**: 274件 (delta 反映後。`cargo test --lib` の権威的総数は 519 で、pre-existing gap は別 PR でバックフィル予定)
+**総テスト数**: 275件 (delta 反映後。`cargo test --lib` の権威的総数は 520 で、pre-existing gap は別 PR でバックフィル予定)
 
 ---
 
@@ -438,8 +438,9 @@ AES-256-GCM暗号化・復号化のテスト。
 | `test_detail_query_grosses_up_zero_tax_included_row` | AMOUNT_INCLUDING_TAX=0 (フロント空欄) も税抜扱い (Fable-5 #3) | src/services/aggregation.rs | 2367 |
 | `test_detail_query_avg_matches_total_over_count_with_mixed_rates` | 混在税率取引で avg × count == total を保持 (Fable-5 #4) | src/services/aggregation.rs | 2398 |
 | `test_detail_query_avg_multi_transaction_arithmetic` | 2 取引の avg = total / txn_count 検証 (Fable-5 #4) | src/services/aggregation.rs | 2430 |
+| `test_detail_query_binds_category_filter_no_injection` | カテゴリフィルタの値が bind されている (SQL 直埋めではない) ことを End-to-End で確認。`EXPENSE' OR '1'='1` payload は 0 rows を返す (PR5, Fable-5 #25) | src/services/aggregation.rs | 2673 |
 
-**合計**: 6件
+**合計**: 7件
 
 ### services/session.rs
 
@@ -512,7 +513,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **251件** |
+| **インラインテスト** | **252件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -529,12 +530,12 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/product.rs | 11 |
 | services/shop.rs | 9 |
 | services/transaction.rs | 21 |
-| services/aggregation.rs | 6 |
+| services/aggregation.rs | 7 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 5 |
 | lib.rs | 4 |
-| **総計** | **274件** |
+| **総計** | **275件** |
 
 ---
 

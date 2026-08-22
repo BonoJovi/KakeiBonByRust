@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-08-22 JST  
-**Total Tests**: 274 (delta-tracked; the full authoritative count from `cargo test --lib` is 519, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 275 (delta-tracked; the full authoritative count from `cargo test --lib` is 520, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -438,8 +438,9 @@ Aggregation service tests.
 | `test_detail_query_grosses_up_zero_tax_included_row` | AMOUNT_INCLUDING_TAX=0 (frontend empty-input sentinel) is treated as pre-tax (Fable-5 #3) | src/services/aggregation.rs | 2367 |
 | `test_detail_query_avg_matches_total_over_count_with_mixed_rates` | avg × count == total holds for a mixed-rate transaction (Fable-5 #4) | src/services/aggregation.rs | 2398 |
 | `test_detail_query_avg_multi_transaction_arithmetic` | avg = total / txn_count over 2 transactions (Fable-5 #4) | src/services/aggregation.rs | 2430 |
+| `test_detail_query_binds_category_filter_no_injection` | End-to-end proof that a category filter's value is bound, not inlined: an `EXPENSE' OR '1'='1` payload returns 0 rows (PR5, Fable-5 #25) | src/services/aggregation.rs | 2673 |
 
-**Total**: 6 tests
+**Total**: 7 tests
 
 ### services/session.rs
 
@@ -512,7 +513,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **251** |
+| **Inline Tests** | **252** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -529,12 +530,12 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/product.rs | 11 |
 | services/shop.rs | 9 |
 | services/transaction.rs | 21 |
-| services/aggregation.rs | 6 |
+| services/aggregation.rs | 7 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 5 |
 | lib.rs | 4 |
-| **Total** | **274** |
+| **Total** | **275** |
 
 ---
 
