@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-08-22 JST  
-**Total Tests**: 275 (delta-tracked; the full authoritative count from `cargo test --lib` is 520, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 280 (delta-tracked; the full authoritative count from `cargo test --lib` is 525, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -439,8 +439,11 @@ Aggregation service tests.
 | `test_detail_query_avg_matches_total_over_count_with_mixed_rates` | avg × count == total holds for a mixed-rate transaction (Fable-5 #4) | src/services/aggregation.rs | 2398 |
 | `test_detail_query_avg_multi_transaction_arithmetic` | avg = total / txn_count over 2 transactions (Fable-5 #4) | src/services/aggregation.rs | 2430 |
 | `test_detail_query_binds_category_filter_no_injection` | End-to-end proof that a category filter's value is bound, not inlined: an `EXPENSE' OR '1'='1` payload returns 0 rows (PR5, Fable-5 #25) | src/services/aggregation.rs | 2673 |
+| `test_category_filter_category2_targets_detail_column` | Category2 filter now targets the existent `td.CATEGORY2_CODE` (detail scope) instead of the non-existent `th.CATEGORY2_CODE` (PR6, Fable-5 #17) | src/services/aggregation.rs | 2766 |
+| `test_category_filter_category3_targets_detail_column` | Category3 filter targets `td.CATEGORY2/3_CODE` (PR6, Fable-5 #17) | src/services/aggregation.rs | 2782 |
+| `test_account_query_applies_category_filter_to_all_union_branches` | Account UNION ALL query now applies the category filter to all 4 branches and binds the value 4x — regression pin for the silent drop (PR6, Fable-5 #18) | src/services/aggregation.rs | 2807 |
 
-**Total**: 7 tests
+**Total**: 10 tests
 
 ### services/session.rs
 
@@ -501,8 +504,10 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | `normalize_language_rejects_unknown_values` | Reject unknown language values | src/lib.rs | 2742 |
 | `normalize_font_size_accepts_keywords_and_percentages` | Accept size keywords and percentages in 50-200 | src/lib.rs | 2748 |
 | `normalize_font_size_rejects_out_of_range_and_garbage` | Reject out-of-range percentages and invalid strings | src/lib.rs | 2757 |
+| `monthly_bounds_with_shift_rejects_out_of_range_month` | month=0/13/100 short-circuits to Err before reaching `services::period::end_of_month` — prevents the backend thread crash (PR6, Fable-5 #22) | src/lib.rs | 2695 |
+| `monthly_bounds_with_shift_accepts_boundary_months` | month=1/12 boundaries still accepted (PR6, Fable-5 #22) | src/lib.rs | 2722 |
 
-**Total**: 4 tests
+**Total**: 6 tests
 
 ---
 
@@ -513,7 +518,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **252** |
+| **Inline Tests** | **257** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -530,12 +535,12 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/product.rs | 11 |
 | services/shop.rs | 9 |
 | services/transaction.rs | 21 |
-| services/aggregation.rs | 7 |
+| services/aggregation.rs | 10 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 5 |
-| lib.rs | 4 |
-| **Total** | **275** |
+| lib.rs | 6 |
+| **Total** | **280** |
 
 ---
 

@@ -764,6 +764,14 @@ async fn update_user_settings(
 
 /// v2.4.0: 月次サイクル境界を holiday_shift 適用込みで返す。
 /// shift が None なら祝日テーブルアクセスを省略する。
+///
+/// PR6 (Fable-5 #22): every entry point that reaches `services::period`
+/// went through here with an unvalidated `month`. On the `HolidayShift::
+/// None` fast path the frontend could send `month = 13`, which walked
+/// into `resolve_day_or_end(_, 14, _)` → `end_of_month(_, 14)` and
+/// panicked on `.expect("end_of_month: year/month must be valid")`.
+/// Reject invalid months before either branch runs so no path below can
+/// crash the backend thread.
 async fn monthly_bounds_with_shift_for(
     pool: &sqlx::SqlitePool,
     user_id: i64,
@@ -772,6 +780,10 @@ async fn monthly_bounds_with_shift_for(
     start_day: u32,
     shift: services::holiday::HolidayShift,
 ) -> Result<(chrono::NaiveDate, chrono::NaiveDate), String> {
+    if !(1..=12).contains(&month) {
+        return Err(format!("Invalid month: {} (expected 1..=12)", month));
+    }
+
     if matches!(shift, services::holiday::HolidayShift::None) {
         return Ok(services::period::monthly_period_bounds(year, month, start_day));
     }
@@ -2671,5 +2683,60 @@ mod settings_validation_tests {
         assert!(normalize_font_size("201").is_err());
         assert!(normalize_font_size("huge").is_err());
         assert!(normalize_font_size("").is_err());
+    }
+
+    // Regression pins for PR6 / Fable-5 #22. `monthly_bounds_with_shift_for`
+    // used to hand an unvalidated `month` down to
+    // `services::period::monthly_period_bounds`, whose `.expect("end_of_month:
+    // year/month must be valid")` panicked the backend thread on `month == 13`.
+    // A dummy in-memory pool is enough because the guard short-circuits before
+    // any query runs.
+    #[tokio::test]
+    async fn monthly_bounds_with_shift_rejects_out_of_range_month() {
+        let pool = sqlx::SqlitePool::connect(":memory:").await.unwrap();
+        for bad_month in [0u32, 13, 100] {
+            let result = monthly_bounds_with_shift_for(
+                &pool,
+                /*user_id*/ 1,
+                2026,
+                bad_month,
+                /*start_day*/ 1,
+                services::holiday::HolidayShift::None,
+            )
+            .await;
+            assert!(
+                result.is_err(),
+                "month={} must be rejected before period::end_of_month runs",
+                bad_month
+            );
+            let msg = result.unwrap_err();
+            assert!(
+                msg.contains(&bad_month.to_string()),
+                "error must name the offending month: {}",
+                msg
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn monthly_bounds_with_shift_accepts_boundary_months() {
+        let pool = sqlx::SqlitePool::connect(":memory:").await.unwrap();
+        for good_month in [1u32, 12] {
+            let result = monthly_bounds_with_shift_for(
+                &pool,
+                1,
+                2026,
+                good_month,
+                1,
+                services::holiday::HolidayShift::None,
+            )
+            .await;
+            assert!(
+                result.is_ok(),
+                "month={} boundary must still be accepted: {:?}",
+                good_month,
+                result.err()
+            );
+        }
     }
 }
