@@ -411,148 +411,170 @@ impl CategoryService {
         Ok(rows)
     }
     
-    /// Get category tree with internationalization
+    /// Get category tree with internationalization.
+    ///
+    /// PR11 (Fable-5 #31): rewritten from a 1 + N + N×M nested-query
+    /// loop into 3 flat queries followed by Rust-side HashMap
+    /// grouping. A new user with the default 3 CATEGORY1 × ~10
+    /// CATEGORY2 × ~5 CATEGORY3 layout would previously issue
+    /// 1 + 3 + 30 = 34 queries every time the transaction form loaded
+    /// its category dropdowns; now it issues 3.
     pub async fn get_category_tree(&self, user_id: i64, lang_code: &str) -> Result<serde_json::Value, CategoryError> {
         use serde_json::json;
-        
-        // Get all category1
+        use std::collections::HashMap;
+
+        // 3 flat queries. Both cat2 and cat3 rows are pre-ordered by
+        // (parent code, DISPLAY_ORDER) so downstream grouping preserves
+        // the display order per parent without re-sorting.
         let cat1_rows = sqlx::query(sql_queries::CATEGORY1_TREE)
             .bind(lang_code)
             .bind(user_id)
             .fetch_all(&self.pool)
             .await?;
-        
-        let mut categories = Vec::new();
-        
-        for row in cat1_rows {
+        let cat2_rows = sqlx::query(sql_queries::CATEGORY2_TREE)
+            .bind(lang_code)
+            .bind(user_id)
+            .fetch_all(&self.pool)
+            .await?;
+        let cat3_rows = sqlx::query(sql_queries::CATEGORY3_TREE)
+            .bind(lang_code)
+            .bind(user_id)
+            .fetch_all(&self.pool)
+            .await?;
+
+        // Bucket cat3 by (cat1_code, cat2_code) — this is the join key
+        // the outer loop consumes. We build the JSON leaves eagerly so
+        // the inner loop below is a plain HashMap lookup.
+        let mut cat3_by_parent: HashMap<(String, String), Vec<serde_json::Value>> = HashMap::new();
+        for row in &cat3_rows {
             let cat1_code: String = row.get("CATEGORY1_CODE");
-            let cat1_name: String = row.get("name");
-            let cat1_order: i64 = row.get("DISPLAY_ORDER");
-            
-            // Get category2 for this category1
-            let cat2_rows = sqlx::query(sql_queries::CATEGORY2_TREE)
-                .bind(lang_code)
-                .bind(user_id)
-                .bind(&cat1_code)
-                .fetch_all(&self.pool)
-                .await?;
-            
-            let mut cat2_list = Vec::new();
-            
-            for cat2_row in cat2_rows {
-                let cat2_code: String = cat2_row.get("CATEGORY2_CODE");
-                let cat2_name: String = cat2_row.get("name");
-                let cat2_order: i64 = cat2_row.get("DISPLAY_ORDER");
-                
-                // Get category3 for this category2
-                let cat3_rows = sqlx::query(sql_queries::CATEGORY3_TREE)
-                    .bind(lang_code)
-                    .bind(user_id)
-                    .bind(&cat1_code)
-                    .bind(&cat2_code)
-                    .fetch_all(&self.pool)
-                    .await?;
-                
-                let cat3_list: Vec<_> = cat3_rows.iter().map(|row| {
-                    json!({
-                        "category3_code": row.get::<String, _>("CATEGORY3_CODE"),
-                        "category3_name_i18n": row.get::<String, _>("name"),
-                        "display_order": row.get::<i64, _>("DISPLAY_ORDER")
-                    })
-                }).collect();
-                
-                cat2_list.push(json!({
-                    "category2": {
-                        "category2_code": cat2_code,
-                        "category2_name_i18n": cat2_name,
-                        "display_order": cat2_order
-                    },
-                    "children": cat3_list
-                }));
-            }
-            
-            categories.push(json!({
-                "category1": {
-                    "category1_code": cat1_code,
-                    "category1_name_i18n": cat1_name,
-                    "display_order": cat1_order
+            let cat2_code: String = row.get("CATEGORY2_CODE");
+            let leaf = json!({
+                "category3_code": row.get::<String, _>("CATEGORY3_CODE"),
+                "category3_name_i18n": row.get::<String, _>("name"),
+                "display_order": row.get::<i64, _>("DISPLAY_ORDER")
+            });
+            cat3_by_parent.entry((cat1_code, cat2_code)).or_default().push(leaf);
+        }
+
+        // Bucket cat2 by cat1_code, emitting the fully assembled
+        // {category2, children} nodes.
+        let mut cat2_by_parent: HashMap<String, Vec<serde_json::Value>> = HashMap::new();
+        for row in &cat2_rows {
+            let cat1_code: String = row.get("CATEGORY1_CODE");
+            let cat2_code: String = row.get("CATEGORY2_CODE");
+            let cat2_name: String = row.get("name");
+            let cat2_order: i64 = row.get("DISPLAY_ORDER");
+            let children = cat3_by_parent
+                .remove(&(cat1_code.clone(), cat2_code.clone()))
+                .unwrap_or_default();
+            cat2_by_parent.entry(cat1_code).or_default().push(json!({
+                "category2": {
+                    "category2_code": cat2_code,
+                    "category2_name_i18n": cat2_name,
+                    "display_order": cat2_order
                 },
-                "children": cat2_list
+                "children": children
             }));
         }
-        
+
+        // Walk cat1 in its display order (already sorted by the SQL) and
+        // attach the matching cat2 bucket.
+        let categories: Vec<_> = cat1_rows
+            .iter()
+            .map(|row| {
+                let cat1_code: String = row.get("CATEGORY1_CODE");
+                let cat1_name: String = row.get("name");
+                let cat1_order: i64 = row.get("DISPLAY_ORDER");
+                let children = cat2_by_parent.remove(&cat1_code).unwrap_or_default();
+                json!({
+                    "category1": {
+                        "category1_code": cat1_code,
+                        "category1_name_i18n": cat1_name,
+                        "display_order": cat1_order
+                    },
+                    "children": children
+                })
+            })
+            .collect();
+
         Ok(json!(categories))
     }
 
-    /// Get category tree including disabled items (for management screen)
+    /// Get category tree including disabled items (for management screen).
+    /// Same 3-flat-queries shape as [`get_category_tree`] plus the
+    /// `is_disabled` fields the management UI needs.
     pub async fn get_category_tree_all(&self, user_id: i64, lang_code: &str) -> Result<serde_json::Value, CategoryError> {
         use serde_json::json;
+        use std::collections::HashMap;
 
         let cat1_rows = sqlx::query(sql_queries::CATEGORY1_TREE)
             .bind(lang_code)
             .bind(user_id)
             .fetch_all(&self.pool)
             .await?;
+        let cat2_rows = sqlx::query(sql_queries::CATEGORY2_TREE_ALL)
+            .bind(lang_code)
+            .bind(user_id)
+            .fetch_all(&self.pool)
+            .await?;
+        let cat3_rows = sqlx::query(sql_queries::CATEGORY3_TREE_ALL)
+            .bind(lang_code)
+            .bind(user_id)
+            .fetch_all(&self.pool)
+            .await?;
 
-        let mut categories = Vec::new();
-
-        for row in cat1_rows {
+        let mut cat3_by_parent: HashMap<(String, String), Vec<serde_json::Value>> = HashMap::new();
+        for row in &cat3_rows {
             let cat1_code: String = row.get("CATEGORY1_CODE");
-            let cat1_name: String = row.get("name");
-            let cat1_order: i64 = row.get("DISPLAY_ORDER");
+            let cat2_code: String = row.get("CATEGORY2_CODE");
+            let leaf = json!({
+                "category3_code": row.get::<String, _>("CATEGORY3_CODE"),
+                "category3_name_i18n": row.get::<String, _>("name"),
+                "display_order": row.get::<i64, _>("DISPLAY_ORDER"),
+                "is_disabled": row.get::<i64, _>("IS_DISABLED")
+            });
+            cat3_by_parent.entry((cat1_code, cat2_code)).or_default().push(leaf);
+        }
 
-            let cat2_rows = sqlx::query(sql_queries::CATEGORY2_TREE_ALL)
-                .bind(lang_code)
-                .bind(user_id)
-                .bind(&cat1_code)
-                .fetch_all(&self.pool)
-                .await?;
-
-            let mut cat2_list = Vec::new();
-
-            for cat2_row in cat2_rows {
-                let cat2_code: String = cat2_row.get("CATEGORY2_CODE");
-                let cat2_name: String = cat2_row.get("name");
-                let cat2_order: i64 = cat2_row.get("DISPLAY_ORDER");
-                let cat2_disabled: i64 = cat2_row.get("IS_DISABLED");
-
-                let cat3_rows = sqlx::query(sql_queries::CATEGORY3_TREE_ALL)
-                    .bind(lang_code)
-                    .bind(user_id)
-                    .bind(&cat1_code)
-                    .bind(&cat2_code)
-                    .fetch_all(&self.pool)
-                    .await?;
-
-                let cat3_list: Vec<_> = cat3_rows.iter().map(|row| {
-                    json!({
-                        "category3_code": row.get::<String, _>("CATEGORY3_CODE"),
-                        "category3_name_i18n": row.get::<String, _>("name"),
-                        "display_order": row.get::<i64, _>("DISPLAY_ORDER"),
-                        "is_disabled": row.get::<i64, _>("IS_DISABLED")
-                    })
-                }).collect();
-
-                cat2_list.push(json!({
-                    "category2": {
-                        "category2_code": cat2_code,
-                        "category2_name_i18n": cat2_name,
-                        "display_order": cat2_order,
-                        "is_disabled": cat2_disabled
-                    },
-                    "children": cat3_list
-                }));
-            }
-
-            categories.push(json!({
-                "category1": {
-                    "category1_code": cat1_code,
-                    "category1_name_i18n": cat1_name,
-                    "display_order": cat1_order
+        let mut cat2_by_parent: HashMap<String, Vec<serde_json::Value>> = HashMap::new();
+        for row in &cat2_rows {
+            let cat1_code: String = row.get("CATEGORY1_CODE");
+            let cat2_code: String = row.get("CATEGORY2_CODE");
+            let cat2_name: String = row.get("name");
+            let cat2_order: i64 = row.get("DISPLAY_ORDER");
+            let cat2_disabled: i64 = row.get("IS_DISABLED");
+            let children = cat3_by_parent
+                .remove(&(cat1_code.clone(), cat2_code.clone()))
+                .unwrap_or_default();
+            cat2_by_parent.entry(cat1_code).or_default().push(json!({
+                "category2": {
+                    "category2_code": cat2_code,
+                    "category2_name_i18n": cat2_name,
+                    "display_order": cat2_order,
+                    "is_disabled": cat2_disabled
                 },
-                "children": cat2_list
+                "children": children
             }));
         }
+
+        let categories: Vec<_> = cat1_rows
+            .iter()
+            .map(|row| {
+                let cat1_code: String = row.get("CATEGORY1_CODE");
+                let cat1_name: String = row.get("name");
+                let cat1_order: i64 = row.get("DISPLAY_ORDER");
+                let children = cat2_by_parent.remove(&cat1_code).unwrap_or_default();
+                json!({
+                    "category1": {
+                        "category1_code": cat1_code,
+                        "category1_name_i18n": cat1_name,
+                        "display_order": cat1_order
+                    },
+                    "children": children
+                })
+            })
+            .collect();
 
         Ok(json!(categories))
     }
@@ -1988,5 +2010,151 @@ mod tests {
         let err: ApiError = CategoryError::DatabaseError(sqlx::Error::RowNotFound).into();
         assert_eq!(err.code, ApiError::CODE_DATABASE);
         assert!(err.entity.is_none());
+    }
+
+    // PR11 (Fable-5 #31) — regression pins for the get_category_tree
+    // and get_category_tree_all refactor from 1+N+N×M queries to a
+    // 3-flat-queries + Rust HashMap grouping. Assert the JSON shape
+    // preserves the (cat1 → cat2 → cat3) parent/child pairing and
+    // per-parent display order.
+
+    #[tokio::test]
+    async fn test_get_category_tree_groups_children_under_parent() {
+        let pool = setup_test_db().await;
+        let service = CategoryService::new(pool.clone());
+        let user_id = 1;
+        setup_category1(&pool, user_id).await;
+
+        // Two CATEGORY2 rows under EXPENSE, each with its own CATEGORY3
+        // child. If the HashMap grouping ever confused parent scope, a
+        // child would land on the wrong cat2.
+        let food = service
+            .add_category2(user_id, "EXPENSE", "食費", "Food")
+            .await
+            .unwrap();
+        let transport = service
+            .add_category2(user_id, "EXPENSE", "交通費", "Transport")
+            .await
+            .unwrap();
+        let rice = service
+            .add_category3(user_id, "EXPENSE", &food, "米", "Rice")
+            .await
+            .unwrap();
+        let train = service
+            .add_category3(user_id, "EXPENSE", &transport, "電車", "Train")
+            .await
+            .unwrap();
+
+        let tree = service.get_category_tree(user_id, "ja").await.unwrap();
+        let root = tree.as_array().expect("tree root is a JSON array");
+        // `setup_category1` seeds EXPENSE + INCOME + TRANSFER; we only
+        // populated EXPENSE, so the other two exist with empty children.
+        let expense = root
+            .iter()
+            .find(|n| n["category1"]["category1_code"] == "EXPENSE")
+            .expect("EXPENSE cat1 node missing");
+        let cat2 = expense["children"].as_array().expect("cat2 children array");
+        assert_eq!(cat2.len(), 2, "two cat2 rows expected: {:?}", cat2);
+
+        let food_node = cat2
+            .iter()
+            .find(|n| n["category2"]["category2_code"] == food.as_str())
+            .expect("food cat2 node missing");
+        let food_children = food_node["children"].as_array().unwrap();
+        assert_eq!(food_children.len(), 1, "food should have 1 cat3");
+        assert_eq!(food_children[0]["category3_code"], rice);
+
+        let transport_node = cat2
+            .iter()
+            .find(|n| n["category2"]["category2_code"] == transport.as_str())
+            .expect("transport cat2 node missing");
+        let transport_children = transport_node["children"].as_array().unwrap();
+        assert_eq!(transport_children.len(), 1, "transport should have 1 cat3");
+        assert_eq!(transport_children[0]["category3_code"], train);
+    }
+
+    #[tokio::test]
+    async fn test_get_category_tree_preserves_display_order() {
+        let pool = setup_test_db().await;
+        let service = CategoryService::new(pool.clone());
+        let user_id = 1;
+        setup_category1(&pool, user_id).await;
+
+        // Add three CATEGORY2 rows; they get DISPLAY_ORDER 1, 2, 3.
+        let a = service.add_category2(user_id, "EXPENSE", "A_ja", "A").await.unwrap();
+        let b = service.add_category2(user_id, "EXPENSE", "B_ja", "B").await.unwrap();
+        let c = service.add_category2(user_id, "EXPENSE", "C_ja", "C").await.unwrap();
+
+        // Move B up so the display order becomes: B, A, C (1, 2, 3).
+        service.move_category2_up(user_id, "EXPENSE", &b).await.unwrap();
+
+        let tree = service.get_category_tree(user_id, "ja").await.unwrap();
+        let expense = tree.as_array().unwrap()
+            .iter()
+            .find(|n| n["category1"]["category1_code"] == "EXPENSE")
+            .unwrap();
+        let cat2 = expense["children"].as_array().unwrap();
+        let order: Vec<&str> = cat2
+            .iter()
+            .map(|n| n["category2"]["category2_code"].as_str().unwrap())
+            .collect();
+        assert_eq!(order, vec![b.as_str(), a.as_str(), c.as_str()],
+                   "display order must survive the flat-query grouping");
+    }
+
+    #[tokio::test]
+    async fn test_get_category_tree_all_includes_disabled_flags() {
+        let pool = setup_test_db().await;
+        let service = CategoryService::new(pool.clone());
+        let user_id = 1;
+        setup_category1(&pool, user_id).await;
+
+        let food = service
+            .add_category2(user_id, "EXPENSE", "食費", "Food")
+            .await
+            .unwrap();
+        let rice = service
+            .add_category3(user_id, "EXPENSE", &food, "米", "Rice")
+            .await
+            .unwrap();
+
+        // Disable both to confirm `_all` shows them.
+        service.disable_category3(user_id, "EXPENSE", &food, &rice).await.unwrap();
+        service.disable_category2(user_id, "EXPENSE", &food).await.unwrap();
+
+        let tree_all = service.get_category_tree_all(user_id, "ja").await.unwrap();
+        let expense_all = tree_all.as_array().unwrap()
+            .iter()
+            .find(|n| n["category1"]["category1_code"] == "EXPENSE")
+            .unwrap();
+        let cat2 = expense_all["children"].as_array().unwrap();
+        let food_node = cat2
+            .iter()
+            .find(|n| n["category2"]["category2_code"] == food.as_str())
+            .expect("disabled cat2 must still appear in _all");
+        assert_eq!(
+            food_node["category2"]["is_disabled"].as_i64(),
+            Some(1),
+            "disabled cat2 must carry is_disabled=1 in _all"
+        );
+        let cat3_children = food_node["children"].as_array().unwrap();
+        assert_eq!(cat3_children.len(), 1);
+        assert_eq!(
+            cat3_children[0]["is_disabled"].as_i64(),
+            Some(1),
+            "disabled cat3 must carry is_disabled=1 in _all"
+        );
+
+        // Sanity: the visible-only tree filters them out.
+        let visible = service.get_category_tree(user_id, "ja").await.unwrap();
+        let visible_expense = visible.as_array().unwrap()
+            .iter()
+            .find(|n| n["category1"]["category1_code"] == "EXPENSE")
+            .unwrap();
+        let visible_cat2 = visible_expense["children"].as_array().unwrap();
+        assert!(
+            !visible_cat2.iter().any(|n| n["category2"]["category2_code"] == food.as_str()),
+            "disabled cat2 must NOT appear in get_category_tree"
+        );
     }
 }

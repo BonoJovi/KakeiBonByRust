@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-08-22 JST  
-**総テスト数**: 280件 (delta 反映後。`cargo test --lib` の権威的総数は 525 で、pre-existing gap は別 PR でバックフィル予定)
+**総テスト数**: 283件 (delta 反映後。`cargo test --lib` の権威的総数は 528 で、pre-existing gap は別 PR でバックフィル予定)
 
 ---
 
@@ -337,8 +337,11 @@ AES-256-GCM暗号化・復号化のテスト。
 | `duplicate_name_maps_to_duplicate_name_code_with_category_entity` | `CategoryError::DuplicateName(_)` → `ApiError { code: "duplicate_name", entity: "category" }` (Fable-5 #23) | src/services/category.rs | 2108 |
 | `validation_preserves_message_and_omits_entity` | `CategoryError::Validation(msg)` → `ApiError { code: "validation" }` で message を保持 (Fable-5 #23) | src/services/category.rs | 2115 |
 | `database_error_maps_to_database_code` | `CategoryError::DatabaseError(_)` → `ApiError { code: "database" }` (Fable-5 #23) | src/services/category.rs | 2125 |
+| `test_get_category_tree_groups_children_under_parent` | 3-flat-queries + HashMap grouping で cat1→cat2→cat3 の親子関係が正しく組み上がる regression pin (PR11, Fable-5 #31) | src/services/category.rs | 2022 |
+| `test_get_category_tree_preserves_display_order` | move_category2_up で並び替えた cat2 の DISPLAY_ORDER が flat-query grouping 後も維持されること (PR11, Fable-5 #31) | src/services/category.rs | 2077 |
+| `test_get_category_tree_all_includes_disabled_flags` | `get_category_tree_all` は disabled 行を含め `is_disabled` フィールド付きで返す (PR11, Fable-5 #31)。反面 `get_category_tree` は disabled 行を除外する対比も同時にチェック | src/services/category.rs | 2106 |
 
-**合計**: 22件
+**合計**: 25件
 
 ### services/manufacturer.rs
 
@@ -518,7 +521,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **257件** |
+| **インラインテスト** | **260件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -530,7 +533,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/user_management.rs | 13 |
 | services/encryption.rs | 8 |
 | services/account.rs | 5 |
-| services/category.rs | 22 |
+| services/category.rs | 25 |
 | services/manufacturer.rs | 9 |
 | services/product.rs | 11 |
 | services/shop.rs | 9 |
@@ -540,7 +543,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/i18n.rs | 8 |
 | services/recurring.rs | 5 |
 | lib.rs | 6 |
-| **総計** | **280件** |
+| **総計** | **283件** |
 
 ---
 

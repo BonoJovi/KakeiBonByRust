@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-08-22 JST  
-**Total Tests**: 280 (delta-tracked; the full authoritative count from `cargo test --lib` is 525, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 283 (delta-tracked; the full authoritative count from `cargo test --lib` is 528, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -337,8 +337,11 @@ Category management service tests (3-tier category CRUD). Internal `CategoryErro
 | `duplicate_name_maps_to_duplicate_name_code_with_category_entity` | `CategoryError::DuplicateName(_)` → `ApiError { code: "duplicate_name", entity: "category" }` (Fable-5 #23) | src/services/category.rs | 2108 |
 | `validation_preserves_message_and_omits_entity` | `CategoryError::Validation(msg)` → `ApiError { code: "validation" }` with message preserved (Fable-5 #23) | src/services/category.rs | 2115 |
 | `database_error_maps_to_database_code` | `CategoryError::DatabaseError(_)` → `ApiError { code: "database" }` (Fable-5 #23) | src/services/category.rs | 2125 |
+| `test_get_category_tree_groups_children_under_parent` | Regression pin for the 3-flat-queries + HashMap grouping shape: cat1 → cat2 → cat3 parent/child pairing is preserved (PR11, Fable-5 #31) | src/services/category.rs | 2022 |
+| `test_get_category_tree_preserves_display_order` | Confirms that a `move_category2_up` reorder survives the flat-query regrouping (PR11, Fable-5 #31) | src/services/category.rs | 2077 |
+| `test_get_category_tree_all_includes_disabled_flags` | `get_category_tree_all` still includes disabled rows and their `is_disabled` fields; the visible-only `get_category_tree` filters them out (PR11, Fable-5 #31) | src/services/category.rs | 2106 |
 
-**Total**: 22 tests
+**Total**: 25 tests
 
 ### services/manufacturer.rs
 
@@ -518,7 +521,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **257** |
+| **Inline Tests** | **260** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -530,7 +533,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/user_management.rs | 13 |
 | services/encryption.rs | 8 |
 | services/account.rs | 5 |
-| services/category.rs | 22 |
+| services/category.rs | 25 |
 | services/manufacturer.rs | 9 |
 | services/product.rs | 11 |
 | services/shop.rs | 9 |
@@ -540,7 +543,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/i18n.rs | 8 |
 | services/recurring.rs | 5 |
 | lib.rs | 6 |
-| **Total** | **280** |
+| **Total** | **283** |
 
 ---
 
