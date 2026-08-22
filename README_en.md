@@ -4,7 +4,7 @@
 
 > **A Modern Household Budget App with Focus on Readability and Usability**
 
-[![Version](https://img.shields.io/badge/Version-2.6.0-blue)](https://github.com/BonoJovi/KakeiBonByRust/releases/tag/v2.6.0)
+[![Version](https://img.shields.io/badge/Version-2.7.0-blue)](https://github.com/BonoJovi/KakeiBonByRust/releases/tag/v2.7.0)
 [![Rust](https://img.shields.io/badge/Rust-1.70+-orange.svg)](https://www.rust-lang.org/)
 [![Tauri](https://img.shields.io/badge/Tauri-v2.11.1-blue.svg)](https://tauri.app/)
 [![Tests](https://img.shields.io/badge/tests-1054%20passing-brightgreen.svg)](#test-results)
@@ -25,16 +25,23 @@
 Thank you for your continued interest in KakeiBon.
 I'm BonoJovi (Yoshihiro NAKAHARA), the project initiator.
 
-**We have officially released Ver.2.6.0!**
+**We have officially released Ver.2.7.0!**
 
-Ver.2.6.0 is a feature release that integrates the product / manufacturer master into the transaction-entry flow. The master management screens have shipped since the v1.x line, but no part of the transaction flow ever referenced them — this release wires the last gap of that work-in-progress feature, so users can normalize spelling drift in item names by linking each detail line to a master entry. It also adds an in-flow path to register a still-unmastered product or manufacturer mid-entry, and unifies the look (borders / header colors / scrollbars / container height) across every list screen.
+Ver.2.7.0 is a "foundation-strengthening" release: no outward-facing new features, but a concentrated lift in internal quality, reliability, and performance. It stems from the Fable-5 code review conducted on 2026-08-19 (43 items in total), and lands as 14 PRs' worth of concentrated cleanup of latent bugs and structural fragility across the whole app. The changes you can directly experience in day-to-day use come down to three:
 
-Key additions / fixes:
+Key changes:
 
-- **Product autocomplete in transaction details** (#65): the "Item name" input on the detail-entry modal now suggests products from the master with substring matching, shown as `product (manufacturer)`. Selecting a candidate keeps the `PRODUCT_ID` in form state; free-text entry still works exactly as before, and typing on top of a previous selection automatically demotes the row back to free-text
-- **In-flow path to register an unmastered product**: a new "Open in product master ↗" button persists the entire detail form to `sessionStorage` and jumps to the product master with the typed text pre-filled; "← Back to detail entry" restores the modal in its original state with the new product already linked
-- **Manufacturer side-trip from inside the product modal**: an analogous "Open in manufacturer master ↗" button lets the user register a new manufacturer mid-edit. The 3-hop chain (detail → product → manufacturer → product → detail) preserves every form value across all hops
-- **Unified list-screen visuals**: row borders, sticky navy-on-white headers, wide always-visible scrollbars, and flex layout that follows the window height are now consistent across all management pages
+- **A rare backend crash path on some transaction screens is closed**: certain monthly screens could panic the backend thread when an unexpected value (e.g. `month=13`) reached period handling. Input is now validated at the entry point and the error is surfaced cleanly
+- **Startup is slightly faster**: the database initialisation at boot is now wrapped in a single transaction, collapsing `~500 fsync operations → 1`. Most visible on the very first launch after install / version upgrade
+- **Long-standing duplicate rows in the shop list are consolidated**: any rare "two-plus rows with the same shop name" state is silently reconciled on the first boot of v2.7.0 (transaction references are repointed onto the active row, only the soft-deleted older rows are removed)
+
+On top of that, the following internal improvements shipped in the same release:
+
+- Category tree lookups and full-history recalc — both previously scaling with transaction count — are now flat via **N+1 query elimination**
+- Aggregation SQL is fully parameterised (a step up in SQL-injection resistance)
+- Error contract is unified across five services (recurring / transaction / account / user_management / category / auth); the "Japanese label + English error" mixed-language toasts on the login / setup screens are gone
+- Four legacy commands that referenced a table no migration ever created (dead code) are removed, `net -281 lines`
+- Test total: 509 → 535 (+26), all passing
 
 If you would like to use the stable release version, please refer to the [main branch](https://github.com/BonoJovi/KakeiBonByRust/tree/main).
 
@@ -45,7 +52,7 @@ We welcome messages via GitHub issues or email, whether it's words of encouragem
 
 Thank you for your continued support of KakeiBon.
 
-**2026-05-30 (JST) Written by Yoshihiro NAKAHARA**
+**2026-08-22 (JST) Written by Yoshihiro NAKAHARA**
 
 </div>
 
