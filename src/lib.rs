@@ -97,33 +97,29 @@ async fn login_user(
     username: String,
     password: String,
     state: tauri::State<'_, AppState>
-) -> Result<services::session::User, String> {
+) -> Result<services::session::User, api_error::ApiError> {
     // Every login attempt starts from a clean session so no user or
     // side-trip state from a previous login can leak into the new one
     state.session.clear_all();
-    
+
     let auth = state.auth.lock().await;
-    
-    match auth.authenticate_user(&username, &password).await {
-        Ok(Some(user)) => {
-            // Create session user
+
+    // PR14 (Fable-5 #21): `Ok(None)` (wrong username/password) and
+    // `Err(AuthError::…)` (DB / crypto failure) each map to a
+    // distinct ApiError code so the frontend can render a localised
+    // message per outcome instead of appending the English `err`
+    // string to a Japanese label.
+    match auth.authenticate_user(&username, &password).await? {
+        Some(user) => {
             let session_user = services::session::User {
                 user_id: user.user_id,
                 name: user.name.clone(),
                 role: user.role,
             };
-            
-            // Save to session state
             state.session.set_user(session_user.clone());
-            
             Ok(session_user)
         }
-        Ok(None) => {
-            Err("Invalid username or password".to_string())
-        }
-        Err(e) => {
-            Err(format!("Authentication error: {}", e))
-        }
+        None => Err(api_error::ApiError::auth_invalid_credentials()),
     }
 }
 
@@ -132,23 +128,20 @@ async fn register_admin(
     username: String,
     password: String,
     state: tauri::State<'_, AppState>
-) -> Result<String, String> {
-    // Validate password
-    validate_password(&password)?;
-    
+) -> Result<String, api_error::ApiError> {
+    validate_password(&password).map_err(api_error::ApiError::validation)?;
+
     let auth = state.auth.lock().await;
-    
-    // Admin registration is only allowed during first-run setup
-    match auth.has_users().await {
-        Ok(true) => return Err("Setup already completed. Admin registration is disabled.".to_string()),
-        Ok(false) => {}
-        Err(e) => return Err(format!("Database error: {}", e)),
+
+    // Admin registration is only allowed during first-run setup.
+    if auth.has_users().await? {
+        return Err(api_error::ApiError::auth_setup_completed(
+            "Setup already completed. Admin registration is disabled.",
+        ));
     }
-    
-    match auth.register_admin_user(&username, &password).await {
-        Ok(_) => Ok("Admin user registered successfully".to_string()),
-        Err(e) => Err(format!("Registration failed: {}", e)),
-    }
+
+    auth.register_admin_user(&username, &password).await?;
+    Ok("Admin user registered successfully".to_string())
 }
 
 #[tauri::command]
@@ -156,27 +149,24 @@ async fn register_user(
     username: String,
     password: String,
     state: tauri::State<'_, AppState>
-) -> Result<String, String> {
-    // Validate password
-    validate_password(&password)?;
-    
+) -> Result<String, api_error::ApiError> {
+    validate_password(&password).map_err(api_error::ApiError::validation)?;
+
     // Only an authenticated user may complete the initial general-user setup
-    get_session_user(&state)?;
-    
+    get_session_user(&state).map_err(api_error::ApiError::validation)?;
+
     let auth = state.auth.lock().await;
-    
+
     // General-user registration through this command is setup-only;
-    // later accounts are created via `create_general_user` (admin only)
-    match auth.has_general_users().await {
-        Ok(true) => return Err("User setup already completed. Use user management instead.".to_string()),
-        Ok(false) => {}
-        Err(e) => return Err(format!("Database error: {}", e)),
+    // later accounts are created via `create_general_user` (admin only).
+    if auth.has_general_users().await? {
+        return Err(api_error::ApiError::auth_setup_completed(
+            "User setup already completed. Use user management instead.",
+        ));
     }
-    
-    match auth.register_user(&username, &password).await {
-        Ok(_) => Ok("User registered successfully".to_string()),
-        Err(e) => Err(format!("Registration failed: {}", e)),
-    }
+
+    auth.register_user(&username, &password).await?;
+    Ok("User registered successfully".to_string())
 }
 
 #[tauri::command]

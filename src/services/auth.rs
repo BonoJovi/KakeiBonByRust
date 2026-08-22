@@ -44,6 +44,25 @@ impl From<SecurityError> for AuthError {
     }
 }
 
+/// Map the domain-specific `AuthError` onto the wire-level `ApiError`
+/// so the tauri command wrappers can `?`-propagate it. Same shape as
+/// `From<CategoryError>` / `From<UserManagementError>`.
+///
+/// Codes:
+///   - `InvalidCredentials` → `auth_invalid_credentials`
+///   - `DatabaseError(e)`   → `database`
+///   - `SecurityError(e)`   → `validation` (message preserved for logs)
+impl From<AuthError> for crate::api_error::ApiError {
+    fn from(err: AuthError) -> Self {
+        use crate::api_error::ApiError;
+        match err {
+            AuthError::InvalidCredentials => ApiError::auth_invalid_credentials(),
+            AuthError::DatabaseError(e) => ApiError::database(e.to_string()),
+            AuthError::SecurityError(e) => ApiError::validation(e.to_string()),
+        }
+    }
+}
+
 pub struct AuthService {
     pool: SqlitePool,
 }
@@ -545,5 +564,38 @@ mod tests {
         assert_ne!(ROLE_ADMIN, ROLE_USER);
         assert_ne!(ROLE_ADMIN, ROLE_VISIT);
         assert_ne!(ROLE_USER, ROLE_VISIT);
+    }
+
+    // ---- From<AuthError> for ApiError -----------------------------------
+    // PR14 (Fable-5 #21). These pins protect the wire codes the frontend
+    // classifier (`res/js/menu.js::mapAuthErrorCode`) matches on. If a
+    // variant is renamed here or in api_error.rs, the JS side stops
+    // classifying auth errors — hence the assertions on the stable
+    // `ApiError::CODE_*` constants.
+
+    #[test]
+    fn invalid_credentials_maps_to_auth_invalid_credentials_code() {
+        use crate::api_error::ApiError;
+        let err: ApiError = AuthError::InvalidCredentials.into();
+        assert_eq!(err.code, ApiError::CODE_AUTH_INVALID_CREDENTIALS);
+        assert!(err.entity.is_none());
+    }
+
+    #[test]
+    fn database_error_maps_to_database_code() {
+        use crate::api_error::ApiError;
+        let err: ApiError = AuthError::DatabaseError(sqlx::Error::RowNotFound).into();
+        assert_eq!(err.code, ApiError::CODE_DATABASE);
+        assert!(err.entity.is_none());
+    }
+
+    #[test]
+    fn security_error_maps_to_validation_code_with_message() {
+        use crate::api_error::ApiError;
+        let sec = SecurityError::InvalidPassword("boom".to_string());
+        let err: ApiError = AuthError::SecurityError(sec).into();
+        assert_eq!(err.code, ApiError::CODE_VALIDATION);
+        assert!(err.entity.is_none());
+        assert!(err.message.contains("boom"), "message must be preserved for logs: {}", err.message);
     }
 }

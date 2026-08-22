@@ -1867,3 +1867,15 @@ INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESO
 INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2428, 'detail_mgmt.error_load_detail_failed', 'ja', '明細の読み込みに失敗しました', 'detail_mgmt', '編集/削除時の明細読み込み失敗プレフィックス (PR2c)', datetime('now'));
 INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2429, 'detail_mgmt.error_detail_not_found', 'en', 'Detail not found', 'detail_mgmt', 'Stale detail_id passed to edit/delete flow (PR2c)', datetime('now'));
 INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2430, 'detail_mgmt.error_detail_not_found', 'ja', '明細が見つかりません', 'detail_mgmt', '編集/削除時に detail_id が既に無効 (PR2c)', datetime('now'));
+
+-- PR14 (Fable-5 #21) — auth-specific error resources for the
+-- login/setup screens. Previously the frontend concatenated
+-- `i18n.t('error.login_failed') + ': ' + error` where `error` was the
+-- raw English string from the backend, producing a mixed-language
+-- toast. The auth commands now return structured ApiError codes
+-- (`auth_invalid_credentials` / `auth_setup_completed`) and the
+-- frontend maps them to these keys directly.
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2431, 'error.invalid_credentials', 'en', 'Invalid username or password.', 'error', 'Login failed: wrong credentials (PR14)', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2432, 'error.invalid_credentials', 'ja', 'ユーザー名またはパスワードが正しくありません。', 'error', 'ログイン失敗: 認証情報不正 (PR14)', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2433, 'error.setup_completed', 'en', 'Setup has already been completed.', 'error', 'Registration refused: setup done (PR14)', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2434, 'error.setup_completed', 'ja', 'セットアップは既に完了しています。', 'error', '登録拒否: セットアップ済み (PR14)', datetime('now'));

@@ -6,6 +6,36 @@ import { setupLanguageMenuHandlers, setupLanguageMenu } from './language-menu.js
 import * as session from './session.js';
 import { showToast } from './toast.js';
 import { HTML_FILES } from './html-files.js';
+import { formatApiError, API_ERROR_CODES } from './master-crud.js';
+
+// PR14 (Fable-5 #21): map an auth-error object from the backend to a
+// localised toast. Auth commands return structured `ApiError { code,
+// message }` objects; the codes below identify each user-facing
+// outcome. `validation` further inspects the message so the existing
+// `error.password_empty` / `error.password_too_short` keys keep
+// working for the two check paths in `validate_password`. Returns
+// `null` for unclassified errors so the caller can fall back to a
+// generic prefix + `formatApiError(err)`.
+const AUTH_ERROR_CODE_AUTH_INVALID_CREDENTIALS = 'auth_invalid_credentials';
+const AUTH_ERROR_CODE_AUTH_SETUP_COMPLETED = 'auth_setup_completed';
+
+function mapAuthErrorCode(err) {
+    if (!err || typeof err !== 'object') return null;
+    switch (err.code) {
+        case AUTH_ERROR_CODE_AUTH_INVALID_CREDENTIALS:
+            return i18n.t('error.invalid_credentials');
+        case AUTH_ERROR_CODE_AUTH_SETUP_COMPLETED:
+            return i18n.t('error.setup_completed');
+        case API_ERROR_CODES.VALIDATION: {
+            const msg = String(err.message || '');
+            if (msg.includes('cannot be empty')) return i18n.t('error.password_empty');
+            if (msg.includes('at least')) return i18n.t('error.password_too_short');
+            return null;
+        }
+        default:
+            return null;
+    }
+}
 
 let isLoggedIn = false;
 
@@ -522,7 +552,15 @@ async function handleAdminSetup(e) {
         
     } catch (error) {
         console.error('Admin registration error:', error);
-        messageDiv.textContent = i18n.t('error.registration_failed') + ': ' + error;
+        // PR14 (Fable-5 #21): render the localised message the
+        // structured ApiError maps to. Fall back to the generic
+        // "registration failed" prefix + `formatApiError` when the
+        // error is not one of the classified auth codes (mostly the
+        // `database` code — the message text stays in the console
+        // for triage but the user sees a clean localised toast).
+        messageDiv.textContent =
+            mapAuthErrorCode(error)
+            || `${i18n.t('error.registration_failed')}: ${formatApiError(error)}`;
         messageDiv.className = 'message error';
     }
 }
@@ -571,7 +609,9 @@ async function handleUserSetup(e) {
         
     } catch (error) {
         console.error('User registration error:', error);
-        messageDiv.textContent = i18n.t('error.registration_failed') + ': ' + error;
+        messageDiv.textContent =
+            mapAuthErrorCode(error)
+            || `${i18n.t('error.registration_failed')}: ${formatApiError(error)}`;
         messageDiv.className = 'message error';
     }
 }
@@ -617,7 +657,9 @@ async function handleLoginSubmit(e) {
         
     } catch (error) {
         console.error('Login error:', error);
-        messageDiv.textContent = i18n.t('error.login_failed') + ': ' + error;
+        messageDiv.textContent =
+            mapAuthErrorCode(error)
+            || `${i18n.t('error.login_failed')}: ${formatApiError(error)}`;
         messageDiv.className = 'message error';
     }
 }
