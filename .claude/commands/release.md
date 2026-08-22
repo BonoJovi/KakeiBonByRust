@@ -4,16 +4,23 @@ Release checklist for KakeiBon. Run this before creating a release tag.
 
 ## Steps
 
-### 1. Version Sync (3 files must match)
+### 1. Version Sync (4 files must match)
 
-Update ALL three files to the same version:
-- `Cargo.toml` → `version = "X.Y.Z"`
-- `tauri.conf.json` → `"version": "X.Y.Z"`
-- `package.json` → `"version": "X.Y.Z"`
+Manually edit these three, then run `cargo build --release` (Step 3
+below already does this) so Cargo picks up the change and rewrites
+the fourth automatically:
+- `Cargo.toml` → `version = "X.Y.Z"` (manual)
+- `tauri.conf.json` → `"version": "X.Y.Z"` (manual)
+- `package.json` → `"version": "X.Y.Z"` (manual)
+- `Cargo.lock` → `version = "X.Y.Z"` on the `app` package entry
+  (auto — cargo rewrites it when it sees the bumped Cargo.toml;
+  commit the diff alongside the other three)
 
-Verify:
+Verify all four are in sync:
 ```bash
-grep -h "version" Cargo.toml tauri.conf.json package.json | head -3
+grep -h "^version" Cargo.toml
+grep -h '"version"' tauri.conf.json package.json
+grep -A1 '^name = "app"' Cargo.lock | grep version
 ```
 
 ### 2. Update Documentation
@@ -59,5 +66,8 @@ git push origin dev
 
 - Forgetting `package.json` → wrong release name on GitHub
 - Forgetting `tauri.conf.json` → wrong asset filenames
+- Forgetting to stage `Cargo.lock` after cargo rewrote it → the
+  release commit's lock file lags the source-of-truth in
+  Cargo.toml, and the next `cargo build` shows a stray diff
 - Pushing tag before main → tag points to wrong commit
 - Forgetting `zundou-website-vps` version update
