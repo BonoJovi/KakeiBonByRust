@@ -49,6 +49,11 @@ impl ApiError {
     pub const CODE_ADMIN_PROTECTED: &'static str = "admin_protected";
     pub const CODE_VALIDATION: &'static str = "validation";
     pub const CODE_DATABASE: &'static str = "database";
+    // PR14 (Fable-5 #21) — auth-specific codes so the login / setup
+    // screens can map to their own i18n messages instead of dumping the
+    // raw English `Err` string next to a Japanese label.
+    pub const CODE_AUTH_INVALID_CREDENTIALS: &'static str = "auth_invalid_credentials";
+    pub const CODE_AUTH_SETUP_COMPLETED: &'static str = "auth_setup_completed";
 
     // ---- Constructors --------------------------------------------------
 
@@ -127,6 +132,31 @@ impl ApiError {
     pub fn database(msg: impl Into<String>) -> Self {
         Self {
             code: Self::CODE_DATABASE.to_string(),
+            message: msg.into(),
+            entity: None,
+        }
+    }
+
+    /// Login failed because the username / password did not match a
+    /// registered user. PR14 (Fable-5 #21): the frontend maps this to
+    /// `error.invalid_credentials` so the user sees a localised
+    /// "wrong username or password" toast instead of the mixed-language
+    /// `<Japanese label>: Invalid username or password`.
+    pub fn auth_invalid_credentials() -> Self {
+        Self {
+            code: Self::CODE_AUTH_INVALID_CREDENTIALS.to_string(),
+            message: "Invalid username or password".to_string(),
+            entity: None,
+        }
+    }
+
+    /// Registration refused because the initial-setup path is one-shot:
+    /// admin setup runs once at first launch, and general-user setup
+    /// runs once per admin. PR14 (Fable-5 #21): the frontend maps this
+    /// to `error.setup_completed`.
+    pub fn auth_setup_completed(msg: impl Into<String>) -> Self {
+        Self {
+            code: Self::CODE_AUTH_SETUP_COMPLETED.to_string(),
             message: msg.into(),
             entity: None,
         }

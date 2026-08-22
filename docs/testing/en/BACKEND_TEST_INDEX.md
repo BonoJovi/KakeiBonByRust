@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-08-22 JST  
-**Total Tests**: 283 (delta-tracked; the full authoritative count from `cargo test --lib` is 528, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 286 (delta-tracked; the full authoritative count from `cargo test --lib` is 531, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -253,8 +253,11 @@ Authentication service tests (user registration, login).
 | `test_unicode_credentials` | Test Unicode in credentials | src/services/auth.rs | 402 |
 | `test_role_constants_values` | Verify role constant values | src/services/auth.rs | 417 |
 | `test_role_constants_uniqueness` | Verify role constant uniqueness | src/services/auth.rs | 425 |
+| `invalid_credentials_maps_to_auth_invalid_credentials_code` | `AuthError::InvalidCredentials` → `ApiError { code: "auth_invalid_credentials" }` (PR14, Fable-5 #21) | src/services/auth.rs | 577 |
+| `database_error_maps_to_database_code` | `AuthError::DatabaseError` → `ApiError { code: "database" }` (PR14, Fable-5 #21) | src/services/auth.rs | 585 |
+| `security_error_maps_to_validation_code_with_message` | `AuthError::SecurityError` → `ApiError { code: "validation" }` with message preserved (PR14, Fable-5 #21) | src/services/auth.rs | 593 |
 
-**Total**: 13 tests
+**Total**: 16 tests
 
 ### services/user_management.rs
 
@@ -521,7 +524,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **260** |
+| **Inline Tests** | **263** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -529,7 +532,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | settings.rs | 12 |
 | api_error.rs | 9 |
 | services/master_data.rs | 2 |
-| services/auth.rs | 13 |
+| services/auth.rs | 16 |
 | services/user_management.rs | 13 |
 | services/encryption.rs | 8 |
 | services/account.rs | 5 |
@@ -543,7 +546,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/i18n.rs | 8 |
 | services/recurring.rs | 5 |
 | lib.rs | 6 |
-| **Total** | **283** |
+| **Total** | **286** |
 
 ---
 

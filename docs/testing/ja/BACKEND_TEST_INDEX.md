@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-08-22 JST  
-**総テスト数**: 283件 (delta 反映後。`cargo test --lib` の権威的総数は 528 で、pre-existing gap は別 PR でバックフィル予定)
+**総テスト数**: 286件 (delta 反映後。`cargo test --lib` の権威的総数は 531 で、pre-existing gap は別 PR でバックフィル予定)
 
 ---
 
@@ -253,8 +253,11 @@ AES-256-GCM暗号化・復号化のテスト。
 | `test_unicode_credentials` | 認証情報のUnicodeテスト | src/services/auth.rs | 402 |
 | `test_role_constants_values` | ロール定数の値確認 | src/services/auth.rs | 417 |
 | `test_role_constants_uniqueness` | ロール定数の一意性確認 | src/services/auth.rs | 425 |
+| `invalid_credentials_maps_to_auth_invalid_credentials_code` | `AuthError::InvalidCredentials` → `ApiError { code: "auth_invalid_credentials" }` (PR14, Fable-5 #21) | src/services/auth.rs | 577 |
+| `database_error_maps_to_database_code` | `AuthError::DatabaseError` → `ApiError { code: "database" }` (PR14, Fable-5 #21) | src/services/auth.rs | 585 |
+| `security_error_maps_to_validation_code_with_message` | `AuthError::SecurityError` → `ApiError { code: "validation" }` で message 保持 (PR14, Fable-5 #21) | src/services/auth.rs | 593 |
 
-**合計**: 13件
+**合計**: 16件
 
 ### services/user_management.rs
 
@@ -521,7 +524,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **260件** |
+| **インラインテスト** | **263件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -529,7 +532,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | settings.rs | 12 |
 | api_error.rs | 9 |
 | services/master_data.rs | 2 |
-| services/auth.rs | 13 |
+| services/auth.rs | 16 |
 | services/user_management.rs | 13 |
 | services/encryption.rs | 8 |
 | services/account.rs | 5 |
@@ -543,7 +546,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/i18n.rs | 8 |
 | services/recurring.rs | 5 |
 | lib.rs | 6 |
-| **総計** | **283件** |
+| **総計** | **286件** |
 
 ---
 
