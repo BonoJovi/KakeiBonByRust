@@ -1391,6 +1391,29 @@ impl TransactionService {
         .fetch_all(&mut *tx)
         .await?;
 
+        // PR12 (Fable-5 #32): fetch every detail row for the user in
+        // one query and bucket by TRANSACTION_ID before the loop below,
+        // instead of running one SELECT per header. On a database with
+        // 1000 headers this collapses 1001 queries to 2. The SQL's
+        // `ORDER BY TRANSACTION_ID, DETAIL_ID` preserves the in-detail
+        // ordering the single-transaction query used to give us, so
+        // `detail_amounts` and the tax-recompute inputs are identical.
+        let all_detail_rows =
+            sqlx::query(sql_queries::TRANSACTION_DETAIL_GET_ALL_FOR_USER_RECALC)
+                .bind(user_id)
+                .fetch_all(&mut *tx)
+                .await?;
+        let mut details_by_txn: std::collections::HashMap<i64, Vec<DetailForRecalc>> =
+            std::collections::HashMap::new();
+        for row in all_detail_rows {
+            let txn_id: i64 = row.get("TRANSACTION_ID");
+            details_by_txn.entry(txn_id).or_default().push(DetailForRecalc {
+                amount: row.get("AMOUNT"),
+                amount_including_tax: row.get("AMOUNT_INCLUDING_TAX"),
+                tax_rate: row.get("TAX_RATE"),
+            });
+        }
+
         let total_headers = header_rows.len() as i64;
         let mut settings_corrected = 0i64;
         let mut total_overwritten = 0i64;
@@ -1404,20 +1427,10 @@ impl TransactionService {
             let included_before: i64 = header_row.get("TAX_INCLUDED_TYPE");
             let total_before: i64 = header_row.get("TOTAL_AMOUNT");
 
-            let detail_rows = sqlx::query(sql_queries::TRANSACTION_DETAIL_GET_FOR_RECALC)
-                .bind(txn_id)
-                .bind(user_id)
-                .fetch_all(&mut *tx)
-                .await?;
-
-            let details: Vec<DetailForRecalc> = detail_rows
-                .iter()
-                .map(|r| DetailForRecalc {
-                    amount: r.get("AMOUNT"),
-                    amount_including_tax: r.get("AMOUNT_INCLUDING_TAX"),
-                    tax_rate: r.get("TAX_RATE"),
-                })
-                .collect();
+            // Take the pre-loaded details for this header (removing to
+            // release memory as we go); a header with no detail rows
+            // yields an empty Vec, matching the prior fetch behaviour.
+            let details = details_by_txn.remove(&txn_id).unwrap_or_default();
             let detail_amounts: Vec<i64> = details.iter().map(|d| d.amount).collect();
 
             // First, prefer to keep the user-entered TOTAL_AMOUNT verbatim by
