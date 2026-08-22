@@ -178,8 +178,25 @@ pub enum CategoryFilter {
 
 impl CategoryFilter {
     /// Generate SQL fragment + bind values for category filtering.
-    /// PR5 (Fable-5 #25): category codes now bind rather than interpolate
+    ///
+    /// PR5 (Fable-5 #25): category codes bind rather than interpolate
     /// through the old `escape_sql_literal` helper.
+    ///
+    /// PR6 (Fable-5 #17): `Category2` and `Category3` now reference
+    /// `td.CATEGORY{2,3}_CODE` because those columns live on
+    /// `TRANSACTIONS_DETAIL`, not `TRANSACTIONS_HEADER`. The old shape
+    /// (`th.CATEGORY2_CODE`) matched no existing column and would have
+    /// crashed with `no such column` the first time the drilldown UI
+    /// wired the filter through — see also the injection-safety pin in
+    /// tests which switched to `Category1` for exactly that reason.
+    ///
+    /// Callers: `Category2`/`Category3` filters are only valid when
+    /// the surrounding query joins `TRANSACTIONS_DETAIL td` — i.e. inside
+    /// `build_detail_query` (`GroupBy::Category2/3/Product`). Applying
+    /// them to a header-only query (`GroupBy::Category1/Shop/Date`) or
+    /// to `build_account_aggregation_query` will still fail with
+    /// `no such column: td.*`; that surfaces the misuse fast rather
+    /// than silently returning the wrong rows.
     pub fn to_sql_parts(&self) -> (String, Vec<BindValue>) {
         match self {
             CategoryFilter::Category1(cat1) => (
@@ -187,11 +204,11 @@ impl CategoryFilter {
                 vec![BindValue::Str(cat1.clone())],
             ),
             CategoryFilter::Category2(cat1, cat2) => (
-                "th.CATEGORY1_CODE = ? AND th.CATEGORY2_CODE = ?".to_string(),
+                "td.CATEGORY1_CODE = ? AND td.CATEGORY2_CODE = ?".to_string(),
                 vec![BindValue::Str(cat1.clone()), BindValue::Str(cat2.clone())],
             ),
             CategoryFilter::Category3(cat1, cat2, cat3) => (
-                "th.CATEGORY1_CODE = ? AND th.CATEGORY2_CODE = ? AND th.CATEGORY3_CODE = ?"
+                "td.CATEGORY1_CODE = ? AND td.CATEGORY2_CODE = ? AND td.CATEGORY3_CODE = ?"
                     .to_string(),
                 vec![
                     BindValue::Str(cat1.clone()),
@@ -986,9 +1003,22 @@ fn build_account_aggregation_query(request: &AggregationRequest) -> (String, Vec
     let order_field = request.order_by.to_order_by_field();
     let sort_order = request.sort_order.to_sql();
 
-    // Build additional filter conditions (amount, shop, scheduled, etc.)
-    // Kept as (sql, binds) pairs so the four UNION ALL branches below can
-    // each replay them in the same order without re-running the builders.
+    // Build additional filter conditions (amount, shop, scheduled,
+    // category). Kept as (sql, binds) pairs so the four UNION ALL
+    // branches below can each replay them in the same order without
+    // re-running the builders.
+    //
+    // PR6 (Fable-5 #18): `request.filter.category` used to be silently
+    // dropped here, so `group_by = "account"` combined with a category
+    // constraint returned every transaction's account flow instead of
+    // the filtered subset — a bloated total with no error to trace.
+    // `Category1` bindings target `th.CATEGORY1_CODE` (present on
+    // TRANSACTIONS_HEADER) and work cleanly. `Category2`/`Category3`
+    // bind `td.CATEGORY*_CODE` (see CategoryFilter::to_sql_parts docs),
+    // which is unresolved here because this query never joins
+    // TRANSACTIONS_DETAIL — SQLite reports `no such column: td.*`
+    // and the misuse surfaces fast instead of silently returning the
+    // wrong rows.
     let mut additional_conditions: Vec<String> = Vec::new();
     let mut additional_binds: Vec<BindValue> = Vec::new();
     if !request.filter.include_scheduled {
@@ -997,6 +1027,13 @@ fn build_account_aggregation_query(request: &AggregationRequest) -> (String, Vec
     if let Some(ref amount) = request.filter.amount {
         if amount.has_condition() {
             let (sql, more) = amount.to_sql_parts();
+            additional_conditions.push(sql);
+            additional_binds.extend(more);
+        }
+    }
+    if let Some(ref category) = request.filter.category {
+        if category.has_condition() {
+            let (sql, more) = category.to_sql_parts();
             additional_conditions.push(sql);
             additional_binds.extend(more);
         }
@@ -2716,6 +2753,81 @@ mod tests {
             results.is_empty(),
             "malicious payload must match zero rows (would have been -108 if inlined): {:?}",
             results
+        );
+    }
+
+    // Regression pin for PR6 / Fable-5 #17. Category2 and Category3
+    // filters used to reference `th.CATEGORY2_CODE` / `th.CATEGORY3_CODE`
+    // — columns that never existed on TRANSACTIONS_HEADER. The corrected
+    // shape targets `td.CATEGORY2_CODE` / `td.CATEGORY3_CODE`, which
+    // resolve against the detail-level JOIN that build_detail_query
+    // already sets up.
+    #[test]
+    fn test_category_filter_category2_targets_detail_column() {
+        let filter = CategoryFilter::Category2("EXPENSE".to_string(), "FOOD".to_string());
+        let (sql, _binds) = filter.to_sql_parts();
+        assert!(
+            sql.contains("td.CATEGORY1_CODE = ?") && sql.contains("td.CATEGORY2_CODE = ?"),
+            "Category2 must target detail-scope columns: {}",
+            sql
+        );
+        assert!(
+            !sql.contains("th.CATEGORY2_CODE"),
+            "Category2 must not reference the non-existent th.CATEGORY2_CODE: {}",
+            sql
+        );
+    }
+
+    #[test]
+    fn test_category_filter_category3_targets_detail_column() {
+        let filter = CategoryFilter::Category3(
+            "EXPENSE".to_string(),
+            "FOOD".to_string(),
+            "GROCERY".to_string(),
+        );
+        let (sql, _binds) = filter.to_sql_parts();
+        assert!(
+            sql.contains("td.CATEGORY2_CODE = ?") && sql.contains("td.CATEGORY3_CODE = ?"),
+            "Category3 must target detail-scope columns: {}",
+            sql
+        );
+        assert!(
+            !sql.contains("th.CATEGORY2_CODE") && !sql.contains("th.CATEGORY3_CODE"),
+            "Category3 must not reference non-existent th.CATEGORY*_CODE: {}",
+            sql
+        );
+    }
+
+    // Regression pin for PR6 / Fable-5 #18. The account UNION ALL
+    // query used to build its WHERE clause from scratch and drop
+    // request.filter.category on the floor — a Category1 filter would
+    // silently expand into every account's total. Confirm the filter
+    // now reaches all four branches and that its binds show up 4x.
+    #[test]
+    fn test_account_query_applies_category_filter_to_all_union_branches() {
+        let date = NaiveDate::from_ymd_opt(2026, 5, 1).unwrap();
+        let filter = AggregationFilter::new(DateFilter::From(date))
+            .with_category(CategoryFilter::Category1("EXPENSE".to_string()));
+        let request = AggregationRequest::new(1, filter, GroupBy::Account);
+
+        let (sql, binds) = build_query(&request, "ja");
+
+        // Category1 predicate is present in the SQL and binds hold the
+        // literal 4 times (one per UNION ALL branch).
+        let occurrences = sql.matches("th.CATEGORY1_CODE = ?").count();
+        assert_eq!(
+            occurrences, 4,
+            "expected the Category1 bind placeholder in all four branches: {}",
+            sql
+        );
+        let expense_binds = binds
+            .iter()
+            .filter(|b| matches!(b, BindValue::Str(s) if s == "EXPENSE"))
+            .count();
+        assert_eq!(
+            expense_binds, 4,
+            "the category filter must be bound once per UNION branch: {:?}",
+            binds
         );
     }
 }
