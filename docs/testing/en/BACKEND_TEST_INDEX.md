@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-08-22 JST  
-**Total Tests**: 286 (delta-tracked; the full authoritative count from `cargo test --lib` is 531, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 289 (delta-tracked; the full authoritative count from `cargo test --lib` is 534, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -181,8 +181,11 @@ Database initialization and migration tests.
 | `test_transactions_detail_migration` | Test transactions_detail table migration | src/db.rs | 217 |
 | `test_migrate_survives_orphaned_memo_reference` | Migration cope with FK-orphaned MEMO_ID from legacy DBs (Fable-5 #11) | src/db.rs | 1032 |
 | `test_migrate_leaves_foreign_keys_on` | PRAGMA foreign_keys is restored to ON on the acquired connection after migration (Fable-5 #11) | src/db.rs | 1137 |
+| `migrate_shops_unique_dedupes_and_repoints_references` | End-to-end proof that duplicate SHOPS rows collapse onto the smallest SHOP_ID, TRANSACTIONS_HEADER + RECURRING_RULES references are repointed, the unique index is created, and further duplicate inserts are rejected (PR15, Fable-5 #20) | src/db.rs | 1373 |
+| `migrate_shops_unique_is_idempotent` | A second run of a successful migration is a no-op and leaves the data untouched (PR15, Fable-5 #20) | src/db.rs | 1424 |
+| `migrate_shops_unique_scopes_per_user` | User A and User B may each own a shop with the same SHOP_NAME — the uniqueness scope is per-user (PR15, Fable-5 #20) | src/db.rs | 1437 |
 
-**Total**: 4 tests
+**Total**: 7 tests
 
 ### settings.rs
 
@@ -524,11 +527,11 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **263** |
+| **Inline Tests** | **266** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
-| db.rs | 4 |
+| db.rs | 7 |
 | settings.rs | 12 |
 | api_error.rs | 9 |
 | services/master_data.rs | 2 |
@@ -546,7 +549,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/i18n.rs | 8 |
 | services/recurring.rs | 5 |
 | lib.rs | 6 |
-| **Total** | **286** |
+| **Total** | **289** |
 
 ---
 

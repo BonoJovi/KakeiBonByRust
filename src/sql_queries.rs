@@ -990,6 +990,97 @@ pub const MIGRATE_TRANSACTIONS_DETAIL_DROP_OLD: &str = "DROP TABLE TRANSACTIONS_
 
 pub const MIGRATE_TRANSACTIONS_DETAIL_RENAME_NEW: &str = "ALTER TABLE TRANSACTIONS_DETAIL_NEW RENAME TO TRANSACTIONS_DETAIL";
 
+// PR15 (Fable-5 #20): SHOPS `UNIQUE(USER_ID, SHOP_NAME)` migration.
+// dbaccess.sql adds the inline constraint for fresh installs; these
+// constants back the idempotent migration for existing DBs.
+
+/// Any pre-existing unique index (auto-index from an inline UNIQUE or a
+/// manually created one from a previous migration run) that covers
+/// exactly `(USER_ID, SHOP_NAME)`. The migration skips its work when
+/// this returns > 0.
+pub const SHOPS_HAS_UNIQUE_USER_NAME_INDEX: &str = r#"
+SELECT COUNT(*)
+FROM sqlite_master m
+WHERE m.type = 'index'
+  AND m.tbl_name = 'SHOPS'
+  AND EXISTS (
+      SELECT 1 FROM pragma_index_list('SHOPS') il
+      WHERE il.name = m.name AND il."unique" = 1
+  )
+  AND (
+      SELECT GROUP_CONCAT(name, ',') FROM (
+          SELECT name FROM pragma_index_info(m.name) ORDER BY seqno
+      )
+  ) = 'USER_ID,SHOP_NAME'
+"#;
+
+/// Repoint every TRANSACTIONS_HEADER.SHOP_ID that references a duplicate
+/// SHOPS row to the earliest (surviving) SHOP_ID within the same
+/// (USER_ID, SHOP_NAME) group. Idempotent: rows already pointing at the
+/// minimum id are a no-op.
+pub const MIGRATE_SHOPS_UNIQUE_REPOINT_HEADER: &str = r#"
+UPDATE TRANSACTIONS_HEADER
+SET SHOP_ID = (
+    SELECT MIN(s2.SHOP_ID)
+    FROM SHOPS s2, SHOPS s1
+    WHERE s1.SHOP_ID = TRANSACTIONS_HEADER.SHOP_ID
+      AND s2.USER_ID = s1.USER_ID
+      AND s2.SHOP_NAME = s1.SHOP_NAME
+)
+WHERE SHOP_ID IN (
+    SELECT s.SHOP_ID FROM SHOPS s
+    WHERE EXISTS (
+        SELECT 1 FROM SHOPS s2
+        WHERE s2.USER_ID = s.USER_ID
+          AND s2.SHOP_NAME = s.SHOP_NAME
+          AND s2.SHOP_ID < s.SHOP_ID
+    )
+)
+"#;
+
+/// Same shape as [`MIGRATE_SHOPS_UNIQUE_REPOINT_HEADER`] for the
+/// recurring-rule table. RULE_ID rows survive; only the shop pointer
+/// moves to the surviving id.
+pub const MIGRATE_SHOPS_UNIQUE_REPOINT_RECURRING: &str = r#"
+UPDATE RECURRING_RULES
+SET SHOP_ID = (
+    SELECT MIN(s2.SHOP_ID)
+    FROM SHOPS s2, SHOPS s1
+    WHERE s1.SHOP_ID = RECURRING_RULES.SHOP_ID
+      AND s2.USER_ID = s1.USER_ID
+      AND s2.SHOP_NAME = s1.SHOP_NAME
+)
+WHERE SHOP_ID IN (
+    SELECT s.SHOP_ID FROM SHOPS s
+    WHERE EXISTS (
+        SELECT 1 FROM SHOPS s2
+        WHERE s2.USER_ID = s.USER_ID
+          AND s2.SHOP_NAME = s.SHOP_NAME
+          AND s2.SHOP_ID < s.SHOP_ID
+    )
+)
+"#;
+
+/// Delete duplicate SHOPS rows, keeping the smallest SHOP_ID per
+/// (USER_ID, SHOP_NAME) group. Safe to run after the repoint steps
+/// above — no live reference is left pointing at the doomed rows.
+pub const MIGRATE_SHOPS_UNIQUE_DELETE_DUPLICATES: &str = r#"
+DELETE FROM SHOPS
+WHERE EXISTS (
+    SELECT 1 FROM SHOPS s2
+    WHERE s2.USER_ID = SHOPS.USER_ID
+      AND s2.SHOP_NAME = SHOPS.SHOP_NAME
+      AND s2.SHOP_ID < SHOPS.SHOP_ID
+)
+"#;
+
+/// Create the unique index that enforces (USER_ID, SHOP_NAME) going
+/// forward. `IF NOT EXISTS` makes the migration itself re-runnable.
+pub const MIGRATE_SHOPS_UNIQUE_CREATE_INDEX: &str = r#"
+CREATE UNIQUE INDEX IF NOT EXISTS idx_shops_user_unique_name
+    ON SHOPS(USER_ID, SHOP_NAME)
+"#;
+
 // Check if CATEGORY2_CODE has NOT NULL constraint (notnull=1 means NOT NULL)
 pub const CHECK_CATEGORY2_NOT_NULL: &str = r#"
 SELECT COALESCE(MAX("notnull"), 0) as is_not_null

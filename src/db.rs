@@ -542,6 +542,58 @@ impl Database {
         Ok(())
     }
 
+    /// PR15 (Fable-5 #20): make SHOPS.SHOP_NAME unique per user.
+    ///
+    /// Fresh DBs pick up `UNIQUE(USER_ID, SHOP_NAME)` from the CREATE
+    /// TABLE clause in dbaccess.sql, which auto-creates the underlying
+    /// index. Existing DBs may already carry duplicate rows because the
+    /// old code path only ran a race-vulnerable SELECT-then-INSERT
+    /// dedup check — this migration walks each duplicate group, moves
+    /// live references (TRANSACTIONS_HEADER.SHOP_ID,
+    /// RECURRING_RULES.SHOP_ID) onto the surviving smallest SHOP_ID,
+    /// deletes the losers, then creates a manually-named UNIQUE index
+    /// so the constraint is enforced going forward.
+    ///
+    /// Everything after the initial no-op probe runs inside a single
+    /// transaction so a mid-migration failure rolls back. The migration
+    /// is idempotent: re-running after success is a no-op because the
+    /// probe finds the index and returns early.
+    pub async fn migrate_shops_unique(&self) -> Result<(), sqlx::Error> {
+        let has_unique: i64 = sqlx::query_scalar(sql_queries::SHOPS_HAS_UNIQUE_USER_NAME_INDEX)
+            .fetch_one(&self.pool)
+            .await?;
+        if has_unique > 0 {
+            // Fresh installs (auto-index from the inline UNIQUE) and DBs
+            // that already went through this migration both take this
+            // branch.
+            return Ok(());
+        }
+
+        let mut tx = self.pool.begin().await?;
+
+        // 1. Move any transaction / recurring-rule reference off the
+        //    doomed duplicate rows and onto the surviving smallest id.
+        sqlx::query(sql_queries::MIGRATE_SHOPS_UNIQUE_REPOINT_HEADER)
+            .execute(&mut *tx)
+            .await?;
+        sqlx::query(sql_queries::MIGRATE_SHOPS_UNIQUE_REPOINT_RECURRING)
+            .execute(&mut *tx)
+            .await?;
+
+        // 2. Drop the duplicate SHOPS rows.
+        sqlx::query(sql_queries::MIGRATE_SHOPS_UNIQUE_DELETE_DUPLICATES)
+            .execute(&mut *tx)
+            .await?;
+
+        // 3. Create the unique index that will refuse future duplicates.
+        sqlx::query(sql_queries::MIGRATE_SHOPS_UNIQUE_CREATE_INDEX)
+            .execute(&mut *tx)
+            .await?;
+
+        tx.commit().await?;
+        Ok(())
+    }
+
     /// Create new tables for v2.1.0 (idempotent via IF NOT EXISTS).
     async fn create_recurring_tables(&self) -> Result<(), sqlx::Error> {
         sqlx::query(sql_queries::CREATE_RECURRING_RULES_TABLE)
@@ -1252,5 +1304,145 @@ mod tests {
 
         drop(db);
         let _ = std::fs::remove_file(&test_db_path);
+    }
+
+    // ---- PR15 / Fable-5 #20 — migrate_shops_unique tests ----
+    //
+    // Fresh installs pick up the inline `UNIQUE(USER_ID, SHOP_NAME)`
+    // constraint from dbaccess.sql and its auto-index; existing DBs
+    // reach here without either. These tests spin up the pre-#20
+    // schema (SHOPS with no UNIQUE + the two tables that carry live
+    // SHOP_ID references), insert duplicate + referenced rows, and
+    // confirm the migration dedupes, repoints, and pins the constraint.
+
+    /// SHOPS DDL as it shipped BEFORE the PR15 inline UNIQUE — no
+    /// constraint, so the migration is the one that adds it.
+    const LEGACY_SHOPS_DDL: &str = r#"
+        CREATE TABLE SHOPS (
+            SHOP_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+            USER_ID INTEGER NOT NULL,
+            SHOP_NAME TEXT NOT NULL,
+            MEMO TEXT,
+            DISPLAY_ORDER INTEGER NOT NULL DEFAULT 0,
+            IS_DISABLED INTEGER DEFAULT 0,
+            ENTRY_DT DATETIME NOT NULL DEFAULT (datetime('now')),
+            UPDATE_DT DATETIME
+        )
+    "#;
+
+    async fn setup_legacy_shops_db() -> Database {
+        let db = memory_db().await;
+        sqlx::query(LEGACY_SHOPS_DDL)
+            .execute(db.pool())
+            .await
+            .expect("legacy SHOPS");
+        // Minimal TRANSACTIONS_HEADER + RECURRING_RULES with just the
+        // columns the migration touches — the full schemas are noisier
+        // than the migration cares about.
+        sqlx::query(
+            "CREATE TABLE TRANSACTIONS_HEADER (TRANSACTION_ID INTEGER PRIMARY KEY, SHOP_ID INTEGER)",
+        )
+        .execute(db.pool())
+        .await
+        .expect("legacy TRANSACTIONS_HEADER");
+        sqlx::query(
+            "CREATE TABLE RECURRING_RULES (RULE_ID INTEGER PRIMARY KEY, SHOP_ID INTEGER)",
+        )
+        .execute(db.pool())
+        .await
+        .expect("legacy RECURRING_RULES");
+        db
+    }
+
+    async fn shop_ids(db: &Database) -> Vec<i64> {
+        sqlx::query_scalar::<_, i64>("SELECT SHOP_ID FROM SHOPS ORDER BY SHOP_ID")
+            .fetch_all(db.pool())
+            .await
+            .expect("SHOPS scan")
+    }
+
+    async fn unique_index_present(db: &Database) -> bool {
+        let count: i64 = sqlx::query_scalar(sql_queries::SHOPS_HAS_UNIQUE_USER_NAME_INDEX)
+            .fetch_one(db.pool())
+            .await
+            .expect("index probe");
+        count > 0
+    }
+
+    #[tokio::test]
+    async fn migrate_shops_unique_dedupes_and_repoints_references() {
+        let db = setup_legacy_shops_db().await;
+
+        // 3 SHOPS: (1, "AEON") and (1, "AEON") — duplicate pair; plus (1, "LAWSON").
+        // SHOP_IDs 1, 2, 3 respectively.
+        sqlx::query("INSERT INTO SHOPS (USER_ID, SHOP_NAME) VALUES (1, 'AEON')")
+            .execute(db.pool()).await.unwrap();
+        sqlx::query("INSERT INTO SHOPS (USER_ID, SHOP_NAME) VALUES (1, 'AEON')")
+            .execute(db.pool()).await.unwrap();
+        sqlx::query("INSERT INTO SHOPS (USER_ID, SHOP_NAME) VALUES (1, 'LAWSON')")
+            .execute(db.pool()).await.unwrap();
+
+        // Two TRANSACTIONS_HEADER rows: one points at the duplicate id (2),
+        // one at the surviving id (1). After migration both must point at 1.
+        sqlx::query("INSERT INTO TRANSACTIONS_HEADER (TRANSACTION_ID, SHOP_ID) VALUES (100, 1)")
+            .execute(db.pool()).await.unwrap();
+        sqlx::query("INSERT INTO TRANSACTIONS_HEADER (TRANSACTION_ID, SHOP_ID) VALUES (101, 2)")
+            .execute(db.pool()).await.unwrap();
+        // A RECURRING_RULES row also pointing at the doomed 2.
+        sqlx::query("INSERT INTO RECURRING_RULES (RULE_ID, SHOP_ID) VALUES (200, 2)")
+            .execute(db.pool()).await.unwrap();
+
+        db.migrate_shops_unique().await.expect("migration");
+
+        // Duplicate SHOP_ID=2 is gone; 1 (AEON) and 3 (LAWSON) survive.
+        assert_eq!(shop_ids(&db).await, vec![1, 3]);
+
+        // References previously on 2 now sit on the surviving 1.
+        let hdr_shop: Vec<i64> = sqlx::query_scalar(
+            "SELECT SHOP_ID FROM TRANSACTIONS_HEADER ORDER BY TRANSACTION_ID",
+        )
+        .fetch_all(db.pool())
+        .await
+        .unwrap();
+        assert_eq!(hdr_shop, vec![1, 1], "duplicate ref must be repointed: {:?}", hdr_shop);
+
+        let rule_shop: Vec<i64> = sqlx::query_scalar("SELECT SHOP_ID FROM RECURRING_RULES")
+            .fetch_all(db.pool()).await.unwrap();
+        assert_eq!(rule_shop, vec![1]);
+
+        // The unique index is in place.
+        assert!(unique_index_present(&db).await, "unique index must be created");
+
+        // Inserting a new duplicate is rejected.
+        let dup = sqlx::query("INSERT INTO SHOPS (USER_ID, SHOP_NAME) VALUES (1, 'AEON')")
+            .execute(db.pool())
+            .await;
+        assert!(dup.is_err(), "post-migration duplicate insert must be rejected");
+    }
+
+    #[tokio::test]
+    async fn migrate_shops_unique_is_idempotent() {
+        let db = setup_legacy_shops_db().await;
+        sqlx::query("INSERT INTO SHOPS (USER_ID, SHOP_NAME) VALUES (1, 'AEON')")
+            .execute(db.pool()).await.unwrap();
+
+        db.migrate_shops_unique().await.expect("first run");
+        assert!(unique_index_present(&db).await);
+        // Second run finds the index already present and returns early.
+        db.migrate_shops_unique().await.expect("second run must be a no-op");
+        assert_eq!(shop_ids(&db).await, vec![1], "no data should be touched");
+    }
+
+    #[tokio::test]
+    async fn migrate_shops_unique_scopes_per_user() {
+        let db = setup_legacy_shops_db().await;
+        // Two users each have a shop named "AEON" — that's NOT a duplicate.
+        sqlx::query("INSERT INTO SHOPS (USER_ID, SHOP_NAME) VALUES (1, 'AEON')")
+            .execute(db.pool()).await.unwrap();
+        sqlx::query("INSERT INTO SHOPS (USER_ID, SHOP_NAME) VALUES (2, 'AEON')")
+            .execute(db.pool()).await.unwrap();
+
+        db.migrate_shops_unique().await.expect("migration");
+        assert_eq!(shop_ids(&db).await, vec![1, 2], "cross-user names must not be treated as duplicates");
     }
 }
