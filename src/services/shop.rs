@@ -129,12 +129,24 @@ pub async fn update_shop(
     Ok("Shop updated successfully".to_string())
 }
 
-/// Delete a shop (logical deletion)
+/// Delete a shop (logical deletion). Rejected with
+/// `ApiError::in_use("Shop")` when any transaction or recurring rule
+/// still names this shop; the frontend surfaces that as the "still in
+/// use" toast and steers the user to disable instead. See
+/// `sql_queries::SHOP_CHECK_IN_USE` for the exact scope.
 pub async fn delete_shop(
     pool: &SqlitePool,
     user_id: i64,
     shop_id: i64,
 ) -> Result<String, ApiError> {
+    let (in_use,): (i64,) = sqlx::query_as(sql_queries::SHOP_CHECK_IN_USE)
+        .bind(user_id)
+        .bind(shop_id)
+        .bind(user_id)
+        .bind(shop_id)
+        .fetch_one(pool)
+        .await?;
+    master_data::reject_if_in_use(SPEC.entity_label, in_use)?;
     master_data::run_delete_expect_one(&SPEC, pool, user_id, shop_id).await?;
     Ok("Shop deleted successfully".to_string())
 }
@@ -154,6 +166,19 @@ mod tests {
             .unwrap();
 
         sqlx::query(sql_queries::TEST_SHOP_CREATE_TABLE)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        // TRANSACTIONS_HEADER / RECURRING_RULES so SHOP_CHECK_IN_USE has
+        // tables to read against. `delete_shop` runs the guard on every
+        // call — including happy paths — so these must exist in every
+        // shop-service test.
+        sqlx::query(sql_queries::TEST_TRANSACTION_CREATE_HEADER_TABLE)
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query(sql_queries::TEST_CREATE_RECURRING_RULES_MINIMAL)
             .execute(&pool)
             .await
             .unwrap();
@@ -315,6 +340,77 @@ mod tests {
         let pool = setup_test_db().await;
         let err = delete_shop(&pool, 2, 9999).await.unwrap_err();
         assert_eq!(err.code, ApiError::CODE_NOT_FOUND);
+    }
+
+    #[tokio::test]
+    async fn test_delete_shop_rejected_when_referenced_by_transaction() {
+        let pool = setup_test_db().await;
+
+        let request = AddShopRequest {
+            shop_name: "イオン新宿店".to_string(),
+            memo: None,
+        };
+        add_shop(&pool, 2, request).await.unwrap();
+        let shop_id = get_shops(&pool, 2).await.unwrap()[0].shop_id;
+
+        sqlx::query(sql_queries::TEST_INSERT_TRANSACTIONS_HEADER_SHOP_REF)
+            .bind(2_i64)
+            .bind(shop_id)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let err = delete_shop(&pool, 2, shop_id).await.unwrap_err();
+        assert_eq!(err.code, ApiError::CODE_IN_USE);
+        assert_eq!(err.entity.as_deref(), Some("shop"));
+
+        // Shop still visible — the guard aborted before the logical delete.
+        assert_eq!(get_shops(&pool, 2).await.unwrap().len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_delete_shop_rejected_when_referenced_by_recurring_rule() {
+        let pool = setup_test_db().await;
+
+        let request = AddShopRequest {
+            shop_name: "イオン新宿店".to_string(),
+            memo: None,
+        };
+        add_shop(&pool, 2, request).await.unwrap();
+        let shop_id = get_shops(&pool, 2).await.unwrap()[0].shop_id;
+
+        sqlx::query(sql_queries::TEST_INSERT_RECURRING_RULES_SHOP_REF)
+            .bind(2_i64)
+            .bind(shop_id)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let err = delete_shop(&pool, 2, shop_id).await.unwrap_err();
+        assert_eq!(err.code, ApiError::CODE_IN_USE);
+    }
+
+    #[tokio::test]
+    async fn test_delete_shop_ignores_other_users_references() {
+        let pool = setup_test_db().await;
+
+        let request = AddShopRequest {
+            shop_name: "イオン新宿店".to_string(),
+            memo: None,
+        };
+        add_shop(&pool, 2, request).await.unwrap();
+        let shop_id = get_shops(&pool, 2).await.unwrap()[0].shop_id;
+
+        // Reference belongs to user 1, so user 2's delete must succeed.
+        sqlx::query(sql_queries::TEST_INSERT_TRANSACTIONS_HEADER_SHOP_REF)
+            .bind(1_i64)
+            .bind(shop_id)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let result = delete_shop(&pool, 2, shop_id).await;
+        assert!(result.is_ok());
     }
 
     #[tokio::test]

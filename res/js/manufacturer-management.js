@@ -12,7 +12,7 @@ import { clearValidationError, attachCharCounter } from './validation-display.js
 import { showToast } from './toast.js';
 import { MAX_NAME_LEN, MAX_MEMO_LEN } from './consts.js';
 import { escapeHtml } from './escape-html.js';
-import { saveMasterEntry } from './master-crud.js';
+import { saveMasterEntry, API_ERROR_CODES, formatApiError } from './master-crud.js';
 
 console.log('=== MANUFACTURER-MANAGEMENT.JS LOADED ===');
 
@@ -412,7 +412,13 @@ async function deleteManufacturer(manufacturerId) {
         return true;
     } catch (error) {
         console.error('Failed to delete manufacturer:', error);
-        showToast(i18n.t('manufacturer_mgmt.failed_to_delete'), { variant: 'error' });
+        // Delete-lock (master-delete-lock PR): reject-with-guidance when
+        // any product still names this manufacturer.
+        if (error?.code === API_ERROR_CODES.IN_USE) {
+            showToast(i18n.t('manufacturer_mgmt.delete_in_use'), { variant: 'error' });
+        } else {
+            showToast(i18n.t('manufacturer_mgmt.failed_to_delete') + ': ' + formatApiError(error), { variant: 'error' });
+        }
         return false;
     }
 }
