@@ -394,7 +394,14 @@ async function deleteAccount(accountCode, accountName) {
         await loadAccounts();
     } catch (error) {
         console.error('Failed to delete account:', error);
-        showToast(i18n.t('account_mgmt.failed_to_delete') + ': ' + formatApiError(error), { variant: 'error' });
+        // Delete-lock (master-delete-lock PR): reject-with-guidance when
+        // any transaction or recurring rule still names this account on
+        // either side (FROM / TO).
+        if (error?.code === API_ERROR_CODES.IN_USE) {
+            showToast(i18n.t('account_mgmt.delete_in_use'), { variant: 'error' });
+        } else {
+            showToast(i18n.t('account_mgmt.failed_to_delete') + ': ' + formatApiError(error), { variant: 'error' });
+        }
     }
 }
 

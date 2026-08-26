@@ -5,10 +5,10 @@
 > **A Modern Household Budget App with Focus on Readability and Usability**  
 > **見やすさと使いやすさを追求した、モダンな家計簿アプリケーション**
 
-[![Version](https://img.shields.io/badge/Version-2.7.0-blue)](https://github.com/BonoJovi/KakeiBonByRust/releases/tag/v2.7.0)
+[![Version](https://img.shields.io/badge/Version-2.8.0-blue)](https://github.com/BonoJovi/KakeiBonByRust/releases/tag/v2.8.0)
 [![Rust](https://img.shields.io/badge/Rust-1.70+-orange.svg)](https://www.rust-lang.org/)
 [![Tauri](https://img.shields.io/badge/Tauri-v2.11.1-blue.svg)](https://tauri.app/)
-[![Tests](https://img.shields.io/badge/tests-1054%20passing-brightgreen.svg)](#test-results--テスト結果)
+[![Tests](https://img.shields.io/badge/tests-1254%20passing-brightgreen.svg)](#test-results--テスト結果)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/bonojovi)
 
@@ -27,23 +27,25 @@
 いつもKakeiBonに気を留めていただき、誠にありがとうございます。
 プロジェクト発案者のBonoJovi(Yoshihiro NAKAHARA)です。
 
-**Ver.2.7.0を正式リリースいたしました！**
+**Ver.2.8.0を正式リリースいたしました！**
 
-Ver.2.7.0 は、外向きの新機能追加はない代わりに、内部品質・信頼性・パフォーマンスを一気に引き上げた「地盤固め」リリースです。2026-08-19 に実施した Fable-5 レビュー (計 43 項目) をきっかけに、14 個の PR に分けて集中的に潜在バグと構造的な脆さを潰しました。ユーザーの皆さんが日々の家計簿入力の中で直接体感できる変化は、次の 3 点に絞られます。
+Ver.2.8.0 は「マスタ整合性ガード」リリースです。口座 / 店舗 / メーカー / 商品マスタが他の画面で使用中のときは、削除ではなく「無効化」に誘導するようになりました。これまでは削除しても静かに論理削除されるだけで、既に登録した入出金や繰り返し予定からは「消えたはずのマスタ」を参照する状態が起き得ましたが、今後はユーザーが意図せず整合性を崩す動線が塞がれます。
 
 主な変化：
 
-- **一部の入出金画面で稀にバックエンドがクラッシュし得たケースを解消**: 月次画面などで想定外の値 (例: `month=13`) が渡るとバックエンドスレッドがパニックしていました。入口で早期に検証して安全にエラーを返すように変更
-- **起動が僅かに速くなりました**: 起動時のデータベース初期化を 1 トランザクションに束ねることで、`~500 回の fsync → 1 回` に圧縮。初回起動 / バージョンアップ直後で最も差が出ます
-- **店舗一覧に長期的に混入し得る重複行を整理**: 稀に発生し得た「同じ店舗名の行が 2 つ以上ある」状態を、v2.7.0 起動時に自動的に統合します (取引履歴の参照は有効な行に付け替え、無効化された古い行のみ削除)
+- **参照中マスタは削除拒否 + 無効化への誘導**: 口座・店舗・メーカー・商品を、以下から参照されているときは削除できなくなりました。トーストで「使用中のため削除できません。代わりに無効化してください」と案内されます。
+  - **口座**: 入出金 (FROM/TO) と繰り返し予定 (FROM/TO)
+  - **店舗**: 入出金と繰り返し予定
+  - **メーカー**: 商品マスタ (無効化された商品も参照とみなします)
+  - **商品**: 入出金明細
+- **非参照なら従来通り**: 使われていないマスタはこれまでと同様、削除ボタンで論理削除できます。挙動が変わるのは「参照中に削除しようとした場合だけ」です。
+- **他ユーザーの参照はブロックしません**: マスタはユーザー毎にスコープされているので、同名 / 同 ID が別ユーザーで使われていても自分の削除は通ります (安全性強化ですが、あなたの操作は自由です)。
 
-これに加えて、内部的には次のような改善を積みました：
+内部の改善：
 
-- カテゴリツリー取得や全履歴の再計算といった、これまで取引数に比例して重くなっていた処理を **N+1 クエリ撲滅** で一定時間に
-- 集計 SQL の全面パラメータ化 (SQL インジェクション耐性の底上げ)
-- 5 サービス (recurring / transaction / account / user_management / category / auth) のエラー契約を統一、ログイン / セットアップ画面での「日本語ラベル + 英語エラー」の混合表示を解消
-- 存在しないテーブルを参照していたレガシーコマンド 4 関数 (dead code) を削除、`net -281 行`
-- テスト総数 509 → 535 (+26)、全 PASS
+- 4 マスタ横断で共通の削除ロックガード (`ApiError::in_use`) を新設、全マスタで同じパターン
+- 参照件数は `SELECT EXISTS(...)` の早期打ち切り SQL で高速に判定
+- テスト総数 535 → 551 (+16)、全 PASS。「参照中 → 拒否」「他ユーザー参照 → 通る」の両方をマスタ毎に pin
 
 安定版リリースをご利用になりたい方は、[mainブランチ](https://github.com/BonoJovi/KakeiBonByRust/tree/main)をご参照ください。
 
@@ -55,7 +57,7 @@ GitHub の issue や e メールでのメッセージも受け付けています
 
 それでは、引き続き KakeiBon をご愛顧頂ますよう、お願い申し上げます。
 
-**2026-08-22 (JST) Written by Yoshihiro NAKAHARA**
+**2026-08-26 (JST) Written by Yoshihiro NAKAHARA**
 
 ---
 
@@ -64,23 +66,25 @@ GitHub の issue や e メールでのメッセージも受け付けています
 Thank you for your continued interest in KakeiBon.
 I'm BonoJovi (Yoshihiro NAKAHARA), the project initiator.
 
-**We have officially released Ver.2.7.0!**
+**We have officially released Ver.2.8.0!**
 
-Ver.2.7.0 is a "foundation-strengthening" release: no outward-facing new features, but a concentrated lift in internal quality, reliability, and performance. It stems from the Fable-5 code review conducted on 2026-08-19 (43 items in total), and lands as 14 PRs' worth of concentrated cleanup of latent bugs and structural fragility across the whole app. The changes you can directly experience in day-to-day use come down to three:
+Ver.2.8.0 is the "master-integrity guard" release. Accounts, shops, manufacturers, and products can no longer be deleted while they are still referenced from other screens — instead, KakeiBon guides you to *disable* them. Before this release, deletion would silently soft-remove the master row while historical transactions and recurring rules kept pointing at it; that path is now closed so you cannot accidentally break integrity while cleaning up.
 
 Key changes:
 
-- **A rare backend crash path on some transaction screens is closed**: certain monthly screens could panic the backend thread when an unexpected value (e.g. `month=13`) reached period handling. Input is now validated at the entry point and the error is surfaced cleanly
-- **Startup is slightly faster**: the database initialisation at boot is now wrapped in a single transaction, collapsing `~500 fsync operations → 1`. Most visible on the very first launch after install / version upgrade
-- **Long-standing duplicate rows in the shop list are consolidated**: any rare "two-plus rows with the same shop name" state is silently reconciled on the first boot of v2.7.0 (transaction references are repointed onto the active row, only the soft-deleted older rows are removed)
+- **Referenced masters are refused deletion and guided to disable**: accounts, shops, manufacturers, and products can no longer be deleted while any of the following names them. You get a toast saying *"Cannot delete this X because it is still used by Y. Disable it instead."*
+  - **Accounts**: transactions (FROM/TO) and recurring rules (FROM/TO)
+  - **Shops**: transactions and recurring rules
+  - **Manufacturers**: products (disabled products still count as a reference)
+  - **Products**: transaction details
+- **Unused masters still delete the same way**: nothing changes if the row is not referenced anywhere — the delete button still performs a logical delete. Only the "referenced but you tried to delete anyway" case changes.
+- **Cross-user references do NOT block your delete**: masters are user-scoped, so a same-name / same-id row belonging to another user does not affect your delete (this is a safety enhancement — your own actions stay free).
 
-On top of that, the following internal improvements shipped in the same release:
+Under the hood:
 
-- Category tree lookups and full-history recalc — both previously scaling with transaction count — are now flat via **N+1 query elimination**
-- Aggregation SQL is fully parameterised (a step up in SQL-injection resistance)
-- Error contract is unified across five services (recurring / transaction / account / user_management / category / auth); the "Japanese label + English error" mixed-language toasts on the login / setup screens are gone
-- Four legacy commands that referenced a table no migration ever created (dead code) are removed, `net -281 lines`
-- Test total: 509 → 535 (+26), all passing
+- A shared delete-lock guard (`ApiError::in_use`) is added across all four masters — same pattern everywhere
+- Reference presence is checked with `SELECT EXISTS(...)` early-termination SQL
+- Test total: 535 → 551 (+16), all passing. Each master pins both "referenced → refused" and "cross-user reference → still succeeds"
 
 If you would like to use the stable release version, please refer to the [main branch](https://github.com/BonoJovi/KakeiBonByRust/tree/main).
 
@@ -92,7 +96,7 @@ We welcome messages via GitHub issues or email, whether it's words of encouragem
 
 Thank you for your continued support of KakeiBon.
 
-**2026-08-22 (JST) Written by Yoshihiro NAKAHARA**
+**2026-08-26 (JST) Written by Yoshihiro NAKAHARA**
 
 </div>
 
@@ -307,10 +311,10 @@ Development is progressing smoothly, and we strive to update daily!
 
 | Metric | Count |
 |--------|-------|
-| 👁️ **Total Views** / 総閲覧数 | **196** |
-| 📦 **Total Clones** / 総クローン数 | **698** |
+| 👁️ **Total Views** / 総閲覧数 | **366** |
+| 📦 **Total Clones** / 総クローン数 | **1,089** |
 
-*Last Updated / 最終更新: 2026-08-22 01:33 UTC*
+*Last Updated / 最終更新: 2026-08-26 01:34 UTC*
 
 </div>
 <!-- STATS_END -->

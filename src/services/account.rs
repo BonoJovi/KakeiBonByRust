@@ -246,7 +246,12 @@ pub async fn update_account(
     Ok("Account updated successfully".to_string())
 }
 
-/// Delete an account (logical deletion)
+/// Delete an account (logical deletion). Rejected with
+/// `ApiError::in_use("Account")` when any transaction or recurring rule
+/// still names this account on either side (FROM/TO). See
+/// `sql_queries::ACCOUNT_CHECK_IN_USE`. Kept off the shared
+/// `MasterCrudSpec` path because the account handle is a String CODE,
+/// not an i64 id (Fable-5 #26 note in `account.rs`).
 pub async fn delete_account(
     pool: &SqlitePool,
     user_id: i64,
@@ -254,6 +259,17 @@ pub async fn delete_account(
 ) -> Result<String, ApiError> {
     // Normalize account code to uppercase
     let account_code = normalize_account_code(account_code);
+
+    let (in_use,): (i64,) = sqlx::query_as(sql_queries::ACCOUNT_CHECK_IN_USE)
+        .bind(user_id)
+        .bind(&account_code)
+        .bind(&account_code)
+        .bind(user_id)
+        .bind(&account_code)
+        .bind(&account_code)
+        .fetch_one(pool)
+        .await?;
+    master_data::reject_if_in_use(ENTITY_LABEL, in_use)?;
 
     // Same rows_affected treatment as delete_shop / delete_manufacturer /
     // delete_product (PR3, Fable-5 #26): a single logical-delete UPDATE
@@ -326,6 +342,19 @@ mod tests {
 
         // Create ACCOUNTS table
         sqlx::query(sql_queries::TEST_ACCOUNT_CREATE_ACCOUNTS_TABLE)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        // TRANSACTIONS_HEADER / RECURRING_RULES so ACCOUNT_CHECK_IN_USE
+        // has tables to read against. `delete_account` runs the guard on
+        // every call — including the "not in use" happy paths — so these
+        // must exist in every account-service test.
+        sqlx::query(sql_queries::TEST_TRANSACTION_CREATE_HEADER_TABLE)
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query(sql_queries::TEST_CREATE_RECURRING_RULES_MINIMAL)
             .execute(&pool)
             .await
             .unwrap();
@@ -792,6 +821,97 @@ mod tests {
         let err = delete_account(&pool, 2, "MISSING").await.unwrap_err();
         assert_eq!(err.code, ApiError::CODE_NOT_FOUND);
         assert_eq!(err.entity.as_deref(), Some("account"));
+    }
+
+    #[tokio::test]
+    async fn test_delete_account_rejected_when_referenced_as_from_account() {
+        let pool = setup_test_db().await;
+        add_test_account(&pool, "CASH", 0).await;
+
+        sqlx::query(sql_queries::TEST_INSERT_TRANSACTIONS_HEADER_ACCOUNT_REF)
+            .bind(2_i64)
+            .bind("CASH")
+            .bind("BANK")
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let err = delete_account(&pool, 2, "CASH").await.unwrap_err();
+        assert_eq!(err.code, ApiError::CODE_IN_USE);
+        assert_eq!(err.entity.as_deref(), Some("account"));
+
+        assert_eq!(get_accounts(&pool, 2).await.unwrap().len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_delete_account_rejected_when_referenced_as_to_account() {
+        let pool = setup_test_db().await;
+        add_test_account(&pool, "CASH", 0).await;
+
+        sqlx::query(sql_queries::TEST_INSERT_TRANSACTIONS_HEADER_ACCOUNT_REF)
+            .bind(2_i64)
+            .bind("BANK")
+            .bind("CASH")
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let err = delete_account(&pool, 2, "CASH").await.unwrap_err();
+        assert_eq!(err.code, ApiError::CODE_IN_USE);
+    }
+
+    #[tokio::test]
+    async fn test_delete_account_rejected_when_referenced_by_recurring_rule() {
+        let pool = setup_test_db().await;
+        add_test_account(&pool, "CASH", 0).await;
+
+        sqlx::query(sql_queries::TEST_INSERT_RECURRING_RULES_ACCOUNT_REF)
+            .bind(2_i64)
+            .bind("CASH")
+            .bind("BANK")
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let err = delete_account(&pool, 2, "CASH").await.unwrap_err();
+        assert_eq!(err.code, ApiError::CODE_IN_USE);
+    }
+
+    #[tokio::test]
+    async fn test_delete_account_ignores_other_users_references() {
+        let pool = setup_test_db().await;
+        add_test_account(&pool, "CASH", 0).await;
+
+        // User 1's transaction references the same code, but user 2's
+        // delete must succeed — codes are scoped by user.
+        sqlx::query(sql_queries::TEST_INSERT_TRANSACTIONS_HEADER_ACCOUNT_REF)
+            .bind(1_i64)
+            .bind("CASH")
+            .bind("BANK")
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        assert!(delete_account(&pool, 2, "CASH").await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_delete_account_normalizes_input_before_in_use_check() {
+        let pool = setup_test_db().await;
+        add_test_account(&pool, "CASH", 0).await;
+
+        sqlx::query(sql_queries::TEST_INSERT_TRANSACTIONS_HEADER_ACCOUNT_REF)
+            .bind(2_i64)
+            .bind("CASH")
+            .bind("BANK")
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        // Lower-case + spacing is normalised on the way in — the guard
+        // still sees CASH in the DB and blocks the delete.
+        let err = delete_account(&pool, 2, "  cash  ").await.unwrap_err();
+        assert_eq!(err.code, ApiError::CODE_IN_USE);
     }
 
     #[tokio::test]

@@ -11,7 +11,7 @@ import { createMenuBar, handleLogout, handleQuit } from './menu.js';
 import { clearValidationError, attachCharCounter } from './validation-display.js';
 import { showToast } from './toast.js';
 import { MAX_NAME_LEN, MAX_MEMO_LEN, SOURCE_SCREEN_TRANSACTION_MGMT } from './consts.js';
-import { saveMasterEntry } from './master-crud.js';
+import { saveMasterEntry, API_ERROR_CODES, formatApiError } from './master-crud.js';
 
 console.log('=== SHOP-MANAGEMENT.JS LOADED ===');
 
@@ -328,7 +328,16 @@ async function deleteShop(shopId) {
         return true;
     } catch (error) {
         console.error('Failed to delete shop:', error);
-        showToast(i18n.t('shop_mgmt.failed_to_delete'), { variant: 'error' });
+        // Delete-lock: master-delete-lock PR. When the backend reports the
+        // shop is still referenced by a transaction or a recurring rule,
+        // surface the dedicated "disable instead" toast so the user knows
+        // why the removal is refused. Everything else keeps the generic
+        // failure toast + `formatApiError` fallback used elsewhere.
+        if (error?.code === API_ERROR_CODES.IN_USE) {
+            showToast(i18n.t('shop_mgmt.delete_in_use'), { variant: 'error' });
+        } else {
+            showToast(i18n.t('shop_mgmt.failed_to_delete') + ': ' + formatApiError(error), { variant: 'error' });
+        }
         return false;
     }
 }

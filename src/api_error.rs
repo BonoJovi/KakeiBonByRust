@@ -47,6 +47,7 @@ impl ApiError {
     pub const CODE_NOT_FOUND: &'static str = "not_found";
     pub const CODE_MANUFACTURER_NOT_FOUND: &'static str = "manufacturer_not_found";
     pub const CODE_ADMIN_PROTECTED: &'static str = "admin_protected";
+    pub const CODE_IN_USE: &'static str = "in_use";
     pub const CODE_VALIDATION: &'static str = "validation";
     pub const CODE_DATABASE: &'static str = "database";
     // PR14 (Fable-5 #21) — auth-specific codes so the login / setup
@@ -100,6 +101,18 @@ impl ApiError {
         Self {
             code: Self::CODE_ADMIN_PROTECTED.to_string(),
             message: format!("Admin {} cannot be modified this way", entity.to_lowercase()),
+            entity: Some(entity.to_lowercase()),
+        }
+    }
+
+    /// Delete refused because the master row is still referenced by
+    /// other data (transactions, recurring rules, product master, etc.).
+    /// The frontend maps this to a "cannot delete: still in use" toast
+    /// so the user is directed to disable the row instead of removing it.
+    pub fn in_use(entity: &str) -> Self {
+        Self {
+            code: Self::CODE_IN_USE.to_string(),
+            message: format!("{} is still in use and cannot be deleted", entity),
             entity: Some(entity.to_lowercase()),
         }
     }
@@ -211,6 +224,14 @@ mod tests {
         assert_eq!(err.code, "admin_protected");
         assert_eq!(err.entity.as_deref(), Some("user"));
         assert!(err.message.contains("Admin"));
+    }
+
+    #[test]
+    fn in_use_carries_lowercased_entity_and_stable_code() {
+        let err = ApiError::in_use("Shop");
+        assert_eq!(err.code, "in_use");
+        assert_eq!(err.entity.as_deref(), Some("shop"));
+        assert!(err.message.contains("still in use"));
     }
 
     #[test]

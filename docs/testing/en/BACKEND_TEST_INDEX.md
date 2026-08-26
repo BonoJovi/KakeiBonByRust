@@ -2,8 +2,8 @@
 
 This document provides a complete index of all backend tests implemented in Rust.
 
-**Last Updated**: 2026-08-22 JST  
-**Total Tests**: 290 (delta-tracked; the full authoritative count from `cargo test --lib` is 535, and a follow-up pass will backfill the remaining pre-existing gap)
+**Last Updated**: 2026-08-26 JST  
+**Total Tests**: 306 (delta-tracked; the full authoritative count from `cargo test --lib` is 551, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -224,8 +224,9 @@ Settings management functionality tests.
 | `database_from_sqlx_row_not_found` | `sqlx::Error → ApiError::database` via `From<sqlx::Error>` | src/api_error.rs | 158 |
 | `serialises_with_snake_case_code_and_optional_entity` | Serialised JSON has snake_case `code` and populated `entity` field | src/api_error.rs | 165 |
 | `serialises_without_entity_key_when_none` | Serialised JSON omits `entity` when None (via `skip_serializing_if`) | src/api_error.rs | 174 |
+| `in_use_carries_lowercased_entity_and_stable_code` | `ApiError::in_use("Shop")` → `code="in_use"`, `entity="shop"` (master delete-lock guard) | src/api_error.rs | 230 |
 
-**Total**: 9 tests
+**Total**: 10 tests
 
 ### services/master_data.rs
 
@@ -235,8 +236,10 @@ Pure-Rust tests for the shared master-CRUD helpers (`MasterCrudSpec` + `ensure_u
 |---------------|-------------|------|------|
 | `ensure_update_affected_one_maps_zero_to_not_found` | `rows_affected == 0` on an UPDATE maps to `ApiError::not_found(entity)` from the spec | src/services/master_data.rs | 228 |
 | `ensure_update_affected_one_passes_positive_count` | Positive rows_affected returns Ok (boundary: 1, 42) | src/services/master_data.rs | 235 |
+| `reject_if_in_use_maps_positive_flag_to_in_use` | Positive in-use flag maps to `ApiError::in_use(entity)` (master delete-lock guard) | src/services/master_data.rs | 256 |
+| `reject_if_in_use_passes_when_flag_is_zero` | Zero in-use flag returns Ok (master delete-lock guard) | src/services/master_data.rs | 263 |
 
-**Total**: 2 tests
+**Total**: 4 tests
 
 ### services/auth.rs
 
@@ -313,8 +316,13 @@ Account management service tests. Assertions on empty-name and duplicate-code pa
 | `test_update_account_rejects_empty_name` | Empty account name via update returns `ApiError { code: "validation" }` (Fable-5 #16, #23) | src/services/account.rs | 627 |
 | `test_update_account_not_found_has_stable_code_and_entity` | Updating a missing account returns `ApiError { code: "not_found", entity: "account" }` (Fable-5 #23) | src/services/account.rs | 815 |
 | `test_delete_account_not_found_has_stable_code_and_entity` | Deleting a missing account returns `ApiError { code: "not_found" }` (Fable-5 #23) | src/services/account.rs | 837 |
+| `test_delete_account_rejected_when_referenced_as_from_account` | Delete rejected with `ApiError { code: "in_use" }` when a TRANSACTIONS_HEADER row names the account as FROM (master delete-lock) | src/services/account.rs | 827 |
+| `test_delete_account_rejected_when_referenced_as_to_account` | Delete rejected with `ApiError { code: "in_use" }` when a TRANSACTIONS_HEADER row names the account as TO (master delete-lock) | src/services/account.rs | 847 |
+| `test_delete_account_rejected_when_referenced_by_recurring_rule` | Delete rejected with `ApiError { code: "in_use" }` when any RECURRING_RULES row names the account (master delete-lock) | src/services/account.rs | 864 |
+| `test_delete_account_ignores_other_users_references` | Cross-user references to the same ACCOUNT_CODE do NOT block delete — codes are user-scoped (master delete-lock) | src/services/account.rs | 881 |
+| `test_delete_account_normalizes_input_before_in_use_check` | Delete input (`"  cash  "`) is uppercased/trimmed before the CHECK_IN_USE query so the guard fires (master delete-lock) | src/services/account.rs | 899 |
 
-**Total**: 5 tests
+**Total**: 10 tests
 
 ### services/category.rs
 
@@ -365,8 +373,11 @@ Manufacturer management service tests. Empty/duplicate assertion tests renamed t
 | `test_update_missing_manufacturer_returns_not_found_code` | Updating a missing manufacturer returns `ApiError { code: "not_found", entity: "manufacturer" }` (Fable-5 #23) | src/services/manufacturer.rs | 383 |
 | `test_delete_missing_manufacturer_returns_not_found_code` | Deleting a missing manufacturer returns `ApiError { code: "not_found" }` (Fable-5 #23) | src/services/manufacturer.rs | 398 |
 | `test_update_same_manufacturer_name` | Same name update (allowed) | src/services/manufacturer.rs | 405 |
+| `test_delete_manufacturer_rejected_when_referenced_by_product` | Delete rejected with `ApiError { code: "in_use", entity: "manufacturer" }` when any PRODUCTS row names the manufacturer (master delete-lock) | src/services/manufacturer.rs | 374 |
+| `test_delete_manufacturer_rejected_when_only_disabled_products_reference` | Even IS_DISABLED products count as a reference — the FK link exists and the products screen still surfaces them (master delete-lock) | src/services/manufacturer.rs | 402 |
+| `test_delete_manufacturer_ignores_other_users_references` | Cross-user products with the same MANUFACTURER_ID do NOT block delete — scoping is by USER_ID (master delete-lock) | src/services/manufacturer.rs | 429 |
 
-**Total**: 9 tests
+**Total**: 12 tests
 
 ### services/product.rs
 
@@ -380,13 +391,15 @@ Product management service tests.
 | `test_delete_product` | Test product deletion | src/services/product.rs | 342 |
 | `test_empty_product_name` | Empty product name error | src/services/product.rs | 367 |
 | `test_add_duplicate_product` | Duplicate product name error | src/services/product.rs | 383 |
-| `test_manufacturer_deletion_sets_product_manufacturer_to_null` | Manufacturer deletion impact on products (CASCADE NULL) | src/services/product.rs | 409 |
+| `test_manufacturer_deletion_rejected_while_product_references_it` | Manufacturer delete rejected with `ApiError { code: "in_use", entity: "manufacturer" }` while any product still references it — renamed from `test_manufacturer_deletion_sets_product_manufacturer_to_null` when the master delete-lock landed (was: fallback ON DELETE SET NULL) | src/services/product.rs | 512 |
 | `test_add_product_rejects_foreign_manufacturer_id` | Cross-owner manufacturer_id on add returns "Manufacturer not found" (Fable-5 #13) | src/services/product.rs | 716 |
 | `test_add_product_rejects_nonexistent_manufacturer_id` | Nonexistent manufacturer_id on add returns "Manufacturer not found" (Fable-5 #13) | src/services/product.rs | 767 |
 | `test_update_product_rejects_foreign_manufacturer_id` | Cross-owner manufacturer_id on update returns "Manufacturer not found" (Fable-5 #13) | src/services/product.rs | 792 |
 | `test_product_join_scopes_manufacturer_by_user_id` | PRODUCT_GET_* JOIN must not leak another user's manufacturer name (Fable-5 #13) | src/services/product.rs | 871 |
+| `test_delete_product_rejected_when_referenced_by_transaction_detail` | Delete rejected with `ApiError { code: "in_use", entity: "product" }` when any TRANSACTIONS_DETAIL row (scoped via TRANSACTIONS_HEADER.USER_ID) names the product (master delete-lock) | src/services/product.rs | 444 |
+| `test_delete_product_ignores_other_users_transaction_details` | Cross-user detail rows do NOT block delete — scoping runs through TRANSACTIONS_HEADER.USER_ID (master delete-lock) | src/services/product.rs | 481 |
 
-**Total**: 11 tests
+**Total**: 13 tests
 
 ### services/shop.rs
 
@@ -403,8 +416,11 @@ Shop management service tests. Empty/duplicate assertion tests renamed to `_retu
 | `test_update_missing_shop_returns_not_found_code` | Updating a missing shop returns `ApiError { code: "not_found", entity: "shop" }` (Fable-5 #23) | src/services/shop.rs | 363 |
 | `test_delete_missing_shop_returns_not_found_code` | Deleting a missing shop returns `ApiError { code: "not_found" }` (Fable-5 #23) | src/services/shop.rs | 375 |
 | `test_update_same_shop_name` | Same name update (allowed) | src/services/shop.rs | 382 |
+| `test_delete_shop_rejected_when_referenced_by_transaction` | Delete rejected with `ApiError { code: "in_use", entity: "shop" }` when any TRANSACTIONS_HEADER row names the shop (master delete-lock) | src/services/shop.rs | 346 |
+| `test_delete_shop_rejected_when_referenced_by_recurring_rule` | Delete rejected with `ApiError { code: "in_use" }` when any RECURRING_RULES row names the shop (master delete-lock) | src/services/shop.rs | 372 |
+| `test_delete_shop_ignores_other_users_references` | Cross-user references to the same SHOP_ID do NOT block delete — scoping is by USER_ID (master delete-lock) | src/services/shop.rs | 394 |
 
-**Total**: 9 tests
+**Total**: 12 tests
 
 ### services/transaction.rs
 
@@ -528,29 +544,29 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **267** |
+| **Inline Tests** | **283** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
 | db.rs | 8 |
 | settings.rs | 12 |
-| api_error.rs | 9 |
-| services/master_data.rs | 2 |
+| api_error.rs | 10 |
+| services/master_data.rs | 4 |
 | services/auth.rs | 16 |
 | services/user_management.rs | 13 |
 | services/encryption.rs | 8 |
-| services/account.rs | 5 |
+| services/account.rs | 10 |
 | services/category.rs | 25 |
-| services/manufacturer.rs | 9 |
-| services/product.rs | 11 |
-| services/shop.rs | 9 |
+| services/manufacturer.rs | 12 |
+| services/product.rs | 13 |
+| services/shop.rs | 12 |
 | services/transaction.rs | 21 |
 | services/aggregation.rs | 10 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 5 |
 | lib.rs | 6 |
-| **Total** | **290** |
+| **Total** | **306** |
 
 ---
 

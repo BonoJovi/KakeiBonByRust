@@ -209,6 +209,21 @@ pub fn ensure_update_affected_one(
     Ok(())
 }
 
+/// Translate a `SELECT EXISTS(...)` result — bound and executed by the
+/// caller because the referenced tables (and therefore the number of
+/// `?` slots) differ per master — into
+/// `Err(ApiError::in_use(entity_label))` when the row is still
+/// referenced by other data. Kept as a plain function so each service's
+/// delete path can stay a linear read: run the master's own
+/// `CHECK_IN_USE` query, hand the flag here, then call
+/// [`run_delete_expect_one`].
+pub fn reject_if_in_use(entity_label: &str, in_use_flag: i64) -> Result<(), ApiError> {
+    if in_use_flag != 0 {
+        return Err(ApiError::in_use(entity_label));
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -235,5 +250,17 @@ mod tests {
     fn ensure_update_affected_one_passes_positive_count() {
         assert!(ensure_update_affected_one(&TEST_SPEC, 1).is_ok());
         assert!(ensure_update_affected_one(&TEST_SPEC, 42).is_ok());
+    }
+
+    #[test]
+    fn reject_if_in_use_maps_positive_flag_to_in_use() {
+        let err = reject_if_in_use(TEST_SPEC.entity_label, 1).unwrap_err();
+        assert_eq!(err.code, ApiError::CODE_IN_USE);
+        assert_eq!(err.entity.as_deref(), Some("shop"));
+    }
+
+    #[test]
+    fn reject_if_in_use_passes_when_flag_is_zero() {
+        assert!(reject_if_in_use(TEST_SPEC.entity_label, 0).is_ok());
     }
 }

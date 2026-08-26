@@ -1884,3 +1884,21 @@ INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESO
 INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2432, 'error.invalid_credentials', 'ja', 'ユーザー名またはパスワードが正しくありません。', 'error', 'ログイン失敗: 認証情報不正 (PR14)', datetime('now'));
 INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2433, 'error.setup_completed', 'en', 'Setup has already been completed.', 'error', 'Registration refused: setup done (PR14)', datetime('now'));
 INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2434, 'error.setup_completed', 'ja', 'セットアップは既に完了しています。', 'error', '登録拒否: セットアップ済み (PR14)', datetime('now'));
+
+-- ============================================================================
+-- Master delete-lock toasts (PR: master-delete-lock)
+-- Each master's delete flow now rejects removal when the row is still
+-- referenced elsewhere (`ApiError::in_use`). The frontend classifier
+-- (`res/js/master-crud.js`) maps `err.code === 'in_use'` to the
+-- per-master key so the wording can name the specific reference source
+-- (transactions & recurring rules for shops / accounts; products for
+-- manufacturers; transaction details for products).
+-- ============================================================================
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2435, 'shop_mgmt.delete_in_use', 'en', 'Cannot delete this shop because it is still used by transactions or recurring rules. Disable it instead.', 'shop_mgmt', 'Delete-lock toast when shop is referenced', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2436, 'shop_mgmt.delete_in_use', 'ja', 'この店舗は取引・繰り返し予定で使用中のため削除できません。代わりに無効化してください。', 'shop_mgmt', '削除ロック時のトースト（参照中）', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2437, 'manufacturer_mgmt.delete_in_use', 'en', 'Cannot delete this manufacturer because it is still used by products. Disable it instead.', 'manufacturer_mgmt', 'Delete-lock toast when manufacturer is referenced', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2438, 'manufacturer_mgmt.delete_in_use', 'ja', 'このメーカーは商品マスタで使用中のため削除できません。代わりに無効化してください。', 'manufacturer_mgmt', '削除ロック時のトースト（参照中）', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2439, 'product_mgmt.delete_in_use', 'en', 'Cannot delete this product because it is still used by transaction details. Disable it instead.', 'product_mgmt', 'Delete-lock toast when product is referenced', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2440, 'product_mgmt.delete_in_use', 'ja', 'この商品は明細で使用中のため削除できません。代わりに無効化してください。', 'product_mgmt', '削除ロック時のトースト（参照中）', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2441, 'account_mgmt.delete_in_use', 'en', 'Cannot delete this account because it is still used by transactions or recurring rules. Disable it instead.', 'account_mgmt', 'Delete-lock toast when account is referenced', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2442, 'account_mgmt.delete_in_use', 'ja', 'この口座は取引・繰り返し予定で使用中のため削除できません。代わりに無効化してください。', 'account_mgmt', '削除ロック時のトースト（参照中）', datetime('now'));

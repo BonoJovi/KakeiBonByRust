@@ -2,8 +2,8 @@
 
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
-**最終更新**: 2026-08-22 JST  
-**総テスト数**: 290件 (delta 反映後。`cargo test --lib` の権威的総数は 535 で、pre-existing gap は別 PR でバックフィル予定)
+**最終更新**: 2026-08-26 JST  
+**総テスト数**: 306件 (delta 反映後。`cargo test --lib` の権威的総数は 551 で、pre-existing gap は別 PR でバックフィル予定)
 
 ---
 
@@ -224,8 +224,9 @@ AES-256-GCM暗号化・復号化のテスト。
 | `database_from_sqlx_row_not_found` | `sqlx::Error` → `ApiError::database` の `From` 変換 | src/api_error.rs | 158 |
 | `serialises_with_snake_case_code_and_optional_entity` | serialize 出力に snake_case `code` と entity フィールドが含まれる | src/api_error.rs | 165 |
 | `serialises_without_entity_key_when_none` | entity=None のときは JSON 出力から `entity` キー自体を省略 (`skip_serializing_if`) | src/api_error.rs | 174 |
+| `in_use_carries_lowercased_entity_and_stable_code` | `ApiError::in_use("Shop")` → `code="in_use"`, `entity="shop"`（マスタ削除ロックガード） | src/api_error.rs | 230 |
 
-**合計**: 9件
+**合計**: 10件
 
 ### services/master_data.rs
 
@@ -235,8 +236,10 @@ AES-256-GCM暗号化・復号化のテスト。
 |-----------|------|---------|-----|
 | `ensure_update_affected_one_maps_zero_to_not_found` | `rows_affected == 0` の UPDATE を spec の entity 付き `ApiError::not_found` にマップ | src/services/master_data.rs | 228 |
 | `ensure_update_affected_one_passes_positive_count` | 正の rows_affected は Ok を返す (境界: 1 / 42) | src/services/master_data.rs | 235 |
+| `reject_if_in_use_maps_positive_flag_to_in_use` | in-use フラグが正なら `ApiError::in_use(entity)` に変換（マスタ削除ロックガード） | src/services/master_data.rs | 256 |
+| `reject_if_in_use_passes_when_flag_is_zero` | in-use フラグが 0 なら Ok を返す（マスタ削除ロックガード） | src/services/master_data.rs | 263 |
 
-**合計**: 2件
+**合計**: 4件
 
 ### services/auth.rs
 
@@ -313,8 +316,13 @@ AES-256-GCM暗号化・復号化のテスト。
 | `test_update_account_rejects_empty_name` | 更新で口座名が空のとき `ApiError { code: "validation" }` (Fable-5 #16, #23) | src/services/account.rs | 627 |
 | `test_update_account_not_found_has_stable_code_and_entity` | 存在しない口座の更新は `ApiError { code: "not_found", entity: "account" }` (Fable-5 #23) | src/services/account.rs | 815 |
 | `test_delete_account_not_found_has_stable_code_and_entity` | 存在しない口座の削除は `ApiError { code: "not_found" }` (Fable-5 #23) | src/services/account.rs | 837 |
+| `test_delete_account_rejected_when_referenced_as_from_account` | TRANSACTIONS_HEADER が FROM 側で参照中なら `ApiError { code: "in_use" }` で削除拒否（マスタ削除ロック） | src/services/account.rs | 827 |
+| `test_delete_account_rejected_when_referenced_as_to_account` | TRANSACTIONS_HEADER が TO 側で参照中なら `ApiError { code: "in_use" }` で削除拒否（マスタ削除ロック） | src/services/account.rs | 847 |
+| `test_delete_account_rejected_when_referenced_by_recurring_rule` | RECURRING_RULES が参照中なら `ApiError { code: "in_use" }` で削除拒否（マスタ削除ロック） | src/services/account.rs | 864 |
+| `test_delete_account_ignores_other_users_references` | 他ユーザーの同一 ACCOUNT_CODE 参照は削除をブロックしない（コードはユーザースコープ、マスタ削除ロック） | src/services/account.rs | 881 |
+| `test_delete_account_normalizes_input_before_in_use_check` | `"  cash  "` 入力は正規化されてから CHECK_IN_USE に流れ、ガードが発火する（マスタ削除ロック） | src/services/account.rs | 899 |
 
-**合計**: 5件
+**合計**: 10件
 
 ### services/category.rs
 
@@ -365,8 +373,11 @@ AES-256-GCM暗号化・復号化のテスト。
 | `test_update_missing_manufacturer_returns_not_found_code` | 存在しないメーカーの更新は `ApiError { code: "not_found", entity: "manufacturer" }` (Fable-5 #23) | src/services/manufacturer.rs | 383 |
 | `test_delete_missing_manufacturer_returns_not_found_code` | 存在しないメーカーの削除は `ApiError { code: "not_found" }` (Fable-5 #23) | src/services/manufacturer.rs | 398 |
 | `test_update_same_manufacturer_name` | 同じ名前への更新（許可） | src/services/manufacturer.rs | 405 |
+| `test_delete_manufacturer_rejected_when_referenced_by_product` | PRODUCTS がメーカーを参照中なら `ApiError { code: "in_use", entity: "manufacturer" }` で削除拒否（マスタ削除ロック） | src/services/manufacturer.rs | 374 |
+| `test_delete_manufacturer_rejected_when_only_disabled_products_reference` | IS_DISABLED=1 の商品でも参照とみなす（FK は残り、「無効表示」でも一覧に出るため、マスタ削除ロック） | src/services/manufacturer.rs | 402 |
+| `test_delete_manufacturer_ignores_other_users_references` | 他ユーザーの同一 MANUFACTURER_ID 参照は削除をブロックしない（USER_ID スコープ、マスタ削除ロック） | src/services/manufacturer.rs | 429 |
 
-**合計**: 9件
+**合計**: 12件
 
 ### services/product.rs
 
@@ -380,13 +391,15 @@ AES-256-GCM暗号化・復号化のテスト。
 | `test_delete_product` | 商品削除テスト | src/services/product.rs | 342 |
 | `test_empty_product_name` | 空商品名のエラー | src/services/product.rs | 367 |
 | `test_add_duplicate_product` | 重複商品名のエラー | src/services/product.rs | 383 |
-| `test_manufacturer_deletion_sets_product_manufacturer_to_null` | メーカー削除時の商品への影響（CASCADE NULL） | src/services/product.rs | 409 |
+| `test_manufacturer_deletion_rejected_while_product_references_it` | 商品が参照中はメーカー削除が `ApiError { code: "in_use", entity: "manufacturer" }` で拒否される — マスタ削除ロック導入で `test_manufacturer_deletion_sets_product_manufacturer_to_null` からリネーム（旧: 論理削除→CASCADE NULL の fallback） | src/services/product.rs | 512 |
 | `test_add_product_rejects_foreign_manufacturer_id` | 他ユーザーの manufacturer_id で add は "Manufacturer not found" (Fable-5 #13) | src/services/product.rs | 716 |
 | `test_add_product_rejects_nonexistent_manufacturer_id` | 存在しない manufacturer_id で add は "Manufacturer not found" (Fable-5 #13) | src/services/product.rs | 767 |
 | `test_update_product_rejects_foreign_manufacturer_id` | 他ユーザーの manufacturer_id で update は "Manufacturer not found" (Fable-5 #13) | src/services/product.rs | 792 |
 | `test_product_join_scopes_manufacturer_by_user_id` | PRODUCT_GET_* JOIN は他ユーザーの manufacturer 名を漏らさない (Fable-5 #13) | src/services/product.rs | 871 |
+| `test_delete_product_rejected_when_referenced_by_transaction_detail` | TRANSACTIONS_DETAIL が商品を参照中なら `ApiError { code: "in_use", entity: "product" }` で削除拒否（TRANSACTIONS_HEADER.USER_ID 経由でスコープ、マスタ削除ロック） | src/services/product.rs | 444 |
+| `test_delete_product_ignores_other_users_transaction_details` | 他ユーザーの明細参照は削除をブロックしない（TRANSACTIONS_HEADER.USER_ID でスコープ、マスタ削除ロック） | src/services/product.rs | 481 |
 
-**合計**: 11件
+**合計**: 13件
 
 ### services/shop.rs
 
@@ -403,8 +416,11 @@ AES-256-GCM暗号化・復号化のテスト。
 | `test_update_missing_shop_returns_not_found_code` | 存在しない店舗の更新は `ApiError { code: "not_found", entity: "shop" }` (Fable-5 #23) | src/services/shop.rs | 363 |
 | `test_delete_missing_shop_returns_not_found_code` | 存在しない店舗の削除は `ApiError { code: "not_found" }` (Fable-5 #23) | src/services/shop.rs | 375 |
 | `test_update_same_shop_name` | 同じ名前への更新（許可） | src/services/shop.rs | 382 |
+| `test_delete_shop_rejected_when_referenced_by_transaction` | TRANSACTIONS_HEADER が店舗を参照中なら `ApiError { code: "in_use", entity: "shop" }` で削除拒否（マスタ削除ロック） | src/services/shop.rs | 346 |
+| `test_delete_shop_rejected_when_referenced_by_recurring_rule` | RECURRING_RULES が店舗を参照中なら `ApiError { code: "in_use" }` で削除拒否（マスタ削除ロック） | src/services/shop.rs | 372 |
+| `test_delete_shop_ignores_other_users_references` | 他ユーザーの同一 SHOP_ID 参照は削除をブロックしない（USER_ID スコープ、マスタ削除ロック） | src/services/shop.rs | 394 |
 
-**合計**: 9件
+**合計**: 12件
 
 ### services/transaction.rs
 
@@ -528,29 +544,29 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **267件** |
+| **インラインテスト** | **283件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
 | db.rs | 8 |
 | settings.rs | 12 |
-| api_error.rs | 9 |
-| services/master_data.rs | 2 |
+| api_error.rs | 10 |
+| services/master_data.rs | 4 |
 | services/auth.rs | 16 |
 | services/user_management.rs | 13 |
 | services/encryption.rs | 8 |
-| services/account.rs | 5 |
+| services/account.rs | 10 |
 | services/category.rs | 25 |
-| services/manufacturer.rs | 9 |
-| services/product.rs | 11 |
-| services/shop.rs | 9 |
+| services/manufacturer.rs | 12 |
+| services/product.rs | 13 |
+| services/shop.rs | 12 |
 | services/transaction.rs | 21 |
 | services/aggregation.rs | 10 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 5 |
 | lib.rs | 6 |
-| **総計** | **290件** |
+| **総計** | **306件** |
 
 ---
 
