@@ -1912,6 +1912,23 @@ INSERT INTO TRANSACTIONS_DETAIL (TRANSACTION_ID, PRODUCT_ID)
 VALUES (?, ?)
 "#;
 
+/// Insert one active PRODUCTS row that points at a manufacturer,
+/// scoped to `user_id`. Binds `(user_id, product_name, manufacturer_id)`.
+/// Used by the manufacturer delete-lock tests to build a reference.
+pub const TEST_INSERT_PRODUCT_WITH_MANUFACTURER: &str = r#"
+INSERT INTO PRODUCTS (USER_ID, PRODUCT_NAME, MANUFACTURER_ID, DISPLAY_ORDER)
+VALUES (?, ?, ?, 0)
+"#;
+
+/// Same as `TEST_INSERT_PRODUCT_WITH_MANUFACTURER` but marks the row
+/// IS_DISABLED=1. The manufacturer guard must still block delete when
+/// only disabled products reference it — the FK link is preserved and
+/// the products screen still surfaces the row under "Show disabled".
+pub const TEST_INSERT_PRODUCT_WITH_MANUFACTURER_DISABLED: &str = r#"
+INSERT INTO PRODUCTS (USER_ID, PRODUCT_NAME, MANUFACTURER_ID, DISPLAY_ORDER, IS_DISABLED)
+VALUES (?, ?, ?, 0, 1)
+"#;
+
 // ============================================================================
 // Transaction Detail Management Queries (with JOIN)
 // ============================================================================

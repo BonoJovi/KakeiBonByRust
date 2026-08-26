@@ -383,7 +383,7 @@ mod tests {
         .unwrap();
         let manufacturer_id = get_manufacturers(&pool, 2, false).await.unwrap()[0].manufacturer_id;
 
-        sqlx::query("INSERT INTO PRODUCTS (USER_ID, PRODUCT_NAME, MANUFACTURER_ID, DISPLAY_ORDER) VALUES (?, ?, ?, 0)")
+        sqlx::query(sql_queries::TEST_INSERT_PRODUCT_WITH_MANUFACTURER)
             .bind(2_i64)
             .bind("サバ缶")
             .bind(manufacturer_id)
@@ -413,7 +413,7 @@ mod tests {
 
         // Even a disabled product still counts — the FK link exists and
         // the products screen still surfaces it under "Show disabled".
-        sqlx::query("INSERT INTO PRODUCTS (USER_ID, PRODUCT_NAME, MANUFACTURER_ID, DISPLAY_ORDER, IS_DISABLED) VALUES (?, ?, ?, 0, 1)")
+        sqlx::query(sql_queries::TEST_INSERT_PRODUCT_WITH_MANUFACTURER_DISABLED)
             .bind(2_i64)
             .bind("旧サバ缶")
             .bind(manufacturer_id)
@@ -440,7 +440,7 @@ mod tests {
 
         // User 1 uses the same manufacturer_id (cross-user id collision
         // is possible on AUTOINCREMENT); user 2's delete must still succeed.
-        sqlx::query("INSERT INTO PRODUCTS (USER_ID, PRODUCT_NAME, MANUFACTURER_ID, DISPLAY_ORDER) VALUES (?, ?, ?, 0)")
+        sqlx::query(sql_queries::TEST_INSERT_PRODUCT_WITH_MANUFACTURER)
             .bind(1_i64)
             .bind("他ユーザ商品")
             .bind(manufacturer_id)
