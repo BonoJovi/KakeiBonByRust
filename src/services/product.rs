@@ -212,12 +212,21 @@ pub async fn update_product(
     Ok("Product updated successfully".to_string())
 }
 
-/// Delete a product (logical deletion)
+/// Delete a product (logical deletion). Rejected with
+/// `ApiError::in_use("Product")` when any transaction detail — from an
+/// active or disabled transaction — still names this product. See
+/// `sql_queries::PRODUCT_CHECK_IN_USE`.
 pub async fn delete_product(
     pool: &SqlitePool,
     user_id: i64,
     product_id: i64,
 ) -> Result<String, ApiError> {
+    let (in_use,): (i64,) = sqlx::query_as(sql_queries::PRODUCT_CHECK_IN_USE)
+        .bind(user_id)
+        .bind(product_id)
+        .fetch_one(pool)
+        .await?;
+    master_data::reject_if_in_use(SPEC.entity_label, in_use)?;
     master_data::run_delete_expect_one(&SPEC, pool, user_id, product_id).await?;
     Ok("Product deleted successfully".to_string())
 }
@@ -246,6 +255,20 @@ mod tests {
 
         // Create PRODUCTS table
         sqlx::query(sql_queries::TEST_PRODUCT_CREATE_TABLE)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        // TRANSACTIONS_HEADER + TRANSACTIONS_DETAIL so PRODUCT_CHECK_IN_USE
+        // has tables to read against. `delete_product` runs the guard on
+        // every call — including happy paths where the manufacturer test
+        // also calls `delete_product` — so both tables must exist in
+        // every product-service test.
+        sqlx::query(sql_queries::TEST_TRANSACTION_CREATE_HEADER_TABLE)
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query(sql_queries::TEST_CREATE_TRANSACTIONS_DETAIL_MINIMAL)
             .execute(&pool)
             .await
             .unwrap();
@@ -418,10 +441,83 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_manufacturer_deletion_sets_product_manufacturer_to_null() {
+    async fn test_delete_product_rejected_when_referenced_by_transaction_detail() {
         let pool = setup_test_db().await;
 
-        // Add manufacturer
+        add_product(&pool, 2, AddProductRequest {
+            product_name: "サバ缶".to_string(),
+            manufacturer_id: None,
+            memo: None,
+            is_disabled: None,
+        })
+        .await
+        .unwrap();
+        let product_id = get_products(&pool, 2, false).await.unwrap()[0].product_id;
+
+        // Insert a transaction owned by user 2 with a detail line naming
+        // the product. Scoping runs through TRANSACTIONS_HEADER because
+        // TRANSACTIONS_DETAIL has no USER_ID of its own.
+        let transaction_id = sqlx::query(sql_queries::TEST_INSERT_TRANSACTIONS_HEADER_USER_ONLY)
+            .bind(2_i64)
+            .execute(&pool)
+            .await
+            .unwrap()
+            .last_insert_rowid();
+        sqlx::query(sql_queries::TEST_INSERT_TRANSACTIONS_DETAIL_PRODUCT_REF)
+            .bind(transaction_id)
+            .bind(product_id)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let err = delete_product(&pool, 2, product_id).await.unwrap_err();
+        assert_eq!(err.code, ApiError::CODE_IN_USE);
+        assert_eq!(err.entity.as_deref(), Some("product"));
+
+        assert_eq!(get_products(&pool, 2, false).await.unwrap().len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_delete_product_ignores_other_users_transaction_details() {
+        let pool = setup_test_db().await;
+
+        add_product(&pool, 2, AddProductRequest {
+            product_name: "サバ缶".to_string(),
+            manufacturer_id: None,
+            memo: None,
+            is_disabled: None,
+        })
+        .await
+        .unwrap();
+        let product_id = get_products(&pool, 2, false).await.unwrap()[0].product_id;
+
+        // Reference owned by user 1 — user 2's delete must still succeed.
+        let transaction_id = sqlx::query(sql_queries::TEST_INSERT_TRANSACTIONS_HEADER_USER_ONLY)
+            .bind(1_i64)
+            .execute(&pool)
+            .await
+            .unwrap()
+            .last_insert_rowid();
+        sqlx::query(sql_queries::TEST_INSERT_TRANSACTIONS_DETAIL_PRODUCT_REF)
+            .bind(transaction_id)
+            .bind(product_id)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        assert!(delete_product(&pool, 2, product_id).await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_manufacturer_deletion_rejected_while_product_references_it() {
+        // Renamed from `test_manufacturer_deletion_sets_product_manufacturer_to_null`
+        // when the master-delete-lock landed: the old test asserted the
+        // fallback UX (logical delete succeeds, JOIN scrubs the name off
+        // the list) — the new guard blocks the delete outright so the
+        // user is steered to disable the manufacturer without orphaning
+        // the FK on the product.
+        let pool = setup_test_db().await;
+
         let manufacturer_request = AddManufacturerRequest {
             manufacturer_name: "ニッスイ".to_string(),
             memo: None,
@@ -432,7 +528,6 @@ mod tests {
         let manufacturers = crate::services::manufacturer::get_manufacturers(&pool, 2, false).await.unwrap();
         let manufacturer_id = manufacturers[0].manufacturer_id;
 
-        // Add product with manufacturer
         let product_request = AddProductRequest {
             product_name: "サバ缶".to_string(),
             manufacturer_id: Some(manufacturer_id),
@@ -441,14 +536,17 @@ mod tests {
         };
         add_product(&pool, 2, product_request).await.unwrap();
 
-        // Delete manufacturer (logical delete)
-        crate::services::manufacturer::delete_manufacturer(&pool, 2, manufacturer_id).await.unwrap();
+        let err = crate::services::manufacturer::delete_manufacturer(&pool, 2, manufacturer_id).await.unwrap_err();
+        assert_eq!(err.code, ApiError::CODE_IN_USE);
+        assert_eq!(err.entity.as_deref(), Some("manufacturer"));
 
-        // Verify product still exists but manufacturer info is gone from list view
+        // Manufacturer still active — the guard aborted before the delete.
+        let manufacturers = crate::services::manufacturer::get_manufacturers(&pool, 2, false).await.unwrap();
+        assert_eq!(manufacturers.len(), 1);
+        // And the product's manufacturer link is preserved.
         let products = get_products(&pool, 2, false).await.unwrap();
         assert_eq!(products.len(), 1);
-        // Due to LEFT JOIN, manufacturer_name should be None when manufacturer is disabled
-        // (The actual manufacturer_id in PRODUCTS table remains, but manufacturer is not shown in list)
+        assert_eq!(products[0].manufacturer_id, Some(manufacturer_id));
     }
 
     // Issue #37 Phase 2-3 — bounded-field length checks must count

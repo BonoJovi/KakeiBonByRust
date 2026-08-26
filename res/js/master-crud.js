@@ -36,6 +36,7 @@ export const API_ERROR_CODES = Object.freeze({
     NOT_FOUND: 'not_found',
     MANUFACTURER_NOT_FOUND: 'manufacturer_not_found',
     ADMIN_PROTECTED: 'admin_protected',
+    IN_USE: 'in_use',
     VALIDATION: 'validation',
     DATABASE: 'database',
 });

@@ -540,9 +540,27 @@ WHERE USER_ID = ? AND ACCOUNT_CODE = ?
 "#;
 
 pub const ACCOUNT_DELETE_LOGICAL: &str = r#"
-UPDATE ACCOUNTS 
+UPDATE ACCOUNTS
 SET IS_DISABLED = 1, UPDATE_DT = datetime('now')
 WHERE USER_ID = ? AND ACCOUNT_CODE = ?
+"#;
+
+/// Delete-lock guard: does any transaction or recurring rule still name
+/// this account on either side (FROM_ACCOUNT_CODE / TO_ACCOUNT_CODE)?
+/// Deleted (IS_DISABLED=1) transactions also count as a reference — they
+/// remain in history and their account handle must not be recycled.
+/// Binds: (user_id, account_code, account_code, user_id, account_code,
+/// account_code).
+pub const ACCOUNT_CHECK_IN_USE: &str = r#"
+SELECT EXISTS(
+    SELECT 1 FROM TRANSACTIONS_HEADER
+    WHERE USER_ID = ?
+      AND (FROM_ACCOUNT_CODE = ? OR TO_ACCOUNT_CODE = ?)
+    UNION ALL
+    SELECT 1 FROM RECURRING_RULES
+    WHERE USER_ID = ?
+      AND (FROM_ACCOUNT_CODE = ? OR TO_ACCOUNT_CODE = ?)
+)
 "#;
 
 pub const ACCOUNT_GET_NEXT_DISPLAY_ORDER: &str = r#"
@@ -1542,6 +1560,18 @@ SET IS_DISABLED = 1, UPDATE_DT = datetime('now')
 WHERE USER_ID = ? AND SHOP_ID = ?
 "#;
 
+/// Delete-lock guard: does any transaction or recurring rule still name
+/// this shop? Binds: (user_id, shop_id, user_id, shop_id).
+pub const SHOP_CHECK_IN_USE: &str = r#"
+SELECT EXISTS(
+    SELECT 1 FROM TRANSACTIONS_HEADER
+    WHERE USER_ID = ? AND SHOP_ID = ?
+    UNION ALL
+    SELECT 1 FROM RECURRING_RULES
+    WHERE USER_ID = ? AND SHOP_ID = ?
+)
+"#;
+
 pub const SHOP_CHECK_DUPLICATE_FOR_ADD: &str = r#"
 SELECT COUNT(*) as count
 FROM SHOPS
@@ -1599,6 +1629,20 @@ pub const MANUFACTURER_DELETE_LOGICAL: &str = r#"
 UPDATE MANUFACTURERS
 SET IS_DISABLED = 1, UPDATE_DT = datetime('now')
 WHERE USER_ID = ? AND MANUFACTURER_ID = ?
+"#;
+
+/// Delete-lock guard: does any product (active OR disabled) still name
+/// this manufacturer? A disabled product row keeps the FK link and would
+/// silently be orphaned to NULL by the ON DELETE SET NULL on physical
+/// removal — a logical delete leaves the manufacturer's IS_DISABLED=1
+/// row referenced by a disabled product's MANUFACTURER_ID, which the
+/// products screen still surfaces via "Show disabled". Blocking here
+/// keeps that consistent. Binds: (user_id, manufacturer_id).
+pub const MANUFACTURER_CHECK_IN_USE: &str = r#"
+SELECT EXISTS(
+    SELECT 1 FROM PRODUCTS
+    WHERE USER_ID = ? AND MANUFACTURER_ID = ?
+)
 "#;
 
 pub const MANUFACTURER_CHECK_DUPLICATE_FOR_ADD: &str = r#"
@@ -1680,6 +1724,21 @@ pub const PRODUCT_DELETE_LOGICAL: &str = r#"
 UPDATE PRODUCTS
 SET IS_DISABLED = 1, UPDATE_DT = datetime('now')
 WHERE USER_ID = ? AND PRODUCT_ID = ?
+"#;
+
+/// Delete-lock guard: does any transaction detail still name this
+/// product? TRANSACTIONS_DETAIL has no USER_ID column so scoping runs
+/// through TRANSACTIONS_HEADER. Detail rows from IS_DISABLED=1
+/// transactions still count — the history reads them and the product
+/// handle must not be recycled while any history references it.
+/// Binds: (user_id, product_id).
+pub const PRODUCT_CHECK_IN_USE: &str = r#"
+SELECT EXISTS(
+    SELECT 1
+    FROM TRANSACTIONS_DETAIL td
+    JOIN TRANSACTIONS_HEADER th ON td.TRANSACTION_ID = th.TRANSACTION_ID
+    WHERE th.USER_ID = ? AND td.PRODUCT_ID = ?
+)
 "#;
 
 pub const PRODUCT_CHECK_DUPLICATE_FOR_ADD: &str = r#"
@@ -1779,6 +1838,78 @@ CREATE TABLE IF NOT EXISTS PRODUCTS (
     FOREIGN KEY (MANUFACTURER_ID) REFERENCES MANUFACTURERS(MANUFACTURER_ID) ON DELETE SET NULL,
     UNIQUE(USER_ID, PRODUCT_NAME)
 )
+"#;
+
+// ============================================================================
+// Test Queries - Delete-lock reference tables
+// ----------------------------------------------------------------------------
+// Reference tables needed by the master-delete-lock tests. The
+// TRANSACTIONS_HEADER minimal is `TEST_TRANSACTION_CREATE_HEADER_TABLE`
+// above (both this file and the aggregation tests use it via IF NOT
+// EXISTS). RECURRING_RULES and TRANSACTIONS_DETAIL get their own
+// stripped-down definitions so the master-service tests do not have to
+// spin up CATEGORY1 + MEMOS + PRODUCTS just to insert one reference row.
+// FOREIGN KEYs deliberately omitted.
+// ============================================================================
+pub const TEST_CREATE_RECURRING_RULES_MINIMAL: &str = r#"
+CREATE TABLE IF NOT EXISTS RECURRING_RULES (
+    RULE_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    USER_ID INTEGER NOT NULL,
+    SHOP_ID INTEGER,
+    FROM_ACCOUNT_CODE VARCHAR(50),
+    TO_ACCOUNT_CODE VARCHAR(50)
+)
+"#;
+
+pub const TEST_CREATE_TRANSACTIONS_DETAIL_MINIMAL: &str = r#"
+CREATE TABLE IF NOT EXISTS TRANSACTIONS_DETAIL (
+    DETAIL_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    TRANSACTION_ID INTEGER NOT NULL,
+    PRODUCT_ID INTEGER
+)
+"#;
+
+/// Insert one TRANSACTIONS_HEADER row for shop delete-lock tests. Binds
+/// `(user_id, shop_id)`; the required NOT NULL columns
+/// (CATEGORY1_CODE / FROM_ACCOUNT_CODE / TO_ACCOUNT_CODE /
+/// TRANSACTION_DATE / TOTAL_AMOUNT) get harmless literals — the guard
+/// only reads USER_ID and SHOP_ID.
+pub const TEST_INSERT_TRANSACTIONS_HEADER_SHOP_REF: &str = r#"
+INSERT INTO TRANSACTIONS_HEADER
+    (USER_ID, SHOP_ID, CATEGORY1_CODE, FROM_ACCOUNT_CODE, TO_ACCOUNT_CODE, TRANSACTION_DATE, TOTAL_AMOUNT)
+VALUES (?, ?, 'EXPENSE', 'CASH', 'CASH', '2026-01-01', 0)
+"#;
+
+pub const TEST_INSERT_RECURRING_RULES_SHOP_REF: &str = r#"
+INSERT INTO RECURRING_RULES (USER_ID, SHOP_ID, FROM_ACCOUNT_CODE, TO_ACCOUNT_CODE)
+VALUES (?, ?, 'CASH', 'CASH')
+"#;
+
+/// Insert one TRANSACTIONS_HEADER row for account delete-lock tests.
+/// Binds `(user_id, from_account_code, to_account_code)`.
+pub const TEST_INSERT_TRANSACTIONS_HEADER_ACCOUNT_REF: &str = r#"
+INSERT INTO TRANSACTIONS_HEADER
+    (USER_ID, CATEGORY1_CODE, FROM_ACCOUNT_CODE, TO_ACCOUNT_CODE, TRANSACTION_DATE, TOTAL_AMOUNT)
+VALUES (?, 'EXPENSE', ?, ?, '2026-01-01', 0)
+"#;
+
+pub const TEST_INSERT_RECURRING_RULES_ACCOUNT_REF: &str = r#"
+INSERT INTO RECURRING_RULES (USER_ID, FROM_ACCOUNT_CODE, TO_ACCOUNT_CODE)
+VALUES (?, ?, ?)
+"#;
+
+/// Insert one TRANSACTIONS_HEADER row scoped to `user_id`, used to give
+/// a TRANSACTIONS_DETAIL row a parent for product delete-lock tests.
+/// Binds `(user_id)`.
+pub const TEST_INSERT_TRANSACTIONS_HEADER_USER_ONLY: &str = r#"
+INSERT INTO TRANSACTIONS_HEADER
+    (USER_ID, CATEGORY1_CODE, FROM_ACCOUNT_CODE, TO_ACCOUNT_CODE, TRANSACTION_DATE, TOTAL_AMOUNT)
+VALUES (?, 'EXPENSE', 'CASH', 'CASH', '2026-01-01', 0)
+"#;
+
+pub const TEST_INSERT_TRANSACTIONS_DETAIL_PRODUCT_REF: &str = r#"
+INSERT INTO TRANSACTIONS_DETAIL (TRANSACTION_ID, PRODUCT_ID)
+VALUES (?, ?)
 "#;
 
 // ============================================================================
@@ -1949,8 +2080,11 @@ pub const TEST_TRANSACTION_INSERT_ACCOUNT_CASH: &str = "INSERT INTO ACCOUNTS (US
 
 pub const TEST_TRANSACTION_INSERT_ACCOUNT_BANK: &str = "INSERT INTO ACCOUNTS (USER_ID, ACCOUNT_CODE, ACCOUNT_NAME, TEMPLATE_CODE) VALUES (2, 'BANK', '銀行', 'BANK')";
 
+// IF NOT EXISTS so the master-delete-lock tests can also create this from
+// their own setup_test_db without racing the balance-computation tests
+// that create it inline.
 pub const TEST_TRANSACTION_CREATE_HEADER_TABLE: &str = r#"
-CREATE TABLE TRANSACTIONS_HEADER (
+CREATE TABLE IF NOT EXISTS TRANSACTIONS_HEADER (
     TRANSACTION_ID INTEGER PRIMARY KEY AUTOINCREMENT,
     USER_ID INTEGER NOT NULL,
     SHOP_ID INTEGER,

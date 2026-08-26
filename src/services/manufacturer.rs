@@ -144,12 +144,21 @@ pub async fn update_manufacturer(
     Ok("Manufacturer updated successfully".to_string())
 }
 
-/// Delete a manufacturer (logical deletion)
+/// Delete a manufacturer (logical deletion). Rejected with
+/// `ApiError::in_use("Manufacturer")` when any product row (active or
+/// disabled) still points at it via `MANUFACTURER_ID`. See
+/// `sql_queries::MANUFACTURER_CHECK_IN_USE`.
 pub async fn delete_manufacturer(
     pool: &SqlitePool,
     user_id: i64,
     manufacturer_id: i64,
 ) -> Result<String, ApiError> {
+    let (in_use,): (i64,) = sqlx::query_as(sql_queries::MANUFACTURER_CHECK_IN_USE)
+        .bind(user_id)
+        .bind(manufacturer_id)
+        .fetch_one(pool)
+        .await?;
+    master_data::reject_if_in_use(SPEC.entity_label, in_use)?;
     master_data::run_delete_expect_one(&SPEC, pool, user_id, manufacturer_id).await?;
     Ok("Manufacturer deleted successfully".to_string())
 }
@@ -171,6 +180,15 @@ mod tests {
 
         // Create MANUFACTURERS table
         sqlx::query(sql_queries::TEST_MANUFACTURER_CREATE_TABLE)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        // PRODUCTS is created too so MANUFACTURER_CHECK_IN_USE has a table
+        // to read against. `delete_manufacturer` runs the guard on every
+        // call — including happy paths — so this must exist in every
+        // manufacturer-service test.
+        sqlx::query(sql_queries::TEST_PRODUCT_CREATE_TABLE)
             .execute(&pool)
             .await
             .unwrap();
@@ -350,6 +368,87 @@ mod tests {
         let pool = setup_test_db().await;
         let err = delete_manufacturer(&pool, 2, 9999).await.unwrap_err();
         assert_eq!(err.code, ApiError::CODE_NOT_FOUND);
+    }
+
+    #[tokio::test]
+    async fn test_delete_manufacturer_rejected_when_referenced_by_product() {
+        let pool = setup_test_db().await;
+
+        add_manufacturer(&pool, 2, AddManufacturerRequest {
+            manufacturer_name: "ニッスイ".to_string(),
+            memo: None,
+            is_disabled: None,
+        })
+        .await
+        .unwrap();
+        let manufacturer_id = get_manufacturers(&pool, 2, false).await.unwrap()[0].manufacturer_id;
+
+        sqlx::query("INSERT INTO PRODUCTS (USER_ID, PRODUCT_NAME, MANUFACTURER_ID, DISPLAY_ORDER) VALUES (?, ?, ?, 0)")
+            .bind(2_i64)
+            .bind("サバ缶")
+            .bind(manufacturer_id)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let err = delete_manufacturer(&pool, 2, manufacturer_id).await.unwrap_err();
+        assert_eq!(err.code, ApiError::CODE_IN_USE);
+        assert_eq!(err.entity.as_deref(), Some("manufacturer"));
+
+        assert_eq!(get_manufacturers(&pool, 2, false).await.unwrap().len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_delete_manufacturer_rejected_when_only_disabled_products_reference() {
+        let pool = setup_test_db().await;
+
+        add_manufacturer(&pool, 2, AddManufacturerRequest {
+            manufacturer_name: "ニッスイ".to_string(),
+            memo: None,
+            is_disabled: None,
+        })
+        .await
+        .unwrap();
+        let manufacturer_id = get_manufacturers(&pool, 2, false).await.unwrap()[0].manufacturer_id;
+
+        // Even a disabled product still counts — the FK link exists and
+        // the products screen still surfaces it under "Show disabled".
+        sqlx::query("INSERT INTO PRODUCTS (USER_ID, PRODUCT_NAME, MANUFACTURER_ID, DISPLAY_ORDER, IS_DISABLED) VALUES (?, ?, ?, 0, 1)")
+            .bind(2_i64)
+            .bind("旧サバ缶")
+            .bind(manufacturer_id)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let err = delete_manufacturer(&pool, 2, manufacturer_id).await.unwrap_err();
+        assert_eq!(err.code, ApiError::CODE_IN_USE);
+    }
+
+    #[tokio::test]
+    async fn test_delete_manufacturer_ignores_other_users_references() {
+        let pool = setup_test_db().await;
+
+        add_manufacturer(&pool, 2, AddManufacturerRequest {
+            manufacturer_name: "ニッスイ".to_string(),
+            memo: None,
+            is_disabled: None,
+        })
+        .await
+        .unwrap();
+        let manufacturer_id = get_manufacturers(&pool, 2, false).await.unwrap()[0].manufacturer_id;
+
+        // User 1 uses the same manufacturer_id (cross-user id collision
+        // is possible on AUTOINCREMENT); user 2's delete must still succeed.
+        sqlx::query("INSERT INTO PRODUCTS (USER_ID, PRODUCT_NAME, MANUFACTURER_ID, DISPLAY_ORDER) VALUES (?, ?, ?, 0)")
+            .bind(1_i64)
+            .bind("他ユーザ商品")
+            .bind(manufacturer_id)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        assert!(delete_manufacturer(&pool, 2, manufacturer_id).await.is_ok());
     }
 
     #[tokio::test]
