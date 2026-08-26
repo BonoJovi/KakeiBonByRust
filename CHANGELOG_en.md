@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v2.8.0] - 2026-08-26
+
+Master-integrity guard release. Accounts / shops / manufacturers / products can no longer be deleted while they are still referenced from other screens; the user is steered to disable them instead. Previously a delete would silently soft-remove the master row while historical data kept pointing at it — that path is now closed so the user cannot break integrity by accident.
+
+### New behaviour (user-visible)
+
+- **Delete-lock on referenced masters**: accounts / shops / manufacturers / products are refused deletion while any of the following still names them. The user gets a per-master toast: *"Cannot delete this X because it is still used by Y. Disable it instead."*
+  - Accounts (ACCOUNTS): transactions (FROM / TO) and recurring rules (FROM / TO)
+  - Shops (SHOPS): transactions and recurring rules
+  - Manufacturers (MANUFACTURERS): products (disabled products also count as a reference)
+  - Products (PRODUCTS): transaction details
+  - **Cross-user references do NOT block delete** — masters are user-scoped, so a same-name / same-id row belonging to another user does not affect your delete.
+- **Actionable failure UX**: the refusal message names the recommended next step (disable) rather than a bare "delete failed", so the user does not have to guess.
+
+### Backend (internal)
+
+- New `ApiError::in_use(entity)` + `CODE_IN_USE` — stable classifier for delete refusals.
+- New `master_data::reject_if_in_use` helper — collapses the "reference count → `ApiError::in_use`" mapping into one place; each service still runs its own SQL because the bind shapes differ per master.
+- New `sql_queries::{ACCOUNT,SHOP,MANUFACTURER,PRODUCT}_CHECK_IN_USE` — all use `SELECT EXISTS(...)` for early termination.
+
+### Tests
+
+- +16 tests (535 → 551). Every master pins "referenced → refused" and "cross-user reference → still succeeds"; manufacturers additionally pin "IS_DISABLED=1 product still counts as a reference".
+
 ## [v2.7.0] - 2026-08-22
 
 Internal-quality, reliability, and performance release driven by the Fable-5 code review (2026-08-19, 43 items). No user-facing new features; the release lands as 14 PRs' worth of concentrated cleanup of the "would hurt when it hit but works today" class of latent bugs and structural fragility across the whole app. User-visible changes are limited to three: (1) an aggregation panic path that could occasionally down the backend thread is closed, (2) startup is slightly faster, and (3) any long-standing duplicate rows in the shop list are consolidated.

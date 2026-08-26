@@ -4,10 +4,10 @@
 
 > **A Modern Household Budget App with Focus on Readability and Usability**
 
-[![Version](https://img.shields.io/badge/Version-2.7.0-blue)](https://github.com/BonoJovi/KakeiBonByRust/releases/tag/v2.7.0)
+[![Version](https://img.shields.io/badge/Version-2.8.0-blue)](https://github.com/BonoJovi/KakeiBonByRust/releases/tag/v2.8.0)
 [![Rust](https://img.shields.io/badge/Rust-1.70+-orange.svg)](https://www.rust-lang.org/)
 [![Tauri](https://img.shields.io/badge/Tauri-v2.11.1-blue.svg)](https://tauri.app/)
-[![Tests](https://img.shields.io/badge/tests-1054%20passing-brightgreen.svg)](#test-results)
+[![Tests](https://img.shields.io/badge/tests-1254%20passing-brightgreen.svg)](#test-results)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 [[J][P] Japanese Version](README_ja.md) | [[Globe] Bilingual README](README.md)
@@ -25,23 +25,25 @@
 Thank you for your continued interest in KakeiBon.
 I'm BonoJovi (Yoshihiro NAKAHARA), the project initiator.
 
-**We have officially released Ver.2.7.0!**
+**We have officially released Ver.2.8.0!**
 
-Ver.2.7.0 is a "foundation-strengthening" release: no outward-facing new features, but a concentrated lift in internal quality, reliability, and performance. It stems from the Fable-5 code review conducted on 2026-08-19 (43 items in total), and lands as 14 PRs' worth of concentrated cleanup of latent bugs and structural fragility across the whole app. The changes you can directly experience in day-to-day use come down to three:
+Ver.2.8.0 is the "master-integrity guard" release. Accounts, shops, manufacturers, and products can no longer be deleted while they are still referenced from other screens — instead, KakeiBon guides you to *disable* them. Before this release, deletion would silently soft-remove the master row while historical transactions and recurring rules kept pointing at it; that path is now closed so you cannot accidentally break integrity while cleaning up.
 
 Key changes:
 
-- **A rare backend crash path on some transaction screens is closed**: certain monthly screens could panic the backend thread when an unexpected value (e.g. `month=13`) reached period handling. Input is now validated at the entry point and the error is surfaced cleanly
-- **Startup is slightly faster**: the database initialisation at boot is now wrapped in a single transaction, collapsing `~500 fsync operations → 1`. Most visible on the very first launch after install / version upgrade
-- **Long-standing duplicate rows in the shop list are consolidated**: any rare "two-plus rows with the same shop name" state is silently reconciled on the first boot of v2.7.0 (transaction references are repointed onto the active row, only the soft-deleted older rows are removed)
+- **Referenced masters are refused deletion and guided to disable**: accounts, shops, manufacturers, and products can no longer be deleted while any of the following names them. You get a toast saying *"Cannot delete this X because it is still used by Y. Disable it instead."*
+  - **Accounts**: transactions (FROM/TO) and recurring rules (FROM/TO)
+  - **Shops**: transactions and recurring rules
+  - **Manufacturers**: products (disabled products still count as a reference)
+  - **Products**: transaction details
+- **Unused masters still delete the same way**: nothing changes if the row is not referenced anywhere — the delete button still performs a logical delete. Only the "referenced but you tried to delete anyway" case changes.
+- **Cross-user references do NOT block your delete**: masters are user-scoped, so a same-name / same-id row belonging to another user does not affect your delete (this is a safety enhancement — your own actions stay free).
 
-On top of that, the following internal improvements shipped in the same release:
+Under the hood:
 
-- Category tree lookups and full-history recalc — both previously scaling with transaction count — are now flat via **N+1 query elimination**
-- Aggregation SQL is fully parameterised (a step up in SQL-injection resistance)
-- Error contract is unified across five services (recurring / transaction / account / user_management / category / auth); the "Japanese label + English error" mixed-language toasts on the login / setup screens are gone
-- Four legacy commands that referenced a table no migration ever created (dead code) are removed, `net -281 lines`
-- Test total: 509 → 535 (+26), all passing
+- A shared delete-lock guard (`ApiError::in_use`) is added across all four masters — same pattern everywhere
+- Reference presence is checked with `SELECT EXISTS(...)` early-termination SQL
+- Test total: 535 → 551 (+16), all passing. Each master pins both "referenced → refused" and "cross-user reference → still succeeds"
 
 If you would like to use the stable release version, please refer to the [main branch](https://github.com/BonoJovi/KakeiBonByRust/tree/main).
 
@@ -52,7 +54,7 @@ We welcome messages via GitHub issues or email, whether it's words of encouragem
 
 Thank you for your continued support of KakeiBon.
 
-**2026-08-22 (JST) Written by Yoshihiro NAKAHARA**
+**2026-08-26 (JST) Written by Yoshihiro NAKAHARA**
 
 </div>
 
