@@ -39,8 +39,14 @@ reviews:
     # Static assets: icons, screenshots.
     - "!icons/**"
     - "!docs/screenshots/**"
-    # SQL test fixtures — data, not schema/i18n.
+    # SQL test fixtures — data, not schema/i18n. Covers both the
+    # `sql/test/` subdirectory and root-level `sql/test_*.sql` files
+    # (e.g. `sql/test_transaction_data.sql`) so the migration/i18n
+    # rules below do not misfire on plain-insert sample data.
     - "!sql/test/**"
+    - "!sql/test_*.sql"
+    # Committed SQLite dev DB, not reviewable text.
+    - "!sql/kakeibo.db"
     # Massive bilingual changelogs — auto-appended, not code.
     - "!CHANGELOG_en.md"
     - "!CHANGELOG_ja.md"
@@ -72,13 +78,13 @@ reviews:
         (d) TEST_INDEX SYNC — many production modules
             (`src/services/*.rs`, `src/db.rs`, `src/validation.rs`, …)
             carry inline `#[cfg(test)] mod tests { … }` blocks in
-            addition to dedicated `*_tests.rs` files. When a diff adds
-            a new `#[test]` fn or a new test module anywhere under
-            `src/`, BOTH `docs/testing/en/BACKEND_TEST_INDEX.md` and
-            `docs/testing/ja/BACKEND_TEST_INDEX.md` must be updated in
-            sync: the section total, summary row, Inline subtotal, and
-            Top+Bottom Total. This is the single most frequent Devin
-            finding; do not let it slip.
+            addition to dedicated `*_tests.rs` files. When a diff
+            adds OR removes a `#[test]` fn or a test module anywhere
+            under `src/`, BOTH `docs/testing/en/BACKEND_TEST_INDEX.md`
+            and `docs/testing/ja/BACKEND_TEST_INDEX.md` must be
+            updated in sync: the section total, summary row, Inline
+            subtotal, and Top+Bottom Total. This is the single most
+            frequent Devin finding; do not let it slip.
         (e) In tests, avoid the CodeQL Critical
             `hardcoded-credentials` pattern — do NOT bind a literal
             password string to a variable named `password`. Prefer a
