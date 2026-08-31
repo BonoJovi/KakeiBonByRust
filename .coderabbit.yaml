@@ -2,8 +2,8 @@
 # https://docs.coderabbit.ai/reference/configuration
 #
 # KakeiBonByRust is a Tauri v2 household-budget desktop app: Rust
-# backend + Vanilla JS (ES modules) frontend + SQLite, fully
-# bilingual (JP/EN) via a DB-driven i18n table. This config tunes
+# backend + Vanilla JS (ES modules) frontend + SQLite, bilingual
+# Japanese and English via a DB-driven i18n table. This config tunes
 # CodeRabbit to review the parts that actually change and to enforce
 # the project-specific rules from CLAUDE.md and recurring review
 # findings.
@@ -12,13 +12,9 @@ language: "ja-JP"
 early_access: false
 enable_free_tier: true
 
+# tone_instructions is capped at 250 chars by the validator — keep terse.
 tone_instructions: |
-  Findings must include a concrete failure scenario: specific inputs / state
-  that lead to the wrong output, crash, data corruption, or a broken user
-  flow. Rank real correctness / persistence / auth / i18n bugs above style
-  nits. Skip cosmetic suggestions on doc comments unless the comment
-  misdescribes actual behaviour. Reply in Japanese to match the project's
-  review history; keep each finding under ~10 lines.
+  Each finding needs a concrete failure scenario (specific inputs/state → wrong output, crash, data corruption, broken user flow). Rank real correctness / persistence / auth / i18n bugs above style nits. Reply in Japanese; keep findings ≤10 lines.
 
 reviews:
   profile: "assertive"
@@ -32,7 +28,8 @@ reviews:
     - "!node_modules/**"
     - "!res/tests/node_modules/**"
     - "!res/tests/target/**"
-    # AI collaboration context / methodology docs.
+    # AI collaboration methodology docs — pulled into CLAUDE.md
+    # via `@` on demand, not the source of truth for code review.
     - "!.ai-context/**"
     # Session scratchpads, bug lists, review notes.
     - "!work/**"
@@ -42,6 +39,8 @@ reviews:
     # Static assets: icons, screenshots.
     - "!icons/**"
     - "!docs/screenshots/**"
+    # SQL test fixtures — data, not schema/i18n.
+    - "!sql/test/**"
     # Massive bilingual changelogs — auto-appended, not code.
     - "!CHANGELOG_en.md"
     - "!CHANGELOG_ja.md"
@@ -70,7 +69,23 @@ reviews:
             `.map_err(|e| e.to_string())` patterns that bypass the typed
             variants — the frontend depends on structured `.code` to
             pick the localised message.
-        (d) Do not flag comment length or missing doc comments.
+        (d) TEST_INDEX SYNC — many production modules
+            (`src/services/*.rs`, `src/db.rs`, `src/validation.rs`, …)
+            carry inline `#[cfg(test)] mod tests { … }` blocks in
+            addition to dedicated `*_tests.rs` files. When a diff adds
+            a new `#[test]` fn or a new test module anywhere under
+            `src/`, BOTH `docs/testing/en/BACKEND_TEST_INDEX.md` and
+            `docs/testing/ja/BACKEND_TEST_INDEX.md` must be updated in
+            sync: the section total, summary row, Inline subtotal, and
+            Top+Bottom Total. This is the single most frequent Devin
+            finding; do not let it slip.
+        (e) In tests, avoid the CodeQL Critical
+            `hardcoded-credentials` pattern — do NOT bind a literal
+            password string to a variable named `password`. Prefer a
+            formatted string (`format!("Pw{}...", ...)`) bound to a
+            variable named `pw`. Test code may otherwise use
+            unwrap()/expect() freely.
+        (f) Do not flag comment length or missing doc comments.
 
     - path: "src/services/**/*.rs"
       instructions: |
@@ -108,29 +123,10 @@ reviews:
         per-section totals when tests are added or removed. Test code
         may use inline strings freely, but avoid a literal password
         assigned to a variable named `password` — that trips CodeQL
-        hardcoded-credentials; use `format!()` / a variable named `pw`
-        or similar (matches the pattern already established for the
-        Rust test suite).
-
-    - path: "src/**/*_tests.rs"
-      instructions: |
-        Backend tests. unwrap()/expect() are freely allowed here.
-        Flag any NEW `#[test]` fn or new test module whose count is
-        not reflected in BOTH `docs/testing/en/BACKEND_TEST_INDEX.md`
-        and `docs/testing/ja/BACKEND_TEST_INDEX.md` — the section total,
-        summary row, Inline subtotal, and Top+Bottom Total must all
-        stay in sync (this is the single most frequent Devin finding).
-        For any test using a password, avoid the literal-string +
-        `password`-named-variable combo that triggers CodeQL Critical
-        `hardcoded-credentials`; prefer `format!("Pw{}...", ...)` bound
-        to a variable named `pw`.
-
-    - path: "src/test_helpers.rs"
-      instructions: |
-        Shared test scaffolding. Any helper that creates a user MUST
-        keep the CodeQL-safe password idiom (formatted string, `pw`
-        variable name) — new helpers copying an older literal form
-        will reintroduce the Critical alert.
+        `hardcoded-credentials`. Prefer a JS template literal
+        (`` `Pw${suffix}...` ``) bound to a variable named `pw` or
+        similar, matching the pattern already established for the Rust
+        test suite.
 
     - path: "res/sql/dbaccess.sql"
       instructions: |
@@ -143,14 +139,19 @@ reviews:
         in the UI. Flag any new RESOURCE_ID that duplicates one
         already present anywhere in the file.
 
-    - path: "sql/migrations/**/*.sql"
+    - path: "sql/**/*.sql"
       instructions: |
-        i18n migrations follow the same rule as `res/sql/dbaccess.sql`:
-        a new RESOURCE_ID must not collide with any ID already defined
-        in `res/sql/dbaccess.sql` or in any prior migration. Silent
-        `INSERT OR IGNORE` skips manifest as raw key strings in the UI.
-        Migrations must also be idempotent (safe to re-run on an
-        already-migrated DB).
+        Migration / seed scripts live directly under `sql/*.sql` (each
+        adds a table, alters a column, or inserts i18n rows) and under
+        `sql/init/{tables,categories,i18n}/`. They follow the same rule
+        as `res/sql/dbaccess.sql`: a new i18n RESOURCE_ID must not
+        collide with any ID already defined in `res/sql/dbaccess.sql`
+        or in any prior `sql/**/*.sql` — silent `INSERT OR IGNORE` skips
+        manifest as raw key strings in the UI. Scripts must be
+        idempotent (safe to re-run on an already-migrated DB): use
+        `CREATE TABLE IF NOT EXISTS`, `INSERT OR IGNORE`, or a
+        MIGRATION_HISTORY guard, never a bare `CREATE TABLE` / `ALTER
+        TABLE ADD COLUMN` that will fail on the second run.
 
     - path: "Cargo.toml"
       instructions: |
