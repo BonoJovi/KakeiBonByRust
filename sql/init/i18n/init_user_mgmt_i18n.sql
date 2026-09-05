@@ -90,3 +90,9 @@ VALUES
 (2356, 'user_mgmt.month_holiday_shift_next', 'ja', '土日祝なら直後の平日', 'user_mgmt', '休日シフト: 直後の平日', datetime('now')),
 (2357, 'user_mgmt.month_holiday_shift_note', 'en', 'Applies to the monthly start day only. The yearly start day is fixed to the calendar date.', 'user_mgmt', 'Note about scope of holiday shift', datetime('now')),
 (2358, 'user_mgmt.month_holiday_shift_note', 'ja', '月次起算日のみ適用されます。年次起算日はカレンダー通り固定です。', 'user_mgmt', '休日シフトの適用範囲注記', datetime('now'));
+
+-- Current-password prompt on the user edit modal (Fable-5 review #1/#5).
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT)
+VALUES
+(2443, 'user_mgmt.current_password', 'en', 'Current password:', 'user_mgmt', 'Current-password label on the user edit modal', datetime('now')),
+(2444, 'user_mgmt.current_password', 'ja', '現在のパスワード:', 'user_mgmt', 'ユーザー編集モーダルの現在のパスワードラベル', datetime('now'));

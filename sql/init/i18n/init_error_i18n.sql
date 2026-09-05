@@ -44,3 +44,11 @@ VALUES
 (2378, 'error.load_accounts_failed', 'ja', '口座の読み込みに失敗しました', 'error', '口座読み込みエラー', datetime('now')),
 (2379, 'error.load_shops_failed', 'en', 'Failed to load shops', 'error', 'Shop load error', datetime('now')),
 (2380, 'error.load_shops_failed', 'ja', '店舗の読み込みに失敗しました', 'error', '店舗読み込みエラー', datetime('now'));
+
+-- Password-change errors (Fable-5 review #1/#5).
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT)
+VALUES
+(2445, 'error.current_password_required', 'en', 'Please enter your current password to change it.', 'error', 'Frontend guard when new password is set but old password is blank', datetime('now')),
+(2446, 'error.current_password_required', 'ja', 'パスワードを変更するには現在のパスワードを入力してください。', 'error', '新パスワード指定時に旧パスワード未入力のガード', datetime('now')),
+(2447, 'error.old_password_incorrect', 'en', 'Current password is incorrect.', 'error', 'Surface for SecurityError::InvalidPassword on password change', datetime('now')),
+(2448, 'error.old_password_incorrect', 'ja', '現在のパスワードが正しくありません。', 'error', 'パスワード変更時の旧パスワード不一致の表示', datetime('now'));
