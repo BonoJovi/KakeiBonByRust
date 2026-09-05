@@ -13,14 +13,14 @@
 //! - `MasterCrudSpec` collects the six SQL constants plus the three labels
 //!   each master service needs, so the shared prelude (validation +
 //!   duplicate check) can be driven off a single value per screen.
-//! - `run_delete_expect_one` and `run_update_expect_one` return the row
+//! - `run_delete_expect_one_in_tx` and `run_update_expect_one` return the row
 //!   count and translate `0 → NotFound`, eliminating the pre-check
 //!   `get_by_id().await?.ok_or(NotFound)?` boilerplate on 6 sites (and its
 //!   TOCTOU window). Update paths accept the caller's `sqlx::query(...)
 //!   .bind(...).bind(...)` because each table's column set differs; the
 //!   helper only takes over the "execute + rows_affected" step.
 
-use sqlx::{sqlite::SqliteRow, FromRow, SqlitePool};
+use sqlx::{sqlite::SqliteRow, FromRow, Sqlite, SqlitePool, Transaction};
 
 use crate::api_error::ApiError;
 
@@ -175,16 +175,24 @@ pub async fn check_duplicate_for_update(
 /// deleted between the check and the execute, and the caller would still
 /// report success. Threading the count back and mapping `0 → NotFound`
 /// eliminates both.
-pub async fn run_delete_expect_one(
+/// Execute the caller's `spec.delete_logical_sql` on a caller-owned
+/// transaction and translate `0 → NotFound`. Used by the per-master
+/// delete paths (shop / product / manufacturer) so the `CHECK_IN_USE`
+/// guard and the `IS_DISABLED=1` write share one transaction —
+/// Fable-5 #14 closed the pre-fix window where the two ran on
+/// independently pooled connections. Callers open the tx with
+/// `pool.begin()` (sqlx default: `BEGIN DEFERRED`) and commit after
+/// this helper returns.
+pub async fn run_delete_expect_one_in_tx(
     spec: &MasterCrudSpec,
-    pool: &SqlitePool,
+    tx: &mut Transaction<'_, Sqlite>,
     user_id: i64,
     id: i64,
 ) -> Result<(), ApiError> {
     let affected = sqlx::query(spec.delete_logical_sql)
         .bind(user_id)
         .bind(id)
-        .execute(pool)
+        .execute(&mut **tx)
         .await?
         .rows_affected();
     if affected == 0 {
@@ -194,7 +202,7 @@ pub async fn run_delete_expect_one(
 }
 
 /// Assert that the update just executed by the caller actually touched a
-/// row. Same rationale as [`run_delete_expect_one`]: eliminates the
+/// row. Same rationale as [`run_delete_expect_one_in_tx`]: eliminates the
 /// separate pre-check `get_by_id().await?.ok_or(NotFound)?` before an
 /// UPDATE and its TOCTOU window. The caller performs the UPDATE itself
 /// (each master's column set differs, so a generic helper would need a
@@ -216,7 +224,7 @@ pub fn ensure_update_affected_one(
 /// referenced by other data. Kept as a plain function so each service's
 /// delete path can stay a linear read: run the master's own
 /// `CHECK_IN_USE` query, hand the flag here, then call
-/// [`run_delete_expect_one`].
+/// [`run_delete_expect_one_in_tx`].
 pub fn reject_if_in_use(entity_label: &str, in_use_flag: i64) -> Result<(), ApiError> {
     if in_use_flag != 0 {
         return Err(ApiError::in_use(entity_label));
