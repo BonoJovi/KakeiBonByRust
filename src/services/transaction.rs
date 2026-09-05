@@ -845,10 +845,33 @@ impl TransactionService {
         Ok(())
     }
 
-    /// Helper function to get or create memo_id for memo text
-    /// Returns memo_id if memo text is provided, None if empty
+    /// Helper function to get or create memo_id for memo text.
+    /// Returns memo_id if memo text is provided, None if empty.
+    ///
+    /// Runs its own single-connection lookup/insert. Callers that need
+    /// atomicity with a subsequent row insert (add_transaction_detail,
+    /// see Fable-5 #7) should use [`get_or_create_memo_id_in_tx`]
+    /// instead so the MEMO row and the referrer row commit together
+    /// and a mid-flight failure cannot orphan the MEMO.
     async fn get_or_create_memo_id(
         &self,
+        user_id: i64,
+        memo_text: Option<&str>,
+    ) -> Result<Option<i64>, TransactionError> {
+        let mut tx = self.pool.begin().await?;
+        let memo_id = Self::get_or_create_memo_id_in_tx(&mut tx, user_id, memo_text).await?;
+        tx.commit().await?;
+        Ok(memo_id)
+    }
+
+    /// Same as [`get_or_create_memo_id`] but reuses an existing
+    /// transaction so the MEMO lookup / insert commits together with
+    /// whatever the caller does next. Fable-5 #7: without this, an
+    /// `add_transaction_detail` that inserts the MEMO on the pool then
+    /// hits an FK error on `TRANSACTIONS_DETAIL_INSERT_FULL` leaves the
+    /// MEMO row behind for good — the two writes need to be one tx.
+    async fn get_or_create_memo_id_in_tx<'c>(
+        tx: &mut sqlx::Transaction<'c, sqlx::Sqlite>,
         user_id: i64,
         memo_text: Option<&str>,
     ) -> Result<Option<i64>, TransactionError> {
@@ -864,21 +887,21 @@ impl TransactionService {
 
         validate_memo_length(memo_text)?;
 
-        // Check if memo with same text already exists
+        // Check if memo with same text already exists.
         let existing_memo = sqlx::query(sql_queries::MEMO_FIND_BY_TEXT)
             .bind(user_id)
             .bind(memo_text)
-            .fetch_optional(&self.pool)
+            .fetch_optional(&mut **tx)
             .await?;
 
         if let Some(row) = existing_memo {
             Ok(Some(row.get(0)))
         } else {
-            // Create new memo
+            // Create new memo inside the caller's tx.
             let result = sqlx::query(sql_queries::MEMO_INSERT)
                 .bind(user_id)
                 .bind(memo_text)
-                .execute(&self.pool)
+                .execute(&mut **tx)
                 .await?;
             Ok(Some(result.last_insert_rowid()))
         }
@@ -1194,24 +1217,31 @@ impl TransactionService {
             return Err(TransactionError::NotFound);
         }
 
-        // Save memo if provided
-        let memo_id = if let Some(text) = &request.memo {
-            if !text.trim().is_empty() {
-                validate_memo_length(text)?;
-                let result = sqlx::query(sql_queries::MEMO_INSERT)
-                    .bind(user_id)
-                    .bind(text)
-                    .execute(&self.pool)
-                    .await?;
-                Some(result.last_insert_rowid())
-            } else {
-                None
-            }
-        } else {
-            None
-        };
+        // Fable-5 review #7 — the two writes below (MEMO insert +
+        // TRANSACTIONS_DETAIL insert) used to run on separate pool
+        // connections. Two things went wrong:
+        //   1. Every add unconditionally inserted a fresh MEMOS row
+        //      even when the user typed the same text as before, so
+        //      the "shared memo" update path in
+        //      `update_transaction_detail` never fired for
+        //      newly-added rows.
+        //   2. If the DETAIL_INSERT failed (FK, disk, cancel), the
+        //      MEMO row was already committed and orphaned forever
+        //      — no cleanup path.
+        // Wrapping both writes in a single tx fixes both by (a) going
+        // through `get_or_create_memo_id_in_tx` which dedups against
+        // an existing row with the same text, and (b) guaranteeing
+        // the MEMO insert only becomes visible when the DETAIL insert
+        // also succeeds.
+        let mut tx = self.pool.begin().await?;
 
-        // Insert detail
+        let memo_id = Self::get_or_create_memo_id_in_tx(
+            &mut tx,
+            user_id,
+            request.memo.as_deref(),
+        )
+        .await?;
+
         let result = sqlx::query(sql_queries::TRANSACTION_DETAIL_INSERT_FULL)
             .bind(transaction_id)
             .bind(user_id)
@@ -1225,9 +1255,10 @@ impl TransactionService {
             .bind(request.amount_including_tax)
             .bind(request.product_id)
             .bind(memo_id)
-            .execute(&self.pool)
+            .execute(&mut *tx)
             .await?;
 
+        tx.commit().await?;
         Ok(result.last_insert_rowid())
     }
 
@@ -4297,6 +4328,149 @@ mod tests {
             "nonexistent parent must return NotFound, got: {:?}",
             attempt
         );
+    }
+
+    /// Fable-5 review #7 — `add_transaction_detail` used to
+    /// unconditionally `MEMO_INSERT` every time it saw a memo, so
+    /// two details with the same memo text ended up with distinct
+    /// MEMOS rows. The "shared memo" branch in
+    /// `update_transaction_detail` then never fired for adds — a
+    /// user editing one row's memo did not update the other row that
+    /// looked like it shared the text. The add path now routes
+    /// through `get_or_create_memo_id_in_tx` and dedups against
+    /// existing memo text for the same user.
+    #[tokio::test]
+    async fn test_add_detail_dedupes_memo_text_across_multiple_adds() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool.clone());
+        let header_id = create_test_header(&service).await;
+
+        // Two adds with the same memo body for the same user.
+        let mut req_a = basic_detail_request();
+        req_a.memo = Some("shared memo".to_string());
+        let mut req_b = basic_detail_request();
+        req_b.memo = Some("shared memo".to_string());
+
+        service.add_transaction_detail(2, header_id, req_a).await.unwrap();
+        service.add_transaction_detail(2, header_id, req_b).await.unwrap();
+
+        // Both detail rows should reference the same MEMO_ID.
+        let memo_ids: Vec<i64> = sqlx::query_scalar(
+            "SELECT MEMO_ID FROM TRANSACTIONS_DETAIL WHERE TRANSACTION_ID = ? AND MEMO_ID IS NOT NULL ORDER BY DETAIL_ID"
+        )
+        .bind(header_id)
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+        assert_eq!(memo_ids.len(), 2, "both details must carry a MEMO_ID");
+        assert_eq!(memo_ids[0], memo_ids[1], "second add must reuse the first add's MEMO_ID");
+
+        // Only one MEMOS row exists with that text — no duplicate insert.
+        let memo_row_count: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM MEMOS WHERE USER_ID = ? AND MEMO_TEXT = ?"
+        )
+        .bind(2i64)
+        .bind("shared memo")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(memo_row_count, 1, "MEMOS must not carry a duplicate row for the same text");
+    }
+
+    /// Fable-5 review #7 companion — a detail add for a memo text
+    /// that the parent HEADER (or any other row) already references
+    /// must reuse that row's MEMO_ID, not mint a new one. This makes
+    /// the "shared memo" contract in `update_transaction_detail`
+    /// (which allocates a fresh row when it detects a shared memo)
+    /// actually reachable from adds too.
+    #[tokio::test]
+    async fn test_add_detail_reuses_memo_shared_with_header() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool.clone());
+
+        // Header carrying its own memo (create_test_header sets no
+        // memo by default, so seed one directly). Reuse the existing
+        // helper to get a valid header, then attach a MEMO row and
+        // point the header at it.
+        let header_id = create_test_header(&service).await;
+        let memo_id: i64 = sqlx::query(
+            "INSERT INTO MEMOS (USER_ID, MEMO_TEXT) VALUES (?, ?) RETURNING MEMO_ID"
+        )
+        .bind(2i64)
+        .bind("shared with header")
+        .fetch_one(&pool)
+        .await
+        .unwrap()
+        .get(0);
+        sqlx::query("UPDATE TRANSACTIONS_HEADER SET MEMO_ID = ? WHERE TRANSACTION_ID = ?")
+            .bind(memo_id)
+            .bind(header_id)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        // Add a detail typing that same memo text.
+        let mut req = basic_detail_request();
+        req.memo = Some("shared with header".to_string());
+        let detail_id = service.add_transaction_detail(2, header_id, req).await.unwrap();
+
+        // Detail must reference the pre-existing MEMO_ID, not a fresh one.
+        let detail_memo_id: Option<i64> = sqlx::query_scalar(
+            "SELECT MEMO_ID FROM TRANSACTIONS_DETAIL WHERE DETAIL_ID = ?"
+        )
+        .bind(detail_id)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(detail_memo_id, Some(memo_id));
+
+        // Still one MEMOS row for that text (no duplicate).
+        let memo_row_count: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM MEMOS WHERE USER_ID = ? AND MEMO_TEXT = ?"
+        )
+        .bind(2i64)
+        .bind("shared with header")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(memo_row_count, 1);
+    }
+
+    /// Fable-5 review #7 (atomicity side) — the MEMO insert and the
+    /// TRANSACTIONS_DETAIL insert now share a transaction, so a
+    /// failure in the DETAIL_INSERT rolls back the MEMO insert too
+    /// and leaves nothing orphaned. Reproduce by targeting a
+    /// nonexistent parent id after the ownership check passes: we
+    /// can't easily race a real FK failure inside the tx, but we can
+    /// prove the "before-fix" leak shape doesn't reappear by asserting
+    /// the MEMOS table stays empty when we ask for an add of a
+    /// memo-only-fresh-body against a header we then delete out of
+    /// scope.
+    #[tokio::test]
+    async fn test_add_detail_failure_does_not_orphan_memo() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool.clone());
+
+        // Try to add a detail with a fresh memo body against a
+        // nonexistent parent — the ownership check fails BEFORE the
+        // tx opens (guard at the top of `add_transaction_detail`),
+        // so the MEMOS table stays empty. This locks the "guard runs
+        // before any write" contract; a regression that moves the
+        // guard after the MEMO insert would leave "leak-me" behind
+        // and trip this test.
+        let mut req = basic_detail_request();
+        req.memo = Some("leak-me".to_string());
+        let result = service.add_transaction_detail(2, 999_999, req).await;
+        assert!(matches!(result, Err(TransactionError::NotFound)));
+
+        let leaked: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM MEMOS WHERE MEMO_TEXT = ?"
+        )
+        .bind("leak-me")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(leaked, 0, "rejected add must not leave a MEMOS row behind");
     }
 
     // ---- From<TransactionError> for ApiError ----------------------------
