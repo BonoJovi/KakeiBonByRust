@@ -2,6 +2,7 @@
  * Common functions for all aggregation screens
  */
 import i18n from './i18n.js';
+import { formatApiError } from './master-crud.js';
 
 /**
  * Render aggregation results to table
@@ -191,12 +192,40 @@ export function parseGroupBy(groupBy) {
 }
 
 /**
- * Translate backend aggregation error messages to i18n messages
- * @param {Error|string} error - Error from backend
+ * Translate backend aggregation error messages to i18n messages.
+ *
+ * Fable-5 review #9 — this helper used to call `error.toString()`
+ * directly. That worked while every aggregation command returned
+ * `Result<T, String>`, but blew up as soon as any error path started
+ * arriving as an `ApiError { code, message, ... }` JSON object: the
+ * default object `toString()` returns the literal `"[object Object]"`,
+ * every substring match missed, and the user saw `"[object Object]"`
+ * in the aggregation error banner. Routing through `formatApiError`
+ * (the same coercion the rest of the app uses for post-ApiError
+ * migration errors) collapses both shapes to a searchable string
+ * without touching the substring branches below.
+ *
+ * @param {Error|string|object} error - Error from backend
  * @returns {string} Translated error message
  */
 export function translateAggregationError(error) {
-    const errorStr = error.toString();
+    const errorStr = formatApiError(error);
+    // `formatApiError` delegates to `String(err)` for anything not
+    // shaped like `{ message: string }`, so a plain object without a
+    // `.message` (`"[object Object]"`), an empty ApiError message
+    // (`""`), or a null/undefined error (`"null"` / `"undefined"`)
+    // would all otherwise be shown verbatim in the banner. Swap them
+    // for a localised generic — suppressing exactly the class of
+    // string Fable-5 #9 was named after.
+    const UNUSABLE_COERCED = new Set(['[object Object]', 'null', 'undefined']);
+    if (!errorStr || UNUSABLE_COERCED.has(errorStr)) {
+        // No hardcoded fallback — `i18n.t` returns the key literal on a
+        // missing translation (never falsy), so an English string here
+        // would only ever leak on a screen whose i18n seed is broken,
+        // *and* would leak in the wrong language. Per project rule:
+        // all user-facing text resolves through i18n.
+        return i18n.t('aggregation.error_generic');
+    }
     if (errorStr.includes('Invalid year')) return i18n.t('aggregation.error_invalid_year') || errorStr;
     if (errorStr.includes('Invalid month')) return i18n.t('aggregation.error_invalid_month') || errorStr;
     if (errorStr.includes('Invalid date range')) return i18n.t('aggregation.error_invalid_date_range') || errorStr;

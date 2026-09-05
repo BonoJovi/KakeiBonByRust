@@ -2,8 +2,8 @@
 
 This document provides a complete index of all frontend tests implemented in JavaScript.
 
-**Last Updated**: 2026-08-21 JST  
-**Total Tests**: 715 (jest suites; 22 test files, per `npm test`)
+**Last Updated**: 2026-09-06 JST  
+**Total Tests**: 728 (jest suites; 23 test files, per `npm test`)
 
 ---
 
@@ -30,7 +30,7 @@ and are **not** added again to the grand total.
 - **login.test.js** - Login tests (58)
 - **user-deletion.test.js** - User deletion tests (46)
 
-### Feature-Specific Tests (292 tests)
+### Feature-Specific Tests (305 tests)
 
 - **transaction-edit.test.js** - Transaction edit tests (112)
 - **transaction-detail-management.test.js** - Transaction detail management tests (51)
@@ -43,6 +43,7 @@ and are **not** added again to the grand total.
 - **modal-double-submit.test.js** - Shared `Modal._handleSave` re-entrancy guard + unhandled-rejection swallow tests (6)
 - **master-crud.test.js** - Shared `saveMasterEntry` + `mapMasterErrorCode` + `formatApiError` (Fable-5 #D3/#D4/#23) tests (30)
 - **attach-char-counter-ime.test.js** - `attachCharCounter` baseline + IME composition guard (Fable-5 #D1) tests (8)
+- **aggregation-error-translate.test.js** - `translateAggregationError` shape-guard tests (Fable-5 #9): coerces `Err(String)` / `ApiError { code, message }` / `Error` to a substring-matchable string before routing to i18n keys, and swaps unusable coerced values (`"[object Object]"`, `"null"`, `"undefined"`, `""`) for the localised generic banner, so the aggregation banner never renders those literals (13)
 
 ### Aggregation Tests (115 tests)
 - **aggregation-daily.test.js** - Daily aggregation (16)
@@ -75,7 +76,7 @@ and are **not** added again to the grand total.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **Feature-Specific Tests** | **292** |
+| **Feature-Specific Tests** | **305** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 29 |
@@ -87,13 +88,14 @@ and are **not** added again to the grand total.
 | modal-double-submit.test.js | 6 |
 | master-crud.test.js | 30 |
 | attach-char-counter-ime.test.js | 8 |
+| aggregation-error-translate.test.js | 13 |
 | **Aggregation Tests** | **115** |
 | aggregation-daily.test.js | 16 |
 | aggregation-weekly.test.js | 22 |
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **Total (jest)** | **715** |
+| **Total (jest)** | **728** |
 
 Grand total is Screen + Feature + Aggregation (Common Test Suites are helper
 libraries invoked from Screen-Specific files and their assertions are already
