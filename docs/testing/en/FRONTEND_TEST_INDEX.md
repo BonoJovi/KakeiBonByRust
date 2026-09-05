@@ -31,6 +31,7 @@ and are **not** added again to the grand total.
 - **user-deletion.test.js** - User deletion tests (46)
 
 ### Feature-Specific Tests (292 tests)
+
 - **transaction-edit.test.js** - Transaction edit tests (112)
 - **transaction-detail-management.test.js** - Transaction detail management tests (51)
 - **transaction-detail-tax-calculation.test.js** - Tax calculation tests (29)

@@ -13,6 +13,7 @@ import { setupTaxCalculationListeners } from './detail-tax-calc.js';
 import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
 import { showToast } from './toast.js';
 import { formatApiError, API_ERROR_CODES } from './master-crud.js';
+import { escapeHtml } from './escape-html.js';
 
 let currentUserId = null;
 let currentUserRole = null;
@@ -661,14 +662,12 @@ async function loadDetails() {
     }
 }
 
-/**
- * Escape HTML to prevent XSS
- */
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
+// `escapeHtml` used across this file is imported from
+// `./escape-html.js` at the top of the module (see the imports
+// block near line 12). CodeRabbit on #129 asked us to consolidate
+// on the shared helper so any future tightening of the escape
+// contract lands in every caller at once, instead of leaving a
+// local sibling behind that could drift out of sync.
 
 // ============================================================================
 // Product autocomplete (v2.6.0 master integration)
