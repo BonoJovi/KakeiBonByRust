@@ -4356,7 +4356,7 @@ mod tests {
 
         // Both detail rows should reference the same MEMO_ID.
         let memo_ids: Vec<i64> = sqlx::query_scalar(
-            "SELECT MEMO_ID FROM TRANSACTIONS_DETAIL WHERE TRANSACTION_ID = ? AND MEMO_ID IS NOT NULL ORDER BY DETAIL_ID"
+            sql_queries::TEST_ADD_DETAIL_SELECT_MEMO_IDS_BY_TXN,
         )
         .bind(header_id)
         .fetch_all(&pool)
@@ -4367,7 +4367,7 @@ mod tests {
 
         // Only one MEMOS row exists with that text — no duplicate insert.
         let memo_row_count: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM MEMOS WHERE USER_ID = ? AND MEMO_TEXT = ?"
+            sql_queries::TEST_ADD_DETAIL_COUNT_MEMOS_BY_TEXT,
         )
         .bind(2i64)
         .bind("shared memo")
@@ -4393,16 +4393,14 @@ mod tests {
         // helper to get a valid header, then attach a MEMO row and
         // point the header at it.
         let header_id = create_test_header(&service).await;
-        let memo_id: i64 = sqlx::query(
-            "INSERT INTO MEMOS (USER_ID, MEMO_TEXT) VALUES (?, ?) RETURNING MEMO_ID"
-        )
-        .bind(2i64)
-        .bind("shared with header")
-        .fetch_one(&pool)
-        .await
-        .unwrap()
-        .get(0);
-        sqlx::query("UPDATE TRANSACTIONS_HEADER SET MEMO_ID = ? WHERE TRANSACTION_ID = ?")
+        let memo_id: i64 = sqlx::query(sql_queries::TEST_ADD_DETAIL_INSERT_MEMO_RETURNING_ID)
+            .bind(2i64)
+            .bind("shared with header")
+            .fetch_one(&pool)
+            .await
+            .unwrap()
+            .get(0);
+        sqlx::query(sql_queries::TEST_ADD_DETAIL_UPDATE_HEADER_MEMO_ID)
             .bind(memo_id)
             .bind(header_id)
             .execute(&pool)
@@ -4416,7 +4414,7 @@ mod tests {
 
         // Detail must reference the pre-existing MEMO_ID, not a fresh one.
         let detail_memo_id: Option<i64> = sqlx::query_scalar(
-            "SELECT MEMO_ID FROM TRANSACTIONS_DETAIL WHERE DETAIL_ID = ?"
+            sql_queries::TEST_ADD_DETAIL_SELECT_DETAIL_MEMO_ID,
         )
         .bind(detail_id)
         .fetch_one(&pool)
@@ -4426,7 +4424,7 @@ mod tests {
 
         // Still one MEMOS row for that text (no duplicate).
         let memo_row_count: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM MEMOS WHERE USER_ID = ? AND MEMO_TEXT = ?"
+            sql_queries::TEST_ADD_DETAIL_COUNT_MEMOS_BY_TEXT,
         )
         .bind(2i64)
         .bind("shared with header")
@@ -4437,40 +4435,57 @@ mod tests {
     }
 
     /// Fable-5 review #7 (atomicity side) — the MEMO insert and the
-    /// TRANSACTIONS_DETAIL insert now share a transaction, so a
-    /// failure in the DETAIL_INSERT rolls back the MEMO insert too
-    /// and leaves nothing orphaned. Reproduce by targeting a
-    /// nonexistent parent id after the ownership check passes: we
-    /// can't easily race a real FK failure inside the tx, but we can
-    /// prove the "before-fix" leak shape doesn't reappear by asserting
-    /// the MEMOS table stays empty when we ask for an add of a
-    /// memo-only-fresh-body against a header we then delete out of
-    /// scope.
+    /// TRANSACTIONS_DETAIL insert share a transaction, so a failure
+    /// in the DETAIL_INSERT rolls the MEMO insert back too. This pin
+    /// targets that behaviour deterministically by driving the
+    /// DETAIL_INSERT into a real FK violation *after* the ownership
+    /// guard has passed and the tx has already opened:
+    /// `TRANSACTIONS_DETAIL` has a composite FK
+    /// `(USER_ID, CATEGORY1_CODE) → CATEGORY1(USER_ID, CATEGORY1_CODE)`.
+    /// Passing a CATEGORY1_CODE that doesn't exist in the fixture
+    /// (`"DOES_NOT_EXIST"`) sails through the parent-header
+    /// existence check, opens the tx, inserts the MEMO row, then
+    /// trips the FK on the DETAIL_INSERT. Post-fix the tx rolls
+    /// back and the MEMOS table is untouched; the pre-fix code
+    /// would have left the "leak-me" row behind because the MEMO
+    /// insert had already committed on its own connection.
     #[tokio::test]
-    async fn test_add_detail_failure_does_not_orphan_memo() {
-        let pool = setup_test_db().await;
+    async fn test_add_detail_failure_rolls_back_memo_insert_in_same_tx() {
+        // Use the FK-enforcing pool so the composite FK on
+        // TRANSACTIONS_DETAIL.(USER_ID, CATEGORY1_CODE) actually
+        // fires — the default `setup_test_db()` leaves PRAGMA
+        // foreign_keys OFF, which would let the bad CATEGORY1_CODE
+        // slip through and defeat the test.
+        let pool = setup_test_db_with_foreign_keys().await;
         let service = TransactionService::new(pool.clone());
+        let valid_header_id = create_test_header(&service).await;
 
-        // Try to add a detail with a fresh memo body against a
-        // nonexistent parent — the ownership check fails BEFORE the
-        // tx opens (guard at the top of `add_transaction_detail`),
-        // so the MEMOS table stays empty. This locks the "guard runs
-        // before any write" contract; a regression that moves the
-        // guard after the MEMO insert would leave "leak-me" behind
-        // and trip this test.
         let mut req = basic_detail_request();
         req.memo = Some("leak-me".to_string());
-        let result = service.add_transaction_detail(2, 999_999, req).await;
-        assert!(matches!(result, Err(TransactionError::NotFound)));
+        // CATEGORY1_CODE not present in the fixture — FK on
+        // TRANSACTIONS_DETAIL.(USER_ID, CATEGORY1_CODE) fails on the
+        // DETAIL_INSERT *inside* the tx, after the memo has been
+        // written but before commit.
+        req.category1_code = "DOES_NOT_EXIST".to_string();
 
-        let leaked: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM MEMOS WHERE MEMO_TEXT = ?"
-        )
-        .bind("leak-me")
-        .fetch_one(&pool)
-        .await
-        .unwrap();
-        assert_eq!(leaked, 0, "rejected add must not leave a MEMOS row behind");
+        let result = service
+            .add_transaction_detail(2, valid_header_id, req)
+            .await;
+        assert!(
+            result.is_err(),
+            "DETAIL_INSERT must fail on the missing CATEGORY1_CODE FK, got: {:?}",
+            result,
+        );
+
+        let leaked: i64 = sqlx::query_scalar(sql_queries::TEST_ADD_DETAIL_COUNT_MEMOS_ORPHAN)
+            .bind("leak-me")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(
+            leaked, 0,
+            "MEMO insert must roll back with the failed DETAIL_INSERT — no orphan row",
+        );
     }
 
     // ---- From<TransactionError> for ApiError ----------------------------

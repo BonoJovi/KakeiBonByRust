@@ -2155,6 +2155,43 @@ CREATE TABLE USERS (
 
 pub const TEST_TRANSACTION_INSERT_USER: &str = "INSERT INTO USERS (USER_ID, NAME, PAW, ROLE, ENTRY_DT) VALUES (2, 'testuser', 'hash', 1, datetime('now'))";
 
+// Fable-5 #7 (CodeRabbit on #130): test-only SQL used by the
+// `add_transaction_detail` memo-dedup / atomicity pins. Kept here as
+// named constants so a rename or schema change fails in ONE place
+// instead of leaving stale strings inside the test module — matches
+// the "Never hardcode SQL in service code" rule.
+
+/// List MEMO_ID for all details of a given transaction, in DETAIL_ID
+/// order, filtering out NULLs. Used to confirm two adds land on the
+/// same MEMO_ID.
+pub const TEST_ADD_DETAIL_SELECT_MEMO_IDS_BY_TXN: &str =
+    "SELECT MEMO_ID FROM TRANSACTIONS_DETAIL \
+     WHERE TRANSACTION_ID = ? AND MEMO_ID IS NOT NULL ORDER BY DETAIL_ID";
+
+/// Count MEMOS rows carrying the same (USER_ID, MEMO_TEXT). Used to
+/// confirm the dedup fix does not create a duplicate row.
+pub const TEST_ADD_DETAIL_COUNT_MEMOS_BY_TEXT: &str =
+    "SELECT COUNT(*) FROM MEMOS WHERE USER_ID = ? AND MEMO_TEXT = ?";
+
+/// Insert a MEMOS row and return the new MEMO_ID. Used by the
+/// header-sharing pin to seed a header memo the add path should
+/// reuse.
+pub const TEST_ADD_DETAIL_INSERT_MEMO_RETURNING_ID: &str =
+    "INSERT INTO MEMOS (USER_ID, MEMO_TEXT) VALUES (?, ?) RETURNING MEMO_ID";
+
+/// Point a given header at a specific MEMO_ID.
+pub const TEST_ADD_DETAIL_UPDATE_HEADER_MEMO_ID: &str =
+    "UPDATE TRANSACTIONS_HEADER SET MEMO_ID = ? WHERE TRANSACTION_ID = ?";
+
+/// Fetch the MEMO_ID a specific detail row references (nullable).
+pub const TEST_ADD_DETAIL_SELECT_DETAIL_MEMO_ID: &str =
+    "SELECT MEMO_ID FROM TRANSACTIONS_DETAIL WHERE DETAIL_ID = ?";
+
+/// Count MEMOS rows carrying a specific text (any user). Used by the
+/// rollback pin to confirm a failed add did not leak a MEMOS row.
+pub const TEST_ADD_DETAIL_COUNT_MEMOS_ORPHAN: &str =
+    "SELECT COUNT(*) FROM MEMOS WHERE MEMO_TEXT = ?";
+
 pub const TEST_TRANSACTION_CREATE_MEMOS_TABLE: &str = r#"
 CREATE TABLE MEMOS (
     MEMO_ID INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -2287,6 +2324,14 @@ CREATE TABLE TRANSACTIONS_DETAIL (
     UPDATE_DT DATETIME,
     FOREIGN KEY (TRANSACTION_ID) REFERENCES TRANSACTIONS_HEADER(TRANSACTION_ID) ON DELETE CASCADE,
     FOREIGN KEY (MEMO_ID) REFERENCES MEMOS(MEMO_ID),
+    -- Fable-5 #7 (CodeRabbit on #130): matches the composite FK the
+    -- production schema declares (see `CREATE_TRANSACTIONS_DETAIL_TABLE`
+    -- above). Test fixtures seed EXPENSE into CATEGORY1 so happy paths
+    -- pass unchanged; the FK now also lets the atomicity pin drive
+    -- DETAIL_INSERT into a deterministic FK failure by supplying a
+    -- CATEGORY1_CODE that isn't seeded.
+    FOREIGN KEY (USER_ID, CATEGORY1_CODE)
+        REFERENCES CATEGORY1(USER_ID, CATEGORY1_CODE),
     CHECK (ITEM_NAME != '')
 )
 "#;
