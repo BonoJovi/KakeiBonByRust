@@ -15,6 +15,10 @@ import { mapMasterErrorCode, API_ERROR_CODES, formatApiError } from './master-cr
 
 let currentUsers = [];
 let editingUserId = null;
+// Session user cached at page load so onOpen / handleUserSave can tell
+// self-edit from admin-edits-someone-else without an extra invoke each
+// time the modal opens (Fable-5 review #19).
+let currentSessionUser = null;
 
 // Modal instances
 let userModal;
@@ -45,7 +49,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
     
     console.log(`Logged in as: ${user.name} (ID: ${user.user_id}, Role: ${user.role})`);
-    
+    currentSessionUser = user;
+
     await i18n.init();
     i18n.updateUI();
     
@@ -127,16 +132,24 @@ function initModals() {
                 usernameInput.value = '';
             } else if (mode === 'edit') {
                 title.textContent = i18n.t('user_mgmt.edit_user');
-                // Password fields are optional at the browser level —
-                // JS requires `old-password` only when the user actually
-                // types a new password (see handleUserSave).
-                oldPasswordGroup.style.display = 'block';
-                passwordGroup.style.display = 'block';
-                passwordConfirmGroup.style.display = 'block';
+                editingUserId = data.userId;
+
+                // Fable-5 review #19 — password change is a self-only
+                // operation because re-encrypting every ENCRYPTED_FIELDS
+                // row needs the caller's old password to derive the
+                // decryption key. An admin editing someone else can only
+                // rename, so hide the password fields entirely for that
+                // case instead of showing inputs the save flow would
+                // reject. Self-edit keeps the full three-input shape.
+                const isSelfEdit = currentSessionUser
+                    && data.userId === currentSessionUser.user_id;
+                const passwordFieldsDisplay = isSelfEdit ? 'block' : 'none';
+                oldPasswordGroup.style.display = passwordFieldsDisplay;
+                passwordGroup.style.display = passwordFieldsDisplay;
+                passwordConfirmGroup.style.display = passwordFieldsDisplay;
                 oldPasswordInput.required = false;
                 passwordInput.required = false;
                 passwordConfirmInput.required = false;
-                editingUserId = data.userId;
 
                 // Set form values
                 usernameInput.value = data.username;
@@ -678,7 +691,10 @@ async function updateUser(userId, username, password, oldPassword) {
         // command so re-encrypting every ENCRYPTED_FIELDS row and
         // updating USERS.PAW commit as one atomic step. The `_info`
         // command below deliberately can no longer accept a password
-        // argument (Fable-5 review #1, #5).
+        // argument (Fable-5 review #1, #5). Password change is
+        // self-only — an admin editing someone else's row cannot
+        // derive the target's encryption key, so the frontend must
+        // not offer this path for cross-user edits (Fable-5 #19).
         const params = {
             oldPassword,
             username: nextUsername,
@@ -690,8 +706,12 @@ async function updateUser(userId, username, password, oldPassword) {
             await invoke('update_general_user_with_reencryption', params);
         }
     } else {
-        // Rename-only path.
-        const params = { username: nextUsername };
+        // Rename-only path. `userId` addresses the target explicitly
+        // so an admin editing someone else lands on that user's row
+        // instead of silently being pointed back at the session user
+        // (Fable-5 #19). Backend authorises: self-edit is always
+        // allowed, cross-user edits require an admin session.
+        const params = { userId, username: nextUsername };
         if (user.role === ROLE_ADMIN) {
             await invoke('update_admin_user_info', params);
         } else {

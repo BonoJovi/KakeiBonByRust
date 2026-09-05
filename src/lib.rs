@@ -369,6 +369,7 @@ async fn create_general_user(
 
 #[tauri::command]
 async fn update_general_user_info(
+    user_id: i64,
     username: Option<String>,
     state: tauri::State<'_, AppState>
 ) -> Result<(), api_error::ApiError> {
@@ -377,7 +378,16 @@ async fn update_general_user_info(
     // `update_general_user_with_reencryption` so the re-encryption and
     // `USERS.PAW` update commit as one atomic step
     // (Fable-5 review #1, #5).
-    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
+    //
+    // Fable-5 review #19 — the target `user_id` now comes from the
+    // frontend rather than being derived from the session, so an
+    // administrator can rename other users from the user-management
+    // screen. Anyone editing themselves is allowed; editing anyone
+    // else requires an admin session.
+    let session_user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
+    if user_id != session_user_id {
+        require_admin_session(&state).map_err(api_error::ApiError::validation)?;
+    }
 
     let user_mgmt = state.user_mgmt.lock().await;
     user_mgmt.update_general_user(
@@ -411,12 +421,16 @@ async fn update_general_user_with_reencryption(
 
 #[tauri::command]
 async fn update_admin_user_info(
+    user_id: i64,
     username: Option<String>,
     state: tauri::State<'_, AppState>
 ) -> Result<(), api_error::ApiError> {
     // Rename-only path. See `update_general_user_info` for the
-    // password-routing contract.
-    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
+    // password-routing and Fable-5 #19 authorization contract.
+    let session_user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
+    if user_id != session_user_id {
+        require_admin_session(&state).map_err(api_error::ApiError::validation)?;
+    }
 
     let user_mgmt = state.user_mgmt.lock().await;
     user_mgmt.update_admin_user(
