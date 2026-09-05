@@ -2,6 +2,41 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v2.9.0] - 2026-09-06
+
+Fable-5 review rollup. Fifteen fixes across three surfaces: money / date correctness, transactional atomicity, and i18n. Two additional user-visible additions rounded out the release — administrators can now edit other users, and TRANSFER with FROM == TO is refused instead of silently double-counting.
+
+### New behaviour (user-visible)
+
+- **Administrators can edit other users** — the general/admin edit modals wire `user_id` end-to-end through the `update_*_info` commands, so an administrator can change another user's name, role, or password without needing to log in as that user. Same-user self-edit paths keep the "old password required for re-encryption" flow intact. (Fable-5 #19)
+- **TRANSFER with FROM == TO is refused** — a transfer whose FROM and TO accounts are identical would net the balance to zero but the dashboard used to credit the TO side, inflating the balance by the transfer amount. Both the backend and the transaction submit path now reject this, and the dashboard nets stale rows to zero. (Fable-5 #20)
+- **Money inputs must be integers** — the detail / transaction / recurring-rule forms now reject decimals, locale commas, scientific notation, sign prefixes, full-width digits, trailing garbage, and integers past `Number.MAX_SAFE_INTEGER` before submit. Users see a per-field validation error instead of silently corrupted amounts (`"1099.5"` → 1099 no longer). (Fable-5 #10)
+- **Tax auto-adjust preserves the typed amount** — when the entered tax-included amount cannot be represented exactly under the current rounding setting, the app auto-adjusts and notifies the user with the diff instead of silently persisting three inconsistent numbers (amount / tax / included). (Fable-5 #8)
+- **Recurring-rule date defaults respect local timezone** — start-date / end-date / anchor-date defaults are now built from the browser's local getters instead of `toISOString()`. JST users opening the modal before 09:00 no longer see yesterday's date. (Fable-5 #13)
+- **Aggregation banner respects locale** — the "Unspecified" fallback for grouped shop / product / account rows is now routed through `common.unspecified` i18n; the previous Japanese literal `"指定なし"` no longer leaks onto the English UI. The recurring-rule account dropdown swaps the NONE account's label the same way. (Fable-5 #22)
+- **Aggregation error banner never renders `"[object Object]"`** — the shape guard on `translateAggregationError` collapses `Err(String)` / `ApiError { code, message }` / `Error` instances to the same substring-matchable string, and falls back to a localised generic message when the coerced value is unusable. (Fable-5 #9)
+- **Product autocomplete matches literally** — the master search now escapes `%` and `_` and pairs `LIKE ? ESCAPE '\'`, so a search for `"100%ジ"` against "果汁100%ジュース" and "果汁100リンゴジュース" matches only the first. (Fable-5 #23)
+- **Password change is atomic with re-encryption** — the password hash and per-row re-encryption now share a single transaction; a failure at either step rolls back both. (Fable-5 #1/#5)
+- **Bulk recalculation preserves the user's rounding choice** — the `recalculate_all_transaction_totals` path no longer overwrites `TAX_ROUNDING_TYPE` when reconstructing a header total. (Fable-5 #2)
+- **Detail aggregation stops double-taxing tax-included headers** — the detail-dimension aggregation now honours `TRANSACTIONS_HEADER.TAX_INCLUDED_TYPE`, matching the header-dimension result on the same ledger. (Fable-5 #3/#4)
+
+### Reliability (internal, no user-facing surface)
+
+- **`save_transaction_header` no longer orphans MEMOS rows on FK failure** — the memo insert and header insert now share a single transaction, and the memo text is deduped via `get_or_create_memo_id_in_tx` so identical texts collapse onto one MEMOS row. (Fable-5 #6)
+- **`add_transaction_detail` shares the same tx path** — same fix pattern as save-header, so a failed detail add no longer leaves a MEMOS row behind. (Fable-5 #7)
+- **`SHOPS.USER_ID` cascade** — `ON DELETE CASCADE` added so removing a user drops the user's shops with them. Pool-wide `PRAGMA foreign_keys = ON` is set via `SqlitePoolOptions::after_connect` so every connection enforces FKs, not just the first. (Fable-5 #11)
+- **Master delete lock runs in a single tx** — `delete_shop` / `delete_product` / `delete_manufacturer` now wrap the "check-in-use → logical delete" pair inside one `pool.begin()` transaction, tying the two operations together for any future concurrent-writer scenario. (Fable-5 #14)
+- **Shared `escape_like_pattern`** — the LIKE-metacharacter escaper extracted from `transaction.rs` into `src/services/like_escape.rs` so `product::search_products_by_name` and the transaction keyword search share one contract.
+
+### Tests
+
+- Backend: 551 → 588 (+37). New pins across every fix — tx rollback pins for the memo-orphan / password-change / master-delete paths, per-grouping "no hardcoded Japanese" pins for the aggregation SQL builder, unsafe-integer rejection for `parseAmountStrict`, LIKE metacharacter pins for `escape_like_pattern`, and integration pins for `search_products_by_name`.
+- Frontend: 715 → 773 (+58). New jest suites: `aggregation-error-translate`, `parse-amount-strict`, `format-local-date`, `aggregation-render-unspecified`. Jest now pins `TZ=Asia/Tokyo` via a `globalSetup` script so the timezone-sensitive `formatLocalDate` pins actually detect a UTC regression in CI.
+
+### Dependencies
+
+- `browserslist` dev-dep bumped 4.28.4 → 4.28.9 (GHSA-73wf-gq98-2v4g, `res/tests`-scope only).
+
 ## [v2.8.0] - 2026-08-26
 
 Master-integrity guard release. Accounts / shops / manufacturers / products can no longer be deleted while they are still referenced from other screens; the user is steered to disable them instead. Previously a delete would silently soft-remove the master row while historical data kept pointing at it — that path is now closed so the user cannot break integrity by accident.

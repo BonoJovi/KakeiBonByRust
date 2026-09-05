@@ -5,7 +5,7 @@
 > **A Modern Household Budget App with Focus on Readability and Usability**  
 > **見やすさと使いやすさを追求した、モダンな家計簿アプリケーション**
 
-[![Version](https://img.shields.io/badge/Version-2.8.0-blue)](https://github.com/BonoJovi/KakeiBonByRust/releases/tag/v2.8.0)
+[![Version](https://img.shields.io/badge/Version-2.9.0-blue)](https://github.com/BonoJovi/KakeiBonByRust/releases/tag/v2.9.0)
 [![Rust](https://img.shields.io/badge/Rust-1.70+-orange.svg)](https://www.rust-lang.org/)
 [![Tauri](https://img.shields.io/badge/Tauri-v2.11.1-blue.svg)](https://tauri.app/)
 [![Tests](https://img.shields.io/badge/tests-1254%20passing-brightgreen.svg)](#test-results--テスト結果)
@@ -27,9 +27,9 @@
 いつもKakeiBonに気を留めていただき、誠にありがとうございます。
 プロジェクト発案者のBonoJovi(Yoshihiro NAKAHARA)です。
 
-**Ver.2.8.0を正式リリースいたしました！**
+**Ver.2.9.0を正式リリースいたしました！**
 
-Ver.2.8.0 は「マスタ整合性ガード」リリースです。口座 / 店舗 / メーカー / 商品マスタが他の画面で使用中のときは、削除ではなく「無効化」に誘導するようになりました。これまでは削除しても静かに論理削除されるだけで、既に登録した入出金や繰り返し予定からは「消えたはずのマスタ」を参照する状態が起き得ましたが、今後はユーザーが意図せず整合性を崩す動線が塞がれます。
+Ver.2.9.0 は Fable-5 レビューの一括対応リリースです。金額・日付の正確性、トランザクション原子性、i18n の 3 領域を横断する 15 件の修正に加え、管理者による他ユーザー編集の解禁と、TRANSFER で FROM==TO を弾くガードの 2 件を同梱しています。金額入力は小数・カンマ・全角数字を明示的に拒否するようになり、集計バナーの英語 UI への「指定なし」漏れ、商品オートコンプリートの `%` / `_` 誤マッチ、JST 未明の日付前日ずれといった小さな綻びをまとめて塞いでいます。
 
 主な変化：
 
@@ -66,9 +66,9 @@ GitHub の issue や e メールでのメッセージも受け付けています
 Thank you for your continued interest in KakeiBon.
 I'm BonoJovi (Yoshihiro NAKAHARA), the project initiator.
 
-**We have officially released Ver.2.8.0!**
+**We have officially released Ver.2.9.0!**
 
-Ver.2.8.0 is the "master-integrity guard" release. Accounts, shops, manufacturers, and products can no longer be deleted while they are still referenced from other screens — instead, KakeiBon guides you to *disable* them. Before this release, deletion would silently soft-remove the master row while historical transactions and recurring rules kept pointing at it; that path is now closed so you cannot accidentally break integrity while cleaning up.
+Ver.2.9.0 is the Fable-5 review rollup. Fifteen fixes across three surfaces (money / date correctness, transactional atomicity, and i18n) plus two user-visible additions: administrators can now edit other users, and a transfer whose FROM and TO accounts are identical is refused instead of silently double-counting. Money inputs now explicitly reject decimals, locale commas, and full-width digits; the aggregation banner no longer leaks Japanese "指定なし" onto the English UI; product autocomplete matches `%` and `_` literally; and the recurring-rule modal's date defaults respect the browser's local timezone so a pre-09:00 JST session no longer shows yesterday's date.
 
 Key changes:
 
