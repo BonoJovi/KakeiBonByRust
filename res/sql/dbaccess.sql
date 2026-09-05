@@ -1915,3 +1915,14 @@ INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESO
 INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2446, 'error.current_password_required', 'ja', 'パスワードを変更するには現在のパスワードを入力してください。', 'error', '新パスワード指定時に旧パスワード未入力のガード', datetime('now'));
 INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2447, 'error.old_password_incorrect', 'en', 'Current password is incorrect.', 'error', 'Surface for SecurityError::InvalidPassword on password change', datetime('now'));
 INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2448, 'error.old_password_incorrect', 'ja', '現在のパスワードが正しくありません。', 'error', 'パスワード変更時の旧パスワード不一致の表示', datetime('now'));
+
+-- ============================================================================
+-- TRANSFER from/to validation toast (Fable-5 review #20)
+-- The transaction save flow now rejects TRANSFER with the same source
+-- and destination account (a self-transfer nets to zero but used to
+-- inflate the dashboard balance because ACCOUNT_BALANCES_AS_OF only
+-- counted the +TO arm). The frontend catches it first so the user
+-- sees a specific toast instead of the raw ApiError message.
+-- ============================================================================
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2449, 'transaction_mgmt.transfer_same_account', 'en', 'Transfer source and destination accounts must be different.', 'transaction_mgmt', 'Frontend guard against TRANSFER with FROM == TO', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2450, 'transaction_mgmt.transfer_same_account', 'ja', '振替元口座と振替先口座は別の口座を指定してください。', 'transaction_mgmt', 'TRANSFER で FROM==TO のフロント側ガード', datetime('now'));

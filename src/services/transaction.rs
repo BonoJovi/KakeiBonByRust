@@ -213,6 +213,14 @@ pub enum TransactionError {
     DatabaseError(String),
     ValidationError(String),
     NotFound,
+    /// Fable-5 review #20 (CodeRabbit on #127) — TRANSFER was submitted
+    /// with `from_account_code == to_account_code`. Kept as its own
+    /// variant (rather than a generic `ValidationError`) so the
+    /// `From<TransactionError> for ApiError` bridge can map it to a
+    /// dedicated `transfer_same_account` code the frontend renders
+    /// with an i18n key, instead of leaking the raw English message
+    /// through `formatApiError` on a ja-JP UI.
+    TransferSameAccount,
 }
 
 impl std::fmt::Display for TransactionError {
@@ -221,6 +229,9 @@ impl std::fmt::Display for TransactionError {
             TransactionError::DatabaseError(msg) => write!(f, "Database error: {}", msg),
             TransactionError::ValidationError(msg) => write!(f, "Validation error: {}", msg),
             TransactionError::NotFound => write!(f, "Transaction not found"),
+            TransactionError::TransferSameAccount => {
+                write!(f, "Transfer source and destination accounts must be different")
+            }
         }
     }
 }
@@ -256,6 +267,7 @@ impl From<TransactionError> for ApiError {
             TransactionError::NotFound => ApiError::not_found(ENTITY_LABEL),
             TransactionError::ValidationError(msg) => ApiError::validation(msg),
             TransactionError::DatabaseError(msg) => ApiError::database(msg),
+            TransactionError::TransferSameAccount => ApiError::transfer_same_account(),
         }
     }
 }
@@ -535,6 +547,21 @@ impl TransactionService {
             return Err(TransactionError::ValidationError(
                 "Invalid tax included type".to_string(),
             ));
+        }
+
+        // Fable-5 review #20 — TRANSFER with the same FROM and TO
+        // account is meaningless (net movement is zero) and used to
+        // sneak through both entry points. The dashboard-side
+        // `ACCOUNT_BALANCES_AS_OF` CASE evaluates the +TO arm before
+        // the -FROM arm and stops at first match, so the row was
+        // silently counted as a one-sided credit and inflated the
+        // account balance by the transfer amount. Reject the write
+        // outright; the CASE was made symmetric in the same PR as a
+        // second line of defence for legacy rows.
+        if request.category1_code == "TRANSFER"
+            && request.from_account_code == request.to_account_code
+        {
+            return Err(TransactionError::TransferSameAccount);
         }
 
         // Save memo if provided
@@ -968,6 +995,21 @@ impl TransactionService {
             return Err(TransactionError::ValidationError(
                 "Invalid tax included type".to_string(),
             ));
+        }
+
+        // Fable-5 review #20 — TRANSFER with the same FROM and TO
+        // account is meaningless (net movement is zero) and used to
+        // sneak through both entry points. The dashboard-side
+        // `ACCOUNT_BALANCES_AS_OF` CASE evaluates the +TO arm before
+        // the -FROM arm and stops at first match, so the row was
+        // silently counted as a one-sided credit and inflated the
+        // account balance by the transfer amount. Reject the write
+        // outright; the CASE was made symmetric in the same PR as a
+        // second line of defence for legacy rows.
+        if request.category1_code == "TRANSFER"
+            && request.from_account_code == request.to_account_code
+        {
+            return Err(TransactionError::TransferSameAccount);
         }
 
         // Get current transaction header to check current memo_id
@@ -3206,6 +3248,65 @@ mod tests {
         );
     }
 
+    /// Fable-5 review #20 — TRANSFER with the same source and
+    /// destination account nets to zero but historically inflated the
+    /// dashboard balance because `ACCOUNT_BALANCES_AS_OF` counted the
+    /// +TO arm first and stopped. The write-side guard now rejects
+    /// this outright at both entry points.
+    #[tokio::test]
+    async fn test_save_header_rejects_transfer_from_equals_to() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+
+        let request = SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "TRANSFER".to_string(),
+            from_account_code: "CASH".to_string(),
+            to_account_code: "CASH".to_string(),
+            transaction_date: "2024-01-01 10:00:00".to_string(),
+            total_amount: 2000,
+            tax_rounding_type: consts::TAX_ROUND_DOWN,
+            tax_included_type: consts::TAX_EXCLUDED,
+            memo: None,
+            is_scheduled: None,
+        };
+        let result = service.save_transaction_header(2, request).await;
+        assert!(
+            matches!(result, Err(TransactionError::TransferSameAccount)),
+            "TRANSFER with from == to must be rejected with the typed variant, got {:?}",
+            result
+        );
+    }
+
+    /// Companion pin for `update_transaction_header` — same guard on
+    /// the edit path so a valid TRANSFER cannot be mutated into a
+    /// self-transfer.
+    #[tokio::test]
+    async fn test_update_header_rejects_transfer_from_equals_to() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        let request = SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "TRANSFER".to_string(),
+            from_account_code: "BANK".to_string(),
+            to_account_code: "BANK".to_string(),
+            transaction_date: "2024-01-01 10:00:00".to_string(),
+            total_amount: 3000,
+            tax_rounding_type: consts::TAX_ROUND_DOWN,
+            tax_included_type: consts::TAX_EXCLUDED,
+            memo: None,
+            is_scheduled: None,
+        };
+        let result = service.update_transaction_header(2, transaction_id, request).await;
+        assert!(
+            matches!(result, Err(TransactionError::TransferSameAccount)),
+            "TRANSFER with from == to must be rejected on update with the typed variant, got {:?}",
+            result
+        );
+    }
+
     // ========================================================================
     // IS_SCHEDULED Tests
     // ========================================================================
@@ -4229,6 +4330,20 @@ mod tests {
     fn database_error_maps_to_database_code() {
         let err: ApiError = TransactionError::DatabaseError("no such table".to_string()).into();
         assert_eq!(err.code, ApiError::CODE_DATABASE);
+        assert!(err.entity.is_none());
+    }
+
+    /// CodeRabbit on #127 — pin the wire code for
+    /// `TransferSameAccount` so a future refactor that folds it back
+    /// into `ApiError::validation(...)` (or renames the code string)
+    /// trips this test instead of silently degrading the frontend to
+    /// the generic English fallback. The `entity` stays `None` because
+    /// the failure is about the transfer relation, not a named row.
+    #[test]
+    fn transfer_same_account_maps_to_stable_wire_code_and_omits_entity() {
+        let err: ApiError = TransactionError::TransferSameAccount.into();
+        assert_eq!(err.code, ApiError::CODE_TRANSFER_SAME_ACCOUNT);
+        assert_eq!(err.code, "transfer_same_account");
         assert!(err.entity.is_none());
     }
 

@@ -130,3 +130,9 @@ INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESO
 (2316, 'transaction_mgmt.failed_to_save', 'ja', '入出金の保存に失敗しました', 'transaction_mgmt', '保存エラーメッセージ', datetime('now')),
 (2317, 'transaction_mgmt.failed_to_load', 'en', 'Failed to load transaction', 'transaction_mgmt', 'Load error message', datetime('now')),
 (2318, 'transaction_mgmt.failed_to_load', 'ja', '入出金の読み込みに失敗しました', 'transaction_mgmt', '読み込みエラーメッセージ', datetime('now'));
+
+-- Fable-5 review #20: frontend toast for the TRANSFER FROM == TO guard.
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT)
+VALUES
+(2449, 'transaction_mgmt.transfer_same_account', 'en', 'Transfer source and destination accounts must be different.', 'transaction_mgmt', 'Frontend guard against TRANSFER with FROM == TO', datetime('now')),
+(2450, 'transaction_mgmt.transfer_same_account', 'ja', '振替元口座と振替先口座は別の口座を指定してください。', 'transaction_mgmt', 'TRANSFER で FROM==TO のフロント側ガード', datetime('now'));
