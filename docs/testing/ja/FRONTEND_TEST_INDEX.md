@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-09-06 JST  
-**総テスト数**: 728件 (jest suite 23 ファイル、`npm test` 実測)
+**総テスト数**: 752件 (jest suite 24 ファイル、`npm test` 実測)
 
 ---
 
@@ -34,6 +34,7 @@
   - [master-crud.test.js](#master-crudtestjs)
   - [attach-char-counter-ime.test.js](#attach-char-counter-imetestjs)
   - [aggregation-error-translate.test.js](#aggregation-error-translatetestjs)
+  - [parse-amount-strict.test.js](#parse-amount-stricttestjs)
 - [集計機能テスト](#集計機能テスト)
   - [aggregation-daily.test.js](#aggregation-dailytestjs)
   - [aggregation-weekly.test.js](#aggregation-weeklytestjs)
@@ -585,6 +586,22 @@
 
 ---
 
+### parse-amount-strict.test.js
+
+`res/js/parse-amount-strict.js` の `parseAmountStrict` 金額パーサの accept/reject テーブル (Fable-5 レビュー #10)。旧実装 `parseInt(el.value) || 0` は `"1099.5"` → 1099 (0.5 円損失)、`"1,099"` → 1 (99% ずれ) を無警告で通していた。新パーサは trim 後に `/^\d+$/` を要求し、空文字と null/undefined は既存の `|| 0` 挙動を保つため 0 を返す。呼び出し側は明細フォーム / 入出金フォーム / 繰り返しルールフォームの 3 経路。
+
+**テスト数**: 24件
+
+| テストブロック | 説明 | テスト数 |
+|--------------|------|---------|
+| accept | 純粋整数 / "0" / 先頭 0 / 前後空白 / 大整数 | 5件 |
+| empty inputs default to 0 | 空 / 空白のみ / null / undefined | 4件 |
+| reject (Fable-5 #10 pin cases) | 小数 / "0.5" / カンマ区切り / 指数表記 / 末尾ゴミ / 先頭ゴミ / 符号 (`-5` `+5`) / 内部空白 / 全角数字 / 単独ピリオド / 末尾ピリオド / `2^53-1` は受理 / `2^53` は拒否 / `9007199254740993` は precision loss なので拒否 | 15件 |
+
+**ファイル**: res/tests/parse-amount-strict.test.js
+
+---
+
 ## 集計機能テスト
 
 ### aggregation-daily.test.js
@@ -749,7 +766,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **305件** |
+| **機能別テスト** | **329件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 29 |
@@ -762,13 +779,14 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | master-crud.test.js | 30 |
 | attach-char-counter-ime.test.js | 8 |
 | aggregation-error-translate.test.js | 13 |
+| parse-amount-strict.test.js | 24 |
 | **集計機能テスト** | **115件** |
 | aggregation-daily.test.js | 16 |
 | aggregation-weekly.test.js | 22 |
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **728件** |
+| **総計 (jest)** | **752件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 

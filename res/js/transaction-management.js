@@ -13,6 +13,7 @@ import { applyHeaderRecalculationPrompt } from './header-recalc.js';
 import { calculateRecommendedTotal } from './tax-calc.js';
 import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
 import { showToast } from './toast.js';
+import { parseAmountStrict } from './parse-amount-strict.js';
 import { escapeHtml } from './escape-html.js';
 import { formatApiError, API_ERROR_CODES } from './master-crud.js';
 
@@ -946,7 +947,16 @@ async function handleTransactionSubmit(event) {
     const category1Code = document.getElementById('category1').value;
     const fromAccountCode = document.getElementById('from-account').value;
     const toAccountCode = document.getElementById('to-account').value;
-    const totalAmount = parseInt(document.getElementById('total-amount').value);
+    // Fable-5 review #10 — `total-amount` was read with
+    // `parseInt(...)` (no `|| 0` even), which silently truncated
+    // decimals and locale-comma inputs. `parseAmountStrict` returns
+    // null on any non-integer shape so the user sees the rejection
+    // before the invoke lands. `tax-rounding` / `tax-included-type`
+    // stay on `parseInt` — they are `<select>` elements whose
+    // options are hard-coded integer strings, unreachable by user
+    // typing.
+    const totalAmountInput = document.getElementById('total-amount');
+    const totalAmount = parseAmountStrict(totalAmountInput.value);
     const taxRoundingValue = parseInt(document.getElementById('tax-rounding').value);
     const taxIncludedTypeValue = parseInt(document.getElementById('tax-included-type').value);
     const memoInput = document.getElementById('transaction-memo');
@@ -956,9 +966,14 @@ async function handleTransactionSubmit(event) {
 
     // Validation — max memo length (mirrors Rust defense in src/services/transaction.rs)
     clearValidationError(memoInput);
+    clearValidationError(totalAmountInput);
     if (memoRaw && [...memoRaw].length > MAX_MEMO_LEN) {
         showMaxLengthError(memoInput, i18n.t('transaction_mgmt.memo'), MAX_MEMO_LEN);
         throw new Error('Validation error: memo too long');
+    }
+    if (totalAmount === null) {
+        showValidationError(totalAmountInput, i18n.t('common.error_amount_not_integer'));
+        return;
     }
 
     // Fable-5 review #20 — TRANSFER with FROM == TO nets to zero but
