@@ -2558,6 +2558,13 @@ pub fn run() {
                 database.migrate_shops_unique().await
                     .map_err(|e| format!("Failed to migrate SHOPS unique constraint: {}", e))?;
 
+                // Fable-5 review #11 — SHOPS FK to USERS was missing
+                // ON DELETE CASCADE, so deleting a user with SHOPS rows
+                // failed and rolled back. Recreate the table with the
+                // sibling-matching cascade. No-op after the first run.
+                database.migrate_shops_user_id_cascade().await
+                    .map_err(|e| format!("Failed to migrate SHOPS FK cascade: {}", e))?;
+
                 let auth_service = AuthService::new(database.pool().clone());
                 let user_mgmt_service = UserManagementService::new(database.pool().clone());
                 let encryption_service = EncryptionService::new(database.pool().clone());

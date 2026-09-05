@@ -1137,6 +1137,90 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_shops_user_unique_name
     ON SHOPS(USER_ID, SHOP_NAME)
 "#;
 
+// Fable-5 review #11: SHOPS `FOREIGN KEY (USER_ID) REFERENCES USERS`
+// missing `ON DELETE CASCADE`. Sibling master tables (ACCOUNTS,
+// PRODUCTS, MANUFACTURERS, TRANSACTIONS_HEADER, MEMOS) all cascade
+// on user deletion, so deleting a user with SHOPS rows fails with
+// `FOREIGN KEY constraint failed` and aborts the whole DELETE.
+// SQLite has no `ALTER TABLE ... ADD/MODIFY FOREIGN KEY` — the FK
+// clause is baked into the CREATE statement — so the migration
+// recreates the table with the same shape plus the CASCADE clause,
+// copies every row, drops the old table, renames the new one, and
+// restores the indexes.
+
+/// Any FK entry from SHOPS to USERS whose `on_delete` action is
+/// `CASCADE`. Zero means the migration must run; > 0 means fresh
+/// installs and previously-migrated DBs — both no-ops.
+pub const SHOPS_HAS_USER_CASCADE_FK: &str = r#"
+SELECT COUNT(*)
+FROM pragma_foreign_key_list('SHOPS')
+WHERE "table" = 'USERS' AND on_delete = 'CASCADE'
+"#;
+
+/// Recreate SHOPS with the CASCADE FK (and the sibling UNIQUE
+/// constraint already added by `migrate_shops_unique`). This is a
+/// pure DDL step — the shape mirrors `res/sql/dbaccess.sql` exactly
+/// except for the auto-generated column list order guarantee. Kept
+/// as a plain CREATE (not `IF NOT EXISTS`) because the migration
+/// only reaches this statement after asserting the new name is free.
+pub const MIGRATE_SHOPS_CASCADE_CREATE_NEW_TABLE: &str = r#"
+CREATE TABLE SHOPS_NEW (
+    SHOP_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    USER_ID INTEGER NOT NULL,
+    SHOP_NAME TEXT NOT NULL,
+    MEMO TEXT,
+    DISPLAY_ORDER INTEGER NOT NULL DEFAULT 0,
+    IS_DISABLED INTEGER DEFAULT 0,
+    ENTRY_DT DATETIME NOT NULL DEFAULT (datetime('now')),
+    UPDATE_DT DATETIME,
+    FOREIGN KEY (USER_ID) REFERENCES USERS(USER_ID) ON DELETE CASCADE,
+    UNIQUE(USER_ID, SHOP_NAME)
+)
+"#;
+
+/// Copy every SHOPS row into SHOPS_NEW verbatim. Column list spelled
+/// out so the copy stays correct even if a later migration appends a
+/// column to `SHOPS_NEW` without touching this constant — the extra
+/// column would take its DEFAULT and the old rows would still line
+/// up on the original columns.
+pub const MIGRATE_SHOPS_CASCADE_COPY_ROWS: &str = r#"
+INSERT INTO SHOPS_NEW
+    (SHOP_ID, USER_ID, SHOP_NAME, MEMO, DISPLAY_ORDER, IS_DISABLED, ENTRY_DT, UPDATE_DT)
+SELECT
+    SHOP_ID, USER_ID, SHOP_NAME, MEMO, DISPLAY_ORDER, IS_DISABLED, ENTRY_DT, UPDATE_DT
+FROM SHOPS
+"#;
+
+pub const MIGRATE_SHOPS_CASCADE_DROP_OLD_TABLE: &str = "DROP TABLE SHOPS";
+
+pub const MIGRATE_SHOPS_CASCADE_RENAME_TABLE: &str = "ALTER TABLE SHOPS_NEW RENAME TO SHOPS";
+
+/// FK enforcement is per-connection in SQLite. The SHOPS cascade
+/// migration flips it off for the recreate step (DROP would otherwise
+/// trip the parent-check from tables that reference SHOPS.SHOP_ID) and
+/// flips it back on before returning. Kept as constants so the test
+/// path and the production path share the exact strings — CodeRabbit
+/// on #128: "SQL literals in db.rs" belong in `sql_queries.rs` so a
+/// future PRAGMA rename can't drift between the two.
+pub const PRAGMA_FOREIGN_KEYS_OFF: &str = "PRAGMA foreign_keys = OFF";
+pub const PRAGMA_FOREIGN_KEYS_ON: &str = "PRAGMA foreign_keys = ON";
+
+/// Reports one row per FK violation. The SHOPS cascade migration runs
+/// this after the recreate as a belt-and-braces guard so a botched
+/// copy is caught immediately rather than at the next query.
+pub const PRAGMA_FOREIGN_KEY_CHECK: &str = "PRAGMA foreign_key_check";
+
+/// Recreate the non-unique index dropped along with the old table.
+/// The inline `UNIQUE(USER_ID, SHOP_NAME)` on the new table already
+/// gives us the auto-index for the unique constraint; the
+/// `idx_shops_user_unique_name` created by `migrate_shops_unique` is
+/// then re-created with `IF NOT EXISTS` for extra safety on DBs that
+/// used to depend on it by name.
+pub const MIGRATE_SHOPS_CASCADE_CREATE_USER_ORDER_INDEX: &str = r#"
+CREATE INDEX IF NOT EXISTS idx_shops_user
+    ON SHOPS(USER_ID, DISPLAY_ORDER)
+"#;
+
 // Check if CATEGORY2_CODE has NOT NULL constraint (notnull=1 means NOT NULL)
 pub const CHECK_CATEGORY2_NOT_NULL: &str = r#"
 SELECT COALESCE(MAX("notnull"), 0) as is_not_null

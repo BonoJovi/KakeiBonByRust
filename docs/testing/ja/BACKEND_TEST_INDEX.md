@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-08-26 JST  
-**総テスト数**: 325件 (差分反映後。`cargo test --lib` の権威的総数は 567 で、既存の未反映分は別 PR でバックフィル予定)
+**総テスト数**: 329件 (差分反映後。`cargo test --lib` の権威的総数は 571 で、既存の未反映分は別 PR でバックフィル予定)
 
 ---
 
@@ -185,8 +185,12 @@ AES-256-GCM暗号化・復号化のテスト。
 | `migrate_shops_unique_is_idempotent` | 一度成功した migration の 2 回目実行が no-op で行数を変えない (PR15, Fable-5 #20) | src/db.rs | 1424 |
 | `migrate_shops_unique_scopes_per_user` | user A と user B が同じ SHOP_NAME を持つケースは重複扱いしない (constraint は per-user scope) (PR15, Fable-5 #20) | src/db.rs | 1437 |
 | `migrate_shops_unique_keeps_active_row_over_soft_deleted_older_id` | 論理削除された古い店舗 (小さい SHOP_ID) と再作成された有効な同名店舗 (大きい SHOP_ID) が並存するとき、有効な行が survivor に選ばれ、旧 transaction 参照も active row に repoint される (PR15, Devin #118 review) | src/db.rs | 1459 |
+| `pool_connections_all_enforce_foreign_keys` | プールが返すすべての接続で `PRAGMA foreign_keys = ON` が有効。修正前は起動時に 1 回だけ実行された接続のみ FK が有効で、それ以外の借り手が取った接続では SHOPS user-cascade マイグレーションが無効化されていた (#128 CodeRabbit 外側指摘) | src/db.rs | 1630 |
+| `migrate_shops_user_id_cascade_adds_cascade_fk_and_preserves_rows` | テーブルを再作成して SHOPS.USER_ID FK に `ON DELETE CASCADE` を追加、SHOP_ID と各列の値はそのまま保持されること (Fable-5 #11) | src/db.rs | 1711 |
+| `migrate_shops_user_id_cascade_is_idempotent` | SHOPS CASCADE マイグレーションの 2 回目は既に CASCADE FK があるため早期に戻る。マイグレーション済み DB では DROP/RENAME は走らない (Fable-5 #11) | src/db.rs | 1799 |
+| `user_delete_cascades_to_shops_after_migration` | CASCADE マイグレーション後、SHOPS 行を持つユーザーの削除が成功し、SHOPS 行も同時に削除される。修正前は `FOREIGN KEY constraint failed` でロールバックしていた (Fable-5 #11) | src/db.rs | 1823 |
 
-**合計**: 8件
+**合計**: 12件
 
 ### settings.rs
 
@@ -563,11 +567,11 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **302件** |
+| **インラインテスト** | **306件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
-| db.rs | 8 |
+| db.rs | 12 |
 | settings.rs | 12 |
 | api_error.rs | 10 |
 | services/master_data.rs | 4 |
@@ -585,7 +589,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/i18n.rs | 8 |
 | services/recurring.rs | 5 |
 | lib.rs | 6 |
-| **総計** | **325件** |
+| **総計** | **329件** |
 
 ---
 

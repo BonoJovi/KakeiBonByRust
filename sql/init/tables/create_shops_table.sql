@@ -11,7 +11,12 @@ CREATE TABLE IF NOT EXISTS SHOPS (
     IS_DISABLED INTEGER DEFAULT 0,
     ENTRY_DT DATETIME NOT NULL DEFAULT (datetime('now')),
     UPDATE_DT DATETIME,
-    FOREIGN KEY (USER_ID) REFERENCES USERS(USER_ID)
+    -- Fable-5 review #11 — match the sibling ACCOUNTS / PRODUCTS /
+    -- MANUFACTURERS / TRANSACTIONS_HEADER / MEMOS FK: cascade the row on
+    -- user deletion. Without ON DELETE CASCADE, deleting a user with
+    -- SHOPS rows fails with `FOREIGN KEY constraint failed` and rolls
+    -- the whole DELETE back.
+    FOREIGN KEY (USER_ID) REFERENCES USERS(USER_ID) ON DELETE CASCADE
 );
 
 -- Create indexes for SHOPS

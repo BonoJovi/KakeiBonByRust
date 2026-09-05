@@ -1,5 +1,6 @@
-use sqlx::sqlite::SqlitePool;
+use sqlx::sqlite::{SqlitePool, SqlitePoolOptions};
 use sqlx::Acquire; // for `PoolConnection::begin`
+use sqlx::Executor;
 use std::path::PathBuf;
 use crate::consts::{DB_DIR_NAME, DB_FILE_NAME};
 use crate::sql_queries;
@@ -10,9 +11,28 @@ use crate::sql_queries;
 // CWD is the install directory and `res/sql/dbaccess.sql` is not there.
 const INIT_SQL: &str = include_str!("../res/sql/dbaccess.sql");
 
-/// Connect to a SQLite database with the given URL
+/// Connect to a SQLite database with the given URL.
+///
+/// `PRAGMA foreign_keys` in SQLite is per-connection, so a pool-wide
+/// `execute()` at startup only sets it on whichever connection ran
+/// first — every subsequent borrower would get the SQLite default
+/// (OFF) and silently skip cascade deletes. `after_connect` runs the
+/// PRAGMA on every newly-established pool connection so the FK
+/// contract holds for all borrowers, even after a connection is
+/// replaced (idle-timeout, closed by the driver, etc.). CodeRabbit
+/// on #128 called this out via the SHOPS user-cascade migration —
+/// the whole point of that migration lands only when every connection
+/// enforces FKs.
 pub async fn connect_db(db_url: &str) -> Result<SqlitePool, sqlx::Error> {
-    SqlitePool::connect(db_url).await
+    SqlitePoolOptions::new()
+        .after_connect(|conn, _meta| {
+            Box::pin(async move {
+                conn.execute(sql_queries::PRAGMA_FOREIGN_KEYS_ON).await?;
+                Ok(())
+            })
+        })
+        .connect(db_url)
+        .await
 }
 
 pub struct Database {
@@ -33,19 +53,18 @@ impl Database {
         let db_url = format!("sqlite://{}?mode=rwc", db_path.display());
         let pool = connect_db(&db_url).await?;
         
-        // Enable WAL mode
+        // Enable WAL mode. WAL is a database-wide setting persisted
+        // in the file header, so a single `execute()` on any pool
+        // connection suffices — no `after_connect` needed for it.
         sqlx::query(sql_queries::DB_PRAGMA_WAL)
             .execute(&pool)
             .await?;
 
-        // SQLite ships with foreign_keys = OFF by default. Without this PRAGMA
-        // every ON DELETE CASCADE / SET NULL we declared (RECURRING_RULES <→
-        // RECURRING_RULE_DETAILS, TRANSACTIONS_HEADER <→ TRANSACTIONS_DETAIL,
-        // TRANSACTIONS_HEADER.RULE_ID → RECURRING_RULES on new DBs, etc.) would
-        // be silently ignored and we'd leak orphaned rows on every delete.
-        sqlx::query("PRAGMA foreign_keys = ON")
-            .execute(&pool)
-            .await?;
+        // `PRAGMA foreign_keys = ON` for every borrower is set once in
+        // `connect_db`'s `after_connect` hook — see that function for
+        // the rationale. Without the per-connection hook, a pool-wide
+        // `execute()` here would only cover the connection that ran
+        // it and later borrowers would silently skip cascade deletes.
 
         Ok(Database { pool })
     }
@@ -591,6 +610,104 @@ impl Database {
             .await?;
 
         tx.commit().await?;
+        Ok(())
+    }
+
+    /// Fable-5 review #11 — SHOPS was missing `ON DELETE CASCADE` on
+    /// its `USER_ID` FK, so deleting a user with SHOPS rows failed
+    /// with `FOREIGN KEY constraint failed` and rolled the whole
+    /// DELETE back. SQLite has no `ALTER TABLE ADD FOREIGN KEY`, so
+    /// we recreate the table with the CASCADE clause and copy every
+    /// row across.
+    ///
+    /// Idempotent — a probe against `pragma_foreign_key_list('SHOPS')`
+    /// returns early when the CASCADE FK is already present (fresh
+    /// installs and DBs that already ran this migration).
+    ///
+    /// FK enforcement is disabled for the duration of the recreate
+    /// because DROP TABLE on a table that other tables reference
+    /// (`TRANSACTIONS_HEADER.SHOP_ID`, `RECURRING_RULES.SHOP_ID`)
+    /// would otherwise trigger the parent-check. We flip it back on
+    /// and run `PRAGMA foreign_key_check` before returning so a
+    /// dangling reference from a botched copy is caught here rather
+    /// than at the next query. The connection is acquired once and
+    /// used for every step so the `PRAGMA foreign_keys` toggle stays
+    /// within scope (it is per-connection).
+    pub async fn migrate_shops_user_id_cascade(&self) -> Result<(), sqlx::Error> {
+        use sqlx::{Acquire, Executor, Row};
+
+        let has_cascade: i64 = sqlx::query_scalar(sql_queries::SHOPS_HAS_USER_CASCADE_FK)
+            .fetch_one(&self.pool)
+            .await?;
+        if has_cascade > 0 {
+            return Ok(());
+        }
+
+        let mut conn = self.pool.acquire().await?;
+
+        // Turn FKs off on THIS connection so the recreate doesn't trip
+        // the parent-check when we DROP the old SHOPS table.
+        conn.execute(sql_queries::PRAGMA_FOREIGN_KEYS_OFF).await?;
+
+        // Run the migration body inside an async block so we can
+        // capture its Result and always run the FK-restore step —
+        // even on failure. CodeRabbit on #128: without this, an
+        // error inside the `tx.commit()` chain would return early
+        // via `?` and the connection would go back to the pool with
+        // `foreign_keys = OFF`, silently disabling cascade deletes
+        // for whichever caller borrowed it next. Same shape as
+        // `migrate_transactions_detail_table`.
+        let migration = async {
+            let mut tx = conn.begin().await?;
+            tx.execute(sql_queries::MIGRATE_SHOPS_CASCADE_CREATE_NEW_TABLE).await?;
+            tx.execute(sql_queries::MIGRATE_SHOPS_CASCADE_COPY_ROWS).await?;
+            tx.execute(sql_queries::MIGRATE_SHOPS_CASCADE_DROP_OLD_TABLE).await?;
+            tx.execute(sql_queries::MIGRATE_SHOPS_CASCADE_RENAME_TABLE).await?;
+            tx.execute(sql_queries::MIGRATE_SHOPS_CASCADE_CREATE_USER_ORDER_INDEX).await?;
+            // Re-create the manually-named unique index too, in case
+            // any caller looked it up by name. `IF NOT EXISTS` is
+            // safe because the inline `UNIQUE` on the new table
+            // already gave us the constraint via an auto-index; this
+            // is a friendlier alias.
+            tx.execute(sql_queries::MIGRATE_SHOPS_UNIQUE_CREATE_INDEX).await?;
+            tx.commit().await?;
+            Ok::<(), sqlx::Error>(())
+        }
+        .await;
+
+        // Restore FK on the SAME connection regardless of the
+        // migration outcome; otherwise a mid-migration failure would
+        // return a FK-off connection to the pool.
+        let restore = sqlx::query(sql_queries::PRAGMA_FOREIGN_KEYS_ON)
+            .execute(&mut *conn)
+            .await;
+
+        // Now propagate the primary result first, then any restore
+        // failure. If both fail, the migration error wins — it's the
+        // one the caller needs to reason about first.
+        migration?;
+        restore?;
+
+        // Belt and braces — if the copy dropped a reference on the
+        // floor, catch it here (returned as one row per violation).
+        // Only runs when both the migration and the FK-restore
+        // succeeded, so a false positive from the FK-off window can't
+        // shadow a real integrity problem.
+        let violations = sqlx::query(sql_queries::PRAGMA_FOREIGN_KEY_CHECK)
+            .fetch_all(&mut *conn)
+            .await?;
+        if !violations.is_empty() {
+            let sample: String = violations
+                .first()
+                .and_then(|row| row.try_get::<String, _>(0).ok())
+                .unwrap_or_else(|| "unknown table".to_string());
+            return Err(sqlx::Error::Protocol(format!(
+                "SHOPS CASCADE migration left {} foreign-key violations (first: {})",
+                violations.len(),
+                sample,
+            )));
+        }
+
         Ok(())
     }
 
@@ -1495,5 +1612,247 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(is_disabled, 0, "the surviving shop must still be active");
+    }
+
+    /// CodeRabbit on #128 outside-diff — `PRAGMA foreign_keys` is
+    /// per-connection in SQLite. A one-shot `execute()` on the pool
+    /// only lands on whichever connection ran first; any later
+    /// borrower would get the SQLite default (OFF) and silently skip
+    /// cascade deletes. `connect_db`'s `after_connect` hook now runs
+    /// the PRAGMA on every newly-established connection — this pin
+    /// forces the pool to open at least two connections (by holding
+    /// the first one) and verifies both report `foreign_keys = 1`.
+    /// Uses a temp-file DB rather than `sqlite::memory:` because
+    /// in-memory DBs give each connection its own independent
+    /// database, so the test can't tell an unset PRAGMA apart from a
+    /// fresh DB.
+    #[tokio::test]
+    async fn pool_connections_all_enforce_foreign_keys() {
+        let temp_dir = std::env::temp_dir();
+        let test_db_name = format!("test_pool_fk_all_{}.db", std::process::id());
+        let test_db_path = temp_dir.join(&test_db_name);
+        let _ = std::fs::remove_file(&test_db_path);
+
+        let db_url = format!("sqlite://{}?mode=rwc", test_db_path.display());
+        let pool = connect_db(&db_url).await.expect("connect");
+
+        // Hold the first connection open so acquire() has to open a
+        // second one — that's the connection the pre-fix code left
+        // with `foreign_keys = OFF`.
+        let mut conn1 = pool.acquire().await.expect("first conn");
+        let mut conn2 = pool.acquire().await.expect("second conn");
+
+        let fk1: i64 = sqlx::query_scalar("PRAGMA foreign_keys")
+            .fetch_one(&mut *conn1)
+            .await
+            .expect("PRAGMA on conn1");
+        let fk2: i64 = sqlx::query_scalar("PRAGMA foreign_keys")
+            .fetch_one(&mut *conn2)
+            .await
+            .expect("PRAGMA on conn2");
+
+        assert_eq!(fk1, 1, "conn1 must have foreign_keys = ON");
+        assert_eq!(fk2, 1, "conn2 (newly opened by the pool) must have foreign_keys = ON");
+
+        drop(conn1);
+        drop(conn2);
+        drop(pool);
+        let _ = std::fs::remove_file(&test_db_path);
+    }
+
+    // ---- Fable-5 #11 — migrate_shops_user_id_cascade tests ----
+    //
+    // Pre-fix, SHOPS had `FOREIGN KEY (USER_ID) REFERENCES USERS(USER_ID)`
+    // with no `ON DELETE CASCADE`, so deleting a user with SHOPS rows
+    // failed the FK check and aborted the whole DELETE. These tests
+    // spin up the pre-fix shape (SHOPS with a non-cascading FK to a
+    // real USERS table), run the migration, and assert both the
+    // schema change and the resulting delete behaviour.
+
+    /// SHOPS as it shipped before #11 — real FK to USERS but no
+    /// `ON DELETE CASCADE` clause. Kept separate from
+    /// `LEGACY_SHOPS_DDL` (which has no FK at all, since the
+    /// migrate_shops_unique tests don't need one).
+    const PRE_CASCADE_SHOPS_DDL: &str = r#"
+        CREATE TABLE SHOPS (
+            SHOP_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+            USER_ID INTEGER NOT NULL,
+            SHOP_NAME TEXT NOT NULL,
+            MEMO TEXT,
+            DISPLAY_ORDER INTEGER NOT NULL DEFAULT 0,
+            IS_DISABLED INTEGER DEFAULT 0,
+            ENTRY_DT DATETIME NOT NULL DEFAULT (datetime('now')),
+            UPDATE_DT DATETIME,
+            FOREIGN KEY (USER_ID) REFERENCES USERS(USER_ID)
+        )
+    "#;
+
+    async fn setup_pre_cascade_shops_db() -> Database {
+        let db = memory_db().await;
+        sqlx::query("CREATE TABLE USERS (USER_ID INTEGER PRIMARY KEY, NAME TEXT NOT NULL)")
+            .execute(db.pool())
+            .await
+            .expect("USERS");
+        sqlx::query(PRE_CASCADE_SHOPS_DDL)
+            .execute(db.pool())
+            .await
+            .expect("pre-#11 SHOPS");
+        db
+    }
+
+    async fn shops_user_fk_cascade_count(db: &Database) -> i64 {
+        sqlx::query_scalar(sql_queries::SHOPS_HAS_USER_CASCADE_FK)
+            .fetch_one(db.pool())
+            .await
+            .expect("cascade probe")
+    }
+
+    #[tokio::test]
+    async fn migrate_shops_user_id_cascade_adds_cascade_fk_and_preserves_rows() {
+        let db = setup_pre_cascade_shops_db().await;
+        // Seed a user + a couple of shops with non-default values for
+        // every column the copy touches, so a regression that drops a
+        // column from `MIGRATE_SHOPS_CASCADE_COPY_ROWS` fails this
+        // test (CodeRabbit on #128).
+        sqlx::query("INSERT INTO USERS (USER_ID, NAME) VALUES (1, 'alice')")
+            .execute(db.pool()).await.unwrap();
+        sqlx::query(
+            "INSERT INTO SHOPS \
+             (SHOP_ID, USER_ID, SHOP_NAME, MEMO, DISPLAY_ORDER, IS_DISABLED, ENTRY_DT, UPDATE_DT) \
+             VALUES (1, 1, 'AEON', 'nearby', 10, 0, '2024-01-15 10:00:00', '2024-06-20 12:34:56')",
+        )
+        .execute(db.pool()).await.unwrap();
+        sqlx::query(
+            "INSERT INTO SHOPS \
+             (SHOP_ID, USER_ID, SHOP_NAME, MEMO, DISPLAY_ORDER, IS_DISABLED, ENTRY_DT, UPDATE_DT) \
+             VALUES (2, 1, 'LAWSON', NULL, 20, 1, '2024-02-01 09:15:00', NULL)",
+        )
+        .execute(db.pool()).await.unwrap();
+
+        // Baseline: no cascade FK yet.
+        assert_eq!(shops_user_fk_cascade_count(&db).await, 0);
+
+        db.migrate_shops_user_id_cascade().await.expect("migration");
+
+        // Post-migration: cascade FK is now present exactly once.
+        assert_eq!(shops_user_fk_cascade_count(&db).await, 1);
+
+        // Every one of the eight copied columns survives verbatim.
+        let rows: Vec<(i64, i64, String, Option<String>, i64, i64, String, Option<String>)> =
+            sqlx::query_as(
+                "SELECT SHOP_ID, USER_ID, SHOP_NAME, MEMO, DISPLAY_ORDER, IS_DISABLED, ENTRY_DT, UPDATE_DT \
+                 FROM SHOPS ORDER BY SHOP_ID",
+            )
+            .fetch_all(db.pool())
+            .await
+            .unwrap();
+        assert_eq!(
+            rows,
+            vec![
+                (
+                    1,
+                    1,
+                    "AEON".to_string(),
+                    Some("nearby".to_string()),
+                    10,
+                    0,
+                    "2024-01-15 10:00:00".to_string(),
+                    Some("2024-06-20 12:34:56".to_string()),
+                ),
+                (
+                    2,
+                    1,
+                    "LAWSON".to_string(),
+                    None,
+                    20,
+                    1,
+                    "2024-02-01 09:15:00".to_string(),
+                    None,
+                ),
+            ]
+        );
+
+        // UNIQUE(USER_ID, SHOP_NAME) constraint carried over — a new
+        // duplicate INSERT for the same user must be rejected.
+        let dup = sqlx::query("INSERT INTO SHOPS (USER_ID, SHOP_NAME) VALUES (1, 'AEON')")
+            .execute(db.pool())
+            .await;
+        assert!(
+            dup.is_err(),
+            "post-migration duplicate (USER_ID, SHOP_NAME) INSERT must be rejected"
+        );
+
+        // The non-unique lookup index recreated during the migration
+        // must exist — otherwise the DISPLAY_ORDER-scoped scans in
+        // shop.rs quietly degrade to full-table scans.
+        let idx_user_present: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM sqlite_master \
+             WHERE type = 'index' AND tbl_name = 'SHOPS' AND name = 'idx_shops_user'",
+        )
+        .fetch_one(db.pool())
+        .await
+        .unwrap();
+        assert_eq!(idx_user_present, 1, "idx_shops_user must be recreated after the migration");
+    }
+
+    #[tokio::test]
+    async fn migrate_shops_user_id_cascade_is_idempotent() {
+        let db = setup_pre_cascade_shops_db().await;
+        sqlx::query("INSERT INTO USERS (USER_ID, NAME) VALUES (1, 'alice')")
+            .execute(db.pool()).await.unwrap();
+        sqlx::query("INSERT INTO SHOPS (SHOP_ID, USER_ID, SHOP_NAME) VALUES (1, 1, 'AEON')")
+            .execute(db.pool()).await.unwrap();
+
+        db.migrate_shops_user_id_cascade().await.expect("first run");
+        assert_eq!(shops_user_fk_cascade_count(&db).await, 1);
+
+        // Second run must find the cascade FK already present and
+        // return early — no DROP TABLE, no data touched.
+        db.migrate_shops_user_id_cascade().await.expect("second run must be a no-op");
+        let ids: Vec<i64> = sqlx::query_scalar("SELECT SHOP_ID FROM SHOPS")
+            .fetch_all(db.pool())
+            .await
+            .unwrap();
+        assert_eq!(ids, vec![1], "no data should be touched by the idempotent run");
+    }
+
+    /// The end-to-end guarantee that motivates the fix: after the
+    /// migration, deleting a user cascades to their SHOPS rows
+    /// instead of aborting with `FOREIGN KEY constraint failed`.
+    #[tokio::test]
+    async fn user_delete_cascades_to_shops_after_migration() {
+        let db = setup_pre_cascade_shops_db().await;
+        sqlx::query("INSERT INTO USERS (USER_ID, NAME) VALUES (1, 'alice')")
+            .execute(db.pool()).await.unwrap();
+        sqlx::query("INSERT INTO SHOPS (USER_ID, SHOP_NAME) VALUES (1, 'AEON')")
+            .execute(db.pool()).await.unwrap();
+        sqlx::query("INSERT INTO SHOPS (USER_ID, SHOP_NAME) VALUES (1, 'LAWSON')")
+            .execute(db.pool()).await.unwrap();
+
+        db.migrate_shops_user_id_cascade().await.expect("migration");
+
+        // FK enforcement is per-connection in SQLite; the pool's
+        // `after_connect` in `connect_db` sets it, but be explicit here
+        // in case the connection returned to us was reused from an
+        // earlier `PRAGMA foreign_keys = OFF` window inside the
+        // migration.
+        sqlx::query(sql_queries::PRAGMA_FOREIGN_KEYS_ON)
+            .execute(db.pool())
+            .await
+            .unwrap();
+
+        // Deleting the user must succeed and take the SHOPS rows with
+        // it. Before the migration the same DELETE aborted with
+        // `FOREIGN KEY constraint failed`.
+        sqlx::query("DELETE FROM USERS WHERE USER_ID = 1")
+            .execute(db.pool())
+            .await
+            .expect("USER delete must succeed with CASCADE FK");
+
+        let remaining: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM SHOPS")
+            .fetch_one(db.pool())
+            .await
+            .unwrap();
+        assert_eq!(remaining, 0, "SHOPS rows must cascade with their owner");
     }
 }
