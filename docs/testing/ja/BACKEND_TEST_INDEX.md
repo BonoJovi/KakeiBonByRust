@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-09-06 JST  
-**総テスト数**: 337件 (差分反映後。`cargo test --lib` の権威的総数は 579 で、既存の未反映分は別 PR でバックフィル予定)
+**総テスト数**: 346件 (差分反映後。`cargo test --lib` の権威的総数は 588 で、既存の未反映分は別 PR でバックフィル予定)
 
 ---
 
@@ -26,6 +26,7 @@
   - [services/category.rs](#servicescategoryrs)
   - [api_error.rs](#api_errorrs)
   - [services/master_data.rs](#servicesmaster_datars)
+  - [services/like_escape.rs](#serviceslike_escapers)
   - [services/manufacturer.rs](#servicesmanufacturerrs)
   - [services/product.rs](#servicesproductrs)
   - [services/shop.rs](#servicesshoprs)
@@ -245,6 +246,22 @@ AES-256-GCM暗号化・復号化のテスト。
 
 **合計**: 4件
 
+### services/like_escape.rs
+
+共有 `escape_like_pattern` — `LIKE ? ESCAPE '\'` を使う全ての検索経路が利用する LIKE メタ文字エスケーパの pure-function テスト (Fable-5 レビュー #23 で `transaction.rs` の private helper から抽出、`product::search_products_by_name` と契約を共有)。
+
+| Test Function | Description | File | Line |
+|---------------|-------------|------|------|
+| `plain_text_passes_through_unchanged` | 通常 ASCII テキストはそのまま返す | src/services/like_escape.rs | 34 |
+| `percent_is_escaped` | `%` → `\%` | src/services/like_escape.rs | 39 |
+| `underscore_is_escaped` | `_` → `\_` | src/services/like_escape.rs | 44 |
+| `backslash_is_escaped_first_then_metacharacters` | `\` を先にエスケープしてから `%` / `_` を処理（自己エスケープ回避） | src/services/like_escape.rs | 49 |
+| `multiple_metacharacters_all_escaped` | `50%_off` → `50\%\_off` | src/services/like_escape.rs | 57 |
+| `empty_input_yields_empty_output` | 空入力は空出力 | src/services/like_escape.rs | 62 |
+| `japanese_text_with_percent_escapes_only_the_metacharacter` | 果汁100%ジュース → 果汁100\%ジュース (Fable-5 #23 の pin シナリオ) | src/services/like_escape.rs | 67 |
+
+**合計**: 7件
+
 ### services/auth.rs
 
 認証サービス（ユーザー登録・ログイン）のテスト。
@@ -409,8 +426,10 @@ AES-256-GCM暗号化・復号化のテスト。
 | `test_product_join_scopes_manufacturer_by_user_id` | PRODUCT_GET_* JOIN は他ユーザーの manufacturer 名を漏らさない (Fable-5 #13) | src/services/product.rs | 871 |
 | `test_delete_product_rejected_when_referenced_by_transaction_detail` | TRANSACTIONS_DETAIL が商品を参照中なら `ApiError { code: "in_use", entity: "product" }` で削除拒否（TRANSACTIONS_HEADER.USER_ID 経由でスコープ、マスタ削除ロック） | src/services/product.rs | 444 |
 | `test_delete_product_ignores_other_users_transaction_details` | 他ユーザーの明細参照は削除をブロックしない（TRANSACTIONS_HEADER.USER_ID でスコープ、マスタ削除ロック） | src/services/product.rs | 481 |
+| `test_search_products_escapes_percent_metacharacter` | オートコンプリート検索で `"100%ジ"` が「果汁100%ジュース」だけにマッチし「果汁100リンゴジュース」にマッチしないこと — `%` をエスケープし `LIKE ? ESCAPE '\'` を併用 (Fable-5 #23) | src/services/product.rs | 785 |
+| `test_search_products_escapes_underscore_metacharacter` | オートコンプリート検索で `"A_1"` が literal "A_1" だけにマッチし "AB1" にマッチしないこと — `_` をエスケープ (Fable-5 #23) | src/services/product.rs | 812 |
 
-**合計**: 13件
+**合計**: 15件
 
 ### services/shop.rs
 
@@ -575,7 +594,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **311件** |
+| **インラインテスト** | **320件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -583,13 +602,14 @@ AES-256-GCM暗号化・復号化のテスト。
 | settings.rs | 12 |
 | api_error.rs | 10 |
 | services/master_data.rs | 4 |
+| services/like_escape.rs | 7 |
 | services/auth.rs | 16 |
 | services/user_management.rs | 19 |
 | services/encryption.rs | 8 |
 | services/account.rs | 11 |
 | services/category.rs | 25 |
 | services/manufacturer.rs | 12 |
-| services/product.rs | 13 |
+| services/product.rs | 15 |
 | services/shop.rs | 12 |
 | services/transaction.rs | 35 |
 | services/aggregation.rs | 16 |
@@ -597,7 +617,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/i18n.rs | 8 |
 | services/recurring.rs | 5 |
 | lib.rs | 6 |
-| **総計** | **337件** |
+| **総計** | **346件** |
 
 ---
 

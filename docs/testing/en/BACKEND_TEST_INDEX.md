@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-08-26 JST  
-**Total Tests**: 337 (delta-tracked; the full authoritative count from `cargo test --lib` is 579, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 346 (delta-tracked; the full authoritative count from `cargo test --lib` is 588, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -21,6 +21,7 @@ This document provides a complete index of all backend tests implemented in Rust
   - [settings.rs](#settingsrs)
   - [api_error.rs](#api_errorrs)
   - [services/master_data.rs](#servicesmaster_datars)
+  - [services/like_escape.rs](#serviceslike_escapers)
   - [services/auth.rs](#servicesauthrs)
   - [services/user_management.rs](#servicesuser_managementrs)
   - [services/encryption.rs](#servicesencryptionrs)
@@ -245,6 +246,22 @@ Pure-Rust tests for the shared master-CRUD helpers (`MasterCrudSpec` + `ensure_u
 
 **Total**: 4 tests
 
+### services/like_escape.rs
+
+Pure-function tests for `escape_like_pattern`, the shared LIKE-metacharacter escaper used by every `LIKE ? ESCAPE '\'` search path (Fable-5 review #23 extracted this from a private helper in `transaction.rs` so `product::search_products_by_name` could share the contract).
+
+| Test Function | Description | File | Line |
+|---------------|-------------|------|------|
+| `plain_text_passes_through_unchanged` | Plain ASCII text is returned verbatim | src/services/like_escape.rs | 34 |
+| `percent_is_escaped` | `%` → `\%` | src/services/like_escape.rs | 39 |
+| `underscore_is_escaped` | `_` → `\_` | src/services/like_escape.rs | 44 |
+| `backslash_is_escaped_first_then_metacharacters` | `\` is escaped before `%` / `_` so escapes are not re-escaped | src/services/like_escape.rs | 49 |
+| `multiple_metacharacters_all_escaped` | `50%_off` → `50\%\_off` | src/services/like_escape.rs | 57 |
+| `empty_input_yields_empty_output` | Empty input returns empty output | src/services/like_escape.rs | 62 |
+| `japanese_text_with_percent_escapes_only_the_metacharacter` | 果汁100%ジュース → 果汁100\%ジュース (the Fable-5 #23 pin scenario) | src/services/like_escape.rs | 67 |
+
+**Total**: 7 tests
+
 ### services/auth.rs
 
 Authentication service tests (user registration, login).
@@ -409,8 +426,10 @@ Product management service tests.
 | `test_product_join_scopes_manufacturer_by_user_id` | PRODUCT_GET_* JOIN must not leak another user's manufacturer name (Fable-5 #13) | src/services/product.rs | 871 |
 | `test_delete_product_rejected_when_referenced_by_transaction_detail` | Delete rejected with `ApiError { code: "in_use", entity: "product" }` when any TRANSACTIONS_DETAIL row (scoped via TRANSACTIONS_HEADER.USER_ID) names the product (master delete-lock) | src/services/product.rs | 444 |
 | `test_delete_product_ignores_other_users_transaction_details` | Cross-user detail rows do NOT block delete — scoping runs through TRANSACTIONS_HEADER.USER_ID (master delete-lock) | src/services/product.rs | 481 |
+| `test_search_products_escapes_percent_metacharacter` | Autocomplete search of `"100%ジ"` matches only "果汁100%ジュース", not "果汁100リンゴジュース" — `%` is escaped and paired with `LIKE ? ESCAPE '\'` (Fable-5 #23) | src/services/product.rs | 785 |
+| `test_search_products_escapes_underscore_metacharacter` | Autocomplete search of `"A_1"` matches only literal "A_1", not "AB1" — `_` is escaped (Fable-5 #23) | src/services/product.rs | 812 |
 
-**Total**: 13 tests
+**Total**: 15 tests
 
 ### services/shop.rs
 
@@ -575,7 +594,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **311** |
+| **Inline Tests** | **320** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -583,13 +602,14 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | settings.rs | 12 |
 | api_error.rs | 10 |
 | services/master_data.rs | 4 |
+| services/like_escape.rs | 7 |
 | services/auth.rs | 16 |
 | services/user_management.rs | 19 |
 | services/encryption.rs | 8 |
 | services/account.rs | 11 |
 | services/category.rs | 25 |
 | services/manufacturer.rs | 12 |
-| services/product.rs | 13 |
+| services/product.rs | 15 |
 | services/shop.rs | 12 |
 | services/transaction.rs | 35 |
 | services/aggregation.rs | 16 |
@@ -597,7 +617,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/i18n.rs | 8 |
 | services/recurring.rs | 5 |
 | lib.rs | 6 |
-| **Total** | **337** |
+| **Total** | **346** |
 
 ---
 
