@@ -56,3 +56,13 @@ VALUES
 (1288, 'detail_mgmt.rounding_warning_title', 'ja', '端数調整警告', 'detail_mgmt', '端数調整警告タイトル', datetime('now')),
 (1289, 'detail_mgmt.rounding_warning_message', 'en', 'Tax calculation resulted in rounding. The total may not match exactly.', 'detail_mgmt', 'Rounding warning message', datetime('now')),
 (1290, 'detail_mgmt.rounding_warning_message', 'ja', '税額計算で端数が発生しました。合計金額が一致しない可能性があります。', 'detail_mgmt', '端数調整警告メッセージ', datetime('now'));
+
+-- Fable-5 review #8: tax-included auto-adjustment notice (replaces the
+-- older 1287-1290 "warning" wording; the old keys stay in place as a
+-- dead fallback so any downstream that still resolved them survives).
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT)
+VALUES
+(2451, 'detail_mgmt.rounding_auto_correct_title', 'en', 'Tax-included amount auto-adjusted', 'detail_mgmt', 'Auto-correct notice title (Fable-5 #8)', datetime('now')),
+(2452, 'detail_mgmt.rounding_auto_correct_title', 'ja', '税込金額を自動調整しました', 'detail_mgmt', '自動調整通知のタイトル (Fable-5 #8)', datetime('now')),
+(2453, 'detail_mgmt.rounding_auto_correct_message', 'en', 'The typed amount {userInput} cannot be represented exactly under the current rounding setting — adjusted to {calculated} (diff: {diff}).', 'detail_mgmt', 'Auto-correct notice body (Fable-5 #8)', datetime('now')),
+(2454, 'detail_mgmt.rounding_auto_correct_message', 'ja', '入力された税込金額 {userInput} は現在の丸め設定では整数表現できないため、{calculated} に自動調整しました（差: {diff}）。', 'detail_mgmt', '自動調整通知の本文 (Fable-5 #8)', datetime('now'));

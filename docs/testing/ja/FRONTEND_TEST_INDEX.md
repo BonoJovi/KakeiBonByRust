@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-08-21 JST  
-**総テスト数**: 703件 (jest suite 22 ファイル、`npm test` 実測)
+**総テスト数**: 715件 (jest suite 22 ファイル、`npm test` 実測)
 
 ---
 
@@ -417,7 +417,7 @@
 
 取引明細の税計算機能のテスト。
 
-**テスト数**: 17件 (jest 実測)
+**テスト数**: 29件 (jest 実測)
 
 | テストカテゴリ | 説明 |
 |--------------|------|
@@ -426,6 +426,8 @@
 | 丸め誤差検出 | 税計算の丸め誤差検出 |
 | エッジケース | 0円、負の値などのエッジケース |
 | 複数税率 | 異なる税率での計算 |
+| 三者自動整合 (Fable-5 #8) | `calculateFromIncluding` の pure helper: 税込入力が丸め設定で表現不能な場合、`tax = round(excluded * rate)` と `includedCorrected = excluded + tax` の 3 数値を DB に整合的に保存 |
+| pure helper 経路 | `calculateFromExcluding` / `applyTaxRounding` の直接テスト (floor / half-up / ceil / unknown default) |
 
 **ファイル**: res/tests/transaction-detail-tax-calculation.test.js
 
@@ -729,10 +731,10 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **280件** |
+| **機能別テスト** | **292件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
-| transaction-detail-tax-calculation.test.js | 17 |
+| transaction-detail-tax-calculation.test.js | 29 |
 | toast.test.js | 14 |
 | tax-calc.test.js | 10 |
 | product-autocomplete.test.js | 10 |
@@ -747,7 +749,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **703件** |
+| **総計 (jest)** | **715件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 
