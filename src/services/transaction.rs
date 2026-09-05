@@ -564,24 +564,29 @@ impl TransactionService {
             return Err(TransactionError::TransferSameAccount);
         }
 
-        // Save memo if provided
-        let memo_id = if let Some(text) = &request.memo {
-            if !text.trim().is_empty() {
-                validate_memo_length(text)?;
-                let result = sqlx::query(sql_queries::MEMO_INSERT)
-                    .bind(user_id)
-                    .bind(text)
-                    .execute(&self.pool)
-                    .await?;
-                Some(result.last_insert_rowid())
-            } else {
-                None
-            }
-        } else {
-            None
-        };
+        // Fable-5 review #6 — the two writes below (MEMO insert +
+        // TRANSACTION_HEADER_INSERT) used to run on separate pool
+        // connections. If the HEADER_INSERT tripped a FK
+        // (`SHOP_ID`, `FROM_ACCOUNT_CODE`, `TO_ACCOUNT_CODE`) after
+        // the MEMO had already committed, the MEMO row was orphaned
+        // forever with no cleanup path — every retry against the
+        // same broken input inflated the MEMOS table by one more
+        // dead row. Wrapping both writes in a single tx (and
+        // routing through `get_or_create_memo_id_in_tx` so the memo
+        // text is deduped against any existing row) fixes both: the
+        // MEMO insert only becomes visible when the HEADER insert
+        // also succeeds, and duplicate memo bodies collapse onto one
+        // MEMOS row the way `add_transaction_detail` already does
+        // (Fable-5 #7, PR #130).
+        let mut tx = self.pool.begin().await?;
 
-        // Insert transaction header
+        let memo_id = Self::get_or_create_memo_id_in_tx(
+            &mut tx,
+            user_id,
+            request.memo.as_deref(),
+        )
+        .await?;
+
         let result = sqlx::query(sql_queries::TRANSACTION_HEADER_INSERT)
             .bind(user_id)
             .bind(request.shop_id)
@@ -594,9 +599,10 @@ impl TransactionService {
             .bind(request.tax_included_type)
             .bind(memo_id)
             .bind(request.is_scheduled.unwrap_or(0))
-            .execute(&self.pool)
+            .execute(&mut *tx)
             .await?;
 
+        tx.commit().await?;
         Ok(result.last_insert_rowid())
     }
 
@@ -3336,6 +3342,132 @@ mod tests {
             "TRANSFER with from == to must be rejected on update with the typed variant, got {:?}",
             result
         );
+    }
+
+    /// Fable-5 review #6 — `save_transaction_header` used to run the
+    /// MEMO insert and the TRANSACTION_HEADER insert on separate pool
+    /// connections. If the HEADER insert tripped an FK, the MEMO row
+    /// had already committed and stayed behind forever. This pin
+    /// drives a real FK failure on the HEADER insert via a composite
+    /// `(USER_ID, CATEGORY1_CODE) → CATEGORY1` violation (same trick
+    /// the #7 rollback pin uses) and asserts the MEMOS row for
+    /// "leak-me-6" is not left behind. Uses
+    /// `setup_test_db_with_foreign_keys` so PRAGMA foreign_keys is on.
+    #[tokio::test]
+    async fn test_save_header_failure_rolls_back_memo_insert_in_same_tx() {
+        let pool = setup_test_db_with_foreign_keys().await;
+
+        // Install a local trigger that fails the HEADER insert for a
+        // sentinel `CATEGORY1_CODE`. We can't use the FK trick from
+        // the #7 detail pin because `TEST_TRANSACTION_CREATE_HEADER_TABLE`
+        // is a minimal shape shared across four modules (account /
+        // product / shop / transaction) and doesn't declare the
+        // production `(USER_ID, CATEGORY1_CODE) → CATEGORY1` FK.
+        // A `RAISE(FAIL)` inside a BEFORE INSERT trigger fires
+        // deterministically inside whatever transaction the caller
+        // opened, so a rollback pin for `save_transaction_header`
+        // becomes a one-line schema addition — no cross-module drag.
+        sqlx::query(
+            "CREATE TRIGGER pin_reject_bad_header BEFORE INSERT ON TRANSACTIONS_HEADER \
+             BEGIN \
+                 SELECT RAISE(FAIL, 'pin-test-rollback') \
+                 WHERE NEW.CATEGORY1_CODE = 'DOES_NOT_EXIST'; \
+             END",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let service = TransactionService::new(pool.clone());
+
+        let request = SaveTransactionRequest {
+            shop_id: None,
+            // Trips the trigger inside the tx AFTER the MEMO row
+            // has been written but BEFORE tx.commit(). Pre-fix, the
+            // MEMO insert had already committed on its own
+            // connection, so the "leak-me-6" body was orphaned even
+            // when the HEADER failed. Post-fix, both writes share
+            // one tx and the trigger's RAISE(FAIL) rolls the MEMO
+            // insert back too.
+            category1_code: "DOES_NOT_EXIST".to_string(),
+            from_account_code: "CASH".to_string(),
+            to_account_code: "BANK".to_string(),
+            transaction_date: "2024-01-01 10:00:00".to_string(),
+            total_amount: 5000,
+            tax_rounding_type: consts::TAX_ROUND_DOWN,
+            tax_included_type: consts::TAX_EXCLUDED,
+            memo: Some("leak-me-6".to_string()),
+            is_scheduled: None,
+        };
+        let result = service.save_transaction_header(2, request).await;
+        assert!(
+            result.is_err(),
+            "HEADER insert must fail on the trigger's RAISE(FAIL), got: {:?}",
+            result,
+        );
+
+        let leaked: i64 = sqlx::query_scalar(sql_queries::TEST_ADD_DETAIL_COUNT_MEMOS_ORPHAN)
+            .bind("leak-me-6")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(
+            leaked, 0,
+            "MEMO insert must roll back with the failed HEADER insert — no orphan row",
+        );
+    }
+
+    /// Fable-5 review #6 companion — reusing
+    /// `get_or_create_memo_id_in_tx` in `save_transaction_header`
+    /// also dedups the memo body across saves, matching what
+    /// `add_transaction_detail` already does after Fable-5 #7. Two
+    /// headers with the same typed memo should end up on one MEMOS
+    /// row and share MEMO_ID.
+    #[tokio::test]
+    async fn test_save_header_dedupes_memo_text_across_multiple_saves() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool.clone());
+
+        let make_request = || SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "EXPENSE".to_string(),
+            from_account_code: "CASH".to_string(),
+            to_account_code: "BANK".to_string(),
+            transaction_date: "2024-01-01 10:00:00".to_string(),
+            total_amount: 1000,
+            tax_rounding_type: consts::TAX_ROUND_DOWN,
+            tax_included_type: consts::TAX_EXCLUDED,
+            memo: Some("shared header memo".to_string()),
+            is_scheduled: None,
+        };
+
+        let txn1 = service.save_transaction_header(2, make_request()).await.unwrap();
+        let txn2 = service.save_transaction_header(2, make_request()).await.unwrap();
+
+        // Both headers must reference the SAME MEMO_ID.
+        let memo_ids: Vec<i64> = sqlx::query_scalar(
+            "SELECT MEMO_ID FROM TRANSACTIONS_HEADER \
+             WHERE TRANSACTION_ID IN (?, ?) AND MEMO_ID IS NOT NULL ORDER BY TRANSACTION_ID",
+        )
+        .bind(txn1)
+        .bind(txn2)
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+        assert_eq!(memo_ids.len(), 2, "both headers must carry a MEMO_ID");
+        assert_eq!(
+            memo_ids[0], memo_ids[1],
+            "second save must reuse the first save's MEMO_ID (Fable-5 #6 dedup)",
+        );
+
+        // Exactly one MEMOS row exists for that text — no duplicate.
+        let memo_row_count: i64 = sqlx::query_scalar(sql_queries::TEST_ADD_DETAIL_COUNT_MEMOS_BY_TEXT)
+            .bind(2i64)
+            .bind("shared header memo")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(memo_row_count, 1);
     }
 
     // ========================================================================
