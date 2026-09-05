@@ -630,23 +630,50 @@ impl Database {
         // the parent-check when we DROP the old SHOPS table.
         conn.execute(sql_queries::PRAGMA_FOREIGN_KEYS_OFF).await?;
 
-        let mut tx = conn.begin().await?;
-        tx.execute(sql_queries::MIGRATE_SHOPS_CASCADE_CREATE_NEW_TABLE).await?;
-        tx.execute(sql_queries::MIGRATE_SHOPS_CASCADE_COPY_ROWS).await?;
-        tx.execute(sql_queries::MIGRATE_SHOPS_CASCADE_DROP_OLD_TABLE).await?;
-        tx.execute(sql_queries::MIGRATE_SHOPS_CASCADE_RENAME_TABLE).await?;
-        tx.execute(sql_queries::MIGRATE_SHOPS_CASCADE_CREATE_USER_ORDER_INDEX).await?;
-        // Re-create the manually-named unique index too, in case any
-        // caller looked it up by name. `IF NOT EXISTS` is safe because
-        // the inline `UNIQUE` on the new table already gave us the
-        // constraint via an auto-index; this is a friendlier alias.
-        tx.execute(sql_queries::MIGRATE_SHOPS_UNIQUE_CREATE_INDEX).await?;
-        tx.commit().await?;
+        // Run the migration body inside an async block so we can
+        // capture its Result and always run the FK-restore step —
+        // even on failure. CodeRabbit on #128: without this, an
+        // error inside the `tx.commit()` chain would return early
+        // via `?` and the connection would go back to the pool with
+        // `foreign_keys = OFF`, silently disabling cascade deletes
+        // for whichever caller borrowed it next. Same shape as
+        // `migrate_transactions_detail_table`.
+        let migration = async {
+            let mut tx = conn.begin().await?;
+            tx.execute(sql_queries::MIGRATE_SHOPS_CASCADE_CREATE_NEW_TABLE).await?;
+            tx.execute(sql_queries::MIGRATE_SHOPS_CASCADE_COPY_ROWS).await?;
+            tx.execute(sql_queries::MIGRATE_SHOPS_CASCADE_DROP_OLD_TABLE).await?;
+            tx.execute(sql_queries::MIGRATE_SHOPS_CASCADE_RENAME_TABLE).await?;
+            tx.execute(sql_queries::MIGRATE_SHOPS_CASCADE_CREATE_USER_ORDER_INDEX).await?;
+            // Re-create the manually-named unique index too, in case
+            // any caller looked it up by name. `IF NOT EXISTS` is
+            // safe because the inline `UNIQUE` on the new table
+            // already gave us the constraint via an auto-index; this
+            // is a friendlier alias.
+            tx.execute(sql_queries::MIGRATE_SHOPS_UNIQUE_CREATE_INDEX).await?;
+            tx.commit().await?;
+            Ok::<(), sqlx::Error>(())
+        }
+        .await;
 
-        conn.execute(sql_queries::PRAGMA_FOREIGN_KEYS_ON).await?;
+        // Restore FK on the SAME connection regardless of the
+        // migration outcome; otherwise a mid-migration failure would
+        // return a FK-off connection to the pool.
+        let restore = sqlx::query(sql_queries::PRAGMA_FOREIGN_KEYS_ON)
+            .execute(&mut *conn)
+            .await;
+
+        // Now propagate the primary result first, then any restore
+        // failure. If both fail, the migration error wins — it's the
+        // one the caller needs to reason about first.
+        migration?;
+        restore?;
 
         // Belt and braces — if the copy dropped a reference on the
         // floor, catch it here (returned as one row per violation).
+        // Only runs when both the migration and the FK-restore
+        // succeeded, so a false positive from the FK-off window can't
+        // shadow a real integrity problem.
         let violations = sqlx::query(sql_queries::PRAGMA_FOREIGN_KEY_CHECK)
             .fetch_all(&mut *conn)
             .await?;

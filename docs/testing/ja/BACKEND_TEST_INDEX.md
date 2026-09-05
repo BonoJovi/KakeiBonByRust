@@ -185,9 +185,9 @@ AES-256-GCM暗号化・復号化のテスト。
 | `migrate_shops_unique_is_idempotent` | 一度成功した migration の 2 回目実行が no-op で行数を変えない (PR15, Fable-5 #20) | src/db.rs | 1424 |
 | `migrate_shops_unique_scopes_per_user` | user A と user B が同じ SHOP_NAME を持つケースは重複扱いしない (constraint は per-user scope) (PR15, Fable-5 #20) | src/db.rs | 1437 |
 | `migrate_shops_unique_keeps_active_row_over_soft_deleted_older_id` | 論理削除された古い店舗 (小さい SHOP_ID) と再作成された有効な同名店舗 (大きい SHOP_ID) が並存するとき、有効な行が survivor に選ばれ、旧 transaction 参照も active row に repoint される (PR15, Devin #118 review) | src/db.rs | 1459 |
-| `migrate_shops_user_id_cascade_adds_cascade_fk_and_preserves_rows` | テーブルを再作成して SHOPS.USER_ID FK に `ON DELETE CASCADE` を追加、SHOP_ID と各列の値はそのまま保持されること (Fable-5 #11) | src/db.rs | 1619 |
-| `migrate_shops_user_id_cascade_is_idempotent` | SHOPS CASCADE マイグレーションの 2 回目は既に CASCADE FK があるため早期に戻る。マイグレーション済み DB では DROP/RENAME は走らない (Fable-5 #11) | src/db.rs | 1651 |
-| `user_delete_cascades_to_shops_after_migration` | CASCADE マイグレーション後、SHOPS 行を持つユーザーの削除が成功し、SHOPS 行も同時に削除される。修正前は `FOREIGN KEY constraint failed` でロールバックしていた (Fable-5 #11) | src/db.rs | 1675 |
+| `migrate_shops_user_id_cascade_adds_cascade_fk_and_preserves_rows` | テーブルを再作成して SHOPS.USER_ID FK に `ON DELETE CASCADE` を追加、SHOP_ID と各列の値はそのまま保持されること (Fable-5 #11) | src/db.rs | 1646 |
+| `migrate_shops_user_id_cascade_is_idempotent` | SHOPS CASCADE マイグレーションの 2 回目は既に CASCADE FK があるため早期に戻る。マイグレーション済み DB では DROP/RENAME は走らない (Fable-5 #11) | src/db.rs | 1734 |
+| `user_delete_cascades_to_shops_after_migration` | CASCADE マイグレーション後、SHOPS 行を持つユーザーの削除が成功し、SHOPS 行も同時に削除される。修正前は `FOREIGN KEY constraint failed` でロールバックしていた (Fable-5 #11) | src/db.rs | 1758 |
 
 **合計**: 11件
 
