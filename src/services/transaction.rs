@@ -523,6 +523,20 @@ impl TransactionService {
             ));
         }
 
+        // Validate tax included type using constants. CodeRabbit on #125
+        // — without this guard, an unknown value (e.g. 99) can be
+        // written to `TAX_INCLUDED_TYPE` and later handed to
+        // `find_matching_pattern` as `preferred`; the preferred-first
+        // check would then preserve the bogus value across bulk recalc
+        // instead of correcting it.
+        if request.tax_included_type != consts::TAX_INCLUDED
+            && request.tax_included_type != consts::TAX_EXCLUDED
+        {
+            return Err(TransactionError::ValidationError(
+                "Invalid tax included type".to_string(),
+            ));
+        }
+
         // Save memo if provided
         let memo_id = if let Some(text) = &request.memo {
             if !text.trim().is_empty() {
@@ -939,6 +953,20 @@ impl TransactionService {
         {
             return Err(TransactionError::ValidationError(
                 "Invalid tax rounding type".to_string(),
+            ));
+        }
+
+        // Validate tax included type using constants. CodeRabbit on #125
+        // — without this guard, an unknown value (e.g. 99) can be
+        // written to `TAX_INCLUDED_TYPE` and later handed to
+        // `find_matching_pattern` as `preferred`; the preferred-first
+        // check would then preserve the bogus value across bulk recalc
+        // instead of correcting it.
+        if request.tax_included_type != consts::TAX_INCLUDED
+            && request.tax_included_type != consts::TAX_EXCLUDED
+        {
+            return Err(TransactionError::ValidationError(
+                "Invalid tax included type".to_string(),
             ));
         }
 
@@ -3117,6 +3145,65 @@ mod tests {
         };
         let result = service.update_transaction_header(2, transaction_id, request).await;
         assert!(result.is_err());
+    }
+
+    /// CodeRabbit review on #125 — before the fix, `save_transaction_header`
+    /// only validated `tax_rounding_type` and let an unknown
+    /// `tax_included_type` (e.g. 99) reach the DB. `find_matching_pattern`
+    /// would then take the bogus value as `preferred` and, with the
+    /// preferred-first check, silently keep it across bulk recalc.
+    /// Guard added at the service entry point rejects the write outright.
+    #[tokio::test]
+    async fn test_save_header_rejects_invalid_tax_included_type() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+
+        let request = SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "EXPENSE".to_string(),
+            from_account_code: "CASH".to_string(),
+            to_account_code: "BANK".to_string(),
+            transaction_date: "2024-01-01 10:00:00".to_string(),
+            total_amount: 1000,
+            tax_rounding_type: consts::TAX_ROUND_DOWN,
+            tax_included_type: 99,
+            memo: None,
+            is_scheduled: None,
+        };
+        let result = service.save_transaction_header(2, request).await;
+        assert!(
+            matches!(result, Err(TransactionError::ValidationError(_))),
+            "unknown tax_included_type must be rejected, got {:?}",
+            result
+        );
+    }
+
+    /// Companion pin for `update_transaction_header` — same
+    /// class-of-defect blocked at the update entry point.
+    #[tokio::test]
+    async fn test_update_header_rejects_invalid_tax_included_type() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        let request = SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "EXPENSE".to_string(),
+            from_account_code: "CASH".to_string(),
+            to_account_code: "BANK".to_string(),
+            transaction_date: "2024-01-01 10:00:00".to_string(),
+            total_amount: 1000,
+            tax_rounding_type: consts::TAX_ROUND_DOWN,
+            tax_included_type: 42,
+            memo: None,
+            is_scheduled: None,
+        };
+        let result = service.update_transaction_header(2, transaction_id, request).await;
+        assert!(
+            matches!(result, Err(TransactionError::ValidationError(_))),
+            "unknown tax_included_type must be rejected on update, got {:?}",
+            result
+        );
     }
 
     // ========================================================================
