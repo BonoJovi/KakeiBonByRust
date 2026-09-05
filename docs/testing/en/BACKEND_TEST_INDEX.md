@@ -466,17 +466,17 @@ Aggregation service tests.
 |---------------|-------------|------|------|
 | `test_monthly_aggregation_current_month` | Monthly aggregation for current month | src/services/aggregation.rs | 1554 |
 | `test_monthly_aggregation_next_month` | Monthly aggregation for next month | src/services/aggregation.rs | 1563 |
-| `test_detail_query_grosses_up_null_tax_included_row` | NULL AMOUNT_INCLUDING_TAX at TAX_RATE>0 is grossed up, not dropped (Fable-5 #3) | src/services/aggregation.rs | 2343 |
-| `test_detail_query_grosses_up_zero_tax_included_row` | AMOUNT_INCLUDING_TAX=0 (frontend empty-input sentinel) is treated as pre-tax (Fable-5 #3) | src/services/aggregation.rs | 2367 |
-| `test_detail_query_avg_matches_total_over_count_with_mixed_rates` | avg × count == total holds for a mixed-rate transaction (Fable-5 #4) | src/services/aggregation.rs | 2398 |
-| `test_detail_query_avg_multi_transaction_arithmetic` | avg = total / txn_count over 2 transactions (Fable-5 #4) | src/services/aggregation.rs | 2430 |
-| `test_detail_query_binds_category_filter_no_injection` | End-to-end proof that a category filter's value is bound, not inlined: an `EXPENSE' OR '1'='1` payload returns 0 rows (PR5, Fable-5 #25) | src/services/aggregation.rs | 2673 |
-| `test_category_filter_category2_targets_detail_column` | Category2 filter now targets the existent `td.CATEGORY2_CODE` (detail scope) instead of the non-existent `th.CATEGORY2_CODE` (PR6, Fable-5 #17) | src/services/aggregation.rs | 2766 |
-| `test_category_filter_category3_targets_detail_column` | Category3 filter targets `td.CATEGORY2/3_CODE` (PR6, Fable-5 #17) | src/services/aggregation.rs | 2782 |
-| `test_account_query_applies_category_filter_to_all_union_branches` | Account UNION ALL query now applies the category filter to all 4 branches and binds the value 4x — regression pin for the silent drop (PR6, Fable-5 #18) | src/services/aggregation.rs | 2807 |
-| `test_detail_query_included_header_legacy_null_row_no_double_taxation` | Header `TAX_INCLUDED_TYPE = TAX_INCLUDED (0)` + legacy `AMOUNT_INCLUDING_TAX = NULL` row is treated as already-included, not grossed up a second time (Fable-5 #3 residual) | src/services/aggregation.rs | 2647 |
-| `test_detail_query_included_header_zero_col_no_double_taxation` | Same #3 residual with `AMOUNT_INCLUDING_TAX = 0` (frontend empty-input sentinel) under a tax-included header | src/services/aggregation.rs | 2684 |
-| `test_detail_query_matches_header_query_for_included_ledger` | Header-dim vs detail-dim aggregation agree on the same tax-included transaction (Fable-5 #4) | src/services/aggregation.rs | 2720 |
+| `test_detail_query_grosses_up_null_tax_included_row` | NULL AMOUNT_INCLUDING_TAX at TAX_RATE>0 is grossed up, not dropped (Fable-5 #3) | src/services/aggregation.rs | 2581 |
+| `test_detail_query_grosses_up_zero_tax_included_row` | AMOUNT_INCLUDING_TAX=0 (frontend empty-input sentinel) is treated as pre-tax (Fable-5 #3) | src/services/aggregation.rs | 2610 |
+| `test_detail_query_included_header_legacy_null_row_no_double_taxation` | Header `TAX_INCLUDED_TYPE = TAX_INCLUDED (0)` + legacy `AMOUNT_INCLUDING_TAX = NULL` row is treated as already-included, not grossed up a second time (Fable-5 #3 residual) | src/services/aggregation.rs | 2653 |
+| `test_detail_query_included_header_zero_col_no_double_taxation` | Same #3 residual with `AMOUNT_INCLUDING_TAX = 0` (frontend empty-input sentinel) under a tax-included header | src/services/aggregation.rs | 2690 |
+| `test_detail_query_matches_header_query_for_included_ledger` | Header-dim vs detail-dim aggregation agree on the same tax-included transaction (Fable-5 #4) | src/services/aggregation.rs | 2726 |
+| `test_detail_query_avg_matches_total_over_count_with_mixed_rates` | avg × count == total holds for a mixed-rate transaction (Fable-5 #4) | src/services/aggregation.rs | 2774 |
+| `test_detail_query_avg_multi_transaction_arithmetic` | avg = total / txn_count over 2 transactions (Fable-5 #4) | src/services/aggregation.rs | 2811 |
+| `test_detail_query_binds_category_filter_no_injection` | End-to-end proof that a category filter's value is bound, not inlined: an `EXPENSE' OR '1'='1` payload returns 0 rows (PR5, Fable-5 #25) | src/services/aggregation.rs | 2846 |
+| `test_category_filter_category2_targets_detail_column` | Category2 filter now targets the existent `td.CATEGORY2_CODE` (detail scope) instead of the non-existent `th.CATEGORY2_CODE` (PR6, Fable-5 #17) | src/services/aggregation.rs | 2902 |
+| `test_category_filter_category3_targets_detail_column` | Category3 filter targets `td.CATEGORY2/3_CODE` (PR6, Fable-5 #17) | src/services/aggregation.rs | 2918 |
+| `test_account_query_applies_category_filter_to_all_union_branches` | Account UNION ALL query now applies the category filter to all 4 branches and binds the value 4x — regression pin for the silent drop (PR6, Fable-5 #18) | src/services/aggregation.rs | 2943 |
 
 **Total**: 13 tests
 
