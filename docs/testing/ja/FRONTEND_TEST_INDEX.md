@@ -2,8 +2,8 @@
 
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
-**最終更新**: 2026-08-21 JST  
-**総テスト数**: 715件 (jest suite 22 ファイル、`npm test` 実測)
+**最終更新**: 2026-09-06 JST  
+**総テスト数**: 726件 (jest suite 23 ファイル、`npm test` 実測)
 
 ---
 
@@ -33,6 +33,7 @@
   - [modal-double-submit.test.js](#modal-double-submittestjs)
   - [master-crud.test.js](#master-crudtestjs)
   - [attach-char-counter-ime.test.js](#attach-char-counter-imetestjs)
+  - [aggregation-error-translate.test.js](#aggregation-error-translatetestjs)
 - [集計機能テスト](#集計機能テスト)
   - [aggregation-daily.test.js](#aggregation-dailytestjs)
   - [aggregation-weekly.test.js](#aggregation-weeklytestjs)
@@ -567,6 +568,23 @@
 
 ---
 
+### aggregation-error-translate.test.js
+
+`res/js/aggregation-common.js` の `translateAggregationError` 型防御ピン (Fable-5 レビュー #9)。旧実装は `error.toString()` を直接呼んでおり、バックエンドが `ApiError { code, message }` 形式で例外を返した瞬間に substring マッチが全部外れ、ユーザーには banner に `"[object Object]"` の文字列が出ていた。修正で `formatApiError` 経由に統一され、`Err(String)` / `ApiError` / `Error` のいずれの形状も同じ i18n キーに解決するようになったのを固定する。
+
+**テスト数**: 11件
+
+| テストブロック | 説明 | テスト数 |
+|--------------|------|---------|
+| Legacy string errors (`Err(String)`) | Invalid year / month / date range / day / date format の 5 経路 + 未マッチ時の raw fallback | 6件 |
+| ApiError 形状 (`{ code, message }`) | `.message` を substring マッチに使い、未マッチでも `.message` を返し `"[object Object]"` を出さない | 2件 |
+| Error instance | `Error.message` が substring 分岐にちゃんと渡る | 1件 |
+| hostile shapes | `.message` の無いオブジェクト / null / undefined でも throw しない | 2件 |
+
+**ファイル**: res/tests/aggregation-error-translate.test.js
+
+---
+
 ## 集計機能テスト
 
 ### aggregation-daily.test.js
@@ -731,7 +749,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **292件** |
+| **機能別テスト** | **303件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 29 |
@@ -743,13 +761,14 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | modal-double-submit.test.js | 6 |
 | master-crud.test.js | 30 |
 | attach-char-counter-ime.test.js | 8 |
+| aggregation-error-translate.test.js | 11 |
 | **集計機能テスト** | **115件** |
 | aggregation-daily.test.js | 16 |
 | aggregation-weekly.test.js | 22 |
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **715件** |
+| **総計 (jest)** | **726件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 
