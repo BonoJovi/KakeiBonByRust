@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-08-26 JST  
-**総テスト数**: 324件 (差分反映後。`cargo test --lib` の権威的総数は 566 で、既存の未反映分は別 PR でバックフィル予定)
+**総テスト数**: 325件 (差分反映後。`cargo test --lib` の権威的総数は 567 で、既存の未反映分は別 PR でバックフィル予定)
 
 ---
 
@@ -464,8 +464,9 @@ AES-256-GCM暗号化・復号化のテスト。
 | `test_update_header_rejects_invalid_tax_included_type` | 更新入口にも同じガード (#125 の CodeRabbit 指摘) | src/services/transaction.rs | 3218 |
 | `test_save_header_rejects_transfer_from_equals_to` | `save_transaction_header` が FROM == TO の TRANSFER を拒否し、ダッシュボード残高の水増しを防ぐ (Fable-5 #20) | src/services/transaction.rs | 3249 |
 | `test_update_header_rejects_transfer_from_equals_to` | 更新入口にも同じガード (Fable-5 #20) | src/services/transaction.rs | 3277 |
+| `transfer_same_account_maps_to_stable_wire_code_and_omits_entity` | `TransactionError::TransferSameAccount` が `ApiError { code: "transfer_same_account", entity: None }` に変換される wire contract を固定。将来のリファクタで generic な `validation` フォールバックへ無言で退化させないための pin (#127 の CodeRabbit 指摘) | src/services/transaction.rs | 4343 |
 
-**合計**: 29件
+**合計**: 30件
 
 ### services/aggregation.rs
 
@@ -562,7 +563,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **301件** |
+| **インラインテスト** | **302件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -578,13 +579,13 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/manufacturer.rs | 12 |
 | services/product.rs | 13 |
 | services/shop.rs | 12 |
-| services/transaction.rs | 29 |
+| services/transaction.rs | 30 |
 | services/aggregation.rs | 13 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 5 |
 | lib.rs | 6 |
-| **総計** | **324件** |
+| **総計** | **325件** |
 
 ---
 

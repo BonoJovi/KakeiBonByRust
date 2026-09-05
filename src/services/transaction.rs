@@ -4333,6 +4333,20 @@ mod tests {
         assert!(err.entity.is_none());
     }
 
+    /// CodeRabbit on #127 — pin the wire code for
+    /// `TransferSameAccount` so a future refactor that folds it back
+    /// into `ApiError::validation(...)` (or renames the code string)
+    /// trips this test instead of silently degrading the frontend to
+    /// the generic English fallback. The `entity` stays `None` because
+    /// the failure is about the transfer relation, not a named row.
+    #[test]
+    fn transfer_same_account_maps_to_stable_wire_code_and_omits_entity() {
+        let err: ApiError = TransactionError::TransferSameAccount.into();
+        assert_eq!(err.code, ApiError::CODE_TRANSFER_SAME_ACCOUNT);
+        assert_eq!(err.code, "transfer_same_account");
+        assert!(err.entity.is_none());
+    }
+
     #[test]
     fn field_needle_message_survives_conversion_for_frontend_routing() {
         // The transaction-management / transaction-detail-management screens

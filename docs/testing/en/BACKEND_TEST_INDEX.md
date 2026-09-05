@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-08-26 JST  
-**Total Tests**: 324 (delta-tracked; the full authoritative count from `cargo test --lib` is 566, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 325 (delta-tracked; the full authoritative count from `cargo test --lib` is 567, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -464,8 +464,9 @@ Transaction management service tests.
 | `test_update_header_rejects_invalid_tax_included_type` | Same guard on the update entry point (CodeRabbit on #125) | src/services/transaction.rs | 3218 |
 | `test_save_header_rejects_transfer_from_equals_to` | `save_transaction_header` rejects TRANSFER with FROM == TO so a self-transfer cannot inflate the dashboard balance (Fable-5 #20) | src/services/transaction.rs | 3249 |
 | `test_update_header_rejects_transfer_from_equals_to` | Same guard on the update entry point (Fable-5 #20) | src/services/transaction.rs | 3277 |
+| `transfer_same_account_maps_to_stable_wire_code_and_omits_entity` | `TransactionError::TransferSameAccount` maps to `ApiError { code: "transfer_same_account", entity: None }` — pins the wire contract so a future refactor cannot silently downgrade to the generic `validation` fallback (CodeRabbit on #127) | src/services/transaction.rs | 4343 |
 
-**Total**: 29 tests
+**Total**: 30 tests
 
 ### services/aggregation.rs
 
@@ -562,7 +563,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **301** |
+| **Inline Tests** | **302** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -578,13 +579,13 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/manufacturer.rs | 12 |
 | services/product.rs | 13 |
 | services/shop.rs | 12 |
-| services/transaction.rs | 29 |
+| services/transaction.rs | 30 |
 | services/aggregation.rs | 13 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 5 |
 | lib.rs | 6 |
-| **Total** | **324** |
+| **Total** | **325** |
 
 ---
 
