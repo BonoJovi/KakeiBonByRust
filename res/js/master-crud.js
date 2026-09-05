@@ -39,6 +39,12 @@ export const API_ERROR_CODES = Object.freeze({
     IN_USE: 'in_use',
     VALIDATION: 'validation',
     DATABASE: 'database',
+    // Fable-5 #1/#5 — password change rejected because the
+    // caller-supplied current password did not verify.
+    OLD_PASSWORD_INCORRECT: 'old_password_incorrect',
+    // Fable-5 #20 — TRANSFER save/update rejected because FROM and
+    // TO are the same account.
+    TRANSFER_SAME_ACCOUNT: 'transfer_same_account',
 });
 
 /**

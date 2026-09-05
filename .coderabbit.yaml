@@ -1,0 +1,220 @@
+# CodeRabbit configuration for KakeiBonByRust.
+# https://docs.coderabbit.ai/reference/configuration
+#
+# KakeiBonByRust is a Tauri v2 household-budget desktop app: Rust
+# backend + Vanilla JS (ES modules) frontend + SQLite, bilingual
+# Japanese and English via a DB-driven i18n table. This config tunes
+# CodeRabbit to review the parts that actually change and to enforce
+# the project-specific rules from CLAUDE.md and recurring review
+# findings.
+
+language: "ja-JP"
+early_access: false
+enable_free_tier: true
+
+# tone_instructions is capped at 250 chars by the validator — keep terse.
+tone_instructions: |
+  Each finding needs a concrete failure scenario (specific inputs/state → wrong output, crash, data corruption, broken user flow). Rank real correctness / persistence / auth / i18n bugs above style nits. Reply in Japanese; keep findings ≤10 lines.
+
+reviews:
+  profile: "assertive"
+  request_changes_workflow: false
+  high_level_summary: true
+
+  path_filters:
+    # Rust build artifacts.
+    - "!target/**"
+    # Frontend / Jest dependencies (root + res/tests).
+    - "!node_modules/**"
+    - "!res/tests/node_modules/**"
+    - "!res/tests/target/**"
+    # AI collaboration methodology docs — pulled into CLAUDE.md
+    # via `@` on demand, not the source of truth for code review.
+    - "!.ai-context/**"
+    # Session scratchpads, bug lists, review notes.
+    - "!work/**"
+    # Generated Tauri capability / schema files.
+    - "!gen/**"
+    - "!capabilities/**"
+    # Static assets: icons, screenshots.
+    - "!icons/**"
+    - "!docs/screenshots/**"
+    # SQL test fixtures — data, not schema/i18n. Covers both the
+    # `sql/test/` subdirectory and root-level `sql/test_*.sql` files
+    # (e.g. `sql/test_transaction_data.sql`) so the migration/i18n
+    # rules below do not misfire on plain-insert sample data.
+    - "!sql/test/**"
+    - "!sql/test_*.sql"
+    # Committed SQLite dev DB, not reviewable text.
+    - "!sql/kakeibo.db"
+    # Massive bilingual changelogs — auto-appended, not code.
+    - "!CHANGELOG_en.md"
+    - "!CHANGELOG_ja.md"
+    # Personal memo, not project source of truth.
+    - "!READER_INSIGHTS_MEMO.md"
+
+  path_instructions:
+    - path: "src/**/*.rs"
+      instructions: |
+        Production Rust must NOT use unwrap()/expect() — always use
+        Result<T, E> or explicit fallbacks. unwrap()/expect() are allowed
+        only under #[cfg(test)], in `*_tests.rs` / `test_helpers.rs`, and
+        in `#[test]` fns. Poison-recovery via
+        `.unwrap_or_else(|e| e.into_inner())` on Mutex/RwLock is idiomatic
+        and NOT a violation. Additional project rules to flag:
+        (a) All SQL literals belong in `src/sql_queries.rs` as prepared
+            statements — flag any inline SQL string in service modules
+            (`src/services/**`) or `src/db.rs`, and flag any query built
+            by string concatenation / format!() with user input (SQL
+            injection). Bind parameters only.
+        (b) Role constants are `ROLE_ADMIN = 0`, `ROLE_USER = 1` (see
+            `src/consts.rs`). Flag magic-number role checks and any new
+            `MIN_PASSWORD_LENGTH` that isn't 16.
+        (c) Errors surfaced to the frontend must go through `ApiError`
+            (`src/api_error.rs`). Flag `Err("string".into())` /
+            `.map_err(|e| e.to_string())` patterns that bypass the typed
+            variants — the frontend depends on structured `.code` to
+            pick the localised message.
+        (d) TEST_INDEX SYNC — many production modules
+            (`src/services/*.rs`, `src/db.rs`, `src/validation.rs`, …)
+            carry inline `#[cfg(test)] mod tests { … }` blocks in
+            addition to dedicated `*_tests.rs` files. When a diff
+            adds OR removes any test function — `#[test]` or
+            `#[tokio::test]` (the async suite has hundreds of the
+            latter) — or a test module anywhere under `src/`, BOTH
+            `docs/testing/en/BACKEND_TEST_INDEX.md` and
+            `docs/testing/ja/BACKEND_TEST_INDEX.md` must be updated
+            in sync: the section total, summary row, Inline subtotal,
+            and Top+Bottom Total. This is the single most frequent
+            Devin finding; do not let it slip.
+        (e) In tests, avoid the CodeQL Critical
+            `hardcoded-credentials` pattern — do NOT bind a literal
+            password string to a variable named `password`. Prefer a
+            formatted string (`format!("Pw{}...", ...)`) bound to a
+            variable named `pw`. Test code may otherwise use
+            unwrap()/expect() freely.
+        (f) Do not flag comment length or missing doc comments.
+
+    - path: "src/services/**/*.rs"
+      instructions: |
+        Service modules coordinate DB writes that must hold invariants
+        across statements — flag any multi-statement mutation that isn't
+        wrapped in a single `conn.transaction()`. Master-delete paths
+        (product / manufacturer / shop / category) must reject deletion
+        when the master is still referenced by TRANSACTIONS or
+        TRANSACTIONS_DETAIL rows; do not regress that check.
+
+    - path: "res/js/**/*.js"
+      instructions: |
+        Frontend is ES Modules — every relative import MUST include the
+        `.js` extension (Tauri's asset resolver does not add it).
+        User-facing text MUST be resolved through `i18n.js` (`t('KEY')`
+        or the equivalent) — flag hardcoded Japanese/English UI strings,
+        including toast/alert/modal messages. All dynamic values
+        rendered into the DOM MUST pass through `escapeHtml()` from
+        `escape-html.js` before `innerHTML` / template concatenation —
+        this includes error objects. Watch specifically for the ApiError
+        migration 3-sweep pattern: `${err}`, `' + err`, and
+        `escapeHtml(err)` all must become `renderApiError(err)` (or the
+        current typed helper) — the `escapeHtml(err)` variant is the
+        one most often missed in review. Do NOT introduce `alert()` /
+        `confirm()` — use `toast.js` and the app's modal helpers
+        (Tauri + WebKitGTK native dialogs break the flow). Use
+        "restart the app" phrasing in any suggested user-facing copy,
+        never "reload the browser".
+
+    - path: "res/tests/**/*.js"
+      instructions: |
+        Jest suite. Flag any NEW `*.test.js` file whose filename is not
+        registered in BOTH `docs/testing/en/FRONTEND_TEST_INDEX.md` and
+        `docs/testing/ja/FRONTEND_TEST_INDEX.md`, and flag drift in the
+        per-section totals when tests are added or removed. Test code
+        may use inline strings freely, but avoid a literal password
+        assigned to a variable named `password` — that trips CodeQL
+        `hardcoded-credentials`. Prefer a JS template literal
+        (`` `Pw${suffix}...` ``) bound to a variable named `pw` or
+        similar, matching the pattern already established for the Rust
+        test suite.
+
+    - path: "res/sql/dbaccess.sql"
+      instructions: |
+        This file mixes multi-row VALUES blocks with individual
+        `INSERT OR IGNORE INTO I18N_RESOURCES` statements. When adding
+        a new i18n RESOURCE_ID, the MAX must be computed across the
+        ENTIRE file, not just the tail of the current block — otherwise
+        the new ID collides with an ID defined earlier and `INSERT OR
+        IGNORE` silently skips it, leaving the raw key string visible
+        in the UI. Flag any new RESOURCE_ID that duplicates one
+        already present anywhere in the file.
+
+    - path: "sql/**/*.sql"
+      instructions: |
+        Migration / seed scripts live directly under `sql/*.sql` (each
+        adds a table, alters a column, or inserts i18n rows) and under
+        `sql/init/{tables,categories,i18n}/`. They follow the same rule
+        as `res/sql/dbaccess.sql`: a new i18n RESOURCE_ID must not
+        collide with any ID already defined in `res/sql/dbaccess.sql`
+        or in any prior `sql/**/*.sql` — silent `INSERT OR IGNORE` skips
+        manifest as raw key strings in the UI. Scripts must be
+        idempotent (safe to re-run on an already-migrated DB): use
+        `CREATE TABLE IF NOT EXISTS`, `INSERT OR IGNORE`, or a
+        MIGRATION_HISTORY guard, never a bare `CREATE TABLE` / `ALTER
+        TABLE ADD COLUMN` that will fail on the second run.
+
+    - path: "Cargo.toml"
+      instructions: |
+        Version bumps here MUST accompany the other three version
+        sources in the same commit: `tauri.conf.json` (`version`),
+        `res/js/package.json` (if present) / `package.json`, and
+        `Cargo.lock` (regenerated automatically by `cargo build`; stage
+        the diff). Flag any partial version bump — a mismatch between
+        Cargo.toml and tauri.conf.json ships a binary whose About
+        dialog and updater manifest disagree.
+
+    - path: "tauri.conf.json"
+      instructions: |
+        `version` here must match `Cargo.toml` `[package].version` and
+        the `package.json` version exactly. Window configuration
+        changes (size, decorations, min/max) can regress the Windows
+        window-position and mouse-hidden-taskbar bugs — call out any
+        change to `windows[].{width,height,x,y,decorations,resizable}`
+        for explicit review.
+
+    - path: "package.json"
+      instructions: |
+        `version` here must match `Cargo.toml` and `tauri.conf.json`.
+        Adding a new dependency at repo root is unusual — the app's
+        JS is served from `res/`, not bundled — flag additions unless
+        clearly justified (e.g. Tauri tooling).
+
+    - path: "**/*.md"
+      instructions: |
+        CLAUDE.md is authoritative for project rules — flag any doc
+        change that contradicts it. Bilingual policy: `README.md` /
+        `CONTRIBUTING.md` / `CODE_OF_CONDUCT.md` etc. without suffix
+        are the JP/EN mixed "public face" versions, `_en.md` are pure
+        English, `_ja.md` are pure Japanese — do not merge languages
+        across the three-layer split. For any user-facing wording,
+        prefer neutral action descriptions ("土日祝なら直前/直後の
+        平日") over usage-metaphor labels ("給料日想定/引き落とし
+        想定"). Skip prose-level style nits on developer docs.
+
+  auto_review:
+    enabled: true
+    drafts: false
+    auto_incremental_review: true
+    auto_pause_after_reviewed_commits: 0
+    # `ignore_title_keywords` uses case-insensitive SUBSTRING match.
+    # `wip` alone matches `feat: add swipe gesture`; even `wip:`
+    # matches a meta-PR like `fix: document the "wip:" syntax`.
+    # `[wip]` (bracketed) is the safest form — practically no
+    # innocent PR title contains those five characters in sequence.
+    ignore_title_keywords:
+      - "[wip]"
+      - "[skip review]"
+    base_branches:
+      - "main"
+      - "dev"
+
+chat:
+  auto_reply: true

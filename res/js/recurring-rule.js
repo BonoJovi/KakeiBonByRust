@@ -10,6 +10,8 @@ import { setupTaxCalculationListeners } from './detail-tax-calc.js';
 import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
 import { MAX_RULE_NAME_LEN, MAX_ITEM_NAME_LEN, MAX_MEMO_LEN } from './consts.js';
 import { formatApiError, API_ERROR_CODES } from './master-crud.js';
+import { parseAmountStrict } from './parse-amount-strict.js';
+import { formatLocalDate } from './format-local-date.js';
 
 console.log('=== RECURRING-RULE.JS LOADED ===');
 
@@ -56,12 +58,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         setupDeleteModal();
         await loadRules();
 
-        // Default start_date to today, end_date to one year out
+        // Default start_date to today, end_date to one year out.
+        // Fable-5 review #13 — the pre-fix defaults used
+        // `new Date().toISOString().slice(0, 10)` which yields the UTC
+        // date. A JST user opening the modal before 09:00 JST saw
+        // yesterday in all three fields (Daily-interval-1 then wrote
+        // a spurious occurrence, Monthly-day-of-month could skip a
+        // cycle). `formatLocalDate` uses the browser's local getters
+        // so the default matches the user's wall clock.
         const today = new Date();
         const oneYearLater = new Date(today.getFullYear() + 1, today.getMonth(), today.getDate());
-        document.getElementById('start-date').value = today.toISOString().slice(0, 10);
-        document.getElementById('end-date').value = oneYearLater.toISOString().slice(0, 10);
-        document.getElementById('anchor-date').value = today.toISOString().slice(0, 10);
+        document.getElementById('start-date').value = formatLocalDate(today);
+        document.getElementById('end-date').value = formatLocalDate(oneYearLater);
+        document.getElementById('anchor-date').value = formatLocalDate(today);
 
         await fitWindowToScreen();
         // Form is taller than the window; ensure the user starts at the top
@@ -102,7 +111,25 @@ async function loadAccounts() {
     const toSel = document.getElementById('to-account');
     fromSel.innerHTML = '';
     toSel.innerHTML = '';
+
+    // Fable-5 review #22 — the NONE account's persisted name is
+    // Japanese ("指定なし") from `initialize_none_account`. Mirror the
+    // pattern already used in `transaction-management.js::loadAccounts
+    // ForModal`: add the NONE option first with the localised
+    // `common.unspecified` label, then skip account_code === 'NONE'
+    // when appending the rest so it isn't duplicated.
+    const unspecifiedText = i18n.t('common.unspecified');
+    const fromNoneOpt = document.createElement('option');
+    fromNoneOpt.value = 'NONE';
+    fromNoneOpt.textContent = unspecifiedText;
+    fromSel.appendChild(fromNoneOpt);
+    const toNoneOpt = document.createElement('option');
+    toNoneOpt.value = 'NONE';
+    toNoneOpt.textContent = unspecifiedText;
+    toSel.appendChild(toNoneOpt);
+
     accounts.forEach((acc) => {
+        if (acc.account_code === 'NONE') return;
         const fromOpt = document.createElement('option');
         fromOpt.value = acc.account_code;
         fromOpt.textContent = acc.account_name;
@@ -261,6 +288,59 @@ function setupFormSubmit() {
             }
         }
 
+        // Fable-5 review #10 — money fields on this form used to be
+        // read with `parseInt(el.value) || 0` (or `intOrNull`), which
+        // silently truncated decimals and locale-comma inputs. The
+        // five money / rate fields are now parsed with the strict
+        // helper up front; a rejection surfaces a field-level error
+        // and aborts before we build the request.
+        const totalAmountInput = document.getElementById('total-amount');
+        const amountExcludingTaxInput = document.getElementById('amount-excluding-tax');
+        const taxAmountInput = document.getElementById('tax-amount');
+        const taxRateInput = document.getElementById('tax-rate');
+        const amountIncludingTaxInput = document.getElementById('amount-including-tax');
+        clearValidationError(totalAmountInput);
+        clearValidationError(amountExcludingTaxInput);
+        clearValidationError(taxAmountInput);
+        clearValidationError(taxRateInput);
+        clearValidationError(amountIncludingTaxInput);
+
+        const totalAmount = parseAmountStrict(totalAmountInput.value);
+        const amountExcludingTax = parseAmountStrict(amountExcludingTaxInput.value);
+        const taxAmount = parseAmountStrict(taxAmountInput.value);
+        const taxRate = parseAmountStrict(taxRateInput.value);
+        // amount_including_tax stays optional (null when empty) — the
+        // strict helper returns 0 for empty, so keep the explicit
+        // empty check that `intOrNull` used to provide.
+        const amountIncludingTaxRaw = amountIncludingTaxInput.value.trim();
+        const amountIncludingTax = amountIncludingTaxRaw === ''
+            ? null
+            : parseAmountStrict(amountIncludingTaxRaw);
+
+        if (totalAmount === null) {
+            showValidationError(totalAmountInput, i18n.t('common.error_amount_not_integer'));
+            return;
+        }
+        if (amountExcludingTax === null) {
+            showValidationError(amountExcludingTaxInput, i18n.t('common.error_amount_not_integer'));
+            return;
+        }
+        if (taxAmount === null) {
+            showValidationError(taxAmountInput, i18n.t('common.error_amount_not_integer'));
+            return;
+        }
+        if (taxRate === null) {
+            showValidationError(taxRateInput, i18n.t('common.error_amount_not_integer'));
+            return;
+        }
+        // `amountIncludingTax === null` from a non-empty raw input
+        // means strict rejection; from an empty raw input it just
+        // means "user didn't fill it in" (legal — server accepts null).
+        if (amountIncludingTax === null && amountIncludingTaxRaw !== '') {
+            showValidationError(amountIncludingTaxInput, i18n.t('common.error_amount_not_integer'));
+            return;
+        }
+
         const request = {
             rule_name: stringOrNull(document.getElementById('rule-name').value),
             period_unit: cycleKind,
@@ -280,7 +360,7 @@ function setupFormSubmit() {
             category1_code: document.getElementById('category1').value,
             from_account_code: document.getElementById('from-account').value,
             to_account_code: document.getElementById('to-account').value,
-            total_amount: parseInt(document.getElementById('total-amount').value, 10) || 0,
+            total_amount: totalAmount,
             tax_rounding_type: parseInt(document.getElementById('tax-rounding-type').value, 10),
             tax_included_type: parseInt(document.getElementById('tax-included-type').value, 10),
             header_memo: stringOrNull(document.getElementById('header-memo').value),
@@ -290,12 +370,10 @@ function setupFormSubmit() {
                 category2_code: stringOrNull(document.getElementById('category2').value),
                 category3_code: stringOrNull(document.getElementById('category3').value),
                 item_name: document.getElementById('item-name').value,
-                amount: parseInt(document.getElementById('amount-excluding-tax').value, 10) || 0,
-                tax_amount: parseInt(document.getElementById('tax-amount').value, 10) || 0,
-                tax_rate: parseInt(document.getElementById('tax-rate').value, 10) || 0,
-                amount_including_tax: intOrNull(
-                    document.getElementById('amount-including-tax').value
-                ),
+                amount: amountExcludingTax,
+                tax_amount: taxAmount,
+                tax_rate: taxRate,
+                amount_including_tax: amountIncludingTax,
                 detail_memo: stringOrNull(document.getElementById('detail-memo').value),
             },
         };

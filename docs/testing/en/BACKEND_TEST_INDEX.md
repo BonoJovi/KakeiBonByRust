@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-08-26 JST  
-**Total Tests**: 306 (delta-tracked; the full authoritative count from `cargo test --lib` is 551, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 346 (delta-tracked; the full authoritative count from `cargo test --lib` is 588, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -21,6 +21,7 @@ This document provides a complete index of all backend tests implemented in Rust
   - [settings.rs](#settingsrs)
   - [api_error.rs](#api_errorrs)
   - [services/master_data.rs](#servicesmaster_datars)
+  - [services/like_escape.rs](#serviceslike_escapers)
   - [services/auth.rs](#servicesauthrs)
   - [services/user_management.rs](#servicesuser_managementrs)
   - [services/encryption.rs](#servicesencryptionrs)
@@ -185,8 +186,12 @@ Database initialization and migration tests.
 | `migrate_shops_unique_is_idempotent` | A second run of a successful migration is a no-op and leaves the data untouched (PR15, Fable-5 #20) | src/db.rs | 1424 |
 | `migrate_shops_unique_scopes_per_user` | User A and User B may each own a shop with the same SHOP_NAME — the uniqueness scope is per-user (PR15, Fable-5 #20) | src/db.rs | 1437 |
 | `migrate_shops_unique_keeps_active_row_over_soft_deleted_older_id` | When a soft-deleted old shop (smaller SHOP_ID, `IS_DISABLED=1`) coexists with a re-created active shop of the same name (larger SHOP_ID, `IS_DISABLED=0`), the migration keeps the active row as survivor and repoints legacy transaction references onto it (PR15, Devin #118 review) | src/db.rs | 1459 |
+| `pool_connections_all_enforce_foreign_keys` | Every connection the pool hands out enforces `PRAGMA foreign_keys = ON`, not just the first one. Pre-fix, only the connection that ran the one-shot `execute()` at startup had FKs enabled; the SHOPS user-cascade migration was toothless on any borrower that got a later connection (CodeRabbit outside-diff on #128) | src/db.rs | 1630 |
+| `migrate_shops_user_id_cascade_adds_cascade_fk_and_preserves_rows` | Table recreate swaps the SHOPS.USER_ID FK to `ON DELETE CASCADE` while keeping every SHOP_ID and column value verbatim (Fable-5 #11) | src/db.rs | 1711 |
+| `migrate_shops_user_id_cascade_is_idempotent` | Second run of the SHOPS cascade migration finds the CASCADE FK already present and returns early — no DROP/RENAME on already-migrated DBs (Fable-5 #11) | src/db.rs | 1799 |
+| `user_delete_cascades_to_shops_after_migration` | End-to-end guarantee: after the cascade migration, deleting a user with SHOPS rows succeeds and takes those rows with it — the pre-fix DELETE aborted with `FOREIGN KEY constraint failed` (Fable-5 #11) | src/db.rs | 1823 |
 
-**Total**: 8 tests
+**Total**: 12 tests
 
 ### settings.rs
 
@@ -241,6 +246,22 @@ Pure-Rust tests for the shared master-CRUD helpers (`MasterCrudSpec` + `ensure_u
 
 **Total**: 4 tests
 
+### services/like_escape.rs
+
+Pure-function tests for `escape_like_pattern`, the shared LIKE-metacharacter escaper used by every `LIKE ? ESCAPE '\'` search path (Fable-5 review #23 extracted this from a private helper in `transaction.rs` so `product::search_products_by_name` could share the contract).
+
+| Test Function | Description | File | Line |
+|---------------|-------------|------|------|
+| `plain_text_passes_through_unchanged` | Plain ASCII text is returned verbatim | src/services/like_escape.rs | 34 |
+| `percent_is_escaped` | `%` → `\%` | src/services/like_escape.rs | 39 |
+| `underscore_is_escaped` | `_` → `\_` | src/services/like_escape.rs | 44 |
+| `backslash_is_escaped_first_then_metacharacters` | `\` is escaped before `%` / `_` so escapes are not re-escaped | src/services/like_escape.rs | 49 |
+| `multiple_metacharacters_all_escaped` | `50%_off` → `50\%\_off` | src/services/like_escape.rs | 57 |
+| `empty_input_yields_empty_output` | Empty input returns empty output | src/services/like_escape.rs | 62 |
+| `japanese_text_with_percent_escapes_only_the_metacharacter` | 果汁100%ジュース → 果汁100\%ジュース (the Fable-5 #23 pin scenario) | src/services/like_escape.rs | 67 |
+
+**Total**: 7 tests
+
 ### services/auth.rs
 
 Authentication service tests (user registration, login).
@@ -272,21 +293,27 @@ User management service tests (CRUD operations).
 
 | Test Function | Description | File | Line |
 |---------------|-------------|------|------|
-| `test_register_general_user` | Test general user registration | src/services/user_management.rs | 354 |
-| `test_update_general_user` | Test general user update | src/services/user_management.rs | 371 |
-| `test_update_general_user_username_only` | Update username only | src/services/user_management.rs | 396 |
-| `test_update_general_user_password_only` | Update password only | src/services/user_management.rs | 417 |
-| `test_update_general_user_username_and_password` | Update both username and password | src/services/user_management.rs | 447 |
-| `test_update_admin_user` | Test admin user update | src/services/user_management.rs | 477 |
-| `test_update_admin_user_username_only` | Update admin username only | src/services/user_management.rs | 493 |
-| `test_update_admin_user_password_only` | Update admin password only | src/services/user_management.rs | 511 |
-| `test_update_admin_user_username_and_password` | Update admin username and password | src/services/user_management.rs | 538 |
-| `test_delete_general_user` | Test general user deletion | src/services/user_management.rs | 565 |
-| `test_cannot_delete_admin_user` | Prevent admin user deletion | src/services/user_management.rs | 581 |
-| `test_duplicate_username` | Test duplicate username error | src/services/user_management.rs | 592 |
-| `test_list_users` | Test user list retrieval | src/services/user_management.rs | 606 |
+| `test_register_general_user` | Test general user registration | src/services/user_management.rs | 502 |
+| `test_update_general_user` | Test general user update | src/services/user_management.rs | 519 |
+| `test_update_general_user_username_only` | Update username only | src/services/user_management.rs | 547 |
+| `test_update_general_user_password_only` | Update password only via `_with_password` (Fable-5 #1/#5) | src/services/user_management.rs | 568 |
+| `test_update_general_user_username_and_password` | Update username + password atomically via `_with_password` (Fable-5 #1/#5) | src/services/user_management.rs | 601 |
+| `test_update_admin_user` | Test admin user update | src/services/user_management.rs | 634 |
+| `test_update_admin_user_username_only` | Update admin username only | src/services/user_management.rs | 650 |
+| `test_update_admin_user_password_only` | Update admin password only via `_with_password` (Fable-5 #1/#5) | src/services/user_management.rs | 668 |
+| `test_update_admin_user_username_and_password` | Update admin username + password atomically (Fable-5 #1/#5) | src/services/user_management.rs | 698 |
+| `test_delete_general_user` | Test general user deletion | src/services/user_management.rs | 728 |
+| `test_cannot_delete_admin_user` | Prevent admin user deletion | src/services/user_management.rs | 744 |
+| `test_duplicate_username` | Test duplicate username error | src/services/user_management.rs | 755 |
+| `test_list_users` | Test user list retrieval | src/services/user_management.rs | 769 |
+| `test_register_general_user_accepts_max_chars_of_multibyte_name` | USERS.NAME length guard counts characters, not bytes: accept MAX_NAME_LEN multibyte (issue #37) | src/services/user_management.rs | 785 |
+| `test_register_general_user_rejects_over_max_chars_of_multibyte_name` | Reject MAX_NAME_LEN+1 multibyte on registration (issue #37) | src/services/user_management.rs | 796 |
+| `test_update_general_user_with_password_rejects_wrong_old_password` | Wrong current password → `OldPasswordIncorrect`; hash + username unchanged (Fable-5 #1/#5) | src/services/user_management.rs | 817 |
+| `test_update_general_user_with_password_rename_only_rejects_wrong_old_password` | Rename-only branch also classifies as `OldPasswordIncorrect` (CodeRabbit on #123) | src/services/user_management.rs | 864 |
+| `test_update_admin_user_with_password_rejects_wrong_old_password` | Admin-side counterpart: wrong current password → `OldPasswordIncorrect`; hash unchanged (Fable-5 #1/#5) | src/services/user_management.rs | 891 |
+| `test_update_general_user_rejects_over_max_chars_of_multibyte_name` | Reject MAX_NAME_LEN+1 multibyte on rename (issue #37) | src/services/user_management.rs | 920 |
 
-**Total**: 13 tests
+**Total**: 19 tests
 
 ### services/encryption.rs
 
@@ -321,8 +348,9 @@ Account management service tests. Assertions on empty-name and duplicate-code pa
 | `test_delete_account_rejected_when_referenced_by_recurring_rule` | Delete rejected with `ApiError { code: "in_use" }` when any RECURRING_RULES row names the account (master delete-lock) | src/services/account.rs | 864 |
 | `test_delete_account_ignores_other_users_references` | Cross-user references to the same ACCOUNT_CODE do NOT block delete — codes are user-scoped (master delete-lock) | src/services/account.rs | 881 |
 | `test_delete_account_normalizes_input_before_in_use_check` | Delete input (`"  cash  "`) is uppercased/trimmed before the CHECK_IN_USE query so the guard fires (master delete-lock) | src/services/account.rs | 899 |
+| `test_get_account_balances_as_of_self_transfer_nets_to_zero` | Stale TRANSFER row with FROM == TO nets to zero on the dashboard instead of inflating the balance (Fable-5 #20) | src/services/account.rs | 991 |
 
-**Total**: 10 tests
+**Total**: 11 tests
 
 ### services/category.rs
 
@@ -398,8 +426,10 @@ Product management service tests.
 | `test_product_join_scopes_manufacturer_by_user_id` | PRODUCT_GET_* JOIN must not leak another user's manufacturer name (Fable-5 #13) | src/services/product.rs | 871 |
 | `test_delete_product_rejected_when_referenced_by_transaction_detail` | Delete rejected with `ApiError { code: "in_use", entity: "product" }` when any TRANSACTIONS_DETAIL row (scoped via TRANSACTIONS_HEADER.USER_ID) names the product (master delete-lock) | src/services/product.rs | 444 |
 | `test_delete_product_ignores_other_users_transaction_details` | Cross-user detail rows do NOT block delete — scoping runs through TRANSACTIONS_HEADER.USER_ID (master delete-lock) | src/services/product.rs | 481 |
+| `test_search_products_escapes_percent_metacharacter` | Autocomplete search of `"100%ジ"` matches only "果汁100%ジュース", not "果汁100リンゴジュース" — `%` is escaped and paired with `LIKE ? ESCAPE '\'` (Fable-5 #23) | src/services/product.rs | 785 |
+| `test_search_products_escapes_underscore_metacharacter` | Autocomplete search of `"A_1"` matches only literal "A_1", not "AB1" — `_` is escaped (Fable-5 #23) | src/services/product.rs | 812 |
 
-**Total**: 13 tests
+**Total**: 15 tests
 
 ### services/shop.rs
 
@@ -449,8 +479,22 @@ Transaction management service tests.
 | `validation_preserves_message_and_omits_entity` | TransactionError::ValidationError maps to ApiError::CODE_VALIDATION with the message preserved (PR2b) | src/services/transaction.rs | 4206 |
 | `database_error_maps_to_database_code` | TransactionError::DatabaseError maps to ApiError::CODE_DATABASE (PR2b) | src/services/transaction.rs | 4217 |
 | `field_needle_message_survives_conversion_for_frontend_routing` | Two field needles (`"Item name must be"` / `"Memo must be"`) survive at the head of the wire message so the frontend `startsWith` routing keeps working (PR2b) | src/services/transaction.rs | 4224 |
+| `test_find_matching_pattern_preserves_user_half_up_when_settings_match` | `HALF_UP + EXCLUDED` stored on a round-cent receipt (500円 × 10% = 550円) survives bulk recalc instead of being silently downgraded to FLOOR (Fable-5 #2) | src/services/transaction.rs | 1802 |
+| `test_find_matching_pattern_preserves_user_ceil_when_settings_match` | Same guarantee for `UP + EXCLUDED` (Fable-5 #2) | src/services/transaction.rs | 1819 |
+| `test_find_matching_pattern_falls_back_to_priority_when_preferred_mismatches` | When the stored settings do not reproduce the total, fall back to the priority-ordered PATTERNS scan (Fable-5 #2) | src/services/transaction.rs | 1836 |
+| `test_find_matching_pattern_returns_none_when_no_pattern_fits` | No combination reproduces the target → `None`, caller overwrites TOTAL_AMOUNT instead of the setting columns (Fable-5 #2) | src/services/transaction.rs | 1859 |
+| `test_save_header_rejects_invalid_tax_included_type` | `save_transaction_header` rejects `tax_included_type` outside `{TAX_INCLUDED, TAX_EXCLUDED}` so a bogus value cannot survive `find_matching_pattern`'s preferred-first check (CodeRabbit on #125) | src/services/transaction.rs | 3230 |
+| `test_update_header_rejects_invalid_tax_included_type` | Same guard on the update entry point (CodeRabbit on #125) | src/services/transaction.rs | 3257 |
+| `test_save_header_rejects_transfer_from_equals_to` | `save_transaction_header` rejects TRANSFER with FROM == TO so a self-transfer cannot inflate the dashboard balance (Fable-5 #20) | src/services/transaction.rs | 3288 |
+| `test_update_header_rejects_transfer_from_equals_to` | Same guard on the update entry point (Fable-5 #20) | src/services/transaction.rs | 3316 |
+| `test_save_header_failure_rolls_back_memo_insert_in_same_tx` | HEADER insert failure inside the tx (via a local `RAISE(FAIL)` trigger) rolls the MEMO insert back too — MEMOS stays empty (Fable-5 #6) | src/services/transaction.rs | 3357 |
+| `test_save_header_dedupes_memo_text_across_multiple_saves` | Two saves with the same memo body land on one MEMOS row and share the MEMO_ID (dedup side effect of the tx-based helper reuse, Fable-5 #6) | src/services/transaction.rs | 3427 |
+| `test_add_detail_dedupes_memo_text_across_multiple_adds` | `add_transaction_detail` reuses the existing MEMOS row when the memo text already exists for the user — no duplicate row, and both details share one MEMO_ID (Fable-5 #7) | src/services/transaction.rs | 4475 |
+| `test_add_detail_reuses_memo_shared_with_header` | An add whose memo text matches the parent header's MEMO_ID reuses that MEMO_ID so the "shared memo" update path is reachable from adds too (Fable-5 #7) | src/services/transaction.rs | 4519 |
+| `test_add_detail_failure_rolls_back_memo_insert_in_same_tx` | An FK failure inside the DETAIL_INSERT (missing `(USER_ID, CATEGORY1_CODE) → CATEGORY1`) rolls the MEMO insert back too — MEMOS stays empty (Fable-5 #7) | src/services/transaction.rs | 4585 |
+| `transfer_same_account_maps_to_stable_wire_code_and_omits_entity` | `TransactionError::TransferSameAccount` maps to `ApiError { code: "transfer_same_account", entity: None }` — pins the wire contract so a future refactor cannot silently downgrade to the generic `validation` fallback (CodeRabbit on #127) | src/services/transaction.rs | 4664 |
 
-**Total**: 21 tests
+**Total**: 35 tests
 
 ### services/aggregation.rs
 
@@ -460,16 +504,22 @@ Aggregation service tests.
 |---------------|-------------|------|------|
 | `test_monthly_aggregation_current_month` | Monthly aggregation for current month | src/services/aggregation.rs | 1554 |
 | `test_monthly_aggregation_next_month` | Monthly aggregation for next month | src/services/aggregation.rs | 1563 |
-| `test_detail_query_grosses_up_null_tax_included_row` | NULL AMOUNT_INCLUDING_TAX at TAX_RATE>0 is grossed up, not dropped (Fable-5 #3) | src/services/aggregation.rs | 2343 |
-| `test_detail_query_grosses_up_zero_tax_included_row` | AMOUNT_INCLUDING_TAX=0 (frontend empty-input sentinel) is treated as pre-tax (Fable-5 #3) | src/services/aggregation.rs | 2367 |
-| `test_detail_query_avg_matches_total_over_count_with_mixed_rates` | avg × count == total holds for a mixed-rate transaction (Fable-5 #4) | src/services/aggregation.rs | 2398 |
-| `test_detail_query_avg_multi_transaction_arithmetic` | avg = total / txn_count over 2 transactions (Fable-5 #4) | src/services/aggregation.rs | 2430 |
-| `test_detail_query_binds_category_filter_no_injection` | End-to-end proof that a category filter's value is bound, not inlined: an `EXPENSE' OR '1'='1` payload returns 0 rows (PR5, Fable-5 #25) | src/services/aggregation.rs | 2673 |
-| `test_category_filter_category2_targets_detail_column` | Category2 filter now targets the existent `td.CATEGORY2_CODE` (detail scope) instead of the non-existent `th.CATEGORY2_CODE` (PR6, Fable-5 #17) | src/services/aggregation.rs | 2766 |
-| `test_category_filter_category3_targets_detail_column` | Category3 filter targets `td.CATEGORY2/3_CODE` (PR6, Fable-5 #17) | src/services/aggregation.rs | 2782 |
-| `test_account_query_applies_category_filter_to_all_union_branches` | Account UNION ALL query now applies the category filter to all 4 branches and binds the value 4x — regression pin for the silent drop (PR6, Fable-5 #18) | src/services/aggregation.rs | 2807 |
+| `test_detail_query_grosses_up_null_tax_included_row` | NULL AMOUNT_INCLUDING_TAX at TAX_RATE>0 is grossed up, not dropped (Fable-5 #3) | src/services/aggregation.rs | 2581 |
+| `test_detail_query_grosses_up_zero_tax_included_row` | AMOUNT_INCLUDING_TAX=0 (frontend empty-input sentinel) is treated as pre-tax (Fable-5 #3) | src/services/aggregation.rs | 2610 |
+| `test_detail_query_included_header_legacy_null_row_no_double_taxation` | Header `TAX_INCLUDED_TYPE = TAX_INCLUDED (0)` + legacy `AMOUNT_INCLUDING_TAX = NULL` row is treated as already-included, not grossed up a second time (Fable-5 #3 residual) | src/services/aggregation.rs | 2653 |
+| `test_detail_query_included_header_zero_col_no_double_taxation` | Same #3 residual with `AMOUNT_INCLUDING_TAX = 0` (frontend empty-input sentinel) under a tax-included header | src/services/aggregation.rs | 2690 |
+| `test_detail_query_matches_header_query_for_included_ledger` | Header-dim vs detail-dim aggregation agree on the same tax-included transaction (Fable-5 #4) | src/services/aggregation.rs | 2726 |
+| `test_detail_query_avg_matches_total_over_count_with_mixed_rates` | avg × count == total holds for a mixed-rate transaction (Fable-5 #4) | src/services/aggregation.rs | 2774 |
+| `test_detail_query_avg_multi_transaction_arithmetic` | avg = total / txn_count over 2 transactions (Fable-5 #4) | src/services/aggregation.rs | 2811 |
+| `test_detail_query_binds_category_filter_no_injection` | End-to-end proof that a category filter's value is bound, not inlined: an `EXPENSE' OR '1'='1` payload returns 0 rows (PR5, Fable-5 #25) | src/services/aggregation.rs | 2846 |
+| `test_category_filter_category2_targets_detail_column` | Category2 filter now targets the existent `td.CATEGORY2_CODE` (detail scope) instead of the non-existent `th.CATEGORY2_CODE` (PR6, Fable-5 #17) | src/services/aggregation.rs | 2902 |
+| `test_category_filter_category3_targets_detail_column` | Category3 filter targets `td.CATEGORY2/3_CODE` (PR6, Fable-5 #17) | src/services/aggregation.rs | 2918 |
+| `test_account_query_applies_category_filter_to_all_union_branches` | Account UNION ALL query now applies the category filter to all 4 branches and binds the value 4x — regression pin for the silent drop (PR6, Fable-5 #18) | src/services/aggregation.rs | 2943 |
+| `test_build_query_shop_uses_empty_string_fallback_no_hardcoded_ja` | Shop grouping returns `COALESCE(s.SHOP_NAME, '')` sentinel, no hardcoded Japanese `'指定なし'` (Fable-5 #22) | src/services/aggregation.rs | 2024 |
+| `test_build_query_product_uses_empty_string_fallback_no_hardcoded_ja` | Product grouping returns `COALESCE(p.PRODUCT_NAME, '')` sentinel, no hardcoded Japanese `'指定なし'` (Fable-5 #22) | src/services/aggregation.rs | 2044 |
+| `test_build_query_account_uses_empty_string_for_none_no_hardcoded_ja` | Account grouping maps `account_code = 'NONE'` to empty string and returns `COALESCE(a.ACCOUNT_NAME, '')` for missing rows — no hardcoded Japanese `'指定なし'` (Fable-5 #22) | src/services/aggregation.rs | 2064 |
 
-**Total**: 10 tests
+**Total**: 16 tests
 
 ### services/session.rs
 
@@ -544,29 +594,30 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **283** |
+| **Inline Tests** | **320** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
-| db.rs | 8 |
+| db.rs | 12 |
 | settings.rs | 12 |
 | api_error.rs | 10 |
 | services/master_data.rs | 4 |
+| services/like_escape.rs | 7 |
 | services/auth.rs | 16 |
-| services/user_management.rs | 13 |
+| services/user_management.rs | 19 |
 | services/encryption.rs | 8 |
-| services/account.rs | 10 |
+| services/account.rs | 11 |
 | services/category.rs | 25 |
 | services/manufacturer.rs | 12 |
-| services/product.rs | 13 |
+| services/product.rs | 15 |
 | services/shop.rs | 12 |
-| services/transaction.rs | 21 |
-| services/aggregation.rs | 10 |
+| services/transaction.rs | 35 |
+| services/aggregation.rs | 16 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 5 |
 | lib.rs | 6 |
-| **Total** | **306** |
+| **Total** | **346** |
 
 ---
 

@@ -2,8 +2,8 @@
 
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
-**最終更新**: 2026-08-21 JST  
-**総テスト数**: 703件 (jest suite 22 ファイル、`npm test` 実測)
+**最終更新**: 2026-09-06 JST  
+**総テスト数**: 773件 (jest suite 26 ファイル、`npm test` 実測)
 
 ---
 
@@ -33,6 +33,10 @@
   - [modal-double-submit.test.js](#modal-double-submittestjs)
   - [master-crud.test.js](#master-crudtestjs)
   - [attach-char-counter-ime.test.js](#attach-char-counter-imetestjs)
+  - [aggregation-error-translate.test.js](#aggregation-error-translatetestjs)
+  - [parse-amount-strict.test.js](#parse-amount-stricttestjs)
+  - [format-local-date.test.js](#format-local-datetestjs)
+  - [aggregation-render-unspecified.test.js](#aggregation-render-unspecifiedtestjs)
 - [集計機能テスト](#集計機能テスト)
   - [aggregation-daily.test.js](#aggregation-dailytestjs)
   - [aggregation-weekly.test.js](#aggregation-weeklytestjs)
@@ -417,7 +421,7 @@
 
 取引明細の税計算機能のテスト。
 
-**テスト数**: 17件 (jest 実測)
+**テスト数**: 29件 (jest 実測)
 
 | テストカテゴリ | 説明 |
 |--------------|------|
@@ -426,6 +430,8 @@
 | 丸め誤差検出 | 税計算の丸め誤差検出 |
 | エッジケース | 0円、負の値などのエッジケース |
 | 複数税率 | 異なる税率での計算 |
+| 三者自動整合 (Fable-5 #8) | `calculateFromIncluding` の pure helper: 税込入力が丸め設定で表現不能な場合、`tax = round(excluded * rate)` と `includedCorrected = excluded + tax` の 3 数値を DB に整合的に保存 |
+| pure helper 経路 | `calculateFromExcluding` / `applyTaxRounding` の直接テスト (floor / half-up / ceil / unknown default) |
 
 **ファイル**: res/tests/transaction-detail-tax-calculation.test.js
 
@@ -562,6 +568,72 @@
 | IME composition ガード | compositionstart 中は `.value` を書き換えない / compositionend で切り詰め / 連続 composition / idempotent (二重 attach でリスナー累積しない) / detach で全リスナー除去 | 5件 |
 
 **ファイル**: res/tests/attach-char-counter-ime.test.js
+
+---
+
+### aggregation-error-translate.test.js
+
+`res/js/aggregation-common.js` の `translateAggregationError` 型防御ピン (Fable-5 レビュー #9)。旧実装は `error.toString()` を直接呼んでおり、バックエンドが `ApiError { code, message }` 形式で例外を返した瞬間に substring マッチが全部外れ、ユーザーには banner に `"[object Object]"` の文字列が出ていた。修正で `formatApiError` 経由に統一され、`Err(String)` / `ApiError` / `Error` のいずれの形状も同じ i18n キーに解決するようになったのを固定する。
+
+**テスト数**: 13件
+
+| テストブロック | 説明 | テスト数 |
+|--------------|------|---------|
+| Legacy string errors (`Err(String)`) | Invalid year / month / date range / day / date format の 5 経路 + 未マッチ時の raw fallback | 6件 |
+| ApiError 形状 (`{ code, message }`) | `.message` を substring マッチに使い、未マッチでも `.message` を返し `"[object Object]"` を出さない | 2件 |
+| Error instance | `Error.message` が substring 分岐にちゃんと渡る | 1件 |
+| hostile shapes | `.message` の無い object / null / undefined / 空 `.message` を汎用 i18n バナー (`aggregation.error_generic`) にすげ替え、`"[object Object]"` / `"null"` / `"undefined"` / `""` の literal を絶対に見せない | 4件 |
+
+**ファイル**: res/tests/aggregation-error-translate.test.js
+
+---
+
+### parse-amount-strict.test.js
+
+`res/js/parse-amount-strict.js` の `parseAmountStrict` 金額パーサの accept/reject テーブル (Fable-5 レビュー #10)。旧実装 `parseInt(el.value) || 0` は `"1099.5"` → 1099 (0.5 円損失)、`"1,099"` → 1 (99% ずれ) を無警告で通していた。新パーサは trim 後に `/^\d+$/` を要求し、空文字と null/undefined は既存の `|| 0` 挙動を保つため 0 を返す。呼び出し側は明細フォーム / 入出金フォーム / 繰り返しルールフォームの 3 経路。
+
+**テスト数**: 24件
+
+| テストブロック | 説明 | テスト数 |
+|--------------|------|---------|
+| accept | 純粋整数 / "0" / 先頭 0 / 前後空白 / 大整数 | 5件 |
+| empty inputs default to 0 | 空 / 空白のみ / null / undefined | 4件 |
+| reject (Fable-5 #10 pin cases) | 小数 / "0.5" / カンマ区切り / 指数表記 / 末尾ゴミ / 先頭ゴミ / 符号 (`-5` `+5`) / 内部空白 / 全角数字 / 単独ピリオド / 末尾ピリオド / `2^53-1` は受理 / `2^53` は拒否 / `9007199254740993` は precision loss なので拒否 | 15件 |
+
+**ファイル**: res/tests/parse-amount-strict.test.js
+
+---
+
+### format-local-date.test.js
+
+`res/js/format-local-date.js` の `formatLocalDate` タイムゾーン安全な `YYYY-MM-DD` フォーマッタのテスト (Fable-5 レビュー #13)。旧実装は `new Date().toISOString().slice(0, 10)` (UTC 変換) で、JST ユーザーが 09:00 JST 前に繰り返しルールモーダルを開くと start-date / end-date / anchor-date が全て前日になっていた。ローカル getter (getFullYear / getMonth / getDate) で組み立てる新実装は、実行タイムゾーンに依存せず常に「ローカル壁時計の日付」を返すので、テストはローカル `Date` コンストラクタ経由で書いてある。
+
+**テスト数**: 16件
+
+テストファイルの先頭で `process.env.TZ = 'Asia/Tokyo'` を pin — CodeRabbit on #134 指摘、UTC 実行では local getter と `.toISOString()` の結果が一致するため UTC 回帰が検出できない問題を解消。
+
+| テストブロック | 説明 | テスト数 |
+|--------------|------|---------|
+| normal cases | 通常日付 / 月ゼロ埋め / 日ゼロ埋め / 両方ゼロ埋め / 12月 / 深夜 0 時 / 23:59:59 | 7件 |
+| Fable-5 #13 pin (does not drift to UTC) | UTC 21:30 → JST 翌日 06:30 / UTC 15:30 → JST 翌日 00:30 (UTC/local 発散を確実に検出) + ローカル 06:30 / 23:30 の壁時計固定 | 4件 |
+| boundary years | 1900 / 2100 / 閏年 2月29日 / 年 1 (4桁ゼロ埋め) / 年 999 (4桁ゼロ埋め) | 5件 |
+
+**ファイル**: res/tests/format-local-date.test.js
+
+---
+
+### aggregation-render-unspecified.test.js
+
+`res/js/aggregation-common.js` の `renderResults` における unspecified グループの i18n スワップテスト (Fable-5 レビュー #22)。バックエンド (`aggregation.rs`) は SHOP_ID / PRODUCT_ID が NULL のケース、および `account_code === 'NONE'` のケースで空文字を返すよう修正済み。renderResults 側で空文字を `i18n.t('common.unspecified')` に置換することで、英語 UI で「指定なし」のハードコード漏れが banner に出るのを防ぐ。
+
+**テスト数**: 5件
+
+| テストブロック | 説明 | テスト数 |
+|--------------|------|---------|
+| unspecified-group i18n swap (Fable-5 #22) | 空文字 group_name が i18n ラベルにスワップ / 通常の group_name はそのまま / mixed rows / null group_name も同様 | 4件 |
+| regression: no-results path | 空 results 時に no_results i18n セルが正しく表示される | 1件 |
+
+**ファイル**: res/tests/aggregation-render-unspecified.test.js
 
 ---
 
@@ -729,10 +801,10 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **280件** |
+| **機能別テスト** | **350件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
-| transaction-detail-tax-calculation.test.js | 17 |
+| transaction-detail-tax-calculation.test.js | 29 |
 | toast.test.js | 14 |
 | tax-calc.test.js | 10 |
 | product-autocomplete.test.js | 10 |
@@ -741,13 +813,17 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | modal-double-submit.test.js | 6 |
 | master-crud.test.js | 30 |
 | attach-char-counter-ime.test.js | 8 |
+| aggregation-error-translate.test.js | 13 |
+| parse-amount-strict.test.js | 24 |
+| format-local-date.test.js | 16 |
+| aggregation-render-unspecified.test.js | 5 |
 | **集計機能テスト** | **115件** |
 | aggregation-daily.test.js | 16 |
 | aggregation-weekly.test.js | 22 |
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **703件** |
+| **総計 (jest)** | **773件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 

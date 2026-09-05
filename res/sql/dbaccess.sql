@@ -670,7 +670,11 @@ CREATE TABLE IF NOT EXISTS SHOPS (
     IS_DISABLED INTEGER DEFAULT 0,
     ENTRY_DT DATETIME NOT NULL DEFAULT (datetime('now')),
     UPDATE_DT DATETIME,
-    FOREIGN KEY (USER_ID) REFERENCES USERS(USER_ID),
+    -- Fable-5 review #11 — match the sibling ACCOUNTS / PRODUCTS /
+    -- MANUFACTURERS / TRANSACTIONS_HEADER / MEMOS FK: cascade the row
+    -- on user deletion. Existing DBs get the same constraint via
+    -- `Database::migrate_shops_user_id_cascade` (table recreate).
+    FOREIGN KEY (USER_ID) REFERENCES USERS(USER_ID) ON DELETE CASCADE,
     -- PR15 (Fable-5 #20): match the sibling MANUFACTURERS / PRODUCTS
     -- constraint. Fresh DBs get the auto-index directly; existing DBs
     -- get an equivalent unique index via `Database::migrate_shops_unique`
@@ -1902,3 +1906,46 @@ INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESO
 INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2440, 'product_mgmt.delete_in_use', 'ja', 'この商品は明細で使用中のため削除できません。代わりに無効化してください。', 'product_mgmt', '削除ロック時のトースト（参照中）', datetime('now'));
 INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2441, 'account_mgmt.delete_in_use', 'en', 'Cannot delete this account because it is still used by transactions or recurring rules. Disable it instead.', 'account_mgmt', 'Delete-lock toast when account is referenced', datetime('now'));
 INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2442, 'account_mgmt.delete_in_use', 'ja', 'この口座は取引・繰り返し予定で使用中のため削除できません。代わりに無効化してください。', 'account_mgmt', '削除ロック時のトースト（参照中）', datetime('now'));
+
+-- ============================================================================
+-- Password change: current-password prompt + error copy (Fable-5 review #1/#5)
+-- The edit modal now asks for the current password before changing it so
+-- the backend can re-encrypt every ENCRYPTED_FIELDS row with the old key
+-- and commit the new hash + new ciphertext together (change_password_in_tx).
+-- ============================================================================
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2443, 'user_mgmt.current_password', 'en', 'Current password:', 'user_mgmt', 'Current-password label on the user edit modal', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2444, 'user_mgmt.current_password', 'ja', '現在のパスワード:', 'user_mgmt', 'ユーザー編集モーダルの現在のパスワードラベル', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2445, 'error.current_password_required', 'en', 'Please enter your current password to change it.', 'error', 'Frontend guard when new password is set but old password is blank', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2446, 'error.current_password_required', 'ja', 'パスワードを変更するには現在のパスワードを入力してください。', 'error', '新パスワード指定時に旧パスワード未入力のガード', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2447, 'error.old_password_incorrect', 'en', 'Current password is incorrect.', 'error', 'Surface for SecurityError::InvalidPassword on password change', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2448, 'error.old_password_incorrect', 'ja', '現在のパスワードが正しくありません。', 'error', 'パスワード変更時の旧パスワード不一致の表示', datetime('now'));
+
+-- ============================================================================
+-- TRANSFER from/to validation toast (Fable-5 review #20)
+-- The transaction save flow now rejects TRANSFER with the same source
+-- and destination account (a self-transfer nets to zero but used to
+-- inflate the dashboard balance because ACCOUNT_BALANCES_AS_OF only
+-- counted the +TO arm). The frontend catches it first so the user
+-- sees a specific toast instead of the raw ApiError message.
+-- ============================================================================
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2449, 'transaction_mgmt.transfer_same_account', 'en', 'Transfer source and destination accounts must be different.', 'transaction_mgmt', 'Frontend guard against TRANSFER with FROM == TO', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2450, 'transaction_mgmt.transfer_same_account', 'ja', '振替元口座と振替先口座は別の口座を指定してください。', 'transaction_mgmt', 'TRANSFER で FROM==TO のフロント側ガード', datetime('now'));
+
+-- ============================================================================
+-- Tax-included auto-correction notice (Fable-5 review #8)
+-- The detail form used to warn "rounding may not match" and still let
+-- the user save three inconsistent numbers; it now derives `tax` from
+-- the authoritative `round(excluded * rate)` formula and rewrites the
+-- tax-included input to `excluded + tax`, so the DB never sees the
+-- inconsistent triple. The modal wording changes from "warning" to
+-- "auto-adjusted to N". Old keys 1287-1290 stay in the file as a dead
+-- fallback (safe: nothing references them any more).
+-- ============================================================================
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2451, 'detail_mgmt.rounding_auto_correct_title', 'en', 'Tax-included amount auto-adjusted', 'detail_mgmt', 'Auto-correct notice title (Fable-5 #8)', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2452, 'detail_mgmt.rounding_auto_correct_title', 'ja', '税込金額を自動調整しました', 'detail_mgmt', '自動調整通知のタイトル (Fable-5 #8)', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2453, 'detail_mgmt.rounding_auto_correct_message', 'en', 'The typed amount {userInput} cannot be represented exactly under the current rounding setting — adjusted to {calculated} (diff: {diff}).', 'detail_mgmt', 'Auto-correct notice body (Fable-5 #8)', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2454, 'detail_mgmt.rounding_auto_correct_message', 'ja', '入力された税込金額 {userInput} は現在の丸め設定では整数表現できないため、{calculated} に自動調整しました（差: {diff}）。', 'detail_mgmt', '自動調整通知の本文 (Fable-5 #8)', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2455, 'aggregation.error_generic', 'en', 'An unexpected error occurred while aggregating.', 'aggregation', 'Generic aggregation error banner shown when the backend error has no recognisable shape (Fable-5 #9)', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2456, 'aggregation.error_generic', 'ja', '集計中に予期しないエラーが発生しました。', 'aggregation', '認識できない形状のバックエンドエラーが返った時に集計バナーに出す汎用エラー (Fable-5 #9)', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2457, 'common.error_amount_not_integer', 'en', 'Enter a whole number — no decimals, commas, or full-width digits.', 'common', 'Money-field strict integer validation error, shared across detail / transaction / recurring-rule submit paths (Fable-5 #10)', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2458, 'common.error_amount_not_integer', 'ja', '整数で入力してください（小数点・カンマ・全角数字は使えません）。', 'common', '明細 / 入出金 / 繰り返し予定の送信経路で共通利用する、金額フィールドの厳密整数バリデーションエラー (Fable-5 #10)', datetime('now'));

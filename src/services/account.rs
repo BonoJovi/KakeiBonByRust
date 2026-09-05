@@ -979,6 +979,37 @@ mod tests {
         assert_eq!(balances[0].balance, 1300);
     }
 
+    /// Fable-5 review #20 — the pre-fix `ACCOUNT_BALANCES_AS_OF` used a
+    /// first-match CASE that put the TRANSFER-TO arm ahead of the
+    /// TRANSFER-FROM arm. A self-transfer (from == to == this account)
+    /// therefore matched only the +TO arm and inflated the account
+    /// balance by the transfer amount. The write-side guard in
+    /// `save_transaction_header` rejects new self-transfers, and the
+    /// query was made symmetric (independent CASE per arm) so any
+    /// stale row already in the DB nets to zero on the dashboard too.
+    #[tokio::test]
+    async fn test_get_account_balances_as_of_self_transfer_nets_to_zero() {
+        let pool = setup_test_db().await;
+        sqlx::query(sql_queries::TEST_TRANSACTION_CREATE_HEADER_TABLE)
+            .execute(&pool)
+            .await
+            .unwrap();
+        add_test_account(&pool, "CASH", 1000).await;
+
+        // Stale self-transfer written before the write-side guard existed.
+        insert_header(&pool, "TRANSFER", "CASH", "CASH", "2026-01-05", 2000, 0).await;
+
+        let balances = get_account_balances_as_of(&pool, 2, "2026-01-31")
+            .await
+            .unwrap();
+
+        let cash = balances.iter().find(|b| b.account_code == "CASH").unwrap();
+        assert_eq!(
+            cash.balance, 1000,
+            "self-transfer must net to zero (pre-fix returned 3000)"
+        );
+    }
+
     #[tokio::test]
     async fn test_get_account_balances_as_of_excludes_disabled_accounts() {
         let pool = setup_test_db().await;

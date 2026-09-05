@@ -2,6 +2,7 @@ use sqlx::{SqlitePool, Row};
 use serde::{Serialize, Deserialize};
 use crate::api_error::ApiError;
 use crate::{sql_queries, consts, validation};
+use crate::services::like_escape::escape_like_pattern;
 
 const ENTITY_LABEL: &str = "Transaction";
 
@@ -213,6 +214,14 @@ pub enum TransactionError {
     DatabaseError(String),
     ValidationError(String),
     NotFound,
+    /// Fable-5 review #20 (CodeRabbit on #127) — TRANSFER was submitted
+    /// with `from_account_code == to_account_code`. Kept as its own
+    /// variant (rather than a generic `ValidationError`) so the
+    /// `From<TransactionError> for ApiError` bridge can map it to a
+    /// dedicated `transfer_same_account` code the frontend renders
+    /// with an i18n key, instead of leaking the raw English message
+    /// through `formatApiError` on a ja-JP UI.
+    TransferSameAccount,
 }
 
 impl std::fmt::Display for TransactionError {
@@ -221,6 +230,9 @@ impl std::fmt::Display for TransactionError {
             TransactionError::DatabaseError(msg) => write!(f, "Database error: {}", msg),
             TransactionError::ValidationError(msg) => write!(f, "Validation error: {}", msg),
             TransactionError::NotFound => write!(f, "Transaction not found"),
+            TransactionError::TransferSameAccount => {
+                write!(f, "Transfer source and destination accounts must be different")
+            }
         }
     }
 }
@@ -256,6 +268,7 @@ impl From<TransactionError> for ApiError {
             TransactionError::NotFound => ApiError::not_found(ENTITY_LABEL),
             TransactionError::ValidationError(msg) => ApiError::validation(msg),
             TransactionError::DatabaseError(msg) => ApiError::database(msg),
+            TransactionError::TransferSameAccount => ApiError::transfer_same_account(),
         }
     }
 }
@@ -272,12 +285,9 @@ fn validate_item_name_length(item_name: &str) -> Result<(), TransactionError> {
         .map_err(TransactionError::ValidationError)
 }
 
-/// Escape SQL LIKE metacharacters so user-supplied text matches literally.
-/// Paired with `LIKE ? ESCAPE '\'` in the query. Backslash must be escaped
-/// first so we do not re-escape the escapes we just added.
-fn escape_like_pattern(s: &str) -> String {
-    s.replace('\\', "\\\\").replace('%', "\\%").replace('_', "\\_")
-}
+// `escape_like_pattern` lives in `crate::services::like_escape` now
+// (Fable-5 review #23 extracted it so `product::search_products_by_name`
+// can share the same escape contract with `LIKE ? ESCAPE '\'`).
 
 /// Result of `recalculate_all_transaction_totals`. The frontend uses this to
 /// tell the user how much work was actually done and where the safety-net
@@ -433,7 +443,23 @@ pub fn calculate_recommended_total_with_settings(
 /// fits, in which case the bulk-recalc flow falls back to overwriting the
 /// total with whatever the existing settings produce.
 ///
-/// Patterns are tried in priority order:
+/// The caller-supplied `preferred` pair (the header's currently-stored
+/// `(rounding, included)`) is always tried first: whenever the existing
+/// settings already reproduce `target_total` — a very common case for
+/// receipts whose total has no fractional part to round — the function
+/// returns them verbatim so the bulk-recalc flow can skip the header
+/// instead of silently rewriting the tax setting columns.
+///
+/// Fable-5 review #2 — without the preferred-first check, a header
+/// saved as `HALF_UP + EXCLUDED` with a round-cent detail (e.g. 500円
+/// at 10 % = 550円 exactly) matched the first PATTERNS entry, which is
+/// `FLOOR + EXCLUDED`, and every bulk recalc silently downgraded the
+/// user's chosen rounding mode to FLOOR.
+///
+/// If the preferred pair doesn't fit, the fallback tries these patterns
+/// in priority order (the order matches what shopkeepers actually do —
+/// floor or half-up dominate, ceil is rare — so "first match wins" lands
+/// on the most plausible setting):
 ///
 ///   1. tax-excluded + floor       (TAX_ROUND_DOWN)
 ///   2. tax-excluded + half-up     (TAX_ROUND_HALF_UP)
@@ -441,12 +467,19 @@ pub fn calculate_recommended_total_with_settings(
 ///   4. tax-included               (the rounding column is irrelevant in
 ///      this mode because no rounding ever happens; we report it back as
 ///      `TAX_ROUND_DOWN` so the caller has a stable value to write)
-///
-/// The order matches what shopkeepers actually do in the wild — most use
-/// floor or half-up, ceil is rare — so the "first match wins" rule lands
-/// on the most plausible setting when several match (which happens often
-/// for receipts whose total has no fractional part to round).
-fn find_matching_pattern(details: &[DetailForRecalc], target_total: i64) -> Option<(i64, i64)> {
+fn find_matching_pattern(
+    details: &[DetailForRecalc],
+    target_total: i64,
+    preferred: (i64, i64),
+) -> Option<(i64, i64)> {
+    // Try the header's current settings first (Fable-5 #2).
+    let (pref_rounding, pref_included) = preferred;
+    if calculate_recommended_total_with_settings(details, pref_rounding, pref_included)
+        == target_total
+    {
+        return Some(preferred);
+    }
+
     const PATTERNS: [(i64, i64); 4] = [
         (consts::TAX_ROUND_DOWN, consts::TAX_EXCLUDED),
         (consts::TAX_ROUND_HALF_UP, consts::TAX_EXCLUDED),
@@ -454,6 +487,10 @@ fn find_matching_pattern(details: &[DetailForRecalc], target_total: i64) -> Opti
         (consts::TAX_ROUND_DOWN, consts::TAX_INCLUDED),
     ];
     for (rounding, included) in PATTERNS {
+        // Skip re-evaluating the preferred pair we already tried.
+        if (rounding, included) == preferred {
+            continue;
+        }
         if calculate_recommended_total_with_settings(details, rounding, included) == target_total {
             return Some((rounding, included));
         }
@@ -496,24 +533,58 @@ impl TransactionService {
             ));
         }
 
-        // Save memo if provided
-        let memo_id = if let Some(text) = &request.memo {
-            if !text.trim().is_empty() {
-                validate_memo_length(text)?;
-                let result = sqlx::query(sql_queries::MEMO_INSERT)
-                    .bind(user_id)
-                    .bind(text)
-                    .execute(&self.pool)
-                    .await?;
-                Some(result.last_insert_rowid())
-            } else {
-                None
-            }
-        } else {
-            None
-        };
+        // Validate tax included type using constants. CodeRabbit on #125
+        // — without this guard, an unknown value (e.g. 99) can be
+        // written to `TAX_INCLUDED_TYPE` and later handed to
+        // `find_matching_pattern` as `preferred`; the preferred-first
+        // check would then preserve the bogus value across bulk recalc
+        // instead of correcting it.
+        if request.tax_included_type != consts::TAX_INCLUDED
+            && request.tax_included_type != consts::TAX_EXCLUDED
+        {
+            return Err(TransactionError::ValidationError(
+                "Invalid tax included type".to_string(),
+            ));
+        }
 
-        // Insert transaction header
+        // Fable-5 review #20 — TRANSFER with the same FROM and TO
+        // account is meaningless (net movement is zero) and used to
+        // sneak through both entry points. The dashboard-side
+        // `ACCOUNT_BALANCES_AS_OF` CASE evaluates the +TO arm before
+        // the -FROM arm and stops at first match, so the row was
+        // silently counted as a one-sided credit and inflated the
+        // account balance by the transfer amount. Reject the write
+        // outright; the CASE was made symmetric in the same PR as a
+        // second line of defence for legacy rows.
+        if request.category1_code == "TRANSFER"
+            && request.from_account_code == request.to_account_code
+        {
+            return Err(TransactionError::TransferSameAccount);
+        }
+
+        // Fable-5 review #6 — the two writes below (MEMO insert +
+        // TRANSACTION_HEADER_INSERT) used to run on separate pool
+        // connections. If the HEADER_INSERT tripped a FK
+        // (`SHOP_ID`, `FROM_ACCOUNT_CODE`, `TO_ACCOUNT_CODE`) after
+        // the MEMO had already committed, the MEMO row was orphaned
+        // forever with no cleanup path — every retry against the
+        // same broken input inflated the MEMOS table by one more
+        // dead row. Wrapping both writes in a single tx (and
+        // routing through `get_or_create_memo_id_in_tx` so the memo
+        // text is deduped against any existing row) fixes both: the
+        // MEMO insert only becomes visible when the HEADER insert
+        // also succeeds, and duplicate memo bodies collapse onto one
+        // MEMOS row the way `add_transaction_detail` already does
+        // (Fable-5 #7, PR #130).
+        let mut tx = self.pool.begin().await?;
+
+        let memo_id = Self::get_or_create_memo_id_in_tx(
+            &mut tx,
+            user_id,
+            request.memo.as_deref(),
+        )
+        .await?;
+
         let result = sqlx::query(sql_queries::TRANSACTION_HEADER_INSERT)
             .bind(user_id)
             .bind(request.shop_id)
@@ -526,9 +597,10 @@ impl TransactionService {
             .bind(request.tax_included_type)
             .bind(memo_id)
             .bind(request.is_scheduled.unwrap_or(0))
-            .execute(&self.pool)
+            .execute(&mut *tx)
             .await?;
 
+        tx.commit().await?;
         Ok(result.last_insert_rowid())
     }
 
@@ -777,10 +849,33 @@ impl TransactionService {
         Ok(())
     }
 
-    /// Helper function to get or create memo_id for memo text
-    /// Returns memo_id if memo text is provided, None if empty
+    /// Helper function to get or create memo_id for memo text.
+    /// Returns memo_id if memo text is provided, None if empty.
+    ///
+    /// Runs its own single-connection lookup/insert. Callers that need
+    /// atomicity with a subsequent row insert (add_transaction_detail,
+    /// see Fable-5 #7) should use [`get_or_create_memo_id_in_tx`]
+    /// instead so the MEMO row and the referrer row commit together
+    /// and a mid-flight failure cannot orphan the MEMO.
     async fn get_or_create_memo_id(
         &self,
+        user_id: i64,
+        memo_text: Option<&str>,
+    ) -> Result<Option<i64>, TransactionError> {
+        let mut tx = self.pool.begin().await?;
+        let memo_id = Self::get_or_create_memo_id_in_tx(&mut tx, user_id, memo_text).await?;
+        tx.commit().await?;
+        Ok(memo_id)
+    }
+
+    /// Same as [`get_or_create_memo_id`] but reuses an existing
+    /// transaction so the MEMO lookup / insert commits together with
+    /// whatever the caller does next. Fable-5 #7: without this, an
+    /// `add_transaction_detail` that inserts the MEMO on the pool then
+    /// hits an FK error on `TRANSACTIONS_DETAIL_INSERT_FULL` leaves the
+    /// MEMO row behind for good — the two writes need to be one tx.
+    async fn get_or_create_memo_id_in_tx<'c>(
+        tx: &mut sqlx::Transaction<'c, sqlx::Sqlite>,
         user_id: i64,
         memo_text: Option<&str>,
     ) -> Result<Option<i64>, TransactionError> {
@@ -796,21 +891,21 @@ impl TransactionService {
 
         validate_memo_length(memo_text)?;
 
-        // Check if memo with same text already exists
+        // Check if memo with same text already exists.
         let existing_memo = sqlx::query(sql_queries::MEMO_FIND_BY_TEXT)
             .bind(user_id)
             .bind(memo_text)
-            .fetch_optional(&self.pool)
+            .fetch_optional(&mut **tx)
             .await?;
 
         if let Some(row) = existing_memo {
             Ok(Some(row.get(0)))
         } else {
-            // Create new memo
+            // Create new memo inside the caller's tx.
             let result = sqlx::query(sql_queries::MEMO_INSERT)
                 .bind(user_id)
                 .bind(memo_text)
-                .execute(&self.pool)
+                .execute(&mut **tx)
                 .await?;
             Ok(Some(result.last_insert_rowid()))
         }
@@ -913,6 +1008,35 @@ impl TransactionService {
             return Err(TransactionError::ValidationError(
                 "Invalid tax rounding type".to_string(),
             ));
+        }
+
+        // Validate tax included type using constants. CodeRabbit on #125
+        // — without this guard, an unknown value (e.g. 99) can be
+        // written to `TAX_INCLUDED_TYPE` and later handed to
+        // `find_matching_pattern` as `preferred`; the preferred-first
+        // check would then preserve the bogus value across bulk recalc
+        // instead of correcting it.
+        if request.tax_included_type != consts::TAX_INCLUDED
+            && request.tax_included_type != consts::TAX_EXCLUDED
+        {
+            return Err(TransactionError::ValidationError(
+                "Invalid tax included type".to_string(),
+            ));
+        }
+
+        // Fable-5 review #20 — TRANSFER with the same FROM and TO
+        // account is meaningless (net movement is zero) and used to
+        // sneak through both entry points. The dashboard-side
+        // `ACCOUNT_BALANCES_AS_OF` CASE evaluates the +TO arm before
+        // the -FROM arm and stops at first match, so the row was
+        // silently counted as a one-sided credit and inflated the
+        // account balance by the transfer amount. Reject the write
+        // outright; the CASE was made symmetric in the same PR as a
+        // second line of defence for legacy rows.
+        if request.category1_code == "TRANSFER"
+            && request.from_account_code == request.to_account_code
+        {
+            return Err(TransactionError::TransferSameAccount);
         }
 
         // Get current transaction header to check current memo_id
@@ -1097,24 +1221,31 @@ impl TransactionService {
             return Err(TransactionError::NotFound);
         }
 
-        // Save memo if provided
-        let memo_id = if let Some(text) = &request.memo {
-            if !text.trim().is_empty() {
-                validate_memo_length(text)?;
-                let result = sqlx::query(sql_queries::MEMO_INSERT)
-                    .bind(user_id)
-                    .bind(text)
-                    .execute(&self.pool)
-                    .await?;
-                Some(result.last_insert_rowid())
-            } else {
-                None
-            }
-        } else {
-            None
-        };
+        // Fable-5 review #7 — the two writes below (MEMO insert +
+        // TRANSACTIONS_DETAIL insert) used to run on separate pool
+        // connections. Two things went wrong:
+        //   1. Every add unconditionally inserted a fresh MEMOS row
+        //      even when the user typed the same text as before, so
+        //      the "shared memo" update path in
+        //      `update_transaction_detail` never fired for
+        //      newly-added rows.
+        //   2. If the DETAIL_INSERT failed (FK, disk, cancel), the
+        //      MEMO row was already committed and orphaned forever
+        //      — no cleanup path.
+        // Wrapping both writes in a single tx fixes both by (a) going
+        // through `get_or_create_memo_id_in_tx` which dedups against
+        // an existing row with the same text, and (b) guaranteeing
+        // the MEMO insert only becomes visible when the DETAIL insert
+        // also succeeds.
+        let mut tx = self.pool.begin().await?;
 
-        // Insert detail
+        let memo_id = Self::get_or_create_memo_id_in_tx(
+            &mut tx,
+            user_id,
+            request.memo.as_deref(),
+        )
+        .await?;
+
         let result = sqlx::query(sql_queries::TRANSACTION_DETAIL_INSERT_FULL)
             .bind(transaction_id)
             .bind(user_id)
@@ -1128,9 +1259,10 @@ impl TransactionService {
             .bind(request.amount_including_tax)
             .bind(request.product_id)
             .bind(memo_id)
-            .execute(&self.pool)
+            .execute(&mut *tx)
             .await?;
 
+        tx.commit().await?;
         Ok(result.last_insert_rowid())
     }
 
@@ -1440,7 +1572,11 @@ impl TransactionService {
             // overwriting TOTAL_AMOUNT with what the *existing* settings
             // produce, since the user's entry is then internally inconsistent
             // with the details and we have no signal to prefer it.
-            match find_matching_pattern(&details, total_before) {
+            match find_matching_pattern(
+                &details,
+                total_before,
+                (rounding_before, included_before),
+            ) {
                 Some((rounding_after, included_after))
                     if rounding_after == rounding_before
                         && included_after == included_before =>
@@ -1751,6 +1887,89 @@ mod tests {
             calculate_recommended_total(&details, consts::TAX_ROUND_DOWN),
             0
         );
+    }
+
+    // find_matching_pattern — bulk-recalc classifier tests
+    // ============================================================
+    // These pin the preferred-first behaviour that closes
+    // Fable-5 review #2 (bulk recalc silently downgrading the user's
+    // chosen rounding mode to FLOOR on receipts with no fractional
+    // remainder).
+
+    /// Fable-5 review #2 — 500円 × 10% = 550円 exactly. With
+    /// `(HALF_UP, EXCLUDED)` stored on the header, the pre-fix
+    /// classifier tried PATTERNS in fixed order starting from
+    /// `(FLOOR, EXCLUDED)` — which also produces 550 — and returned
+    /// FLOOR, so the bulk recalc downgraded the user's chosen
+    /// rounding mode. The preferred-first check now returns the
+    /// stored setting verbatim whenever it reproduces the total.
+    #[test]
+    fn test_find_matching_pattern_preserves_user_half_up_when_settings_match() {
+        let details = vec![DetailForRecalc {
+            amount: 500,
+            amount_including_tax: Some(0),
+            tax_rate: 10,
+        }];
+        let preferred = (consts::TAX_ROUND_HALF_UP, consts::TAX_EXCLUDED);
+        assert_eq!(
+            find_matching_pattern(&details, 550, preferred),
+            Some(preferred),
+            "HALF_UP + EXCLUDED must be preserved when it reproduces the total"
+        );
+    }
+
+    /// Companion pin — `(UP, EXCLUDED)` on a round-cent receipt used
+    /// to be downgraded to FLOOR for the same reason.
+    #[test]
+    fn test_find_matching_pattern_preserves_user_ceil_when_settings_match() {
+        let details = vec![DetailForRecalc {
+            amount: 500,
+            amount_including_tax: Some(0),
+            tax_rate: 10,
+        }];
+        let preferred = (consts::TAX_ROUND_UP, consts::TAX_EXCLUDED);
+        assert_eq!(
+            find_matching_pattern(&details, 550, preferred),
+            Some(preferred),
+        );
+    }
+
+    /// When the preferred pair does not reproduce the total, the
+    /// classifier must fall back to the priority-ordered PATTERNS
+    /// list — the same behaviour the old code had for every input.
+    #[test]
+    fn test_find_matching_pattern_falls_back_to_priority_when_preferred_mismatches() {
+        // 100円 × 8% → floor(108) = 108 (matches FLOOR+EXCLUDED),
+        // half-up rounds to 108 as well and ceil to 108, so the
+        // priority-ordered fallback lands on FLOOR+EXCLUDED first.
+        // Store the header as INCLUDED (which would sum to 100 verbatim,
+        // not 108) so the preferred check misses.
+        let details = vec![DetailForRecalc {
+            amount: 100,
+            amount_including_tax: Some(0),
+            tax_rate: 8,
+        }];
+        let preferred = (consts::TAX_ROUND_HALF_UP, consts::TAX_INCLUDED);
+        assert_eq!(
+            find_matching_pattern(&details, 108, preferred),
+            Some((consts::TAX_ROUND_DOWN, consts::TAX_EXCLUDED)),
+            "fallback must pick the first PATTERNS entry that fits"
+        );
+    }
+
+    /// Sanity: when no pattern — preferred or fallback — reproduces
+    /// the target, the classifier returns `None` and the caller
+    /// overwrites TOTAL_AMOUNT instead of the setting columns.
+    #[test]
+    fn test_find_matching_pattern_returns_none_when_no_pattern_fits() {
+        let details = vec![DetailForRecalc {
+            amount: 100,
+            amount_including_tax: Some(0),
+            tax_rate: 10,
+        }];
+        // No settings combination produces 999 from 100@10%.
+        let preferred = (consts::TAX_ROUND_HALF_UP, consts::TAX_EXCLUDED);
+        assert_eq!(find_matching_pattern(&details, 999, preferred), None);
     }
 
     async fn setup_test_db() -> SqlitePool {
@@ -3005,6 +3224,243 @@ mod tests {
         assert!(result.is_err());
     }
 
+    /// CodeRabbit review on #125 — before the fix, `save_transaction_header`
+    /// only validated `tax_rounding_type` and let an unknown
+    /// `tax_included_type` (e.g. 99) reach the DB. `find_matching_pattern`
+    /// would then take the bogus value as `preferred` and, with the
+    /// preferred-first check, silently keep it across bulk recalc.
+    /// Guard added at the service entry point rejects the write outright.
+    #[tokio::test]
+    async fn test_save_header_rejects_invalid_tax_included_type() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+
+        let request = SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "EXPENSE".to_string(),
+            from_account_code: "CASH".to_string(),
+            to_account_code: "BANK".to_string(),
+            transaction_date: "2024-01-01 10:00:00".to_string(),
+            total_amount: 1000,
+            tax_rounding_type: consts::TAX_ROUND_DOWN,
+            tax_included_type: 99,
+            memo: None,
+            is_scheduled: None,
+        };
+        let result = service.save_transaction_header(2, request).await;
+        assert!(
+            matches!(result, Err(TransactionError::ValidationError(_))),
+            "unknown tax_included_type must be rejected, got {:?}",
+            result
+        );
+    }
+
+    /// Companion pin for `update_transaction_header` — same
+    /// class-of-defect blocked at the update entry point.
+    #[tokio::test]
+    async fn test_update_header_rejects_invalid_tax_included_type() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        let request = SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "EXPENSE".to_string(),
+            from_account_code: "CASH".to_string(),
+            to_account_code: "BANK".to_string(),
+            transaction_date: "2024-01-01 10:00:00".to_string(),
+            total_amount: 1000,
+            tax_rounding_type: consts::TAX_ROUND_DOWN,
+            tax_included_type: 42,
+            memo: None,
+            is_scheduled: None,
+        };
+        let result = service.update_transaction_header(2, transaction_id, request).await;
+        assert!(
+            matches!(result, Err(TransactionError::ValidationError(_))),
+            "unknown tax_included_type must be rejected on update, got {:?}",
+            result
+        );
+    }
+
+    /// Fable-5 review #20 — TRANSFER with the same source and
+    /// destination account nets to zero but historically inflated the
+    /// dashboard balance because `ACCOUNT_BALANCES_AS_OF` counted the
+    /// +TO arm first and stopped. The write-side guard now rejects
+    /// this outright at both entry points.
+    #[tokio::test]
+    async fn test_save_header_rejects_transfer_from_equals_to() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+
+        let request = SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "TRANSFER".to_string(),
+            from_account_code: "CASH".to_string(),
+            to_account_code: "CASH".to_string(),
+            transaction_date: "2024-01-01 10:00:00".to_string(),
+            total_amount: 2000,
+            tax_rounding_type: consts::TAX_ROUND_DOWN,
+            tax_included_type: consts::TAX_EXCLUDED,
+            memo: None,
+            is_scheduled: None,
+        };
+        let result = service.save_transaction_header(2, request).await;
+        assert!(
+            matches!(result, Err(TransactionError::TransferSameAccount)),
+            "TRANSFER with from == to must be rejected with the typed variant, got {:?}",
+            result
+        );
+    }
+
+    /// Companion pin for `update_transaction_header` — same guard on
+    /// the edit path so a valid TRANSFER cannot be mutated into a
+    /// self-transfer.
+    #[tokio::test]
+    async fn test_update_header_rejects_transfer_from_equals_to() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        let request = SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "TRANSFER".to_string(),
+            from_account_code: "BANK".to_string(),
+            to_account_code: "BANK".to_string(),
+            transaction_date: "2024-01-01 10:00:00".to_string(),
+            total_amount: 3000,
+            tax_rounding_type: consts::TAX_ROUND_DOWN,
+            tax_included_type: consts::TAX_EXCLUDED,
+            memo: None,
+            is_scheduled: None,
+        };
+        let result = service.update_transaction_header(2, transaction_id, request).await;
+        assert!(
+            matches!(result, Err(TransactionError::TransferSameAccount)),
+            "TRANSFER with from == to must be rejected on update with the typed variant, got {:?}",
+            result
+        );
+    }
+
+    /// Fable-5 review #6 — `save_transaction_header` used to run the
+    /// MEMO insert and the TRANSACTION_HEADER insert on separate pool
+    /// connections. If the HEADER insert tripped an FK, the MEMO row
+    /// had already committed and stayed behind forever. This pin
+    /// drives a real FK failure on the HEADER insert via a composite
+    /// `(USER_ID, CATEGORY1_CODE) → CATEGORY1` violation (same trick
+    /// the #7 rollback pin uses) and asserts the MEMOS row for
+    /// "leak-me-6" is not left behind. Uses
+    /// `setup_test_db_with_foreign_keys` so PRAGMA foreign_keys is on.
+    #[tokio::test]
+    async fn test_save_header_failure_rolls_back_memo_insert_in_same_tx() {
+        let pool = setup_test_db_with_foreign_keys().await;
+
+        // Install a local trigger that fails the HEADER insert for a
+        // sentinel `CATEGORY1_CODE`. We can't use the FK trick from
+        // the #7 detail pin because `TEST_TRANSACTION_CREATE_HEADER_TABLE`
+        // is a minimal shape shared across four modules (account /
+        // product / shop / transaction) and doesn't declare the
+        // production `(USER_ID, CATEGORY1_CODE) → CATEGORY1` FK.
+        // A `RAISE(FAIL)` inside a BEFORE INSERT trigger fires
+        // deterministically inside whatever transaction the caller
+        // opened, so a rollback pin for `save_transaction_header`
+        // becomes a one-line schema addition — no cross-module drag.
+        sqlx::query(crate::sql_queries::TEST_SAVE_HEADER_INSTALL_ROLLBACK_TRIGGER)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let service = TransactionService::new(pool.clone());
+
+        let request = SaveTransactionRequest {
+            shop_id: None,
+            // Trips the trigger inside the tx AFTER the MEMO row
+            // has been written but BEFORE tx.commit(). Pre-fix, the
+            // MEMO insert had already committed on its own
+            // connection, so the "leak-me-6" body was orphaned even
+            // when the HEADER failed. Post-fix, both writes share
+            // one tx and the trigger's RAISE(FAIL) rolls the MEMO
+            // insert back too.
+            category1_code: "DOES_NOT_EXIST".to_string(),
+            from_account_code: "CASH".to_string(),
+            to_account_code: "BANK".to_string(),
+            transaction_date: "2024-01-01 10:00:00".to_string(),
+            total_amount: 5000,
+            tax_rounding_type: consts::TAX_ROUND_DOWN,
+            tax_included_type: consts::TAX_EXCLUDED,
+            memo: Some("leak-me-6".to_string()),
+            is_scheduled: None,
+        };
+        let result = service.save_transaction_header(2, request).await;
+        assert!(
+            result.is_err(),
+            "HEADER insert must fail on the trigger's RAISE(FAIL), got: {:?}",
+            result,
+        );
+
+        let leaked: i64 = sqlx::query_scalar(sql_queries::TEST_ADD_DETAIL_COUNT_MEMOS_ORPHAN)
+            .bind("leak-me-6")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(
+            leaked, 0,
+            "MEMO insert must roll back with the failed HEADER insert — no orphan row",
+        );
+    }
+
+    /// Fable-5 review #6 companion — reusing
+    /// `get_or_create_memo_id_in_tx` in `save_transaction_header`
+    /// also dedups the memo body across saves, matching what
+    /// `add_transaction_detail` already does after Fable-5 #7. Two
+    /// headers with the same typed memo should end up on one MEMOS
+    /// row and share MEMO_ID.
+    #[tokio::test]
+    async fn test_save_header_dedupes_memo_text_across_multiple_saves() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool.clone());
+
+        let make_request = || SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "EXPENSE".to_string(),
+            from_account_code: "CASH".to_string(),
+            to_account_code: "BANK".to_string(),
+            transaction_date: "2024-01-01 10:00:00".to_string(),
+            total_amount: 1000,
+            tax_rounding_type: consts::TAX_ROUND_DOWN,
+            tax_included_type: consts::TAX_EXCLUDED,
+            memo: Some("shared header memo".to_string()),
+            is_scheduled: None,
+        };
+
+        let txn1 = service.save_transaction_header(2, make_request()).await.unwrap();
+        let txn2 = service.save_transaction_header(2, make_request()).await.unwrap();
+
+        // Both headers must reference the SAME MEMO_ID.
+        let memo_ids: Vec<i64> = sqlx::query_scalar(
+            crate::sql_queries::TEST_SAVE_HEADER_SELECT_MEMO_IDS_BY_TXN_PAIR,
+        )
+        .bind(txn1)
+        .bind(txn2)
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+        assert_eq!(memo_ids.len(), 2, "both headers must carry a MEMO_ID");
+        assert_eq!(
+            memo_ids[0], memo_ids[1],
+            "second save must reuse the first save's MEMO_ID (Fable-5 #6 dedup)",
+        );
+
+        // Exactly one MEMOS row exists for that text — no duplicate.
+        let memo_row_count: i64 = sqlx::query_scalar(sql_queries::TEST_ADD_DETAIL_COUNT_MEMOS_BY_TEXT)
+            .bind(2i64)
+            .bind("shared header memo")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(memo_row_count, 1);
+    }
+
     // ========================================================================
     // IS_SCHEDULED Tests
     // ========================================================================
@@ -3997,6 +4453,164 @@ mod tests {
         );
     }
 
+    /// Fable-5 review #7 — `add_transaction_detail` used to
+    /// unconditionally `MEMO_INSERT` every time it saw a memo, so
+    /// two details with the same memo text ended up with distinct
+    /// MEMOS rows. The "shared memo" branch in
+    /// `update_transaction_detail` then never fired for adds — a
+    /// user editing one row's memo did not update the other row that
+    /// looked like it shared the text. The add path now routes
+    /// through `get_or_create_memo_id_in_tx` and dedups against
+    /// existing memo text for the same user.
+    #[tokio::test]
+    async fn test_add_detail_dedupes_memo_text_across_multiple_adds() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool.clone());
+        let header_id = create_test_header(&service).await;
+
+        // Two adds with the same memo body for the same user.
+        let mut req_a = basic_detail_request();
+        req_a.memo = Some("shared memo".to_string());
+        let mut req_b = basic_detail_request();
+        req_b.memo = Some("shared memo".to_string());
+
+        service.add_transaction_detail(2, header_id, req_a).await.unwrap();
+        service.add_transaction_detail(2, header_id, req_b).await.unwrap();
+
+        // Both detail rows should reference the same MEMO_ID.
+        let memo_ids: Vec<i64> = sqlx::query_scalar(
+            sql_queries::TEST_ADD_DETAIL_SELECT_MEMO_IDS_BY_TXN,
+        )
+        .bind(header_id)
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+        assert_eq!(memo_ids.len(), 2, "both details must carry a MEMO_ID");
+        assert_eq!(memo_ids[0], memo_ids[1], "second add must reuse the first add's MEMO_ID");
+
+        // Only one MEMOS row exists with that text — no duplicate insert.
+        let memo_row_count: i64 = sqlx::query_scalar(
+            sql_queries::TEST_ADD_DETAIL_COUNT_MEMOS_BY_TEXT,
+        )
+        .bind(2i64)
+        .bind("shared memo")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(memo_row_count, 1, "MEMOS must not carry a duplicate row for the same text");
+    }
+
+    /// Fable-5 review #7 companion — a detail add for a memo text
+    /// that the parent HEADER (or any other row) already references
+    /// must reuse that row's MEMO_ID, not mint a new one. This makes
+    /// the "shared memo" contract in `update_transaction_detail`
+    /// (which allocates a fresh row when it detects a shared memo)
+    /// actually reachable from adds too.
+    #[tokio::test]
+    async fn test_add_detail_reuses_memo_shared_with_header() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool.clone());
+
+        // Header carrying its own memo (create_test_header sets no
+        // memo by default, so seed one directly). Reuse the existing
+        // helper to get a valid header, then attach a MEMO row and
+        // point the header at it.
+        let header_id = create_test_header(&service).await;
+        let memo_id: i64 = sqlx::query(sql_queries::TEST_ADD_DETAIL_INSERT_MEMO_RETURNING_ID)
+            .bind(2i64)
+            .bind("shared with header")
+            .fetch_one(&pool)
+            .await
+            .unwrap()
+            .get(0);
+        sqlx::query(sql_queries::TEST_ADD_DETAIL_UPDATE_HEADER_MEMO_ID)
+            .bind(memo_id)
+            .bind(header_id)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        // Add a detail typing that same memo text.
+        let mut req = basic_detail_request();
+        req.memo = Some("shared with header".to_string());
+        let detail_id = service.add_transaction_detail(2, header_id, req).await.unwrap();
+
+        // Detail must reference the pre-existing MEMO_ID, not a fresh one.
+        let detail_memo_id: Option<i64> = sqlx::query_scalar(
+            sql_queries::TEST_ADD_DETAIL_SELECT_DETAIL_MEMO_ID,
+        )
+        .bind(detail_id)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(detail_memo_id, Some(memo_id));
+
+        // Still one MEMOS row for that text (no duplicate).
+        let memo_row_count: i64 = sqlx::query_scalar(
+            sql_queries::TEST_ADD_DETAIL_COUNT_MEMOS_BY_TEXT,
+        )
+        .bind(2i64)
+        .bind("shared with header")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(memo_row_count, 1);
+    }
+
+    /// Fable-5 review #7 (atomicity side) — the MEMO insert and the
+    /// TRANSACTIONS_DETAIL insert share a transaction, so a failure
+    /// in the DETAIL_INSERT rolls the MEMO insert back too. This pin
+    /// targets that behaviour deterministically by driving the
+    /// DETAIL_INSERT into a real FK violation *after* the ownership
+    /// guard has passed and the tx has already opened:
+    /// `TRANSACTIONS_DETAIL` has a composite FK
+    /// `(USER_ID, CATEGORY1_CODE) → CATEGORY1(USER_ID, CATEGORY1_CODE)`.
+    /// Passing a CATEGORY1_CODE that doesn't exist in the fixture
+    /// (`"DOES_NOT_EXIST"`) sails through the parent-header
+    /// existence check, opens the tx, inserts the MEMO row, then
+    /// trips the FK on the DETAIL_INSERT. Post-fix the tx rolls
+    /// back and the MEMOS table is untouched; the pre-fix code
+    /// would have left the "leak-me" row behind because the MEMO
+    /// insert had already committed on its own connection.
+    #[tokio::test]
+    async fn test_add_detail_failure_rolls_back_memo_insert_in_same_tx() {
+        // Use the FK-enforcing pool so the composite FK on
+        // TRANSACTIONS_DETAIL.(USER_ID, CATEGORY1_CODE) actually
+        // fires — the default `setup_test_db()` leaves PRAGMA
+        // foreign_keys OFF, which would let the bad CATEGORY1_CODE
+        // slip through and defeat the test.
+        let pool = setup_test_db_with_foreign_keys().await;
+        let service = TransactionService::new(pool.clone());
+        let valid_header_id = create_test_header(&service).await;
+
+        let mut req = basic_detail_request();
+        req.memo = Some("leak-me".to_string());
+        // CATEGORY1_CODE not present in the fixture — FK on
+        // TRANSACTIONS_DETAIL.(USER_ID, CATEGORY1_CODE) fails on the
+        // DETAIL_INSERT *inside* the tx, after the memo has been
+        // written but before commit.
+        req.category1_code = "DOES_NOT_EXIST".to_string();
+
+        let result = service
+            .add_transaction_detail(2, valid_header_id, req)
+            .await;
+        assert!(
+            result.is_err(),
+            "DETAIL_INSERT must fail on the missing CATEGORY1_CODE FK, got: {:?}",
+            result,
+        );
+
+        let leaked: i64 = sqlx::query_scalar(sql_queries::TEST_ADD_DETAIL_COUNT_MEMOS_ORPHAN)
+            .bind("leak-me")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(
+            leaked, 0,
+            "MEMO insert must roll back with the failed DETAIL_INSERT — no orphan row",
+        );
+    }
+
     // ---- From<TransactionError> for ApiError ----------------------------
     // These tests pin the wire codes that the frontend classifier
     // (`res/js/transaction-management.js` / `transaction-detail-management.js`
@@ -4028,6 +4642,20 @@ mod tests {
     fn database_error_maps_to_database_code() {
         let err: ApiError = TransactionError::DatabaseError("no such table".to_string()).into();
         assert_eq!(err.code, ApiError::CODE_DATABASE);
+        assert!(err.entity.is_none());
+    }
+
+    /// CodeRabbit on #127 — pin the wire code for
+    /// `TransferSameAccount` so a future refactor that folds it back
+    /// into `ApiError::validation(...)` (or renames the code string)
+    /// trips this test instead of silently degrading the frontend to
+    /// the generic English fallback. The `entity` stays `None` because
+    /// the failure is about the transfer relation, not a named row.
+    #[test]
+    fn transfer_same_account_maps_to_stable_wire_code_and_omits_entity() {
+        let err: ApiError = TransactionError::TransferSameAccount.into();
+        assert_eq!(err.code, ApiError::CODE_TRANSFER_SAME_ACCOUNT);
+        assert_eq!(err.code, "transfer_same_account");
         assert!(err.entity.is_none());
     }
 

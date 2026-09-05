@@ -25,6 +25,13 @@ pub enum UserManagementError {
     AdminUserCannotBeDeleted,
     InvalidRole,
     DuplicateUsername,
+    /// Fable-5 #1/#5 — the caller-supplied current password did not
+    /// verify. Kept as its own variant (rather than a
+    /// `SecurityError::InvalidPassword` inside a generic
+    /// `SecurityError`) so the `From<UserManagementError> for ApiError`
+    /// bridge can map it to a dedicated `old_password_incorrect` code
+    /// instead of the generic `validation` bucket.
+    OldPasswordIncorrect,
     Validation(String),
 }
 
@@ -37,6 +44,7 @@ impl std::fmt::Display for UserManagementError {
             UserManagementError::AdminUserCannotBeDeleted => write!(f, "Admin user cannot be deleted"),
             UserManagementError::InvalidRole => write!(f, "Invalid role"),
             UserManagementError::DuplicateUsername => write!(f, "Username already exists"),
+            UserManagementError::OldPasswordIncorrect => write!(f, "Current password is incorrect"),
             UserManagementError::Validation(msg) => write!(f, "{}", msg),
         }
     }
@@ -84,6 +92,7 @@ impl From<UserManagementError> for ApiError {
             UserManagementError::AdminUserCannotBeDeleted => ApiError::admin_protected(ENTITY_LABEL),
             UserManagementError::DuplicateUsername => ApiError::duplicate_name(ENTITY_LABEL),
             UserManagementError::InvalidRole => ApiError::validation("Invalid role"),
+            UserManagementError::OldPasswordIncorrect => ApiError::old_password_incorrect(),
             UserManagementError::Validation(msg) => ApiError::validation(msg),
             UserManagementError::SecurityError(e) => ApiError::validation(e.to_string()),
             UserManagementError::DatabaseError(e) => ApiError::database(e.to_string()),
@@ -185,83 +194,158 @@ impl UserManagementService {
         Ok(next_id)
     }
 
-    /// Update user (username and/or password)
-    /// When updating password, old_password must be provided for re-encryption
-    async fn update_user_internal(
+    /// Update the username only. The password path is deliberately not
+    /// reachable from here (Fable-5 review #1) — every password change
+    /// must go through [`change_password_in_tx`] so it is bundled with
+    /// re-encryption in a single transaction and never persists a
+    /// "new hash + old-key ciphertext" split state (Fable-5 review #5).
+    async fn update_username(
         &self,
         user_id: i64,
-        new_username: Option<&str>,
-        new_password: Option<&str>,
-        old_password: Option<&str>,
+        new_username: &str,
     ) -> Result<(), UserManagementError> {
+        validate_username_length(new_username)?;
+        let _user = self.get_user(user_id).await?;
+
+        let exists = sqlx::query(sql_queries::USER_CHECK_NAME_EXISTS_EXCLUDING_ID)
+            .bind(new_username)
+            .bind(user_id)
+            .fetch_one(&self.pool)
+            .await?;
+        let count: i64 = exists.get(0);
+        if count > 0 {
+            return Err(UserManagementError::DuplicateUsername);
+        }
+
+        sqlx::query(sql_queries::USER_UPDATE_NAME)
+            .bind(new_username)
+            .bind(user_id)
+            .execute(&self.pool)
+            .await?;
+
+        Ok(())
+    }
+
+    /// Update the username inside an existing transaction. Used by the
+    /// combined password-change path so the name UPDATE commits with
+    /// the re-encryption and the `USERS.PAW` update as one atomic step.
+    async fn update_username_in_tx<'c>(
+        &self,
+        tx: &mut sqlx::Transaction<'c, sqlx::Sqlite>,
+        user_id: i64,
+        new_username: &str,
+    ) -> Result<(), UserManagementError> {
+        validate_username_length(new_username)?;
+
+        let row = sqlx::query(sql_queries::USER_CHECK_NAME_EXISTS_EXCLUDING_ID)
+            .bind(new_username)
+            .bind(user_id)
+            .fetch_one(&mut **tx)
+            .await?;
+        let count: i64 = row.get(0);
+        if count > 0 {
+            return Err(UserManagementError::DuplicateUsername);
+        }
+
+        sqlx::query(sql_queries::USER_UPDATE_NAME)
+            .bind(new_username)
+            .bind(user_id)
+            .execute(&mut **tx)
+            .await?;
+
+        Ok(())
+    }
+
+    /// Bundled password change: verify the caller's old password, then
+    /// atomically re-encrypt every `ENCRYPTED_FIELDS` row for the user
+    /// with the new key, write the new password hash, and — if the
+    /// caller also asked to rename the account — update the username,
+    /// all inside a single `BEGIN`/`COMMIT`. Any failure (I/O, decode,
+    /// FK, process kill) rolls the transaction back so the DB is left
+    /// with either (old key, old hash) or (new key, new hash), never
+    /// the (new key, old hash) split that would strand every encrypted
+    /// value behind a password the user could still log in with
+    /// (Fable-5 review #5). The optional rename is included because
+    /// splitting it into a second transaction would re-introduce a
+    /// narrower version of the same window and force the frontend to
+    /// issue two invokes for one save.
+    async fn change_password_in_tx(
+        &self,
+        user_id: i64,
+        old_password: &str,
+        new_password: &str,
+        new_username: Option<&str>,
+    ) -> Result<(), UserManagementError> {
+        // Validate the new username up front so we fail before touching
+        // any encrypted rows on validation errors.
         if let Some(name) = new_username {
             validate_username_length(name)?;
         }
 
-        let _user = self.get_user(user_id).await?;
-        
-        if let Some(password) = new_password {
-            // Re-encrypt encrypted fields if old password is provided
-            if let Some(old_pwd) = old_password {
-                self.re_encrypt_user_data(user_id, old_pwd, password).await?;
-            }
-            
-            let password_hash = hash_password(password)?;
-            
-            sqlx::query(sql_queries::USER_UPDATE_PASSWORD)
-                .bind(password_hash)
-                .bind(user_id)
-                .execute(&self.pool)
-                .await?;
+        // Verify old password against the current hash.
+        let row = sqlx::query(sql_queries::TEST_USER_GET_PASSWORD_BY_ID)
+            .bind(user_id)
+            .fetch_one(&self.pool)
+            .await?;
+        let current_hash: String = row.get(0);
+        if !verify_password(old_password, &current_hash)? {
+            return Err(UserManagementError::OldPasswordIncorrect);
         }
-        
-        if let Some(username) = new_username {
-            let exists = sqlx::query(sql_queries::USER_CHECK_NAME_EXISTS_EXCLUDING_ID)
-                .bind(username)
-                .bind(user_id)
-                .fetch_one(&self.pool)
-                .await?;
-            let count: i64 = exists.get(0);
-            if count > 0 {
-                return Err(UserManagementError::DuplicateUsername);
-            }
-            
-            sqlx::query(sql_queries::USER_UPDATE_NAME)
-                .bind(username)
-                .bind(user_id)
-                .execute(&self.pool)
-                .await?;
+
+        // Hash the new password outside the tx (Argon2 is CPU-heavy;
+        // holding the tx open while it runs would extend lock windows
+        // for no correctness benefit).
+        let password_hash = hash_password(new_password)?;
+
+        let mut tx = self.pool.begin().await?;
+
+        // Re-encrypt every row with the new key inside this tx.
+        self.encryption_service
+            .re_encrypt_user_data_in_tx(&mut tx, user_id, old_password, new_password)
+            .await
+            .map_err(|e| UserManagementError::SecurityError(
+                SecurityError::InvalidPassword(format!("Re-encryption failed: {}", e))
+            ))?;
+
+        // Update the password hash in the same tx.
+        sqlx::query(sql_queries::USER_UPDATE_PASSWORD)
+            .bind(password_hash)
+            .bind(user_id)
+            .execute(&mut *tx)
+            .await?;
+
+        // Optionally update the username in the same tx.
+        if let Some(name) = new_username {
+            self.update_username_in_tx(&mut tx, user_id, name).await?;
         }
-        
+
+        tx.commit().await?;
         Ok(())
     }
 
-    /// Update user (username and/or password) - simplified interface without re-encryption
-    pub async fn update_user(
-        &self,
-        user_id: i64,
-        new_username: Option<&str>,
-        new_password: Option<&str>,
-    ) -> Result<(), UserManagementError> {
-        self.update_user_internal(user_id, new_username, new_password, None).await
-    }
-
-    /// Update general user (only for ROLE_USER)
+    /// Update general user (only for ROLE_USER). Rename only — password
+    /// changes must go through
+    /// [`update_general_user_with_password`].
     pub async fn update_general_user(
         &self,
         user_id: i64,
         new_username: Option<&str>,
-        new_password: Option<&str>,
     ) -> Result<(), UserManagementError> {
         let user = self.get_user(user_id).await?;
         if user.role != ROLE_USER {
             return Err(UserManagementError::InvalidRole);
         }
-        
-        self.update_user(user_id, new_username, new_password).await
+
+        if let Some(name) = new_username {
+            self.update_username(user_id, name).await?;
+        }
+        Ok(())
     }
 
-    /// Update general user with old password verification (for re-encryption)
+    /// Update general user with password change (verifies the old
+    /// password and re-encrypts every encrypted field atomically).
+    /// `new_password` is optional so callers can rename the account
+    /// while still authenticating with the old password.
     pub async fn update_general_user_with_password(
         &self,
         user_id: i64,
@@ -269,44 +353,63 @@ impl UserManagementService {
         new_username: Option<&str>,
         new_password: Option<&str>,
     ) -> Result<(), UserManagementError> {
-        // Get user and verify role
         let user = self.get_user(user_id).await?;
         if user.role != ROLE_USER {
             return Err(UserManagementError::InvalidRole);
         }
 
-        // Verify old password
-        let row = sqlx::query(sql_queries::TEST_USER_GET_PASSWORD_BY_ID)
-            .bind(user_id)
-            .fetch_one(&self.pool)
-            .await?;
-        let current_hash: String = row.get(0);
-        
-        if !verify_password(old_password, &current_hash)? {
-            return Err(UserManagementError::SecurityError(
-                SecurityError::InvalidPassword("Old password is incorrect".to_string())
-            ));
+        match new_password {
+            Some(new_pwd) => {
+                self.change_password_in_tx(user_id, old_password, new_pwd, new_username).await
+            }
+            None => {
+                // No password change — still verify the old password so
+                // this entry point cannot be used to rename an account
+                // without proving knowledge of the current password.
+                let row = sqlx::query(sql_queries::TEST_USER_GET_PASSWORD_BY_ID)
+                    .bind(user_id)
+                    .fetch_one(&self.pool)
+                    .await?;
+                let current_hash: String = row.get(0);
+                if !verify_password(old_password, &current_hash)? {
+                    // Same variant as the change_password_in_tx path so the
+                    // rename-only branch classifies as
+                    // `old_password_incorrect` too — otherwise a wrong
+                    // current password produces `validation` here and
+                    // `old_password_incorrect` in the password-change
+                    // branch (CodeRabbit review on #123).
+                    return Err(UserManagementError::OldPasswordIncorrect);
+                }
+                if let Some(name) = new_username {
+                    self.update_username(user_id, name).await?;
+                }
+                Ok(())
+            }
         }
-        
-        self.update_user_internal(user_id, new_username, new_password, Some(old_password)).await
     }
 
-    /// Update admin user (only for ROLE_ADMIN)
+    /// Update admin user (only for ROLE_ADMIN). Rename only — password
+    /// changes must go through
+    /// [`update_admin_user_with_password`].
     pub async fn update_admin_user(
         &self,
         user_id: i64,
         new_username: Option<&str>,
-        new_password: Option<&str>,
     ) -> Result<(), UserManagementError> {
         let user = self.get_user(user_id).await?;
         if user.role != ROLE_ADMIN {
             return Err(UserManagementError::InvalidRole);
         }
-        
-        self.update_user(user_id, new_username, new_password).await
+
+        if let Some(name) = new_username {
+            self.update_username(user_id, name).await?;
+        }
+        Ok(())
     }
 
-    /// Update admin user with old password verification (for re-encryption)
+    /// Update admin user with password change (see
+    /// [`update_general_user_with_password`] for the atomicity
+    /// contract).
     pub async fn update_admin_user_with_password(
         &self,
         user_id: i64,
@@ -314,26 +417,36 @@ impl UserManagementService {
         new_username: Option<&str>,
         new_password: Option<&str>,
     ) -> Result<(), UserManagementError> {
-        // Get user and verify role
         let user = self.get_user(user_id).await?;
         if user.role != ROLE_ADMIN {
             return Err(UserManagementError::InvalidRole);
         }
 
-        // Verify old password
-        let row = sqlx::query(sql_queries::TEST_USER_GET_PASSWORD_BY_ID)
-            .bind(user_id)
-            .fetch_one(&self.pool)
-            .await?;
-        let current_hash: String = row.get(0);
-        
-        if !verify_password(old_password, &current_hash)? {
-            return Err(UserManagementError::SecurityError(
-                SecurityError::InvalidPassword("Old password is incorrect".to_string())
-            ));
+        match new_password {
+            Some(new_pwd) => {
+                self.change_password_in_tx(user_id, old_password, new_pwd, new_username).await
+            }
+            None => {
+                let row = sqlx::query(sql_queries::TEST_USER_GET_PASSWORD_BY_ID)
+                    .bind(user_id)
+                    .fetch_one(&self.pool)
+                    .await?;
+                let current_hash: String = row.get(0);
+                if !verify_password(old_password, &current_hash)? {
+                    // Same variant as the change_password_in_tx path so the
+                    // rename-only branch classifies as
+                    // `old_password_incorrect` too — otherwise a wrong
+                    // current password produces `validation` here and
+                    // `old_password_incorrect` in the password-change
+                    // branch (CodeRabbit review on #123).
+                    return Err(UserManagementError::OldPasswordIncorrect);
+                }
+                if let Some(name) = new_username {
+                    self.update_username(user_id, name).await?;
+                }
+                Ok(())
+            }
         }
-        
-        self.update_user_internal(user_id, new_username, new_password, Some(old_password)).await
     }
 
     /// Delete a general user
@@ -356,21 +469,6 @@ impl UserManagementService {
         Ok(())
     }
 
-    /// Re-encrypt all encrypted fields for a user with new password
-    async fn re_encrypt_user_data(
-        &self,
-        user_id: i64,
-        old_password: &str,
-        new_password: &str,
-    ) -> Result<(), UserManagementError> {
-        self.encryption_service
-            .re_encrypt_user_data(user_id, old_password, new_password)
-            .await
-            .map_err(|e| UserManagementError::SecurityError(
-                SecurityError::InvalidPassword(format!("Re-encryption failed: {}", e))
-            ))
-    }
-    
     /// Insert "Unspecified" master data for a new user
     async fn insert_unspecified_data(&self, user_id: i64) -> Result<(), UserManagementError> {
         // Insert "Unspecified" account
@@ -421,23 +519,26 @@ mod tests {
     async fn test_update_general_user() {
         let pool = setup_test_db().await;
         create_test_admin(&pool, "admin", "admin_password123456").await;
-        
+
         let service = UserManagementService::new(pool.clone());
-        let user_id = service.register_general_user("testuser", "password123")
+        let user_id = service.register_general_user("testuser", "password_123456789")
             .await
             .unwrap();
-        
-        service.update_general_user(user_id, Some("newname"), None)
+
+        service.update_general_user(user_id, Some("newname"))
             .await
             .unwrap();
-        
+
         let user = service.get_user(user_id).await.unwrap();
         assert_eq!(user.name, "newname");
-        
-        service.update_general_user(user_id, None, Some("newpassword"))
-            .await
-            .unwrap();
-        
+
+        service.update_general_user_with_password(
+            user_id,
+            "password_123456789",
+            None,
+            Some("new_password_123456"),
+        ).await.unwrap();
+
         let user = service.get_user(user_id).await.unwrap();
         assert!(user.update_dt.is_some());
     }
@@ -446,17 +547,17 @@ mod tests {
     async fn test_update_general_user_username_only() {
         let pool = setup_test_db().await;
         create_test_admin(&pool, "admin", "admin_password123456").await;
-        
+
         let service = UserManagementService::new(pool.clone());
         let user_id = service.register_general_user("testuser", "password_123456789")
             .await
             .unwrap();
-        
+
         // Update username only, password remains unchanged
-        service.update_general_user(user_id, Some("updateduser"), None)
+        service.update_general_user(user_id, Some("updateduser"))
             .await
             .unwrap();
-        
+
         let user = service.get_user(user_id).await.unwrap();
         assert_eq!(user.name, "updateduser");
         assert_eq!(user.role, ROLE_USER);
@@ -467,22 +568,25 @@ mod tests {
     async fn test_update_general_user_password_only() {
         let pool = setup_test_db().await;
         create_test_admin(&pool, "admin", "admin_password123456").await;
-        
+
         let service = UserManagementService::new(pool.clone());
         let user_id = service.register_general_user("testuser", "password_123456789")
             .await
             .unwrap();
-        
+
         // Update password only, username remains unchanged
-        service.update_general_user(user_id, None, Some("new_password_123456"))
-            .await
-            .unwrap();
-        
+        service.update_general_user_with_password(
+            user_id,
+            "password_123456789",
+            None,
+            Some("new_password_123456"),
+        ).await.unwrap();
+
         let user = service.get_user(user_id).await.unwrap();
         assert_eq!(user.name, "testuser");
         assert_eq!(user.role, ROLE_USER);
         assert!(user.update_dt.is_some());
-        
+
         // Verify new password works
         let row = sqlx::query(sql_queries::TEST_USER_GET_PASSWORD_BY_ID)
             .bind(user_id)
@@ -497,22 +601,25 @@ mod tests {
     async fn test_update_general_user_username_and_password() {
         let pool = setup_test_db().await;
         create_test_admin(&pool, "admin", "admin_password123456").await;
-        
+
         let service = UserManagementService::new(pool.clone());
         let user_id = service.register_general_user("testuser", "password_123456789")
             .await
             .unwrap();
-        
-        // Update both username and password
-        service.update_general_user(user_id, Some("superuser"), Some("super_password_123456"))
-            .await
-            .unwrap();
-        
+
+        // Update both username and password in one atomic call.
+        service.update_general_user_with_password(
+            user_id,
+            "password_123456789",
+            Some("superuser"),
+            Some("super_password_123456"),
+        ).await.unwrap();
+
         let user = service.get_user(user_id).await.unwrap();
         assert_eq!(user.name, "superuser");
         assert_eq!(user.role, ROLE_USER);
         assert!(user.update_dt.is_some());
-        
+
         // Verify new password works
         let row = sqlx::query(sql_queries::TEST_USER_GET_PASSWORD_BY_ID)
             .bind(user_id)
@@ -527,13 +634,13 @@ mod tests {
     async fn test_update_admin_user() {
         let pool = setup_test_db().await;
         let admin_id = create_test_admin(&pool, "admin", "admin_password123456").await;
-        
+
         let service = UserManagementService::new(pool.clone());
-        
-        service.update_admin_user(admin_id, Some("superadmin"), None)
+
+        service.update_admin_user(admin_id, Some("superadmin"))
             .await
             .unwrap();
-        
+
         let user = service.get_user(admin_id).await.unwrap();
         assert_eq!(user.name, "superadmin");
         assert_eq!(user.role, ROLE_ADMIN);
@@ -543,14 +650,14 @@ mod tests {
     async fn test_update_admin_user_username_only() {
         let pool = setup_test_db().await;
         let admin_id = create_test_admin(&pool, "admin", "admin_password123456").await;
-        
+
         let service = UserManagementService::new(pool.clone());
-        
+
         // Update username only, password remains unchanged
-        service.update_admin_user(admin_id, Some("newadmin"), None)
+        service.update_admin_user(admin_id, Some("newadmin"))
             .await
             .unwrap();
-        
+
         let user = service.get_user(admin_id).await.unwrap();
         assert_eq!(user.name, "newadmin");
         assert_eq!(user.role, ROLE_ADMIN);
@@ -561,19 +668,22 @@ mod tests {
     async fn test_update_admin_user_password_only() {
         let pool = setup_test_db().await;
         let admin_id = create_test_admin(&pool, "admin", "admin_password123456").await;
-        
+
         let service = UserManagementService::new(pool.clone());
-        
+
         // Update password only, username remains unchanged
-        service.update_admin_user(admin_id, None, Some("new_password_123456"))
-            .await
-            .unwrap();
-        
+        service.update_admin_user_with_password(
+            admin_id,
+            "admin_password123456",
+            None,
+            Some("new_password_123456"),
+        ).await.unwrap();
+
         let user = service.get_user(admin_id).await.unwrap();
         assert_eq!(user.name, "admin");
         assert_eq!(user.role, ROLE_ADMIN);
         assert!(user.update_dt.is_some());
-        
+
         // Verify new password works
         let row = sqlx::query(sql_queries::TEST_USER_GET_PASSWORD_BY_ID)
             .bind(admin_id)
@@ -588,19 +698,22 @@ mod tests {
     async fn test_update_admin_user_username_and_password() {
         let pool = setup_test_db().await;
         let admin_id = create_test_admin(&pool, "admin", "admin_password123456").await;
-        
+
         let service = UserManagementService::new(pool.clone());
-        
+
         // Update both username and password
-        service.update_admin_user(admin_id, Some("superadmin"), Some("super_password_123456"))
-            .await
-            .unwrap();
-        
+        service.update_admin_user_with_password(
+            admin_id,
+            "admin_password123456",
+            Some("superadmin"),
+            Some("super_password_123456"),
+        ).await.unwrap();
+
         let user = service.get_user(admin_id).await.unwrap();
         assert_eq!(user.name, "superadmin");
         assert_eq!(user.role, ROLE_ADMIN);
         assert!(user.update_dt.is_some());
-        
+
         // Verify new password works
         let row = sqlx::query(sql_queries::TEST_USER_GET_PASSWORD_BY_ID)
             .bind(admin_id)
@@ -692,6 +805,117 @@ mod tests {
             "error should reference the limit: {}", msg);
     }
 
+    /// Fable-5 review #1/#5 — a password change with the wrong "current
+    /// password" must be rejected with `OldPasswordIncorrect` before any
+    /// state changes. The password hash and update timestamp must remain
+    /// untouched so the caller can retry, and so a mistyped current
+    /// password can never advance the rest of the flow (which would
+    /// leave `re_encrypt_user_data_in_tx` computing a new key from
+    /// garbage input, then stamping the correct new hash next to
+    /// stranded ciphertext).
+    #[tokio::test]
+    async fn test_update_general_user_with_password_rejects_wrong_old_password() {
+        let pool = setup_test_db().await;
+        create_test_admin(&pool, "admin", "admin_password123456").await;
+
+        let service = UserManagementService::new(pool.clone());
+        let user_id = service.register_general_user("testuser", "password_123456789")
+            .await
+            .unwrap();
+
+        // Snapshot the pre-change hash so we can assert it did not move.
+        let before: String = sqlx::query_scalar(sql_queries::TEST_USER_GET_PASSWORD_BY_ID)
+            .bind(user_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+
+        let err = service.update_general_user_with_password(
+            user_id,
+            "wrong_old_password!!",
+            Some("would-not-take"),
+            Some("would_not_take_1234"),
+        ).await.unwrap_err();
+        assert!(matches!(err, UserManagementError::OldPasswordIncorrect));
+
+        // Hash unchanged — the rejected attempt did not partially commit.
+        let after: String = sqlx::query_scalar(sql_queries::TEST_USER_GET_PASSWORD_BY_ID)
+            .bind(user_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(before, after);
+
+        // Username unchanged — the rename bundled with the password
+        // change did not sneak through either.
+        let user = service.get_user(user_id).await.unwrap();
+        assert_eq!(user.name, "testuser");
+    }
+
+    /// CodeRabbit review on #123 — the rename-only branch of
+    /// `update_general_user_with_password` (`new_password: None`) used
+    /// to return `SecurityError::InvalidPassword`, which mapped to
+    /// `ApiError::validation` instead of `old_password_incorrect`. The
+    /// frontend then dropped through to the generic "save failed"
+    /// message even though the same input at the password-change
+    /// branch would have highlighted the current-password field. This
+    /// pin locks the two branches to the same error code.
+    #[tokio::test]
+    async fn test_update_general_user_with_password_rename_only_rejects_wrong_old_password() {
+        let pool = setup_test_db().await;
+        create_test_admin(&pool, "admin", "admin_password123456").await;
+
+        let service = UserManagementService::new(pool.clone());
+        let user_id = service.register_general_user("testuser", "password_123456789")
+            .await
+            .unwrap();
+
+        // new_password = None → rename-only branch; wrong old_password
+        // must still classify as OldPasswordIncorrect.
+        let err = service.update_general_user_with_password(
+            user_id,
+            "wrong_old_password!!",
+            Some("would-not-take"),
+            None,
+        ).await.unwrap_err();
+        assert!(matches!(err, UserManagementError::OldPasswordIncorrect));
+
+        // Username unchanged — the rename did not partially commit.
+        let user = service.get_user(user_id).await.unwrap();
+        assert_eq!(user.name, "testuser");
+    }
+
+    /// Admin-side counterpart to
+    /// [`test_update_general_user_with_password_rejects_wrong_old_password`].
+    #[tokio::test]
+    async fn test_update_admin_user_with_password_rejects_wrong_old_password() {
+        let pool = setup_test_db().await;
+        let admin_id = create_test_admin(&pool, "admin", "admin_password123456").await;
+
+        let service = UserManagementService::new(pool.clone());
+
+        let before: String = sqlx::query_scalar(sql_queries::TEST_USER_GET_PASSWORD_BY_ID)
+            .bind(admin_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+
+        let err = service.update_admin_user_with_password(
+            admin_id,
+            "wrong_admin_password!",
+            None,
+            Some("would_not_take_1234"),
+        ).await.unwrap_err();
+        assert!(matches!(err, UserManagementError::OldPasswordIncorrect));
+
+        let after: String = sqlx::query_scalar(sql_queries::TEST_USER_GET_PASSWORD_BY_ID)
+            .bind(admin_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(before, after);
+    }
+
     #[tokio::test]
     async fn test_update_general_user_rejects_over_max_chars_of_multibyte_name() {
         let pool = setup_test_db().await;
@@ -702,7 +926,7 @@ mod tests {
             .await.unwrap();
 
         let name = "あ".repeat(consts::MAX_NAME_LEN + 1);
-        let err = service.update_general_user(user_id, Some(&name), None).await.unwrap_err();
+        let err = service.update_general_user(user_id, Some(&name)).await.unwrap_err();
         let msg = err.to_string();
         assert!(msg.contains(&consts::MAX_NAME_LEN.to_string()),
             "error should reference the limit: {}", msg);

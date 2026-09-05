@@ -132,16 +132,22 @@
                                     <input type="text" id="username" name="username" required />
                                 </div>
                             </div>
+                            <div class="form-group" id="old-password-group">
+                                <label for="old-password" data-i18n="user_mgmt.current_password">Current password:</label>
+                                <div class="input-wrapper">
+                                    <input type="password" id="old-password" name="old-password" autocomplete="current-password" />
+                                </div>
+                            </div>
                             <div class="form-group" id="password-group">
                                 <label for="password" data-i18n="user_mgmt.password">Password (minimum 16 characters):</label>
                                 <div class="input-wrapper">
-                                    <input type="password" id="password" name="password" minlength="16" />
+                                    <input type="password" id="password" name="password" minlength="16" autocomplete="new-password" />
                                 </div>
                             </div>
                             <div class="form-group" id="password-confirm-group">
                                 <label for="password-confirm" data-i18n="user_mgmt.password_confirm">Password (Confirm):</label>
                                 <div class="input-wrapper">
-                                    <input type="password" id="password-confirm" name="password-confirm" />
+                                    <input type="password" id="password-confirm" name="password-confirm" autocomplete="new-password" />
                                 </div>
                             </div>
                             <div class="form-actions">

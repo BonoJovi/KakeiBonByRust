@@ -4,7 +4,7 @@
 
 > **A Modern Household Budget App with Focus on Readability and Usability**
 
-[![Version](https://img.shields.io/badge/Version-2.8.0-blue)](https://github.com/BonoJovi/KakeiBonByRust/releases/tag/v2.8.0)
+[![Version](https://img.shields.io/badge/Version-2.9.0-blue)](https://github.com/BonoJovi/KakeiBonByRust/releases/tag/v2.9.0)
 [![Rust](https://img.shields.io/badge/Rust-1.70+-orange.svg)](https://www.rust-lang.org/)
 [![Tauri](https://img.shields.io/badge/Tauri-v2.11.1-blue.svg)](https://tauri.app/)
 [![Tests](https://img.shields.io/badge/tests-1254%20passing-brightgreen.svg)](#test-results)
@@ -25,9 +25,9 @@
 Thank you for your continued interest in KakeiBon.
 I'm BonoJovi (Yoshihiro NAKAHARA), the project initiator.
 
-**We have officially released Ver.2.8.0!**
+**We have officially released Ver.2.9.0!**
 
-Ver.2.8.0 is the "master-integrity guard" release. Accounts, shops, manufacturers, and products can no longer be deleted while they are still referenced from other screens — instead, KakeiBon guides you to *disable* them. Before this release, deletion would silently soft-remove the master row while historical transactions and recurring rules kept pointing at it; that path is now closed so you cannot accidentally break integrity while cleaning up.
+Ver.2.9.0 is the Fable-5 review rollup. Fifteen fixes across three surfaces (money / date correctness, transactional atomicity, and i18n) plus two user-visible additions: administrators can now edit other users, and a transfer whose FROM and TO accounts are identical is refused instead of silently double-counting. Money inputs now explicitly reject decimals, locale commas, and full-width digits; the aggregation banner no longer leaks Japanese "指定なし" onto the English UI; product autocomplete matches `%` and `_` literally; and the recurring-rule modal's date defaults respect the browser's local timezone so a pre-09:00 JST session no longer shows yesterday's date.
 
 Key changes:
 

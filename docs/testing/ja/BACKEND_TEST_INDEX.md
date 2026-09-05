@@ -2,8 +2,8 @@
 
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
-**最終更新**: 2026-08-26 JST  
-**総テスト数**: 306件 (delta 反映後。`cargo test --lib` の権威的総数は 551 で、pre-existing gap は別 PR でバックフィル予定)
+**最終更新**: 2026-09-06 JST  
+**総テスト数**: 346件 (差分反映後。`cargo test --lib` の権威的総数は 588 で、既存の未反映分は別 PR でバックフィル予定)
 
 ---
 
@@ -26,6 +26,7 @@
   - [services/category.rs](#servicescategoryrs)
   - [api_error.rs](#api_errorrs)
   - [services/master_data.rs](#servicesmaster_datars)
+  - [services/like_escape.rs](#serviceslike_escapers)
   - [services/manufacturer.rs](#servicesmanufacturerrs)
   - [services/product.rs](#servicesproductrs)
   - [services/shop.rs](#servicesshoprs)
@@ -185,8 +186,12 @@ AES-256-GCM暗号化・復号化のテスト。
 | `migrate_shops_unique_is_idempotent` | 一度成功した migration の 2 回目実行が no-op で行数を変えない (PR15, Fable-5 #20) | src/db.rs | 1424 |
 | `migrate_shops_unique_scopes_per_user` | user A と user B が同じ SHOP_NAME を持つケースは重複扱いしない (constraint は per-user scope) (PR15, Fable-5 #20) | src/db.rs | 1437 |
 | `migrate_shops_unique_keeps_active_row_over_soft_deleted_older_id` | 論理削除された古い店舗 (小さい SHOP_ID) と再作成された有効な同名店舗 (大きい SHOP_ID) が並存するとき、有効な行が survivor に選ばれ、旧 transaction 参照も active row に repoint される (PR15, Devin #118 review) | src/db.rs | 1459 |
+| `pool_connections_all_enforce_foreign_keys` | プールが返すすべての接続で `PRAGMA foreign_keys = ON` が有効。修正前は起動時に 1 回だけ実行された接続のみ FK が有効で、それ以外の借り手が取った接続では SHOPS user-cascade マイグレーションが無効化されていた (#128 CodeRabbit 外側指摘) | src/db.rs | 1630 |
+| `migrate_shops_user_id_cascade_adds_cascade_fk_and_preserves_rows` | テーブルを再作成して SHOPS.USER_ID FK に `ON DELETE CASCADE` を追加、SHOP_ID と各列の値はそのまま保持されること (Fable-5 #11) | src/db.rs | 1711 |
+| `migrate_shops_user_id_cascade_is_idempotent` | SHOPS CASCADE マイグレーションの 2 回目は既に CASCADE FK があるため早期に戻る。マイグレーション済み DB では DROP/RENAME は走らない (Fable-5 #11) | src/db.rs | 1799 |
+| `user_delete_cascades_to_shops_after_migration` | CASCADE マイグレーション後、SHOPS 行を持つユーザーの削除が成功し、SHOPS 行も同時に削除される。修正前は `FOREIGN KEY constraint failed` でロールバックしていた (Fable-5 #11) | src/db.rs | 1823 |
 
-**合計**: 8件
+**合計**: 12件
 
 ### settings.rs
 
@@ -241,6 +246,22 @@ AES-256-GCM暗号化・復号化のテスト。
 
 **合計**: 4件
 
+### services/like_escape.rs
+
+共有 `escape_like_pattern` — `LIKE ? ESCAPE '\'` を使う全ての検索経路が利用する LIKE メタ文字エスケーパの pure-function テスト (Fable-5 レビュー #23 で `transaction.rs` の private helper から抽出、`product::search_products_by_name` と契約を共有)。
+
+| Test Function | Description | File | Line |
+|---------------|-------------|------|------|
+| `plain_text_passes_through_unchanged` | 通常 ASCII テキストはそのまま返す | src/services/like_escape.rs | 34 |
+| `percent_is_escaped` | `%` → `\%` | src/services/like_escape.rs | 39 |
+| `underscore_is_escaped` | `_` → `\_` | src/services/like_escape.rs | 44 |
+| `backslash_is_escaped_first_then_metacharacters` | `\` を先にエスケープしてから `%` / `_` を処理（自己エスケープ回避） | src/services/like_escape.rs | 49 |
+| `multiple_metacharacters_all_escaped` | `50%_off` → `50\%\_off` | src/services/like_escape.rs | 57 |
+| `empty_input_yields_empty_output` | 空入力は空出力 | src/services/like_escape.rs | 62 |
+| `japanese_text_with_percent_escapes_only_the_metacharacter` | 果汁100%ジュース → 果汁100\%ジュース (Fable-5 #23 の pin シナリオ) | src/services/like_escape.rs | 67 |
+
+**合計**: 7件
+
 ### services/auth.rs
 
 認証サービス（ユーザー登録・ログイン）のテスト。
@@ -272,21 +293,27 @@ AES-256-GCM暗号化・復号化のテスト。
 
 | テスト関数 | 説明 | ファイル | 行 |
 |-----------|------|---------|-----|
-| `test_register_general_user` | 一般ユーザー登録テスト | src/services/user_management.rs | 354 |
-| `test_update_general_user` | 一般ユーザー更新テスト | src/services/user_management.rs | 371 |
-| `test_update_general_user_username_only` | ユーザー名のみ更新 | src/services/user_management.rs | 396 |
-| `test_update_general_user_password_only` | パスワードのみ更新 | src/services/user_management.rs | 417 |
-| `test_update_general_user_username_and_password` | ユーザー名とパスワード両方更新 | src/services/user_management.rs | 447 |
-| `test_update_admin_user` | 管理者ユーザー更新テスト | src/services/user_management.rs | 477 |
-| `test_update_admin_user_username_only` | 管理者のユーザー名のみ更新 | src/services/user_management.rs | 493 |
-| `test_update_admin_user_password_only` | 管理者のパスワードのみ更新 | src/services/user_management.rs | 511 |
-| `test_update_admin_user_username_and_password` | 管理者のユーザー名とパスワード両方更新 | src/services/user_management.rs | 538 |
-| `test_delete_general_user` | 一般ユーザー削除テスト | src/services/user_management.rs | 565 |
-| `test_cannot_delete_admin_user` | 管理者ユーザー削除の防止 | src/services/user_management.rs | 581 |
-| `test_duplicate_username` | 重複ユーザー名のエラー | src/services/user_management.rs | 592 |
-| `test_list_users` | ユーザー一覧取得テスト | src/services/user_management.rs | 606 |
+| `test_register_general_user` | 一般ユーザー登録テスト | src/services/user_management.rs | 502 |
+| `test_update_general_user` | 一般ユーザー更新テスト | src/services/user_management.rs | 519 |
+| `test_update_general_user_username_only` | ユーザー名のみ更新 | src/services/user_management.rs | 547 |
+| `test_update_general_user_password_only` | `_with_password` 経由でパスワードのみ更新 (Fable-5 #1/#5) | src/services/user_management.rs | 568 |
+| `test_update_general_user_username_and_password` | `_with_password` 経由でユーザー名とパスワードを 1 tx で更新 (Fable-5 #1/#5) | src/services/user_management.rs | 601 |
+| `test_update_admin_user` | 管理者ユーザー更新テスト | src/services/user_management.rs | 634 |
+| `test_update_admin_user_username_only` | 管理者のユーザー名のみ更新 | src/services/user_management.rs | 650 |
+| `test_update_admin_user_password_only` | `_with_password` 経由で管理者のパスワードのみ更新 (Fable-5 #1/#5) | src/services/user_management.rs | 668 |
+| `test_update_admin_user_username_and_password` | 管理者のユーザー名とパスワードを 1 tx で更新 (Fable-5 #1/#5) | src/services/user_management.rs | 698 |
+| `test_delete_general_user` | 一般ユーザー削除テスト | src/services/user_management.rs | 728 |
+| `test_cannot_delete_admin_user` | 管理者ユーザー削除の防止 | src/services/user_management.rs | 744 |
+| `test_duplicate_username` | 重複ユーザー名のエラー | src/services/user_management.rs | 755 |
+| `test_list_users` | ユーザー一覧取得テスト | src/services/user_management.rs | 769 |
+| `test_register_general_user_accepts_max_chars_of_multibyte_name` | USERS.NAME 長制約は文字数 (byte 数ではない) — MAX_NAME_LEN 分の多バイト文字を受理 (issue #37) | src/services/user_management.rs | 785 |
+| `test_register_general_user_rejects_over_max_chars_of_multibyte_name` | 登録時に MAX_NAME_LEN+1 の多バイト文字を拒否 (issue #37) | src/services/user_management.rs | 796 |
+| `test_update_general_user_with_password_rejects_wrong_old_password` | 現在パスワード誤り → `OldPasswordIncorrect`。ハッシュ・ユーザー名とも未変更 (Fable-5 #1/#5) | src/services/user_management.rs | 817 |
+| `test_update_general_user_with_password_rename_only_rejects_wrong_old_password` | 改名専用分岐でも `OldPasswordIncorrect` に統一 (CodeRabbit on #123) | src/services/user_management.rs | 864 |
+| `test_update_admin_user_with_password_rejects_wrong_old_password` | 管理者版: 現在パスワード誤り → `OldPasswordIncorrect`。ハッシュ未変更 (Fable-5 #1/#5) | src/services/user_management.rs | 891 |
+| `test_update_general_user_rejects_over_max_chars_of_multibyte_name` | 改名時に MAX_NAME_LEN+1 の多バイト文字を拒否 (issue #37) | src/services/user_management.rs | 920 |
 
-**合計**: 13件
+**合計**: 19件
 
 ### services/encryption.rs
 
@@ -321,8 +348,9 @@ AES-256-GCM暗号化・復号化のテスト。
 | `test_delete_account_rejected_when_referenced_by_recurring_rule` | RECURRING_RULES が参照中なら `ApiError { code: "in_use" }` で削除拒否（マスタ削除ロック） | src/services/account.rs | 864 |
 | `test_delete_account_ignores_other_users_references` | 他ユーザーの同一 ACCOUNT_CODE 参照は削除をブロックしない（コードはユーザースコープ、マスタ削除ロック） | src/services/account.rs | 881 |
 | `test_delete_account_normalizes_input_before_in_use_check` | `"  cash  "` 入力は正規化されてから CHECK_IN_USE に流れ、ガードが発火する（マスタ削除ロック） | src/services/account.rs | 899 |
+| `test_get_account_balances_as_of_self_transfer_nets_to_zero` | FROM == TO の残存 TRANSFER 行はダッシュボード残高で相殺され、残高が水増しされないこと (Fable-5 #20) | src/services/account.rs | 991 |
 
-**合計**: 10件
+**合計**: 11件
 
 ### services/category.rs
 
@@ -398,8 +426,10 @@ AES-256-GCM暗号化・復号化のテスト。
 | `test_product_join_scopes_manufacturer_by_user_id` | PRODUCT_GET_* JOIN は他ユーザーの manufacturer 名を漏らさない (Fable-5 #13) | src/services/product.rs | 871 |
 | `test_delete_product_rejected_when_referenced_by_transaction_detail` | TRANSACTIONS_DETAIL が商品を参照中なら `ApiError { code: "in_use", entity: "product" }` で削除拒否（TRANSACTIONS_HEADER.USER_ID 経由でスコープ、マスタ削除ロック） | src/services/product.rs | 444 |
 | `test_delete_product_ignores_other_users_transaction_details` | 他ユーザーの明細参照は削除をブロックしない（TRANSACTIONS_HEADER.USER_ID でスコープ、マスタ削除ロック） | src/services/product.rs | 481 |
+| `test_search_products_escapes_percent_metacharacter` | オートコンプリート検索で `"100%ジ"` が「果汁100%ジュース」だけにマッチし「果汁100リンゴジュース」にマッチしないこと — `%` をエスケープし `LIKE ? ESCAPE '\'` を併用 (Fable-5 #23) | src/services/product.rs | 785 |
+| `test_search_products_escapes_underscore_metacharacter` | オートコンプリート検索で `"A_1"` が literal "A_1" だけにマッチし "AB1" にマッチしないこと — `_` をエスケープ (Fable-5 #23) | src/services/product.rs | 812 |
 
-**合計**: 13件
+**合計**: 15件
 
 ### services/shop.rs
 
@@ -449,8 +479,22 @@ AES-256-GCM暗号化・復号化のテスト。
 | `validation_preserves_message_and_omits_entity` | TransactionError::ValidationError が ApiError::CODE_VALIDATION に変換され、メッセージが保持されること (PR2b) | src/services/transaction.rs | 4206 |
 | `database_error_maps_to_database_code` | TransactionError::DatabaseError が ApiError::CODE_DATABASE に変換されること (PR2b) | src/services/transaction.rs | 4217 |
 | `field_needle_message_survives_conversion_for_frontend_routing` | 2 つのフィールド needle (`"Item name must be"` / `"Memo must be"`) が変換後もそのまま先頭に残り、フロントの `startsWith` ルーティングを維持できること (PR2b) | src/services/transaction.rs | 4224 |
+| `test_find_matching_pattern_preserves_user_half_up_when_settings_match` | 端数なしの伝票 (500円 × 10% = 550円) で `HALF_UP + EXCLUDED` を保存している場合、一括再計算で FLOOR に無言で書き換えられないこと (Fable-5 #2) | src/services/transaction.rs | 1802 |
+| `test_find_matching_pattern_preserves_user_ceil_when_settings_match` | `UP + EXCLUDED` にも同じ保証 (Fable-5 #2) | src/services/transaction.rs | 1819 |
+| `test_find_matching_pattern_falls_back_to_priority_when_preferred_mismatches` | 現在設定で `target_total` を再現できない場合、優先順 PATTERNS 探索へフォールバック (Fable-5 #2) | src/services/transaction.rs | 1836 |
+| `test_find_matching_pattern_returns_none_when_no_pattern_fits` | どの組み合わせも `target_total` を再現できない場合は `None`、呼び出し側は設定列でなく TOTAL_AMOUNT を上書き (Fable-5 #2) | src/services/transaction.rs | 1859 |
+| `test_save_header_rejects_invalid_tax_included_type` | `save_transaction_header` が `{TAX_INCLUDED, TAX_EXCLUDED}` 以外の `tax_included_type` を拒否し、無効値が `find_matching_pattern` の「優先設定を先に確認する判定」に流れて残らないこと (#125 の CodeRabbit 指摘) | src/services/transaction.rs | 3230 |
+| `test_update_header_rejects_invalid_tax_included_type` | 更新入口にも同じガード (#125 の CodeRabbit 指摘) | src/services/transaction.rs | 3257 |
+| `test_save_header_rejects_transfer_from_equals_to` | `save_transaction_header` が FROM == TO の TRANSFER を拒否し、ダッシュボード残高の水増しを防ぐ (Fable-5 #20) | src/services/transaction.rs | 3288 |
+| `test_update_header_rejects_transfer_from_equals_to` | 更新入口にも同じガード (Fable-5 #20) | src/services/transaction.rs | 3316 |
+| `test_save_header_failure_rolls_back_memo_insert_in_same_tx` | tx 内 HEADER insert 失敗 (ローカル `RAISE(FAIL)` トリガー) で MEMO insert も同 tx でロールバック、MEMOS 空を確認 (Fable-5 #6) | src/services/transaction.rs | 3357 |
+| `test_save_header_dedupes_memo_text_across_multiple_saves` | 同じ memo 本文で 2 回 save → MEMOS 1 行のみ、MEMO_ID 共有 (tx-based helper 再利用の dedup 副次効果、Fable-5 #6) | src/services/transaction.rs | 3427 |
+| `test_add_detail_dedupes_memo_text_across_multiple_adds` | `add_transaction_detail` が同一ユーザーの同一メモ本文で既存 MEMOS 行を再利用。重複行なし、両明細で MEMO_ID 共有 (Fable-5 #7) | src/services/transaction.rs | 4475 |
+| `test_add_detail_reuses_memo_shared_with_header` | 親ヘッダーの MEMO_ID と同じ本文で detail 追加すると同じ MEMO_ID を再利用。update の「共有メモ」経路が add 側からも到達可能に (Fable-5 #7) | src/services/transaction.rs | 4519 |
+| `test_add_detail_failure_rolls_back_memo_insert_in_same_tx` | DETAIL_INSERT 内の FK 失敗 (`(USER_ID, CATEGORY1_CODE) → CATEGORY1` が未 seed) で MEMO insert も同 tx でロールバック、MEMOS 空を確認 (Fable-5 #7) | src/services/transaction.rs | 4585 |
+| `transfer_same_account_maps_to_stable_wire_code_and_omits_entity` | `TransactionError::TransferSameAccount` が `ApiError { code: "transfer_same_account", entity: None }` に変換される wire contract を固定。将来のリファクタで generic な `validation` フォールバックへ無言で退化させないための pin (#127 の CodeRabbit 指摘) | src/services/transaction.rs | 4664 |
 
-**合計**: 21件
+**合計**: 35件
 
 ### services/aggregation.rs
 
@@ -460,16 +504,22 @@ AES-256-GCM暗号化・復号化のテスト。
 |-----------|------|---------|-----|
 | `test_monthly_aggregation_current_month` | 当月の月次集計 | src/services/aggregation.rs | 1554 |
 | `test_monthly_aggregation_next_month` | 翌月の月次集計 | src/services/aggregation.rs | 1563 |
-| `test_detail_query_grosses_up_null_tax_included_row` | TAX_RATE>0 で AMOUNT_INCLUDING_TAX が NULL の明細も税抜として割増 (Fable-5 #3) | src/services/aggregation.rs | 2343 |
-| `test_detail_query_grosses_up_zero_tax_included_row` | AMOUNT_INCLUDING_TAX=0 (フロント空欄) も税抜扱い (Fable-5 #3) | src/services/aggregation.rs | 2367 |
-| `test_detail_query_avg_matches_total_over_count_with_mixed_rates` | 混在税率取引で avg × count == total を保持 (Fable-5 #4) | src/services/aggregation.rs | 2398 |
-| `test_detail_query_avg_multi_transaction_arithmetic` | 2 取引の avg = total / txn_count 検証 (Fable-5 #4) | src/services/aggregation.rs | 2430 |
-| `test_detail_query_binds_category_filter_no_injection` | カテゴリフィルタの値が bind されている (SQL 直埋めではない) ことを End-to-End で確認。`EXPENSE' OR '1'='1` payload は 0 rows を返す (PR5, Fable-5 #25) | src/services/aggregation.rs | 2673 |
-| `test_category_filter_category2_targets_detail_column` | Category2 フィルタが `td.CATEGORY2_CODE` (detail-scope、実在する列) を参照し、`th.CATEGORY2_CODE` (存在しない列) を参照しないこと (PR6, Fable-5 #17) | src/services/aggregation.rs | 2766 |
-| `test_category_filter_category3_targets_detail_column` | Category3 フィルタが `td.CATEGORY2/3_CODE` を参照すること (PR6, Fable-5 #17) | src/services/aggregation.rs | 2782 |
-| `test_account_query_applies_category_filter_to_all_union_branches` | 口座別集計の 4-branch UNION ALL 全てにカテゴリフィルタが適用され、bind vec に 4 回登場することを確認 (PR6, Fable-5 #18: silent drop の regression pin) | src/services/aggregation.rs | 2807 |
+| `test_detail_query_grosses_up_null_tax_included_row` | TAX_RATE>0 で AMOUNT_INCLUDING_TAX が NULL の明細も税抜として割増 (Fable-5 #3) | src/services/aggregation.rs | 2581 |
+| `test_detail_query_grosses_up_zero_tax_included_row` | AMOUNT_INCLUDING_TAX=0 (フロント空欄) も税抜扱い (Fable-5 #3) | src/services/aggregation.rs | 2610 |
+| `test_detail_query_included_header_legacy_null_row_no_double_taxation` | 税込ヘッダー (`TAX_INCLUDED_TYPE = TAX_INCLUDED (0)`) + レガシー `AMOUNT_INCLUDING_TAX = NULL` 明細を「税込み済み」として扱い、二重課税しない (Fable-5 #3 残) | src/services/aggregation.rs | 2653 |
+| `test_detail_query_included_header_zero_col_no_double_taxation` | 同じ #3 残: 税込ヘッダー配下で `AMOUNT_INCLUDING_TAX = 0` (フロント空欄) も「税込み済み」扱い | src/services/aggregation.rs | 2690 |
+| `test_detail_query_matches_header_query_for_included_ledger` | 税込ヘッダーの同一伝票でヘッダー集計と明細集計の値が一致する (Fable-5 #4) | src/services/aggregation.rs | 2726 |
+| `test_detail_query_avg_matches_total_over_count_with_mixed_rates` | 混在税率取引で avg × count == total を保持 (Fable-5 #4) | src/services/aggregation.rs | 2774 |
+| `test_detail_query_avg_multi_transaction_arithmetic` | 2 取引の avg = total / txn_count 検証 (Fable-5 #4) | src/services/aggregation.rs | 2811 |
+| `test_detail_query_binds_category_filter_no_injection` | カテゴリフィルタの値が bind されている (SQL 直埋めではない) ことを End-to-End で確認。`EXPENSE' OR '1'='1` payload は 0 rows を返す (PR5, Fable-5 #25) | src/services/aggregation.rs | 2846 |
+| `test_category_filter_category2_targets_detail_column` | Category2 フィルタが `td.CATEGORY2_CODE` (detail-scope、実在する列) を参照し、`th.CATEGORY2_CODE` (存在しない列) を参照しないこと (PR6, Fable-5 #17) | src/services/aggregation.rs | 2902 |
+| `test_category_filter_category3_targets_detail_column` | Category3 フィルタが `td.CATEGORY2/3_CODE` を参照すること (PR6, Fable-5 #17) | src/services/aggregation.rs | 2918 |
+| `test_account_query_applies_category_filter_to_all_union_branches` | 口座別集計の 4-branch UNION ALL 全てにカテゴリフィルタが適用され、bind vec に 4 回登場することを確認 (PR6, Fable-5 #18: silent drop の regression pin) | src/services/aggregation.rs | 2943 |
+| `test_build_query_shop_uses_empty_string_fallback_no_hardcoded_ja` | Shop 集計が `COALESCE(s.SHOP_NAME, '')` 空文字 sentinel を返し、日本語ハードコード `'指定なし'` を含まないこと (Fable-5 #22) | src/services/aggregation.rs | 2024 |
+| `test_build_query_product_uses_empty_string_fallback_no_hardcoded_ja` | Product 集計が `COALESCE(p.PRODUCT_NAME, '')` 空文字 sentinel を返し、日本語ハードコード `'指定なし'` を含まないこと (Fable-5 #22) | src/services/aggregation.rs | 2044 |
+| `test_build_query_account_uses_empty_string_for_none_no_hardcoded_ja` | Account 集計が `account_code = 'NONE'` を空文字にマップし、欠損行では `COALESCE(a.ACCOUNT_NAME, '')` を返し、日本語ハードコード `'指定なし'` を含まないこと (Fable-5 #22) | src/services/aggregation.rs | 2064 |
 
-**合計**: 10件
+**合計**: 16件
 
 ### services/session.rs
 
@@ -544,29 +594,30 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **283件** |
+| **インラインテスト** | **320件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
-| db.rs | 8 |
+| db.rs | 12 |
 | settings.rs | 12 |
 | api_error.rs | 10 |
 | services/master_data.rs | 4 |
+| services/like_escape.rs | 7 |
 | services/auth.rs | 16 |
-| services/user_management.rs | 13 |
+| services/user_management.rs | 19 |
 | services/encryption.rs | 8 |
-| services/account.rs | 10 |
+| services/account.rs | 11 |
 | services/category.rs | 25 |
 | services/manufacturer.rs | 12 |
-| services/product.rs | 13 |
+| services/product.rs | 15 |
 | services/shop.rs | 12 |
-| services/transaction.rs | 21 |
-| services/aggregation.rs | 10 |
+| services/transaction.rs | 35 |
+| services/aggregation.rs | 16 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 5 |
 | lib.rs | 6 |
-| **総計** | **306件** |
+| **総計** | **346件** |
 
 ---
 

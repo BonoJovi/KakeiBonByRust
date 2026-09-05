@@ -615,21 +615,31 @@ SELECT
     a.ACCOUNT_CODE,
     a.ACCOUNT_NAME,
     a.INITIAL_BALANCE
-        + COALESCE(SUM(CASE
-            WHEN th.CATEGORY1_CODE = 'INCOME'
-                 AND th.TO_ACCOUNT_CODE = a.ACCOUNT_CODE
-                THEN th.TOTAL_AMOUNT
-            WHEN th.CATEGORY1_CODE = 'EXPENSE'
-                 AND th.FROM_ACCOUNT_CODE = a.ACCOUNT_CODE
-                THEN -th.TOTAL_AMOUNT
-            WHEN th.CATEGORY1_CODE = 'TRANSFER'
-                 AND th.TO_ACCOUNT_CODE = a.ACCOUNT_CODE
-                THEN th.TOTAL_AMOUNT
-            WHEN th.CATEGORY1_CODE = 'TRANSFER'
-                 AND th.FROM_ACCOUNT_CODE = a.ACCOUNT_CODE
-                THEN -th.TOTAL_AMOUNT
-            ELSE 0
-        END), 0) AS BALANCE,
+        -- Fable-5 review #20 — sum every applicable arm independently
+        -- instead of using a single CASE that stops at first match.
+        -- The old shape put the TRANSFER-TO arm ahead of the
+        -- TRANSFER-FROM arm, so a self-transfer (from == to == a)
+        -- matched only the credit side and inflated the balance by the
+        -- transfer amount. Four independent CASE expressions each
+        -- resolve to 0 when their condition doesn't fire, so the sum
+        -- nets to zero for a self-transfer even if a stale one is
+        -- already in the DB; the write-side guards in
+        -- `save_transaction_header` / `update_transaction_header`
+        -- prevent new occurrences.
+        + COALESCE(SUM(
+              CASE WHEN th.CATEGORY1_CODE = 'INCOME'
+                        AND th.TO_ACCOUNT_CODE = a.ACCOUNT_CODE
+                   THEN th.TOTAL_AMOUNT ELSE 0 END
+            + CASE WHEN th.CATEGORY1_CODE = 'EXPENSE'
+                        AND th.FROM_ACCOUNT_CODE = a.ACCOUNT_CODE
+                   THEN -th.TOTAL_AMOUNT ELSE 0 END
+            + CASE WHEN th.CATEGORY1_CODE = 'TRANSFER'
+                        AND th.TO_ACCOUNT_CODE = a.ACCOUNT_CODE
+                   THEN th.TOTAL_AMOUNT ELSE 0 END
+            + CASE WHEN th.CATEGORY1_CODE = 'TRANSFER'
+                        AND th.FROM_ACCOUNT_CODE = a.ACCOUNT_CODE
+                   THEN -th.TOTAL_AMOUNT ELSE 0 END
+        ), 0) AS BALANCE,
     a.DISPLAY_ORDER
 FROM ACCOUNTS a
 LEFT JOIN TRANSACTIONS_HEADER th
@@ -721,6 +731,16 @@ VALUES
 pub const TEST_INSERT_USER_ADMIN: &str = "INSERT INTO USERS (USER_ID, NAME, PAW, ROLE, ENTRY_DT) VALUES (1, 'admin', 'dummy', 0, datetime('now'))";
 
 pub const TEST_INSERT_USER_GENERAL: &str = "INSERT INTO USERS (USER_ID, NAME, PAW, ROLE, ENTRY_DT) VALUES (2, 'testuser', 'dummy', 1, datetime('now'))";
+
+/// Auto-increment USERS INSERT for test helpers that need a per-user
+/// random `ENCRYPTION_SALT` (so `_with_password` code paths can derive
+/// keys the same way production users do). Kept in one place so a
+/// future USERS column addition only touches one statement — the two
+/// helpers in `test_helpers.rs` used to duplicate this INSERT verbatim
+/// (CodeRabbit review on #123). Bind order: NAME, PAW, ROLE,
+/// ENCRYPTION_SALT, ENTRY_DT.
+pub const TEST_INSERT_USER_WITH_SALT: &str =
+    "INSERT INTO USERS (NAME, PAW, ROLE, ENCRYPTION_SALT, ENTRY_DT) VALUES (?, ?, ?, ?, ?)";
 
 pub const TEST_CATEGORY2_GET_DISPLAY_ORDER: &str = "SELECT DISPLAY_ORDER FROM CATEGORY2 WHERE USER_ID = ? AND CATEGORY2_CODE = ?";
 
@@ -1115,6 +1135,90 @@ WHERE EXISTS (
 pub const MIGRATE_SHOPS_UNIQUE_CREATE_INDEX: &str = r#"
 CREATE UNIQUE INDEX IF NOT EXISTS idx_shops_user_unique_name
     ON SHOPS(USER_ID, SHOP_NAME)
+"#;
+
+// Fable-5 review #11: SHOPS `FOREIGN KEY (USER_ID) REFERENCES USERS`
+// missing `ON DELETE CASCADE`. Sibling master tables (ACCOUNTS,
+// PRODUCTS, MANUFACTURERS, TRANSACTIONS_HEADER, MEMOS) all cascade
+// on user deletion, so deleting a user with SHOPS rows fails with
+// `FOREIGN KEY constraint failed` and aborts the whole DELETE.
+// SQLite has no `ALTER TABLE ... ADD/MODIFY FOREIGN KEY` — the FK
+// clause is baked into the CREATE statement — so the migration
+// recreates the table with the same shape plus the CASCADE clause,
+// copies every row, drops the old table, renames the new one, and
+// restores the indexes.
+
+/// Any FK entry from SHOPS to USERS whose `on_delete` action is
+/// `CASCADE`. Zero means the migration must run; > 0 means fresh
+/// installs and previously-migrated DBs — both no-ops.
+pub const SHOPS_HAS_USER_CASCADE_FK: &str = r#"
+SELECT COUNT(*)
+FROM pragma_foreign_key_list('SHOPS')
+WHERE "table" = 'USERS' AND on_delete = 'CASCADE'
+"#;
+
+/// Recreate SHOPS with the CASCADE FK (and the sibling UNIQUE
+/// constraint already added by `migrate_shops_unique`). This is a
+/// pure DDL step — the shape mirrors `res/sql/dbaccess.sql` exactly
+/// except for the auto-generated column list order guarantee. Kept
+/// as a plain CREATE (not `IF NOT EXISTS`) because the migration
+/// only reaches this statement after asserting the new name is free.
+pub const MIGRATE_SHOPS_CASCADE_CREATE_NEW_TABLE: &str = r#"
+CREATE TABLE SHOPS_NEW (
+    SHOP_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    USER_ID INTEGER NOT NULL,
+    SHOP_NAME TEXT NOT NULL,
+    MEMO TEXT,
+    DISPLAY_ORDER INTEGER NOT NULL DEFAULT 0,
+    IS_DISABLED INTEGER DEFAULT 0,
+    ENTRY_DT DATETIME NOT NULL DEFAULT (datetime('now')),
+    UPDATE_DT DATETIME,
+    FOREIGN KEY (USER_ID) REFERENCES USERS(USER_ID) ON DELETE CASCADE,
+    UNIQUE(USER_ID, SHOP_NAME)
+)
+"#;
+
+/// Copy every SHOPS row into SHOPS_NEW verbatim. Column list spelled
+/// out so the copy stays correct even if a later migration appends a
+/// column to `SHOPS_NEW` without touching this constant — the extra
+/// column would take its DEFAULT and the old rows would still line
+/// up on the original columns.
+pub const MIGRATE_SHOPS_CASCADE_COPY_ROWS: &str = r#"
+INSERT INTO SHOPS_NEW
+    (SHOP_ID, USER_ID, SHOP_NAME, MEMO, DISPLAY_ORDER, IS_DISABLED, ENTRY_DT, UPDATE_DT)
+SELECT
+    SHOP_ID, USER_ID, SHOP_NAME, MEMO, DISPLAY_ORDER, IS_DISABLED, ENTRY_DT, UPDATE_DT
+FROM SHOPS
+"#;
+
+pub const MIGRATE_SHOPS_CASCADE_DROP_OLD_TABLE: &str = "DROP TABLE SHOPS";
+
+pub const MIGRATE_SHOPS_CASCADE_RENAME_TABLE: &str = "ALTER TABLE SHOPS_NEW RENAME TO SHOPS";
+
+/// FK enforcement is per-connection in SQLite. The SHOPS cascade
+/// migration flips it off for the recreate step (DROP would otherwise
+/// trip the parent-check from tables that reference SHOPS.SHOP_ID) and
+/// flips it back on before returning. Kept as constants so the test
+/// path and the production path share the exact strings — CodeRabbit
+/// on #128: "SQL literals in db.rs" belong in `sql_queries.rs` so a
+/// future PRAGMA rename can't drift between the two.
+pub const PRAGMA_FOREIGN_KEYS_OFF: &str = "PRAGMA foreign_keys = OFF";
+pub const PRAGMA_FOREIGN_KEYS_ON: &str = "PRAGMA foreign_keys = ON";
+
+/// Reports one row per FK violation. The SHOPS cascade migration runs
+/// this after the recreate as a belt-and-braces guard so a botched
+/// copy is caught immediately rather than at the next query.
+pub const PRAGMA_FOREIGN_KEY_CHECK: &str = "PRAGMA foreign_key_check";
+
+/// Recreate the non-unique index dropped along with the old table.
+/// The inline `UNIQUE(USER_ID, SHOP_NAME)` on the new table already
+/// gives us the auto-index for the unique constraint; the
+/// `idx_shops_user_unique_name` created by `migrate_shops_unique` is
+/// then re-created with `IF NOT EXISTS` for extra safety on DBs that
+/// used to depend on it by name.
+pub const MIGRATE_SHOPS_CASCADE_CREATE_USER_ORDER_INDEX: &str = r#"
+CREATE INDEX IF NOT EXISTS idx_shops_user
+    ON SHOPS(USER_ID, DISPLAY_ORDER)
 "#;
 
 // Check if CATEGORY2_CODE has NOT NULL constraint (notnull=1 means NOT NULL)
@@ -1766,7 +1870,7 @@ FROM PRODUCTS p
 LEFT JOIN MANUFACTURERS m
     ON p.MANUFACTURER_ID = m.MANUFACTURER_ID
    AND m.USER_ID = p.USER_ID
-WHERE p.USER_ID = ? AND p.IS_DISABLED = 0 AND p.PRODUCT_NAME LIKE ?
+WHERE p.USER_ID = ? AND p.IS_DISABLED = 0 AND p.PRODUCT_NAME LIKE ? ESCAPE '\'
 ORDER BY p.PRODUCT_NAME
 LIMIT 20
 "#;
@@ -2051,6 +2155,66 @@ CREATE TABLE USERS (
 
 pub const TEST_TRANSACTION_INSERT_USER: &str = "INSERT INTO USERS (USER_ID, NAME, PAW, ROLE, ENTRY_DT) VALUES (2, 'testuser', 'hash', 1, datetime('now'))";
 
+// Fable-5 #7 (CodeRabbit on #130): test-only SQL used by the
+// `add_transaction_detail` memo-dedup / atomicity pins. Kept here as
+// named constants so a rename or schema change fails in ONE place
+// instead of leaving stale strings inside the test module — matches
+// the "Never hardcode SQL in service code" rule.
+
+/// List MEMO_ID for all details of a given transaction, in DETAIL_ID
+/// order, filtering out NULLs. Used to confirm two adds land on the
+/// same MEMO_ID.
+pub const TEST_ADD_DETAIL_SELECT_MEMO_IDS_BY_TXN: &str =
+    "SELECT MEMO_ID FROM TRANSACTIONS_DETAIL \
+     WHERE TRANSACTION_ID = ? AND MEMO_ID IS NOT NULL ORDER BY DETAIL_ID";
+
+/// Count MEMOS rows carrying the same (USER_ID, MEMO_TEXT). Used to
+/// confirm the dedup fix does not create a duplicate row.
+pub const TEST_ADD_DETAIL_COUNT_MEMOS_BY_TEXT: &str =
+    "SELECT COUNT(*) FROM MEMOS WHERE USER_ID = ? AND MEMO_TEXT = ?";
+
+/// Insert a MEMOS row and return the new MEMO_ID. Used by the
+/// header-sharing pin to seed a header memo the add path should
+/// reuse.
+pub const TEST_ADD_DETAIL_INSERT_MEMO_RETURNING_ID: &str =
+    "INSERT INTO MEMOS (USER_ID, MEMO_TEXT) VALUES (?, ?) RETURNING MEMO_ID";
+
+/// Point a given header at a specific MEMO_ID.
+pub const TEST_ADD_DETAIL_UPDATE_HEADER_MEMO_ID: &str =
+    "UPDATE TRANSACTIONS_HEADER SET MEMO_ID = ? WHERE TRANSACTION_ID = ?";
+
+/// Fetch the MEMO_ID a specific detail row references (nullable).
+pub const TEST_ADD_DETAIL_SELECT_DETAIL_MEMO_ID: &str =
+    "SELECT MEMO_ID FROM TRANSACTIONS_DETAIL WHERE DETAIL_ID = ?";
+
+/// Count MEMOS rows carrying a specific text (any user). Used by the
+/// rollback pin to confirm a failed add did not leak a MEMOS row.
+pub const TEST_ADD_DETAIL_COUNT_MEMOS_ORPHAN: &str =
+    "SELECT COUNT(*) FROM MEMOS WHERE MEMO_TEXT = ?";
+
+// Fable-5 #6 (CodeRabbit on #131): test-only SQL used by the
+// `save_transaction_header` rollback / dedup pins.
+
+/// `BEFORE INSERT` trigger that fails the HEADER insert on a sentinel
+/// `CATEGORY1_CODE`. Used by the rollback pin to drive a
+/// deterministic failure INSIDE the tx after the MEMO row has been
+/// written, so the pin can assert the MEMO insert rolls back too.
+/// Kept as a `TEST_*` constant instead of an inline literal so a
+/// future schema tweak fails in one place.
+pub const TEST_SAVE_HEADER_INSTALL_ROLLBACK_TRIGGER: &str =
+    "CREATE TRIGGER pin_reject_bad_header BEFORE INSERT ON TRANSACTIONS_HEADER \
+     BEGIN \
+         SELECT RAISE(FAIL, 'pin-test-rollback') \
+         WHERE NEW.CATEGORY1_CODE = 'DOES_NOT_EXIST'; \
+     END";
+
+/// Fetch the MEMO_ID two specific headers reference (filtered to
+/// non-NULL). Used by the header-dedup pin to confirm two saves
+/// with the same memo text land on the same MEMOS row.
+pub const TEST_SAVE_HEADER_SELECT_MEMO_IDS_BY_TXN_PAIR: &str =
+    "SELECT MEMO_ID FROM TRANSACTIONS_HEADER \
+     WHERE TRANSACTION_ID IN (?, ?) AND MEMO_ID IS NOT NULL ORDER BY TRANSACTION_ID";
+
 pub const TEST_TRANSACTION_CREATE_MEMOS_TABLE: &str = r#"
 CREATE TABLE MEMOS (
     MEMO_ID INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -2183,6 +2347,14 @@ CREATE TABLE TRANSACTIONS_DETAIL (
     UPDATE_DT DATETIME,
     FOREIGN KEY (TRANSACTION_ID) REFERENCES TRANSACTIONS_HEADER(TRANSACTION_ID) ON DELETE CASCADE,
     FOREIGN KEY (MEMO_ID) REFERENCES MEMOS(MEMO_ID),
+    -- Fable-5 #7 (CodeRabbit on #130): matches the composite FK the
+    -- production schema declares (see `CREATE_TRANSACTIONS_DETAIL_TABLE`
+    -- above). Test fixtures seed EXPENSE into CATEGORY1 so happy paths
+    -- pass unchanged; the FK now also lets the atomicity pin drive
+    -- DETAIL_INSERT into a deterministic FK failure by supplying a
+    -- CATEGORY1_CODE that isn't seeded.
+    FOREIGN KEY (USER_ID, CATEGORY1_CODE)
+        REFERENCES CATEGORY1(USER_ID, CATEGORY1_CODE),
     CHECK (ITEM_NAME != '')
 )
 "#;

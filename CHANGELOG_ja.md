@@ -2,6 +2,41 @@
 
 このファイルには、プロジェクトのすべての重要な変更が記録されます。
 
+## [v2.9.0] - 2026-09-06
+
+Fable-5 レビューの一括対応リリース。金額・日付の正確性、トランザクション原子性、i18n の 3 領域を横断する 15 件の修正に加え、管理者による他ユーザー編集の解禁と、TRANSFER で FROM==TO を拒否するガードの 2 件をユーザー可視の追加として同梱しています。
+
+### 新機能 (ユーザー可視の挙動変化)
+
+- **管理者が他ユーザーを編集可能に** — 一般 / 管理者 の編集モーダルが `user_id` をバックエンドの `update_*_info` コマンドまで貫通するようになり、管理者は他ユーザーの名前・ロール・パスワードを、そのユーザーとしてログインし直さずに変更できるようになりました。自分自身を編集する経路は「旧パスワード必須の再暗号化」フローがそのまま残ります。(Fable-5 #19)
+- **TRANSFER の FROM==TO を拒否** — 振替元と振替先が同じ口座の振替は差引ゼロなのに、ダッシュボードの残高計算が TO 側だけを加算してしまい、振替金額分だけ残高が水増しされる問題がありました。バックエンドと入出金送信経路の両方で弾き、ダッシュボードでは既存の同一口座 TRANSFER 行をゼロに補正します。(Fable-5 #20)
+- **金額入力を整数に厳格化** — 明細 / 入出金 / 繰り返しルールの各フォームが小数、カンマ区切り、指数表記、符号、全角数字、末尾ゴミ、および `Number.MAX_SAFE_INTEGER` を超える整数を submit 前に拒否するようになりました。従来「1099.5」が黙って 1099 に切り捨てられていた挙動が、フィールド単位のバリデーションエラーとして可視化されます。(Fable-5 #10)
+- **税額オートカルクが入力値を保存** — 入力された税込金額が現在の丸め設定では整数表現不可能なとき、自動調整して差分を通知するようにしました。従来はサイレントに 3 つの数値 (税抜 / 税額 / 税込) が不整合のまま保存されていた経路を塞いでいます。(Fable-5 #8)
+- **繰り返しルールの日付既定値がローカルタイムゾーン準拠に** — start-date / end-date / anchor-date の既定値を `toISOString()` ではなくブラウザのローカル getter で組み立てるように変更。JST ユーザーが 09:00 JST 前にモーダルを開いても前日にならなくなりました。(Fable-5 #13)
+- **集計バナーがロケール準拠に** — 店舗 / 商品 / 口座 で未指定行を集計した際の "Unspecified" / 「指定なし」表示を、`common.unspecified` i18n 経由でスワップするようにしました。英語 UI に「指定なし」が漏れる問題を解消。繰り返しルール画面の口座ドロップダウンでも NONE 口座名を同じ方式で置換します。(Fable-5 #22)
+- **集計エラーバナーが `"[object Object]"` を絶対出さない** — `translateAggregationError` が `Err(String)` / `ApiError { code, message }` / `Error` の 3 形状を統一的に扱い、substring マッチ不能な shape のときはローカライズされた汎用エラーにフォールバックします。(Fable-5 #9)
+- **商品オートコンプリートがリテラルマッチ** — マスタ検索が `%` と `_` をエスケープして `LIKE ? ESCAPE '\'` を併用するようになり、「果汁100%ジュース」と「果汁100リンゴジュース」の両方が登録されている状態で `"100%ジ"` を検索すると前者だけがヒットします。(Fable-5 #23)
+- **パスワード変更と再暗号化が原子性を確保** — パスワードハッシュ更新と全行再暗号化が単一トランザクション内で実行されるようになり、どちらかが失敗すれば両方がロールバックされます。(Fable-5 #1/#5)
+- **一括再計算がユーザーの丸め設定を保持** — `recalculate_all_transaction_totals` 経路がヘッダー合計を再構築する際に `TAX_ROUNDING_TYPE` を上書きしないよう修正。(Fable-5 #2)
+- **明細集計が税込ヘッダーを二重課税しない** — 明細集計が `TRANSACTIONS_HEADER.TAX_INCLUDED_TYPE` を尊重するようになり、同一台帳でヘッダー集計と結果が一致します。(Fable-5 #3/#4)
+
+### 信頼性 (内部、ユーザーには不可視)
+
+- **`save_transaction_header` が FK 失敗で MEMOS を孤立させない** — メモ insert とヘッダー insert が単一トランザクションを共有し、`get_or_create_memo_id_in_tx` 経由で dedup することで、同じテキストのメモが 1 行に集約されます。(Fable-5 #6)
+- **`add_transaction_detail` が同じ tx パターンを共有** — save-header と同じ修正を適用、明細追加失敗時に MEMOS 行が残らなくなりました。(Fable-5 #7)
+- **`SHOPS.USER_ID` に CASCADE** — `ON DELETE CASCADE` を追加、ユーザー削除で店舗も同時削除されます。全プール接続で FK が有効になるよう `SqlitePoolOptions::after_connect` で `PRAGMA foreign_keys = ON` を統一設定。(Fable-5 #11)
+- **マスタ削除ロックが単一 tx で実行** — `delete_shop` / `delete_product` / `delete_manufacturer` が check-in-use → 論理削除のペアを `pool.begin()` の単一 tx で包むようになり、将来並列 writer 経路が入っても契約が守られる形に。(Fable-5 #14)
+- **共有 `escape_like_pattern`** — LIKE メタ文字エスケーパを `transaction.rs` から `src/services/like_escape.rs` に抽出、`product::search_products_by_name` と `transaction` キーワード検索が同じ契約を共有。
+
+### テスト
+
+- Backend: 551 → 588 (+37)。修正毎に pin を追加 — メモ孤立 / パスワード変更 / マスタ削除の tx ロールバック、集計 SQL ビルダーの「日本語ハードコード無し」pins、`parseAmountStrict` の unsafe integer 拒否、`escape_like_pattern` の LIKE メタ文字 pins、`search_products_by_name` の integration pins。
+- Frontend: 715 → 773 (+58)。新規 jest suites: `aggregation-error-translate`, `parse-amount-strict`, `format-local-date`, `aggregation-render-unspecified`。Jest は `globalSetup` スクリプト経由で `TZ=Asia/Tokyo` を pin、CI 上でも `formatLocalDate` の UTC 回帰が確実に検出されるようになりました。
+
+### 依存関係
+
+- `browserslist` dev-dep を 4.28.4 → 4.28.9 に bump (GHSA-73wf-gq98-2v4g、`res/tests` スコープのみ)。
+
 ## [v2.8.0] - 2026-08-26
 
 マスタ整合性ガードの追加リリース。口座 / 店舗 / メーカー / 商品マスタを、他画面で参照中のときは削除できないようにし、代わりに「無効化してください」のトーストで誘導します。従来は静かに論理削除されて履歴側から「消えたマスタ」を参照する状態になり得ましたが、今後はユーザーが意図せず整合性を崩す動線が塞がれます。

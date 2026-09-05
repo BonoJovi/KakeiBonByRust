@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use sqlx::{SqlitePool, FromRow};
 use crate::api_error::ApiError;
+use crate::services::like_escape::escape_like_pattern;
 use crate::services::master_data::{self, MasterCrudSpec};
 use crate::sql_queries;
 use crate::validation;
@@ -77,7 +78,14 @@ pub async fn search_products_by_name(
         return Ok(Vec::new());
     }
 
-    let pattern = format!("%{}%", trimmed);
+    // Fable-5 review #23 — the previous form was
+    // `format!("%{}%", trimmed)`, which passed `%` and `_` through as
+    // LIKE wildcards. A product named "果汁100%ジュース" typed as
+    // "100%ジ" then matched "100リンゴジュース" too. Escape the query
+    // and pair with `LIKE ? ESCAPE '\'` in
+    // `sql_queries::PRODUCT_SEARCH_BY_NAME` so the metacharacters
+    // match literally.
+    let pattern = format!("%{}%", escape_like_pattern(trimmed));
 
     let products = sqlx::query_as::<_, Product>(sql_queries::PRODUCT_SEARCH_BY_NAME)
         .bind(user_id)
@@ -221,13 +229,20 @@ pub async fn delete_product(
     user_id: i64,
     product_id: i64,
 ) -> Result<String, ApiError> {
+    // Fable-5 review #14 — same TOCTOU-window closure as
+    // `delete_shop` / `delete_manufacturer`. Check + delete now
+    // run inside one transaction so the reference-count guard
+    // and the `IS_DISABLED=1` write can never be separated by a
+    // concurrent transaction-detail insert.
+    let mut tx = pool.begin().await?;
     let (in_use,): (i64,) = sqlx::query_as(sql_queries::PRODUCT_CHECK_IN_USE)
         .bind(user_id)
         .bind(product_id)
-        .fetch_one(pool)
+        .fetch_one(&mut *tx)
         .await?;
     master_data::reject_if_in_use(SPEC.entity_label, in_use)?;
-    master_data::run_delete_expect_one(&SPEC, pool, user_id, product_id).await?;
+    master_data::run_delete_expect_one_in_tx(&SPEC, &mut tx, user_id, product_id).await?;
+    tx.commit().await?;
     Ok("Product deleted successfully".to_string())
 }
 
@@ -759,6 +774,63 @@ mod tests {
         let hits = search_products_by_name(&pool, 2, "サバ").await.unwrap();
         assert_eq!(hits.len(), 1);
         assert_eq!(hits[0].manufacturer_name.as_deref(), Some("ニッスイ"));
+    }
+
+    /// Fable-5 review #23 pin — the pre-fix `format!("%{}%", trimmed)`
+    /// passed `%` and `_` through as LIKE wildcards, so "100%ジ"
+    /// matched every "100…ジ" product, not just the one whose name
+    /// literally contained "100%ジ". Escape the query and pair with
+    /// `LIKE ? ESCAPE '\'` so metacharacters match literally.
+    #[tokio::test]
+    async fn test_search_products_escapes_percent_metacharacter() {
+        let pool = setup_test_db().await;
+
+        add_product(&pool, 2, AddProductRequest {
+            product_name: "果汁100%ジュース".to_string(),
+            manufacturer_id: None,
+            memo: None,
+            is_disabled: None,
+        }).await.unwrap();
+        add_product(&pool, 2, AddProductRequest {
+            product_name: "果汁100リンゴジュース".to_string(),
+            manufacturer_id: None,
+            memo: None,
+            is_disabled: None,
+        }).await.unwrap();
+
+        // Pre-fix: `LIKE '%100%ジ%'` matched both products because the
+        // interior `%` was a wildcard. Post-fix: `LIKE '%100\%ジ%'
+        // ESCAPE '\'` treats `\%` as a literal percent and only the
+        // first product matches.
+        let hits = search_products_by_name(&pool, 2, "100%ジ").await.unwrap();
+        assert_eq!(hits.len(), 1, "only 果汁100%ジュース must match: {:?}",
+                   hits.iter().map(|p| p.product_name.as_str()).collect::<Vec<_>>());
+        assert_eq!(hits[0].product_name, "果汁100%ジュース");
+    }
+
+    #[tokio::test]
+    async fn test_search_products_escapes_underscore_metacharacter() {
+        let pool = setup_test_db().await;
+
+        add_product(&pool, 2, AddProductRequest {
+            product_name: "A_1".to_string(),
+            manufacturer_id: None,
+            memo: None,
+            is_disabled: None,
+        }).await.unwrap();
+        add_product(&pool, 2, AddProductRequest {
+            product_name: "AB1".to_string(),
+            manufacturer_id: None,
+            memo: None,
+            is_disabled: None,
+        }).await.unwrap();
+
+        // Pre-fix: `LIKE '%A_1%'` matched both (underscore = any
+        // single char). Post-fix: only the literal-underscore product.
+        let hits = search_products_by_name(&pool, 2, "A_1").await.unwrap();
+        assert_eq!(hits.len(), 1, "only A_1 must match: {:?}",
+                   hits.iter().map(|p| p.product_name.as_str()).collect::<Vec<_>>());
+        assert_eq!(hits[0].product_name, "A_1");
     }
 
     /// Helper: seed a second general user (USER_ID = 3) alongside the

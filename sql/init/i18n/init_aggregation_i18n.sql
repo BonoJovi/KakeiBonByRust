@@ -101,4 +101,6 @@ VALUES
 (2083, 'aggregation.include_scheduled_desc', 'en', 'Include scheduled transactions', 'aggregation', 'Include scheduled checkbox description', datetime('now')),
 (2084, 'aggregation.include_scheduled_desc', 'ja', '予定入出金を含む', 'aggregation', '予定を含むチェックボックス説明', datetime('now')),
 (2085, 'aggregation.week_range_label', 'en', 'Target week', 'aggregation', 'Week range display label', datetime('now')),
-(2086, 'aggregation.week_range_label', 'ja', '集計対象週', 'aggregation', '週範囲表示ラベル', datetime('now'));
+(2086, 'aggregation.week_range_label', 'ja', '集計対象週', 'aggregation', '週範囲表示ラベル', datetime('now')),
+(2455, 'aggregation.error_generic', 'en', 'An unexpected error occurred while aggregating.', 'aggregation', 'Generic aggregation error banner shown when the backend error has no recognisable shape (Fable-5 #9)', datetime('now')),
+(2456, 'aggregation.error_generic', 'ja', '集計中に予期しないエラーが発生しました。', 'aggregation', '認識できない形状のバックエンドエラーが返った時に集計バナーに出す汎用エラー (Fable-5 #9)', datetime('now'));

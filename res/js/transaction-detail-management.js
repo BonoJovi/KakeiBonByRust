@@ -13,6 +13,8 @@ import { setupTaxCalculationListeners } from './detail-tax-calc.js';
 import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
 import { showToast } from './toast.js';
 import { formatApiError, API_ERROR_CODES } from './master-crud.js';
+import { parseAmountStrict } from './parse-amount-strict.js';
+import { escapeHtml } from './escape-html.js';
 
 let currentUserId = null;
 let currentUserRole = null;
@@ -273,13 +275,27 @@ function showRoundingWarning(userInput, calculated) {
     
     const warning = document.getElementById('rounding-warning');
     const diff = Math.abs(userInput - calculated);
-    warning.innerHTML = `
-        <strong>⚠️ ${i18n.t('detail_mgmt.rounding_warning_title')}</strong><br>
-        ${i18n.t('detail_mgmt.rounding_warning_message')
+    // Fable-5 #8 — wording now reads "auto-adjusted to N" because the
+    // form actually rewrites the tax-included input rather than
+    // leaving three inconsistent numbers behind for the user to
+    // ignore. Uses the new i18n keys (2451-2454); the older
+    // `rounding_warning_*` keys are dead but stay in the resource
+    // table as a fallback for anything that still resolved them.
+    //
+    // CodeRabbit on #129 — the i18n resource text is DB-sourced, so
+    // in principle a malicious admin could seed an `<img onerror>`
+    // and land it in `innerHTML` here. escapeHtml every dynamic
+    // fragment (the title, the message body after `{userInput}` /
+    // `{calculated}` / `{diff}` substitution) so untrusted characters
+    // render as text.
+    const titleEscaped = escapeHtml(i18n.t('detail_mgmt.rounding_auto_correct_title'));
+    const bodyEscaped = escapeHtml(
+        i18n.t('detail_mgmt.rounding_auto_correct_message')
             .replace('{userInput}', userInput.toLocaleString())
             .replace('{calculated}', calculated.toLocaleString())
-            .replace('{diff}', diff)}
-    `;
+            .replace('{diff}', diff)
+    );
+    warning.innerHTML = `<strong>✏️ ${titleEscaped}</strong><br>${bodyEscaped}`;
     warning.style.display = 'block';
 }
 
@@ -647,14 +663,12 @@ async function loadDetails() {
     }
 }
 
-/**
- * Escape HTML to prevent XSS
- */
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
+// `escapeHtml` used across this file is imported from
+// `./escape-html.js` at the top of the module (see the imports
+// block near line 12). CodeRabbit on #129 asked us to consolidate
+// on the shared helper so any future tightening of the escape
+// contract lands in every caller at once, instead of leaving a
+// local sibling behind that could drift out of sync.
 
 // ============================================================================
 // Product autocomplete (v2.6.0 master integration)
@@ -943,14 +957,28 @@ async function handleDetailFormSubmit(event) {
     const category1Code = document.getElementById('category1-code').value;
     const category2Code = document.getElementById('category2-code').value;
     const category3Code = document.getElementById('category3-code').value;
-    const amountExcludingTax = parseInt(document.getElementById('amount-excluding-tax').value) || 0;
-    const amountIncludingTax = parseInt(document.getElementById('amount-including-tax').value) || 0;
-    const taxRate = parseInt(document.getElementById('tax-rate').value) || 0;
-    const taxAmount = parseInt(document.getElementById('tax-amount').value) || 0;
+    // Fable-5 review #10 — money fields used to be read with
+    // `parseInt(el.value) || 0`, which silently truncated decimals
+    // (`"1099.5"` → 1099, half-yen loss) and locale-comma inputs
+    // (`"1,099"` → 1, 99% off). `parseAmountStrict` returns null on
+    // any non-integer shape; each field is checked below so the user
+    // sees a specific validation error before the invoke lands.
+    const amountExcludingTaxInput = document.getElementById('amount-excluding-tax');
+    const amountIncludingTaxInput = document.getElementById('amount-including-tax');
+    const taxRateInput = document.getElementById('tax-rate');
+    const taxAmountInput = document.getElementById('tax-amount');
+    const amountExcludingTax = parseAmountStrict(amountExcludingTaxInput.value);
+    const amountIncludingTax = parseAmountStrict(amountIncludingTaxInput.value);
+    const taxRate = parseAmountStrict(taxRateInput.value);
+    const taxAmount = parseAmountStrict(taxAmountInput.value);
     const memo = memoInput.value.trim();
 
     clearValidationError(itemNameInput);
     clearValidationError(memoInput);
+    clearValidationError(amountExcludingTaxInput);
+    clearValidationError(amountIncludingTaxInput);
+    clearValidationError(taxRateInput);
+    clearValidationError(taxAmountInput);
 
     // Validation
     if (!itemName) {
@@ -970,6 +998,27 @@ async function handleDetailFormSubmit(event) {
 
     if (!category1Code) {
         showMessage('error', i18n.t('detail_mgmt.error_category_required'));
+        return;
+    }
+
+    // Fable-5 #10 — strict-integer rejection surfaced per field
+    // BEFORE the < 0 guard, so the user sees "not integer" for
+    // "1099.5" rather than being routed to the "invalid amount"
+    // branch downstream on a coerced null.
+    if (amountExcludingTax === null) {
+        showValidationError(amountExcludingTaxInput, i18n.t('common.error_amount_not_integer'));
+        return;
+    }
+    if (amountIncludingTax === null) {
+        showValidationError(amountIncludingTaxInput, i18n.t('common.error_amount_not_integer'));
+        return;
+    }
+    if (taxRate === null) {
+        showValidationError(taxRateInput, i18n.t('common.error_amount_not_integer'));
+        return;
+    }
+    if (taxAmount === null) {
+        showValidationError(taxAmountInput, i18n.t('common.error_amount_not_integer'));
         return;
     }
 

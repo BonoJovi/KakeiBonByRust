@@ -280,8 +280,14 @@ impl GroupBy {
                     .to_string()
             }
             GroupBy::Shop => {
+                // Fable-5 review #22 — the previous form baked `'指定なし'`
+                // into the SQL as the SHOP-not-set fallback, so the
+                // aggregation banner rendered Japanese even on the
+                // English UI. Return an empty string instead and let
+                // the frontend swap it for `i18n.t('common.unspecified')`
+                // in `aggregation-common.js::renderResults`.
                 "CAST(COALESCE(th.SHOP_ID, 0) AS TEXT) as group_key, \
-                 COALESCE(s.SHOP_NAME, '指定なし') as group_name"
+                 COALESCE(s.SHOP_NAME, '') as group_name"
                     .to_string()
             }
             GroupBy::Date => {
@@ -823,15 +829,25 @@ ORDER BY {} {}
 ///    aggregation is exact.
 ///
 /// The amount classification follows the rule we agreed on with the data:
-/// a row counts as "already tax-included" when `TAX_RATE = 0` (gross-up has no
-/// effect anyway) **or** `AMOUNT = AMOUNT_INCLUDING_TAX` and the tax-included
-/// column is actually populated (the user entered a tax-included receipt
-/// verbatim). Everything else — including rows where `AMOUNT_INCLUDING_TAX` is
-/// NULL (older rows added before the column existed) or 0 (the frontend sends
-/// 0 for empty input) — is treated as pre-tax and grossed up, matching the
-/// authoritative Rust classifier in
-/// `services::transaction::calculate_recommended_total`. The two branches are
-/// exhaustive complements so no row silently drops out of both sums.
+/// a row counts as "already tax-included" when the *header* declares the
+/// ledger as tax-included (`TAX_INCLUDED_TYPE == TAX_INCLUDED = 0` — the
+/// user typed the AMOUNT column as prices that already contain tax), OR
+/// when `TAX_RATE = 0` (gross-up has no effect anyway), OR when
+/// `AMOUNT = AMOUNT_INCLUDING_TAX` and the tax-included column is
+/// actually populated (a single already-included row inside an otherwise
+/// tax-excluded ledger). Everything else is treated as pre-tax and
+/// grossed up, matching the authoritative Rust classifier in
+/// `services::transaction::calculate_recommended_total_with_settings`.
+///
+/// The `TAX_INCLUDED_TYPE` branch is what closes Fable-5 review #3:
+/// legacy rows (v2.0 or earlier) whose `AMOUNT_INCLUDING_TAX` is NULL
+/// under a tax-included header used to fall through to the pre-tax bucket
+/// and get grossed up a second time, silently over-reporting the amount
+/// by the tax rate. The header-level check catches those rows before
+/// per-detail heuristics ever run.
+///
+/// The two branches remain exhaustive complements so no row silently
+/// drops out of both sums.
 fn build_detail_query(request: &AggregationRequest, lang: &str) -> (String, Vec<BindValue>) {
     let (where_clause, where_binds) = build_where_clause(request.user_id, &request.filter);
     let order_field = request.order_by.to_order_by_field();
@@ -896,13 +912,26 @@ FROM (
             td.TAX_RATE AS tax_rate,
             th.TAX_ROUNDING_TYPE AS rounding_type,
             SUM(CASE
-                WHEN td.TAX_RATE = 0
+                -- Fable-5 #3: header-level tax-included declaration wins
+                -- over the per-detail heuristic. Without this, legacy
+                -- rows (AMOUNT_INCLUDING_TAX IS NULL, tax-included
+                -- header) fall into the pretax bucket below and get
+                -- grossed up again, silently over-reporting by the tax
+                -- rate. The `{tax_included}` placeholder is
+                -- `consts::TAX_INCLUDED` interpolated at build time —
+                -- CodeRabbit #124 review: hard-coding a bare `0` here
+                -- couples the SQL to a specific numeric encoding of the
+                -- constant and would silently drift if the constant is
+                -- ever renumbered.
+                WHEN th.TAX_INCLUDED_TYPE = {tax_included}
+                  OR td.TAX_RATE = 0
                   OR (td.AMOUNT_INCLUDING_TAX IS NOT NULL
                       AND td.AMOUNT = td.AMOUNT_INCLUDING_TAX)
                 THEN td.AMOUNT ELSE 0
             END) AS already_included_sum,
             SUM(CASE
-                WHEN td.TAX_RATE > 0
+                WHEN th.TAX_INCLUDED_TYPE != {tax_included}
+                  AND td.TAX_RATE > 0
                   AND (td.AMOUNT_INCLUDING_TAX IS NULL
                        OR td.AMOUNT != td.AMOUNT_INCLUDING_TAX)
                 THEN td.AMOUNT ELSE 0
@@ -924,6 +953,7 @@ ORDER BY {order_field} {sort_order}
         where_clause = where_clause,
         order_field = order_field,
         sort_order = sort_order,
+        tax_included = crate::consts::TAX_INCLUDED,
     );
 
     // Bind order matches the placeholder order inside the SQL string above:
@@ -983,7 +1013,10 @@ fn build_detail_group_pieces(
         ),
         GroupBy::Product => (
             "CAST(COALESCE(td.PRODUCT_ID, 0) AS TEXT)".to_string(),
-            "COALESCE(p.PRODUCT_NAME, '指定なし')".to_string(),
+            // Fable-5 review #22 — empty string sentinel, swapped to
+            // `i18n.t('common.unspecified')` on the frontend. See
+            // the matching comment on the Shop branch above.
+            "COALESCE(p.PRODUCT_NAME, '')".to_string(),
             "LEFT JOIN PRODUCTS p ON td.USER_ID = p.USER_ID AND td.PRODUCT_ID = p.PRODUCT_ID"
                 .to_string(),
             Vec::new(),
@@ -1055,7 +1088,17 @@ fn build_account_aggregation_query(request: &AggregationRequest) -> (String, Vec
         r#"
 SELECT
     account_data.account_code as group_key,
-    COALESCE(a.ACCOUNT_NAME, '指定なし') as group_name,
+    -- Fable-5 review #22 — the NONE account is initialised via
+    -- `initialize_none_account` with `template_name_ja` ("指定なし"),
+    -- so `a.ACCOUNT_NAME` for it is Japanese regardless of the UI
+    -- language. Return an empty string for both the NONE case and
+    -- any unresolved account (defensive NULL) so the frontend's
+    -- `aggregation-common.js::renderResults` can swap it for
+    -- `i18n.t('common.unspecified')` uniformly across en/ja.
+    CASE
+        WHEN account_data.account_code = 'NONE' THEN ''
+        ELSE COALESCE(a.ACCOUNT_NAME, '')
+    END as group_name,
     SUM(account_data.amount) as total_amount,
     COUNT(*) as count,
     CAST(AVG(account_data.amount) AS INTEGER) as avg_amount
@@ -1967,6 +2010,84 @@ mod tests {
         assert!(sql.contains("COUNT(DISTINCT sub.txn_id)"));
     }
 
+    // Fable-5 review #22 — pins the "no hardcoded 指定なし in the
+    // group_name fallback" contract across Shop / Product / Account
+    // aggregation. Each groupings previously inlined `'指定なし'` as
+    // the COALESCE fallback, which surfaced Japanese on English UIs;
+    // the fix returns an empty string sentinel and the frontend
+    // (`aggregation-common.js::renderResults`) swaps that for
+    // `i18n.t('common.unspecified')`. If any of these tests fail,
+    // a regression has re-introduced the hardcoded Japanese literal
+    // and the aggregation banner will leak locale again.
+
+    #[test]
+    fn test_build_query_shop_uses_empty_string_fallback_no_hardcoded_ja() {
+        let date = NaiveDate::from_ymd_opt(2025, 1, 1).unwrap();
+        let filter = AggregationFilter::new(DateFilter::From(date));
+        let request = AggregationRequest::new(1, filter, GroupBy::Shop);
+
+        let (sql, _binds) = build_query(&request, "ja");
+
+        assert!(
+            !sql.contains("'指定なし'"),
+            "Shop grouping must not hardcode Japanese '指定なし' — swap is now a frontend concern: {}",
+            sql
+        );
+        assert!(
+            sql.contains("COALESCE(s.SHOP_NAME, '')"),
+            "Shop grouping must return the empty-string sentinel for the NULL-shop case: {}",
+            sql
+        );
+    }
+
+    #[test]
+    fn test_build_query_product_uses_empty_string_fallback_no_hardcoded_ja() {
+        let date = NaiveDate::from_ymd_opt(2025, 1, 1).unwrap();
+        let filter = AggregationFilter::new(DateFilter::From(date));
+        let request = AggregationRequest::new(1, filter, GroupBy::Product);
+
+        let (sql, _binds) = build_query(&request, "ja");
+
+        assert!(
+            !sql.contains("'指定なし'"),
+            "Product grouping must not hardcode Japanese '指定なし': {}",
+            sql
+        );
+        assert!(
+            sql.contains("COALESCE(p.PRODUCT_NAME, '')"),
+            "Product grouping must return the empty-string sentinel for the NULL-product case: {}",
+            sql
+        );
+    }
+
+    #[test]
+    fn test_build_query_account_uses_empty_string_for_none_no_hardcoded_ja() {
+        let date = NaiveDate::from_ymd_opt(2025, 1, 1).unwrap();
+        let filter = AggregationFilter::new(DateFilter::From(date));
+        let request = AggregationRequest::new(1, filter, GroupBy::Account);
+
+        let (sql, _binds) = build_query(&request, "ja");
+
+        assert!(
+            !sql.contains("'指定なし'"),
+            "Account grouping must not hardcode Japanese '指定なし' — the NONE account's persisted \
+             `template_name_ja` name is intercepted at build time: {}",
+            sql
+        );
+        // Both branches of the CASE (NONE → '' and every-other-account →
+        // COALESCE-empty) must be present.
+        assert!(
+            sql.contains("account_data.account_code = 'NONE' THEN ''"),
+            "Account grouping must map the NONE account_code to empty string: {}",
+            sql
+        );
+        assert!(
+            sql.contains("COALESCE(a.ACCOUNT_NAME, '')"),
+            "Account grouping must return the empty-string sentinel for a missing account row: {}",
+            sql
+        );
+    }
+
     // =========================================================================
     // Wrapper Function Tests
     // =========================================================================
@@ -2606,6 +2727,134 @@ mod tests {
             "AMOUNT_INCLUDING_TAX = 0 (frontend's empty-input sentinel) must be \
              treated as pre-tax"
         );
+    }
+
+    /// Fable-5 review #3 — legacy (v2.0-era) transactions saved before
+    /// `AMOUNT_INCLUDING_TAX` existed carry `AMOUNT_INCLUDING_TAX = NULL`
+    /// under a `TAX_INCLUDED_TYPE = TAX_INCLUDED (0)` header, with the
+    /// per-detail AMOUNT already containing tax. Prior to the fix, the
+    /// detail-side classifier looked at the per-row shape only
+    /// (`AMOUNT_INCLUDING_TAX IS NOT NULL AND AMOUNT = AMOUNT_INCLUDING_TAX`)
+    /// and, finding the row failed that pattern, dropped it into the
+    /// pretax bucket. The gross-up then multiplied the tax-included
+    /// AMOUNT by (1 + rate) again — a 10 % row went from ¥110 to ¥121,
+    /// a permanent silent 10 % over-count on legacy tax-included rows.
+    ///
+    /// The corrected classifier now consults the header first:
+    /// `TAX_INCLUDED_TYPE = 0` means the whole ledger is tax-included,
+    /// so every AMOUNT in it goes straight into `already_included_sum`
+    /// regardless of the per-detail column. This aligns detail
+    /// aggregation with `calculate_recommended_total_with_settings`,
+    /// which has taken the header type into account since v2.0.
+    #[tokio::test]
+    async fn test_detail_query_included_header_legacy_null_row_no_double_taxation() {
+        let pool = setup_aggregation_test_db().await;
+
+        // TAX_INCLUDED_TYPE = 0 (INCLUDED) header. TOTAL_AMOUNT would
+        // have been stamped as 110 by a v2.0-era `save_transaction`
+        // path; we set 0 here so we can prove the detail-side
+        // computation stands on its own.
+        let txn = insert_test_header(&pool, 1, /*floor*/ 0, /*tax_included*/ 0, 0).await;
+        // Legacy row: AMOUNT is the tax-included price (110), TAX_RATE
+        // is stored but AMOUNT_INCLUDING_TAX was not yet a column.
+        insert_detail(&pool, 1, txn, 1, "FOOD", 110, 10, /*NULL*/ None).await;
+
+        let request = june_2024_request(GroupBy::Category2);
+        let (sql, binds) = build_query(&request, "ja");
+        let results: Vec<AggregationResult> = bind_all(
+            sqlx::query_as::<_, AggregationResult>(&sql),
+            binds,
+        )
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+
+        assert_eq!(results.len(), 1);
+        // Pre-fix: -121 (110 × 1.10). Post-fix: -110.
+        assert_eq!(
+            results[0].total_amount, -110,
+            "tax-included header must not gross up its details a second time"
+        );
+    }
+
+    /// Fable-5 review #3 companion — legacy tax-included row with a
+    /// zero `AMOUNT_INCLUDING_TAX` (the frontend's empty-input sentinel).
+    /// Same root cause as the NULL variant: pre-fix, the row failed the
+    /// `AMOUNT = AMOUNT_INCLUDING_TAX` short-circuit (0 ≠ 100), fell into
+    /// the pretax bucket, and was grossed up. Post-fix, the header
+    /// `TAX_INCLUDED_TYPE = 0` catches it first.
+    #[tokio::test]
+    async fn test_detail_query_included_header_zero_col_no_double_taxation() {
+        let pool = setup_aggregation_test_db().await;
+
+        let txn = insert_test_header(&pool, 1, 0, /*tax_included*/ 0, 0).await;
+        insert_detail(&pool, 1, txn, 1, "FOOD", 100, 8, Some(0)).await;
+
+        let request = june_2024_request(GroupBy::Category2);
+        let (sql, binds) = build_query(&request, "ja");
+        let results: Vec<AggregationResult> = bind_all(
+            sqlx::query_as::<_, AggregationResult>(&sql),
+            binds,
+        )
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+
+        assert_eq!(results.len(), 1);
+        assert_eq!(
+            results[0].total_amount, -100,
+            "tax-included header must treat AMOUNT verbatim regardless of AMOUNT_INCLUDING_TAX column shape"
+        );
+    }
+
+    /// Fable-5 review #4 — under a tax-included header, the header-dim
+    /// aggregation (`SUM(th.TOTAL_AMOUNT)`) and the detail-dim
+    /// aggregation (reconstruct from details) must agree on the same
+    /// transaction. Prior to the #3 fix, the two diverged for any
+    /// legacy tax-included row: the header side would return the stored
+    /// 110, the detail side would gross it up to 121, and switching the
+    /// group_by axis appeared to change the money. With #3 fixed, both
+    /// sides now return the same value. Uses `GroupBy::Date` for the
+    /// header side to avoid the CATEGORY1_I18N join (this test's fixture
+    /// DB doesn't seed the i18n tables); Date shares `build_header_query`
+    /// with Category1 / Shop, so the invariant is proved for the whole
+    /// header code path.
+    #[tokio::test]
+    async fn test_detail_query_matches_header_query_for_included_ledger() {
+        let pool = setup_aggregation_test_db().await;
+
+        // TOTAL_AMOUNT = 110 stamped by `save_transaction`, exact match
+        // for the AMOUNT the detail carries under a tax-included header.
+        let txn = insert_test_header(&pool, 1, 0, /*tax_included*/ 0, 110).await;
+        insert_detail(&pool, 1, txn, 1, "FOOD", 110, 10, None).await;
+
+        let header_request = june_2024_request(GroupBy::Date);
+        let (header_sql, header_binds) = build_query(&header_request, "ja");
+        let header_results: Vec<AggregationResult> = bind_all(
+            sqlx::query_as::<_, AggregationResult>(&header_sql),
+            header_binds,
+        )
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+
+        let detail_request = june_2024_request(GroupBy::Category2);
+        let (detail_sql, detail_binds) = build_query(&detail_request, "ja");
+        let detail_results: Vec<AggregationResult> = bind_all(
+            sqlx::query_as::<_, AggregationResult>(&detail_sql),
+            detail_binds,
+        )
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+
+        assert_eq!(header_results.len(), 1);
+        assert_eq!(detail_results.len(), 1);
+        assert_eq!(
+            header_results[0].total_amount, detail_results[0].total_amount,
+            "header dim and detail dim must agree on the same transaction (Fable-5 #4)"
+        );
+        assert_eq!(header_results[0].total_amount, -110);
     }
 
     /// Fable-5 review #4 — `avg_amount` used to come from

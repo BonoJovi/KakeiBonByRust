@@ -55,6 +55,17 @@ impl ApiError {
     // raw English `Err` string next to a Japanese label.
     pub const CODE_AUTH_INVALID_CREDENTIALS: &'static str = "auth_invalid_credentials";
     pub const CODE_AUTH_SETUP_COMPLETED: &'static str = "auth_setup_completed";
+    // Fable-5 #1/#5 — password change rejected because the caller-supplied
+    // "current password" did not verify against the stored hash. Distinct
+    // from `auth_invalid_credentials` (login) so the user-management
+    // screen can point the user at the correct input.
+    pub const CODE_OLD_PASSWORD_INCORRECT: &'static str = "old_password_incorrect";
+    // Fable-5 #20 (CodeRabbit on #127) — TRANSFER save/update rejected
+    // because FROM and TO are the same account. Kept separate from
+    // generic `validation` so the frontend can render the localised
+    // `transaction_mgmt.transfer_same_account` toast instead of the
+    // raw English fallback via `formatApiError`.
+    pub const CODE_TRANSFER_SAME_ACCOUNT: &'static str = "transfer_same_account";
 
     // ---- Constructors --------------------------------------------------
 
@@ -159,6 +170,33 @@ impl ApiError {
         Self {
             code: Self::CODE_AUTH_INVALID_CREDENTIALS.to_string(),
             message: "Invalid username or password".to_string(),
+            entity: None,
+        }
+    }
+
+    /// Password change refused because the user-supplied "current
+    /// password" did not verify. Fable-5 #1/#5: separated from generic
+    /// validation so the edit modal can highlight the current-password
+    /// field with its own wording (`error.old_password_incorrect`)
+    /// instead of showing a raw English "Old password is incorrect"
+    /// message in the form-message slot.
+    pub fn old_password_incorrect() -> Self {
+        Self {
+            code: Self::CODE_OLD_PASSWORD_INCORRECT.to_string(),
+            message: "Current password is incorrect".to_string(),
+            entity: None,
+        }
+    }
+
+    /// TRANSFER save/update refused because the source and destination
+    /// account are the same. Fable-5 #20 (CodeRabbit on #127): kept
+    /// separate from generic `validation` so the frontend routes it
+    /// through the `transaction_mgmt.transfer_same_account` i18n key
+    /// instead of surfacing the English fallback via `formatApiError`.
+    pub fn transfer_same_account() -> Self {
+        Self {
+            code: Self::CODE_TRANSFER_SAME_ACCOUNT.to_string(),
+            message: "Transfer source and destination accounts must be different".to_string(),
             entity: None,
         }
     }
