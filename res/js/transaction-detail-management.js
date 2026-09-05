@@ -273,9 +273,15 @@ function showRoundingWarning(userInput, calculated) {
     
     const warning = document.getElementById('rounding-warning');
     const diff = Math.abs(userInput - calculated);
+    // Fable-5 #8 — wording now reads "auto-adjusted to N" because the
+    // form actually rewrites the tax-included input rather than
+    // leaving three inconsistent numbers behind for the user to
+    // ignore. Uses the new i18n keys (2451-2454); the older
+    // `rounding_warning_*` keys are dead but stay in the resource
+    // table as a fallback for anything that still resolved them.
     warning.innerHTML = `
-        <strong>⚠️ ${i18n.t('detail_mgmt.rounding_warning_title')}</strong><br>
-        ${i18n.t('detail_mgmt.rounding_warning_message')
+        <strong>✏️ ${i18n.t('detail_mgmt.rounding_auto_correct_title')}</strong><br>
+        ${i18n.t('detail_mgmt.rounding_auto_correct_message')
             .replace('{userInput}', userInput.toLocaleString())
             .replace('{calculated}', calculated.toLocaleString())
             .replace('{diff}', diff)}

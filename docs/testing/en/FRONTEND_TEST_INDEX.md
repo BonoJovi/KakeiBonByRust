@@ -3,7 +3,7 @@
 This document provides a complete index of all frontend tests implemented in JavaScript.
 
 **Last Updated**: 2026-08-21 JST  
-**Total Tests**: 703 (jest suites; 22 test files, per `npm test`)
+**Total Tests**: 714 (jest suites; 22 test files, per `npm test`)
 
 ---
 
@@ -33,7 +33,7 @@ and are **not** added again to the grand total.
 ### Feature-Specific Tests (280 tests)
 - **transaction-edit.test.js** - Transaction edit tests (112)
 - **transaction-detail-management.test.js** - Transaction detail management tests (51)
-- **transaction-detail-tax-calculation.test.js** - Tax calculation tests (17)
+- **transaction-detail-tax-calculation.test.js** - Tax calculation tests (28)
 - **toast.test.js** - Toast notification tests (14)
 - **tax-calc.test.js** - Tax calculation utility tests (10)
 - **product-autocomplete.test.js** - Product autocomplete UI tests (10)
@@ -74,10 +74,10 @@ and are **not** added again to the grand total.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **Feature-Specific Tests** | **280** |
+| **Feature-Specific Tests** | **291** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
-| transaction-detail-tax-calculation.test.js | 17 |
+| transaction-detail-tax-calculation.test.js | 28 |
 | toast.test.js | 14 |
 | tax-calc.test.js | 10 |
 | product-autocomplete.test.js | 10 |
@@ -92,7 +92,7 @@ and are **not** added again to the grand total.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **Total (jest)** | **703** |
+| **Total (jest)** | **714** |
 
 Grand total is Screen + Feature + Aggregation (Common Test Suites are helper
 libraries invoked from Screen-Specific files and their assertions are already

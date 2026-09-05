@@ -1930,3 +1930,18 @@ INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESO
 -- ============================================================================
 INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2449, 'transaction_mgmt.transfer_same_account', 'en', 'Transfer source and destination accounts must be different.', 'transaction_mgmt', 'Frontend guard against TRANSFER with FROM == TO', datetime('now'));
 INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2450, 'transaction_mgmt.transfer_same_account', 'ja', '振替元口座と振替先口座は別の口座を指定してください。', 'transaction_mgmt', 'TRANSFER で FROM==TO のフロント側ガード', datetime('now'));
+
+-- ============================================================================
+-- Tax-included auto-correction notice (Fable-5 review #8)
+-- The detail form used to warn "rounding may not match" and still let
+-- the user save three inconsistent numbers; it now derives `tax` from
+-- the authoritative `round(excluded * rate)` formula and rewrites the
+-- tax-included input to `excluded + tax`, so the DB never sees the
+-- inconsistent triple. The modal wording changes from "warning" to
+-- "auto-adjusted to N". Old keys 1287-1290 stay in the file as a dead
+-- fallback (safe: nothing references them any more).
+-- ============================================================================
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2451, 'detail_mgmt.rounding_auto_correct_title', 'en', 'Tax-included amount auto-adjusted', 'detail_mgmt', 'Auto-correct notice title (Fable-5 #8)', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2452, 'detail_mgmt.rounding_auto_correct_title', 'ja', '税込金額を自動調整しました', 'detail_mgmt', '自動調整通知のタイトル (Fable-5 #8)', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2453, 'detail_mgmt.rounding_auto_correct_message', 'en', 'The typed amount {userInput} cannot be represented exactly under the current rounding setting — adjusted to {calculated} (diff: {diff}).', 'detail_mgmt', 'Auto-correct notice body (Fable-5 #8)', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2454, 'detail_mgmt.rounding_auto_correct_message', 'ja', '入力された税込金額 {userInput} は現在の丸め設定では整数表現できないため、{calculated} に自動調整しました（差: {diff}）。', 'detail_mgmt', '自動調整通知の本文 (Fable-5 #8)', datetime('now'));

@@ -12,13 +12,63 @@
  * - rounding types: 0 = floor, 1 = half-up, 2 = ceil
  */
 
-function applyTaxRounding(value, roundingType) {
+export function applyTaxRounding(value, roundingType) {
     switch (roundingType) {
         case 0: return Math.floor(value);
         case 1: return Math.round(value);
         case 2: return Math.ceil(value);
         default: return Math.floor(value);
     }
+}
+
+/**
+ * Pure helper: derive the (excluded, tax) pair from a tax-included input,
+ * always producing a self-consistent tax-included figure `excluded + tax`.
+ *
+ * Fable-5 review #8 — the historic shape `tax = included - excluded` could
+ * leave `tax != round(excluded * rate)` under FLOOR / CEIL rounding, so a
+ * transaction detail row would carry three inconsistent numbers to the DB
+ * (and the aggregation pipeline then produced a fourth one for the same
+ * row). The tax value now always comes from the authoritative
+ * `round(excluded * rate)` formula, and the returned `includedCorrected`
+ * is `excluded + tax`; when it differs from the input, the caller has a
+ * clean signal to tell the user "adjusted to N".
+ *
+ * @param {number} includedInput  tax-included amount typed by the user (>=0)
+ * @param {number} rate           tax rate in percent (e.g. 8, 10; 0 means no tax)
+ * @param {number} roundingType   0=floor, 1=half-up, 2=ceil
+ * @returns {{ excluded: number, tax: number, includedCorrected: number }}
+ */
+export function calculateFromIncluding(includedInput, rate, roundingType) {
+    if (!includedInput) {
+        return { excluded: 0, tax: 0, includedCorrected: 0 };
+    }
+    if (rate === 0) {
+        return { excluded: includedInput, tax: 0, includedCorrected: includedInput };
+    }
+
+    const excluded = applyTaxRounding(includedInput / (1 + rate / 100), roundingType);
+    const tax = applyTaxRounding(excluded * rate / 100, roundingType);
+    const includedCorrected = excluded + tax;
+    return { excluded, tax, includedCorrected };
+}
+
+/**
+ * Pure helper: derive the (tax, included) pair from a tax-excluded input.
+ * Symmetric with `calculateFromIncluding`; this branch has always been
+ * internally consistent because it starts from the authoritative formula.
+ *
+ * @param {number} excludedInput  tax-excluded amount typed by the user (>=0)
+ * @param {number} rate           tax rate in percent
+ * @param {number} roundingType   0=floor, 1=half-up, 2=ceil
+ * @returns {{ tax: number, included: number }}
+ */
+export function calculateFromExcluding(excludedInput, rate, roundingType) {
+    if (!excludedInput) {
+        return { tax: 0, included: 0 };
+    }
+    const tax = applyTaxRounding(excludedInput * rate / 100, roundingType);
+    return { tax, included: excludedInput + tax };
 }
 
 /**
@@ -46,46 +96,53 @@ export function setupTaxCalculationListeners(elements, options = {}) {
     let lastTaxInputField = null;
 
     function calcFromExcluding() {
-        const excluded = parseFloat(amountExcludingTax.value) || 0;
+        const excludedInput = parseFloat(amountExcludingTax.value) || 0;
         const rate = parseFloat(taxRate.value) || 0;
         onCleared();
         lastTaxInputField = 'excluding';
 
-        const tax = applyTaxRounding(excluded * rate / 100, getRoundingType());
-        const included = excluded + tax;
+        const { tax, included } = calculateFromExcluding(excludedInput, rate, getRoundingType());
         taxAmount.value = tax;
         amountIncludingTax.value = included || '';
     }
 
     function calcFromIncluding() {
-        const included = parseFloat(amountIncludingTax.value) || 0;
+        const includedInput = parseFloat(amountIncludingTax.value) || 0;
         const rate = parseFloat(taxRate.value) || 0;
         onCleared();
         lastTaxInputField = 'including';
 
-        if (!included) {
+        if (!includedInput) {
             amountExcludingTax.value = '';
             taxAmount.value = 0;
             return;
         }
-        if (rate === 0) {
-            amountExcludingTax.value = included || '';
-            taxAmount.value = 0;
-            return;
-        }
 
-        const roundingType = getRoundingType();
-        const excluded = applyTaxRounding(included / (1 + rate / 100), roundingType);
-        const tax = included - excluded;
+        const { excluded, tax, includedCorrected } =
+            calculateFromIncluding(includedInput, rate, getRoundingType());
 
-        const taxReverse = applyTaxRounding(excluded * rate / 100, roundingType);
-        const includedReverse = excluded + taxReverse;
-        if (includedReverse !== included) {
-            onDiscrepancy({ userInput: included, calculated: includedReverse });
+        // Fable-5 #8 — historic shape was `tax = included - excluded`
+        // followed by a warning-only comparison against
+        // `round(excluded * rate)`. That could persist THREE inconsistent
+        // numbers to the DB (AMOUNT / TAX_AMOUNT / AMOUNT_INCLUDING_TAX)
+        // and the aggregation pipeline then produced a FOURTH number for
+        // the same row. `calculateFromIncluding` now derives `tax` from
+        // the authoritative formula, so the three saved numbers stay
+        // self-consistent (`excluded + tax == includedCorrected`) and
+        // match what `services::transaction::calculate_recommended_total`
+        // recomputes on the Rust side. When the correction changes the
+        // typed input we fire `onDiscrepancy` so the caller can tell the
+        // user "adjusted to N".
+        if (includedCorrected !== includedInput) {
+            onDiscrepancy({ userInput: includedInput, calculated: includedCorrected });
         }
 
         taxAmount.value = tax;
         amountExcludingTax.value = excluded || '';
+        // Rewrite the tax-included input so the on-screen number matches
+        // what will be saved (and what the aggregation will later
+        // recompute).
+        amountIncludingTax.value = includedCorrected || '';
     }
 
     function recalculateUsingLastField() {
