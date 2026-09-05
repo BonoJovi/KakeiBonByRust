@@ -135,16 +135,43 @@ impl EncryptionService {
         Ok(next_id)
     }
 
-    /// Re-encrypt all encrypted fields for a user
+    /// Re-encrypt all encrypted fields for a user, committing its own
+    /// transaction. Kept for tests and any caller that doesn't need to
+    /// share a transaction with a subsequent password-hash update; the
+    /// production password-change path uses
+    /// [`re_encrypt_user_data_in_tx`] so the re-encryption and the
+    /// `USERS.PAW` update commit atomically (Fable-5 review #5).
     pub async fn re_encrypt_user_data(
         &self,
         user_id: i64,
         old_password: &str,
         new_password: &str,
     ) -> Result<(), EncryptionError> {
+        let mut tx = self.pool.begin().await?;
+        self.re_encrypt_user_data_in_tx(&mut tx, user_id, old_password, new_password).await?;
+        tx.commit().await?;
+        Ok(())
+    }
+
+    /// Re-encrypt all encrypted fields for a user inside an existing
+    /// transaction. The caller owns the `BEGIN`/`COMMIT` so that a
+    /// password-change flow can bundle re-encryption, the
+    /// `USERS.PAW` update, and optional username update into a single
+    /// atomic step. If any step fails (or the process dies mid-write),
+    /// the transaction rolls back and the DB is left with either the
+    /// old key + old hash *or* the new key + new hash — never the
+    /// "new key + old hash" state that would strand every encrypted
+    /// value behind a password nobody knows (Fable-5 review #5).
+    pub async fn re_encrypt_user_data_in_tx<'c>(
+        &self,
+        tx: &mut sqlx::Transaction<'c, sqlx::Sqlite>,
+        user_id: i64,
+        old_password: &str,
+        new_password: &str,
+    ) -> Result<(), EncryptionError> {
         // Get all encrypted fields
         let encrypted_fields = self.get_encrypted_fields().await?;
-        
+
         if encrypted_fields.is_empty() {
             return Ok(());
         }
@@ -160,9 +187,6 @@ impl EncryptionService {
 
         let old_crypto = Crypto::new(old_key);
         let new_crypto = Crypto::new(new_key);
-
-        // Start transaction
-        let mut tx = self.pool.begin().await?;
 
         // Group fields by table
         let mut tables: std::collections::HashMap<String, Vec<String>> = std::collections::HashMap::new();
@@ -206,7 +230,7 @@ impl EncryptionService {
             // Fetch every encrypted row for this user (not just the first).
             let rows = sqlx::query(&select_query)
                 .bind(user_id)
-                .fetch_all(&mut *tx)
+                .fetch_all(&mut **tx)
                 .await?;
 
             for row in rows {
@@ -255,13 +279,10 @@ impl EncryptionService {
                     }
                     query = query.bind(rowid);
 
-                    query.execute(&mut *tx).await?;
+                    query.execute(&mut **tx).await?;
                 }
             }
         }
-
-        // Commit transaction
-        tx.commit().await?;
 
         Ok(())
     }

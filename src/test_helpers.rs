@@ -97,7 +97,7 @@ pub mod validation {
 #[allow(dead_code)]
 pub mod database {
     use sqlx::sqlite::SqlitePool;
-    use crate::security::hash_password;
+    use crate::security::{generate_encryption_salt, hash_password};
     use crate::consts::{ROLE_ADMIN, ROLE_USER};
     use crate::db::connect_db;
 
@@ -150,41 +150,49 @@ pub mod database {
         pool
     }
 
-    /// Create a test admin user in the database
+    /// Create a test admin user in the database. Seeds a per-user
+    /// `ENCRYPTION_SALT` so password-change tests exercising the
+    /// `_with_password` path (which calls `re_encrypt_user_data_in_tx`)
+    /// can fetch a salt like production users do.
     pub async fn create_test_admin(pool: &SqlitePool, username: &str, password: &str) -> i64 {
         let now = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
         let password_hash = hash_password(password).unwrap();
-        
+        let salt = generate_encryption_salt();
+
         let result = sqlx::query(
-            "INSERT INTO USERS (NAME, PAW, ROLE, ENTRY_DT) VALUES (?, ?, ?, ?)"
+            "INSERT INTO USERS (NAME, PAW, ROLE, ENCRYPTION_SALT, ENTRY_DT) VALUES (?, ?, ?, ?, ?)"
         )
         .bind(username)
         .bind(password_hash)
         .bind(ROLE_ADMIN)
+        .bind(salt.as_slice())
         .bind(now)
         .execute(pool)
         .await
         .unwrap();
-        
+
         result.last_insert_rowid()
     }
 
-    /// Create a test general user in the database
+    /// Create a test general user in the database. See
+    /// [`create_test_admin`] for the ENCRYPTION_SALT rationale.
     pub async fn create_test_user(pool: &SqlitePool, username: &str, password: &str) -> i64 {
         let now = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
         let password_hash = hash_password(password).unwrap();
-        
+        let salt = generate_encryption_salt();
+
         let result = sqlx::query(
-            "INSERT INTO USERS (NAME, PAW, ROLE, ENTRY_DT) VALUES (?, ?, ?, ?)"
+            "INSERT INTO USERS (NAME, PAW, ROLE, ENCRYPTION_SALT, ENTRY_DT) VALUES (?, ?, ?, ?, ?)"
         )
         .bind(username)
         .bind(password_hash)
         .bind(ROLE_USER)
+        .bind(salt.as_slice())
         .bind(now)
         .execute(pool)
         .await
         .unwrap();
-        
+
         result.last_insert_rowid()
     }
 }

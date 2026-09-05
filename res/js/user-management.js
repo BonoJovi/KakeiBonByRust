@@ -92,14 +92,26 @@ function initModals() {
         cancelButtonId: 'cancel-btn',
         onOpen: (mode, data) => {
             const title = document.getElementById('modal-title');
+            const oldPasswordGroup = document.getElementById('old-password-group');
             const passwordGroup = document.getElementById('password-group');
             const passwordConfirmGroup = document.getElementById('password-confirm-group');
+            const oldPasswordInput = document.getElementById('old-password');
             const passwordInput = document.getElementById('password');
             const passwordConfirmInput = document.getElementById('password-confirm');
             const usernameInput = document.getElementById('username');
 
+            // Clear password fields on every open so a previous session's
+            // typed value can't leak into the next edit.
+            oldPasswordInput.value = '';
+            passwordInput.value = '';
+            passwordConfirmInput.value = '';
+
             if (mode === 'add') {
                 title.textContent = i18n.t('user_mgmt.add_user');
+                // New users have no encrypted data yet, so the "current
+                // password" prompt would be meaningless — hide it.
+                oldPasswordGroup.style.display = 'none';
+                oldPasswordInput.required = false;
                 passwordGroup.style.display = 'block';
                 passwordConfirmGroup.style.display = 'block';
                 passwordInput.required = true;
@@ -108,8 +120,13 @@ function initModals() {
                 usernameInput.value = '';
             } else if (mode === 'edit') {
                 title.textContent = i18n.t('user_mgmt.edit_user');
-                passwordGroup.style.display = 'none';
-                passwordConfirmGroup.style.display = 'none';
+                // Password fields are optional at the browser level —
+                // JS requires `old-password` only when the user actually
+                // types a new password (see handleUserSave).
+                oldPasswordGroup.style.display = 'block';
+                passwordGroup.style.display = 'block';
+                passwordConfirmGroup.style.display = 'block';
+                oldPasswordInput.required = false;
                 passwordInput.required = false;
                 passwordConfirmInput.required = false;
                 editingUserId = data.userId;
@@ -504,6 +521,7 @@ function closeUserModal() {
 async function handleUserSave() {
     const usernameInput = document.getElementById('username');
     const username = usernameInput.value.trim();
+    const oldPassword = document.getElementById('old-password').value;
     const password = document.getElementById('password').value;
     const passwordConfirm = document.getElementById('password-confirm').value;
 
@@ -525,9 +543,22 @@ async function handleUserSave() {
         throw new Error('Password too short');
     }
 
+    // Fable-5 review #1 — changing the password requires the caller to
+    // prove knowledge of the current one so the backend can decrypt
+    // every encrypted field with the old key before re-encrypting with
+    // the new one. Without this guard the frontend could send the new
+    // hash while every ciphertext still needs the old key, orphaning
+    // the data forever (see change_password_in_tx). Only enforced in
+    // edit mode — add mode has no encrypted data yet and no old
+    // password to check against.
+    if (editingUserId && password && !oldPassword) {
+        showMessage('form-message', i18n.t('error.current_password_required'), 'error');
+        throw new Error('Current password required');
+    }
+
     try {
         if (editingUserId) {
-            await updateUser(editingUserId, username, password || null);
+            await updateUser(editingUserId, username, password || null, oldPassword || null);
         } else {
             await createUser(username, password);
         }
@@ -535,6 +566,19 @@ async function handleUserSave() {
         await loadUsers();
     } catch (error) {
         console.error('Failed to save user:', error);
+
+        // Password-change specific: the current-password field is where
+        // the user can act on this failure, so surface the error inline
+        // there instead of dropping the generic classifier's toast.
+        // Handled before mapMasterErrorCode because the shared
+        // classifier has no concept of the current-password input.
+        if (error && typeof error === 'object'
+            && error.code === API_ERROR_CODES.OLD_PASSWORD_INCORRECT) {
+            const oldPasswordInput = document.getElementById('old-password');
+            showValidationError(oldPasswordInput, i18n.t('error.old_password_incorrect'));
+            showMessage('form-message', '', '');
+            throw error;
+        }
 
         // Backend not_found means the edit target was deleted between
         // load and save. Reload the list so the "the list has been
@@ -609,25 +653,45 @@ async function createUser(username, password) {
     return userId;
 }
 
-async function updateUser(userId, username, password) {
+async function updateUser(userId, username, password, oldPassword) {
     showMessage('form-message', i18n.t('user_mgmt.updating'), 'info');
-    
+
     const user = currentUsers.find(u => u.user_id === userId);
     if (!user) {
         throw new Error('User not found');
     }
-    
-    const updateParams = {
-        username: username !== user.name ? username : null,
-        password: password
-    };
-    
-    if (user.role === ROLE_ADMIN) {
-        await invoke('update_admin_user_info', updateParams);
+
+    // Only send the username field when it actually changed — a NULL
+    // username on the backend means "leave it alone" and lets the
+    // rename-only vs. password-only paths share one shape.
+    const nextUsername = username !== user.name ? username : null;
+
+    if (password) {
+        // Password change: route through the `_with_reencryption`
+        // command so re-encrypting every ENCRYPTED_FIELDS row and
+        // updating USERS.PAW commit as one atomic step. The `_info`
+        // command below deliberately can no longer accept a password
+        // argument (Fable-5 review #1, #5).
+        const params = {
+            oldPassword,
+            username: nextUsername,
+            newPassword: password,
+        };
+        if (user.role === ROLE_ADMIN) {
+            await invoke('update_admin_user_with_reencryption', params);
+        } else {
+            await invoke('update_general_user_with_reencryption', params);
+        }
     } else {
-        await invoke('update_general_user_info', updateParams);
+        // Rename-only path.
+        const params = { username: nextUsername };
+        if (user.role === ROLE_ADMIN) {
+            await invoke('update_admin_user_info', params);
+        } else {
+            await invoke('update_general_user_info', params);
+        }
     }
-    
+
     showMessage('form-message', i18n.t('user_mgmt.user_updated'), 'success');
 }
 

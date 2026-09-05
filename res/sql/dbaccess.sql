@@ -1902,3 +1902,16 @@ INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESO
 INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2440, 'product_mgmt.delete_in_use', 'ja', 'この商品は明細で使用中のため削除できません。代わりに無効化してください。', 'product_mgmt', '削除ロック時のトースト（参照中）', datetime('now'));
 INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2441, 'account_mgmt.delete_in_use', 'en', 'Cannot delete this account because it is still used by transactions or recurring rules. Disable it instead.', 'account_mgmt', 'Delete-lock toast when account is referenced', datetime('now'));
 INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2442, 'account_mgmt.delete_in_use', 'ja', 'この口座は取引・繰り返し予定で使用中のため削除できません。代わりに無効化してください。', 'account_mgmt', '削除ロック時のトースト（参照中）', datetime('now'));
+
+-- ============================================================================
+-- Password change: current-password prompt + error copy (Fable-5 review #1/#5)
+-- The edit modal now asks for the current password before changing it so
+-- the backend can re-encrypt every ENCRYPTED_FIELDS row with the old key
+-- and commit the new hash + new ciphertext together (change_password_in_tx).
+-- ============================================================================
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2443, 'user_mgmt.current_password', 'en', 'Current password:', 'user_mgmt', 'Current-password label on the user edit modal', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2444, 'user_mgmt.current_password', 'ja', '現在のパスワード:', 'user_mgmt', 'ユーザー編集モーダルの現在のパスワードラベル', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2445, 'error.current_password_required', 'en', 'Please enter your current password to change it.', 'error', 'Frontend guard when new password is set but old password is blank', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2446, 'error.current_password_required', 'ja', 'パスワードを変更するには現在のパスワードを入力してください。', 'error', '新パスワード指定時に旧パスワード未入力のガード', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2447, 'error.old_password_incorrect', 'en', 'Current password is incorrect.', 'error', 'Surface for SecurityError::InvalidPassword on password change', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2448, 'error.old_password_incorrect', 'ja', '現在のパスワードが正しくありません。', 'error', 'パスワード変更時の旧パスワード不一致の表示', datetime('now'));

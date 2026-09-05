@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-08-26 JST  
-**総テスト数**: 306件 (delta 反映後。`cargo test --lib` の権威的総数は 551 で、pre-existing gap は別 PR でバックフィル予定)
+**総テスト数**: 308件 (delta 反映後。`cargo test --lib` の権威的総数は 553 で、pre-existing gap は別 PR でバックフィル予定)
 
 ---
 
@@ -272,21 +272,23 @@ AES-256-GCM暗号化・復号化のテスト。
 
 | テスト関数 | 説明 | ファイル | 行 |
 |-----------|------|---------|-----|
-| `test_register_general_user` | 一般ユーザー登録テスト | src/services/user_management.rs | 354 |
-| `test_update_general_user` | 一般ユーザー更新テスト | src/services/user_management.rs | 371 |
-| `test_update_general_user_username_only` | ユーザー名のみ更新 | src/services/user_management.rs | 396 |
-| `test_update_general_user_password_only` | パスワードのみ更新 | src/services/user_management.rs | 417 |
-| `test_update_general_user_username_and_password` | ユーザー名とパスワード両方更新 | src/services/user_management.rs | 447 |
-| `test_update_admin_user` | 管理者ユーザー更新テスト | src/services/user_management.rs | 477 |
-| `test_update_admin_user_username_only` | 管理者のユーザー名のみ更新 | src/services/user_management.rs | 493 |
-| `test_update_admin_user_password_only` | 管理者のパスワードのみ更新 | src/services/user_management.rs | 511 |
-| `test_update_admin_user_username_and_password` | 管理者のユーザー名とパスワード両方更新 | src/services/user_management.rs | 538 |
-| `test_delete_general_user` | 一般ユーザー削除テスト | src/services/user_management.rs | 565 |
-| `test_cannot_delete_admin_user` | 管理者ユーザー削除の防止 | src/services/user_management.rs | 581 |
-| `test_duplicate_username` | 重複ユーザー名のエラー | src/services/user_management.rs | 592 |
-| `test_list_users` | ユーザー一覧取得テスト | src/services/user_management.rs | 606 |
+| `test_register_general_user` | 一般ユーザー登録テスト | src/services/user_management.rs | 494 |
+| `test_update_general_user` | 一般ユーザー更新テスト | src/services/user_management.rs | 511 |
+| `test_update_general_user_username_only` | ユーザー名のみ更新 | src/services/user_management.rs | 539 |
+| `test_update_general_user_password_only` | `_with_password` 経由でパスワードのみ更新 (Fable-5 #1/#5) | src/services/user_management.rs | 560 |
+| `test_update_general_user_username_and_password` | `_with_password` 経由でユーザー名とパスワードを 1 tx で更新 (Fable-5 #1/#5) | src/services/user_management.rs | 593 |
+| `test_update_admin_user` | 管理者ユーザー更新テスト | src/services/user_management.rs | 626 |
+| `test_update_admin_user_username_only` | 管理者のユーザー名のみ更新 | src/services/user_management.rs | 642 |
+| `test_update_admin_user_password_only` | `_with_password` 経由で管理者のパスワードのみ更新 (Fable-5 #1/#5) | src/services/user_management.rs | 660 |
+| `test_update_admin_user_username_and_password` | 管理者のユーザー名とパスワードを 1 tx で更新 (Fable-5 #1/#5) | src/services/user_management.rs | 690 |
+| `test_delete_general_user` | 一般ユーザー削除テスト | src/services/user_management.rs | 720 |
+| `test_cannot_delete_admin_user` | 管理者ユーザー削除の防止 | src/services/user_management.rs | 736 |
+| `test_duplicate_username` | 重複ユーザー名のエラー | src/services/user_management.rs | 747 |
+| `test_list_users` | ユーザー一覧取得テスト | src/services/user_management.rs | 761 |
+| `test_update_general_user_with_password_rejects_wrong_old_password` | 現在パスワード誤り → `OldPasswordIncorrect`。ハッシュ・ユーザー名とも未変更 (Fable-5 #1/#5) | src/services/user_management.rs | 809 |
+| `test_update_admin_user_with_password_rejects_wrong_old_password` | 管理者版: 現在パスワード誤り → `OldPasswordIncorrect`。ハッシュ未変更 (Fable-5 #1/#5) | src/services/user_management.rs | 850 |
 
-**合計**: 13件
+**合計**: 15件
 
 ### services/encryption.rs
 
@@ -544,7 +546,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **283件** |
+| **インラインテスト** | **285件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -553,7 +555,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | api_error.rs | 10 |
 | services/master_data.rs | 4 |
 | services/auth.rs | 16 |
-| services/user_management.rs | 13 |
+| services/user_management.rs | 15 |
 | services/encryption.rs | 8 |
 | services/account.rs | 10 |
 | services/category.rs | 25 |
@@ -566,7 +568,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/i18n.rs | 8 |
 | services/recurring.rs | 5 |
 | lib.rs | 6 |
-| **総計** | **306件** |
+| **総計** | **308件** |
 
 ---
 
