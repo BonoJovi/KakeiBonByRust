@@ -210,6 +210,17 @@ export function parseGroupBy(groupBy) {
  */
 export function translateAggregationError(error) {
     const errorStr = formatApiError(error);
+    // `formatApiError` delegates to `String(err)` for anything not
+    // shaped like `{ message: string }`, so a plain object without a
+    // `.message` (`"[object Object]"`), an empty ApiError message
+    // (`""`), or a null/undefined error (`"null"` / `"undefined"`)
+    // would all otherwise be shown verbatim in the banner. Swap them
+    // for a localised generic — suppressing exactly the class of
+    // string Fable-5 #9 was named after.
+    const UNUSABLE_COERCED = new Set(['[object Object]', 'null', 'undefined']);
+    if (!errorStr || UNUSABLE_COERCED.has(errorStr)) {
+        return i18n.t('aggregation.error_generic') || 'An unexpected error occurred while aggregating.';
+    }
     if (errorStr.includes('Invalid year')) return i18n.t('aggregation.error_invalid_year') || errorStr;
     if (errorStr.includes('Invalid month')) return i18n.t('aggregation.error_invalid_month') || errorStr;
     if (errorStr.includes('Invalid date range')) return i18n.t('aggregation.error_invalid_date_range') || errorStr;

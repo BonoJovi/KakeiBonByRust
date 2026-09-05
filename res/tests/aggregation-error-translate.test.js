@@ -30,6 +30,7 @@ const translations = {
     'aggregation.error_invalid_date_range': 'i18n:invalid_date_range',
     'aggregation.error_invalid_day': 'i18n:invalid_day',
     'aggregation.error_invalid_date_format': 'i18n:invalid_date_format',
+    'aggregation.error_generic': 'i18n:generic',
 };
 jest.unstable_mockModule('../js/i18n.js', () => ({
     default: {
@@ -100,19 +101,24 @@ describe('translateAggregationError — Error instances', () => {
 });
 
 describe('translateAggregationError — hostile shapes', () => {
-    test('object with no .message never renders "[object Object]"', () => {
-        // Pre-fix this would have gone through Object.prototype.toString().
-        // Post-fix formatApiError delegates to String(err) which is still
-        // "[object Object]" — but the important thing is the aggregation
-        // banner never shows that literal for the shape callers actually
-        // produce (Err(String) / ApiError / Error). We assert the pin
-        // scenario the bug called out (ApiError with .message) above,
-        // and here just confirm the helper does not throw on odd input.
-        expect(() => translateAggregationError({ weird: true })).not.toThrow();
+    // These pin down the actual banner text the user sees. Pre-fix the
+    // helper returned the literal `"[object Object]"` for every shape
+    // in this block; the point of Fable-5 #9 is that that string is
+    // never surfaced. All three cases must land on the localised
+    // generic fallback (`aggregation.error_generic`).
+    test('object with no .message resolves to the generic i18n banner (was "[object Object]")', () => {
+        expect(translateAggregationError({ weird: true })).toBe('i18n:generic');
     });
 
-    test('null / undefined do not throw', () => {
-        expect(() => translateAggregationError(null)).not.toThrow();
-        expect(() => translateAggregationError(undefined)).not.toThrow();
+    test('null resolves to the generic i18n banner', () => {
+        expect(translateAggregationError(null)).toBe('i18n:generic');
+    });
+
+    test('undefined resolves to the generic i18n banner', () => {
+        expect(translateAggregationError(undefined)).toBe('i18n:generic');
+    });
+
+    test('empty-string ApiError message resolves to the generic banner too', () => {
+        expect(translateAggregationError({ code: 'internal', message: '' })).toBe('i18n:generic');
     });
 });
