@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-08-26 JST  
-**Total Tests**: 312 (delta-tracked; the full authoritative count from `cargo test --lib` is 554, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 315 (delta-tracked; the full authoritative count from `cargo test --lib` is 557, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -474,8 +474,11 @@ Aggregation service tests.
 | `test_category_filter_category2_targets_detail_column` | Category2 filter now targets the existent `td.CATEGORY2_CODE` (detail scope) instead of the non-existent `th.CATEGORY2_CODE` (PR6, Fable-5 #17) | src/services/aggregation.rs | 2766 |
 | `test_category_filter_category3_targets_detail_column` | Category3 filter targets `td.CATEGORY2/3_CODE` (PR6, Fable-5 #17) | src/services/aggregation.rs | 2782 |
 | `test_account_query_applies_category_filter_to_all_union_branches` | Account UNION ALL query now applies the category filter to all 4 branches and binds the value 4x — regression pin for the silent drop (PR6, Fable-5 #18) | src/services/aggregation.rs | 2807 |
+| `test_detail_query_included_header_legacy_null_row_no_double_taxation` | Header `TAX_INCLUDED_TYPE = TAX_INCLUDED (0)` + legacy `AMOUNT_INCLUDING_TAX = NULL` row is treated as already-included, not grossed up a second time (Fable-5 #3 residual) | src/services/aggregation.rs | 2647 |
+| `test_detail_query_included_header_zero_col_no_double_taxation` | Same #3 residual with `AMOUNT_INCLUDING_TAX = 0` (frontend empty-input sentinel) under a tax-included header | src/services/aggregation.rs | 2684 |
+| `test_detail_query_matches_header_query_for_included_ledger` | Header-dim vs detail-dim aggregation agree on the same tax-included transaction (Fable-5 #4) | src/services/aggregation.rs | 2720 |
 
-**Total**: 10 tests
+**Total**: 13 tests
 
 ### services/session.rs
 
@@ -550,7 +553,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **289** |
+| **Inline Tests** | **292** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -567,12 +570,12 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/product.rs | 13 |
 | services/shop.rs | 12 |
 | services/transaction.rs | 21 |
-| services/aggregation.rs | 10 |
+| services/aggregation.rs | 13 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 5 |
 | lib.rs | 6 |
-| **Total** | **312** |
+| **Total** | **315** |
 
 ---
 

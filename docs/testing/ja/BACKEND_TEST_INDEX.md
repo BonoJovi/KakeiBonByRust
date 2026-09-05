@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-08-26 JST  
-**総テスト数**: 312件 (delta 反映後。`cargo test --lib` の権威的総数は 554 で、pre-existing gap は別 PR でバックフィル予定)
+**総テスト数**: 315件 (delta 反映後。`cargo test --lib` の権威的総数は 557 で、pre-existing gap は別 PR でバックフィル予定)
 
 ---
 
@@ -474,8 +474,11 @@ AES-256-GCM暗号化・復号化のテスト。
 | `test_category_filter_category2_targets_detail_column` | Category2 フィルタが `td.CATEGORY2_CODE` (detail-scope、実在する列) を参照し、`th.CATEGORY2_CODE` (存在しない列) を参照しないこと (PR6, Fable-5 #17) | src/services/aggregation.rs | 2766 |
 | `test_category_filter_category3_targets_detail_column` | Category3 フィルタが `td.CATEGORY2/3_CODE` を参照すること (PR6, Fable-5 #17) | src/services/aggregation.rs | 2782 |
 | `test_account_query_applies_category_filter_to_all_union_branches` | 口座別集計の 4-branch UNION ALL 全てにカテゴリフィルタが適用され、bind vec に 4 回登場することを確認 (PR6, Fable-5 #18: silent drop の regression pin) | src/services/aggregation.rs | 2807 |
+| `test_detail_query_included_header_legacy_null_row_no_double_taxation` | 税込ヘッダー (`TAX_INCLUDED_TYPE = TAX_INCLUDED (0)`) + レガシー `AMOUNT_INCLUDING_TAX = NULL` 明細を already-included として扱い、二重課税しない (Fable-5 #3 残) | src/services/aggregation.rs | 2647 |
+| `test_detail_query_included_header_zero_col_no_double_taxation` | 同じ #3 残: 税込ヘッダー配下で `AMOUNT_INCLUDING_TAX = 0` (フロント空欄) も already-included 扱い | src/services/aggregation.rs | 2684 |
+| `test_detail_query_matches_header_query_for_included_ledger` | 税込ヘッダーの同一伝票で header-dim と detail-dim の集計値が一致する (Fable-5 #4) | src/services/aggregation.rs | 2720 |
 
-**合計**: 10件
+**合計**: 13件
 
 ### services/session.rs
 
@@ -550,7 +553,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **289件** |
+| **インラインテスト** | **292件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -567,12 +570,12 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/product.rs | 13 |
 | services/shop.rs | 12 |
 | services/transaction.rs | 21 |
-| services/aggregation.rs | 10 |
+| services/aggregation.rs | 13 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 5 |
 | lib.rs | 6 |
-| **総計** | **312件** |
+| **総計** | **315件** |
 
 ---
 
