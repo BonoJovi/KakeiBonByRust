@@ -470,7 +470,7 @@ Transaction management service tests.
 | `test_update_header_rejects_transfer_from_equals_to` | Same guard on the update entry point (Fable-5 #20) | src/services/transaction.rs | 3316 |
 | `test_add_detail_dedupes_memo_text_across_multiple_adds` | `add_transaction_detail` reuses the existing MEMOS row when the memo text already exists for the user — no duplicate row, and both details share one MEMO_ID (Fable-5 #7) | src/services/transaction.rs | 4343 |
 | `test_add_detail_reuses_memo_shared_with_header` | An add whose memo text matches the parent header's MEMO_ID reuses that MEMO_ID so the "shared memo" update path is reachable from adds too (Fable-5 #7) | src/services/transaction.rs | 4387 |
-| `test_add_detail_failure_does_not_orphan_memo` | Ownership check runs before any write, so a rejected add cannot leak a MEMOS row (Fable-5 #7) | src/services/transaction.rs | 4450 |
+| `test_add_detail_failure_rolls_back_memo_insert_in_same_tx` | An FK failure inside the DETAIL_INSERT (missing `(USER_ID, CATEGORY1_CODE) → CATEGORY1`) rolls the MEMO insert back too — MEMOS stays empty (Fable-5 #7) | src/services/transaction.rs | 4453 |
 | `transfer_same_account_maps_to_stable_wire_code_and_omits_entity` | `TransactionError::TransferSameAccount` maps to `ApiError { code: "transfer_same_account", entity: None }` — pins the wire contract so a future refactor cannot silently downgrade to the generic `validation` fallback (CodeRabbit on #127) | src/services/transaction.rs | 4517 |
 
 **Total**: 33 tests

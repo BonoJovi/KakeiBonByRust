@@ -470,7 +470,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | `test_update_header_rejects_transfer_from_equals_to` | 更新入口にも同じガード (Fable-5 #20) | src/services/transaction.rs | 3316 |
 | `test_add_detail_dedupes_memo_text_across_multiple_adds` | `add_transaction_detail` が同一ユーザーの同一メモ本文で既存 MEMOS 行を再利用。重複行なし、両明細で MEMO_ID 共有 (Fable-5 #7) | src/services/transaction.rs | 4343 |
 | `test_add_detail_reuses_memo_shared_with_header` | 親ヘッダーの MEMO_ID と同じ本文で detail 追加すると同じ MEMO_ID を再利用。update の「共有メモ」経路が add 側からも到達可能に (Fable-5 #7) | src/services/transaction.rs | 4387 |
-| `test_add_detail_failure_does_not_orphan_memo` | 所有権チェックが全書き込みの前に走るため、拒否された add が MEMOS 行を残さない (Fable-5 #7) | src/services/transaction.rs | 4450 |
+| `test_add_detail_failure_rolls_back_memo_insert_in_same_tx` | DETAIL_INSERT 内の FK 失敗 (`(USER_ID, CATEGORY1_CODE) → CATEGORY1` が未 seed) で MEMO insert も同 tx でロールバック、MEMOS 空を確認 (Fable-5 #7) | src/services/transaction.rs | 4453 |
 | `transfer_same_account_maps_to_stable_wire_code_and_omits_entity` | `TransactionError::TransferSameAccount` が `ApiError { code: "transfer_same_account", entity: None }` に変換される wire contract を固定。将来のリファクタで generic な `validation` フォールバックへ無言で退化させないための pin (#127 の CodeRabbit 指摘) | src/services/transaction.rs | 4517 |
 
 **合計**: 33件
