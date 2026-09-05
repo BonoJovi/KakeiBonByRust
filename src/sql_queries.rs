@@ -615,21 +615,31 @@ SELECT
     a.ACCOUNT_CODE,
     a.ACCOUNT_NAME,
     a.INITIAL_BALANCE
-        + COALESCE(SUM(CASE
-            WHEN th.CATEGORY1_CODE = 'INCOME'
-                 AND th.TO_ACCOUNT_CODE = a.ACCOUNT_CODE
-                THEN th.TOTAL_AMOUNT
-            WHEN th.CATEGORY1_CODE = 'EXPENSE'
-                 AND th.FROM_ACCOUNT_CODE = a.ACCOUNT_CODE
-                THEN -th.TOTAL_AMOUNT
-            WHEN th.CATEGORY1_CODE = 'TRANSFER'
-                 AND th.TO_ACCOUNT_CODE = a.ACCOUNT_CODE
-                THEN th.TOTAL_AMOUNT
-            WHEN th.CATEGORY1_CODE = 'TRANSFER'
-                 AND th.FROM_ACCOUNT_CODE = a.ACCOUNT_CODE
-                THEN -th.TOTAL_AMOUNT
-            ELSE 0
-        END), 0) AS BALANCE,
+        -- Fable-5 review #20 — sum every applicable arm independently
+        -- instead of using a single CASE that stops at first match.
+        -- The old shape put the TRANSFER-TO arm ahead of the
+        -- TRANSFER-FROM arm, so a self-transfer (from == to == a)
+        -- matched only the credit side and inflated the balance by the
+        -- transfer amount. Four independent CASE expressions each
+        -- resolve to 0 when their condition doesn't fire, so the sum
+        -- nets to zero for a self-transfer even if a stale one is
+        -- already in the DB; the write-side guards in
+        -- `save_transaction_header` / `update_transaction_header`
+        -- prevent new occurrences.
+        + COALESCE(SUM(
+              CASE WHEN th.CATEGORY1_CODE = 'INCOME'
+                        AND th.TO_ACCOUNT_CODE = a.ACCOUNT_CODE
+                   THEN th.TOTAL_AMOUNT ELSE 0 END
+            + CASE WHEN th.CATEGORY1_CODE = 'EXPENSE'
+                        AND th.FROM_ACCOUNT_CODE = a.ACCOUNT_CODE
+                   THEN -th.TOTAL_AMOUNT ELSE 0 END
+            + CASE WHEN th.CATEGORY1_CODE = 'TRANSFER'
+                        AND th.TO_ACCOUNT_CODE = a.ACCOUNT_CODE
+                   THEN th.TOTAL_AMOUNT ELSE 0 END
+            + CASE WHEN th.CATEGORY1_CODE = 'TRANSFER'
+                        AND th.FROM_ACCOUNT_CODE = a.ACCOUNT_CODE
+                   THEN -th.TOTAL_AMOUNT ELSE 0 END
+        ), 0) AS BALANCE,
     a.DISPLAY_ORDER
 FROM ACCOUNTS a
 LEFT JOIN TRANSACTIONS_HEADER th

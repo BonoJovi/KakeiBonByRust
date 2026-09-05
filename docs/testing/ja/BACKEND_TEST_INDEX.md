@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-08-26 JST  
-**総テスト数**: 321件 (差分反映後。`cargo test --lib` の権威的総数は 563 で、既存の未反映分は別 PR でバックフィル予定)
+**総テスト数**: 324件 (差分反映後。`cargo test --lib` の権威的総数は 566 で、既存の未反映分は別 PR でバックフィル予定)
 
 ---
 
@@ -327,8 +327,9 @@ AES-256-GCM暗号化・復号化のテスト。
 | `test_delete_account_rejected_when_referenced_by_recurring_rule` | RECURRING_RULES が参照中なら `ApiError { code: "in_use" }` で削除拒否（マスタ削除ロック） | src/services/account.rs | 864 |
 | `test_delete_account_ignores_other_users_references` | 他ユーザーの同一 ACCOUNT_CODE 参照は削除をブロックしない（コードはユーザースコープ、マスタ削除ロック） | src/services/account.rs | 881 |
 | `test_delete_account_normalizes_input_before_in_use_check` | `"  cash  "` 入力は正規化されてから CHECK_IN_USE に流れ、ガードが発火する（マスタ削除ロック） | src/services/account.rs | 899 |
+| `test_get_account_balances_as_of_self_transfer_nets_to_zero` | FROM == TO の残存 TRANSFER 行はダッシュボード残高で相殺され、残高が水増しされないこと (Fable-5 #20) | src/services/account.rs | 991 |
 
-**合計**: 10件
+**合計**: 11件
 
 ### services/category.rs
 
@@ -459,10 +460,12 @@ AES-256-GCM暗号化・復号化のテスト。
 | `test_find_matching_pattern_preserves_user_ceil_when_settings_match` | `UP + EXCLUDED` にも同じ保証 (Fable-5 #2) | src/services/transaction.rs | 1819 |
 | `test_find_matching_pattern_falls_back_to_priority_when_preferred_mismatches` | 現在設定で `target_total` を再現できない場合、優先順 PATTERNS 探索へフォールバック (Fable-5 #2) | src/services/transaction.rs | 1836 |
 | `test_find_matching_pattern_returns_none_when_no_pattern_fits` | どの組み合わせも `target_total` を再現できない場合は `None`、呼び出し側は設定列でなく TOTAL_AMOUNT を上書き (Fable-5 #2) | src/services/transaction.rs | 1859 |
-| `test_save_header_rejects_invalid_tax_included_type` | `save_transaction_header` が `{TAX_INCLUDED, TAX_EXCLUDED}` 以外の `tax_included_type` を拒否し、無効値が `find_matching_pattern` の「優先設定を先に確認する判定」に流れて残らないこと (#125 の CodeRabbit 指摘) | src/services/transaction.rs | 3157 |
-| `test_update_header_rejects_invalid_tax_included_type` | 更新入口にも同じガード (#125 の CodeRabbit 指摘) | src/services/transaction.rs | 3184 |
+| `test_save_header_rejects_invalid_tax_included_type` | `save_transaction_header` が `{TAX_INCLUDED, TAX_EXCLUDED}` 以外の `tax_included_type` を拒否し、無効値が `find_matching_pattern` の「優先設定を先に確認する判定」に流れて残らないこと (#125 の CodeRabbit 指摘) | src/services/transaction.rs | 3191 |
+| `test_update_header_rejects_invalid_tax_included_type` | 更新入口にも同じガード (#125 の CodeRabbit 指摘) | src/services/transaction.rs | 3218 |
+| `test_save_header_rejects_transfer_from_equals_to` | `save_transaction_header` が FROM == TO の TRANSFER を拒否し、ダッシュボード残高の水増しを防ぐ (Fable-5 #20) | src/services/transaction.rs | 3249 |
+| `test_update_header_rejects_transfer_from_equals_to` | 更新入口にも同じガード (Fable-5 #20) | src/services/transaction.rs | 3277 |
 
-**合計**: 27件
+**合計**: 29件
 
 ### services/aggregation.rs
 
@@ -559,7 +562,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **298件** |
+| **インラインテスト** | **301件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -570,18 +573,18 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/auth.rs | 16 |
 | services/user_management.rs | 19 |
 | services/encryption.rs | 8 |
-| services/account.rs | 10 |
+| services/account.rs | 11 |
 | services/category.rs | 25 |
 | services/manufacturer.rs | 12 |
 | services/product.rs | 13 |
 | services/shop.rs | 12 |
-| services/transaction.rs | 27 |
+| services/transaction.rs | 29 |
 | services/aggregation.rs | 13 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 5 |
 | lib.rs | 6 |
-| **総計** | **321件** |
+| **総計** | **324件** |
 
 ---
 

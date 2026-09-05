@@ -961,6 +961,16 @@ async function handleTransactionSubmit(event) {
         throw new Error('Validation error: memo too long');
     }
 
+    // Fable-5 review #20 — TRANSFER with FROM == TO nets to zero but
+    // the dashboard `ACCOUNT_BALANCES_AS_OF` CASE used to credit only
+    // the TO side, inflating the account balance. The backend now
+    // rejects this outright; catch it here first so the user sees an
+    // inline message instead of a raw ApiError toast.
+    if (category1Code === 'TRANSFER' && fromAccountCode === toAccountCode) {
+        showToast(i18n.t('transaction_mgmt.transfer_same_account'), { variant: 'error' });
+        throw new Error('Validation error: transfer from and to accounts must differ');
+    }
+
     // Convert datetime-local format (YYYY-MM-DDTHH:mm) to SQLite DATETIME format (YYYY-MM-DD HH:MM:SS)
     const transactionDate = transactionDateInput.replace('T', ' ') + ':00';
 

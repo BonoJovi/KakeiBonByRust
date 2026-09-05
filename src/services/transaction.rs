@@ -537,6 +537,23 @@ impl TransactionService {
             ));
         }
 
+        // Fable-5 review #20 — TRANSFER with the same FROM and TO
+        // account is meaningless (net movement is zero) and used to
+        // sneak through both entry points. The dashboard-side
+        // `ACCOUNT_BALANCES_AS_OF` CASE evaluates the +TO arm before
+        // the -FROM arm and stops at first match, so the row was
+        // silently counted as a one-sided credit and inflated the
+        // account balance by the transfer amount. Reject the write
+        // outright; the CASE was made symmetric in the same PR as a
+        // second line of defence for legacy rows.
+        if request.category1_code == "TRANSFER"
+            && request.from_account_code == request.to_account_code
+        {
+            return Err(TransactionError::ValidationError(
+                "Transfer from and to accounts must be different".to_string(),
+            ));
+        }
+
         // Save memo if provided
         let memo_id = if let Some(text) = &request.memo {
             if !text.trim().is_empty() {
@@ -967,6 +984,23 @@ impl TransactionService {
         {
             return Err(TransactionError::ValidationError(
                 "Invalid tax included type".to_string(),
+            ));
+        }
+
+        // Fable-5 review #20 — TRANSFER with the same FROM and TO
+        // account is meaningless (net movement is zero) and used to
+        // sneak through both entry points. The dashboard-side
+        // `ACCOUNT_BALANCES_AS_OF` CASE evaluates the +TO arm before
+        // the -FROM arm and stops at first match, so the row was
+        // silently counted as a one-sided credit and inflated the
+        // account balance by the transfer amount. Reject the write
+        // outright; the CASE was made symmetric in the same PR as a
+        // second line of defence for legacy rows.
+        if request.category1_code == "TRANSFER"
+            && request.from_account_code == request.to_account_code
+        {
+            return Err(TransactionError::ValidationError(
+                "Transfer from and to accounts must be different".to_string(),
             ));
         }
 
@@ -3202,6 +3236,65 @@ mod tests {
         assert!(
             matches!(result, Err(TransactionError::ValidationError(_))),
             "unknown tax_included_type must be rejected on update, got {:?}",
+            result
+        );
+    }
+
+    /// Fable-5 review #20 — TRANSFER with the same source and
+    /// destination account nets to zero but historically inflated the
+    /// dashboard balance because `ACCOUNT_BALANCES_AS_OF` counted the
+    /// +TO arm first and stopped. The write-side guard now rejects
+    /// this outright at both entry points.
+    #[tokio::test]
+    async fn test_save_header_rejects_transfer_from_equals_to() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+
+        let request = SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "TRANSFER".to_string(),
+            from_account_code: "CASH".to_string(),
+            to_account_code: "CASH".to_string(),
+            transaction_date: "2024-01-01 10:00:00".to_string(),
+            total_amount: 2000,
+            tax_rounding_type: consts::TAX_ROUND_DOWN,
+            tax_included_type: consts::TAX_EXCLUDED,
+            memo: None,
+            is_scheduled: None,
+        };
+        let result = service.save_transaction_header(2, request).await;
+        assert!(
+            matches!(result, Err(TransactionError::ValidationError(_))),
+            "TRANSFER with from == to must be rejected, got {:?}",
+            result
+        );
+    }
+
+    /// Companion pin for `update_transaction_header` — same guard on
+    /// the edit path so a valid TRANSFER cannot be mutated into a
+    /// self-transfer.
+    #[tokio::test]
+    async fn test_update_header_rejects_transfer_from_equals_to() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        let request = SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "TRANSFER".to_string(),
+            from_account_code: "BANK".to_string(),
+            to_account_code: "BANK".to_string(),
+            transaction_date: "2024-01-01 10:00:00".to_string(),
+            total_amount: 3000,
+            tax_rounding_type: consts::TAX_ROUND_DOWN,
+            tax_included_type: consts::TAX_EXCLUDED,
+            memo: None,
+            is_scheduled: None,
+        };
+        let result = service.update_transaction_header(2, transaction_id, request).await;
+        assert!(
+            matches!(result, Err(TransactionError::ValidationError(_))),
+            "TRANSFER with from == to must be rejected on update, got {:?}",
             result
         );
     }

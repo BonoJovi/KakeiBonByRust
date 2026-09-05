@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-08-26 JST  
-**Total Tests**: 321 (delta-tracked; the full authoritative count from `cargo test --lib` is 563, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 324 (delta-tracked; the full authoritative count from `cargo test --lib` is 566, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -327,8 +327,9 @@ Account management service tests. Assertions on empty-name and duplicate-code pa
 | `test_delete_account_rejected_when_referenced_by_recurring_rule` | Delete rejected with `ApiError { code: "in_use" }` when any RECURRING_RULES row names the account (master delete-lock) | src/services/account.rs | 864 |
 | `test_delete_account_ignores_other_users_references` | Cross-user references to the same ACCOUNT_CODE do NOT block delete — codes are user-scoped (master delete-lock) | src/services/account.rs | 881 |
 | `test_delete_account_normalizes_input_before_in_use_check` | Delete input (`"  cash  "`) is uppercased/trimmed before the CHECK_IN_USE query so the guard fires (master delete-lock) | src/services/account.rs | 899 |
+| `test_get_account_balances_as_of_self_transfer_nets_to_zero` | Stale TRANSFER row with FROM == TO nets to zero on the dashboard instead of inflating the balance (Fable-5 #20) | src/services/account.rs | 991 |
 
-**Total**: 10 tests
+**Total**: 11 tests
 
 ### services/category.rs
 
@@ -459,10 +460,12 @@ Transaction management service tests.
 | `test_find_matching_pattern_preserves_user_ceil_when_settings_match` | Same guarantee for `UP + EXCLUDED` (Fable-5 #2) | src/services/transaction.rs | 1819 |
 | `test_find_matching_pattern_falls_back_to_priority_when_preferred_mismatches` | When the stored settings do not reproduce the total, fall back to the priority-ordered PATTERNS scan (Fable-5 #2) | src/services/transaction.rs | 1836 |
 | `test_find_matching_pattern_returns_none_when_no_pattern_fits` | No combination reproduces the target → `None`, caller overwrites TOTAL_AMOUNT instead of the setting columns (Fable-5 #2) | src/services/transaction.rs | 1859 |
-| `test_save_header_rejects_invalid_tax_included_type` | `save_transaction_header` rejects `tax_included_type` outside `{TAX_INCLUDED, TAX_EXCLUDED}` so a bogus value cannot survive `find_matching_pattern`'s preferred-first check (CodeRabbit on #125) | src/services/transaction.rs | 3157 |
-| `test_update_header_rejects_invalid_tax_included_type` | Same guard on the update entry point (CodeRabbit on #125) | src/services/transaction.rs | 3184 |
+| `test_save_header_rejects_invalid_tax_included_type` | `save_transaction_header` rejects `tax_included_type` outside `{TAX_INCLUDED, TAX_EXCLUDED}` so a bogus value cannot survive `find_matching_pattern`'s preferred-first check (CodeRabbit on #125) | src/services/transaction.rs | 3191 |
+| `test_update_header_rejects_invalid_tax_included_type` | Same guard on the update entry point (CodeRabbit on #125) | src/services/transaction.rs | 3218 |
+| `test_save_header_rejects_transfer_from_equals_to` | `save_transaction_header` rejects TRANSFER with FROM == TO so a self-transfer cannot inflate the dashboard balance (Fable-5 #20) | src/services/transaction.rs | 3249 |
+| `test_update_header_rejects_transfer_from_equals_to` | Same guard on the update entry point (Fable-5 #20) | src/services/transaction.rs | 3277 |
 
-**Total**: 27 tests
+**Total**: 29 tests
 
 ### services/aggregation.rs
 
@@ -559,7 +562,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **298** |
+| **Inline Tests** | **301** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -570,18 +573,18 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/auth.rs | 16 |
 | services/user_management.rs | 19 |
 | services/encryption.rs | 8 |
-| services/account.rs | 10 |
+| services/account.rs | 11 |
 | services/category.rs | 25 |
 | services/manufacturer.rs | 12 |
 | services/product.rs | 13 |
 | services/shop.rs | 12 |
-| services/transaction.rs | 27 |
+| services/transaction.rs | 29 |
 | services/aggregation.rs | 13 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 5 |
 | lib.rs | 6 |
-| **Total** | **321** |
+| **Total** | **324** |
 
 ---
 
