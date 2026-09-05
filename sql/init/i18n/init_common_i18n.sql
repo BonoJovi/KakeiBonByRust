@@ -33,4 +33,6 @@ VALUES
 (1099, 'common.apply', 'en', 'Apply', 'common', 'Apply button', datetime('now')),
 (1100, 'common.apply', 'ja', '適用', 'common', '適用ボタン', datetime('now')),
 (2079, 'common.not_authenticated', 'en', 'Not authenticated. Please login.', 'common', 'Not authenticated error message', datetime('now')),
-(2080, 'common.not_authenticated', 'ja', '認証されていません。ログインしてください。', 'common', '未認証エラーメッセージ', datetime('now'));
+(2080, 'common.not_authenticated', 'ja', '認証されていません。ログインしてください。', 'common', '未認証エラーメッセージ', datetime('now')),
+(2457, 'common.error_amount_not_integer', 'en', 'Enter a whole number — no decimals, commas, or full-width digits.', 'common', 'Money-field strict integer validation error, shared across detail / transaction / recurring-rule submit paths (Fable-5 #10)', datetime('now')),
+(2458, 'common.error_amount_not_integer', 'ja', '整数で入力してください（小数点・カンマ・全角数字は使えません）。', 'common', '明細 / 入出金 / 繰り返し予定の送信経路で共通利用する、金額フィールドの厳密整数バリデーションエラー (Fable-5 #10)', datetime('now'));
