@@ -3367,16 +3367,10 @@ mod tests {
         // deterministically inside whatever transaction the caller
         // opened, so a rollback pin for `save_transaction_header`
         // becomes a one-line schema addition — no cross-module drag.
-        sqlx::query(
-            "CREATE TRIGGER pin_reject_bad_header BEFORE INSERT ON TRANSACTIONS_HEADER \
-             BEGIN \
-                 SELECT RAISE(FAIL, 'pin-test-rollback') \
-                 WHERE NEW.CATEGORY1_CODE = 'DOES_NOT_EXIST'; \
-             END",
-        )
-        .execute(&pool)
-        .await
-        .unwrap();
+        sqlx::query(crate::sql_queries::TEST_SAVE_HEADER_INSTALL_ROLLBACK_TRIGGER)
+            .execute(&pool)
+            .await
+            .unwrap();
 
         let service = TransactionService::new(pool.clone());
 
@@ -3446,8 +3440,7 @@ mod tests {
 
         // Both headers must reference the SAME MEMO_ID.
         let memo_ids: Vec<i64> = sqlx::query_scalar(
-            "SELECT MEMO_ID FROM TRANSACTIONS_HEADER \
-             WHERE TRANSACTION_ID IN (?, ?) AND MEMO_ID IS NOT NULL ORDER BY TRANSACTION_ID",
+            crate::sql_queries::TEST_SAVE_HEADER_SELECT_MEMO_IDS_BY_TXN_PAIR,
         )
         .bind(txn1)
         .bind(txn2)

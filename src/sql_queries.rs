@@ -2192,6 +2192,29 @@ pub const TEST_ADD_DETAIL_SELECT_DETAIL_MEMO_ID: &str =
 pub const TEST_ADD_DETAIL_COUNT_MEMOS_ORPHAN: &str =
     "SELECT COUNT(*) FROM MEMOS WHERE MEMO_TEXT = ?";
 
+// Fable-5 #6 (CodeRabbit on #131): test-only SQL used by the
+// `save_transaction_header` rollback / dedup pins.
+
+/// `BEFORE INSERT` trigger that fails the HEADER insert on a sentinel
+/// `CATEGORY1_CODE`. Used by the rollback pin to drive a
+/// deterministic failure INSIDE the tx after the MEMO row has been
+/// written, so the pin can assert the MEMO insert rolls back too.
+/// Kept as a `TEST_*` constant instead of an inline literal so a
+/// future schema tweak fails in one place.
+pub const TEST_SAVE_HEADER_INSTALL_ROLLBACK_TRIGGER: &str =
+    "CREATE TRIGGER pin_reject_bad_header BEFORE INSERT ON TRANSACTIONS_HEADER \
+     BEGIN \
+         SELECT RAISE(FAIL, 'pin-test-rollback') \
+         WHERE NEW.CATEGORY1_CODE = 'DOES_NOT_EXIST'; \
+     END";
+
+/// Fetch the MEMO_ID two specific headers reference (filtered to
+/// non-NULL). Used by the header-dedup pin to confirm two saves
+/// with the same memo text land on the same MEMOS row.
+pub const TEST_SAVE_HEADER_SELECT_MEMO_IDS_BY_TXN_PAIR: &str =
+    "SELECT MEMO_ID FROM TRANSACTIONS_HEADER \
+     WHERE TRANSACTION_ID IN (?, ?) AND MEMO_ID IS NOT NULL ORDER BY TRANSACTION_ID";
+
 pub const TEST_TRANSACTION_CREATE_MEMOS_TABLE: &str = r#"
 CREATE TABLE MEMOS (
     MEMO_ID INTEGER PRIMARY KEY AUTOINCREMENT,
