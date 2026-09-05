@@ -8,12 +8,15 @@
  *
  * The Fable-5 #13 divergence pins below build their Date via
  * `Date.UTC(...)` and rely on the runtime being in a non-UTC zone
- * so local-getter and `.toISOString()` views diverge. The Jest test
- * scripts in `res/tests/package.json` prepend `TZ=Asia/Tokyo` for
- * exactly this reason — Node reads TZ at startup, so pinning it
- * inside the file (a) is unreliable across Node versions and (b)
- * definitely doesn't work when CI Node starts under UTC. See the
- * CI failure on PR #134 first push for the confirming reproduction.
+ * so local-getter and `.toISOString()` views diverge. TZ pinning
+ * lives in `res/tests/jest.global-setup.cjs` (wired via the
+ * `"globalSetup"` key in `res/tests/package.json`) — that script
+ * runs in the Jest main process before workers fork, so each
+ * worker's Node starts with `TZ=Asia/Tokyo`. Pinning it inside
+ * this file is unreliable (Node caches TZ at startup) and pinning
+ * it via a shell `TZ=…` prefix in the npm script breaks on Windows
+ * `cmd.exe`. The globalSetup route is cross-platform and adds no
+ * dev dependency.
  *
  * Pure helper — no i18n / DOM / Tauri stubs needed.
  */
