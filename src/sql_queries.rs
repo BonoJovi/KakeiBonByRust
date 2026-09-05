@@ -1195,6 +1195,21 @@ pub const MIGRATE_SHOPS_CASCADE_DROP_OLD_TABLE: &str = "DROP TABLE SHOPS";
 
 pub const MIGRATE_SHOPS_CASCADE_RENAME_TABLE: &str = "ALTER TABLE SHOPS_NEW RENAME TO SHOPS";
 
+/// FK enforcement is per-connection in SQLite. The SHOPS cascade
+/// migration flips it off for the recreate step (DROP would otherwise
+/// trip the parent-check from tables that reference SHOPS.SHOP_ID) and
+/// flips it back on before returning. Kept as constants so the test
+/// path and the production path share the exact strings — CodeRabbit
+/// on #128: "SQL literals in db.rs" belong in `sql_queries.rs` so a
+/// future PRAGMA rename can't drift between the two.
+pub const PRAGMA_FOREIGN_KEYS_OFF: &str = "PRAGMA foreign_keys = OFF";
+pub const PRAGMA_FOREIGN_KEYS_ON: &str = "PRAGMA foreign_keys = ON";
+
+/// Reports one row per FK violation. The SHOPS cascade migration runs
+/// this after the recreate as a belt-and-braces guard so a botched
+/// copy is caught immediately rather than at the next query.
+pub const PRAGMA_FOREIGN_KEY_CHECK: &str = "PRAGMA foreign_key_check";
+
 /// Recreate the non-unique index dropped along with the old table.
 /// The inline `UNIQUE(USER_ID, SHOP_NAME)` on the new table already
 /// gives us the auto-index for the unique constraint; the

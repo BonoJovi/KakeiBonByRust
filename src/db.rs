@@ -628,7 +628,7 @@ impl Database {
 
         // Turn FKs off on THIS connection so the recreate doesn't trip
         // the parent-check when we DROP the old SHOPS table.
-        conn.execute("PRAGMA foreign_keys = OFF").await?;
+        conn.execute(sql_queries::PRAGMA_FOREIGN_KEYS_OFF).await?;
 
         let mut tx = conn.begin().await?;
         tx.execute(sql_queries::MIGRATE_SHOPS_CASCADE_CREATE_NEW_TABLE).await?;
@@ -643,11 +643,11 @@ impl Database {
         tx.execute(sql_queries::MIGRATE_SHOPS_UNIQUE_CREATE_INDEX).await?;
         tx.commit().await?;
 
-        conn.execute("PRAGMA foreign_keys = ON").await?;
+        conn.execute(sql_queries::PRAGMA_FOREIGN_KEYS_ON).await?;
 
         // Belt and braces — if the copy dropped a reference on the
         // floor, catch it here (returned as one row per violation).
-        let violations = sqlx::query("PRAGMA foreign_key_check")
+        let violations = sqlx::query(sql_queries::PRAGMA_FOREIGN_KEY_CHECK)
             .fetch_all(&mut *conn)
             .await?;
         if !violations.is_empty() {
@@ -1618,13 +1618,24 @@ mod tests {
     #[tokio::test]
     async fn migrate_shops_user_id_cascade_adds_cascade_fk_and_preserves_rows() {
         let db = setup_pre_cascade_shops_db().await;
-        // Seed a user + a couple of shops with the pre-fix shape.
+        // Seed a user + a couple of shops with non-default values for
+        // every column the copy touches, so a regression that drops a
+        // column from `MIGRATE_SHOPS_CASCADE_COPY_ROWS` fails this
+        // test (CodeRabbit on #128).
         sqlx::query("INSERT INTO USERS (USER_ID, NAME) VALUES (1, 'alice')")
             .execute(db.pool()).await.unwrap();
-        sqlx::query("INSERT INTO SHOPS (SHOP_ID, USER_ID, SHOP_NAME, DISPLAY_ORDER) VALUES (1, 1, 'AEON', 10)")
-            .execute(db.pool()).await.unwrap();
-        sqlx::query("INSERT INTO SHOPS (SHOP_ID, USER_ID, SHOP_NAME, DISPLAY_ORDER) VALUES (2, 1, 'LAWSON', 20)")
-            .execute(db.pool()).await.unwrap();
+        sqlx::query(
+            "INSERT INTO SHOPS \
+             (SHOP_ID, USER_ID, SHOP_NAME, MEMO, DISPLAY_ORDER, IS_DISABLED, ENTRY_DT, UPDATE_DT) \
+             VALUES (1, 1, 'AEON', 'nearby', 10, 0, '2024-01-15 10:00:00', '2024-06-20 12:34:56')",
+        )
+        .execute(db.pool()).await.unwrap();
+        sqlx::query(
+            "INSERT INTO SHOPS \
+             (SHOP_ID, USER_ID, SHOP_NAME, MEMO, DISPLAY_ORDER, IS_DISABLED, ENTRY_DT, UPDATE_DT) \
+             VALUES (2, 1, 'LAWSON', NULL, 20, 1, '2024-02-01 09:15:00', NULL)",
+        )
+        .execute(db.pool()).await.unwrap();
 
         // Baseline: no cascade FK yet.
         assert_eq!(shops_user_fk_cascade_count(&db).await, 0);
@@ -1634,17 +1645,62 @@ mod tests {
         // Post-migration: cascade FK is now present exactly once.
         assert_eq!(shops_user_fk_cascade_count(&db).await, 1);
 
-        // Rows and their SHOP_ID values survived the copy verbatim.
-        let rows: Vec<(i64, i64, String, i64)> = sqlx::query_as(
-            "SELECT SHOP_ID, USER_ID, SHOP_NAME, DISPLAY_ORDER FROM SHOPS ORDER BY SHOP_ID",
-        )
-        .fetch_all(db.pool())
-        .await
-        .unwrap();
+        // Every one of the eight copied columns survives verbatim.
+        let rows: Vec<(i64, i64, String, Option<String>, i64, i64, String, Option<String>)> =
+            sqlx::query_as(
+                "SELECT SHOP_ID, USER_ID, SHOP_NAME, MEMO, DISPLAY_ORDER, IS_DISABLED, ENTRY_DT, UPDATE_DT \
+                 FROM SHOPS ORDER BY SHOP_ID",
+            )
+            .fetch_all(db.pool())
+            .await
+            .unwrap();
         assert_eq!(
             rows,
-            vec![(1, 1, "AEON".to_string(), 10), (2, 1, "LAWSON".to_string(), 20)]
+            vec![
+                (
+                    1,
+                    1,
+                    "AEON".to_string(),
+                    Some("nearby".to_string()),
+                    10,
+                    0,
+                    "2024-01-15 10:00:00".to_string(),
+                    Some("2024-06-20 12:34:56".to_string()),
+                ),
+                (
+                    2,
+                    1,
+                    "LAWSON".to_string(),
+                    None,
+                    20,
+                    1,
+                    "2024-02-01 09:15:00".to_string(),
+                    None,
+                ),
+            ]
         );
+
+        // UNIQUE(USER_ID, SHOP_NAME) constraint carried over — a new
+        // duplicate INSERT for the same user must be rejected.
+        let dup = sqlx::query("INSERT INTO SHOPS (USER_ID, SHOP_NAME) VALUES (1, 'AEON')")
+            .execute(db.pool())
+            .await;
+        assert!(
+            dup.is_err(),
+            "post-migration duplicate (USER_ID, SHOP_NAME) INSERT must be rejected"
+        );
+
+        // The non-unique lookup index recreated during the migration
+        // must exist — otherwise the DISPLAY_ORDER-scoped scans in
+        // shop.rs quietly degrade to full-table scans.
+        let idx_user_present: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM sqlite_master \
+             WHERE type = 'index' AND tbl_name = 'SHOPS' AND name = 'idx_shops_user'",
+        )
+        .fetch_one(db.pool())
+        .await
+        .unwrap();
+        assert_eq!(idx_user_present, 1, "idx_shops_user must be recreated after the migration");
     }
 
     #[tokio::test]
@@ -1688,7 +1744,7 @@ mod tests {
         // in case the connection returned to us was reused from an
         // earlier `PRAGMA foreign_keys = OFF` window inside the
         // migration.
-        sqlx::query("PRAGMA foreign_keys = ON")
+        sqlx::query(sql_queries::PRAGMA_FOREIGN_KEYS_ON)
             .execute(db.pool())
             .await
             .unwrap();
