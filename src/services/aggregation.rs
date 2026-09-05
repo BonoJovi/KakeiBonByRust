@@ -908,18 +908,23 @@ FROM (
             SUM(CASE
                 -- Fable-5 #3: header-level tax-included declaration wins
                 -- over the per-detail heuristic. Without this, legacy
-                -- rows (AMOUNT_INCLUDING_TAX IS NULL, TAX_INCLUDED_TYPE=0)
-                -- fall into the pretax bucket below and get grossed up
-                -- again, silently over-reporting by the tax rate.
-                -- 0 == consts::TAX_INCLUDED.
-                WHEN th.TAX_INCLUDED_TYPE = 0
+                -- rows (AMOUNT_INCLUDING_TAX IS NULL, tax-included
+                -- header) fall into the pretax bucket below and get
+                -- grossed up again, silently over-reporting by the tax
+                -- rate. The `{tax_included}` placeholder is
+                -- `consts::TAX_INCLUDED` interpolated at build time —
+                -- CodeRabbit #124 review: hard-coding a bare `0` here
+                -- couples the SQL to a specific numeric encoding of the
+                -- constant and would silently drift if the constant is
+                -- ever renumbered.
+                WHEN th.TAX_INCLUDED_TYPE = {tax_included}
                   OR td.TAX_RATE = 0
                   OR (td.AMOUNT_INCLUDING_TAX IS NOT NULL
                       AND td.AMOUNT = td.AMOUNT_INCLUDING_TAX)
                 THEN td.AMOUNT ELSE 0
             END) AS already_included_sum,
             SUM(CASE
-                WHEN th.TAX_INCLUDED_TYPE != 0
+                WHEN th.TAX_INCLUDED_TYPE != {tax_included}
                   AND td.TAX_RATE > 0
                   AND (td.AMOUNT_INCLUDING_TAX IS NULL
                        OR td.AMOUNT != td.AMOUNT_INCLUDING_TAX)
@@ -942,6 +947,7 @@ ORDER BY {order_field} {sort_order}
         where_clause = where_clause,
         order_field = order_field,
         sort_order = sort_order,
+        tax_included = crate::consts::TAX_INCLUDED,
     );
 
     // Bind order matches the placeholder order inside the SQL string above:
