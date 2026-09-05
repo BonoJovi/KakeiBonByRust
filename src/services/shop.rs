@@ -139,15 +139,32 @@ pub async fn delete_shop(
     user_id: i64,
     shop_id: i64,
 ) -> Result<String, ApiError> {
+    // Fable-5 review #14 — the pre-fix form ran `SHOP_CHECK_IN_USE`
+    // and the `IS_DISABLED=1` write on two connections borrowed
+    // independently from the pool. Wrap both in a single tx so
+    // they're one unit at the connection level. KakeiBonByRust is
+    // a single-user Tauri desktop app with no concurrent writers
+    // (no `tokio::spawn`, no background importer, single window),
+    // so the classical TOCTOU race the bug list describes isn't
+    // reachable today; this tx is a defense-in-depth signal that
+    // pins check + delete together as one operation, and a
+    // prerequisite if a future concurrent-writer path lands (that
+    // would also need `BEGIN IMMEDIATE` for full closure — sqlx's
+    // default `begin()` opens the tx as `DEFERRED` and SQLite's
+    // read snapshot doesn't itself detect a concurrent write to
+    // TRANSACTIONS_HEADER between the SELECT and the UPDATE on
+    // SHOPS).
+    let mut tx = pool.begin().await?;
     let (in_use,): (i64,) = sqlx::query_as(sql_queries::SHOP_CHECK_IN_USE)
         .bind(user_id)
         .bind(shop_id)
         .bind(user_id)
         .bind(shop_id)
-        .fetch_one(pool)
+        .fetch_one(&mut *tx)
         .await?;
     master_data::reject_if_in_use(SPEC.entity_label, in_use)?;
-    master_data::run_delete_expect_one(&SPEC, pool, user_id, shop_id).await?;
+    master_data::run_delete_expect_one_in_tx(&SPEC, &mut tx, user_id, shop_id).await?;
+    tx.commit().await?;
     Ok("Shop deleted successfully".to_string())
 }
 

@@ -153,13 +153,19 @@ pub async fn delete_manufacturer(
     user_id: i64,
     manufacturer_id: i64,
 ) -> Result<String, ApiError> {
+    // Fable-5 review #14 — same TOCTOU-window closure as
+    // `delete_shop` / `delete_product`. Check + delete now share
+    // one transaction so a concurrent product insert can never
+    // slip between them.
+    let mut tx = pool.begin().await?;
     let (in_use,): (i64,) = sqlx::query_as(sql_queries::MANUFACTURER_CHECK_IN_USE)
         .bind(user_id)
         .bind(manufacturer_id)
-        .fetch_one(pool)
+        .fetch_one(&mut *tx)
         .await?;
     master_data::reject_if_in_use(SPEC.entity_label, in_use)?;
-    master_data::run_delete_expect_one(&SPEC, pool, user_id, manufacturer_id).await?;
+    master_data::run_delete_expect_one_in_tx(&SPEC, &mut tx, user_id, manufacturer_id).await?;
+    tx.commit().await?;
     Ok("Manufacturer deleted successfully".to_string())
 }
 
