@@ -23,6 +23,7 @@ mod services {
     pub mod period;
     pub mod holiday;
     pub mod master_data;
+    pub mod like_escape;
 }
 
 #[cfg(test)]

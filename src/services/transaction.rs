@@ -2,6 +2,7 @@ use sqlx::{SqlitePool, Row};
 use serde::{Serialize, Deserialize};
 use crate::api_error::ApiError;
 use crate::{sql_queries, consts, validation};
+use crate::services::like_escape::escape_like_pattern;
 
 const ENTITY_LABEL: &str = "Transaction";
 
@@ -284,12 +285,9 @@ fn validate_item_name_length(item_name: &str) -> Result<(), TransactionError> {
         .map_err(TransactionError::ValidationError)
 }
 
-/// Escape SQL LIKE metacharacters so user-supplied text matches literally.
-/// Paired with `LIKE ? ESCAPE '\'` in the query. Backslash must be escaped
-/// first so we do not re-escape the escapes we just added.
-fn escape_like_pattern(s: &str) -> String {
-    s.replace('\\', "\\\\").replace('%', "\\%").replace('_', "\\_")
-}
+// `escape_like_pattern` lives in `crate::services::like_escape` now
+// (Fable-5 review #23 extracted it so `product::search_products_by_name`
+// can share the same escape contract with `LIKE ? ESCAPE '\'`).
 
 /// Result of `recalculate_all_transaction_totals`. The frontend uses this to
 /// tell the user how much work was actually done and where the safety-net
