@@ -5,9 +5,9 @@
   "type": "module",
   "main": "admin-setup.test.js",
   "scripts": {
-    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
-    "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
-    "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage"
+    "test": "TZ=Asia/Tokyo node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test:watch": "TZ=Asia/Tokyo node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
+    "test:coverage": "TZ=Asia/Tokyo node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage"
   },
   "keywords": [],
   "author": "",

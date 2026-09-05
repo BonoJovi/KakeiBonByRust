@@ -6,18 +6,17 @@
  * The old one-liner used UTC, so a JST user who opened the modal
  * before 09:00 JST saw yesterday in every date default.
  *
- * CodeRabbit on #134 noted that if the CI or a contributor runs
- * Jest under `TZ=UTC`, local getters and `.toISOString()` produce
- * the same date and a UTC regression would go undetected. Pin
- * `TZ=Asia/Tokyo` at the top of this file (before any Date value
- * is constructed) so the divergence tests below actually diverge.
- * Node reads `process.env.TZ` on demand for Date operations, so
- * setting it here scopes the timezone to just this test file.
+ * The Fable-5 #13 divergence pins below build their Date via
+ * `Date.UTC(...)` and rely on the runtime being in a non-UTC zone
+ * so local-getter and `.toISOString()` views diverge. The Jest test
+ * scripts in `res/tests/package.json` prepend `TZ=Asia/Tokyo` for
+ * exactly this reason — Node reads TZ at startup, so pinning it
+ * inside the file (a) is unreliable across Node versions and (b)
+ * definitely doesn't work when CI Node starts under UTC. See the
+ * CI failure on PR #134 first push for the confirming reproduction.
  *
  * Pure helper — no i18n / DOM / Tauri stubs needed.
  */
-
-process.env.TZ = 'Asia/Tokyo';
 
 import { formatLocalDate } from '../js/format-local-date.js';
 
