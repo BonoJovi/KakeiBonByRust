@@ -107,4 +107,26 @@ describe('parseAmountStrict — reject (the Fable-5 #10 pin cases)', () => {
     test('trailing period ("1099.") rejected', () => {
         expect(parseAmountStrict('1099.')).toBeNull();
     });
+
+    // CodeRabbit on #133 — precision-loss cases: an all-digits input
+    // whose integer value is past `Number.MAX_SAFE_INTEGER` (2^53-1)
+    // coerces to the nearest representable Number and silently drops
+    // the low bits. The helper must reject those.
+    test('max safe integer (2^53-1) accepted', () => {
+        expect(parseAmountStrict('9007199254740991')).toBe(9007199254740991);
+    });
+
+    test('one past max safe integer ("9007199254740992") rejected — first unsafe int', () => {
+        // Number('9007199254740992') === 9007199254740992 which is still
+        // *representable* but `Number.isSafeInteger` returns false for
+        // anything >= 2^53. Reject to keep the "what the user typed is
+        // what the backend receives" contract.
+        expect(parseAmountStrict('9007199254740992')).toBeNull();
+    });
+
+    test('unsafe integer that also loses precision ("9007199254740993") rejected', () => {
+        // Number('9007199254740993') === 9007199254740992 — the low bit
+        // is gone. Pre-fix this returned 9007199254740992 silently.
+        expect(parseAmountStrict('9007199254740993')).toBeNull();
+    });
 });

@@ -31,5 +31,15 @@ export function parseAmountStrict(raw) {
     const trimmed = String(raw).trim();
     if (trimmed === '') return 0;
     if (!/^\d+$/.test(trimmed)) return null;
-    return Number(trimmed);
+    const value = Number(trimmed);
+    // CodeRabbit on #133 — an all-digits input past 2^53-1 (e.g.
+    // "9007199254740993") coerces to the nearest representable
+    // Number and loses precision silently. Reject it here so the
+    // user sees the validation error rather than a corrupted
+    // amount landing in the backend. `Number.isSafeInteger` also
+    // returns false for `Infinity`, so the check doubles as a
+    // belt-and-suspenders guard even though `Infinity` can't reach
+    // this line under `/^\d+$/`.
+    if (!Number.isSafeInteger(value)) return null;
+    return value;
 }
