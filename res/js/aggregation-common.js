@@ -3,6 +3,7 @@
  */
 import i18n from './i18n.js';
 import { formatApiError } from './master-crud.js';
+import { formatLocalDate } from './format-local-date.js';
 
 /**
  * Render aggregation results to table
@@ -158,16 +159,15 @@ export function getCurrentDate() {
 }
 
 /**
- * Format date as YYYY-MM-DD
+ * Format date as `YYYY-MM-DD` in the browser's local timezone.
+ * Thin re-export of the shared `formatLocalDate` helper — kept
+ * under this file's namespace so existing `AggCommon.formatDate`
+ * callers on the aggregation screens don't have to change (Fable-5 #13).
+ *
  * @param {Date} date - Date to format
  * @returns {string} Formatted date
  */
-export function formatDate(date) {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-}
+export const formatDate = formatLocalDate;
 
 /**
  * Get current week number (ISO 8601)

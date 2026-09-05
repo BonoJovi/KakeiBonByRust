@@ -11,6 +11,7 @@ import { showValidationError, clearValidationError, showMaxLengthError, attachCh
 import { MAX_RULE_NAME_LEN, MAX_ITEM_NAME_LEN, MAX_MEMO_LEN } from './consts.js';
 import { formatApiError, API_ERROR_CODES } from './master-crud.js';
 import { parseAmountStrict } from './parse-amount-strict.js';
+import { formatLocalDate } from './format-local-date.js';
 
 console.log('=== RECURRING-RULE.JS LOADED ===');
 
@@ -57,12 +58,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         setupDeleteModal();
         await loadRules();
 
-        // Default start_date to today, end_date to one year out
+        // Default start_date to today, end_date to one year out.
+        // Fable-5 review #13 — the pre-fix defaults used
+        // `new Date().toISOString().slice(0, 10)` which yields the UTC
+        // date. A JST user opening the modal before 09:00 JST saw
+        // yesterday in all three fields (Daily-interval-1 then wrote
+        // a spurious occurrence, Monthly-day-of-month could skip a
+        // cycle). `formatLocalDate` uses the browser's local getters
+        // so the default matches the user's wall clock.
         const today = new Date();
         const oneYearLater = new Date(today.getFullYear() + 1, today.getMonth(), today.getDate());
-        document.getElementById('start-date').value = today.toISOString().slice(0, 10);
-        document.getElementById('end-date').value = oneYearLater.toISOString().slice(0, 10);
-        document.getElementById('anchor-date').value = today.toISOString().slice(0, 10);
+        document.getElementById('start-date').value = formatLocalDate(today);
+        document.getElementById('end-date').value = formatLocalDate(oneYearLater);
+        document.getElementById('anchor-date').value = formatLocalDate(today);
 
         await fitWindowToScreen();
         // Form is taller than the window; ensure the user starts at the top

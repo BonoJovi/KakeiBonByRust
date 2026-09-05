@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-09-06 JST  
-**総テスト数**: 752件 (jest suite 24 ファイル、`npm test` 実測)
+**総テスト数**: 768件 (jest suite 25 ファイル、`npm test` 実測)
 
 ---
 
@@ -35,6 +35,7 @@
   - [attach-char-counter-ime.test.js](#attach-char-counter-imetestjs)
   - [aggregation-error-translate.test.js](#aggregation-error-translatetestjs)
   - [parse-amount-strict.test.js](#parse-amount-stricttestjs)
+  - [format-local-date.test.js](#format-local-datetestjs)
 - [集計機能テスト](#集計機能テスト)
   - [aggregation-daily.test.js](#aggregation-dailytestjs)
   - [aggregation-weekly.test.js](#aggregation-weeklytestjs)
@@ -602,6 +603,24 @@
 
 ---
 
+### format-local-date.test.js
+
+`res/js/format-local-date.js` の `formatLocalDate` タイムゾーン安全な `YYYY-MM-DD` フォーマッタのテスト (Fable-5 レビュー #13)。旧実装は `new Date().toISOString().slice(0, 10)` (UTC 変換) で、JST ユーザーが 09:00 JST 前に繰り返しルールモーダルを開くと start-date / end-date / anchor-date が全て前日になっていた。ローカル getter (getFullYear / getMonth / getDate) で組み立てる新実装は、実行タイムゾーンに依存せず常に「ローカル壁時計の日付」を返すので、テストはローカル `Date` コンストラクタ経由で書いてある。
+
+**テスト数**: 16件
+
+テストファイルの先頭で `process.env.TZ = 'Asia/Tokyo'` を pin — CodeRabbit on #134 指摘、UTC 実行では local getter と `.toISOString()` の結果が一致するため UTC 回帰が検出できない問題を解消。
+
+| テストブロック | 説明 | テスト数 |
+|--------------|------|---------|
+| normal cases | 通常日付 / 月ゼロ埋め / 日ゼロ埋め / 両方ゼロ埋め / 12月 / 深夜 0 時 / 23:59:59 | 7件 |
+| Fable-5 #13 pin (does not drift to UTC) | UTC 21:30 → JST 翌日 06:30 / UTC 15:30 → JST 翌日 00:30 (UTC/local 発散を確実に検出) + ローカル 06:30 / 23:30 の壁時計固定 | 4件 |
+| boundary years | 1900 / 2100 / 閏年 2月29日 / 年 1 (4桁ゼロ埋め) / 年 999 (4桁ゼロ埋め) | 5件 |
+
+**ファイル**: res/tests/format-local-date.test.js
+
+---
+
 ## 集計機能テスト
 
 ### aggregation-daily.test.js
@@ -766,7 +785,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **329件** |
+| **機能別テスト** | **345件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 29 |
@@ -780,13 +799,14 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | attach-char-counter-ime.test.js | 8 |
 | aggregation-error-translate.test.js | 13 |
 | parse-amount-strict.test.js | 24 |
+| format-local-date.test.js | 16 |
 | **集計機能テスト** | **115件** |
 | aggregation-daily.test.js | 16 |
 | aggregation-weekly.test.js | 22 |
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **752件** |
+| **総計 (jest)** | **768件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 

@@ -28,7 +28,8 @@
     "transform": {},
     "moduleNameMapper": {
       "^@tauri-apps/api/core$": "<rootDir>/__mocks__/@tauri-apps/api/core.js"
-    }
+    },
+    "globalSetup": "<rootDir>/jest.global-setup.cjs"
   }
 }
 
