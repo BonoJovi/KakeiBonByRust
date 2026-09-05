@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-08-26 JST  
-**Total Tests**: 332 (delta-tracked; the full authoritative count from `cargo test --lib` is 574, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 334 (delta-tracked; the full authoritative count from `cargo test --lib` is 576, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -468,12 +468,14 @@ Transaction management service tests.
 | `test_update_header_rejects_invalid_tax_included_type` | Same guard on the update entry point (CodeRabbit on #125) | src/services/transaction.rs | 3257 |
 | `test_save_header_rejects_transfer_from_equals_to` | `save_transaction_header` rejects TRANSFER with FROM == TO so a self-transfer cannot inflate the dashboard balance (Fable-5 #20) | src/services/transaction.rs | 3288 |
 | `test_update_header_rejects_transfer_from_equals_to` | Same guard on the update entry point (Fable-5 #20) | src/services/transaction.rs | 3316 |
-| `test_add_detail_dedupes_memo_text_across_multiple_adds` | `add_transaction_detail` reuses the existing MEMOS row when the memo text already exists for the user — no duplicate row, and both details share one MEMO_ID (Fable-5 #7) | src/services/transaction.rs | 4343 |
-| `test_add_detail_reuses_memo_shared_with_header` | An add whose memo text matches the parent header's MEMO_ID reuses that MEMO_ID so the "shared memo" update path is reachable from adds too (Fable-5 #7) | src/services/transaction.rs | 4387 |
-| `test_add_detail_failure_rolls_back_memo_insert_in_same_tx` | An FK failure inside the DETAIL_INSERT (missing `(USER_ID, CATEGORY1_CODE) → CATEGORY1`) rolls the MEMO insert back too — MEMOS stays empty (Fable-5 #7) | src/services/transaction.rs | 4453 |
-| `transfer_same_account_maps_to_stable_wire_code_and_omits_entity` | `TransactionError::TransferSameAccount` maps to `ApiError { code: "transfer_same_account", entity: None }` — pins the wire contract so a future refactor cannot silently downgrade to the generic `validation` fallback (CodeRabbit on #127) | src/services/transaction.rs | 4517 |
+| `test_save_header_failure_rolls_back_memo_insert_in_same_tx` | HEADER insert failure inside the tx (via a local `RAISE(FAIL)` trigger) rolls the MEMO insert back too — MEMOS stays empty (Fable-5 #6) | src/services/transaction.rs | 3357 |
+| `test_save_header_dedupes_memo_text_across_multiple_saves` | Two saves with the same memo body land on one MEMOS row and share the MEMO_ID (dedup side effect of the tx-based helper reuse, Fable-5 #6) | src/services/transaction.rs | 3427 |
+| `test_add_detail_dedupes_memo_text_across_multiple_adds` | `add_transaction_detail` reuses the existing MEMOS row when the memo text already exists for the user — no duplicate row, and both details share one MEMO_ID (Fable-5 #7) | src/services/transaction.rs | 4475 |
+| `test_add_detail_reuses_memo_shared_with_header` | An add whose memo text matches the parent header's MEMO_ID reuses that MEMO_ID so the "shared memo" update path is reachable from adds too (Fable-5 #7) | src/services/transaction.rs | 4519 |
+| `test_add_detail_failure_rolls_back_memo_insert_in_same_tx` | An FK failure inside the DETAIL_INSERT (missing `(USER_ID, CATEGORY1_CODE) → CATEGORY1`) rolls the MEMO insert back too — MEMOS stays empty (Fable-5 #7) | src/services/transaction.rs | 4585 |
+| `transfer_same_account_maps_to_stable_wire_code_and_omits_entity` | `TransactionError::TransferSameAccount` maps to `ApiError { code: "transfer_same_account", entity: None }` — pins the wire contract so a future refactor cannot silently downgrade to the generic `validation` fallback (CodeRabbit on #127) | src/services/transaction.rs | 4664 |
 
-**Total**: 33 tests
+**Total**: 35 tests
 
 ### services/aggregation.rs
 
@@ -570,7 +572,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **309** |
+| **Inline Tests** | **311** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -586,13 +588,13 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/manufacturer.rs | 12 |
 | services/product.rs | 13 |
 | services/shop.rs | 12 |
-| services/transaction.rs | 33 |
+| services/transaction.rs | 35 |
 | services/aggregation.rs | 13 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 5 |
 | lib.rs | 6 |
-| **Total** | **332** |
+| **Total** | **334** |
 
 ---
 
