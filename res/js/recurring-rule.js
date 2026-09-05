@@ -111,7 +111,25 @@ async function loadAccounts() {
     const toSel = document.getElementById('to-account');
     fromSel.innerHTML = '';
     toSel.innerHTML = '';
+
+    // Fable-5 review #22 — the NONE account's persisted name is
+    // Japanese ("指定なし") from `initialize_none_account`. Mirror the
+    // pattern already used in `transaction-management.js::loadAccounts
+    // ForModal`: add the NONE option first with the localised
+    // `common.unspecified` label, then skip account_code === 'NONE'
+    // when appending the rest so it isn't duplicated.
+    const unspecifiedText = i18n.t('common.unspecified');
+    const fromNoneOpt = document.createElement('option');
+    fromNoneOpt.value = 'NONE';
+    fromNoneOpt.textContent = unspecifiedText;
+    fromSel.appendChild(fromNoneOpt);
+    const toNoneOpt = document.createElement('option');
+    toNoneOpt.value = 'NONE';
+    toNoneOpt.textContent = unspecifiedText;
+    toSel.appendChild(toNoneOpt);
+
     accounts.forEach((acc) => {
+        if (acc.account_code === 'NONE') return;
         const fromOpt = document.createElement('option');
         fromOpt.value = acc.account_code;
         fromOpt.textContent = acc.account_name;

@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-09-06 JST  
-**総テスト数**: 768件 (jest suite 25 ファイル、`npm test` 実測)
+**総テスト数**: 773件 (jest suite 26 ファイル、`npm test` 実測)
 
 ---
 
@@ -36,6 +36,7 @@
   - [aggregation-error-translate.test.js](#aggregation-error-translatetestjs)
   - [parse-amount-strict.test.js](#parse-amount-stricttestjs)
   - [format-local-date.test.js](#format-local-datetestjs)
+  - [aggregation-render-unspecified.test.js](#aggregation-render-unspecifiedtestjs)
 - [集計機能テスト](#集計機能テスト)
   - [aggregation-daily.test.js](#aggregation-dailytestjs)
   - [aggregation-weekly.test.js](#aggregation-weeklytestjs)
@@ -621,6 +622,21 @@
 
 ---
 
+### aggregation-render-unspecified.test.js
+
+`res/js/aggregation-common.js` の `renderResults` における unspecified グループの i18n スワップテスト (Fable-5 レビュー #22)。バックエンド (`aggregation.rs`) は SHOP_ID / PRODUCT_ID が NULL のケース、および `account_code === 'NONE'` のケースで空文字を返すよう修正済み。renderResults 側で空文字を `i18n.t('common.unspecified')` に置換することで、英語 UI で「指定なし」のハードコード漏れが banner に出るのを防ぐ。
+
+**テスト数**: 5件
+
+| テストブロック | 説明 | テスト数 |
+|--------------|------|---------|
+| unspecified-group i18n swap (Fable-5 #22) | 空文字 group_name が i18n ラベルにスワップ / 通常の group_name はそのまま / mixed rows / null group_name も同様 | 4件 |
+| regression: no-results path | 空 results 時に no_results i18n セルが正しく表示される | 1件 |
+
+**ファイル**: res/tests/aggregation-render-unspecified.test.js
+
+---
+
 ## 集計機能テスト
 
 ### aggregation-daily.test.js
@@ -785,7 +801,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **345件** |
+| **機能別テスト** | **350件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 29 |
@@ -800,13 +816,14 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | aggregation-error-translate.test.js | 13 |
 | parse-amount-strict.test.js | 24 |
 | format-local-date.test.js | 16 |
+| aggregation-render-unspecified.test.js | 5 |
 | **集計機能テスト** | **115件** |
 | aggregation-daily.test.js | 16 |
 | aggregation-weekly.test.js | 22 |
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **768件** |
+| **総計 (jest)** | **773件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 

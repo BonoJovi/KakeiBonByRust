@@ -34,10 +34,14 @@ export function renderResults(results, tbody, tfoot) {
     // Render each result row
     results.forEach(result => {
         const row = document.createElement('tr');
-        
-        // Group name
+
+        // Group name — Fable-5 review #22: the backend returns an empty
+        // string when the underlying reference is unspecified (SHOP_ID
+        // NULL, PRODUCT_ID NULL, account_code === 'NONE'). Swap in the
+        // localised "unspecified" label so English users don't see
+        // Japanese "指定なし" leaking through the aggregation banner.
         const nameCell = document.createElement('td');
-        nameCell.textContent = result.group_name;
+        nameCell.textContent = result.group_name || i18n.t('common.unspecified');
         row.appendChild(nameCell);
         
         // Total amount
