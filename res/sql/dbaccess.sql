@@ -670,7 +670,11 @@ CREATE TABLE IF NOT EXISTS SHOPS (
     IS_DISABLED INTEGER DEFAULT 0,
     ENTRY_DT DATETIME NOT NULL DEFAULT (datetime('now')),
     UPDATE_DT DATETIME,
-    FOREIGN KEY (USER_ID) REFERENCES USERS(USER_ID),
+    -- Fable-5 review #11 — match the sibling ACCOUNTS / PRODUCTS /
+    -- MANUFACTURERS / TRANSACTIONS_HEADER / MEMOS FK: cascade the row
+    -- on user deletion. Existing DBs get the same constraint via
+    -- `Database::migrate_shops_user_id_cascade` (table recreate).
+    FOREIGN KEY (USER_ID) REFERENCES USERS(USER_ID) ON DELETE CASCADE,
     -- PR15 (Fable-5 #20): match the sibling MANUFACTURERS / PRODUCTS
     -- constraint. Fresh DBs get the auto-index directly; existing DBs
     -- get an equivalent unique index via `Database::migrate_shops_unique`

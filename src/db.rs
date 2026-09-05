@@ -594,6 +594,77 @@ impl Database {
         Ok(())
     }
 
+    /// Fable-5 review #11 — SHOPS was missing `ON DELETE CASCADE` on
+    /// its `USER_ID` FK, so deleting a user with SHOPS rows failed
+    /// with `FOREIGN KEY constraint failed` and rolled the whole
+    /// DELETE back. SQLite has no `ALTER TABLE ADD FOREIGN KEY`, so
+    /// we recreate the table with the CASCADE clause and copy every
+    /// row across.
+    ///
+    /// Idempotent — a probe against `pragma_foreign_key_list('SHOPS')`
+    /// returns early when the CASCADE FK is already present (fresh
+    /// installs and DBs that already ran this migration).
+    ///
+    /// FK enforcement is disabled for the duration of the recreate
+    /// because DROP TABLE on a table that other tables reference
+    /// (`TRANSACTIONS_HEADER.SHOP_ID`, `RECURRING_RULES.SHOP_ID`)
+    /// would otherwise trigger the parent-check. We flip it back on
+    /// and run `PRAGMA foreign_key_check` before returning so a
+    /// dangling reference from a botched copy is caught here rather
+    /// than at the next query. The connection is acquired once and
+    /// used for every step so the `PRAGMA foreign_keys` toggle stays
+    /// within scope (it is per-connection).
+    pub async fn migrate_shops_user_id_cascade(&self) -> Result<(), sqlx::Error> {
+        use sqlx::{Acquire, Executor, Row};
+
+        let has_cascade: i64 = sqlx::query_scalar(sql_queries::SHOPS_HAS_USER_CASCADE_FK)
+            .fetch_one(&self.pool)
+            .await?;
+        if has_cascade > 0 {
+            return Ok(());
+        }
+
+        let mut conn = self.pool.acquire().await?;
+
+        // Turn FKs off on THIS connection so the recreate doesn't trip
+        // the parent-check when we DROP the old SHOPS table.
+        conn.execute("PRAGMA foreign_keys = OFF").await?;
+
+        let mut tx = conn.begin().await?;
+        tx.execute(sql_queries::MIGRATE_SHOPS_CASCADE_CREATE_NEW_TABLE).await?;
+        tx.execute(sql_queries::MIGRATE_SHOPS_CASCADE_COPY_ROWS).await?;
+        tx.execute(sql_queries::MIGRATE_SHOPS_CASCADE_DROP_OLD_TABLE).await?;
+        tx.execute(sql_queries::MIGRATE_SHOPS_CASCADE_RENAME_TABLE).await?;
+        tx.execute(sql_queries::MIGRATE_SHOPS_CASCADE_CREATE_USER_ORDER_INDEX).await?;
+        // Re-create the manually-named unique index too, in case any
+        // caller looked it up by name. `IF NOT EXISTS` is safe because
+        // the inline `UNIQUE` on the new table already gave us the
+        // constraint via an auto-index; this is a friendlier alias.
+        tx.execute(sql_queries::MIGRATE_SHOPS_UNIQUE_CREATE_INDEX).await?;
+        tx.commit().await?;
+
+        conn.execute("PRAGMA foreign_keys = ON").await?;
+
+        // Belt and braces — if the copy dropped a reference on the
+        // floor, catch it here (returned as one row per violation).
+        let violations = sqlx::query("PRAGMA foreign_key_check")
+            .fetch_all(&mut *conn)
+            .await?;
+        if !violations.is_empty() {
+            let sample: String = violations
+                .first()
+                .and_then(|row| row.try_get::<String, _>(0).ok())
+                .unwrap_or_else(|| "unknown table".to_string());
+            return Err(sqlx::Error::Protocol(format!(
+                "SHOPS CASCADE migration left {} foreign-key violations (first: {})",
+                violations.len(),
+                sample,
+            )));
+        }
+
+        Ok(())
+    }
+
     /// Create new tables for v2.1.0 (idempotent via IF NOT EXISTS).
     async fn create_recurring_tables(&self) -> Result<(), sqlx::Error> {
         sqlx::query(sql_queries::CREATE_RECURRING_RULES_TABLE)
@@ -1495,5 +1566,145 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(is_disabled, 0, "the surviving shop must still be active");
+    }
+
+    // ---- Fable-5 #11 — migrate_shops_user_id_cascade tests ----
+    //
+    // Pre-fix, SHOPS had `FOREIGN KEY (USER_ID) REFERENCES USERS(USER_ID)`
+    // with no `ON DELETE CASCADE`, so deleting a user with SHOPS rows
+    // failed the FK check and aborted the whole DELETE. These tests
+    // spin up the pre-fix shape (SHOPS with a non-cascading FK to a
+    // real USERS table), run the migration, and assert both the
+    // schema change and the resulting delete behaviour.
+
+    /// SHOPS as it shipped before #11 — real FK to USERS but no
+    /// `ON DELETE CASCADE` clause. Kept separate from
+    /// `LEGACY_SHOPS_DDL` (which has no FK at all, since the
+    /// migrate_shops_unique tests don't need one).
+    const PRE_CASCADE_SHOPS_DDL: &str = r#"
+        CREATE TABLE SHOPS (
+            SHOP_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+            USER_ID INTEGER NOT NULL,
+            SHOP_NAME TEXT NOT NULL,
+            MEMO TEXT,
+            DISPLAY_ORDER INTEGER NOT NULL DEFAULT 0,
+            IS_DISABLED INTEGER DEFAULT 0,
+            ENTRY_DT DATETIME NOT NULL DEFAULT (datetime('now')),
+            UPDATE_DT DATETIME,
+            FOREIGN KEY (USER_ID) REFERENCES USERS(USER_ID)
+        )
+    "#;
+
+    async fn setup_pre_cascade_shops_db() -> Database {
+        let db = memory_db().await;
+        sqlx::query("CREATE TABLE USERS (USER_ID INTEGER PRIMARY KEY, NAME TEXT NOT NULL)")
+            .execute(db.pool())
+            .await
+            .expect("USERS");
+        sqlx::query(PRE_CASCADE_SHOPS_DDL)
+            .execute(db.pool())
+            .await
+            .expect("pre-#11 SHOPS");
+        db
+    }
+
+    async fn shops_user_fk_cascade_count(db: &Database) -> i64 {
+        sqlx::query_scalar(sql_queries::SHOPS_HAS_USER_CASCADE_FK)
+            .fetch_one(db.pool())
+            .await
+            .expect("cascade probe")
+    }
+
+    #[tokio::test]
+    async fn migrate_shops_user_id_cascade_adds_cascade_fk_and_preserves_rows() {
+        let db = setup_pre_cascade_shops_db().await;
+        // Seed a user + a couple of shops with the pre-fix shape.
+        sqlx::query("INSERT INTO USERS (USER_ID, NAME) VALUES (1, 'alice')")
+            .execute(db.pool()).await.unwrap();
+        sqlx::query("INSERT INTO SHOPS (SHOP_ID, USER_ID, SHOP_NAME, DISPLAY_ORDER) VALUES (1, 1, 'AEON', 10)")
+            .execute(db.pool()).await.unwrap();
+        sqlx::query("INSERT INTO SHOPS (SHOP_ID, USER_ID, SHOP_NAME, DISPLAY_ORDER) VALUES (2, 1, 'LAWSON', 20)")
+            .execute(db.pool()).await.unwrap();
+
+        // Baseline: no cascade FK yet.
+        assert_eq!(shops_user_fk_cascade_count(&db).await, 0);
+
+        db.migrate_shops_user_id_cascade().await.expect("migration");
+
+        // Post-migration: cascade FK is now present exactly once.
+        assert_eq!(shops_user_fk_cascade_count(&db).await, 1);
+
+        // Rows and their SHOP_ID values survived the copy verbatim.
+        let rows: Vec<(i64, i64, String, i64)> = sqlx::query_as(
+            "SELECT SHOP_ID, USER_ID, SHOP_NAME, DISPLAY_ORDER FROM SHOPS ORDER BY SHOP_ID",
+        )
+        .fetch_all(db.pool())
+        .await
+        .unwrap();
+        assert_eq!(
+            rows,
+            vec![(1, 1, "AEON".to_string(), 10), (2, 1, "LAWSON".to_string(), 20)]
+        );
+    }
+
+    #[tokio::test]
+    async fn migrate_shops_user_id_cascade_is_idempotent() {
+        let db = setup_pre_cascade_shops_db().await;
+        sqlx::query("INSERT INTO USERS (USER_ID, NAME) VALUES (1, 'alice')")
+            .execute(db.pool()).await.unwrap();
+        sqlx::query("INSERT INTO SHOPS (SHOP_ID, USER_ID, SHOP_NAME) VALUES (1, 1, 'AEON')")
+            .execute(db.pool()).await.unwrap();
+
+        db.migrate_shops_user_id_cascade().await.expect("first run");
+        assert_eq!(shops_user_fk_cascade_count(&db).await, 1);
+
+        // Second run must find the cascade FK already present and
+        // return early — no DROP TABLE, no data touched.
+        db.migrate_shops_user_id_cascade().await.expect("second run must be a no-op");
+        let ids: Vec<i64> = sqlx::query_scalar("SELECT SHOP_ID FROM SHOPS")
+            .fetch_all(db.pool())
+            .await
+            .unwrap();
+        assert_eq!(ids, vec![1], "no data should be touched by the idempotent run");
+    }
+
+    /// The end-to-end guarantee that motivates the fix: after the
+    /// migration, deleting a user cascades to their SHOPS rows
+    /// instead of aborting with `FOREIGN KEY constraint failed`.
+    #[tokio::test]
+    async fn user_delete_cascades_to_shops_after_migration() {
+        let db = setup_pre_cascade_shops_db().await;
+        sqlx::query("INSERT INTO USERS (USER_ID, NAME) VALUES (1, 'alice')")
+            .execute(db.pool()).await.unwrap();
+        sqlx::query("INSERT INTO SHOPS (USER_ID, SHOP_NAME) VALUES (1, 'AEON')")
+            .execute(db.pool()).await.unwrap();
+        sqlx::query("INSERT INTO SHOPS (USER_ID, SHOP_NAME) VALUES (1, 'LAWSON')")
+            .execute(db.pool()).await.unwrap();
+
+        db.migrate_shops_user_id_cascade().await.expect("migration");
+
+        // FK enforcement is per-connection in SQLite; the pool's
+        // `after_connect` in `connect_db` sets it, but be explicit here
+        // in case the connection returned to us was reused from an
+        // earlier `PRAGMA foreign_keys = OFF` window inside the
+        // migration.
+        sqlx::query("PRAGMA foreign_keys = ON")
+            .execute(db.pool())
+            .await
+            .unwrap();
+
+        // Deleting the user must succeed and take the SHOPS rows with
+        // it. Before the migration the same DELETE aborted with
+        // `FOREIGN KEY constraint failed`.
+        sqlx::query("DELETE FROM USERS WHERE USER_ID = 1")
+            .execute(db.pool())
+            .await
+            .expect("USER delete must succeed with CASCADE FK");
+
+        let remaining: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM SHOPS")
+            .fetch_one(db.pool())
+            .await
+            .unwrap();
+        assert_eq!(remaining, 0, "SHOPS rows must cascade with their owner");
     }
 }
