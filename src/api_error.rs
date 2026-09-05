@@ -60,6 +60,12 @@ impl ApiError {
     // from `auth_invalid_credentials` (login) so the user-management
     // screen can point the user at the correct input.
     pub const CODE_OLD_PASSWORD_INCORRECT: &'static str = "old_password_incorrect";
+    // Fable-5 #20 (CodeRabbit on #127) — TRANSFER save/update rejected
+    // because FROM and TO are the same account. Kept separate from
+    // generic `validation` so the frontend can render the localised
+    // `transaction_mgmt.transfer_same_account` toast instead of the
+    // raw English fallback via `formatApiError`.
+    pub const CODE_TRANSFER_SAME_ACCOUNT: &'static str = "transfer_same_account";
 
     // ---- Constructors --------------------------------------------------
 
@@ -178,6 +184,19 @@ impl ApiError {
         Self {
             code: Self::CODE_OLD_PASSWORD_INCORRECT.to_string(),
             message: "Current password is incorrect".to_string(),
+            entity: None,
+        }
+    }
+
+    /// TRANSFER save/update refused because the source and destination
+    /// account are the same. Fable-5 #20 (CodeRabbit on #127): kept
+    /// separate from generic `validation` so the frontend routes it
+    /// through the `transaction_mgmt.transfer_same_account` i18n key
+    /// instead of surfacing the English fallback via `formatApiError`.
+    pub fn transfer_same_account() -> Self {
+        Self {
+            code: Self::CODE_TRANSFER_SAME_ACCOUNT.to_string(),
+            message: "Transfer source and destination accounts must be different".to_string(),
             entity: None,
         }
     }

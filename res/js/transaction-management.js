@@ -963,12 +963,16 @@ async function handleTransactionSubmit(event) {
 
     // Fable-5 review #20 — TRANSFER with FROM == TO nets to zero but
     // the dashboard `ACCOUNT_BALANCES_AS_OF` CASE used to credit only
-    // the TO side, inflating the account balance. The backend now
-    // rejects this outright; catch it here first so the user sees an
-    // inline message instead of a raw ApiError toast.
+    // the TO side, inflating the account balance. The backend rejects
+    // this outright (returning `ApiError { code: transfer_same_account }`);
+    // catch it here first so the user sees a specific toast instead
+    // of even reaching the invoke. Returning (rather than throwing)
+    // keeps this outside the surrounding try and avoids an unhandled
+    // Promise rejection if the caller doesn't await this handler
+    // (CodeRabbit on #127).
     if (category1Code === 'TRANSFER' && fromAccountCode === toAccountCode) {
         showToast(i18n.t('transaction_mgmt.transfer_same_account'), { variant: 'error' });
-        throw new Error('Validation error: transfer from and to accounts must differ');
+        return;
     }
 
     // Convert datetime-local format (YYYY-MM-DDTHH:mm) to SQLite DATETIME format (YYYY-MM-DD HH:MM:SS)
@@ -1034,6 +1038,18 @@ async function handleTransactionSubmit(event) {
         
     } catch (error) {
         console.error('Failed to save transaction:', error);
+
+        // Fable-5 #20 — the backend also enforces the FROM != TO
+        // guard for TRANSFER (frontend catches it first, but a
+        // caller that bypasses the frontend still lands here).
+        // Route the typed `transfer_same_account` code to the same
+        // localised toast the frontend guard uses so a ja-JP user
+        // never sees the English fallback message.
+        if (error && typeof error === 'object'
+            && error.code === API_ERROR_CODES.TRANSFER_SAME_ACCOUNT) {
+            showToast(i18n.t('transaction_mgmt.transfer_same_account'), { variant: 'error' });
+            throw error;
+        }
 
         // Route bounded-field validation errors to the offending input.
         // Rust now emits a structured `ApiError { code: 'validation',

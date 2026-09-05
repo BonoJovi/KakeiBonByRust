@@ -213,6 +213,14 @@ pub enum TransactionError {
     DatabaseError(String),
     ValidationError(String),
     NotFound,
+    /// Fable-5 review #20 (CodeRabbit on #127) — TRANSFER was submitted
+    /// with `from_account_code == to_account_code`. Kept as its own
+    /// variant (rather than a generic `ValidationError`) so the
+    /// `From<TransactionError> for ApiError` bridge can map it to a
+    /// dedicated `transfer_same_account` code the frontend renders
+    /// with an i18n key, instead of leaking the raw English message
+    /// through `formatApiError` on a ja-JP UI.
+    TransferSameAccount,
 }
 
 impl std::fmt::Display for TransactionError {
@@ -221,6 +229,9 @@ impl std::fmt::Display for TransactionError {
             TransactionError::DatabaseError(msg) => write!(f, "Database error: {}", msg),
             TransactionError::ValidationError(msg) => write!(f, "Validation error: {}", msg),
             TransactionError::NotFound => write!(f, "Transaction not found"),
+            TransactionError::TransferSameAccount => {
+                write!(f, "Transfer source and destination accounts must be different")
+            }
         }
     }
 }
@@ -256,6 +267,7 @@ impl From<TransactionError> for ApiError {
             TransactionError::NotFound => ApiError::not_found(ENTITY_LABEL),
             TransactionError::ValidationError(msg) => ApiError::validation(msg),
             TransactionError::DatabaseError(msg) => ApiError::database(msg),
+            TransactionError::TransferSameAccount => ApiError::transfer_same_account(),
         }
     }
 }
@@ -549,9 +561,7 @@ impl TransactionService {
         if request.category1_code == "TRANSFER"
             && request.from_account_code == request.to_account_code
         {
-            return Err(TransactionError::ValidationError(
-                "Transfer from and to accounts must be different".to_string(),
-            ));
+            return Err(TransactionError::TransferSameAccount);
         }
 
         // Save memo if provided
@@ -999,9 +1009,7 @@ impl TransactionService {
         if request.category1_code == "TRANSFER"
             && request.from_account_code == request.to_account_code
         {
-            return Err(TransactionError::ValidationError(
-                "Transfer from and to accounts must be different".to_string(),
-            ));
+            return Err(TransactionError::TransferSameAccount);
         }
 
         // Get current transaction header to check current memo_id
@@ -3264,8 +3272,8 @@ mod tests {
         };
         let result = service.save_transaction_header(2, request).await;
         assert!(
-            matches!(result, Err(TransactionError::ValidationError(_))),
-            "TRANSFER with from == to must be rejected, got {:?}",
+            matches!(result, Err(TransactionError::TransferSameAccount)),
+            "TRANSFER with from == to must be rejected with the typed variant, got {:?}",
             result
         );
     }
@@ -3293,8 +3301,8 @@ mod tests {
         };
         let result = service.update_transaction_header(2, transaction_id, request).await;
         assert!(
-            matches!(result, Err(TransactionError::ValidationError(_))),
-            "TRANSFER with from == to must be rejected on update, got {:?}",
+            matches!(result, Err(TransactionError::TransferSameAccount)),
+            "TRANSFER with from == to must be rejected on update with the typed variant, got {:?}",
             result
         );
     }
