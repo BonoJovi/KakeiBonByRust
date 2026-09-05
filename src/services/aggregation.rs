@@ -280,8 +280,14 @@ impl GroupBy {
                     .to_string()
             }
             GroupBy::Shop => {
+                // Fable-5 review #22 — the previous form baked `'指定なし'`
+                // into the SQL as the SHOP-not-set fallback, so the
+                // aggregation banner rendered Japanese even on the
+                // English UI. Return an empty string instead and let
+                // the frontend swap it for `i18n.t('common.unspecified')`
+                // in `aggregation-common.js::renderResults`.
                 "CAST(COALESCE(th.SHOP_ID, 0) AS TEXT) as group_key, \
-                 COALESCE(s.SHOP_NAME, '指定なし') as group_name"
+                 COALESCE(s.SHOP_NAME, '') as group_name"
                     .to_string()
             }
             GroupBy::Date => {
@@ -1007,7 +1013,10 @@ fn build_detail_group_pieces(
         ),
         GroupBy::Product => (
             "CAST(COALESCE(td.PRODUCT_ID, 0) AS TEXT)".to_string(),
-            "COALESCE(p.PRODUCT_NAME, '指定なし')".to_string(),
+            // Fable-5 review #22 — empty string sentinel, swapped to
+            // `i18n.t('common.unspecified')` on the frontend. See
+            // the matching comment on the Shop branch above.
+            "COALESCE(p.PRODUCT_NAME, '')".to_string(),
             "LEFT JOIN PRODUCTS p ON td.USER_ID = p.USER_ID AND td.PRODUCT_ID = p.PRODUCT_ID"
                 .to_string(),
             Vec::new(),
@@ -1079,7 +1088,17 @@ fn build_account_aggregation_query(request: &AggregationRequest) -> (String, Vec
         r#"
 SELECT
     account_data.account_code as group_key,
-    COALESCE(a.ACCOUNT_NAME, '指定なし') as group_name,
+    -- Fable-5 review #22 — the NONE account is initialised via
+    -- `initialize_none_account` with `template_name_ja` ("指定なし"),
+    -- so `a.ACCOUNT_NAME` for it is Japanese regardless of the UI
+    -- language. Return an empty string for both the NONE case and
+    -- any unresolved account (defensive NULL) so the frontend's
+    -- `aggregation-common.js::renderResults` can swap it for
+    -- `i18n.t('common.unspecified')` uniformly across en/ja.
+    CASE
+        WHEN account_data.account_code = 'NONE' THEN ''
+        ELSE COALESCE(a.ACCOUNT_NAME, '')
+    END as group_name,
     SUM(account_data.amount) as total_amount,
     COUNT(*) as count,
     CAST(AVG(account_data.amount) AS INTEGER) as avg_amount
@@ -1989,6 +2008,84 @@ mod tests {
         // Same subquery contract.
         assert!(sql.contains("SUM(sub.signed_amount)"));
         assert!(sql.contains("COUNT(DISTINCT sub.txn_id)"));
+    }
+
+    // Fable-5 review #22 — pins the "no hardcoded 指定なし in the
+    // group_name fallback" contract across Shop / Product / Account
+    // aggregation. Each groupings previously inlined `'指定なし'` as
+    // the COALESCE fallback, which surfaced Japanese on English UIs;
+    // the fix returns an empty string sentinel and the frontend
+    // (`aggregation-common.js::renderResults`) swaps that for
+    // `i18n.t('common.unspecified')`. If any of these tests fail,
+    // a regression has re-introduced the hardcoded Japanese literal
+    // and the aggregation banner will leak locale again.
+
+    #[test]
+    fn test_build_query_shop_uses_empty_string_fallback_no_hardcoded_ja() {
+        let date = NaiveDate::from_ymd_opt(2025, 1, 1).unwrap();
+        let filter = AggregationFilter::new(DateFilter::From(date));
+        let request = AggregationRequest::new(1, filter, GroupBy::Shop);
+
+        let (sql, _binds) = build_query(&request, "ja");
+
+        assert!(
+            !sql.contains("'指定なし'"),
+            "Shop grouping must not hardcode Japanese '指定なし' — swap is now a frontend concern: {}",
+            sql
+        );
+        assert!(
+            sql.contains("COALESCE(s.SHOP_NAME, '')"),
+            "Shop grouping must return the empty-string sentinel for the NULL-shop case: {}",
+            sql
+        );
+    }
+
+    #[test]
+    fn test_build_query_product_uses_empty_string_fallback_no_hardcoded_ja() {
+        let date = NaiveDate::from_ymd_opt(2025, 1, 1).unwrap();
+        let filter = AggregationFilter::new(DateFilter::From(date));
+        let request = AggregationRequest::new(1, filter, GroupBy::Product);
+
+        let (sql, _binds) = build_query(&request, "ja");
+
+        assert!(
+            !sql.contains("'指定なし'"),
+            "Product grouping must not hardcode Japanese '指定なし': {}",
+            sql
+        );
+        assert!(
+            sql.contains("COALESCE(p.PRODUCT_NAME, '')"),
+            "Product grouping must return the empty-string sentinel for the NULL-product case: {}",
+            sql
+        );
+    }
+
+    #[test]
+    fn test_build_query_account_uses_empty_string_for_none_no_hardcoded_ja() {
+        let date = NaiveDate::from_ymd_opt(2025, 1, 1).unwrap();
+        let filter = AggregationFilter::new(DateFilter::From(date));
+        let request = AggregationRequest::new(1, filter, GroupBy::Account);
+
+        let (sql, _binds) = build_query(&request, "ja");
+
+        assert!(
+            !sql.contains("'指定なし'"),
+            "Account grouping must not hardcode Japanese '指定なし' — the NONE account's persisted \
+             `template_name_ja` name is intercepted at build time: {}",
+            sql
+        );
+        // Both branches of the CASE (NONE → '' and every-other-account →
+        // COALESCE-empty) must be present.
+        assert!(
+            sql.contains("account_data.account_code = 'NONE' THEN ''"),
+            "Account grouping must map the NONE account_code to empty string: {}",
+            sql
+        );
+        assert!(
+            sql.contains("COALESCE(a.ACCOUNT_NAME, '')"),
+            "Account grouping must return the empty-string sentinel for a missing account row: {}",
+            sql
+        );
     }
 
     // =========================================================================

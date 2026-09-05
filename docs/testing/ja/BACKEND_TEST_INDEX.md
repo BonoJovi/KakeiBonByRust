@@ -2,8 +2,8 @@
 
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
-**最終更新**: 2026-08-26 JST  
-**総テスト数**: 334件 (差分反映後。`cargo test --lib` の権威的総数は 576 で、既存の未反映分は別 PR でバックフィル予定)
+**最終更新**: 2026-09-06 JST  
+**総テスト数**: 337件 (差分反映後。`cargo test --lib` の権威的総数は 579 で、既存の未反映分は別 PR でバックフィル予定)
 
 ---
 
@@ -496,8 +496,11 @@ AES-256-GCM暗号化・復号化のテスト。
 | `test_category_filter_category2_targets_detail_column` | Category2 フィルタが `td.CATEGORY2_CODE` (detail-scope、実在する列) を参照し、`th.CATEGORY2_CODE` (存在しない列) を参照しないこと (PR6, Fable-5 #17) | src/services/aggregation.rs | 2902 |
 | `test_category_filter_category3_targets_detail_column` | Category3 フィルタが `td.CATEGORY2/3_CODE` を参照すること (PR6, Fable-5 #17) | src/services/aggregation.rs | 2918 |
 | `test_account_query_applies_category_filter_to_all_union_branches` | 口座別集計の 4-branch UNION ALL 全てにカテゴリフィルタが適用され、bind vec に 4 回登場することを確認 (PR6, Fable-5 #18: silent drop の regression pin) | src/services/aggregation.rs | 2943 |
+| `test_build_query_shop_uses_empty_string_fallback_no_hardcoded_ja` | Shop 集計が `COALESCE(s.SHOP_NAME, '')` 空文字 sentinel を返し、日本語ハードコード `'指定なし'` を含まないこと (Fable-5 #22) | src/services/aggregation.rs | 2024 |
+| `test_build_query_product_uses_empty_string_fallback_no_hardcoded_ja` | Product 集計が `COALESCE(p.PRODUCT_NAME, '')` 空文字 sentinel を返し、日本語ハードコード `'指定なし'` を含まないこと (Fable-5 #22) | src/services/aggregation.rs | 2044 |
+| `test_build_query_account_uses_empty_string_for_none_no_hardcoded_ja` | Account 集計が `account_code = 'NONE'` を空文字にマップし、欠損行では `COALESCE(a.ACCOUNT_NAME, '')` を返し、日本語ハードコード `'指定なし'` を含まないこと (Fable-5 #22) | src/services/aggregation.rs | 2064 |
 
-**合計**: 13件
+**合計**: 16件
 
 ### services/session.rs
 
@@ -589,12 +592,12 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/product.rs | 13 |
 | services/shop.rs | 12 |
 | services/transaction.rs | 35 |
-| services/aggregation.rs | 13 |
+| services/aggregation.rs | 16 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 5 |
 | lib.rs | 6 |
-| **総計** | **334件** |
+| **総計** | **337件** |
 
 ---
 

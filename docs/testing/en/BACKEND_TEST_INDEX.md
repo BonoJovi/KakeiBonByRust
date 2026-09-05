@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-08-26 JST  
-**Total Tests**: 334 (delta-tracked; the full authoritative count from `cargo test --lib` is 576, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 337 (delta-tracked; the full authoritative count from `cargo test --lib` is 579, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -496,8 +496,11 @@ Aggregation service tests.
 | `test_category_filter_category2_targets_detail_column` | Category2 filter now targets the existent `td.CATEGORY2_CODE` (detail scope) instead of the non-existent `th.CATEGORY2_CODE` (PR6, Fable-5 #17) | src/services/aggregation.rs | 2902 |
 | `test_category_filter_category3_targets_detail_column` | Category3 filter targets `td.CATEGORY2/3_CODE` (PR6, Fable-5 #17) | src/services/aggregation.rs | 2918 |
 | `test_account_query_applies_category_filter_to_all_union_branches` | Account UNION ALL query now applies the category filter to all 4 branches and binds the value 4x — regression pin for the silent drop (PR6, Fable-5 #18) | src/services/aggregation.rs | 2943 |
+| `test_build_query_shop_uses_empty_string_fallback_no_hardcoded_ja` | Shop grouping returns `COALESCE(s.SHOP_NAME, '')` sentinel, no hardcoded Japanese `'指定なし'` (Fable-5 #22) | src/services/aggregation.rs | 2024 |
+| `test_build_query_product_uses_empty_string_fallback_no_hardcoded_ja` | Product grouping returns `COALESCE(p.PRODUCT_NAME, '')` sentinel, no hardcoded Japanese `'指定なし'` (Fable-5 #22) | src/services/aggregation.rs | 2044 |
+| `test_build_query_account_uses_empty_string_for_none_no_hardcoded_ja` | Account grouping maps `account_code = 'NONE'` to empty string and returns `COALESCE(a.ACCOUNT_NAME, '')` for missing rows — no hardcoded Japanese `'指定なし'` (Fable-5 #22) | src/services/aggregation.rs | 2064 |
 
-**Total**: 13 tests
+**Total**: 16 tests
 
 ### services/session.rs
 
@@ -589,12 +592,12 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/product.rs | 13 |
 | services/shop.rs | 12 |
 | services/transaction.rs | 35 |
-| services/aggregation.rs | 13 |
+| services/aggregation.rs | 16 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 5 |
 | lib.rs | 6 |
-| **Total** | **334** |
+| **Total** | **337** |
 
 ---
 
