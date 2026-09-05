@@ -433,7 +433,23 @@ pub fn calculate_recommended_total_with_settings(
 /// fits, in which case the bulk-recalc flow falls back to overwriting the
 /// total with whatever the existing settings produce.
 ///
-/// Patterns are tried in priority order:
+/// The caller-supplied `preferred` pair (the header's currently-stored
+/// `(rounding, included)`) is always tried first: whenever the existing
+/// settings already reproduce `target_total` — a very common case for
+/// receipts whose total has no fractional part to round — the function
+/// returns them verbatim so the bulk-recalc flow can skip the header
+/// instead of silently rewriting the tax setting columns.
+///
+/// Fable-5 review #2 — without the preferred-first check, a header
+/// saved as `HALF_UP + EXCLUDED` with a round-cent detail (e.g. 500円
+/// at 10 % = 550円 exactly) matched the first PATTERNS entry, which is
+/// `FLOOR + EXCLUDED`, and every bulk recalc silently downgraded the
+/// user's chosen rounding mode to FLOOR.
+///
+/// If the preferred pair doesn't fit, the fallback tries these patterns
+/// in priority order (the order matches what shopkeepers actually do —
+/// floor or half-up dominate, ceil is rare — so "first match wins" lands
+/// on the most plausible setting):
 ///
 ///   1. tax-excluded + floor       (TAX_ROUND_DOWN)
 ///   2. tax-excluded + half-up     (TAX_ROUND_HALF_UP)
@@ -441,12 +457,19 @@ pub fn calculate_recommended_total_with_settings(
 ///   4. tax-included               (the rounding column is irrelevant in
 ///      this mode because no rounding ever happens; we report it back as
 ///      `TAX_ROUND_DOWN` so the caller has a stable value to write)
-///
-/// The order matches what shopkeepers actually do in the wild — most use
-/// floor or half-up, ceil is rare — so the "first match wins" rule lands
-/// on the most plausible setting when several match (which happens often
-/// for receipts whose total has no fractional part to round).
-fn find_matching_pattern(details: &[DetailForRecalc], target_total: i64) -> Option<(i64, i64)> {
+fn find_matching_pattern(
+    details: &[DetailForRecalc],
+    target_total: i64,
+    preferred: (i64, i64),
+) -> Option<(i64, i64)> {
+    // Try the header's current settings first (Fable-5 #2).
+    let (pref_rounding, pref_included) = preferred;
+    if calculate_recommended_total_with_settings(details, pref_rounding, pref_included)
+        == target_total
+    {
+        return Some(preferred);
+    }
+
     const PATTERNS: [(i64, i64); 4] = [
         (consts::TAX_ROUND_DOWN, consts::TAX_EXCLUDED),
         (consts::TAX_ROUND_HALF_UP, consts::TAX_EXCLUDED),
@@ -454,6 +477,10 @@ fn find_matching_pattern(details: &[DetailForRecalc], target_total: i64) -> Opti
         (consts::TAX_ROUND_DOWN, consts::TAX_INCLUDED),
     ];
     for (rounding, included) in PATTERNS {
+        // Skip re-evaluating the preferred pair we already tried.
+        if (rounding, included) == preferred {
+            continue;
+        }
         if calculate_recommended_total_with_settings(details, rounding, included) == target_total {
             return Some((rounding, included));
         }
@@ -493,6 +520,20 @@ impl TransactionService {
         {
             return Err(TransactionError::ValidationError(
                 "Invalid tax rounding type".to_string(),
+            ));
+        }
+
+        // Validate tax included type using constants. CodeRabbit on #125
+        // — without this guard, an unknown value (e.g. 99) can be
+        // written to `TAX_INCLUDED_TYPE` and later handed to
+        // `find_matching_pattern` as `preferred`; the preferred-first
+        // check would then preserve the bogus value across bulk recalc
+        // instead of correcting it.
+        if request.tax_included_type != consts::TAX_INCLUDED
+            && request.tax_included_type != consts::TAX_EXCLUDED
+        {
+            return Err(TransactionError::ValidationError(
+                "Invalid tax included type".to_string(),
             ));
         }
 
@@ -912,6 +953,20 @@ impl TransactionService {
         {
             return Err(TransactionError::ValidationError(
                 "Invalid tax rounding type".to_string(),
+            ));
+        }
+
+        // Validate tax included type using constants. CodeRabbit on #125
+        // — without this guard, an unknown value (e.g. 99) can be
+        // written to `TAX_INCLUDED_TYPE` and later handed to
+        // `find_matching_pattern` as `preferred`; the preferred-first
+        // check would then preserve the bogus value across bulk recalc
+        // instead of correcting it.
+        if request.tax_included_type != consts::TAX_INCLUDED
+            && request.tax_included_type != consts::TAX_EXCLUDED
+        {
+            return Err(TransactionError::ValidationError(
+                "Invalid tax included type".to_string(),
             ));
         }
 
@@ -1440,7 +1495,11 @@ impl TransactionService {
             // overwriting TOTAL_AMOUNT with what the *existing* settings
             // produce, since the user's entry is then internally inconsistent
             // with the details and we have no signal to prefer it.
-            match find_matching_pattern(&details, total_before) {
+            match find_matching_pattern(
+                &details,
+                total_before,
+                (rounding_before, included_before),
+            ) {
                 Some((rounding_after, included_after))
                     if rounding_after == rounding_before
                         && included_after == included_before =>
@@ -1751,6 +1810,89 @@ mod tests {
             calculate_recommended_total(&details, consts::TAX_ROUND_DOWN),
             0
         );
+    }
+
+    // find_matching_pattern — bulk-recalc classifier tests
+    // ============================================================
+    // These pin the preferred-first behaviour that closes
+    // Fable-5 review #2 (bulk recalc silently downgrading the user's
+    // chosen rounding mode to FLOOR on receipts with no fractional
+    // remainder).
+
+    /// Fable-5 review #2 — 500円 × 10% = 550円 exactly. With
+    /// `(HALF_UP, EXCLUDED)` stored on the header, the pre-fix
+    /// classifier tried PATTERNS in fixed order starting from
+    /// `(FLOOR, EXCLUDED)` — which also produces 550 — and returned
+    /// FLOOR, so the bulk recalc downgraded the user's chosen
+    /// rounding mode. The preferred-first check now returns the
+    /// stored setting verbatim whenever it reproduces the total.
+    #[test]
+    fn test_find_matching_pattern_preserves_user_half_up_when_settings_match() {
+        let details = vec![DetailForRecalc {
+            amount: 500,
+            amount_including_tax: Some(0),
+            tax_rate: 10,
+        }];
+        let preferred = (consts::TAX_ROUND_HALF_UP, consts::TAX_EXCLUDED);
+        assert_eq!(
+            find_matching_pattern(&details, 550, preferred),
+            Some(preferred),
+            "HALF_UP + EXCLUDED must be preserved when it reproduces the total"
+        );
+    }
+
+    /// Companion pin — `(UP, EXCLUDED)` on a round-cent receipt used
+    /// to be downgraded to FLOOR for the same reason.
+    #[test]
+    fn test_find_matching_pattern_preserves_user_ceil_when_settings_match() {
+        let details = vec![DetailForRecalc {
+            amount: 500,
+            amount_including_tax: Some(0),
+            tax_rate: 10,
+        }];
+        let preferred = (consts::TAX_ROUND_UP, consts::TAX_EXCLUDED);
+        assert_eq!(
+            find_matching_pattern(&details, 550, preferred),
+            Some(preferred),
+        );
+    }
+
+    /// When the preferred pair does not reproduce the total, the
+    /// classifier must fall back to the priority-ordered PATTERNS
+    /// list — the same behaviour the old code had for every input.
+    #[test]
+    fn test_find_matching_pattern_falls_back_to_priority_when_preferred_mismatches() {
+        // 100円 × 8% → floor(108) = 108 (matches FLOOR+EXCLUDED),
+        // half-up rounds to 108 as well and ceil to 108, so the
+        // priority-ordered fallback lands on FLOOR+EXCLUDED first.
+        // Store the header as INCLUDED (which would sum to 100 verbatim,
+        // not 108) so the preferred check misses.
+        let details = vec![DetailForRecalc {
+            amount: 100,
+            amount_including_tax: Some(0),
+            tax_rate: 8,
+        }];
+        let preferred = (consts::TAX_ROUND_HALF_UP, consts::TAX_INCLUDED);
+        assert_eq!(
+            find_matching_pattern(&details, 108, preferred),
+            Some((consts::TAX_ROUND_DOWN, consts::TAX_EXCLUDED)),
+            "fallback must pick the first PATTERNS entry that fits"
+        );
+    }
+
+    /// Sanity: when no pattern — preferred or fallback — reproduces
+    /// the target, the classifier returns `None` and the caller
+    /// overwrites TOTAL_AMOUNT instead of the setting columns.
+    #[test]
+    fn test_find_matching_pattern_returns_none_when_no_pattern_fits() {
+        let details = vec![DetailForRecalc {
+            amount: 100,
+            amount_including_tax: Some(0),
+            tax_rate: 10,
+        }];
+        // No settings combination produces 999 from 100@10%.
+        let preferred = (consts::TAX_ROUND_HALF_UP, consts::TAX_EXCLUDED);
+        assert_eq!(find_matching_pattern(&details, 999, preferred), None);
     }
 
     async fn setup_test_db() -> SqlitePool {
@@ -3003,6 +3145,65 @@ mod tests {
         };
         let result = service.update_transaction_header(2, transaction_id, request).await;
         assert!(result.is_err());
+    }
+
+    /// CodeRabbit review on #125 — before the fix, `save_transaction_header`
+    /// only validated `tax_rounding_type` and let an unknown
+    /// `tax_included_type` (e.g. 99) reach the DB. `find_matching_pattern`
+    /// would then take the bogus value as `preferred` and, with the
+    /// preferred-first check, silently keep it across bulk recalc.
+    /// Guard added at the service entry point rejects the write outright.
+    #[tokio::test]
+    async fn test_save_header_rejects_invalid_tax_included_type() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+
+        let request = SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "EXPENSE".to_string(),
+            from_account_code: "CASH".to_string(),
+            to_account_code: "BANK".to_string(),
+            transaction_date: "2024-01-01 10:00:00".to_string(),
+            total_amount: 1000,
+            tax_rounding_type: consts::TAX_ROUND_DOWN,
+            tax_included_type: 99,
+            memo: None,
+            is_scheduled: None,
+        };
+        let result = service.save_transaction_header(2, request).await;
+        assert!(
+            matches!(result, Err(TransactionError::ValidationError(_))),
+            "unknown tax_included_type must be rejected, got {:?}",
+            result
+        );
+    }
+
+    /// Companion pin for `update_transaction_header` — same
+    /// class-of-defect blocked at the update entry point.
+    #[tokio::test]
+    async fn test_update_header_rejects_invalid_tax_included_type() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        let request = SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "EXPENSE".to_string(),
+            from_account_code: "CASH".to_string(),
+            to_account_code: "BANK".to_string(),
+            transaction_date: "2024-01-01 10:00:00".to_string(),
+            total_amount: 1000,
+            tax_rounding_type: consts::TAX_ROUND_DOWN,
+            tax_included_type: 42,
+            memo: None,
+            is_scheduled: None,
+        };
+        let result = service.update_transaction_header(2, transaction_id, request).await;
+        assert!(
+            matches!(result, Err(TransactionError::ValidationError(_))),
+            "unknown tax_included_type must be rejected on update, got {:?}",
+            result
+        );
     }
 
     // ========================================================================
