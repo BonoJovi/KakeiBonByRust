@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-08-26 JST  
-**Total Tests**: 308 (delta-tracked; the full authoritative count from `cargo test --lib` is 553, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 312 (delta-tracked; the full authoritative count from `cargo test --lib` is 554, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -272,23 +272,27 @@ User management service tests (CRUD operations).
 
 | Test Function | Description | File | Line |
 |---------------|-------------|------|------|
-| `test_register_general_user` | Test general user registration | src/services/user_management.rs | 494 |
-| `test_update_general_user` | Test general user update | src/services/user_management.rs | 511 |
-| `test_update_general_user_username_only` | Update username only | src/services/user_management.rs | 539 |
-| `test_update_general_user_password_only` | Update password only via `_with_password` (Fable-5 #1/#5) | src/services/user_management.rs | 560 |
-| `test_update_general_user_username_and_password` | Update username + password atomically via `_with_password` (Fable-5 #1/#5) | src/services/user_management.rs | 593 |
-| `test_update_admin_user` | Test admin user update | src/services/user_management.rs | 626 |
-| `test_update_admin_user_username_only` | Update admin username only | src/services/user_management.rs | 642 |
-| `test_update_admin_user_password_only` | Update admin password only via `_with_password` (Fable-5 #1/#5) | src/services/user_management.rs | 660 |
-| `test_update_admin_user_username_and_password` | Update admin username + password atomically (Fable-5 #1/#5) | src/services/user_management.rs | 690 |
-| `test_delete_general_user` | Test general user deletion | src/services/user_management.rs | 720 |
-| `test_cannot_delete_admin_user` | Prevent admin user deletion | src/services/user_management.rs | 736 |
-| `test_duplicate_username` | Test duplicate username error | src/services/user_management.rs | 747 |
-| `test_list_users` | Test user list retrieval | src/services/user_management.rs | 761 |
-| `test_update_general_user_with_password_rejects_wrong_old_password` | Wrong current password → `OldPasswordIncorrect`; hash + username unchanged (Fable-5 #1/#5) | src/services/user_management.rs | 809 |
-| `test_update_admin_user_with_password_rejects_wrong_old_password` | Admin-side counterpart: wrong current password → `OldPasswordIncorrect`; hash unchanged (Fable-5 #1/#5) | src/services/user_management.rs | 850 |
+| `test_register_general_user` | Test general user registration | src/services/user_management.rs | 502 |
+| `test_update_general_user` | Test general user update | src/services/user_management.rs | 519 |
+| `test_update_general_user_username_only` | Update username only | src/services/user_management.rs | 547 |
+| `test_update_general_user_password_only` | Update password only via `_with_password` (Fable-5 #1/#5) | src/services/user_management.rs | 568 |
+| `test_update_general_user_username_and_password` | Update username + password atomically via `_with_password` (Fable-5 #1/#5) | src/services/user_management.rs | 601 |
+| `test_update_admin_user` | Test admin user update | src/services/user_management.rs | 634 |
+| `test_update_admin_user_username_only` | Update admin username only | src/services/user_management.rs | 650 |
+| `test_update_admin_user_password_only` | Update admin password only via `_with_password` (Fable-5 #1/#5) | src/services/user_management.rs | 668 |
+| `test_update_admin_user_username_and_password` | Update admin username + password atomically (Fable-5 #1/#5) | src/services/user_management.rs | 698 |
+| `test_delete_general_user` | Test general user deletion | src/services/user_management.rs | 728 |
+| `test_cannot_delete_admin_user` | Prevent admin user deletion | src/services/user_management.rs | 744 |
+| `test_duplicate_username` | Test duplicate username error | src/services/user_management.rs | 755 |
+| `test_list_users` | Test user list retrieval | src/services/user_management.rs | 769 |
+| `test_register_general_user_accepts_max_chars_of_multibyte_name` | USERS.NAME length guard counts characters, not bytes: accept MAX_NAME_LEN multibyte (issue #37) | src/services/user_management.rs | 785 |
+| `test_register_general_user_rejects_over_max_chars_of_multibyte_name` | Reject MAX_NAME_LEN+1 multibyte on registration (issue #37) | src/services/user_management.rs | 796 |
+| `test_update_general_user_with_password_rejects_wrong_old_password` | Wrong current password → `OldPasswordIncorrect`; hash + username unchanged (Fable-5 #1/#5) | src/services/user_management.rs | 817 |
+| `test_update_general_user_with_password_rename_only_rejects_wrong_old_password` | Rename-only branch also classifies as `OldPasswordIncorrect` (CodeRabbit on #123) | src/services/user_management.rs | 864 |
+| `test_update_admin_user_with_password_rejects_wrong_old_password` | Admin-side counterpart: wrong current password → `OldPasswordIncorrect`; hash unchanged (Fable-5 #1/#5) | src/services/user_management.rs | 891 |
+| `test_update_general_user_rejects_over_max_chars_of_multibyte_name` | Reject MAX_NAME_LEN+1 multibyte on rename (issue #37) | src/services/user_management.rs | 920 |
 
-**Total**: 15 tests
+**Total**: 19 tests
 
 ### services/encryption.rs
 
@@ -546,7 +550,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **285** |
+| **Inline Tests** | **289** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -555,7 +559,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | api_error.rs | 10 |
 | services/master_data.rs | 4 |
 | services/auth.rs | 16 |
-| services/user_management.rs | 15 |
+| services/user_management.rs | 19 |
 | services/encryption.rs | 8 |
 | services/account.rs | 10 |
 | services/category.rs | 25 |
@@ -568,7 +572,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/i18n.rs | 8 |
 | services/recurring.rs | 5 |
 | lib.rs | 6 |
-| **Total** | **308** |
+| **Total** | **312** |
 
 ---
 

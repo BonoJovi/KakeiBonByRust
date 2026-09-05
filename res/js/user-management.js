@@ -101,10 +101,17 @@ function initModals() {
             const usernameInput = document.getElementById('username');
 
             // Clear password fields on every open so a previous session's
-            // typed value can't leak into the next edit.
+            // typed value can't leak into the next edit. The inline
+            // validation error attached to the current-password input
+            // (set by handleUserSave when the backend returns
+            // `old_password_incorrect`) also has to go, otherwise the
+            // wording sticks to the empty field on the next open and
+            // points at input the user has not typed yet (CodeRabbit
+            // review on #123).
             oldPasswordInput.value = '';
             passwordInput.value = '';
             passwordConfirmInput.value = '';
+            clearValidationError(oldPasswordInput);
 
             if (mode === 'add') {
                 title.textContent = i18n.t('user_mgmt.add_user');

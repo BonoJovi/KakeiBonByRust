@@ -722,6 +722,16 @@ pub const TEST_INSERT_USER_ADMIN: &str = "INSERT INTO USERS (USER_ID, NAME, PAW,
 
 pub const TEST_INSERT_USER_GENERAL: &str = "INSERT INTO USERS (USER_ID, NAME, PAW, ROLE, ENTRY_DT) VALUES (2, 'testuser', 'dummy', 1, datetime('now'))";
 
+/// Auto-increment USERS INSERT for test helpers that need a per-user
+/// random `ENCRYPTION_SALT` (so `_with_password` code paths can derive
+/// keys the same way production users do). Kept in one place so a
+/// future USERS column addition only touches one statement — the two
+/// helpers in `test_helpers.rs` used to duplicate this INSERT verbatim
+/// (CodeRabbit review on #123). Bind order: NAME, PAW, ROLE,
+/// ENCRYPTION_SALT, ENTRY_DT.
+pub const TEST_INSERT_USER_WITH_SALT: &str =
+    "INSERT INTO USERS (NAME, PAW, ROLE, ENCRYPTION_SALT, ENTRY_DT) VALUES (?, ?, ?, ?, ?)";
+
 pub const TEST_CATEGORY2_GET_DISPLAY_ORDER: &str = "SELECT DISPLAY_ORDER FROM CATEGORY2 WHERE USER_ID = ? AND CATEGORY2_CODE = ?";
 
 pub const TEST_CATEGORY3_GET_DISPLAY_ORDER: &str = "SELECT DISPLAY_ORDER FROM CATEGORY3 WHERE USER_ID = ? AND CATEGORY3_CODE = ?";

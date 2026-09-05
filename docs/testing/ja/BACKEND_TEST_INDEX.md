@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-08-26 JST  
-**総テスト数**: 308件 (delta 反映後。`cargo test --lib` の権威的総数は 553 で、pre-existing gap は別 PR でバックフィル予定)
+**総テスト数**: 312件 (delta 反映後。`cargo test --lib` の権威的総数は 554 で、pre-existing gap は別 PR でバックフィル予定)
 
 ---
 
@@ -272,23 +272,27 @@ AES-256-GCM暗号化・復号化のテスト。
 
 | テスト関数 | 説明 | ファイル | 行 |
 |-----------|------|---------|-----|
-| `test_register_general_user` | 一般ユーザー登録テスト | src/services/user_management.rs | 494 |
-| `test_update_general_user` | 一般ユーザー更新テスト | src/services/user_management.rs | 511 |
-| `test_update_general_user_username_only` | ユーザー名のみ更新 | src/services/user_management.rs | 539 |
-| `test_update_general_user_password_only` | `_with_password` 経由でパスワードのみ更新 (Fable-5 #1/#5) | src/services/user_management.rs | 560 |
-| `test_update_general_user_username_and_password` | `_with_password` 経由でユーザー名とパスワードを 1 tx で更新 (Fable-5 #1/#5) | src/services/user_management.rs | 593 |
-| `test_update_admin_user` | 管理者ユーザー更新テスト | src/services/user_management.rs | 626 |
-| `test_update_admin_user_username_only` | 管理者のユーザー名のみ更新 | src/services/user_management.rs | 642 |
-| `test_update_admin_user_password_only` | `_with_password` 経由で管理者のパスワードのみ更新 (Fable-5 #1/#5) | src/services/user_management.rs | 660 |
-| `test_update_admin_user_username_and_password` | 管理者のユーザー名とパスワードを 1 tx で更新 (Fable-5 #1/#5) | src/services/user_management.rs | 690 |
-| `test_delete_general_user` | 一般ユーザー削除テスト | src/services/user_management.rs | 720 |
-| `test_cannot_delete_admin_user` | 管理者ユーザー削除の防止 | src/services/user_management.rs | 736 |
-| `test_duplicate_username` | 重複ユーザー名のエラー | src/services/user_management.rs | 747 |
-| `test_list_users` | ユーザー一覧取得テスト | src/services/user_management.rs | 761 |
-| `test_update_general_user_with_password_rejects_wrong_old_password` | 現在パスワード誤り → `OldPasswordIncorrect`。ハッシュ・ユーザー名とも未変更 (Fable-5 #1/#5) | src/services/user_management.rs | 809 |
-| `test_update_admin_user_with_password_rejects_wrong_old_password` | 管理者版: 現在パスワード誤り → `OldPasswordIncorrect`。ハッシュ未変更 (Fable-5 #1/#5) | src/services/user_management.rs | 850 |
+| `test_register_general_user` | 一般ユーザー登録テスト | src/services/user_management.rs | 502 |
+| `test_update_general_user` | 一般ユーザー更新テスト | src/services/user_management.rs | 519 |
+| `test_update_general_user_username_only` | ユーザー名のみ更新 | src/services/user_management.rs | 547 |
+| `test_update_general_user_password_only` | `_with_password` 経由でパスワードのみ更新 (Fable-5 #1/#5) | src/services/user_management.rs | 568 |
+| `test_update_general_user_username_and_password` | `_with_password` 経由でユーザー名とパスワードを 1 tx で更新 (Fable-5 #1/#5) | src/services/user_management.rs | 601 |
+| `test_update_admin_user` | 管理者ユーザー更新テスト | src/services/user_management.rs | 634 |
+| `test_update_admin_user_username_only` | 管理者のユーザー名のみ更新 | src/services/user_management.rs | 650 |
+| `test_update_admin_user_password_only` | `_with_password` 経由で管理者のパスワードのみ更新 (Fable-5 #1/#5) | src/services/user_management.rs | 668 |
+| `test_update_admin_user_username_and_password` | 管理者のユーザー名とパスワードを 1 tx で更新 (Fable-5 #1/#5) | src/services/user_management.rs | 698 |
+| `test_delete_general_user` | 一般ユーザー削除テスト | src/services/user_management.rs | 728 |
+| `test_cannot_delete_admin_user` | 管理者ユーザー削除の防止 | src/services/user_management.rs | 744 |
+| `test_duplicate_username` | 重複ユーザー名のエラー | src/services/user_management.rs | 755 |
+| `test_list_users` | ユーザー一覧取得テスト | src/services/user_management.rs | 769 |
+| `test_register_general_user_accepts_max_chars_of_multibyte_name` | USERS.NAME 長制約は文字数 (byte 数ではない) — MAX_NAME_LEN 分の多バイト文字を受理 (issue #37) | src/services/user_management.rs | 785 |
+| `test_register_general_user_rejects_over_max_chars_of_multibyte_name` | 登録時に MAX_NAME_LEN+1 の多バイト文字を拒否 (issue #37) | src/services/user_management.rs | 796 |
+| `test_update_general_user_with_password_rejects_wrong_old_password` | 現在パスワード誤り → `OldPasswordIncorrect`。ハッシュ・ユーザー名とも未変更 (Fable-5 #1/#5) | src/services/user_management.rs | 817 |
+| `test_update_general_user_with_password_rename_only_rejects_wrong_old_password` | 改名専用分岐でも `OldPasswordIncorrect` に統一 (CodeRabbit on #123) | src/services/user_management.rs | 864 |
+| `test_update_admin_user_with_password_rejects_wrong_old_password` | 管理者版: 現在パスワード誤り → `OldPasswordIncorrect`。ハッシュ未変更 (Fable-5 #1/#5) | src/services/user_management.rs | 891 |
+| `test_update_general_user_rejects_over_max_chars_of_multibyte_name` | 改名時に MAX_NAME_LEN+1 の多バイト文字を拒否 (issue #37) | src/services/user_management.rs | 920 |
 
-**合計**: 15件
+**合計**: 19件
 
 ### services/encryption.rs
 
@@ -546,7 +550,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **285件** |
+| **インラインテスト** | **289件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -555,7 +559,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | api_error.rs | 10 |
 | services/master_data.rs | 4 |
 | services/auth.rs | 16 |
-| services/user_management.rs | 15 |
+| services/user_management.rs | 19 |
 | services/encryption.rs | 8 |
 | services/account.rs | 10 |
 | services/category.rs | 25 |
@@ -568,7 +572,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/i18n.rs | 8 |
 | services/recurring.rs | 5 |
 | lib.rs | 6 |
-| **総計** | **308件** |
+| **総計** | **312件** |
 
 ---
 

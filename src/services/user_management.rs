@@ -372,9 +372,13 @@ impl UserManagementService {
                     .await?;
                 let current_hash: String = row.get(0);
                 if !verify_password(old_password, &current_hash)? {
-                    return Err(UserManagementError::SecurityError(
-                        SecurityError::InvalidPassword("Old password is incorrect".to_string())
-                    ));
+                    // Same variant as the change_password_in_tx path so the
+                    // rename-only branch classifies as
+                    // `old_password_incorrect` too — otherwise a wrong
+                    // current password produces `validation` here and
+                    // `old_password_incorrect` in the password-change
+                    // branch (CodeRabbit review on #123).
+                    return Err(UserManagementError::OldPasswordIncorrect);
                 }
                 if let Some(name) = new_username {
                     self.update_username(user_id, name).await?;
@@ -429,9 +433,13 @@ impl UserManagementService {
                     .await?;
                 let current_hash: String = row.get(0);
                 if !verify_password(old_password, &current_hash)? {
-                    return Err(UserManagementError::SecurityError(
-                        SecurityError::InvalidPassword("Old password is incorrect".to_string())
-                    ));
+                    // Same variant as the change_password_in_tx path so the
+                    // rename-only branch classifies as
+                    // `old_password_incorrect` too — otherwise a wrong
+                    // current password produces `validation` here and
+                    // `old_password_incorrect` in the password-change
+                    // branch (CodeRabbit review on #123).
+                    return Err(UserManagementError::OldPasswordIncorrect);
                 }
                 if let Some(name) = new_username {
                     self.update_username(user_id, name).await?;
@@ -840,6 +848,39 @@ mod tests {
 
         // Username unchanged — the rename bundled with the password
         // change did not sneak through either.
+        let user = service.get_user(user_id).await.unwrap();
+        assert_eq!(user.name, "testuser");
+    }
+
+    /// CodeRabbit review on #123 — the rename-only branch of
+    /// `update_general_user_with_password` (`new_password: None`) used
+    /// to return `SecurityError::InvalidPassword`, which mapped to
+    /// `ApiError::validation` instead of `old_password_incorrect`. The
+    /// frontend then dropped through to the generic "save failed"
+    /// message even though the same input at the password-change
+    /// branch would have highlighted the current-password field. This
+    /// pin locks the two branches to the same error code.
+    #[tokio::test]
+    async fn test_update_general_user_with_password_rename_only_rejects_wrong_old_password() {
+        let pool = setup_test_db().await;
+        create_test_admin(&pool, "admin", "admin_password123456").await;
+
+        let service = UserManagementService::new(pool.clone());
+        let user_id = service.register_general_user("testuser", "password_123456789")
+            .await
+            .unwrap();
+
+        // new_password = None → rename-only branch; wrong old_password
+        // must still classify as OldPasswordIncorrect.
+        let err = service.update_general_user_with_password(
+            user_id,
+            "wrong_old_password!!",
+            Some("would-not-take"),
+            None,
+        ).await.unwrap_err();
+        assert!(matches!(err, UserManagementError::OldPasswordIncorrect));
+
+        // Username unchanged — the rename did not partially commit.
         let user = service.get_user(user_id).await.unwrap();
         assert_eq!(user.name, "testuser");
     }

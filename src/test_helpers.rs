@@ -159,9 +159,7 @@ pub mod database {
         let password_hash = hash_password(password).unwrap();
         let salt = generate_encryption_salt();
 
-        let result = sqlx::query(
-            "INSERT INTO USERS (NAME, PAW, ROLE, ENCRYPTION_SALT, ENTRY_DT) VALUES (?, ?, ?, ?, ?)"
-        )
+        let result = sqlx::query(crate::sql_queries::TEST_INSERT_USER_WITH_SALT)
         .bind(username)
         .bind(password_hash)
         .bind(ROLE_ADMIN)
@@ -181,9 +179,7 @@ pub mod database {
         let password_hash = hash_password(password).unwrap();
         let salt = generate_encryption_salt();
 
-        let result = sqlx::query(
-            "INSERT INTO USERS (NAME, PAW, ROLE, ENCRYPTION_SALT, ENTRY_DT) VALUES (?, ?, ?, ?, ?)"
-        )
+        let result = sqlx::query(crate::sql_queries::TEST_INSERT_USER_WITH_SALT)
         .bind(username)
         .bind(password_hash)
         .bind(ROLE_USER)
