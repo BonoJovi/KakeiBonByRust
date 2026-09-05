@@ -433,7 +433,23 @@ pub fn calculate_recommended_total_with_settings(
 /// fits, in which case the bulk-recalc flow falls back to overwriting the
 /// total with whatever the existing settings produce.
 ///
-/// Patterns are tried in priority order:
+/// The caller-supplied `preferred` pair (the header's currently-stored
+/// `(rounding, included)`) is always tried first: whenever the existing
+/// settings already reproduce `target_total` — a very common case for
+/// receipts whose total has no fractional part to round — the function
+/// returns them verbatim so the bulk-recalc flow can skip the header
+/// instead of silently rewriting the tax setting columns.
+///
+/// Fable-5 review #2 — without the preferred-first check, a header
+/// saved as `HALF_UP + EXCLUDED` with a round-cent detail (e.g. 500円
+/// at 10 % = 550円 exactly) matched the first PATTERNS entry, which is
+/// `FLOOR + EXCLUDED`, and every bulk recalc silently downgraded the
+/// user's chosen rounding mode to FLOOR.
+///
+/// If the preferred pair doesn't fit, the fallback tries these patterns
+/// in priority order (the order matches what shopkeepers actually do —
+/// floor or half-up dominate, ceil is rare — so "first match wins" lands
+/// on the most plausible setting):
 ///
 ///   1. tax-excluded + floor       (TAX_ROUND_DOWN)
 ///   2. tax-excluded + half-up     (TAX_ROUND_HALF_UP)
@@ -441,12 +457,19 @@ pub fn calculate_recommended_total_with_settings(
 ///   4. tax-included               (the rounding column is irrelevant in
 ///      this mode because no rounding ever happens; we report it back as
 ///      `TAX_ROUND_DOWN` so the caller has a stable value to write)
-///
-/// The order matches what shopkeepers actually do in the wild — most use
-/// floor or half-up, ceil is rare — so the "first match wins" rule lands
-/// on the most plausible setting when several match (which happens often
-/// for receipts whose total has no fractional part to round).
-fn find_matching_pattern(details: &[DetailForRecalc], target_total: i64) -> Option<(i64, i64)> {
+fn find_matching_pattern(
+    details: &[DetailForRecalc],
+    target_total: i64,
+    preferred: (i64, i64),
+) -> Option<(i64, i64)> {
+    // Try the header's current settings first (Fable-5 #2).
+    let (pref_rounding, pref_included) = preferred;
+    if calculate_recommended_total_with_settings(details, pref_rounding, pref_included)
+        == target_total
+    {
+        return Some(preferred);
+    }
+
     const PATTERNS: [(i64, i64); 4] = [
         (consts::TAX_ROUND_DOWN, consts::TAX_EXCLUDED),
         (consts::TAX_ROUND_HALF_UP, consts::TAX_EXCLUDED),
@@ -454,6 +477,10 @@ fn find_matching_pattern(details: &[DetailForRecalc], target_total: i64) -> Opti
         (consts::TAX_ROUND_DOWN, consts::TAX_INCLUDED),
     ];
     for (rounding, included) in PATTERNS {
+        // Skip re-evaluating the preferred pair we already tried.
+        if (rounding, included) == preferred {
+            continue;
+        }
         if calculate_recommended_total_with_settings(details, rounding, included) == target_total {
             return Some((rounding, included));
         }
@@ -1440,7 +1467,11 @@ impl TransactionService {
             // overwriting TOTAL_AMOUNT with what the *existing* settings
             // produce, since the user's entry is then internally inconsistent
             // with the details and we have no signal to prefer it.
-            match find_matching_pattern(&details, total_before) {
+            match find_matching_pattern(
+                &details,
+                total_before,
+                (rounding_before, included_before),
+            ) {
                 Some((rounding_after, included_after))
                     if rounding_after == rounding_before
                         && included_after == included_before =>
@@ -1751,6 +1782,89 @@ mod tests {
             calculate_recommended_total(&details, consts::TAX_ROUND_DOWN),
             0
         );
+    }
+
+    // find_matching_pattern — bulk-recalc classifier tests
+    // ============================================================
+    // These pin the preferred-first behaviour that closes
+    // Fable-5 review #2 (bulk recalc silently downgrading the user's
+    // chosen rounding mode to FLOOR on receipts with no fractional
+    // remainder).
+
+    /// Fable-5 review #2 — 500円 × 10% = 550円 exactly. With
+    /// `(HALF_UP, EXCLUDED)` stored on the header, the pre-fix
+    /// classifier tried PATTERNS in fixed order starting from
+    /// `(FLOOR, EXCLUDED)` — which also produces 550 — and returned
+    /// FLOOR, so the bulk recalc downgraded the user's chosen
+    /// rounding mode. The preferred-first check now returns the
+    /// stored setting verbatim whenever it reproduces the total.
+    #[test]
+    fn test_find_matching_pattern_preserves_user_half_up_when_settings_match() {
+        let details = vec![DetailForRecalc {
+            amount: 500,
+            amount_including_tax: Some(0),
+            tax_rate: 10,
+        }];
+        let preferred = (consts::TAX_ROUND_HALF_UP, consts::TAX_EXCLUDED);
+        assert_eq!(
+            find_matching_pattern(&details, 550, preferred),
+            Some(preferred),
+            "HALF_UP + EXCLUDED must be preserved when it reproduces the total"
+        );
+    }
+
+    /// Companion pin — `(UP, EXCLUDED)` on a round-cent receipt used
+    /// to be downgraded to FLOOR for the same reason.
+    #[test]
+    fn test_find_matching_pattern_preserves_user_ceil_when_settings_match() {
+        let details = vec![DetailForRecalc {
+            amount: 500,
+            amount_including_tax: Some(0),
+            tax_rate: 10,
+        }];
+        let preferred = (consts::TAX_ROUND_UP, consts::TAX_EXCLUDED);
+        assert_eq!(
+            find_matching_pattern(&details, 550, preferred),
+            Some(preferred),
+        );
+    }
+
+    /// When the preferred pair does not reproduce the total, the
+    /// classifier must fall back to the priority-ordered PATTERNS
+    /// list — the same behaviour the old code had for every input.
+    #[test]
+    fn test_find_matching_pattern_falls_back_to_priority_when_preferred_mismatches() {
+        // 100円 × 8% → floor(108) = 108 (matches FLOOR+EXCLUDED),
+        // half-up rounds to 108 as well and ceil to 108, so the
+        // priority-ordered fallback lands on FLOOR+EXCLUDED first.
+        // Store the header as INCLUDED (which would sum to 100 verbatim,
+        // not 108) so the preferred check misses.
+        let details = vec![DetailForRecalc {
+            amount: 100,
+            amount_including_tax: Some(0),
+            tax_rate: 8,
+        }];
+        let preferred = (consts::TAX_ROUND_HALF_UP, consts::TAX_INCLUDED);
+        assert_eq!(
+            find_matching_pattern(&details, 108, preferred),
+            Some((consts::TAX_ROUND_DOWN, consts::TAX_EXCLUDED)),
+            "fallback must pick the first PATTERNS entry that fits"
+        );
+    }
+
+    /// Sanity: when no pattern — preferred or fallback — reproduces
+    /// the target, the classifier returns `None` and the caller
+    /// overwrites TOTAL_AMOUNT instead of the setting columns.
+    #[test]
+    fn test_find_matching_pattern_returns_none_when_no_pattern_fits() {
+        let details = vec![DetailForRecalc {
+            amount: 100,
+            amount_including_tax: Some(0),
+            tax_rate: 10,
+        }];
+        // No settings combination produces 999 from 100@10%.
+        let preferred = (consts::TAX_ROUND_HALF_UP, consts::TAX_EXCLUDED);
+        assert_eq!(find_matching_pattern(&details, 999, preferred), None);
     }
 
     async fn setup_test_db() -> SqlitePool {

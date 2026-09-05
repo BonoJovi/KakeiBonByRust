@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-08-26 JST  
-**総テスト数**: 315件 (delta 反映後。`cargo test --lib` の権威的総数は 557 で、pre-existing gap は別 PR でバックフィル予定)
+**総テスト数**: 319件 (delta 反映後。`cargo test --lib` の権威的総数は 561 で、pre-existing gap は別 PR でバックフィル予定)
 
 ---
 
@@ -455,8 +455,12 @@ AES-256-GCM暗号化・復号化のテスト。
 | `validation_preserves_message_and_omits_entity` | TransactionError::ValidationError が ApiError::CODE_VALIDATION に変換され、メッセージが保持されること (PR2b) | src/services/transaction.rs | 4206 |
 | `database_error_maps_to_database_code` | TransactionError::DatabaseError が ApiError::CODE_DATABASE に変換されること (PR2b) | src/services/transaction.rs | 4217 |
 | `field_needle_message_survives_conversion_for_frontend_routing` | 2 つのフィールド needle (`"Item name must be"` / `"Memo must be"`) が変換後もそのまま先頭に残り、フロントの `startsWith` ルーティングを維持できること (PR2b) | src/services/transaction.rs | 4224 |
+| `test_find_matching_pattern_preserves_user_half_up_when_settings_match` | 端数なしの伝票 (500円 × 10% = 550円) で `HALF_UP + EXCLUDED` を保存している場合、一括再計算で FLOOR に無言で書き換えられないこと (Fable-5 #2) | src/services/transaction.rs | 1802 |
+| `test_find_matching_pattern_preserves_user_ceil_when_settings_match` | `UP + EXCLUDED` にも同じ保証 (Fable-5 #2) | src/services/transaction.rs | 1817 |
+| `test_find_matching_pattern_falls_back_to_priority_when_preferred_mismatches` | 現在設定で total を再現できない場合、優先順 PATTERNS 探索へフォールバック (Fable-5 #2) | src/services/transaction.rs | 1834 |
+| `test_find_matching_pattern_returns_none_when_no_pattern_fits` | どの組み合わせも target を再現できない場合は `None`、caller が設定列でなく TOTAL_AMOUNT を上書き (Fable-5 #2) | src/services/transaction.rs | 1856 |
 
-**合計**: 21件
+**合計**: 25件
 
 ### services/aggregation.rs
 
@@ -553,7 +557,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **292件** |
+| **インラインテスト** | **296件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -569,13 +573,13 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/manufacturer.rs | 12 |
 | services/product.rs | 13 |
 | services/shop.rs | 12 |
-| services/transaction.rs | 21 |
+| services/transaction.rs | 25 |
 | services/aggregation.rs | 13 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 5 |
 | lib.rs | 6 |
-| **総計** | **315件** |
+| **総計** | **319件** |
 
 ---
 
