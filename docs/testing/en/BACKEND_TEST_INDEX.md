@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-08-26 JST  
-**Total Tests**: 328 (delta-tracked; the full authoritative count from `cargo test --lib` is 570, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 329 (delta-tracked; the full authoritative count from `cargo test --lib` is 571, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -185,9 +185,10 @@ Database initialization and migration tests.
 | `migrate_shops_unique_is_idempotent` | A second run of a successful migration is a no-op and leaves the data untouched (PR15, Fable-5 #20) | src/db.rs | 1424 |
 | `migrate_shops_unique_scopes_per_user` | User A and User B may each own a shop with the same SHOP_NAME — the uniqueness scope is per-user (PR15, Fable-5 #20) | src/db.rs | 1437 |
 | `migrate_shops_unique_keeps_active_row_over_soft_deleted_older_id` | When a soft-deleted old shop (smaller SHOP_ID, `IS_DISABLED=1`) coexists with a re-created active shop of the same name (larger SHOP_ID, `IS_DISABLED=0`), the migration keeps the active row as survivor and repoints legacy transaction references onto it (PR15, Devin #118 review) | src/db.rs | 1459 |
-| `migrate_shops_user_id_cascade_adds_cascade_fk_and_preserves_rows` | Table recreate swaps the SHOPS.USER_ID FK to `ON DELETE CASCADE` while keeping every SHOP_ID and column value verbatim (Fable-5 #11) | src/db.rs | 1646 |
-| `migrate_shops_user_id_cascade_is_idempotent` | Second run of the SHOPS cascade migration finds the CASCADE FK already present and returns early — no DROP/RENAME on already-migrated DBs (Fable-5 #11) | src/db.rs | 1734 |
-| `user_delete_cascades_to_shops_after_migration` | End-to-end guarantee: after the cascade migration, deleting a user with SHOPS rows succeeds and takes those rows with it — the pre-fix DELETE aborted with `FOREIGN KEY constraint failed` (Fable-5 #11) | src/db.rs | 1758 |
+| `pool_connections_all_enforce_foreign_keys` | Every connection the pool hands out enforces `PRAGMA foreign_keys = ON`, not just the first one. Pre-fix, only the connection that ran the one-shot `execute()` at startup had FKs enabled; the SHOPS user-cascade migration was toothless on any borrower that got a later connection (CodeRabbit outside-diff on #128) | src/db.rs | 1630 |
+| `migrate_shops_user_id_cascade_adds_cascade_fk_and_preserves_rows` | Table recreate swaps the SHOPS.USER_ID FK to `ON DELETE CASCADE` while keeping every SHOP_ID and column value verbatim (Fable-5 #11) | src/db.rs | 1711 |
+| `migrate_shops_user_id_cascade_is_idempotent` | Second run of the SHOPS cascade migration finds the CASCADE FK already present and returns early — no DROP/RENAME on already-migrated DBs (Fable-5 #11) | src/db.rs | 1799 |
+| `user_delete_cascades_to_shops_after_migration` | End-to-end guarantee: after the cascade migration, deleting a user with SHOPS rows succeeds and takes those rows with it — the pre-fix DELETE aborted with `FOREIGN KEY constraint failed` (Fable-5 #11) | src/db.rs | 1823 |
 
 **Total**: 11 tests
 
@@ -566,11 +567,11 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **305** |
+| **Inline Tests** | **306** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
-| db.rs | 11 |
+| db.rs | 12 |
 | settings.rs | 12 |
 | api_error.rs | 10 |
 | services/master_data.rs | 4 |
@@ -588,7 +589,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/i18n.rs | 8 |
 | services/recurring.rs | 5 |
 | lib.rs | 6 |
-| **Total** | **328** |
+| **Total** | **329** |
 
 ---
 

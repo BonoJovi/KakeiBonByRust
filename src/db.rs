@@ -1,5 +1,6 @@
-use sqlx::sqlite::SqlitePool;
+use sqlx::sqlite::{SqlitePool, SqlitePoolOptions};
 use sqlx::Acquire; // for `PoolConnection::begin`
+use sqlx::Executor;
 use std::path::PathBuf;
 use crate::consts::{DB_DIR_NAME, DB_FILE_NAME};
 use crate::sql_queries;
@@ -10,9 +11,28 @@ use crate::sql_queries;
 // CWD is the install directory and `res/sql/dbaccess.sql` is not there.
 const INIT_SQL: &str = include_str!("../res/sql/dbaccess.sql");
 
-/// Connect to a SQLite database with the given URL
+/// Connect to a SQLite database with the given URL.
+///
+/// `PRAGMA foreign_keys` in SQLite is per-connection, so a pool-wide
+/// `execute()` at startup only sets it on whichever connection ran
+/// first — every subsequent borrower would get the SQLite default
+/// (OFF) and silently skip cascade deletes. `after_connect` runs the
+/// PRAGMA on every newly-established pool connection so the FK
+/// contract holds for all borrowers, even after a connection is
+/// replaced (idle-timeout, closed by the driver, etc.). CodeRabbit
+/// on #128 called this out via the SHOPS user-cascade migration —
+/// the whole point of that migration lands only when every connection
+/// enforces FKs.
 pub async fn connect_db(db_url: &str) -> Result<SqlitePool, sqlx::Error> {
-    SqlitePool::connect(db_url).await
+    SqlitePoolOptions::new()
+        .after_connect(|conn, _meta| {
+            Box::pin(async move {
+                conn.execute(sql_queries::PRAGMA_FOREIGN_KEYS_ON).await?;
+                Ok(())
+            })
+        })
+        .connect(db_url)
+        .await
 }
 
 pub struct Database {
@@ -33,19 +53,18 @@ impl Database {
         let db_url = format!("sqlite://{}?mode=rwc", db_path.display());
         let pool = connect_db(&db_url).await?;
         
-        // Enable WAL mode
+        // Enable WAL mode. WAL is a database-wide setting persisted
+        // in the file header, so a single `execute()` on any pool
+        // connection suffices — no `after_connect` needed for it.
         sqlx::query(sql_queries::DB_PRAGMA_WAL)
             .execute(&pool)
             .await?;
 
-        // SQLite ships with foreign_keys = OFF by default. Without this PRAGMA
-        // every ON DELETE CASCADE / SET NULL we declared (RECURRING_RULES <→
-        // RECURRING_RULE_DETAILS, TRANSACTIONS_HEADER <→ TRANSACTIONS_DETAIL,
-        // TRANSACTIONS_HEADER.RULE_ID → RECURRING_RULES on new DBs, etc.) would
-        // be silently ignored and we'd leak orphaned rows on every delete.
-        sqlx::query("PRAGMA foreign_keys = ON")
-            .execute(&pool)
-            .await?;
+        // `PRAGMA foreign_keys = ON` for every borrower is set once in
+        // `connect_db`'s `after_connect` hook — see that function for
+        // the rationale. Without the per-connection hook, a pool-wide
+        // `execute()` here would only cover the connection that ran
+        // it and later borrowers would silently skip cascade deletes.
 
         Ok(Database { pool })
     }
@@ -1593,6 +1612,52 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(is_disabled, 0, "the surviving shop must still be active");
+    }
+
+    /// CodeRabbit on #128 outside-diff — `PRAGMA foreign_keys` is
+    /// per-connection in SQLite. A one-shot `execute()` on the pool
+    /// only lands on whichever connection ran first; any later
+    /// borrower would get the SQLite default (OFF) and silently skip
+    /// cascade deletes. `connect_db`'s `after_connect` hook now runs
+    /// the PRAGMA on every newly-established connection — this pin
+    /// forces the pool to open at least two connections (by holding
+    /// the first one) and verifies both report `foreign_keys = 1`.
+    /// Uses a temp-file DB rather than `sqlite::memory:` because
+    /// in-memory DBs give each connection its own independent
+    /// database, so the test can't tell an unset PRAGMA apart from a
+    /// fresh DB.
+    #[tokio::test]
+    async fn pool_connections_all_enforce_foreign_keys() {
+        let temp_dir = std::env::temp_dir();
+        let test_db_name = format!("test_pool_fk_all_{}.db", std::process::id());
+        let test_db_path = temp_dir.join(&test_db_name);
+        let _ = std::fs::remove_file(&test_db_path);
+
+        let db_url = format!("sqlite://{}?mode=rwc", test_db_path.display());
+        let pool = connect_db(&db_url).await.expect("connect");
+
+        // Hold the first connection open so acquire() has to open a
+        // second one — that's the connection the pre-fix code left
+        // with `foreign_keys = OFF`.
+        let mut conn1 = pool.acquire().await.expect("first conn");
+        let mut conn2 = pool.acquire().await.expect("second conn");
+
+        let fk1: i64 = sqlx::query_scalar("PRAGMA foreign_keys")
+            .fetch_one(&mut *conn1)
+            .await
+            .expect("PRAGMA on conn1");
+        let fk2: i64 = sqlx::query_scalar("PRAGMA foreign_keys")
+            .fetch_one(&mut *conn2)
+            .await
+            .expect("PRAGMA on conn2");
+
+        assert_eq!(fk1, 1, "conn1 must have foreign_keys = ON");
+        assert_eq!(fk2, 1, "conn2 (newly opened by the pool) must have foreign_keys = ON");
+
+        drop(conn1);
+        drop(conn2);
+        drop(pool);
+        let _ = std::fs::remove_file(&test_db_path);
     }
 
     // ---- Fable-5 #11 — migrate_shops_user_id_cascade tests ----
