@@ -279,13 +279,21 @@ function showRoundingWarning(userInput, calculated) {
     // ignore. Uses the new i18n keys (2451-2454); the older
     // `rounding_warning_*` keys are dead but stay in the resource
     // table as a fallback for anything that still resolved them.
-    warning.innerHTML = `
-        <strong>✏️ ${i18n.t('detail_mgmt.rounding_auto_correct_title')}</strong><br>
-        ${i18n.t('detail_mgmt.rounding_auto_correct_message')
+    //
+    // CodeRabbit on #129 — the i18n resource text is DB-sourced, so
+    // in principle a malicious admin could seed an `<img onerror>`
+    // and land it in `innerHTML` here. escapeHtml every dynamic
+    // fragment (the title, the message body after `{userInput}` /
+    // `{calculated}` / `{diff}` substitution) so untrusted characters
+    // render as text.
+    const titleEscaped = escapeHtml(i18n.t('detail_mgmt.rounding_auto_correct_title'));
+    const bodyEscaped = escapeHtml(
+        i18n.t('detail_mgmt.rounding_auto_correct_message')
             .replace('{userInput}', userInput.toLocaleString())
             .replace('{calculated}', calculated.toLocaleString())
-            .replace('{diff}', diff)}
-    `;
+            .replace('{diff}', diff)
+    );
+    warning.innerHTML = `<strong>✏️ ${titleEscaped}</strong><br>${bodyEscaped}`;
     warning.style.display = 'block';
 }
 

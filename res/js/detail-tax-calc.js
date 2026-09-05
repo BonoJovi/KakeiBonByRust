@@ -47,10 +47,33 @@ export function calculateFromIncluding(includedInput, rate, roundingType) {
         return { excluded: includedInput, tax: 0, includedCorrected: includedInput };
     }
 
-    const excluded = applyTaxRounding(includedInput / (1 + rate / 100), roundingType);
-    const tax = applyTaxRounding(excluded * rate / 100, roundingType);
-    const includedCorrected = excluded + tax;
-    return { excluded, tax, includedCorrected };
+    const base = applyTaxRounding(includedInput / (1 + rate / 100), roundingType);
+
+    // CodeRabbit on #129 — pick the `excluded` candidate that lets the
+    // user keep their typed tax-included value, when one exists. The
+    // two-step rounding (division then multiplication) can produce a
+    // base that misses by 1 in either direction; e.g. 101 円 at 10 %
+    // under FLOOR gives base=91 and 91+9=100, but base+1=92 gives
+    // 92+9=101 — that second candidate matches the typed input, so
+    // there's no need to auto-adjust it down to 100. The scan is
+    // `[base, base+1, base-1]` — the base wins ties (matches the
+    // configured rounding mode), then the "bumped up" variant, then
+    // "bumped down". Anything wider than ±1 can't help: the split
+    // stays within one integer of the exact real-number result.
+    for (const delta of [0, 1, -1]) {
+        const cand = base + delta;
+        if (cand < 0) continue;
+        const candTax = applyTaxRounding(cand * rate / 100, roundingType);
+        if (cand + candTax === includedInput) {
+            return { excluded: cand, tax: candTax, includedCorrected: includedInput };
+        }
+    }
+
+    // No integer split reproduces the typed input under this rounding
+    // mode. Fall back to the base pair and report the corrected total
+    // — the caller rewrites the on-screen tax-included value to match.
+    const tax = applyTaxRounding(base * rate / 100, roundingType);
+    return { excluded: base, tax, includedCorrected: base + tax };
 }
 
 /**

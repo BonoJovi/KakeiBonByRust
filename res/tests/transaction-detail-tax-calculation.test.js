@@ -259,24 +259,38 @@ describe('Transaction Detail Tax Calculation Tests', () => {
     // ========================================================================
     describe('calculateFromIncluding — three-value self-consistency (Fable-5 #8)', () => {
 
-        it('rewrites tax-included input when FLOOR rounding cannot represent it exactly', () => {
+        it('preserves the typed input under FLOOR when a base±1 candidate reproduces it', () => {
             // The canonical Fable-5 #8 scenario: user types 101 with 10 % / FLOOR.
-            // Pre-fix: excluded=91, tax=10 (leaked as `included - excluded`), and
-            // the DB carried (91, 10, 101) while aggregation would recompute 100.
-            // Post-fix: excluded=91, tax=9, includedCorrected=100 — three
-            // internally consistent numbers, and aggregation lands on the same
-            // 100.
+            // Pre-fix: `tax = included - excluded` left the DB with three
+            // inconsistent numbers (91, 10, 101). CodeRabbit on #129 pointed
+            // out that just picking base=91 and correcting the input down to
+            // 100 is unnecessary — base+1=92 gives 92 + floor(92 * 0.10) = 101,
+            // reproducing the typed input exactly. The helper now scans
+            // `[base, base+1, base-1]` and prefers the candidate that matches
+            // the typed input, so this common shape stays at 101 円.
             const { excluded, tax, includedCorrected } =
                 calculateFromIncluding(/*includedInput*/ 101, /*rate*/ 10, /*floor*/ 0);
 
-            expect(excluded).toBe(91);
+            expect(excluded).toBe(92);
             expect(tax).toBe(9);
-            expect(includedCorrected).toBe(100);
+            expect(includedCorrected).toBe(101);
             expect(excluded + tax).toBe(includedCorrected);
         });
 
+        it('preserves the typed input under CEIL by picking base-1 (91, not the ceil base 92)', () => {
+            // Same typed 101, but with CEIL. base = ceil(101/1.1) = 92, and
+            // 92 + ceil(92*0.1) = 102 (does NOT match). base-1 = 91 with
+            // ceil(91*0.1) = 10 yields 101 — pick that so the input stays.
+            const { excluded, tax, includedCorrected } =
+                calculateFromIncluding(101, 10, /*ceil*/ 2);
+
+            expect(excluded).toBe(91);
+            expect(tax).toBe(10);
+            expect(includedCorrected).toBe(101);
+        });
+
         it('leaves the tax-included input untouched when the split is already exact', () => {
-            // 330 = 300 + 30 under FLOOR + 10 %; nothing to adjust.
+            // 330 = 300 + 30 under FLOOR + 10 %; base wins immediately.
             const { excluded, tax, includedCorrected } =
                 calculateFromIncluding(330, 10, 0);
 
@@ -285,9 +299,9 @@ describe('Transaction Detail Tax Calculation Tests', () => {
             expect(includedCorrected).toBe(330);
         });
 
-        it('produces consistent numbers under half-up rounding too', () => {
+        it('produces consistent numbers under half-up rounding when the base already matches', () => {
             // 325 / 1.08 ≈ 300.925 → half-up 301, tax = round(301 * 0.08) = 24,
-            // includedCorrected = 325 (matches user input exactly).
+            // 301 + 24 = 325 — base itself matches, no candidate scan needed.
             const { excluded, tax, includedCorrected } =
                 calculateFromIncluding(325, 8, /*half-up*/ 1);
 
@@ -296,17 +310,19 @@ describe('Transaction Detail Tax Calculation Tests', () => {
             expect(includedCorrected).toBe(325);
         });
 
-        it('produces consistent numbers under ceil rounding (bumping the input up)', () => {
-            // Same 101 / 10 % but with CEIL: excluded = ceil(101/1.1) = 92,
-            // tax = ceil(92*0.1) = 10, includedCorrected = 102 (bumps the
-            // typed 101 up by 1). Correction still yields three self-consistent
-            // numbers.
+        it('falls back to the base pair when even base±1 cannot reproduce the input', () => {
+            // 1000 円 at 10 % / FLOOR: base=909, 909+90=999 ≠ 1000; base+1=910,
+            // 910+91=1001 ≠ 1000; base-1=908, 908+90=998 ≠ 1000. No candidate
+            // fits, so the helper falls back to (base, tax_of_base,
+            // base+tax_of_base) and the caller rewrites the displayed
+            // tax-included value to 999.
             const { excluded, tax, includedCorrected } =
-                calculateFromIncluding(101, 10, /*ceil*/ 2);
+                calculateFromIncluding(1000, 10, 0);
 
-            expect(excluded).toBe(92);
-            expect(tax).toBe(10);
-            expect(includedCorrected).toBe(102);
+            expect(excluded).toBe(909);
+            expect(tax).toBe(90);
+            expect(includedCorrected).toBe(999);
+            expect(excluded + tax).toBe(includedCorrected);
         });
 
         it('returns zeros for zero input', () => {
@@ -335,10 +351,16 @@ describe('Transaction Detail Tax Calculation Tests', () => {
 
     describe('applyTaxRounding — three modes plus a defensive default', () => {
         // Sanity for the low-level helper used by both branches above.
+        // These tests exercise positive inputs only — the transaction
+        // save path validates `amount >= 0` before any of this runs, so
+        // the negative-input semantics of `Math.round` (which rounds
+        // toward +Infinity for .5, not away from zero) are outside the
+        // helper's input contract. Documented explicitly here after
+        // CodeRabbit on #129 flagged the pre-fix wording as ambiguous.
         it('floor is the default for unknown rounding types', () => {
             expect(applyTaxRounding(9.9, /*unknown*/ 99)).toBe(9);
         });
-        it('half-up rounds .5 away from zero', () => {
+        it('half-up on a positive .5 rounds up to the next integer', () => {
             expect(applyTaxRounding(9.5, 1)).toBe(10);
         });
         it('ceil bumps a fractional part up', () => {
