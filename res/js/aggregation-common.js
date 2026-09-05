@@ -219,7 +219,12 @@ export function translateAggregationError(error) {
     // string Fable-5 #9 was named after.
     const UNUSABLE_COERCED = new Set(['[object Object]', 'null', 'undefined']);
     if (!errorStr || UNUSABLE_COERCED.has(errorStr)) {
-        return i18n.t('aggregation.error_generic') || 'An unexpected error occurred while aggregating.';
+        // No hardcoded fallback — `i18n.t` returns the key literal on a
+        // missing translation (never falsy), so an English string here
+        // would only ever leak on a screen whose i18n seed is broken,
+        // *and* would leak in the wrong language. Per project rule:
+        // all user-facing text resolves through i18n.
+        return i18n.t('aggregation.error_generic');
     }
     if (errorStr.includes('Invalid year')) return i18n.t('aggregation.error_invalid_year') || errorStr;
     if (errorStr.includes('Invalid month')) return i18n.t('aggregation.error_invalid_month') || errorStr;
