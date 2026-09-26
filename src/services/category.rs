@@ -591,7 +591,8 @@ impl CategoryService {
     ) -> Result<(), CategoryError> {
         let mut tx = self.pool.begin().await?;
 
-        // Re-enable the CATEGORY2 itself — must hit exactly one row
+        // Re-enable the CATEGORY2 itself. The UPDATE only matches a disabled
+        // row, so zero rows means it is already enabled or does not exist.
         let result = sqlx::query(sql_queries::CATEGORY2_ENABLE)
             .bind(user_id)
             .bind(category1_code)
@@ -600,10 +601,21 @@ impl CategoryService {
             .await?;
 
         if result.rows_affected() == 0 {
-            return Err(CategoryError::NotFound);
+            // Already enabled: nothing to do, and the children must stay as
+            // they are — a CATEGORY3 hidden on its own would otherwise be
+            // shown again by a repeated / stale enable (CodeRabbit on #146).
+            let exists = sqlx::query(sql_queries::CATEGORY2_GET_ORDER)
+                .bind(user_id)
+                .bind(category1_code)
+                .bind(category2_code)
+                .fetch_optional(&mut *tx)
+                .await?
+                .is_some();
+            return if exists { Ok(()) } else { Err(CategoryError::NotFound) };
         }
 
-        // Re-enable its child CATEGORY3 entries (may be zero — that is fine)
+        // Hidden → shown: re-enable its child CATEGORY3 entries
+        // (may be zero — that is fine)
         sqlx::query(sql_queries::CATEGORY3_ENABLE_BY_CATEGORY2)
             .bind(user_id)
             .bind(category1_code)

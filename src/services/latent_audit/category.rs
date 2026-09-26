@@ -103,6 +103,31 @@ async fn latent_m8_enable_category2_restores_cascaded_category3() {
     );
 }
 
+/// M8 follow-up (CodeRabbit on #146): enabling a CATEGORY2 that is already
+/// enabled is a successful no-op and leaves its children alone — a CATEGORY3
+/// hidden on its own must not be shown again by a repeated / stale enable.
+#[tokio::test]
+async fn latent_m8_enable_already_enabled_category2_keeps_hidden_children() {
+    let (_pool, service, user_id) = setup().await;
+    let food = service.add_category2(user_id, "EXPENSE", "食費", "Food").await.unwrap();
+    let rice = service.add_category3(user_id, "EXPENSE", &food, "米", "Rice").await.unwrap();
+
+    // Hide only the child; the parent stays enabled.
+    service.disable_category3(user_id, "EXPENSE", &food, &rice).await.unwrap();
+
+    service
+        .enable_category2(user_id, "EXPENSE", &food)
+        .await
+        .expect("enabling an already enabled CATEGORY2 must succeed");
+    let tree = service.get_category_tree_all(user_id, "ja").await.unwrap();
+    assert_eq!(
+        cat3_is_disabled(&tree, "EXPENSE", &food, &rice),
+        Some(1),
+        "a CATEGORY3 hidden on its own must stay hidden (tree: {})",
+        tree
+    );
+}
+
 // ---------------------------------------------------------------------------
 // L18
 // ---------------------------------------------------------------------------
