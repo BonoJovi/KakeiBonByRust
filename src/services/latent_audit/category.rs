@@ -80,7 +80,6 @@ fn cat3_is_disabled(tree: &serde_json::Value, cat1: &str, cat2: &str, cat3: &str
 /// Expected: a disable → enable round trip restores the children that the
 /// disable cascaded to.
 #[tokio::test]
-#[ignore = "latent-audit M8"]
 async fn latent_m8_enable_category2_restores_cascaded_category3() {
     let (_pool, service, user_id) = setup().await;
     let food = service.add_category2(user_id, "EXPENSE", "食費", "Food").await.unwrap();
@@ -221,7 +220,6 @@ async fn latent_l19_move_missing_category3_returns_not_found() {
 ///
 /// Expected: structured `not_found`.
 #[tokio::test]
-#[ignore = "latent-audit L19"]
 async fn latent_l19_enable_missing_category2_returns_not_found() {
     let (_pool, service, user_id) = setup().await;
     let result = service.enable_category2(user_id, "EXPENSE", "C2_E_999").await;

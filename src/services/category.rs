@@ -579,19 +579,39 @@ impl CategoryService {
         Ok(json!(categories))
     }
 
-    /// Re-enable a disabled CATEGORY2 and its child CATEGORY3 entries
+    /// Re-enable a disabled CATEGORY2 and its child CATEGORY3 entries —
+    /// the mirror of `disable_category2`, which hides both. Without the
+    /// child step the CATEGORY2 came back with an empty CATEGORY3 dropdown
+    /// (latent-audit M8).
     pub async fn enable_category2(
         &self,
         user_id: i64,
         category1_code: &str,
         category2_code: &str,
     ) -> Result<(), CategoryError> {
-        sqlx::query(sql_queries::CATEGORY2_ENABLE)
+        let mut tx = self.pool.begin().await?;
+
+        // Re-enable the CATEGORY2 itself — must hit exactly one row
+        let result = sqlx::query(sql_queries::CATEGORY2_ENABLE)
             .bind(user_id)
             .bind(category1_code)
             .bind(category2_code)
-            .execute(&self.pool)
+            .execute(&mut *tx)
             .await?;
+
+        if result.rows_affected() == 0 {
+            return Err(CategoryError::NotFound);
+        }
+
+        // Re-enable its child CATEGORY3 entries (may be zero — that is fine)
+        sqlx::query(sql_queries::CATEGORY3_ENABLE_BY_CATEGORY2)
+            .bind(user_id)
+            .bind(category1_code)
+            .bind(category2_code)
+            .execute(&mut *tx)
+            .await?;
+
+        tx.commit().await?;
         Ok(())
     }
 

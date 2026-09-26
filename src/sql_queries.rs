@@ -312,6 +312,15 @@ SET IS_DISABLED = 0, UPDATE_DT = datetime('now')
 WHERE USER_ID = ? AND CATEGORY1_CODE = ? AND CATEGORY2_CODE = ?
 "#;
 
+/// Re-enable every CATEGORY3 under a CATEGORY2 — the counterpart of
+/// CATEGORY3_DISABLE_BY_CATEGORY2, run when the CATEGORY2 is shown again
+/// (latent-audit M8).
+pub const CATEGORY3_ENABLE_BY_CATEGORY2: &str = r#"
+UPDATE CATEGORY3
+SET IS_DISABLED = 0, UPDATE_DT = datetime('now')
+WHERE USER_ID = ? AND CATEGORY1_CODE = ? AND CATEGORY2_CODE = ? AND IS_DISABLED = 1
+"#;
+
 pub const CATEGORY3_ENABLE: &str = r#"
 UPDATE CATEGORY3
 SET IS_DISABLED = 0, UPDATE_DT = datetime('now')
