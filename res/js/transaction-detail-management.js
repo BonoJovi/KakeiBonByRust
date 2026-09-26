@@ -9,6 +9,7 @@ import { ROLE_ADMIN, MAX_ITEM_NAME_LEN, MAX_MEMO_LEN } from './consts.js';
 import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
 import { createMenuBar } from './menu.js';
 import { applyHeaderRecalculationPrompt } from './header-recalc.js';
+import { singleFlight } from './single-flight.js';
 import { setupTaxCalculationListeners } from './detail-tax-calc.js';
 import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
 import { showToast } from './toast.js';
@@ -366,7 +367,9 @@ function setupEventListeners() {
     // Detail form submit
     const detailForm = document.getElementById('detail-form');
     if (detailForm) {
-        detailForm.addEventListener('submit', handleDetailFormSubmit);
+        // singleFlight: a double click / repeated Enter while the save is
+        // in flight must not add the detail twice (latent-audit M19).
+        detailForm.addEventListener('submit', singleFlight(handleDetailFormSubmit));
     }
     
     // Delete modal handlers

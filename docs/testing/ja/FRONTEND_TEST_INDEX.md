@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-09-27 JST  
-**総テスト数**: 782件 (jest suite 30 ファイル、`npm test` 実測)
+**総テスト数**: 788件 (jest suite 32 ファイル、`npm test` 実測)
 
 ---
 
@@ -41,6 +41,8 @@
   - [pages/transaction-management-page.test.js](#pagestransaction-management-pagetestjs)
   - [pages/user-management-page.test.js](#pagesuser-management-pagetestjs)
   - [pages/recurring-rule-page.test.js](#pagesrecurring-rule-pagetestjs)
+  - [pages/recurring-rule-double-submit.test.js](#pagesrecurring-rule-double-submittestjs)
+  - [single-flight.test.js](#single-flighttestjs)
 - [集計機能テスト](#集計機能テスト)
   - [aggregation-daily.test.js](#aggregation-dailytestjs)
   - [aggregation-weekly.test.js](#aggregation-weeklytestjs)
@@ -646,11 +648,12 @@
 
 実際の明細画面モジュールを `transaction-detail-management.html` に対して起動する回帰テスト (潜在監査 H3)。共通ハーネスは `pages/_page-harness.js`。
 
-**テスト数**: 1件
+**テスト数**: 2件
 
 | テスト | 説明 |
 |--------|------|
 | `[H3] saving a product-linked detail without changes keeps its productId` | 商品に紐付いた明細を開いて無変更で保存しても `update_transaction_detail` に元の `productId` が送られる |
+| `[M19] double submit of the add-detail form invokes add_transaction_detail once` | 保存中の二重送信で `add_transaction_detail` が 1 回しか呼ばれない (潜在監査 M19) |
 
 **ファイル**: res/tests/pages/transaction-detail-page.test.js
 
@@ -698,6 +701,37 @@
 | `[M16] a backend transfer_same_account rejection shows the dedicated message` | バックエンドが `transfer_same_account` で拒否した場合も同じ専用メッセージを表示し、汎用の作成失敗メッセージを出さない |
 
 **ファイル**: res/tests/pages/recurring-rule-page.test.js
+
+---
+
+### pages/recurring-rule-double-submit.test.js
+
+実際の繰り返しルール画面での二重送信の回帰テスト (潜在監査 M19)。
+
+**テスト数**: 1件
+
+| テスト | 説明 |
+|--------|------|
+| `[M19] double submit invokes create_recurring_rule only once` | `create_recurring_rule` の実行中に送信を重ねても 1 回しか呼ばれない |
+
+**ファイル**: res/tests/pages/recurring-rule-double-submit.test.js
+
+---
+
+### single-flight.test.js
+
+送信ハンドラの二重実行防止 `singleFlight` (`res/js/single-flight.js`) のテスト (潜在監査 M19)。
+
+**テスト数**: 4件
+
+| テスト | 説明 |
+|--------|------|
+| ignores a second call while the first is in flight | 実行中の再送信を無視する |
+| calls preventDefault on every submit, including ignored ones | 無視した送信でも `preventDefault` を呼ぶ |
+| accepts a new call after the previous one resolved | 完了後は次の送信を受け付ける |
+| releases the guard when the handler throws | ハンドラが例外を投げてもガードを解除する |
+
+**ファイル**: res/tests/single-flight.test.js
 
 ---
 
@@ -865,7 +899,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **359件** |
+| **機能別テスト** | **365件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 29 |
@@ -881,17 +915,19 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | parse-amount-strict.test.js | 24 |
 | format-local-date.test.js | 16 |
 | aggregation-render-unspecified.test.js | 5 |
-| pages/transaction-detail-page.test.js | 1 |
+| pages/transaction-detail-page.test.js | 2 |
 | pages/transaction-management-page.test.js | 1 |
 | pages/user-management-page.test.js | 2 |
 | pages/recurring-rule-page.test.js | 3 |
+| pages/recurring-rule-double-submit.test.js | 1 |
+| single-flight.test.js | 4 |
 | **集計機能テスト** | **115件** |
 | aggregation-daily.test.js | 16 |
 | aggregation-weekly.test.js | 22 |
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **782件** |
+| **総計 (jest)** | **788件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 
