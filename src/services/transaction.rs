@@ -340,6 +340,40 @@ pub struct RecalcChangeEntry {
     pub change_type: String,
 }
 
+/// The header columns a bulk recalc may change, as one comparable tuple.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+struct RecalcHeaderState {
+    total_amount: i64,
+    tax_rounding_type: i64,
+    tax_included_type: i64,
+}
+
+/// One header the recalc changed: the state it found and the state it wrote.
+#[derive(Debug, Serialize, Deserialize)]
+struct RecalcJournalEntry {
+    transaction_id: i64,
+    before: RecalcHeaderState,
+    after: RecalcHeaderState,
+}
+
+/// Change journal written next to the recalc backup
+/// (`<backup>.changes.json`). `restore_totals_from_backup` replays it in
+/// reverse: only the headers the recalc actually changed are reverted — all
+/// three columns — and only while they still hold the value the recalc
+/// wrote, so edits made after the recalc survive (latent-audit M9).
+#[derive(Debug, Serialize, Deserialize)]
+struct RecalcJournal {
+    user_id: i64,
+    changes: Vec<RecalcJournalEntry>,
+}
+
+/// Path of the change journal that belongs to a recalc backup file.
+fn recalc_journal_path(backup_path: &std::path::Path) -> std::path::PathBuf {
+    let mut name = backup_path.as_os_str().to_os_string();
+    name.push(".changes.json");
+    std::path::PathBuf::from(name)
+}
+
 /// Result of `restore_totals_from_backup`. Reports how many header rows
 /// actually had their `TOTAL_AMOUNT` reverted to the backup value.
 #[derive(Debug, Serialize, Deserialize)]
@@ -1591,6 +1625,7 @@ impl TransactionService {
         let mut total_overwritten = 0i64;
         let mut skipped = 0i64;
         let mut changes: Vec<RecalcChangeEntry> = Vec::new();
+        let mut journal: Vec<RecalcJournalEntry> = Vec::new();
 
         for header_row in header_rows {
             let txn_id: i64 = header_row.get("TRANSACTION_ID");
@@ -1652,6 +1687,19 @@ impl TransactionService {
                         tax_included_type_after: included_after,
                         change_type: "settings_corrected".to_string(),
                     });
+                    journal.push(RecalcJournalEntry {
+                        transaction_id: txn_id,
+                        before: RecalcHeaderState {
+                            total_amount: total_before,
+                            tax_rounding_type: rounding_before,
+                            tax_included_type: included_before,
+                        },
+                        after: RecalcHeaderState {
+                            total_amount: total_before,
+                            tax_rounding_type: rounding_after,
+                            tax_included_type: included_after,
+                        },
+                    });
                 }
                 None => {
                     let total_after = calculate_recommended_total_with_settings(
@@ -1682,10 +1730,34 @@ impl TransactionService {
                             tax_included_type_after: included_before,
                             change_type: "total_overwritten".to_string(),
                         });
+                        journal.push(RecalcJournalEntry {
+                            transaction_id: txn_id,
+                            before: RecalcHeaderState {
+                                total_amount: total_before,
+                                tax_rounding_type: rounding_before,
+                                tax_included_type: included_before,
+                            },
+                            after: RecalcHeaderState {
+                                total_amount: total_after,
+                                tax_rounding_type: rounding_before,
+                                tax_included_type: included_before,
+                            },
+                        });
                     }
                 }
             }
         }
+
+        // Write the change journal before committing: if the commit then
+        // fails, the journal is stale but harmless (restore only reverts
+        // rows that still hold the journaled "after" state).
+        let journal = RecalcJournal { user_id, changes: journal };
+        let journal_json = serde_json::to_string(&journal).map_err(|e| {
+            TransactionError::DatabaseError(format!("Failed to serialize recalc journal: {}", e))
+        })?;
+        std::fs::write(recalc_journal_path(&backup_path), journal_json).map_err(|e| {
+            TransactionError::DatabaseError(format!("Failed to write recalc journal: {}", e))
+        })?;
 
         tx.commit().await?;
 
@@ -1699,11 +1771,16 @@ impl TransactionService {
         })
     }
 
-    /// Restore the `TOTAL_AMOUNT` column on every header for `user_id` from a
-    /// backup file produced by `recalculate_all_transaction_totals`. We
-    /// deliberately touch *only* `TOTAL_AMOUNT` — leaving details, memos and
-    /// the rest of the schema untouched — so a rollback cannot accidentally
-    /// erase any data the user has entered since the recalculation ran.
+    /// Roll back a `recalculate_all_transaction_totals` run, using the change
+    /// journal written next to its backup (`<backup>.changes.json`).
+    ///
+    /// Only the headers the recalc changed are touched, and for each of them
+    /// the three columns it may have changed (`TOTAL_AMOUNT`,
+    /// `TAX_ROUNDING_TYPE`, `TAX_INCLUDED_TYPE`) are reverted together — and
+    /// only while the row still holds exactly what the recalc wrote, so a
+    /// rollback never erases an edit made after the recalculation ran
+    /// (latent-audit M9). The backup DB file itself stays untouched as a
+    /// full copy for manual recovery.
     pub async fn restore_totals_from_backup(
         &self,
         user_id: i64,
@@ -1743,42 +1820,42 @@ impl TransactionService {
             )));
         }
 
-        // ATTACH/UPDATE/DETACH must all run on the *same* SQLite connection
-        // — `recalc_backup` only exists on the connection that ATTACHed it.
-        // A pool-level `execute` would hand each statement out on a possibly
-        // different connection, so we explicitly acquire one and pin every
-        // statement to it.
-        let mut conn = self.pool.acquire().await?;
+        let journal_path = recalc_journal_path(backup);
+        let journal_json = std::fs::read_to_string(&journal_path).map_err(|_| {
+            TransactionError::ValidationError(format!(
+                "Recalc change journal not found for backup: {}",
+                backup_path
+            ))
+        })?;
+        let journal: RecalcJournal = serde_json::from_str(&journal_json).map_err(|e| {
+            TransactionError::ValidationError(format!("Invalid recalc change journal: {}", e))
+        })?;
+        if journal.user_id != user_id {
+            return Err(TransactionError::ValidationError(
+                "Backup belongs to a different user".to_string(),
+            ));
+        }
 
-        let attach_sql = format!(
-            "ATTACH DATABASE '{}' AS recalc_backup",
-            backup_path.replace('\'', "''")
-        );
-        sqlx::query(&attach_sql).execute(&mut *conn).await?;
-
-        let result = sqlx::query(
-            "UPDATE TRANSACTIONS_HEADER \
-             SET TOTAL_AMOUNT = ( \
-                 SELECT b.TOTAL_AMOUNT FROM recalc_backup.TRANSACTIONS_HEADER b \
-                 WHERE b.TRANSACTION_ID = TRANSACTIONS_HEADER.TRANSACTION_ID \
-                   AND b.USER_ID = TRANSACTIONS_HEADER.USER_ID \
-             ), UPDATE_DT = datetime('now') \
-             WHERE USER_ID = ? \
-               AND EXISTS ( \
-                   SELECT 1 FROM recalc_backup.TRANSACTIONS_HEADER b \
-                   WHERE b.TRANSACTION_ID = TRANSACTIONS_HEADER.TRANSACTION_ID \
-                     AND b.USER_ID = TRANSACTIONS_HEADER.USER_ID \
-               )",
-        )
-        .bind(user_id)
-        .execute(&mut *conn)
-        .await?;
-
-        let restored = result.rows_affected() as i64;
-
-        sqlx::query("DETACH DATABASE recalc_backup")
-            .execute(&mut *conn)
-            .await?;
+        // Revert only the headers the recalc changed, all three columns, and
+        // only while each still holds exactly what the recalc wrote. A header
+        // edited after the recalc keeps the user's edit (latent-audit M9).
+        let mut tx = self.pool.begin().await?;
+        let mut restored = 0i64;
+        for entry in &journal.changes {
+            let result = sqlx::query(sql_queries::TRANSACTION_HEADER_REVERT_RECALC)
+                .bind(entry.before.total_amount)
+                .bind(entry.before.tax_rounding_type)
+                .bind(entry.before.tax_included_type)
+                .bind(entry.transaction_id)
+                .bind(user_id)
+                .bind(entry.after.total_amount)
+                .bind(entry.after.tax_rounding_type)
+                .bind(entry.after.tax_included_type)
+                .execute(&mut *tx)
+                .await?;
+            restored += result.rows_affected() as i64;
+        }
+        tx.commit().await?;
 
         Ok(RestoreSummary { restored })
     }
