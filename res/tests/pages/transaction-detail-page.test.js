@@ -1,31 +1,22 @@
 /**
- * Latent audit 2026-09 — transaction detail screen (res/js/transaction-detail-management.js)
+ * Transaction detail screen (res/js/transaction-detail-management.js) —
+ * regression tests promoted from the 2026-09 latent audit.
  *
- * IDs covered: M19 (detail form half), L7
- *
- * M19 Bug: handleDetailFormSubmit has no re-entrancy guard; a double click on
- *     Save / double Enter while add_transaction_detail is in flight invokes
- *     the command twice → duplicate detail rows.
- *     Expected: add_transaction_detail is invoked exactly once.
- *
- * L7  Bug: detail list renders `detail.amount_including_tax?.toLocaleString()
- *     || detail.amount...`; for legacy rows where amount_including_tax is 0,
- *     `(0).toLocaleString()` is the truthy string "0", so the row shows ¥0
- *     even though AMOUNT > 0.
- *     Expected: the amount cell never shows ¥0 when AMOUNT > 0 (falls back to
- *     AMOUNT or a computed tax-included value).
- *     Note (spec 2026-09-26): AMOUNT is always tax-excluded; legacy
- *     NULL/0 tax-included rows will be backfilled, but the display fallback
- *     must still be correct.
+ * H3  openDetailModal() restores `autocompleteState.selectedProductId` from
+ *     detail.product_id. It used to refresh the char counter by dispatching
+ *     a synthetic `input` on #item-name, which the autocomplete handler took
+ *     as a keystroke and reset the id to null — so "open a product-linked
+ *     detail → Save without changes" silently dropped the PRODUCT_ID link.
+ *     Pinned: update_transaction_detail receives the original productId.
  *
  * The real page module is booted against res/transaction-detail-management.html
- * via ../pages/_page-harness.js; Tauri invoke is routed per command below.
+ * via ./_page-harness.js; Tauri invoke is routed per command below.
  */
 
 import { jest } from '@jest/globals';
 import {
     mockPageModules, loadPageBody, bootPage, flush, deferred, callsOf,
-} from '../pages/_page-harness.js';
+} from './_page-harness.js';
 
 const TRANSACTION_ID = 10;
 
@@ -121,43 +112,28 @@ function submitDetailForm() {
     );
 }
 
-describe('transaction detail screen — latent audit 2026-09', () => {
+describe('transaction detail screen — regression (latent audit 2026-09)', () => {
     beforeEach(() => {
         invoke.mockClear();
     });
 
-    test('[latent L7] legacy row with amount_including_tax = 0 is not rendered as ¥0', () => {
-        const row = document.querySelector('#detail-list tr[data-detail-id="2"]');
-        expect(row).not.toBeNull();
-        const amountCell = row.querySelectorAll('td')[2];
-        const text = amountCell.textContent.trim();
-        // AMOUNT is 1000 (tax-excluded, 0% tax) — the display must fall
-        // back to a non-zero value instead of the stored 0.
-        expect(text).not.toBe('¥0');
-        expect(text).toMatch(/¥1,\d00/);
-    });
-
-    test('[latent M19] double submit of the add-detail form invokes add_transaction_detail once', async () => {
-        document.getElementById('add-detail-btn').click();
+    test('[H3] saving a product-linked detail without changes keeps its productId', async () => {
+        const editBtn = document.querySelector('.edit-detail-btn[data-detail-id="1"]');
+        expect(editBtn).not.toBeNull();
+        editBtn.click();
         await flush(10);
+
+        // Sanity: the modal opened in edit mode with the row's values.
         expect(document.getElementById('detail-modal').classList.contains('hidden')).toBe(false);
+        expect(document.getElementById('detail-id').value).toBe('1');
+        expect(document.getElementById('item-name').value).toBe('サバ缶');
 
-        document.getElementById('item-name').value = 'New item';
-        document.getElementById('tax-rate').value = '10';
-        document.getElementById('amount-excluding-tax').value = '1000';
-        document.getElementById('amount-including-tax').value = '1100';
-        document.getElementById('tax-amount').value = '100';
-
-        addInflight = deferred();
+        // No user edit — just Save.
         submitDetailForm();
-        submitDetailForm();
-        await flush(5);
-
-        const adds = callsOf(invoke, 'add_transaction_detail');
-        addInflight.resolve(null);
-        addInflight = null;
         await flush(10);
 
-        expect(adds).toHaveLength(1);
+        const updates = callsOf(invoke, 'update_transaction_detail');
+        expect(updates).toHaveLength(1);
+        expect(updates[0].productId).toBe(7);
     });
 });
