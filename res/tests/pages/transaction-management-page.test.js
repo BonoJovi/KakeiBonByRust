@@ -143,7 +143,10 @@ describe('transaction management screen — regression (latent audit 2026-09)', 
         );
         await flush(10);
 
-        expect(callsOf(invoke, 'update_transaction_header')).toHaveLength(1);
+        const headerUpdates = callsOf(invoke, 'update_transaction_header');
+        expect(headerUpdates).toHaveLength(1);
+        // The header save itself must carry the unchanged total, not 0.
+        expect(headerUpdates[0].totalAmount).toBe(5000);
 
         const recalcModal = document.getElementById('header-recalc-modal');
         const promptShown = !!recalcModal && !recalcModal.classList.contains('hidden');
