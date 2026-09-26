@@ -1997,12 +1997,13 @@ async fn delete_transaction_detail(
 /// Compute the TOTAL_AMOUNT a transaction header *should* have based on its
 /// current details and saved tax rounding setting. The frontend uses this
 /// after a detail edit (or a tax-setting change) to decide whether to prompt
-/// the user before overwriting the cached header total.
+/// the user before overwriting the cached header total. Returns `null` for a
+/// header without details (nothing to recommend).
 #[tauri::command]
 async fn compute_recommended_transaction_total(
     transaction_id: i64,
     state: tauri::State<'_, AppState>,
-) -> Result<i64, api_error::ApiError> {
+) -> Result<Option<i64>, api_error::ApiError> {
     let transaction = state.transaction.lock().await;
     let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
 

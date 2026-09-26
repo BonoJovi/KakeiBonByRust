@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-09-06 JST  
-**総テスト数**: 362件 (差分反映後。`cargo test --lib` の権威的総数は 602 で、既存の未反映分は別 PR でバックフィル予定)
+**総テスト数**: 364件 (差分反映後。`cargo test --lib` の権威的総数は 604 で、既存の未反映分は別 PR でバックフィル予定)
 
 ---
 
@@ -504,8 +504,10 @@ AES-256-GCM暗号化・復号化のテスト。
 | `latent_l1_small_detail_with_zero_tax_is_still_grossed_up` | 税額が丸めで 0 円になる少額明細も税率単位で gross-up される (潜在監査 L1) | src/services/latent_audit/transaction.rs | 259 |
 | `test_calculate_recommended_total_uses_amount_not_amount_including_tax` | 外税の合計は AMOUNT_INCLUDING_TAX に関係なく AMOUNT を gross-up (AMOUNT は常に税抜) | src/services/transaction.rs | 1837 |
 | `test_calculate_recommended_total_with_settings_included_derives_missing_rows` | 税込の合計で NULL / 0 の行を AMOUNT + TAX_RATE から導出 | src/services/transaction.rs | 1890 |
+| `latent_h4_bulk_recalc_keeps_total_without_details` | 明細なしヘッダーは一括再計算で TOTAL_AMOUNT を変更しない (潜在監査 H4) | src/services/latent_audit/transaction.rs | 177 |
+| `latent_h4_compute_recommended_total_is_none_without_details` | 明細なしヘッダーの `compute_recommended_total` は None を返す (潜在監査 H4) | src/services/latent_audit/transaction.rs | 666 |
 
-**合計**: 41件
+**合計**: 43件
 
 ### services/aggregation.rs
 
@@ -610,7 +612,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **336件** |
+| **インラインテスト** | **338件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -627,13 +629,13 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/manufacturer.rs | 12 |
 | services/product.rs | 15 |
 | services/shop.rs | 16 |
-| services/transaction.rs | 41 |
+| services/transaction.rs | 43 |
 | services/aggregation.rs | 20 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 6 |
 | lib.rs | 6 |
-| **総計** | **362件** |
+| **総計** | **364件** |
 
 ---
 

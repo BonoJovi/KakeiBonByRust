@@ -174,7 +174,6 @@ async fn sandboxed_file_db() -> (HomeSandbox, SqlitePool) {
 /// H4: 一括再計算で明細なしヘッダーの TOTAL_AMOUNT が 0 に上書きされる。
 /// Expected: 明細が 1 件も無いヘッダーは再計算対象外 (TOTAL_AMOUNT はユーザー入力値のまま)。
 #[tokio::test]
-#[ignore = "latent-audit H4"]
 async fn latent_h4_bulk_recalc_keeps_total_without_details() {
     let (_home, pool) = sandboxed_file_db().await;
     let service = TransactionService::new(pool.clone());
@@ -223,7 +222,7 @@ async fn latent_h5_compute_recommended_total_honours_included_header() {
     }
 
     let recommended = service.compute_recommended_total(USER, txn_id).await.unwrap();
-    assert_eq!(recommended, 718, "tax-included header total must be SUM(AMOUNT_INCLUDING_TAX)");
+    assert_eq!(recommended, Some(718), "tax-included header total must be SUM(AMOUNT_INCLUDING_TAX)");
 }
 
 /// H5: 一括再計算が内税ヘッダーを「外税」と誤判定し TAX_INCLUDED_TYPE を黙って書き換える。
@@ -658,4 +657,19 @@ async fn latent_l8_update_header_rejects_malformed_datetime() {
     req.transaction_date = "2024-02-30 25:61:61".to_string();
     let result = service.update_transaction_header(USER, txn_id, req).await;
     assert!(result.is_err(), "malformed datetime must be rejected on update");
+}
+
+/// H4 (frontend contract): `compute_recommended_total` reports "nothing to
+/// recommend" (`None` → JSON `null`) for a header without details instead of
+/// `0`, so the edit flow never offers to overwrite the total with ¥0.
+#[tokio::test]
+async fn latent_h4_compute_recommended_total_is_none_without_details() {
+    let pool = setup_test_db().await;
+    let service = TransactionService::new(pool);
+    let txn_id = service
+        .save_transaction_header(USER, header_request(5000, consts::TAX_ROUND_DOWN, consts::TAX_EXCLUDED))
+        .await
+        .unwrap();
+
+    assert_eq!(service.compute_recommended_total(USER, txn_id).await.unwrap(), None);
 }
