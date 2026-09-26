@@ -341,6 +341,16 @@ function setupFormSubmit() {
             return;
         }
 
+        // Latent-audit M16 — a TRANSFER from an account to itself is
+        // rejected by the transaction screen and by the Rust side; catch it
+        // here with the same message before any occurrence is generated.
+        if (document.getElementById('category1').value === 'TRANSFER'
+            && document.getElementById('from-account').value
+                === document.getElementById('to-account').value) {
+            showResult('error', i18n.t('transaction_mgmt.transfer_same_account'));
+            return;
+        }
+
         const request = {
             rule_name: stringOrNull(document.getElementById('rule-name').value),
             period_unit: cycleKind,
@@ -469,6 +479,12 @@ function setupFormSubmit() {
                         return;
                     }
                 }
+            }
+
+            if (err && typeof err === 'object'
+                && err.code === API_ERROR_CODES.TRANSFER_SAME_ACCOUNT) {
+                showResult('error', i18n.t('transaction_mgmt.transfer_same_account'));
+                return;
             }
 
             const prefix = i18n.t('recurring_rule.create_failed') || 'Failed to create rule:';

@@ -306,10 +306,23 @@ WHERE c.USER_ID = ?
 ORDER BY c.CATEGORY1_CODE, c.CATEGORY2_CODE, c.IS_DISABLED, c.DISPLAY_ORDER
 "#;
 
+/// Only matches a currently *disabled* CATEGORY2, so `rows_affected() == 1`
+/// means "hidden → shown" — the only case in which its CATEGORY3 children
+/// are re-enabled too (CodeRabbit on #146). Zero rows means already enabled
+/// or missing; check with CATEGORY2_GET_ORDER to tell them apart.
 pub const CATEGORY2_ENABLE: &str = r#"
 UPDATE CATEGORY2
 SET IS_DISABLED = 0, UPDATE_DT = datetime('now')
-WHERE USER_ID = ? AND CATEGORY1_CODE = ? AND CATEGORY2_CODE = ?
+WHERE USER_ID = ? AND CATEGORY1_CODE = ? AND CATEGORY2_CODE = ? AND IS_DISABLED = 1
+"#;
+
+/// Re-enable every CATEGORY3 under a CATEGORY2 — the counterpart of
+/// CATEGORY3_DISABLE_BY_CATEGORY2, run when the CATEGORY2 is shown again
+/// (latent-audit M8).
+pub const CATEGORY3_ENABLE_BY_CATEGORY2: &str = r#"
+UPDATE CATEGORY3
+SET IS_DISABLED = 0, UPDATE_DT = datetime('now')
+WHERE USER_ID = ? AND CATEGORY1_CODE = ? AND CATEGORY2_CODE = ? AND IS_DISABLED = 1
 "#;
 
 pub const CATEGORY3_ENABLE: &str = r#"

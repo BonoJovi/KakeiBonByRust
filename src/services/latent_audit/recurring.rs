@@ -328,7 +328,6 @@ async fn latent_m15_holiday_shift_applies_beyond_seeded_range() {
 /// a TRANSFER with FROM == TO is generated and later cannot be edited.
 /// Expected: creation is rejected like `save_transaction_header` does.
 #[tokio::test]
-#[ignore = "latent-audit M16"]
 async fn latent_m16_transfer_same_account_rejected() {
     let pool = setup_recurring_db().await;
     let service = RecurringService::new(pool.clone());
@@ -351,7 +350,6 @@ async fn latent_m16_transfer_same_account_rejected() {
 /// M16: recurring creation accepts any TAX_ROUNDING_TYPE value.
 /// Expected: values outside {DOWN, HALF_UP, UP} are rejected.
 #[tokio::test]
-#[ignore = "latent-audit M16"]
 async fn latent_m16_tax_rounding_type_out_of_range_rejected() {
     let pool = setup_recurring_db().await;
     let service = RecurringService::new(pool.clone());
@@ -373,7 +371,6 @@ async fn latent_m16_tax_rounding_type_out_of_range_rejected() {
 /// M16: recurring creation accepts any TAX_INCLUDED_TYPE value.
 /// Expected: values outside {INCLUDED, EXCLUDED} are rejected.
 #[tokio::test]
-#[ignore = "latent-audit M16"]
 async fn latent_m16_tax_included_type_out_of_range_rejected() {
     let pool = setup_recurring_db().await;
     let service = RecurringService::new(pool.clone());
@@ -395,7 +392,6 @@ async fn latent_m16_tax_included_type_out_of_range_rejected() {
 /// M16: the DETAIL amount is not range-checked on the recurring path.
 /// Expected: amount outside 0..=999,999,999 is rejected (as for normal details).
 #[tokio::test]
-#[ignore = "latent-audit M16"]
 async fn latent_m16_detail_amount_out_of_range_rejected() {
     let pool = setup_recurring_db().await;
     let service = RecurringService::new(pool.clone());
@@ -417,7 +413,6 @@ async fn latent_m16_detail_amount_out_of_range_rejected() {
 /// M16: the DETAIL tax_rate is not range-checked on the recurring path.
 /// Expected: tax_rate outside 0..=100 is rejected (as for normal details).
 #[tokio::test]
-#[ignore = "latent-audit M16"]
 async fn latent_m16_detail_tax_rate_out_of_range_rejected() {
     let pool = setup_recurring_db().await;
     let service = RecurringService::new(pool.clone());

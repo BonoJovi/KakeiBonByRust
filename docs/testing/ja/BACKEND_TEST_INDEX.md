@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-09-06 JST  
-**総テスト数**: 378件 (差分反映後。`cargo test --lib` の権威的総数は 618 で、既存の未反映分は別 PR でバックフィル予定)
+**総テスト数**: 387件 (差分反映後。`cargo test --lib` の権威的総数は 627 で、既存の未反映分は別 PR でバックフィル予定)
 
 ---
 
@@ -389,8 +389,11 @@ AES-256-GCM暗号化・復号化のテスト。
 | `test_get_category_tree_groups_children_under_parent` | 3-flat-queries + HashMap grouping で cat1→cat2→cat3 の親子関係が正しく組み上がる regression pin (PR11, Fable-5 #31) | src/services/category.rs | 2022 |
 | `test_get_category_tree_preserves_display_order` | move_category2_up で並び替えた cat2 の DISPLAY_ORDER が flat-query grouping 後も維持されること (PR11, Fable-5 #31) | src/services/category.rs | 2077 |
 | `test_get_category_tree_all_includes_disabled_flags` | `get_category_tree_all` は disabled 行を含め `is_disabled` フィールド付きで返す (PR11, Fable-5 #31)。反面 `get_category_tree` は disabled 行を除外する対比も同時にチェック | src/services/category.rs | 2106 |
+| `latent_m8_enable_category2_restores_cascaded_category3` | 非表示にした中分類を表示に戻すと、一緒に非表示になった小分類も戻る (潜在監査 M8) | src/services/latent_audit/category.rs | 83 |
+| `latent_l19_enable_missing_category2_returns_not_found` | 存在しない中分類の表示復帰は not_found (潜在監査 L19、中分類の表示復帰のみ) | src/services/latent_audit/category.rs | 223 |
+| `latent_m8_enable_already_enabled_category2_keeps_hidden_children` | 表示中の中分類への表示復帰は何もせず、個別に非表示にした小分類は非表示のまま (潜在監査 M8) | src/services/latent_audit/category.rs | 110 |
 
-**合計**: 25件
+**合計**: 28件
 
 ### services/manufacturer.rs
 
@@ -599,8 +602,14 @@ AES-256-GCM暗号化・復号化のテスト。
 | `database_error_maps_to_database_code` | RecurringError::Database が ApiError::CODE_DATABASE に変換されること (PR2a) | src/services/recurring.rs | 1851 |
 | `field_needle_message_survives_conversion_for_frontend_routing` | 4 つのフィールド needle (`"Rule name must be"` 等) が変換後もそのまま先頭に残り、フロントの `startsWith` ルーティングを維持できること (PR2a) | src/services/recurring.rs | 1858 |
 | `latent_h2_cascade_delete_keeps_confirmed_headers` | ルールのカスケード削除は未確定の予定取引だけを消し、確定済み (IS_SCHEDULED = 0) は残して紐付けを外す (潜在監査 H2) | src/services/latent_audit/recurring.rs | 196 |
+| `latent_m16_transfer_same_account_rejected` | 出金元と入金先が同じ振替ルールの作成を拒否 (潜在監査 M16) | src/services/latent_audit/recurring.rs | 331 |
+| `latent_m16_tax_rounding_type_out_of_range_rejected` | 範囲外の端数処理種別でのルール作成を拒否 (潜在監査 M16) | src/services/latent_audit/recurring.rs | 353 |
+| `latent_m16_tax_included_type_out_of_range_rejected` | 範囲外の内税/外税種別でのルール作成を拒否 (潜在監査 M16) | src/services/latent_audit/recurring.rs | 374 |
+| `latent_m16_detail_amount_out_of_range_rejected` | 範囲外の明細金額でのルール作成を拒否 (潜在監査 M16) | src/services/latent_audit/recurring.rs | 395 |
+| `latent_m16_detail_tax_rate_out_of_range_rejected` | 範囲外の税率でのルール作成を拒否 (潜在監査 M16) | src/services/latent_audit/recurring.rs | 416 |
+| `transfer_same_account_maps_to_transfer_same_account_code` | `RecurringError::TransferSameAccount` が `transfer_same_account` コードに変換される (潜在監査 M16) | src/services/recurring.rs | 1881 |
 
-**合計**: 6件
+**合計**: 12件
 
 ### lib.rs
 
@@ -626,7 +635,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **352件** |
+| **インラインテスト** | **361件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -639,7 +648,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/user_management.rs | 23 |
 | services/encryption.rs | 8 |
 | services/account.rs | 11 |
-| services/category.rs | 25 |
+| services/category.rs | 28 |
 | services/manufacturer.rs | 15 |
 | services/product.rs | 18 |
 | services/shop.rs | 16 |
@@ -647,9 +656,9 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/aggregation.rs | 20 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
-| services/recurring.rs | 6 |
+| services/recurring.rs | 12 |
 | lib.rs | 6 |
-| **総計** | **378件** |
+| **総計** | **387件** |
 
 ---
 
