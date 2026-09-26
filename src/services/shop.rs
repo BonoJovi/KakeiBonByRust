@@ -96,9 +96,6 @@ pub async fn add_shop(
         .rows_affected();
 
     if revived == 0 {
-        // A concurrent add of the same name can slip past the pre-check;
-        // report the UNIQUE violation as duplicate_name, not a raw
-        // database error.
         sqlx::query(sql_queries::SHOP_INSERT)
             .bind(user_id)
             .bind(&request.shop_name)
@@ -106,12 +103,7 @@ pub async fn add_shop(
             .bind(display_order)
             .execute(pool)
             .await
-            .map_err(|e| match &e {
-                sqlx::Error::Database(db) if db.is_unique_violation() => {
-                    ApiError::duplicate_name(SPEC.entity_label)
-                }
-                _ => ApiError::from(e),
-            })?;
+            .map_err(|e| master_data::map_insert_error(&SPEC, e))?;
     }
 
     Ok("Shop added successfully".to_string())

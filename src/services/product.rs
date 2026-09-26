@@ -139,15 +139,32 @@ pub async fn add_product(
 
     let is_disabled = request.is_disabled.unwrap_or(0);
 
-    sqlx::query(sql_queries::PRODUCT_INSERT)
-        .bind(user_id)
-        .bind(&request.product_name)
+    // A disabled / logically deleted product with the same name still holds
+    // the UNIQUE slot, so reuse that row instead of inserting
+    // (latent-audit M6).
+    let revived = sqlx::query(sql_queries::PRODUCT_REVIVE_DISABLED_BY_NAME)
+        .bind(is_disabled)
         .bind(&request.manufacturer_id)
         .bind(&request.memo)
         .bind(display_order)
-        .bind(is_disabled)
+        .bind(user_id)
+        .bind(&request.product_name)
         .execute(pool)
-        .await?;
+        .await?
+        .rows_affected();
+
+    if revived == 0 {
+        sqlx::query(sql_queries::PRODUCT_INSERT)
+            .bind(user_id)
+            .bind(&request.product_name)
+            .bind(&request.manufacturer_id)
+            .bind(&request.memo)
+            .bind(display_order)
+            .bind(is_disabled)
+            .execute(pool)
+            .await
+            .map_err(|e| master_data::map_insert_error(&SPEC, e))?;
+    }
 
     Ok("Product added successfully".to_string())
 }
