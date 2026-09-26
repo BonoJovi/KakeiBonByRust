@@ -616,6 +616,19 @@ impl Database {
         Ok(())
     }
 
+    /// Remove category rows (CATEGORY1/2/3 + *_I18N) whose user no longer
+    /// exists. User deletes before latent-audit M3 left them behind, and
+    /// since USER_ID is assigned as MAX + 1 a later user could reuse the id
+    /// and inherit them. Idempotent; a no-op once no orphans remain.
+    pub async fn cleanup_orphan_user_categories(&self) -> Result<(), sqlx::Error> {
+        let mut tx = self.pool.begin().await?;
+        for sql in sql_queries::ORPHAN_USER_CATEGORIES_DELETE {
+            sqlx::query(sql).execute(&mut *tx).await?;
+        }
+        tx.commit().await?;
+        Ok(())
+    }
+
     /// Fable-5 review #11 — SHOPS was missing `ON DELETE CASCADE` on
     /// its `USER_ID` FK, so deleting a user with SHOPS rows failed
     /// with `FOREIGN KEY constraint failed` and rolled the whole

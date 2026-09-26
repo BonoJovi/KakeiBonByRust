@@ -2567,6 +2567,11 @@ pub fn run() {
                 database.migrate_shops_user_id_cascade().await
                     .map_err(|e| format!("Failed to migrate SHOPS FK cascade: {}", e))?;
 
+                // Latent-audit M3 — sweep category rows left behind by
+                // user deletes before the fix. No-op once none remain.
+                database.cleanup_orphan_user_categories().await
+                    .map_err(|e| format!("Failed to clean up orphan user categories: {}", e))?;
+
                 let auth_service = AuthService::new(database.pool().clone());
                 let user_mgmt_service = UserManagementService::new(database.pool().clone());
                 let encryption_service = EncryptionService::new(database.pool().clone());

@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-09-27 JST  
-**総テスト数**: 777件 (jest suite 28 ファイル、`npm test` 実測)
+**総テスト数**: 779件 (jest suite 29 ファイル、`npm test` 実測)
 
 ---
 
@@ -39,6 +39,7 @@
   - [aggregation-render-unspecified.test.js](#aggregation-render-unspecifiedtestjs)
   - [pages/transaction-detail-page.test.js](#pagestransaction-detail-pagetestjs)
   - [pages/transaction-management-page.test.js](#pagestransaction-management-pagetestjs)
+  - [pages/user-management-page.test.js](#pagesuser-management-pagetestjs)
 - [集計機能テスト](#集計機能テスト)
   - [aggregation-daily.test.js](#aggregation-dailytestjs)
   - [aggregation-weekly.test.js](#aggregation-weeklytestjs)
@@ -668,6 +669,21 @@
 
 ---
 
+### pages/user-management-page.test.js
+
+実際のユーザー管理画面モジュールを `user-management.html` に対して管理者セッションで起動する回帰テスト (潜在監査 M13)。
+
+**テスト数**: 2件
+
+| テスト | 説明 |
+|--------|------|
+| `[M13] a whitespace-only username is rejected before create_general_user` | 空白のみのユーザー名は `validation.required` をユーザー名欄に表示し、`create_general_user` を送らない |
+| `[M13] a normal username still reaches create_general_user` | 通常のユーザー名は `create_general_user` に送られる (比較用) |
+
+**ファイル**: res/tests/pages/user-management-page.test.js
+
+---
+
 ## 集計機能テスト
 
 ### aggregation-daily.test.js
@@ -832,7 +848,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **354件** |
+| **機能別テスト** | **356件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 29 |
@@ -850,13 +866,14 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | aggregation-render-unspecified.test.js | 5 |
 | pages/transaction-detail-page.test.js | 1 |
 | pages/transaction-management-page.test.js | 1 |
+| pages/user-management-page.test.js | 2 |
 | **集計機能テスト** | **115件** |
 | aggregation-daily.test.js | 16 |
 | aggregation-weekly.test.js | 22 |
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **777件** |
+| **総計 (jest)** | **779件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 

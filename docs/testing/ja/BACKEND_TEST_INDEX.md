@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-09-06 JST  
-**総テスト数**: 373件 (差分反映後。`cargo test --lib` の権威的総数は 613 で、既存の未反映分は別 PR でバックフィル予定)
+**総テスト数**: 378件 (差分反映後。`cargo test --lib` の権威的総数は 618 で、既存の未反映分は別 PR でバックフィル予定)
 
 ---
 
@@ -191,8 +191,9 @@ AES-256-GCM暗号化・復号化のテスト。
 | `migrate_shops_user_id_cascade_is_idempotent` | SHOPS CASCADE マイグレーションの 2 回目は既に CASCADE FK があるため早期に戻る。マイグレーション済み DB では DROP/RENAME は走らない (Fable-5 #11) | src/db.rs | 1799 |
 | `user_delete_cascades_to_shops_after_migration` | CASCADE マイグレーション後、SHOPS 行を持つユーザーの削除が成功し、SHOPS 行も同時に削除される。修正前は `FOREIGN KEY constraint failed` でロールバックしていた (Fable-5 #11) | src/db.rs | 1823 |
 | `latent_h5_migration_backfills_null_amount_including_tax` | 起動時マイグレーションが NULL の AMOUNT_INCLUDING_TAX を AMOUNT + TAX_AMOUNT で補完 (潜在監査 H5) | src/latent_audit/db.rs | 33 |
+| `latent_m3_startup_removes_orphan_user_categories` | 起動時の掃除で削除済みユーザーの費目を消し、存在するユーザーの費目は残す (潜在監査 M3) | src/latent_audit/db.rs | 106 |
 
-**合計**: 13件
+**合計**: 14件
 
 ### settings.rs
 
@@ -313,8 +314,12 @@ AES-256-GCM暗号化・復号化のテスト。
 | `test_update_general_user_with_password_rename_only_rejects_wrong_old_password` | 改名専用分岐でも `OldPasswordIncorrect` に統一 (CodeRabbit on #123) | src/services/user_management.rs | 864 |
 | `test_update_admin_user_with_password_rejects_wrong_old_password` | 管理者版: 現在パスワード誤り → `OldPasswordIncorrect`。ハッシュ未変更 (Fable-5 #1/#5) | src/services/user_management.rs | 891 |
 | `test_update_general_user_rejects_over_max_chars_of_multibyte_name` | 改名時に MAX_NAME_LEN+1 の多バイト文字を拒否 (issue #37) | src/services/user_management.rs | 920 |
+| `latent_m3_delete_user_removes_categories` | 一般ユーザー削除で CATEGORY1/2/3 と *_I18N も削除される (潜在監査 M3) | src/services/latent_audit/user_management.rs | 64 |
+| `latent_m3_reused_user_id_gets_default_categories` | 削除済み USER_ID を再利用した新ユーザーは既定の費目を持ち、旧ユーザーの費目を引き継がない (潜在監査 M3) | src/services/latent_audit/user_management.rs | 92 |
+| `latent_m13_create_rejects_blank_username` | 空 / 空白のみの名前でのユーザー作成を拒否 (潜在監査 M13) | src/services/latent_audit/user_management.rs | 135 |
+| `latent_m13_update_rejects_blank_username` | 一般 / 管理者ユーザーの空白名への変更を拒否 (潜在監査 M13) | src/services/latent_audit/user_management.rs | 158 |
 
-**合計**: 19件
+**合計**: 23件
 
 ### services/encryption.rs
 
@@ -621,17 +626,17 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **347件** |
+| **インラインテスト** | **352件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
-| db.rs | 13 |
+| db.rs | 14 |
 | settings.rs | 12 |
 | api_error.rs | 10 |
 | services/master_data.rs | 4 |
 | services/like_escape.rs | 7 |
 | services/auth.rs | 16 |
-| services/user_management.rs | 19 |
+| services/user_management.rs | 23 |
 | services/encryption.rs | 8 |
 | services/account.rs | 11 |
 | services/category.rs | 25 |
@@ -644,7 +649,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/i18n.rs | 8 |
 | services/recurring.rs | 6 |
 | lib.rs | 6 |
-| **総計** | **373件** |
+| **総計** | **378件** |
 
 ---
 

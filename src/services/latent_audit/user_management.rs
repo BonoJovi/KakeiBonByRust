@@ -61,7 +61,6 @@ async fn count_category2_named(pool: &SqlitePool, user_id: i64, name: &str) -> i
 /// (no FK/CASCADE to USERS, delete_general_user only deletes the USERS row).
 /// Expected: after deletion no category row for that USER_ID remains.
 #[tokio::test]
-#[ignore = "latent-audit M3"]
 async fn latent_m3_delete_user_removes_categories() {
     let pool = setup_test_db().await;
     create_test_admin(&pool, "admin", ADMIN_CREDENTIAL).await;
@@ -90,7 +89,6 @@ async fn latent_m3_delete_user_removes_categories() {
 /// categories (populate_default_categories skips because CATEGORY2 rows exist).
 /// Expected: the new user gets exactly the default category set.
 #[tokio::test]
-#[ignore = "latent-audit M3"]
 async fn latent_m3_reused_user_id_gets_default_categories() {
     let pool = setup_test_db().await;
     create_test_admin(&pool, "admin", ADMIN_CREDENTIAL).await;

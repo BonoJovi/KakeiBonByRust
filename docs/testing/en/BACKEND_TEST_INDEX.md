@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-08-26 JST  
-**Total Tests**: 373 (delta-tracked; the full authoritative count from `cargo test --lib` is 613, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 378 (delta-tracked; the full authoritative count from `cargo test --lib` is 618, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -191,8 +191,9 @@ Database initialization and migration tests.
 | `migrate_shops_user_id_cascade_is_idempotent` | Second run of the SHOPS cascade migration finds the CASCADE FK already present and returns early — no DROP/RENAME on already-migrated DBs (Fable-5 #11) | src/db.rs | 1799 |
 | `user_delete_cascades_to_shops_after_migration` | End-to-end guarantee: after the cascade migration, deleting a user with SHOPS rows succeeds and takes those rows with it — the pre-fix DELETE aborted with `FOREIGN KEY constraint failed` (Fable-5 #11) | src/db.rs | 1823 |
 | `latent_h5_migration_backfills_null_amount_including_tax` | Startup migration backfills NULL AMOUNT_INCLUDING_TAX from AMOUNT + TAX_AMOUNT (latent-audit H5) | src/latent_audit/db.rs | 33 |
+| `latent_m3_startup_removes_orphan_user_categories` | Startup cleanup removes category rows of deleted users and keeps live users' (latent-audit M3) | src/latent_audit/db.rs | 106 |
 
-**Total**: 13 tests
+**Total**: 14 tests
 
 ### settings.rs
 
@@ -313,8 +314,12 @@ User management service tests (CRUD operations).
 | `test_update_general_user_with_password_rename_only_rejects_wrong_old_password` | Rename-only branch also classifies as `OldPasswordIncorrect` (CodeRabbit on #123) | src/services/user_management.rs | 864 |
 | `test_update_admin_user_with_password_rejects_wrong_old_password` | Admin-side counterpart: wrong current password → `OldPasswordIncorrect`; hash unchanged (Fable-5 #1/#5) | src/services/user_management.rs | 891 |
 | `test_update_general_user_rejects_over_max_chars_of_multibyte_name` | Reject MAX_NAME_LEN+1 multibyte on rename (issue #37) | src/services/user_management.rs | 920 |
+| `latent_m3_delete_user_removes_categories` | Deleting a general user removes their CATEGORY1/2/3 and *_I18N rows (latent-audit M3) | src/services/latent_audit/user_management.rs | 64 |
+| `latent_m3_reused_user_id_gets_default_categories` | A new user reusing a deleted USER_ID gets the default categories, not the deleted user's (latent-audit M3) | src/services/latent_audit/user_management.rs | 92 |
+| `latent_m13_create_rejects_blank_username` | Creating a user with an empty / whitespace-only name is rejected (latent-audit M13) | src/services/latent_audit/user_management.rs | 135 |
+| `latent_m13_update_rejects_blank_username` | Renaming a user (general / admin, with or without password) to a blank name is rejected (latent-audit M13) | src/services/latent_audit/user_management.rs | 158 |
 
-**Total**: 19 tests
+**Total**: 23 tests
 
 ### services/encryption.rs
 
@@ -621,17 +626,17 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **347** |
+| **Inline Tests** | **352** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
-| db.rs | 13 |
+| db.rs | 14 |
 | settings.rs | 12 |
 | api_error.rs | 10 |
 | services/master_data.rs | 4 |
 | services/like_escape.rs | 7 |
 | services/auth.rs | 16 |
-| services/user_management.rs | 19 |
+| services/user_management.rs | 23 |
 | services/encryption.rs | 8 |
 | services/account.rs | 11 |
 | services/category.rs | 25 |
@@ -644,7 +649,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/i18n.rs | 8 |
 | services/recurring.rs | 6 |
 | lib.rs | 6 |
-| **Total** | **373** |
+| **Total** | **378** |
 
 ---
 

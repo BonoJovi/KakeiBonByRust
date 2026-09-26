@@ -471,11 +471,22 @@ impl UserManagementService {
             return Err(UserManagementError::InvalidRole);
         }
         
+        // One transaction: the USERS delete cascades to every table with an
+        // FK to USERS (transactions, accounts, masters, ...), but the
+        // category tables have none and must be removed explicitly — else a
+        // later user reusing this USER_ID (MAX + 1) inherits them
+        // (latent-audit M3). USERS goes first so the cascaded transactions
+        // no longer reference CATEGORY1 when it is deleted.
+        let mut tx = self.pool.begin().await?;
         sqlx::query(sql_queries::USER_DELETE)
             .bind(user_id)
-            .execute(&self.pool)
+            .execute(&mut *tx)
             .await?;
-        
+        for sql in sql_queries::USER_DELETE_CATEGORIES {
+            sqlx::query(sql).bind(user_id).execute(&mut *tx).await?;
+        }
+        tx.commit().await?;
+
         Ok(())
     }
 
