@@ -547,6 +547,14 @@ async function handleUserSave() {
 
     clearValidationError(usernameInput);
 
+    // Validation — required. A whitespace-only name trims to '' and the
+    // login form could never submit it (latent-audit M13; the Rust side
+    // rejects it too).
+    if (!username) {
+        showValidationError(usernameInput, i18n.t('validation.required'));
+        throw new Error('Validation error: username required');
+    }
+
     // Validation — max length (mirrors Rust defense in src/services/user_management.rs)
     if ([...username].length > MAX_NAME_LEN) {
         showMaxLengthError(usernameInput, i18n.t('user_mgmt.username'), MAX_NAME_LEN);

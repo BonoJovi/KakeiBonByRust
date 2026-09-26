@@ -134,7 +134,6 @@ async fn latent_m3_reused_user_id_gets_default_categories() {
 /// an account nobody can log in to.
 /// Expected: both are rejected and no USERS row is created.
 #[tokio::test]
-#[ignore = "latent-audit M13"]
 async fn latent_m13_create_rejects_blank_username() {
     let pool = setup_test_db().await;
     create_test_admin(&pool, "admin", ADMIN_CREDENTIAL).await;
@@ -158,7 +157,6 @@ async fn latent_m13_create_rejects_blank_username() {
 /// the admin) out with no recovery path.
 /// Expected: every update path rejects a blank name and keeps the old name.
 #[tokio::test]
-#[ignore = "latent-audit M13"]
 async fn latent_m13_update_rejects_blank_username() {
     let pool = setup_test_db().await;
     let admin_id = create_test_admin(&pool, "admin", ADMIN_CREDENTIAL).await;
