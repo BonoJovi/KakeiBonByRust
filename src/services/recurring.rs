@@ -540,6 +540,10 @@ pub enum RecurringError {
     Database(sqlx::Error),
     Validation(String),
     NotFound,
+    /// TRANSFER template with `from_account_code == to_account_code`
+    /// (latent-audit M16). Mapped to the same `transfer_same_account` code
+    /// the transaction screen uses, so the UI can show its i18n message.
+    TransferSameAccount,
 }
 
 impl std::fmt::Display for RecurringError {
@@ -548,6 +552,9 @@ impl std::fmt::Display for RecurringError {
             RecurringError::Database(e) => write!(f, "Database error: {}", e),
             RecurringError::Validation(msg) => write!(f, "Validation error: {}", msg),
             RecurringError::NotFound => write!(f, "Recurring rule not found"),
+            RecurringError::TransferSameAccount => {
+                write!(f, "Transfer source and destination accounts must differ")
+            }
         }
     }
 }
@@ -578,6 +585,7 @@ impl From<RecurringError> for ApiError {
         match err {
             RecurringError::NotFound => ApiError::not_found(ENTITY_LABEL),
             RecurringError::Validation(msg) => ApiError::validation(msg),
+            RecurringError::TransferSameAccount => ApiError::transfer_same_account(),
             RecurringError::Database(e) => ApiError::database(e.to_string()),
         }
     }
@@ -690,6 +698,43 @@ impl RecurringService {
         if request.detail.item_name.trim().is_empty() {
             return Err(RecurringError::Validation(
                 "DETAIL.item_name must not be empty".to_string(),
+            ));
+        }
+
+        // Latent-audit M16 — apply the same write validation as a normal
+        // transaction (TransactionService::save_transaction_header /
+        // add_transaction_detail); without it every generated occurrence
+        // could carry a value the regular edit path later rejects.
+        if request.category1_code == "TRANSFER"
+            && request.from_account_code == request.to_account_code
+        {
+            return Err(RecurringError::TransferSameAccount);
+        }
+        if ![consts::TAX_ROUND_DOWN, consts::TAX_ROUND_HALF_UP, consts::TAX_ROUND_UP]
+            .contains(&request.tax_rounding_type)
+        {
+            return Err(RecurringError::Validation(
+                "Invalid tax rounding type".to_string(),
+            ));
+        }
+        if ![consts::TAX_INCLUDED, consts::TAX_EXCLUDED].contains(&request.tax_included_type) {
+            return Err(RecurringError::Validation(
+                "Invalid tax included type".to_string(),
+            ));
+        }
+        if request.detail.amount < 0 || request.detail.amount > 999_999_999 {
+            return Err(RecurringError::Validation(
+                "DETAIL.amount must be between 0 and 999,999,999".to_string(),
+            ));
+        }
+        if request.detail.tax_rate < 0 || request.detail.tax_rate > 100 {
+            return Err(RecurringError::Validation(
+                "DETAIL.tax_rate must be between 0 and 100".to_string(),
+            ));
+        }
+        if request.detail.tax_amount < 0 {
+            return Err(RecurringError::Validation(
+                "DETAIL.tax_amount cannot be negative".to_string(),
             ));
         }
 
@@ -1831,6 +1876,14 @@ mod tests {
     // classifying its errors — hence the assertions on the stable
     // `ApiError::CODE_*` constants. Mirrors the CategoryError /
     // UserManagementError precedent (PR #100/#101).
+
+    #[test]
+    fn transfer_same_account_maps_to_transfer_same_account_code() {
+        // Latent-audit M16 — same wire code as the transaction screen, so
+        // recurring-rule.js can show `transaction_mgmt.transfer_same_account`.
+        let err: ApiError = RecurringError::TransferSameAccount.into();
+        assert_eq!(err.code, ApiError::CODE_TRANSFER_SAME_ACCOUNT);
+    }
 
     #[test]
     fn not_found_maps_to_not_found_code_with_recurring_rule_entity() {

@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-08-26 JST  
-**Total Tests**: 378 (delta-tracked; the full authoritative count from `cargo test --lib` is 618, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 386 (delta-tracked; the full authoritative count from `cargo test --lib` is 626, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -389,8 +389,10 @@ Category management service tests (3-tier category CRUD). Internal `CategoryErro
 | `test_get_category_tree_groups_children_under_parent` | Regression pin for the 3-flat-queries + HashMap grouping shape: cat1 → cat2 → cat3 parent/child pairing is preserved (PR11, Fable-5 #31) | src/services/category.rs | 2022 |
 | `test_get_category_tree_preserves_display_order` | Confirms that a `move_category2_up` reorder survives the flat-query regrouping (PR11, Fable-5 #31) | src/services/category.rs | 2077 |
 | `test_get_category_tree_all_includes_disabled_flags` | `get_category_tree_all` still includes disabled rows and their `is_disabled` fields; the visible-only `get_category_tree` filters them out (PR11, Fable-5 #31) | src/services/category.rs | 2106 |
+| `latent_m8_enable_category2_restores_cascaded_category3` | Showing a hidden CATEGORY2 again also re-enables the CATEGORY3 rows hiding it disabled (latent-audit M8) | src/services/latent_audit/category.rs | 83 |
+| `latent_l19_enable_missing_category2_returns_not_found` | Enabling a non-existent CATEGORY2 returns not_found (latent-audit L19, CATEGORY2 enable only) | src/services/latent_audit/category.rs | 223 |
 
-**Total**: 25 tests
+**Total**: 27 tests
 
 ### services/manufacturer.rs
 
@@ -599,8 +601,14 @@ Recurring transaction rule service tests.
 | `database_error_maps_to_database_code` | RecurringError::Database maps to ApiError::CODE_DATABASE (PR2a) | src/services/recurring.rs | 1851 |
 | `field_needle_message_survives_conversion_for_frontend_routing` | Four field needles (`"Rule name must be"` etc.) survive at the head of the wire message so the frontend `startsWith` routing keeps working (PR2a) | src/services/recurring.rs | 1858 |
 | `latent_h2_cascade_delete_keeps_confirmed_headers` | Cascade rule delete removes only still-scheduled occurrences; confirmed (IS_SCHEDULED = 0) headers survive, detached (latent-audit H2) | src/services/latent_audit/recurring.rs | 196 |
+| `latent_m16_transfer_same_account_rejected` | Creating a TRANSFER rule with from == to account is rejected (latent-audit M16) | src/services/latent_audit/recurring.rs | 331 |
+| `latent_m16_tax_rounding_type_out_of_range_rejected` | Out-of-range tax rounding type is rejected on rule creation (latent-audit M16) | src/services/latent_audit/recurring.rs | 353 |
+| `latent_m16_tax_included_type_out_of_range_rejected` | Out-of-range tax included type is rejected on rule creation (latent-audit M16) | src/services/latent_audit/recurring.rs | 374 |
+| `latent_m16_detail_amount_out_of_range_rejected` | Out-of-range detail amount is rejected on rule creation (latent-audit M16) | src/services/latent_audit/recurring.rs | 395 |
+| `latent_m16_detail_tax_rate_out_of_range_rejected` | Out-of-range detail tax rate is rejected on rule creation (latent-audit M16) | src/services/latent_audit/recurring.rs | 416 |
+| `transfer_same_account_maps_to_transfer_same_account_code` | `RecurringError::TransferSameAccount` maps to the `transfer_same_account` wire code (latent-audit M16) | src/services/recurring.rs | 1881 |
 
-**Total**: 6 tests
+**Total**: 12 tests
 
 ### lib.rs
 
@@ -626,7 +634,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **352** |
+| **Inline Tests** | **360** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -639,7 +647,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/user_management.rs | 23 |
 | services/encryption.rs | 8 |
 | services/account.rs | 11 |
-| services/category.rs | 25 |
+| services/category.rs | 27 |
 | services/manufacturer.rs | 15 |
 | services/product.rs | 18 |
 | services/shop.rs | 16 |
@@ -647,9 +655,9 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/aggregation.rs | 20 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
-| services/recurring.rs | 6 |
+| services/recurring.rs | 12 |
 | lib.rs | 6 |
-| **Total** | **378** |
+| **Total** | **386** |
 
 ---
 
