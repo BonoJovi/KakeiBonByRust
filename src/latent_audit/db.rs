@@ -30,7 +30,6 @@ async fn run_startup(db: &Database) {
 /// Expected: 起動時マイグレーションで AMOUNT_INCLUDING_TAX = AMOUNT + TAX_AMOUNT を backfill。
 /// TAX_AMOUNT=0 かつ税率>0 の行はヘッダーの TAX_ROUNDING_TYPE で税額を計算して補完する。
 #[tokio::test]
-#[ignore = "latent-audit H5"]
 async fn latent_h5_migration_backfills_null_amount_including_tax() {
     let db = memory_db().await;
     run_startup(&db).await;

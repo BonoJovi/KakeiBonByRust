@@ -8,6 +8,8 @@ import { calculateRecommendedTotal } from '../js/tax-calc.js';
 const TAX_ROUND_DOWN = 0;
 const TAX_ROUND_HALF_UP = 1;
 const TAX_ROUND_UP = 2;
+const TAX_INCLUDED = 0;
+const TAX_EXCLUDED = 1;
 
 const detail = (amount, including, rate) => ({
     amount,
@@ -35,10 +37,18 @@ describe('calculateRecommendedTotal', () => {
         expect(calculateRecommendedTotal(details, TAX_ROUND_DOWN)).toBe(3280);
     });
 
-    test('amount equal to amount_including_tax passes through (tax-included input)', () => {
-        // Must NOT gross up a row the user already typed in tax-included.
-        const details = [detail(216, 216, 8)];
-        expect(calculateRecommendedTotal(details, TAX_ROUND_DOWN)).toBe(216);
+    test('tax-excluded header grosses up amount regardless of amount_including_tax', () => {
+        // amount is always tax-excluded: 200 × 1.08 = 216 whatever the
+        // including column holds.
+        for (const including of [216, null, 200]) {
+            expect(calculateRecommendedTotal([detail(200, including, 8)], TAX_ROUND_DOWN)).toBe(216);
+        }
+    });
+
+    test('small rows whose tax rounds to zero are still grossed up (latent-audit L1)', () => {
+        // (5 + 10) × 1.08 = 16.2 → 16, not 5 + 10 = 15.
+        const details = [detail(5, 5, 8), detail(10, 10, 8)];
+        expect(calculateRecommendedTotal(details, TAX_ROUND_DOWN, TAX_EXCLUDED)).toBe(16);
     });
 
     test('tax_rate zero passes through', () => {
@@ -61,10 +71,17 @@ describe('calculateRecommendedTotal', () => {
         expect(calculateRecommendedTotal(exact, TAX_ROUND_UP)).toBe(1080);
     });
 
-    test('mixed already-included and pre-tax in the same rate bucket', () => {
-        // pre-tax 1000 grosses to 1080; already-included 300 stays as 300; total 1380.
-        const details = [detail(1000, 1080, 8), detail(300, 300, 8)];
-        expect(calculateRecommendedTotal(details, TAX_ROUND_DOWN)).toBe(1380);
+    test('tax-included header sums amount_including_tax (latent-audit H5)', () => {
+        // 359 + 359 = 718; grossing up 666 × 1.08 would give 719.
+        const details = [detail(333, 359, 8), detail(333, 359, 8)];
+        expect(calculateRecommendedTotal(details, TAX_ROUND_DOWN, TAX_INCLUDED)).toBe(718);
+        expect(calculateRecommendedTotal(details, TAX_ROUND_DOWN, TAX_EXCLUDED)).toBe(719);
+    });
+
+    test('tax-included header derives missing tax-included prices', () => {
+        // 1080 (stored) + 1000 × 1.10 (null) + 300 × 1.08 (0 sentinel) = 2504.
+        const details = [detail(1000, 1080, 8), detail(1000, null, 10), detail(300, 0, 8)];
+        expect(calculateRecommendedTotal(details, TAX_ROUND_DOWN, TAX_INCLUDED)).toBe(2504);
     });
 
     test('empty detail list returns zero', () => {

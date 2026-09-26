@@ -1475,11 +1475,48 @@ SET SHOP_ID = ?, TRANSACTION_DATE = ?, CATEGORY1_CODE = ?, FROM_ACCOUNT_CODE = ?
 WHERE TRANSACTION_ID = ? AND USER_ID = ?
 "#;
 
+/// Startup backfill (latent-audit H5): fill `AMOUNT_INCLUDING_TAX` on detail
+/// rows written before the column existed (NULL) or saved with the `0`
+/// empty-input sentinel on a non-zero row. `AMOUNT` is always tax-excluded,
+/// so the tax-included value is `AMOUNT + TAX_AMOUNT`; when `TAX_AMOUNT` was
+/// never stored (0) on a taxed row, the tax is recomputed from `TAX_RATE`
+/// under the parent header's `TAX_ROUNDING_TYPE` and written back to
+/// `TAX_AMOUNT` too. SQLite evaluates every SET expression against the old
+/// row, so both columns see the same pre-update values. Idempotent: rows
+/// with a populated `AMOUNT_INCLUDING_TAX` are not touched.
+///
+/// Binds: TAX_ROUND_HALF_UP, TAX_ROUND_UP (for each of the two SET clauses).
+pub const TRANSACTION_DETAIL_BACKFILL_AMOUNT_INCLUDING_TAX: &str = r#"
+UPDATE TRANSACTIONS_DETAIL
+SET TAX_AMOUNT = CASE
+        WHEN COALESCE(TAX_AMOUNT, 0) > 0 OR TAX_RATE <= 0 THEN COALESCE(TAX_AMOUNT, 0)
+        ELSE CASE (SELECT th.TAX_ROUNDING_TYPE FROM TRANSACTIONS_HEADER th
+                   WHERE th.TRANSACTION_ID = TRANSACTIONS_DETAIL.TRANSACTION_ID
+                     AND th.USER_ID = TRANSACTIONS_DETAIL.USER_ID)
+            WHEN ? THEN (AMOUNT * TAX_RATE + 50) / 100
+            WHEN ? THEN (AMOUNT * TAX_RATE + 99) / 100
+            ELSE AMOUNT * TAX_RATE / 100
+        END
+    END,
+    AMOUNT_INCLUDING_TAX = AMOUNT + CASE
+        WHEN COALESCE(TAX_AMOUNT, 0) > 0 OR TAX_RATE <= 0 THEN COALESCE(TAX_AMOUNT, 0)
+        ELSE CASE (SELECT th.TAX_ROUNDING_TYPE FROM TRANSACTIONS_HEADER th
+                   WHERE th.TRANSACTION_ID = TRANSACTIONS_DETAIL.TRANSACTION_ID
+                     AND th.USER_ID = TRANSACTIONS_DETAIL.USER_ID)
+            WHEN ? THEN (AMOUNT * TAX_RATE + 50) / 100
+            WHEN ? THEN (AMOUNT * TAX_RATE + 99) / 100
+            ELSE AMOUNT * TAX_RATE / 100
+        END
+    END
+WHERE AMOUNT_INCLUDING_TAX IS NULL
+   OR (AMOUNT_INCLUDING_TAX = 0 AND AMOUNT > 0)
+"#;
+
 /// Read just the columns needed to recompute a transaction's TOTAL_AMOUNT
 /// from its details. Used by the auto-recalculation path; does not need to
 /// hydrate the full TransactionHeader struct.
-pub const TRANSACTION_HEADER_GET_ROUNDING_TYPE: &str = r#"
-SELECT TAX_ROUNDING_TYPE
+pub const TRANSACTION_HEADER_GET_TAX_SETTINGS: &str = r#"
+SELECT TAX_ROUNDING_TYPE, TAX_INCLUDED_TYPE
 FROM TRANSACTIONS_HEADER
 WHERE TRANSACTION_ID = ? AND USER_ID = ?
 "#;

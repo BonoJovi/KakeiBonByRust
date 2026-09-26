@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-09-06 JST  
-**総テスト数**: 349件 (差分反映後。`cargo test --lib` の権威的総数は 591 で、既存の未反映分は別 PR でバックフィル予定)
+**総テスト数**: 357件 (差分反映後。`cargo test --lib` の権威的総数は 597 で、既存の未反映分は別 PR でバックフィル予定)
 
 ---
 
@@ -190,8 +190,9 @@ AES-256-GCM暗号化・復号化のテスト。
 | `migrate_shops_user_id_cascade_adds_cascade_fk_and_preserves_rows` | テーブルを再作成して SHOPS.USER_ID FK に `ON DELETE CASCADE` を追加、SHOP_ID と各列の値はそのまま保持されること (Fable-5 #11) | src/db.rs | 1711 |
 | `migrate_shops_user_id_cascade_is_idempotent` | SHOPS CASCADE マイグレーションの 2 回目は既に CASCADE FK があるため早期に戻る。マイグレーション済み DB では DROP/RENAME は走らない (Fable-5 #11) | src/db.rs | 1799 |
 | `user_delete_cascades_to_shops_after_migration` | CASCADE マイグレーション後、SHOPS 行を持つユーザーの削除が成功し、SHOPS 行も同時に削除される。修正前は `FOREIGN KEY constraint failed` でロールバックしていた (Fable-5 #11) | src/db.rs | 1823 |
+| `latent_h5_migration_backfills_null_amount_including_tax` | 起動時マイグレーションが NULL の AMOUNT_INCLUDING_TAX を AMOUNT + TAX_AMOUNT で補完 (潜在監査 H5) | src/latent_audit/db.rs | 33 |
 
-**合計**: 12件
+**合計**: 13件
 
 ### settings.rs
 
@@ -481,7 +482,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | `field_needle_message_survives_conversion_for_frontend_routing` | 2 つのフィールド needle (`"Item name must be"` / `"Memo must be"`) が変換後もそのまま先頭に残り、フロントの `startsWith` ルーティングを維持できること (PR2b) | src/services/transaction.rs | 4224 |
 | `test_find_matching_pattern_preserves_user_half_up_when_settings_match` | 端数なしの伝票 (500円 × 10% = 550円) で `HALF_UP + EXCLUDED` を保存している場合、一括再計算で FLOOR に無言で書き換えられないこと (Fable-5 #2) | src/services/transaction.rs | 1802 |
 | `test_find_matching_pattern_preserves_user_ceil_when_settings_match` | `UP + EXCLUDED` にも同じ保証 (Fable-5 #2) | src/services/transaction.rs | 1819 |
-| `test_find_matching_pattern_falls_back_to_priority_when_preferred_mismatches` | 現在設定で `target_total` を再現できない場合、優先順 PATTERNS 探索へフォールバック (Fable-5 #2) | src/services/transaction.rs | 1836 |
+| `test_find_matching_pattern_falls_back_to_priority_when_preferred_mismatches` | 現在設定で `target_total` を再現できない場合、優先順 PATTERNS 探索へフォールバック (Fable-5 #2) | src/services/transaction.rs | 1968 |
 | `test_find_matching_pattern_returns_none_when_no_pattern_fits` | どの組み合わせも `target_total` を再現できない場合は `None`、呼び出し側は設定列でなく TOTAL_AMOUNT を上書き (Fable-5 #2) | src/services/transaction.rs | 1859 |
 | `test_save_header_rejects_invalid_tax_included_type` | `save_transaction_header` が `{TAX_INCLUDED, TAX_EXCLUDED}` 以外の `tax_included_type` を拒否し、無効値が `find_matching_pattern` の「優先設定を先に確認する判定」に流れて残らないこと (#125 の CodeRabbit 指摘) | src/services/transaction.rs | 3230 |
 | `test_update_header_rejects_invalid_tax_included_type` | 更新入口にも同じガード (#125 の CodeRabbit 指摘) | src/services/transaction.rs | 3257 |
@@ -493,8 +494,14 @@ AES-256-GCM暗号化・復号化のテスト。
 | `test_add_detail_reuses_memo_shared_with_header` | 親ヘッダーの MEMO_ID と同じ本文で detail 追加すると同じ MEMO_ID を再利用。update の「共有メモ」経路が add 側からも到達可能に (Fable-5 #7) | src/services/transaction.rs | 4519 |
 | `test_add_detail_failure_rolls_back_memo_insert_in_same_tx` | DETAIL_INSERT 内の FK 失敗 (`(USER_ID, CATEGORY1_CODE) → CATEGORY1` が未 seed) で MEMO insert も同 tx でロールバック、MEMOS 空を確認 (Fable-5 #7) | src/services/transaction.rs | 4585 |
 | `transfer_same_account_maps_to_stable_wire_code_and_omits_entity` | `TransactionError::TransferSameAccount` が `ApiError { code: "transfer_same_account", entity: None }` に変換される wire contract を固定。将来のリファクタで generic な `validation` フォールバックへ無言で退化させないための pin (#127 の CodeRabbit 指摘) | src/services/transaction.rs | 4664 |
+| `latent_h5_included_header_total_sums_amount_including_tax` | 税込ヘッダーの合計 = SUM(AMOUNT_INCLUDING_TAX) (潜在監査 H5) | src/services/latent_audit/transaction.rs | 199 |
+| `latent_h5_compute_recommended_total_honours_included_header` | `compute_recommended_total` がヘッダーの TAX_INCLUDED_TYPE を考慮する (潜在監査 H5) | src/services/latent_audit/transaction.rs | 211 |
+| `latent_h5_bulk_recalc_keeps_consistent_included_header` | 整合した税込ヘッダーを一括再計算が書き換えない (潜在監査 H5) | src/services/latent_audit/transaction.rs | 232 |
+| `latent_l1_small_detail_with_zero_tax_is_still_grossed_up` | 税額が丸めで 0 円になる少額明細も税率単位で gross-up される (潜在監査 L1) | src/services/latent_audit/transaction.rs | 259 |
+| `test_calculate_recommended_total_uses_amount_not_amount_including_tax` | 外税の合計は AMOUNT_INCLUDING_TAX に関係なく AMOUNT を gross-up (AMOUNT は常に税抜) | src/services/transaction.rs | 1837 |
+| `test_calculate_recommended_total_with_settings_included_derives_missing_rows` | 税込の合計で NULL / 0 の行を AMOUNT + TAX_RATE から導出 | src/services/transaction.rs | 1890 |
 
-**合計**: 35件
+**合計**: 41件
 
 ### services/aggregation.rs
 
@@ -506,9 +513,9 @@ AES-256-GCM暗号化・復号化のテスト。
 | `test_monthly_aggregation_next_month` | 翌月の月次集計 | src/services/aggregation.rs | 1563 |
 | `test_detail_query_grosses_up_null_tax_included_row` | TAX_RATE>0 で AMOUNT_INCLUDING_TAX が NULL の明細も税抜として割増 (Fable-5 #3) | src/services/aggregation.rs | 2581 |
 | `test_detail_query_grosses_up_zero_tax_included_row` | AMOUNT_INCLUDING_TAX=0 (フロント空欄) も税抜扱い (Fable-5 #3) | src/services/aggregation.rs | 2610 |
-| `test_detail_query_included_header_legacy_null_row_no_double_taxation` | 税込ヘッダー (`TAX_INCLUDED_TYPE = TAX_INCLUDED (0)`) + レガシー `AMOUNT_INCLUDING_TAX = NULL` 明細を「税込み済み」として扱い、二重課税しない (Fable-5 #3 残) | src/services/aggregation.rs | 2653 |
-| `test_detail_query_included_header_zero_col_no_double_taxation` | 同じ #3 残: 税込ヘッダー配下で `AMOUNT_INCLUDING_TAX = 0` (フロント空欄) も「税込み済み」扱い | src/services/aggregation.rs | 2690 |
-| `test_detail_query_matches_header_query_for_included_ledger` | 税込ヘッダーの同一伝票でヘッダー集計と明細集計の値が一致する (Fable-5 #4) | src/services/aggregation.rs | 2726 |
+| `test_detail_query_included_header_derives_null_tax_included_row` | 税込ヘッダー + レガシー `AMOUNT_INCLUDING_TAX = NULL` 明細は税抜 AMOUNT から税込額を導出する (Fable-5 #3 の解釈を置換、潜在監査 H5) | src/services/aggregation.rs | 2741 |
+| `test_detail_query_included_header_derives_zero_tax_included_row` | 税込ヘッダー配下の `AMOUNT_INCLUDING_TAX = 0` (フロント空欄) も同じく税抜 AMOUNT から導出 (潜在監査 H5) | src/services/aggregation.rs | 2770 |
+| `test_detail_query_matches_header_query_for_included_ledger` | 税込ヘッダーの同一伝票でヘッダー集計と明細集計の値が一致する (Fable-5 #4) | src/services/aggregation.rs | 2805 |
 | `test_detail_query_avg_matches_total_over_count_with_mixed_rates` | 混在税率取引で avg × count == total を保持 (Fable-5 #4) | src/services/aggregation.rs | 2774 |
 | `test_detail_query_avg_multi_transaction_arithmetic` | 2 取引の avg = total / txn_count 検証 (Fable-5 #4) | src/services/aggregation.rs | 2811 |
 | `test_detail_query_binds_category_filter_no_injection` | カテゴリフィルタの値が bind されている (SQL 直埋めではない) ことを End-to-End で確認。`EXPENSE' OR '1'='1` payload は 0 rows を返す (PR5, Fable-5 #25) | src/services/aggregation.rs | 2846 |
@@ -521,8 +528,9 @@ AES-256-GCM暗号化・復号化のテスト。
 | `latent_h1_category2_null_code_goes_to_unspecified_group` | CATEGORY2_CODE が NULL の明細があっても費目2集計が成功し「指定なし」('') グループに入る（潜在監査 H1 の回帰防止） | src/services/latent_audit/aggregation.rs | 240 |
 | `latent_h1_category3_null_code_goes_to_unspecified_group` | CATEGORY2/3 が NULL でも費目3集計が成功し「指定なし」グループに入る（潜在監査 H1 の回帰防止） | src/services/latent_audit/aggregation.rs | 256 |
 | `latent_h1_category3_only_code3_null_does_not_fail` | CATEGORY3_CODE のみ NULL でも費目3集計が失敗しない（潜在監査 H1 の回帰防止） | src/services/latent_audit/aggregation.rs | 271 |
+| `latent_h5_included_header_category2_uses_amount_including_tax` | 税込ヘッダーの費目2集計が AMOUNT_INCLUDING_TAX を使う (潜在監査 H5) | src/services/latent_audit/aggregation.rs | 438 |
 
-**合計**: 19件
+**合計**: 20件
 
 ### services/session.rs
 
@@ -597,11 +605,11 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **323件** |
+| **インラインテスト** | **331件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
-| db.rs | 12 |
+| db.rs | 13 |
 | settings.rs | 12 |
 | api_error.rs | 10 |
 | services/master_data.rs | 4 |
@@ -614,13 +622,13 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/manufacturer.rs | 12 |
 | services/product.rs | 15 |
 | services/shop.rs | 12 |
-| services/transaction.rs | 35 |
-| services/aggregation.rs | 19 |
+| services/transaction.rs | 41 |
+| services/aggregation.rs | 20 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 5 |
 | lib.rs | 6 |
-| **総計** | **349件** |
+| **総計** | **357件** |
 
 ---
 

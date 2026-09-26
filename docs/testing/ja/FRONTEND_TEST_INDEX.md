@@ -2,8 +2,8 @@
 
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
-**最終更新**: 2026-09-06 JST  
-**総テスト数**: 773件 (jest suite 26 ファイル、`npm test` 実測)
+**最終更新**: 2026-09-27 JST  
+**総テスト数**: 775件 (jest suite 26 ファイル、`npm test` 実測)
 
 ---
 
@@ -457,7 +457,7 @@
 
 税計算ユーティリティのテスト (`tax-calc.js`)。税抜⇔税込変換、丸めモード。
 
-**テスト数**: 10件
+**テスト数**: 12件
 
 | テストカテゴリ | 説明 |
 |--------------|------|
@@ -465,6 +465,7 @@
 | 税込→税抜 | 8%/10% での逆算 |
 | 丸め処理 | floor / round / ceil の 3 モード |
 | エッジケース | 0円、端数 |
+| 内税/外税 (潜在監査 H5/L1) | AMOUNT は常に税抜。外税は AMOUNT を税率単位で gross-up (税額 0 円の少額明細も)、内税は AMOUNT_INCLUDING_TAX を合算し欠損行は導出 |
 
 **ファイル**: res/tests/tax-calc.test.js
 
@@ -801,12 +802,12 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **350件** |
+| **機能別テスト** | **352件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 29 |
 | toast.test.js | 14 |
-| tax-calc.test.js | 10 |
+| tax-calc.test.js | 12 |
 | product-autocomplete.test.js | 10 |
 | product-draft.test.js | 11 |
 | product-master-jump-draft.test.js | 11 |
@@ -823,7 +824,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **773件** |
+| **総計 (jest)** | **775件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 

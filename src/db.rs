@@ -138,6 +138,9 @@ impl Database {
         // Add AMOUNT_INCLUDING_TAX column if it doesn't exist (for tables created before this column was added)
         self.ensure_amount_including_tax_column().await?;
 
+        // Fill AMOUNT_INCLUDING_TAX on legacy / sentinel rows (latent-audit H5)
+        self.backfill_amount_including_tax().await?;
+
         // Make CATEGORY2_CODE and CATEGORY3_CODE nullable if they have NOT NULL constraint
         self.ensure_category_nullable().await?;
 
@@ -742,6 +745,21 @@ impl Database {
                 .await?;
         }
 
+        Ok(())
+    }
+
+    /// Backfill `AMOUNT_INCLUDING_TAX` so every detail row carries its
+    /// tax-included price. `AMOUNT` has always been tax-excluded, so the
+    /// header total / aggregation for tax-included headers can then sum
+    /// `AMOUNT_INCLUDING_TAX` directly. A no-op once every row is filled.
+    async fn backfill_amount_including_tax(&self) -> Result<(), sqlx::Error> {
+        sqlx::query(sql_queries::TRANSACTION_DETAIL_BACKFILL_AMOUNT_INCLUDING_TAX)
+            .bind(crate::consts::TAX_ROUND_HALF_UP)
+            .bind(crate::consts::TAX_ROUND_UP)
+            .bind(crate::consts::TAX_ROUND_HALF_UP)
+            .bind(crate::consts::TAX_ROUND_UP)
+            .execute(&self.pool)
+            .await?;
         Ok(())
     }
 }
