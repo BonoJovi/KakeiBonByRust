@@ -28,9 +28,9 @@ export const RES_DIR = path.resolve(HERE, '../..');
 /** Put the <body> of res/<htmlFile> into the jsdom document (scripts stripped). */
 export function loadPageBody(htmlFile) {
     const html = fs.readFileSync(path.join(RES_DIR, htmlFile), 'utf8');
-    const m = html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
-    if (!m) throw new Error(`no <body> in ${htmlFile}`);
-    document.body.innerHTML = m[1].replace(/<script[\s\S]*?<\/script>/gi, '');
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    doc.querySelectorAll('script').forEach((el) => el.remove());
+    document.body.innerHTML = doc.body.innerHTML;
 }
 
 /** All RESOURCE_KEYs defined in res/sql/dbaccess.sql (used to spot raw keys). */
