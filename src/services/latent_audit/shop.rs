@@ -119,15 +119,17 @@ async fn latent_h6_rename_onto_deleted_shop_name_is_duplicate_name() {
 /// H6 follow-up (CodeRabbit #142): an INSERT that hits UNIQUE(USER_ID,
 /// SHOP_NAME) after slipping past the pre-check — e.g. two concurrent adds
 /// of the same name — is reported as duplicate_name, not `database`.
-/// Simulated by inserting the conflicting row directly, bypassing add_shop.
+/// Simulated with a trigger that inserts the conflicting row first.
 #[tokio::test]
 async fn latent_h6_insert_unique_violation_maps_to_duplicate_name() {
     let (pool, user_id) = setup_production_schema_db().await;
 
     // The pre-check is bypassed by racing a trigger that inserts the same
-    // name right before add_shop's INSERT lands.
+    // name right before add_shop's INSERT lands. Not TEMP: a temp trigger
+    // only exists on the connection that created it, and the pool may run
+    // add_shop on another one (it did on CI).
     sqlx::query(
-        "CREATE TEMP TRIGGER race_same_name BEFORE INSERT ON SHOPS \
+        "CREATE TRIGGER race_same_name BEFORE INSERT ON SHOPS \
          WHEN NEW.SHOP_NAME = 'イオン' AND NOT EXISTS (SELECT 1 FROM SHOPS WHERE SHOP_NAME = 'イオン') \
          BEGIN INSERT INTO SHOPS (USER_ID, SHOP_NAME, DISPLAY_ORDER) VALUES (NEW.USER_ID, NEW.SHOP_NAME, 0); END",
     )
