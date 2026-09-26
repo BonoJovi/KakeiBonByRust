@@ -431,3 +431,7 @@ mod tests {
         assert!(!tmp_path.exists(), "next save must clean the tmp path via rename");
     }
 }
+
+#[cfg(test)]
+#[path = "latent_audit/settings.rs"]
+mod latent_audit;

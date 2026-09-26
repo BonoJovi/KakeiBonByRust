@@ -1069,3 +1069,7 @@ mod tests {
         assert_eq!(hits[0].manufacturer_name, None);
     }
 }
+
+#[cfg(test)]
+#[path = "latent_audit/product.rs"]
+mod latent_audit;

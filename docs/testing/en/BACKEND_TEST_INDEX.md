@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-08-26 JST  
-**Total Tests**: 346 (delta-tracked; the full authoritative count from `cargo test --lib` is 588, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 349 (delta-tracked; the full authoritative count from `cargo test --lib` is 591, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -518,8 +518,11 @@ Aggregation service tests.
 | `test_build_query_shop_uses_empty_string_fallback_no_hardcoded_ja` | Shop grouping returns `COALESCE(s.SHOP_NAME, '')` sentinel, no hardcoded Japanese `'指定なし'` (Fable-5 #22) | src/services/aggregation.rs | 2024 |
 | `test_build_query_product_uses_empty_string_fallback_no_hardcoded_ja` | Product grouping returns `COALESCE(p.PRODUCT_NAME, '')` sentinel, no hardcoded Japanese `'指定なし'` (Fable-5 #22) | src/services/aggregation.rs | 2044 |
 | `test_build_query_account_uses_empty_string_for_none_no_hardcoded_ja` | Account grouping maps `account_code = 'NONE'` to empty string and returns `COALESCE(a.ACCOUNT_NAME, '')` for missing rows — no hardcoded Japanese `'指定なし'` (Fable-5 #22) | src/services/aggregation.rs | 2064 |
+| `latent_h1_category2_null_code_goes_to_unspecified_group` | Category2 grouping with a NULL CATEGORY2_CODE detail succeeds and lands in the unspecified ('') group (latent-audit H1 regression guard) | src/services/latent_audit/aggregation.rs | 240 |
+| `latent_h1_category3_null_code_goes_to_unspecified_group` | Category3 grouping with NULL CATEGORY2/3 codes succeeds and lands in the unspecified group (latent-audit H1 regression guard) | src/services/latent_audit/aggregation.rs | 256 |
+| `latent_h1_category3_only_code3_null_does_not_fail` | Category3 grouping with only CATEGORY3_CODE NULL does not fail (latent-audit H1 regression guard) | src/services/latent_audit/aggregation.rs | 271 |
 
-**Total**: 16 tests
+**Total**: 19 tests
 
 ### services/session.rs
 
@@ -594,7 +597,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **320** |
+| **Inline Tests** | **323** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -612,12 +615,12 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/product.rs | 15 |
 | services/shop.rs | 12 |
 | services/transaction.rs | 35 |
-| services/aggregation.rs | 16 |
+| services/aggregation.rs | 19 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 5 |
 | lib.rs | 6 |
-| **Total** | **346** |
+| **Total** | **349** |
 
 ---
 

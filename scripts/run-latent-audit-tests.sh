@@ -20,7 +20,7 @@ target="${1:-all}"
 
 if [[ "$target" == "all" || "$target" == "rust" ]]; then
     echo "=== Rust latent-audit tests ==="
-    cargo test --lib latent_ -- --ignored 2>&1 \
+    cargo test --lib latent_ -- --ignored --test-threads=1 2>&1 \
         | grep -E '^test .*latent_.* \.\.\. |^test result:' \
         | sed -E 's/^test (.*) \.\.\. (ok|FAILED)$/\2\t\1/'
     echo

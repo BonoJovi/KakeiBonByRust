@@ -1038,3 +1038,7 @@ mod tests {
         assert!(get_accounts(&pool, 2).await.unwrap().is_empty());
     }
 }
+
+#[cfg(test)]
+#[path = "latent_audit/account.rs"]
+mod latent_audit;

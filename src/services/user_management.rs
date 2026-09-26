@@ -932,3 +932,7 @@ mod tests {
             "error should reference the limit: {}", msg);
     }
 }
+
+#[cfg(test)]
+#[path = "latent_audit/user_management.rs"]
+mod latent_audit;

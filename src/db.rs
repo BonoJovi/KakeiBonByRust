@@ -1856,3 +1856,7 @@ mod tests {
         assert_eq!(remaining, 0, "SHOPS rows must cascade with their owner");
     }
 }
+
+#[cfg(test)]
+#[path = "latent_audit/db.rs"]
+mod latent_audit;
