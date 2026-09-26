@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-08-26 JST  
-**Total Tests**: 364 (delta-tracked; the full authoritative count from `cargo test --lib` is 604, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 372 (delta-tracked; the full authoritative count from `cargo test --lib` is 612, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -405,8 +405,11 @@ Manufacturer management service tests. Empty/duplicate assertion tests renamed t
 | `test_delete_manufacturer_rejected_when_referenced_by_product` | Delete rejected with `ApiError { code: "in_use", entity: "manufacturer" }` when any PRODUCTS row names the manufacturer (master delete-lock) | src/services/manufacturer.rs | 374 |
 | `test_delete_manufacturer_rejected_when_only_disabled_products_reference` | Even IS_DISABLED products count as a reference — the FK link exists and the products screen still surfaces them (master delete-lock) | src/services/manufacturer.rs | 402 |
 | `test_delete_manufacturer_ignores_other_users_references` | Cross-user products with the same MANUFACTURER_ID do NOT block delete — scoping is by USER_ID (master delete-lock) | src/services/manufacturer.rs | 429 |
+| `latent_m6_readd_deleted_manufacturer_name_is_not_database_error` | Re-adding a deleted manufacturer name never surfaces a generic database error (latent-audit M6) | src/services/latent_audit/manufacturer.rs | 26 |
+| `latent_m6_readd_deleted_manufacturer_name_revives_original_row` | Re-adding a disabled / deleted manufacturer name reuses the original row, enabled, with the new memo (latent-audit M6) | src/services/latent_audit/manufacturer.rs | 83 |
+| `latent_m6_rename_onto_disabled_manufacturer_name_is_duplicate_name` | Renaming onto a disabled manufacturer name is rejected with duplicate_name (latent-audit M6) | src/services/latent_audit/manufacturer.rs | 106 |
 
-**Total**: 12 tests
+**Total**: 15 tests
 
 ### services/product.rs
 
@@ -429,8 +432,11 @@ Product management service tests.
 | `test_delete_product_ignores_other_users_transaction_details` | Cross-user detail rows do NOT block delete — scoping runs through TRANSACTIONS_HEADER.USER_ID (master delete-lock) | src/services/product.rs | 481 |
 | `test_search_products_escapes_percent_metacharacter` | Autocomplete search of `"100%ジ"` matches only "果汁100%ジュース", not "果汁100リンゴジュース" — `%` is escaped and paired with `LIKE ? ESCAPE '\'` (Fable-5 #23) | src/services/product.rs | 785 |
 | `test_search_products_escapes_underscore_metacharacter` | Autocomplete search of `"A_1"` matches only literal "A_1", not "AB1" — `_` is escaped (Fable-5 #23) | src/services/product.rs | 812 |
+| `latent_m6_readd_deleted_product_name_is_not_database_error` | Re-adding a deleted product name never surfaces a generic database error (latent-audit M6) | src/services/latent_audit/product.rs | 27 |
+| `latent_m6_readd_deleted_product_name_revives_original_row` | Re-adding a disabled / deleted product name reuses the original row (same PRODUCT_ID), enabled, with the new memo (latent-audit M6) | src/services/latent_audit/product.rs | 87 |
+| `latent_m6_rename_onto_disabled_product_name_is_duplicate_name` | Renaming onto a disabled product name is rejected with duplicate_name (latent-audit M6) | src/services/latent_audit/product.rs | 110 |
 
-**Total**: 15 tests
+**Total**: 18 tests
 
 ### services/shop.rs
 
@@ -506,8 +512,10 @@ Transaction management service tests.
 | `test_calculate_recommended_total_with_settings_included_derives_missing_rows` | Tax-included total derives NULL / 0-sentinel rows from AMOUNT + TAX_RATE | src/services/transaction.rs | 1890 |
 | `latent_h4_bulk_recalc_keeps_total_without_details` | Bulk recalc leaves a header without details untouched (latent-audit H4) | src/services/latent_audit/transaction.rs | 177 |
 | `latent_h4_compute_recommended_total_is_none_without_details` | `compute_recommended_total` returns None for a header without details (latent-audit H4) | src/services/latent_audit/transaction.rs | 666 |
+| `latent_m1_update_header_persists_is_scheduled` | Header update persists the IS_SCHEDULED checkbox (latent-audit M1) | src/services/latent_audit/transaction.rs | 273 |
+| `latent_m1_update_header_without_flag_keeps_is_scheduled` | Header update with `is_scheduled: None` keeps the stored flag (latent-audit M1) | src/services/latent_audit/transaction.rs | 679 |
 
-**Total**: 43 tests
+**Total**: 45 tests
 
 ### services/aggregation.rs
 
@@ -612,7 +620,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **338** |
+| **Inline Tests** | **346** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -626,16 +634,16 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/encryption.rs | 8 |
 | services/account.rs | 11 |
 | services/category.rs | 25 |
-| services/manufacturer.rs | 12 |
-| services/product.rs | 15 |
+| services/manufacturer.rs | 15 |
+| services/product.rs | 18 |
 | services/shop.rs | 16 |
-| services/transaction.rs | 43 |
+| services/transaction.rs | 45 |
 | services/aggregation.rs | 20 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 6 |
 | lib.rs | 6 |
-| **Total** | **364** |
+| **Total** | **372** |
 
 ---
 

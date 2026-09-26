@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-09-06 JST  
-**総テスト数**: 364件 (差分反映後。`cargo test --lib` の権威的総数は 604 で、既存の未反映分は別 PR でバックフィル予定)
+**総テスト数**: 372件 (差分反映後。`cargo test --lib` の権威的総数は 612 で、既存の未反映分は別 PR でバックフィル予定)
 
 ---
 
@@ -405,8 +405,11 @@ AES-256-GCM暗号化・復号化のテスト。
 | `test_delete_manufacturer_rejected_when_referenced_by_product` | PRODUCTS がメーカーを参照中なら `ApiError { code: "in_use", entity: "manufacturer" }` で削除拒否（マスタ削除ロック） | src/services/manufacturer.rs | 374 |
 | `test_delete_manufacturer_rejected_when_only_disabled_products_reference` | IS_DISABLED=1 の商品でも参照とみなす（FK は残り、「無効表示」でも一覧に出るため、マスタ削除ロック） | src/services/manufacturer.rs | 402 |
 | `test_delete_manufacturer_ignores_other_users_references` | 他ユーザーの同一 MANUFACTURER_ID 参照は削除をブロックしない（USER_ID スコープ、マスタ削除ロック） | src/services/manufacturer.rs | 429 |
+| `latent_m6_readd_deleted_manufacturer_name_is_not_database_error` | 削除済みメーカーと同名の再登録で汎用 database エラーにならない (潜在監査 M6) | src/services/latent_audit/manufacturer.rs | 26 |
+| `latent_m6_readd_deleted_manufacturer_name_revives_original_row` | 無効 / 削除済みメーカーと同名の追加は元の行を有効化して再利用 (潜在監査 M6) | src/services/latent_audit/manufacturer.rs | 83 |
+| `latent_m6_rename_onto_disabled_manufacturer_name_is_duplicate_name` | 無効メーカーの名前への変更は duplicate_name で拒否 (潜在監査 M6) | src/services/latent_audit/manufacturer.rs | 106 |
 
-**合計**: 12件
+**合計**: 15件
 
 ### services/product.rs
 
@@ -429,8 +432,11 @@ AES-256-GCM暗号化・復号化のテスト。
 | `test_delete_product_ignores_other_users_transaction_details` | 他ユーザーの明細参照は削除をブロックしない（TRANSACTIONS_HEADER.USER_ID でスコープ、マスタ削除ロック） | src/services/product.rs | 481 |
 | `test_search_products_escapes_percent_metacharacter` | オートコンプリート検索で `"100%ジ"` が「果汁100%ジュース」だけにマッチし「果汁100リンゴジュース」にマッチしないこと — `%` をエスケープし `LIKE ? ESCAPE '\'` を併用 (Fable-5 #23) | src/services/product.rs | 785 |
 | `test_search_products_escapes_underscore_metacharacter` | オートコンプリート検索で `"A_1"` が literal "A_1" だけにマッチし "AB1" にマッチしないこと — `_` をエスケープ (Fable-5 #23) | src/services/product.rs | 812 |
+| `latent_m6_readd_deleted_product_name_is_not_database_error` | 削除済み商品と同名の再登録で汎用 database エラーにならない (潜在監査 M6) | src/services/latent_audit/product.rs | 27 |
+| `latent_m6_readd_deleted_product_name_revives_original_row` | 無効 / 削除済み商品と同名の追加は元の行 (同じ PRODUCT_ID) を有効化して再利用 (潜在監査 M6) | src/services/latent_audit/product.rs | 87 |
+| `latent_m6_rename_onto_disabled_product_name_is_duplicate_name` | 無効商品の名前への変更は duplicate_name で拒否 (潜在監査 M6) | src/services/latent_audit/product.rs | 110 |
 
-**合計**: 15件
+**合計**: 18件
 
 ### services/shop.rs
 
@@ -506,8 +512,10 @@ AES-256-GCM暗号化・復号化のテスト。
 | `test_calculate_recommended_total_with_settings_included_derives_missing_rows` | 税込の合計で NULL / 0 の行を AMOUNT + TAX_RATE から導出 | src/services/transaction.rs | 1890 |
 | `latent_h4_bulk_recalc_keeps_total_without_details` | 明細なしヘッダーは一括再計算で TOTAL_AMOUNT を変更しない (潜在監査 H4) | src/services/latent_audit/transaction.rs | 177 |
 | `latent_h4_compute_recommended_total_is_none_without_details` | 明細なしヘッダーの `compute_recommended_total` は None を返す (潜在監査 H4) | src/services/latent_audit/transaction.rs | 666 |
+| `latent_m1_update_header_persists_is_scheduled` | ヘッダー更新で予定チェック (IS_SCHEDULED) が保存される (潜在監査 M1) | src/services/latent_audit/transaction.rs | 273 |
+| `latent_m1_update_header_without_flag_keeps_is_scheduled` | `is_scheduled: None` のヘッダー更新は既存の値を保つ (潜在監査 M1) | src/services/latent_audit/transaction.rs | 679 |
 
-**合計**: 43件
+**合計**: 45件
 
 ### services/aggregation.rs
 
@@ -612,7 +620,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **338件** |
+| **インラインテスト** | **346件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -626,16 +634,16 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/encryption.rs | 8 |
 | services/account.rs | 11 |
 | services/category.rs | 25 |
-| services/manufacturer.rs | 12 |
-| services/product.rs | 15 |
+| services/manufacturer.rs | 15 |
+| services/product.rs | 18 |
 | services/shop.rs | 16 |
-| services/transaction.rs | 43 |
+| services/transaction.rs | 45 |
 | services/aggregation.rs | 20 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 6 |
 | lib.rs | 6 |
-| **総計** | **364件** |
+| **総計** | **372件** |
 
 ---
 
