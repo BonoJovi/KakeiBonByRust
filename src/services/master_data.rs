@@ -201,6 +201,19 @@ pub async fn run_delete_expect_one_in_tx(
     Ok(())
 }
 
+/// Map the error of a master **add** INSERT. A concurrent add of the same
+/// name can slip past [`check_duplicate_for_add`] and hit the table's
+/// UNIQUE(USER_ID, <name>) constraint; report that as
+/// `ApiError::duplicate_name(entity)` rather than a raw database error.
+pub fn map_insert_error(spec: &MasterCrudSpec, err: sqlx::Error) -> ApiError {
+    match &err {
+        sqlx::Error::Database(db) if db.is_unique_violation() => {
+            ApiError::duplicate_name(spec.entity_label)
+        }
+        _ => ApiError::from(err),
+    }
+}
+
 /// Assert that the update just executed by the caller actually touched a
 /// row. Same rationale as [`run_delete_expect_one_in_tx`]: eliminates the
 /// separate pre-check `get_by_id().await?.ok_or(NotFound)?` before an

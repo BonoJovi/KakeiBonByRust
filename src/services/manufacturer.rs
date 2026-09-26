@@ -93,14 +93,30 @@ pub async fn add_manufacturer(
 
     let is_disabled = request.is_disabled.unwrap_or(0);
 
-    sqlx::query(sql_queries::MANUFACTURER_INSERT)
-        .bind(user_id)
-        .bind(&request.manufacturer_name)
+    // A disabled / logically deleted manufacturer with the same name still
+    // holds the UNIQUE slot, so reuse that row instead of inserting
+    // (latent-audit M6).
+    let revived = sqlx::query(sql_queries::MANUFACTURER_REVIVE_DISABLED_BY_NAME)
+        .bind(is_disabled)
         .bind(&request.memo)
         .bind(display_order)
-        .bind(is_disabled)
+        .bind(user_id)
+        .bind(&request.manufacturer_name)
         .execute(pool)
-        .await?;
+        .await?
+        .rows_affected();
+
+    if revived == 0 {
+        sqlx::query(sql_queries::MANUFACTURER_INSERT)
+            .bind(user_id)
+            .bind(&request.manufacturer_name)
+            .bind(&request.memo)
+            .bind(display_order)
+            .bind(is_disabled)
+            .execute(pool)
+            .await
+            .map_err(|e| master_data::map_insert_error(&SPEC, e))?;
+    }
 
     Ok("Manufacturer added successfully".to_string())
 }

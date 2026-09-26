@@ -555,6 +555,15 @@ impl TransactionService {
             ));
         }
 
+        // IS_SCHEDULED is a 0/1 flag. CodeRabbit on #144 — any other value
+        // (e.g. 2) would be stored verbatim, and since the regular list only
+        // shows IS_SCHEDULED = 0 rows, the transaction would vanish from it.
+        if !matches!(request.is_scheduled, None | Some(0) | Some(1)) {
+            return Err(TransactionError::ValidationError(
+                "Invalid scheduled flag".to_string(),
+            ));
+        }
+
         // Fable-5 review #20 — TRANSFER with the same FROM and TO
         // account is meaningless (net movement is zero) and used to
         // sneak through both entry points. The dashboard-side
@@ -1032,6 +1041,15 @@ impl TransactionService {
             ));
         }
 
+        // IS_SCHEDULED is a 0/1 flag. CodeRabbit on #144 — any other value
+        // (e.g. 2) would be stored verbatim, and since the regular list only
+        // shows IS_SCHEDULED = 0 rows, the transaction would vanish from it.
+        if !matches!(request.is_scheduled, None | Some(0) | Some(1)) {
+            return Err(TransactionError::ValidationError(
+                "Invalid scheduled flag".to_string(),
+            ));
+        }
+
         // Fable-5 review #20 — TRANSFER with the same FROM and TO
         // account is meaningless (net movement is zero) and used to
         // sneak through both entry points. The dashboard-side
@@ -1066,6 +1084,7 @@ impl TransactionService {
             .bind(request.tax_rounding_type)
             .bind(request.tax_included_type)
             .bind(memo_id)
+            .bind(request.is_scheduled)
             .bind(transaction_id)
             .bind(user_id)
             .execute(&self.pool)

@@ -1470,11 +1470,14 @@ LEFT JOIN MEMOS m ON t.MEMO_ID = m.MEMO_ID
 WHERE t.TRANSACTION_ID = ? AND t.USER_ID = ?
 "#;
 
+/// `IS_SCHEDULED = COALESCE(?, IS_SCHEDULED)`: the edit modal's "scheduled"
+/// checkbox is persisted (latent-audit M1); a caller that passes NULL keeps
+/// the stored flag.
 pub const TRANSACTION_HEADER_UPDATE: &str = r#"
 UPDATE TRANSACTIONS_HEADER
 SET SHOP_ID = ?, TRANSACTION_DATE = ?, CATEGORY1_CODE = ?, FROM_ACCOUNT_CODE = ?,
     TO_ACCOUNT_CODE = ?, TOTAL_AMOUNT = ?, TAX_ROUNDING_TYPE = ?, TAX_INCLUDED_TYPE = ?,
-    MEMO_ID = ?, UPDATE_DT = datetime('now')
+    MEMO_ID = ?, IS_SCHEDULED = COALESCE(?, IS_SCHEDULED), UPDATE_DT = datetime('now')
 WHERE TRANSACTION_ID = ? AND USER_ID = ?
 "#;
 
@@ -1777,6 +1780,16 @@ INSERT INTO MANUFACTURERS (USER_ID, MANUFACTURER_NAME, MEMO, DISPLAY_ORDER, IS_D
 VALUES (?, ?, ?, ?, ?, datetime('now'))
 "#;
 
+/// Adding a name held by a disabled / logically deleted manufacturer reuses
+/// that row instead of inserting (latent-audit M6, same as shops / H6):
+/// UNIQUE(USER_ID, MANUFACTURER_NAME) covers disabled rows too.
+/// Binds: (is_disabled, memo, display_order, user_id, manufacturer_name).
+pub const MANUFACTURER_REVIVE_DISABLED_BY_NAME: &str = r#"
+UPDATE MANUFACTURERS
+SET IS_DISABLED = ?, MEMO = ?, DISPLAY_ORDER = ?, UPDATE_DT = datetime('now')
+WHERE USER_ID = ? AND MANUFACTURER_NAME = ? AND IS_DISABLED = 1
+"#;
+
 pub const MANUFACTURER_UPDATE: &str = r#"
 UPDATE MANUFACTURERS
 SET MANUFACTURER_NAME = ?, MEMO = ?, DISPLAY_ORDER = ?, IS_DISABLED = ?, UPDATE_DT = datetime('now')
@@ -1809,10 +1822,13 @@ FROM MANUFACTURERS
 WHERE USER_ID = ? AND MANUFACTURER_NAME = ? AND IS_DISABLED = 0
 "#;
 
+/// Counts disabled / logically deleted rows too: UNIQUE(USER_ID, MANUFACTURER_NAME)
+/// covers them, so renaming onto such a row's name must surface as
+/// duplicate_name rather than a raw constraint error (latent-audit M6).
 pub const MANUFACTURER_CHECK_DUPLICATE_FOR_UPDATE: &str = r#"
 SELECT COUNT(*) as count
 FROM MANUFACTURERS
-WHERE USER_ID = ? AND MANUFACTURER_NAME = ? AND MANUFACTURER_ID != ? AND IS_DISABLED = 0
+WHERE USER_ID = ? AND MANUFACTURER_NAME = ? AND MANUFACTURER_ID != ?
 "#;
 
 // ============================================================================
@@ -1872,6 +1888,19 @@ INSERT INTO PRODUCTS (USER_ID, PRODUCT_NAME, MANUFACTURER_ID, MEMO, DISPLAY_ORDE
 VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
 "#;
 
+/// Adding a name held by a disabled / logically deleted product reuses that
+/// row instead of inserting (latent-audit M6, same as shops / H6):
+/// UNIQUE(USER_ID, PRODUCT_NAME) covers disabled rows too. Existing detail
+/// rows keep pointing at the same PRODUCT_ID.
+/// Binds: (is_disabled, manufacturer_id, memo, display_order, user_id,
+/// product_name).
+pub const PRODUCT_REVIVE_DISABLED_BY_NAME: &str = r#"
+UPDATE PRODUCTS
+SET IS_DISABLED = ?, MANUFACTURER_ID = ?, MEMO = ?, DISPLAY_ORDER = ?,
+    UPDATE_DT = datetime('now')
+WHERE USER_ID = ? AND PRODUCT_NAME = ? AND IS_DISABLED = 1
+"#;
+
 pub const PRODUCT_UPDATE: &str = r#"
 UPDATE PRODUCTS
 SET PRODUCT_NAME = ?, MANUFACTURER_ID = ?, MEMO = ?, DISPLAY_ORDER = ?, IS_DISABLED = ?, UPDATE_DT = datetime('now')
@@ -1905,10 +1934,13 @@ FROM PRODUCTS
 WHERE USER_ID = ? AND PRODUCT_NAME = ? AND IS_DISABLED = 0
 "#;
 
+/// Counts disabled / logically deleted rows too: UNIQUE(USER_ID, PRODUCT_NAME)
+/// covers them, so renaming onto such a row's name must surface as
+/// duplicate_name rather than a raw constraint error (latent-audit M6).
 pub const PRODUCT_CHECK_DUPLICATE_FOR_UPDATE: &str = r#"
 SELECT COUNT(*) as count
 FROM PRODUCTS
-WHERE USER_ID = ? AND PRODUCT_NAME = ? AND PRODUCT_ID != ? AND IS_DISABLED = 0
+WHERE USER_ID = ? AND PRODUCT_NAME = ? AND PRODUCT_ID != ?
 "#;
 
 // Autocomplete lookup for transaction detail entry (v2.6.0 master integration).
