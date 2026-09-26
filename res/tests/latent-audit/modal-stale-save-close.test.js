@@ -16,7 +16,7 @@
  */
 
 import { Modal } from '../../js/modal.js';
-import { deferred, flush } from './_page-harness.js';
+import { deferred, flush } from '../pages/_page-harness.js';
 
 function buildModalDom() {
     document.body.innerHTML = `

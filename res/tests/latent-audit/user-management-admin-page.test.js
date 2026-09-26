@@ -24,13 +24,13 @@
  *     invoked) with the `error.password_too_short` message.
  *
  * The real page module is booted against res/user-management.html via
- * ./_page-harness.js with an admin session.
+ * ../pages/_page-harness.js with an admin session.
  */
 
 import { jest } from '@jest/globals';
 import {
     mockPageModules, loadPageBody, bootPage, flush, callsOf, definedI18nKeys,
-} from './_page-harness.js';
+} from '../pages/_page-harness.js';
 
 const ADMIN = { user_id: 1, name: 'admin', role: 0 };
 

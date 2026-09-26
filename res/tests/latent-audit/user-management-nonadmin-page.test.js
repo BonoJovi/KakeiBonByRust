@@ -11,13 +11,13 @@
  *      the user's own row has no delete button.
  *
  * The real page module is booted against res/user-management.html via
- * ./_page-harness.js with a general-user (role 1) session.
+ * ../pages/_page-harness.js with a general-user (role 1) session.
  */
 
 import { jest } from '@jest/globals';
 import {
     mockPageModules, loadPageBody, bootPage, isHiddenOrAbsent,
-} from './_page-harness.js';
+} from '../pages/_page-harness.js';
 
 const SELF = { user_id: 2, name: 'alice', role: 1 };
 

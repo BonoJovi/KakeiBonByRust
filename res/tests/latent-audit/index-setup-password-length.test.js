@@ -12,14 +12,14 @@
  *      password itself (register_admin / register_user not invoked) and shows
  *      `error.password_too_short`.
  *
- * The real menu.js is booted against res/index.html via ./_page-harness.js
+ * The real menu.js is booted against res/index.html via ../pages/_page-harness.js
  * (menu.js itself is NOT mocked here).
  */
 
 import { jest } from '@jest/globals';
 import {
     mockPageModules, loadPageBody, bootPage, flush, callsOf,
-} from './_page-harness.js';
+} from '../pages/_page-harness.js';
 
 const { invoke } = mockPageModules(jest, {
     keepMenu: true,

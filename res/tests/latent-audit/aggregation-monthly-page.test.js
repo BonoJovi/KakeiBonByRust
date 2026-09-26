@@ -31,11 +31,11 @@
  *     total, extend the fixture accordingly.
  *
  * The real page module is booted against res/aggregation.html via
- * ./_page-harness.js.
+ * ../pages/_page-harness.js.
  */
 
 import { jest } from '@jest/globals';
-import { mockPageModules, loadPageBody, bootPage, flush } from './_page-harness.js';
+import { mockPageModules, loadPageBody, bootPage, flush } from '../pages/_page-harness.js';
 
 let monthlyResults = [];
 
