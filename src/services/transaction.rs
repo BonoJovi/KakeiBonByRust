@@ -1066,6 +1066,7 @@ impl TransactionService {
             .bind(request.tax_rounding_type)
             .bind(request.tax_included_type)
             .bind(memo_id)
+            .bind(request.is_scheduled)
             .bind(transaction_id)
             .bind(user_id)
             .execute(&self.pool)

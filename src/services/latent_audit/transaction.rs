@@ -270,7 +270,6 @@ fn latent_l1_small_detail_with_zero_tax_is_still_grossed_up() {
 /// M1: TRANSACTION_HEADER_UPDATE に IS_SCHEDULED が無く、予定チェックの変更が黙って捨てられる。
 /// Expected: update_transaction_header(is_scheduled=Some(1)) 後、ヘッダーの IS_SCHEDULED は 1。
 #[tokio::test]
-#[ignore = "latent-audit M1"]
 async fn latent_m1_update_header_persists_is_scheduled() {
     let pool = setup_test_db().await;
     let service = TransactionService::new(pool);
@@ -672,4 +671,22 @@ async fn latent_h4_compute_recommended_total_is_none_without_details() {
         .unwrap();
 
     assert_eq!(service.compute_recommended_total(USER, txn_id).await.unwrap(), None);
+}
+
+/// M1: passing `is_scheduled: None` (a caller that does not manage the flag)
+/// keeps the stored IS_SCHEDULED instead of resetting it.
+#[tokio::test]
+async fn latent_m1_update_header_without_flag_keeps_is_scheduled() {
+    let pool = setup_test_db().await;
+    let service = TransactionService::new(pool);
+    let mut req = header_request(1000, consts::TAX_ROUND_DOWN, consts::TAX_EXCLUDED);
+    req.is_scheduled = Some(1);
+    let txn_id = service.save_transaction_header(USER, req).await.unwrap();
+
+    let req = header_request(1000, consts::TAX_ROUND_DOWN, consts::TAX_EXCLUDED);
+    assert_eq!(req.is_scheduled, None);
+    service.update_transaction_header(USER, txn_id, req).await.unwrap();
+
+    let header = service.get_transaction_header(USER, txn_id).await.unwrap();
+    assert_eq!(header.is_scheduled, 1, "IS_SCHEDULED must be kept when the update omits it");
 }

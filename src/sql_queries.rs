@@ -1470,11 +1470,14 @@ LEFT JOIN MEMOS m ON t.MEMO_ID = m.MEMO_ID
 WHERE t.TRANSACTION_ID = ? AND t.USER_ID = ?
 "#;
 
+/// `IS_SCHEDULED = COALESCE(?, IS_SCHEDULED)`: the edit modal's "scheduled"
+/// checkbox is persisted (latent-audit M1); a caller that passes NULL keeps
+/// the stored flag.
 pub const TRANSACTION_HEADER_UPDATE: &str = r#"
 UPDATE TRANSACTIONS_HEADER
 SET SHOP_ID = ?, TRANSACTION_DATE = ?, CATEGORY1_CODE = ?, FROM_ACCOUNT_CODE = ?,
     TO_ACCOUNT_CODE = ?, TOTAL_AMOUNT = ?, TAX_ROUNDING_TYPE = ?, TAX_INCLUDED_TYPE = ?,
-    MEMO_ID = ?, UPDATE_DT = datetime('now')
+    MEMO_ID = ?, IS_SCHEDULED = COALESCE(?, IS_SCHEDULED), UPDATE_DT = datetime('now')
 WHERE TRANSACTION_ID = ? AND USER_ID = ?
 "#;
 
