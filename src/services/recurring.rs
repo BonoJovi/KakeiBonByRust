@@ -894,9 +894,11 @@ impl RecurringService {
 
     /// Delete a recurring rule. The user picks one of two semantics in the UI:
     ///
-    /// - `cascade = true`  → also drop every generated TRANSACTIONS_HEADER (and
-    ///   their DETAILs via the existing FK) that points at this rule. Use when
-    ///   the user is throwing the whole template away including its history.
+    /// - `cascade = true`  → also drop the rule's still-scheduled
+    ///   TRANSACTIONS_HEADERs (and their DETAILs via the existing FK).
+    ///   Occurrences already confirmed (`IS_SCHEDULED = 0`) are real
+    ///   transactions: they are kept and detached, never deleted
+    ///   (latent-audit H2).
     /// - `cascade = false` → keep the generated occurrences as standalone
     ///   scheduled transactions; only their `RULE_ID` is cleared so they no
     ///   longer reference the now-deleted rule.
@@ -918,13 +920,14 @@ impl RecurringService {
                 .bind(user_id)
                 .execute(&mut *tx)
                 .await?;
-        } else {
-            sqlx::query(sql_queries::TRANSACTIONS_HEADER_DETACH_FROM_RULE)
-                .bind(rule_id)
-                .bind(user_id)
-                .execute(&mut *tx)
-                .await?;
         }
+        // Detach whatever is left: every occurrence in detach mode, and the
+        // confirmed ones the cascade path deliberately kept.
+        sqlx::query(sql_queries::TRANSACTIONS_HEADER_DETACH_FROM_RULE)
+            .bind(rule_id)
+            .bind(user_id)
+            .execute(&mut *tx)
+            .await?;
 
         // The rule delete itself must hit exactly one row. Zero means the
         // rule was already removed (concurrent op from another window, or

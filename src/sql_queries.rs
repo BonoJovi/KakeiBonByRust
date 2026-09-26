@@ -1368,12 +1368,15 @@ INSERT INTO TRANSACTIONS_HEADER (
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, datetime('now', 'localtime'))
 "#;
 
-// Cascade-delete path for a recurring rule: drop every generated HEADER first
-// (their DETAILs cascade via the existing FK). Caller still has to DELETE the
-// RECURRING_RULES row afterwards (which cascades RECURRING_RULE_DETAILS).
+// Cascade-delete path for a recurring rule: drop the rule's still-scheduled
+// HEADERs (their DETAILs cascade via the existing FK). Occurrences the user
+// already confirmed (IS_SCHEDULED = 0) are real transactions and must
+// survive (latent-audit H2) — the caller detaches them with
+// TRANSACTIONS_HEADER_DETACH_FROM_RULE, then DELETEs the RECURRING_RULES row
+// (which cascades RECURRING_RULE_DETAILS).
 pub const TRANSACTIONS_HEADER_DELETE_BY_RULE: &str = r#"
 DELETE FROM TRANSACTIONS_HEADER
-WHERE RULE_ID = ? AND USER_ID = ?
+WHERE RULE_ID = ? AND USER_ID = ? AND IS_SCHEDULED = 1
 "#;
 
 // Detach-mode path: orphan generated HEADERs from the rule before the rule
