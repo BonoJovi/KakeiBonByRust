@@ -84,13 +84,35 @@ pub async fn add_shop(
     )
     .await?;
 
-    sqlx::query(sql_queries::SHOP_INSERT)
-        .bind(user_id)
-        .bind(&request.shop_name)
+    // A logically deleted shop with the same name still holds the UNIQUE
+    // slot, so bring it back instead of inserting (latent-audit H6).
+    let revived = sqlx::query(sql_queries::SHOP_REVIVE_DELETED_BY_NAME)
         .bind(&request.memo)
         .bind(display_order)
+        .bind(user_id)
+        .bind(&request.shop_name)
         .execute(pool)
-        .await?;
+        .await?
+        .rows_affected();
+
+    if revived == 0 {
+        // A concurrent add of the same name can slip past the pre-check;
+        // report the UNIQUE violation as duplicate_name, not a raw
+        // database error.
+        sqlx::query(sql_queries::SHOP_INSERT)
+            .bind(user_id)
+            .bind(&request.shop_name)
+            .bind(&request.memo)
+            .bind(display_order)
+            .execute(pool)
+            .await
+            .map_err(|e| match &e {
+                sqlx::Error::Database(db) if db.is_unique_violation() => {
+                    ApiError::duplicate_name(SPEC.entity_label)
+                }
+                _ => ApiError::from(e),
+            })?;
+    }
 
     Ok("Shop added successfully".to_string())
 }

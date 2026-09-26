@@ -193,7 +193,6 @@ async fn count_headers_for_rule(pool: &SqlitePool, rule_id: i64) -> i64 {
 /// Expected: only IS_SCHEDULED = 1 occurrences are removed; confirmed rows
 /// survive the cascade delete.
 #[tokio::test]
-#[ignore = "latent-audit H2"]
 async fn latent_h2_cascade_delete_keeps_confirmed_headers() {
     let pool = setup_recurring_db().await;
     let service = RecurringService::new(pool.clone());

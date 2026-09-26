@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-09-06 JST  
-**総テスト数**: 357件 (差分反映後。`cargo test --lib` の権威的総数は 597 で、既存の未反映分は別 PR でバックフィル予定)
+**総テスト数**: 362件 (差分反映後。`cargo test --lib` の権威的総数は 602 で、既存の未反映分は別 PR でバックフィル予定)
 
 ---
 
@@ -450,8 +450,12 @@ AES-256-GCM暗号化・復号化のテスト。
 | `test_delete_shop_rejected_when_referenced_by_transaction` | TRANSACTIONS_HEADER が店舗を参照中なら `ApiError { code: "in_use", entity: "shop" }` で削除拒否（マスタ削除ロック） | src/services/shop.rs | 346 |
 | `test_delete_shop_rejected_when_referenced_by_recurring_rule` | RECURRING_RULES が店舗を参照中なら `ApiError { code: "in_use" }` で削除拒否（マスタ削除ロック） | src/services/shop.rs | 372 |
 | `test_delete_shop_ignores_other_users_references` | 他ユーザーの同一 SHOP_ID 参照は削除をブロックしない（USER_ID スコープ、マスタ削除ロック） | src/services/shop.rs | 394 |
+| `latent_h6_readd_deleted_shop_name_is_not_database_error` | 削除済み店舗と同名の再登録で汎用 database エラーにならない (潜在監査 H6) | src/services/latent_audit/shop.rs | 24 |
+| `latent_h6_readd_deleted_shop_name_revives_original_row` | 削除済み店舗と同名の再登録は元の行を復活させる (同じ SHOP_ID、メモは新しい値) (潜在監査 H6) | src/services/latent_audit/shop.rs | 64 |
+| `latent_h6_rename_onto_deleted_shop_name_is_duplicate_name` | 削除済み店舗の名前への変更は duplicate_name で拒否 (潜在監査 H6) | src/services/latent_audit/shop.rs | 95 |
+| `latent_h6_insert_unique_violation_maps_to_duplicate_name` | 重複チェックをすり抜けた add_shop の INSERT が UNIQUE 違反になった場合 duplicate_name を返す (潜在監査 H6) | src/services/latent_audit/shop.rs | 124 |
 
-**合計**: 12件
+**合計**: 16件
 
 ### services/transaction.rs
 
@@ -578,8 +582,9 @@ AES-256-GCM暗号化・復号化のテスト。
 | `validation_preserves_message_and_omits_entity` | RecurringError::Validation が ApiError::CODE_VALIDATION に変換され、メッセージが保持されること (PR2a) | src/services/recurring.rs | 1840 |
 | `database_error_maps_to_database_code` | RecurringError::Database が ApiError::CODE_DATABASE に変換されること (PR2a) | src/services/recurring.rs | 1851 |
 | `field_needle_message_survives_conversion_for_frontend_routing` | 4 つのフィールド needle (`"Rule name must be"` 等) が変換後もそのまま先頭に残り、フロントの `startsWith` ルーティングを維持できること (PR2a) | src/services/recurring.rs | 1858 |
+| `latent_h2_cascade_delete_keeps_confirmed_headers` | ルールのカスケード削除は未確定の予定取引だけを消し、確定済み (IS_SCHEDULED = 0) は残して紐付けを外す (潜在監査 H2) | src/services/latent_audit/recurring.rs | 196 |
 
-**合計**: 5件
+**合計**: 6件
 
 ### lib.rs
 
@@ -605,7 +610,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **331件** |
+| **インラインテスト** | **336件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -621,14 +626,14 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/category.rs | 25 |
 | services/manufacturer.rs | 12 |
 | services/product.rs | 15 |
-| services/shop.rs | 12 |
+| services/shop.rs | 16 |
 | services/transaction.rs | 41 |
 | services/aggregation.rs | 20 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
-| services/recurring.rs | 5 |
+| services/recurring.rs | 6 |
 | lib.rs | 6 |
-| **総計** | **357件** |
+| **総計** | **362件** |
 
 ---
 

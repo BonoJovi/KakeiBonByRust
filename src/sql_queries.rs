@@ -1368,12 +1368,15 @@ INSERT INTO TRANSACTIONS_HEADER (
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, datetime('now', 'localtime'))
 "#;
 
-// Cascade-delete path for a recurring rule: drop every generated HEADER first
-// (their DETAILs cascade via the existing FK). Caller still has to DELETE the
-// RECURRING_RULES row afterwards (which cascades RECURRING_RULE_DETAILS).
+// Cascade-delete path for a recurring rule: drop the rule's still-scheduled
+// HEADERs (their DETAILs cascade via the existing FK). Occurrences the user
+// already confirmed (IS_SCHEDULED = 0) are real transactions and must
+// survive (latent-audit H2) — the caller detaches them with
+// TRANSACTIONS_HEADER_DETACH_FROM_RULE, then DELETEs the RECURRING_RULES row
+// (which cascades RECURRING_RULE_DETAILS).
 pub const TRANSACTIONS_HEADER_DELETE_BY_RULE: &str = r#"
 DELETE FROM TRANSACTIONS_HEADER
-WHERE RULE_ID = ? AND USER_ID = ?
+WHERE RULE_ID = ? AND USER_ID = ? AND IS_SCHEDULED = 1
 "#;
 
 // Detach-mode path: orphan generated HEADERs from the rule before the rule
@@ -1689,6 +1692,17 @@ INSERT INTO SHOPS (USER_ID, SHOP_NAME, MEMO, DISPLAY_ORDER, ENTRY_DT)
 VALUES (?, ?, ?, ?, datetime('now'))
 "#;
 
+/// Re-adding a logically deleted shop name revives that row instead of
+/// inserting (latent-audit H6): UNIQUE(USER_ID, SHOP_NAME) covers deleted
+/// rows too, so a plain INSERT would fail. Deleted shops are never
+/// referenced (the delete lock rejects in-use shops), so reviving is safe.
+/// Binds: (memo, display_order, user_id, shop_name).
+pub const SHOP_REVIVE_DELETED_BY_NAME: &str = r#"
+UPDATE SHOPS
+SET IS_DISABLED = 0, MEMO = ?, DISPLAY_ORDER = ?, UPDATE_DT = datetime('now')
+WHERE USER_ID = ? AND SHOP_NAME = ? AND IS_DISABLED = 1
+"#;
+
 pub const SHOP_UPDATE: &str = r#"
 UPDATE SHOPS
 SET SHOP_NAME = ?, MEMO = ?, DISPLAY_ORDER = ?, UPDATE_DT = datetime('now')
@@ -1719,10 +1733,13 @@ FROM SHOPS
 WHERE USER_ID = ? AND SHOP_NAME = ? AND IS_DISABLED = 0
 "#;
 
+/// Counts logically deleted rows too: UNIQUE(USER_ID, SHOP_NAME) covers
+/// them, so renaming onto a deleted shop's name must surface as
+/// duplicate_name rather than a raw constraint error (latent-audit H6).
 pub const SHOP_CHECK_DUPLICATE_FOR_UPDATE: &str = r#"
 SELECT COUNT(*) as count
 FROM SHOPS
-WHERE USER_ID = ? AND SHOP_NAME = ? AND SHOP_ID != ? AND IS_DISABLED = 0
+WHERE USER_ID = ? AND SHOP_NAME = ? AND SHOP_ID != ?
 "#;
 
 // ============================================================================
