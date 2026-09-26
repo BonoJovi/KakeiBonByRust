@@ -14,11 +14,11 @@
  *      仕様確認待ち (see aggregation-monthly-page.test.js for details).
  *
  * The real yearly page module is booted against res/aggregation-yearly.html
- * via ./_page-harness.js so the renderer sees the real group-by context.
+ * via ../pages/_page-harness.js so the renderer sees the real group-by context.
  */
 
 import { jest } from '@jest/globals';
-import { mockPageModules, loadPageBody, bootPage, flush } from './_page-harness.js';
+import { mockPageModules, loadPageBody, bootPage, flush } from '../pages/_page-harness.js';
 
 mockPageModules(jest, {
     invoke: (cmd) => {

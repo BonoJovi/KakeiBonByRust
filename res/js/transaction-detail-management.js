@@ -898,12 +898,16 @@ async function openDetailModal(detail = null) {
 
     // Clear validation errors and refresh char counters after programmatic
     // value changes (form.reset() / direct .value assignments do not fire 'input').
+    // Re-attaching (idempotent) refreshes the counter without dispatching a
+    // synthetic 'input': that event also reaches handleAutocompleteInput,
+    // which treats it as the user retyping and drops the PRODUCT_ID link
+    // restored above (latent-audit H3).
     const itemNameInput = document.getElementById('item-name');
     const memoInput = document.getElementById('memo');
     clearValidationError(itemNameInput);
     clearValidationError(memoInput);
-    itemNameInput?.dispatchEvent(new Event('input'));
-    memoInput?.dispatchEvent(new Event('input'));
+    if (itemNameInput) attachCharCounter(itemNameInput, MAX_ITEM_NAME_LEN);
+    if (memoInput) attachCharCounter(memoInput, MAX_MEMO_LEN);
 
     // Focus on item name input after modal opens (preventScroll to avoid modal shifting)
     setTimeout(() => document.getElementById('item-name')?.focus({ preventScroll: true }), 0);

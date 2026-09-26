@@ -21,13 +21,13 @@
  *
  * The real page module is booted against res/product-management.html (with
  * ?return_to=<transaction_id>, i.e. arriving from the detail modal) via
- * ./_page-harness.js.
+ * ../pages/_page-harness.js.
  */
 
 import { jest } from '@jest/globals';
 import {
     mockPageModules, loadPageBody, bootPage, flush, callsOf,
-} from './_page-harness.js';
+} from '../pages/_page-harness.js';
 
 const DETAIL_DRAFT_KEY = 'kakeibon.detail_draft.v1';
 

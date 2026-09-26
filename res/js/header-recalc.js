@@ -22,7 +22,9 @@ import i18n from './i18n.js';
  * @returns {Promise<{applied: boolean, recommended: number|null}>}
  *   `applied` is true when the cached value can be trusted afterwards: the
  *   two were already equal, or the user accepted the overwrite. `recommended`
- *   is the value the backend would prefer (or null if the compute call failed).
+ *   is the value the backend would prefer, or null when the header has no
+ *   details (nothing to recommend; `applied` is true) or the compute call
+ *   failed (`applied` is false).
  */
 export async function applyHeaderRecalculationPrompt(transactionId, currentTotal) {
     let recommended;
@@ -35,7 +37,10 @@ export async function applyHeaderRecalculationPrompt(transactionId, currentTotal
         return { applied: false, recommended: null };
     }
 
-    if (recommended === currentTotal) {
+    // null: the header has no details, so there is nothing to recommend.
+    // Never offer to overwrite a total entered directly on the header
+    // (latent-audit H4).
+    if (recommended === null || recommended === currentTotal) {
         return { applied: true, recommended };
     }
 

@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-08-26 JST  
-**Total Tests**: 362 (delta-tracked; the full authoritative count from `cargo test --lib` is 602, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 364 (delta-tracked; the full authoritative count from `cargo test --lib` is 604, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -504,8 +504,10 @@ Transaction management service tests.
 | `latent_l1_small_detail_with_zero_tax_is_still_grossed_up` | Small rows whose tax rounds to 0 are still grossed up per rate (latent-audit L1) | src/services/latent_audit/transaction.rs | 259 |
 | `test_calculate_recommended_total_uses_amount_not_amount_including_tax` | Tax-excluded total grosses up AMOUNT regardless of AMOUNT_INCLUDING_TAX (AMOUNT is always tax-excluded) | src/services/transaction.rs | 1837 |
 | `test_calculate_recommended_total_with_settings_included_derives_missing_rows` | Tax-included total derives NULL / 0-sentinel rows from AMOUNT + TAX_RATE | src/services/transaction.rs | 1890 |
+| `latent_h4_bulk_recalc_keeps_total_without_details` | Bulk recalc leaves a header without details untouched (latent-audit H4) | src/services/latent_audit/transaction.rs | 177 |
+| `latent_h4_compute_recommended_total_is_none_without_details` | `compute_recommended_total` returns None for a header without details (latent-audit H4) | src/services/latent_audit/transaction.rs | 666 |
 
-**Total**: 41 tests
+**Total**: 43 tests
 
 ### services/aggregation.rs
 
@@ -610,7 +612,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **336** |
+| **Inline Tests** | **338** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -627,13 +629,13 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/manufacturer.rs | 12 |
 | services/product.rs | 15 |
 | services/shop.rs | 16 |
-| services/transaction.rs | 41 |
+| services/transaction.rs | 43 |
 | services/aggregation.rs | 20 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 6 |
 | lib.rs | 6 |
-| **Total** | **362** |
+| **Total** | **364** |
 
 ---
 

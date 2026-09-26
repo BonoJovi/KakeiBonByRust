@@ -12,13 +12,13 @@
  *      submits are ignored — the command is invoked exactly once.
  *
  * The real page module is booted against res/recurring-rule.html via
- * ./_page-harness.js.
+ * ../pages/_page-harness.js.
  */
 
 import { jest } from '@jest/globals';
 import {
     mockPageModules, loadPageBody, bootPage, flush, deferred, callsOf,
-} from './_page-harness.js';
+} from '../pages/_page-harness.js';
 
 const CATEGORY_TREE = [
     {

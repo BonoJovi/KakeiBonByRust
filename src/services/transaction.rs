@@ -1453,11 +1453,15 @@ impl TransactionService {
     /// its current details and saved `TAX_ROUNDING_TYPE` / `TAX_INCLUDED_TYPE`. The frontend calls
     /// this after a detail edit to find out whether the header total it has
     /// cached is still correct, and prompts the user before overwriting it.
+    ///
+    /// Returns `None` when the header has no details: there is nothing to
+    /// recommend, and a `0` would prompt the user to wipe a total entered
+    /// directly on the header (latent-audit H4).
     pub async fn compute_recommended_total(
         &self,
         user_id: i64,
         transaction_id: i64,
-    ) -> Result<i64, TransactionError> {
+    ) -> Result<Option<i64>, TransactionError> {
         let header_row = sqlx::query(sql_queries::TRANSACTION_HEADER_GET_TAX_SETTINGS)
             .bind(transaction_id)
             .bind(user_id)
@@ -1482,11 +1486,15 @@ impl TransactionService {
             })
             .collect();
 
-        Ok(calculate_recommended_total_with_settings(
+        if details.is_empty() {
+            return Ok(None);
+        }
+
+        Ok(Some(calculate_recommended_total_with_settings(
             &details,
             rounding_type,
             included_type,
-        ))
+        )))
     }
 
     /// Recompute every transaction header's `TOTAL_AMOUNT` for `user_id`
@@ -1576,6 +1584,15 @@ impl TransactionService {
             // release memory as we go); a header with no detail rows
             // yields an empty Vec, matching the prior fetch behaviour.
             let details = details_by_txn.remove(&txn_id).unwrap_or_default();
+
+            // A header without details (e.g. a salary entered as a bare
+            // total) has nothing to recompute from: every pattern yields 0,
+            // which would overwrite the user's TOTAL_AMOUNT with 0
+            // (latent-audit H4). Leave it untouched.
+            if details.is_empty() {
+                skipped += 1;
+                continue;
+            }
             let detail_amounts: Vec<i64> = details.iter().map(|d| d.amount).collect();
 
             // First, prefer to keep the user-entered TOTAL_AMOUNT verbatim by

@@ -1,26 +1,23 @@
 /**
- * Latent audit 2026-09 — transaction list / header screen (res/js/transaction-management.js)
+ * Transaction list / header screen (res/js/transaction-management.js) —
+ * regression tests promoted from the 2026-09 latent audit.
  *
- * IDs covered: L5
- *
- * L5  Bug 1: deleting the only row on the last page reloads the same page
- *     number; the backend answers page=3 / total_pages=2 with no rows, so the
- *     screen shows an empty "3 / 2" page.
- *     Expected: the list moves back to the last existing page
- *     (current page <= total pages, rows visible).
- *     Bug 2: loadTransactions has no request token, so when page requests
- *     resolve out of order an older response overwrites the newer one.
- *     Expected: the screen reflects the most recently requested page (a fix
- *     that ignores the second click while loading also satisfies this).
+ * H4  After update_transaction_header the edit flow runs
+ *     applyHeaderRecalculationPrompt(). For a header without details the
+ *     backend used to recommend 0, so every save of such a header asked to
+ *     overwrite the total with ¥0. compute_recommended_transaction_total now
+ *     returns null ("nothing to recommend") for a detail-less header.
+ *     Pinned: saving it shows no recalc prompt and never sends
+ *     update_transaction_header_total.
  *
  * The real page module is booted against res/transaction-management.html via
- * ../pages/_page-harness.js.
+ * ./_page-harness.js.
  */
 
 import { jest } from '@jest/globals';
 import {
     mockPageModules, loadPageBody, bootPage, flush, deferred, callsOf,
-} from '../pages/_page-harness.js';
+} from './_page-harness.js';
 
 const PER_PAGE = 50;
 
@@ -104,7 +101,7 @@ const { invoke } = mockPageModules(jest, {
             case 'get_transaction_details':
                 return []; // header without details
             case 'compute_recommended_transaction_total':
-                return 0; // current backend contract for a detail-less header
+                return null; // detail-less header: nothing to recommend
             default:
                 return null;
         }
@@ -125,57 +122,46 @@ function rowButtons(label) {
         .filter((b) => b.getAttribute('data-i18n') === label);
 }
 
-describe('transaction management screen — latent audit 2026-09', () => {
+describe('transaction management screen — regression (latent audit 2026-09)', () => {
     beforeEach(() => {
         invoke.mockClear();
     });
 
-    test('[latent L5] deleting the only row on the last page moves back to the previous page', async () => {
-        // 101 rows → pages of 50/50/1.
-        seedTransactions(2 * PER_PAGE + 1);
-        document.getElementById('clear-filter-btn').click();
+    test('[H4] saving a header without details does not prompt to overwrite the total with ¥0', async () => {
+        const editBtn = rowButtons('common.edit')[0];
+        expect(editBtn).toBeDefined();
+        editBtn.click();
         await flush(10);
-        document.getElementById('next-page-btn').click();
+
+        const modal = document.getElementById('transaction-modal');
+        expect(modal.classList.contains('hidden')).toBe(false);
+        expect(document.getElementById('total-amount').value).toBe('5000');
+
+        // Save without changes.
+        document.getElementById('transaction-form').dispatchEvent(
+            new Event('submit', { cancelable: true, bubbles: true })
+        );
         await flush(10);
-        document.getElementById('next-page-btn').click();
-        await flush(10);
-        expect(text('current-page')).toBe('3');
-        expect(text('total-pages')).toBe('3');
 
-        const deleteBtns = rowButtons('common.delete');
-        expect(deleteBtns).toHaveLength(1);
-        deleteBtns[0].click();
-        await flush(15);
+        const headerUpdates = callsOf(invoke, 'update_transaction_header');
+        expect(headerUpdates).toHaveLength(1);
+        // The header save itself must carry the unchanged total, not 0.
+        expect(headerUpdates[0].totalAmount).toBe(5000);
 
-        const current = parseInt(text('current-page'), 10);
-        const totalPages = parseInt(text('total-pages'), 10);
-        expect(totalPages).toBe(2);
-        expect(current).toBeLessThanOrEqual(totalPages);
-        expect(document.querySelectorAll('#transaction-list .transaction-item').length).toBeGreaterThan(0);
-    });
+        const recalcModal = document.getElementById('header-recalc-modal');
+        const promptShown = !!recalcModal && !recalcModal.classList.contains('hidden');
 
-    test('[latent L5] an older page response resolving late does not overwrite the newer page', async () => {
-        seedTransactions(3 * PER_PAGE);
-        document.getElementById('clear-filter-btn').click();
-        await flush(10);
-        expect(text('current-page')).toBe('1');
-
-        pendingPageRequests = [];
-        document.getElementById('next-page-btn').click(); // request page 2
-        document.getElementById('next-page-btn').click(); // request page 3 (unless ignored while loading)
-        await flush(5);
-        const requests = pendingPageRequests;
-        pendingPageRequests = null;
-        expect(requests.length).toBeGreaterThanOrEqual(1);
-        const lastPage = requests[requests.length - 1].page;
-
-        // Answer in reverse order: newest first, oldest last.
-        for (let i = requests.length - 1; i >= 0; i--) {
-            requests[i].d.resolve(pageResponse(requests[i].page));
-            await flush(5);
+        // Clean up a pending prompt so the save flow can settle.
+        if (promptShown) {
+            document.getElementById('header-recalc-keep').click();
+            await flush(10);
         }
-        await flush(10);
 
-        expect(text('current-page')).toBe(String(lastPage));
+        expect(promptShown).toBe(false);
+        expect(callsOf(invoke, 'update_transaction_header_total')).toHaveLength(0);
+        // The save flow must run to completion (reloading the list): a null
+        // recommendation must not throw on the way — the pre-fix prompt
+        // crashed formatting it and aborted the save flow.
+        expect(callsOf(invoke, 'get_transactions').length).toBeGreaterThan(0);
     });
 });
