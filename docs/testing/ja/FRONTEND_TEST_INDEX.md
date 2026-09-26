@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-09-27 JST  
-**総テスト数**: 781件 (jest suite 30 ファイル、`npm test` 実測)
+**総テスト数**: 782件 (jest suite 30 ファイル、`npm test` 実測)
 
 ---
 
@@ -689,12 +689,13 @@
 
 実際の繰り返しルール画面モジュールを `recurring-rule.html` に対して起動する回帰テスト (潜在監査 M16)。
 
-**テスト数**: 2件
+**テスト数**: 3件
 
 | テスト | 説明 |
 |--------|------|
 | `[M16] a TRANSFER from an account to itself is rejected before create_recurring_rule` | 出金元と入金先が同じ振替テンプレートは `transaction_mgmt.transfer_same_account` を表示し、`create_recurring_rule` を送らない |
 | `[M16] a TRANSFER between two different accounts still reaches create_recurring_rule` | 異なる口座間の振替は `create_recurring_rule` に送られる (比較用) |
+| `[M16] a backend transfer_same_account rejection shows the dedicated message` | バックエンドが `transfer_same_account` で拒否した場合も同じ専用メッセージを表示し、汎用の作成失敗メッセージを出さない |
 
 **ファイル**: res/tests/pages/recurring-rule-page.test.js
 
@@ -864,7 +865,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **358件** |
+| **機能別テスト** | **359件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 29 |
@@ -883,14 +884,14 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | pages/transaction-detail-page.test.js | 1 |
 | pages/transaction-management-page.test.js | 1 |
 | pages/user-management-page.test.js | 2 |
-| pages/recurring-rule-page.test.js | 2 |
+| pages/recurring-rule-page.test.js | 3 |
 | **集計機能テスト** | **115件** |
 | aggregation-daily.test.js | 16 |
 | aggregation-weekly.test.js | 22 |
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **781件** |
+| **総計 (jest)** | **782件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 

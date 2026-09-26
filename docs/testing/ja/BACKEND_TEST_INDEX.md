@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-09-06 JST  
-**総テスト数**: 386件 (差分反映後。`cargo test --lib` の権威的総数は 626 で、既存の未反映分は別 PR でバックフィル予定)
+**総テスト数**: 387件 (差分反映後。`cargo test --lib` の権威的総数は 627 で、既存の未反映分は別 PR でバックフィル予定)
 
 ---
 
@@ -391,8 +391,9 @@ AES-256-GCM暗号化・復号化のテスト。
 | `test_get_category_tree_all_includes_disabled_flags` | `get_category_tree_all` は disabled 行を含め `is_disabled` フィールド付きで返す (PR11, Fable-5 #31)。反面 `get_category_tree` は disabled 行を除外する対比も同時にチェック | src/services/category.rs | 2106 |
 | `latent_m8_enable_category2_restores_cascaded_category3` | 非表示にした中分類を表示に戻すと、一緒に非表示になった小分類も戻る (潜在監査 M8) | src/services/latent_audit/category.rs | 83 |
 | `latent_l19_enable_missing_category2_returns_not_found` | 存在しない中分類の表示復帰は not_found (潜在監査 L19、中分類の表示復帰のみ) | src/services/latent_audit/category.rs | 223 |
+| `latent_m8_enable_already_enabled_category2_keeps_hidden_children` | 表示中の中分類への表示復帰は何もせず、個別に非表示にした小分類は非表示のまま (潜在監査 M8) | src/services/latent_audit/category.rs | 110 |
 
-**合計**: 27件
+**合計**: 28件
 
 ### services/manufacturer.rs
 
@@ -634,7 +635,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **360件** |
+| **インラインテスト** | **361件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -647,7 +648,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/user_management.rs | 23 |
 | services/encryption.rs | 8 |
 | services/account.rs | 11 |
-| services/category.rs | 27 |
+| services/category.rs | 28 |
 | services/manufacturer.rs | 15 |
 | services/product.rs | 18 |
 | services/shop.rs | 16 |
@@ -657,7 +658,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/i18n.rs | 8 |
 | services/recurring.rs | 12 |
 | lib.rs | 6 |
-| **総計** | **386件** |
+| **総計** | **387件** |
 
 ---
 

@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-08-26 JST  
-**Total Tests**: 386 (delta-tracked; the full authoritative count from `cargo test --lib` is 626, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 387 (delta-tracked; the full authoritative count from `cargo test --lib` is 627, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -391,8 +391,9 @@ Category management service tests (3-tier category CRUD). Internal `CategoryErro
 | `test_get_category_tree_all_includes_disabled_flags` | `get_category_tree_all` still includes disabled rows and their `is_disabled` fields; the visible-only `get_category_tree` filters them out (PR11, Fable-5 #31) | src/services/category.rs | 2106 |
 | `latent_m8_enable_category2_restores_cascaded_category3` | Showing a hidden CATEGORY2 again also re-enables the CATEGORY3 rows hiding it disabled (latent-audit M8) | src/services/latent_audit/category.rs | 83 |
 | `latent_l19_enable_missing_category2_returns_not_found` | Enabling a non-existent CATEGORY2 returns not_found (latent-audit L19, CATEGORY2 enable only) | src/services/latent_audit/category.rs | 223 |
+| `latent_m8_enable_already_enabled_category2_keeps_hidden_children` | Enabling an already enabled CATEGORY2 is a no-op that keeps a separately hidden CATEGORY3 hidden (latent-audit M8) | src/services/latent_audit/category.rs | 110 |
 
-**Total**: 27 tests
+**Total**: 28 tests
 
 ### services/manufacturer.rs
 
@@ -634,7 +635,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **360** |
+| **Inline Tests** | **361** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -647,7 +648,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/user_management.rs | 23 |
 | services/encryption.rs | 8 |
 | services/account.rs | 11 |
-| services/category.rs | 27 |
+| services/category.rs | 28 |
 | services/manufacturer.rs | 15 |
 | services/product.rs | 18 |
 | services/shop.rs | 16 |
@@ -657,7 +658,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/i18n.rs | 8 |
 | services/recurring.rs | 12 |
 | lib.rs | 6 |
-| **Total** | **386** |
+| **Total** | **387** |
 
 ---
 

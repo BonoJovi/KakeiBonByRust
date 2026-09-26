@@ -8,7 +8,8 @@
  *     self-transfers that the regular edit path then refused to save. The
  *     backend now rejects it (transfer_same_account); this pins the
  *     frontend guard: the transaction screen's message is shown and
- *     create_recurring_rule is never sent.
+ *     create_recurring_rule is never sent — and that a backend
+ *     transfer_same_account rejection is shown with the same message.
  *
  * The real page module is booted against res/recurring-rule.html via
  * ./_page-harness.js.
@@ -35,6 +36,9 @@ const CATEGORY_TREE = [
     },
 ];
 
+// When set, create_recurring_rule rejects with this error once.
+let createRejection = null;
+
 const { invoke } = mockPageModules(jest, {
     invoke: (cmd) => {
         switch (cmd) {
@@ -50,6 +54,11 @@ const { invoke } = mockPageModules(jest, {
             case 'list_recurring_rules':
                 return [];
             case 'create_recurring_rule':
+                if (createRejection) {
+                    const err = createRejection;
+                    createRejection = null;
+                    return Promise.reject(err);
+                }
                 return { rule_id: 1, generated_count: 12 };
             default:
                 return null;
@@ -112,5 +121,20 @@ describe('recurring rule form — regression (latent audit 2026-09)', () => {
         expect(creates).toHaveLength(1);
         expect(creates[0].request.from_account_code).toBe('CASH');
         expect(creates[0].request.to_account_code).toBe('BANK');
+    });
+
+    test('[M16] a backend transfer_same_account rejection shows the dedicated message', async () => {
+        // The frontend guard passes (different accounts); the backend
+        // rejects anyway — e.g. a stale account list.
+        await fillTransferForm('CASH', 'BANK');
+        createRejection = { code: 'transfer_same_account', message: 'Transfer source and destination accounts must differ' };
+
+        await submitForm();
+
+        expect(callsOf(invoke, 'create_recurring_rule')).toHaveLength(1);
+        const box = document.getElementById('result-box');
+        expect(box.classList.contains('error')).toBe(true);
+        expect(box.textContent).toBe('transaction_mgmt.transfer_same_account');
+        expect(box.textContent).not.toContain('recurring_rule.create_failed');
     });
 });
