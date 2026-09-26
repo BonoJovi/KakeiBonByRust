@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-09-06 JST  
-**総テスト数**: 361件 (差分反映後。`cargo test --lib` の権威的総数は 601 で、既存の未反映分は別 PR でバックフィル予定)
+**総テスト数**: 362件 (差分反映後。`cargo test --lib` の権威的総数は 602 で、既存の未反映分は別 PR でバックフィル予定)
 
 ---
 
@@ -453,8 +453,9 @@ AES-256-GCM暗号化・復号化のテスト。
 | `latent_h6_readd_deleted_shop_name_is_not_database_error` | 削除済み店舗と同名の再登録で汎用 database エラーにならない (潜在監査 H6) | src/services/latent_audit/shop.rs | 24 |
 | `latent_h6_readd_deleted_shop_name_revives_original_row` | 削除済み店舗と同名の再登録は元の行を復活させる (同じ SHOP_ID、メモは新しい値) (潜在監査 H6) | src/services/latent_audit/shop.rs | 64 |
 | `latent_h6_rename_onto_deleted_shop_name_is_duplicate_name` | 削除済み店舗の名前への変更は duplicate_name で拒否 (潜在監査 H6) | src/services/latent_audit/shop.rs | 95 |
+| `latent_h6_insert_unique_violation_maps_to_duplicate_name` | 重複チェックをすり抜けた add_shop の INSERT が UNIQUE 違反になった場合 duplicate_name を返す (潜在監査 H6) | src/services/latent_audit/shop.rs | 124 |
 
-**合計**: 15件
+**合計**: 16件
 
 ### services/transaction.rs
 
@@ -609,7 +610,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **335件** |
+| **インラインテスト** | **336件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -625,14 +626,14 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/category.rs | 25 |
 | services/manufacturer.rs | 12 |
 | services/product.rs | 15 |
-| services/shop.rs | 15 |
+| services/shop.rs | 16 |
 | services/transaction.rs | 41 |
 | services/aggregation.rs | 20 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 6 |
 | lib.rs | 6 |
-| **総計** | **361件** |
+| **総計** | **362件** |
 
 ---
 

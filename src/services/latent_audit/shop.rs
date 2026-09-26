@@ -115,3 +115,32 @@ async fn latent_h6_rename_onto_deleted_shop_name_is_duplicate_name() {
     .expect_err("renaming onto a deleted shop's name must be rejected");
     assert_eq!(err.code, ApiError::CODE_DUPLICATE_NAME, "{:?}", err);
 }
+
+/// H6 follow-up (CodeRabbit #142): an INSERT that hits UNIQUE(USER_ID,
+/// SHOP_NAME) after slipping past the pre-check — e.g. two concurrent adds
+/// of the same name — is reported as duplicate_name, not `database`.
+/// Simulated by inserting the conflicting row directly, bypassing add_shop.
+#[tokio::test]
+async fn latent_h6_insert_unique_violation_maps_to_duplicate_name() {
+    let (pool, user_id) = setup_production_schema_db().await;
+
+    // The pre-check is bypassed by racing a trigger that inserts the same
+    // name right before add_shop's INSERT lands.
+    sqlx::query(
+        "CREATE TEMP TRIGGER race_same_name BEFORE INSERT ON SHOPS \
+         WHEN NEW.SHOP_NAME = 'イオン' AND NOT EXISTS (SELECT 1 FROM SHOPS WHERE SHOP_NAME = 'イオン') \
+         BEGIN INSERT INTO SHOPS (USER_ID, SHOP_NAME, DISPLAY_ORDER) VALUES (NEW.USER_ID, NEW.SHOP_NAME, 0); END",
+    )
+    .execute(&pool)
+    .await
+    .expect("create race trigger");
+
+    let err = add_shop(
+        &pool,
+        user_id,
+        AddShopRequest { shop_name: "イオン".to_string(), memo: None },
+    )
+    .await
+    .expect_err("the raced INSERT must be rejected");
+    assert_eq!(err.code, ApiError::CODE_DUPLICATE_NAME, "{:?}", err);
+}

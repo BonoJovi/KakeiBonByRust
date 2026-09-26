@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-08-26 JST  
-**Total Tests**: 361 (delta-tracked; the full authoritative count from `cargo test --lib` is 601, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 362 (delta-tracked; the full authoritative count from `cargo test --lib` is 602, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -453,8 +453,9 @@ Shop management service tests. Empty/duplicate assertion tests renamed to `_retu
 | `latent_h6_readd_deleted_shop_name_is_not_database_error` | Re-adding a deleted shop name never surfaces a generic database error (latent-audit H6) | src/services/latent_audit/shop.rs | 24 |
 | `latent_h6_readd_deleted_shop_name_revives_original_row` | Re-adding a deleted shop name revives the original row (same SHOP_ID, new memo) (latent-audit H6) | src/services/latent_audit/shop.rs | 64 |
 | `latent_h6_rename_onto_deleted_shop_name_is_duplicate_name` | Renaming onto a deleted shop name is rejected with duplicate_name (latent-audit H6) | src/services/latent_audit/shop.rs | 95 |
+| `latent_h6_insert_unique_violation_maps_to_duplicate_name` | An add_shop INSERT that races past the duplicate pre-check maps the UNIQUE violation to duplicate_name (latent-audit H6) | src/services/latent_audit/shop.rs | 124 |
 
-**Total**: 15 tests
+**Total**: 16 tests
 
 ### services/transaction.rs
 
@@ -609,7 +610,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **335** |
+| **Inline Tests** | **336** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -625,14 +626,14 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/category.rs | 25 |
 | services/manufacturer.rs | 12 |
 | services/product.rs | 15 |
-| services/shop.rs | 15 |
+| services/shop.rs | 16 |
 | services/transaction.rs | 41 |
 | services/aggregation.rs | 20 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 6 |
 | lib.rs | 6 |
-| **Total** | **361** |
+| **Total** | **362** |
 
 ---
 
