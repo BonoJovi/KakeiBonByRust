@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-08-26 JST  
-**Total Tests**: 349 (delta-tracked; the full authoritative count from `cargo test --lib` is 591, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 357 (delta-tracked; the full authoritative count from `cargo test --lib` is 597, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -190,8 +190,9 @@ Database initialization and migration tests.
 | `migrate_shops_user_id_cascade_adds_cascade_fk_and_preserves_rows` | Table recreate swaps the SHOPS.USER_ID FK to `ON DELETE CASCADE` while keeping every SHOP_ID and column value verbatim (Fable-5 #11) | src/db.rs | 1711 |
 | `migrate_shops_user_id_cascade_is_idempotent` | Second run of the SHOPS cascade migration finds the CASCADE FK already present and returns early — no DROP/RENAME on already-migrated DBs (Fable-5 #11) | src/db.rs | 1799 |
 | `user_delete_cascades_to_shops_after_migration` | End-to-end guarantee: after the cascade migration, deleting a user with SHOPS rows succeeds and takes those rows with it — the pre-fix DELETE aborted with `FOREIGN KEY constraint failed` (Fable-5 #11) | src/db.rs | 1823 |
+| `latent_h5_migration_backfills_null_amount_including_tax` | Startup migration backfills NULL AMOUNT_INCLUDING_TAX from AMOUNT + TAX_AMOUNT (latent-audit H5) | src/latent_audit/db.rs | 33 |
 
-**Total**: 12 tests
+**Total**: 13 tests
 
 ### settings.rs
 
@@ -481,7 +482,7 @@ Transaction management service tests.
 | `field_needle_message_survives_conversion_for_frontend_routing` | Two field needles (`"Item name must be"` / `"Memo must be"`) survive at the head of the wire message so the frontend `startsWith` routing keeps working (PR2b) | src/services/transaction.rs | 4224 |
 | `test_find_matching_pattern_preserves_user_half_up_when_settings_match` | `HALF_UP + EXCLUDED` stored on a round-cent receipt (500円 × 10% = 550円) survives bulk recalc instead of being silently downgraded to FLOOR (Fable-5 #2) | src/services/transaction.rs | 1802 |
 | `test_find_matching_pattern_preserves_user_ceil_when_settings_match` | Same guarantee for `UP + EXCLUDED` (Fable-5 #2) | src/services/transaction.rs | 1819 |
-| `test_find_matching_pattern_falls_back_to_priority_when_preferred_mismatches` | When the stored settings do not reproduce the total, fall back to the priority-ordered PATTERNS scan (Fable-5 #2) | src/services/transaction.rs | 1836 |
+| `test_find_matching_pattern_falls_back_to_priority_when_preferred_mismatches` | When the stored settings do not reproduce the total, fall back to the priority-ordered PATTERNS scan (Fable-5 #2) | src/services/transaction.rs | 1968 |
 | `test_find_matching_pattern_returns_none_when_no_pattern_fits` | No combination reproduces the target → `None`, caller overwrites TOTAL_AMOUNT instead of the setting columns (Fable-5 #2) | src/services/transaction.rs | 1859 |
 | `test_save_header_rejects_invalid_tax_included_type` | `save_transaction_header` rejects `tax_included_type` outside `{TAX_INCLUDED, TAX_EXCLUDED}` so a bogus value cannot survive `find_matching_pattern`'s preferred-first check (CodeRabbit on #125) | src/services/transaction.rs | 3230 |
 | `test_update_header_rejects_invalid_tax_included_type` | Same guard on the update entry point (CodeRabbit on #125) | src/services/transaction.rs | 3257 |
@@ -493,8 +494,14 @@ Transaction management service tests.
 | `test_add_detail_reuses_memo_shared_with_header` | An add whose memo text matches the parent header's MEMO_ID reuses that MEMO_ID so the "shared memo" update path is reachable from adds too (Fable-5 #7) | src/services/transaction.rs | 4519 |
 | `test_add_detail_failure_rolls_back_memo_insert_in_same_tx` | An FK failure inside the DETAIL_INSERT (missing `(USER_ID, CATEGORY1_CODE) → CATEGORY1`) rolls the MEMO insert back too — MEMOS stays empty (Fable-5 #7) | src/services/transaction.rs | 4585 |
 | `transfer_same_account_maps_to_stable_wire_code_and_omits_entity` | `TransactionError::TransferSameAccount` maps to `ApiError { code: "transfer_same_account", entity: None }` — pins the wire contract so a future refactor cannot silently downgrade to the generic `validation` fallback (CodeRabbit on #127) | src/services/transaction.rs | 4664 |
+| `latent_h5_included_header_total_sums_amount_including_tax` | Tax-included header total = SUM(AMOUNT_INCLUDING_TAX) (latent-audit H5) | src/services/latent_audit/transaction.rs | 199 |
+| `latent_h5_compute_recommended_total_honours_included_header` | `compute_recommended_total` honours the header TAX_INCLUDED_TYPE (latent-audit H5) | src/services/latent_audit/transaction.rs | 211 |
+| `latent_h5_bulk_recalc_keeps_consistent_included_header` | Bulk recalc leaves a consistent tax-included header untouched (latent-audit H5) | src/services/latent_audit/transaction.rs | 232 |
+| `latent_l1_small_detail_with_zero_tax_is_still_grossed_up` | Small rows whose tax rounds to 0 are still grossed up per rate (latent-audit L1) | src/services/latent_audit/transaction.rs | 259 |
+| `test_calculate_recommended_total_uses_amount_not_amount_including_tax` | Tax-excluded total grosses up AMOUNT regardless of AMOUNT_INCLUDING_TAX (AMOUNT is always tax-excluded) | src/services/transaction.rs | 1837 |
+| `test_calculate_recommended_total_with_settings_included_derives_missing_rows` | Tax-included total derives NULL / 0-sentinel rows from AMOUNT + TAX_RATE | src/services/transaction.rs | 1890 |
 
-**Total**: 35 tests
+**Total**: 41 tests
 
 ### services/aggregation.rs
 
@@ -506,9 +513,9 @@ Aggregation service tests.
 | `test_monthly_aggregation_next_month` | Monthly aggregation for next month | src/services/aggregation.rs | 1563 |
 | `test_detail_query_grosses_up_null_tax_included_row` | NULL AMOUNT_INCLUDING_TAX at TAX_RATE>0 is grossed up, not dropped (Fable-5 #3) | src/services/aggregation.rs | 2581 |
 | `test_detail_query_grosses_up_zero_tax_included_row` | AMOUNT_INCLUDING_TAX=0 (frontend empty-input sentinel) is treated as pre-tax (Fable-5 #3) | src/services/aggregation.rs | 2610 |
-| `test_detail_query_included_header_legacy_null_row_no_double_taxation` | Header `TAX_INCLUDED_TYPE = TAX_INCLUDED (0)` + legacy `AMOUNT_INCLUDING_TAX = NULL` row is treated as already-included, not grossed up a second time (Fable-5 #3 residual) | src/services/aggregation.rs | 2653 |
-| `test_detail_query_included_header_zero_col_no_double_taxation` | Same #3 residual with `AMOUNT_INCLUDING_TAX = 0` (frontend empty-input sentinel) under a tax-included header | src/services/aggregation.rs | 2690 |
-| `test_detail_query_matches_header_query_for_included_ledger` | Header-dim vs detail-dim aggregation agree on the same tax-included transaction (Fable-5 #4) | src/services/aggregation.rs | 2726 |
+| `test_detail_query_included_header_derives_null_tax_included_row` | Tax-included header + legacy `AMOUNT_INCLUDING_TAX = NULL` row derives the tax-included price from the tax-excluded AMOUNT (supersedes Fable-5 #3 reading; latent-audit H5) | src/services/aggregation.rs | 2741 |
+| `test_detail_query_included_header_derives_zero_tax_included_row` | Same fallback for the `AMOUNT_INCLUDING_TAX = 0` empty-input sentinel under a tax-included header (latent-audit H5) | src/services/aggregation.rs | 2770 |
+| `test_detail_query_matches_header_query_for_included_ledger` | Header-dim vs detail-dim aggregation agree on the same tax-included transaction (Fable-5 #4) | src/services/aggregation.rs | 2805 |
 | `test_detail_query_avg_matches_total_over_count_with_mixed_rates` | avg × count == total holds for a mixed-rate transaction (Fable-5 #4) | src/services/aggregation.rs | 2774 |
 | `test_detail_query_avg_multi_transaction_arithmetic` | avg = total / txn_count over 2 transactions (Fable-5 #4) | src/services/aggregation.rs | 2811 |
 | `test_detail_query_binds_category_filter_no_injection` | End-to-end proof that a category filter's value is bound, not inlined: an `EXPENSE' OR '1'='1` payload returns 0 rows (PR5, Fable-5 #25) | src/services/aggregation.rs | 2846 |
@@ -521,8 +528,9 @@ Aggregation service tests.
 | `latent_h1_category2_null_code_goes_to_unspecified_group` | Category2 grouping with a NULL CATEGORY2_CODE detail succeeds and lands in the unspecified ('') group (latent-audit H1 regression guard) | src/services/latent_audit/aggregation.rs | 240 |
 | `latent_h1_category3_null_code_goes_to_unspecified_group` | Category3 grouping with NULL CATEGORY2/3 codes succeeds and lands in the unspecified group (latent-audit H1 regression guard) | src/services/latent_audit/aggregation.rs | 256 |
 | `latent_h1_category3_only_code3_null_does_not_fail` | Category3 grouping with only CATEGORY3_CODE NULL does not fail (latent-audit H1 regression guard) | src/services/latent_audit/aggregation.rs | 271 |
+| `latent_h5_included_header_category2_uses_amount_including_tax` | Category2 aggregation of a tax-included header uses AMOUNT_INCLUDING_TAX (latent-audit H5) | src/services/latent_audit/aggregation.rs | 438 |
 
-**Total**: 19 tests
+**Total**: 20 tests
 
 ### services/session.rs
 
@@ -597,11 +605,11 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **323** |
+| **Inline Tests** | **331** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
-| db.rs | 12 |
+| db.rs | 13 |
 | settings.rs | 12 |
 | api_error.rs | 10 |
 | services/master_data.rs | 4 |
@@ -614,13 +622,13 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/manufacturer.rs | 12 |
 | services/product.rs | 15 |
 | services/shop.rs | 12 |
-| services/transaction.rs | 35 |
-| services/aggregation.rs | 19 |
+| services/transaction.rs | 41 |
+| services/aggregation.rs | 20 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 5 |
 | lib.rs | 6 |
-| **Total** | **349** |
+| **Total** | **357** |
 
 ---
 

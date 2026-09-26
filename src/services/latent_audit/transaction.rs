@@ -196,7 +196,6 @@ async fn latent_h4_bulk_recalc_keeps_total_without_details() {
 /// H5: 内税ヘッダー用の合計計算が明細 AMOUNT (税抜) をそのまま SUM している。
 /// Expected: 内税ヘッダー (TAX_INCLUDED_TYPE=0) の合計 = SUM(AMOUNT_INCLUDING_TAX)。
 #[test]
-#[ignore = "latent-audit H5"]
 fn latent_h5_included_header_total_sums_amount_including_tax() {
     // AMOUNT is tax-excluded; AMOUNT_INCLUDING_TAX carries the per-row gross.
     let details = vec![d(1000, Some(1080), 8), d(500, Some(550), 10), d(333, Some(359), 8)];
@@ -209,7 +208,6 @@ fn latent_h5_included_header_total_sums_amount_including_tax() {
 /// H5: compute_recommended_total がヘッダーの TAX_INCLUDED_TYPE を見ず常に gross-up する。
 /// Expected: 内税ヘッダーでは SUM(AMOUNT_INCLUDING_TAX) を返す (333+333 @8% → 359+359=718, gross-up だと 719)。
 #[tokio::test]
-#[ignore = "latent-audit H5"]
 async fn latent_h5_compute_recommended_total_honours_included_header() {
     let pool = setup_test_db().await;
     let service = TransactionService::new(pool);
@@ -231,7 +229,6 @@ async fn latent_h5_compute_recommended_total_honours_included_header() {
 /// H5: 一括再計算が内税ヘッダーを「外税」と誤判定し TAX_INCLUDED_TYPE を黙って書き換える。
 /// Expected: TOTAL_AMOUNT = SUM(AMOUNT_INCLUDING_TAX) の整合した内税ヘッダーは変更されない。
 #[tokio::test]
-#[ignore = "latent-audit H5"]
 async fn latent_h5_bulk_recalc_keeps_consistent_included_header() {
     let (_home, pool) = sandboxed_file_db().await;
     let service = TransactionService::new(pool.clone());
@@ -259,7 +256,6 @@ async fn latent_h5_bulk_recalc_keeps_consistent_included_header() {
 /// Expected: 外税ヘッダーは税率ごとに SUM(AMOUNT) を gross-up して 1 回丸める
 /// (5+10 @8% = 15×1.08 = 16.2 → floor 16。現状は両明細を税込扱いして 15)。
 #[test]
-#[ignore = "latent-audit L1"]
 fn latent_l1_small_detail_with_zero_tax_is_still_grossed_up() {
     let details = vec![d(5, Some(5), 8), d(10, Some(10), 8)];
     assert_eq!(

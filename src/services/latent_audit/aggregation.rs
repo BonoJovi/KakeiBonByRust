@@ -435,7 +435,6 @@ fn latent_l11_weekly_every_day_of_year_is_covered() {
 /// Expected: AMOUNT=1000, AMOUNT_INCLUDING_TAX=1100, TAX_RATE=10 under an
 /// included header aggregates as 1100 (EXPENSE → -1100) in Category2.
 #[tokio::test]
-#[ignore = "latent-audit H5"]
 async fn latent_h5_included_header_category2_uses_amount_including_tax() {
     let pool = setup_db().await;
     let t = insert_header(&pool, 0, /*tax_included*/ 0, 1100).await;

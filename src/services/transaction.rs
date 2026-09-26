@@ -360,79 +360,87 @@ pub struct DetailForRecalc {
     pub tax_rate: i64,
 }
 
-/// Compute the recommended `TOTAL_AMOUNT` for a transaction header from its
-/// detail rows and the header's `TAX_ROUNDING_TYPE`.
+/// Round an amount expressed in 1/100ths of a yen back to whole yen under
+/// the given `TAX_ROUNDING_TYPE`. All inputs are non-negative (AMOUNT and
+/// TAX_RATE are validated `>= 0`), so integer division is floor.
 ///
-/// The shape mirrors `build_detail_query` in `services::aggregation`, so the
-/// header total a saved transaction carries always matches what the
-/// dashboard would re-derive by walking the details:
-///
-/// 1. Each detail is classified as either *already tax-included* (when
-///    `TAX_RATE = 0` or `AMOUNT == AMOUNT_INCLUDING_TAX`) or *needs gross-up*.
-/// 2. For each tax rate present, the pre-tax amounts are summed before the
-///    gross-up factor is applied — never the other way around — and the
-///    rounding rule is applied exactly once per `(rate, rounding_type)` slice
-///    to avoid the per-detail rounding error that v1.x carried.
-/// 3. The integer slices are summed to produce the header total.
-///
-/// `tax_rounding_type` follows the existing constants:
 /// - `0` → floor (`TAX_ROUND_DOWN`)
 /// - `1` → half-away-from-zero (`TAX_ROUND_HALF_UP`)
 /// - `2` → ceil (`TAX_ROUND_UP`)
-/// Anything else falls back to floor, matching the SQL `ELSE` arm.
+///
+/// Anything else falls back to floor, matching the SQL `ELSE` arm in
+/// `services::aggregation::build_detail_query`.
+fn round_hundredths(hundredths: i64, tax_rounding_type: i64) -> i64 {
+    match tax_rounding_type {
+        consts::TAX_ROUND_DOWN => hundredths / 100,
+        consts::TAX_ROUND_HALF_UP => (hundredths + 50) / 100,
+        consts::TAX_ROUND_UP => (hundredths + 99) / 100,
+        _ => hundredths / 100,
+    }
+}
+
+/// The tax-included amount of one detail row.
+///
+/// `AMOUNT` is always tax-excluded (owner decision 2026-09-26), so the
+/// tax-included figure is `AMOUNT_INCLUDING_TAX`. When that column is
+/// missing — `NULL`, or the `0` empty-input sentinel on a non-zero row —
+/// it is derived from `AMOUNT` and `TAX_RATE` under the header's rounding
+/// mode. The startup migration backfills legacy rows, so the fallback only
+/// covers rows written later through the `Option` API.
+fn detail_included_amount(detail: &DetailForRecalc, tax_rounding_type: i64) -> i64 {
+    match detail.amount_including_tax {
+        Some(included) if !(included == 0 && detail.amount > 0) => included,
+        _ => detail.amount + round_hundredths(detail.amount * detail.tax_rate, tax_rounding_type),
+    }
+}
+
+/// Compute the recommended `TOTAL_AMOUNT` of a **tax-excluded** header from
+/// its detail rows and the header's `TAX_ROUNDING_TYPE`.
+///
+/// `AMOUNT` is always tax-excluded, so for each tax rate present the
+/// amounts are summed first and grossed up by `(100 + rate) / 100` second,
+/// with the rounding rule applied exactly once per rate — never per detail,
+/// which is the accumulation error v1.x carried. The integer slices are then
+/// summed. The shape mirrors the pre-tax branch of `build_detail_query` in
+/// `services::aggregation`.
+///
+/// There is deliberately no "`AMOUNT == AMOUNT_INCLUDING_TAX` means already
+/// included" short-circuit: a small row whose tax rounds to 0 yen would match
+/// it and silently skip the gross-up (latent-audit L1).
 pub fn calculate_recommended_total(
     details: &[DetailForRecalc],
     tax_rounding_type: i64,
 ) -> i64 {
     use std::collections::HashMap;
 
-    // (already_included_sum, pretax_sum) keyed by tax_rate
-    let mut by_rate: HashMap<i64, (i64, i64)> = HashMap::new();
-
+    let mut pretax_by_rate: HashMap<i64, i64> = HashMap::new();
     for d in details {
-        let is_already_included = d.tax_rate == 0
-            || d.amount_including_tax.map_or(false, |inc| inc == d.amount);
-
-        let entry = by_rate.entry(d.tax_rate).or_insert((0, 0));
-        if is_already_included {
-            entry.0 += d.amount;
-        } else {
-            entry.1 += d.amount;
-        }
+        *pretax_by_rate.entry(d.tax_rate).or_insert(0) += d.amount;
     }
 
-    let mut total: i64 = 0;
-    for (rate, (already, pretax)) in by_rate {
-        // pretax * (100 + rate) is the un-rounded grossed amount in 1/100ths
-        // of a yen; rounding it back to whole yen depends on the chosen mode.
-        let grossed = pretax * (100 + rate);
-        let pretax_grossed = match tax_rounding_type {
-            consts::TAX_ROUND_DOWN => grossed / 100,            // floor (positive only)
-            consts::TAX_ROUND_HALF_UP => (grossed + 50) / 100,  // half-away-from-zero, positive
-            consts::TAX_ROUND_UP => (grossed + 99) / 100,       // ceil, positive
-            _ => grossed / 100,
-        };
-        total += already + pretax_grossed;
-    }
-
-    total
+    pretax_by_rate
+        .into_iter()
+        .map(|(rate, pretax)| round_hundredths(pretax * (100 + rate), tax_rounding_type))
+        .sum()
 }
 
 /// Compute the header total under an explicit `(tax_rounding, tax_included)`
-/// pair. The "tax-included" branch takes the SUM verbatim — no gross-up, no
-/// rounding — because in that mode the user has declared the per-detail
-/// AMOUNT values are already inclusive of tax. The "tax-excluded" branch
-/// delegates to `calculate_recommended_total`, which still honours the
-/// per-detail `AMOUNT == AMOUNT_INCLUDING_TAX` short-circuit so a single
-/// already-included row inside an otherwise-excluded ledger does not get
-/// grossed up a second time.
+/// pair.
+///
+/// - Tax-included header: the per-row tax-included amounts are summed
+///   verbatim (see `detail_included_amount`), since each row's price already
+///   carries its own tax.
+/// - Tax-excluded header: delegates to `calculate_recommended_total`.
 pub fn calculate_recommended_total_with_settings(
     details: &[DetailForRecalc],
     tax_rounding_type: i64,
     tax_included_type: i64,
 ) -> i64 {
     if tax_included_type == consts::TAX_INCLUDED {
-        details.iter().map(|d| d.amount).sum()
+        details
+            .iter()
+            .map(|d| detail_included_amount(d, tax_rounding_type))
+            .sum()
     } else {
         calculate_recommended_total(details, tax_rounding_type)
     }
@@ -464,8 +472,8 @@ pub fn calculate_recommended_total_with_settings(
 ///   1. tax-excluded + floor       (TAX_ROUND_DOWN)
 ///   2. tax-excluded + half-up     (TAX_ROUND_HALF_UP)
 ///   3. tax-excluded + ceil        (TAX_ROUND_UP)
-///   4. tax-included               (the rounding column is irrelevant in
-///      this mode because no rounding ever happens; we report it back as
+///   4. tax-included               (the rounding column only matters for
+///      rows missing `AMOUNT_INCLUDING_TAX`; we report it back as
 ///      `TAX_ROUND_DOWN` so the caller has a stable value to write)
 fn find_matching_pattern(
     details: &[DetailForRecalc],
@@ -1442,7 +1450,7 @@ impl TransactionService {
     }
 
     /// Compute what `TOTAL_AMOUNT` should be for a transaction header given
-    /// its current details and saved `TAX_ROUNDING_TYPE`. The frontend calls
+    /// its current details and saved `TAX_ROUNDING_TYPE` / `TAX_INCLUDED_TYPE`. The frontend calls
     /// this after a detail edit to find out whether the header total it has
     /// cached is still correct, and prompts the user before overwriting it.
     pub async fn compute_recommended_total(
@@ -1450,13 +1458,14 @@ impl TransactionService {
         user_id: i64,
         transaction_id: i64,
     ) -> Result<i64, TransactionError> {
-        let header_row = sqlx::query(sql_queries::TRANSACTION_HEADER_GET_ROUNDING_TYPE)
+        let header_row = sqlx::query(sql_queries::TRANSACTION_HEADER_GET_TAX_SETTINGS)
             .bind(transaction_id)
             .bind(user_id)
             .fetch_optional(&self.pool)
             .await?
             .ok_or(TransactionError::NotFound)?;
         let rounding_type: i64 = header_row.get("TAX_ROUNDING_TYPE");
+        let included_type: i64 = header_row.get("TAX_INCLUDED_TYPE");
 
         let detail_rows = sqlx::query(sql_queries::TRANSACTION_DETAIL_GET_FOR_RECALC)
             .bind(transaction_id)
@@ -1473,7 +1482,11 @@ impl TransactionService {
             })
             .collect();
 
-        Ok(calculate_recommended_total(&details, rounding_type))
+        Ok(calculate_recommended_total_with_settings(
+            &details,
+            rounding_type,
+            included_type,
+        ))
     }
 
     /// Recompute every transaction header's `TOTAL_AMOUNT` for `user_id`
@@ -1821,14 +1834,19 @@ mod tests {
     }
 
     #[test]
-    fn test_calculate_recommended_total_tax_included_detail_passes_through() {
-        // amount == amount_including_tax with non-zero rate is tax-included
-        // input — we must NOT gross it up a second time.
-        let details = vec![detail(216, Some(216), 8)];
-        assert_eq!(
-            calculate_recommended_total(&details, consts::TAX_ROUND_DOWN),
-            216
-        );
+    fn test_calculate_recommended_total_uses_amount_not_amount_including_tax() {
+        // AMOUNT is always tax-excluded, so a tax-excluded header grosses up
+        // AMOUNT regardless of what AMOUNT_INCLUDING_TAX holds: 200 × 1.08 = 216
+        // whether the column is populated, NULL, or equal to AMOUNT.
+        for including in [Some(216), None, Some(200)] {
+            let details = vec![detail(200, including, 8)];
+            assert_eq!(
+                calculate_recommended_total(&details, consts::TAX_ROUND_DOWN),
+                216,
+                "amount_including_tax = {:?}",
+                including
+            );
+        }
     }
 
     #[test]
@@ -1869,14 +1887,23 @@ mod tests {
     }
 
     #[test]
-    fn test_calculate_recommended_total_mixed_included_and_pretax_same_rate() {
-        // Within one tax rate, an already-tax-included detail (300) sits next
-        // to a pre-tax detail (1000). The pre-tax bucket grosses up to 1080,
-        // the tax-included bucket passes through, total = 1380.
-        let details = vec![detail(1000, Some(1080), 8), detail(300, Some(300), 8)];
+    fn test_calculate_recommended_total_with_settings_included_derives_missing_rows() {
+        // Tax-included header: each row contributes AMOUNT_INCLUDING_TAX.
+        // A row missing it (NULL, or the 0 sentinel on a non-zero AMOUNT)
+        // derives it from AMOUNT + TAX_RATE under the header rounding:
+        // 1080 (stored) + 1000 × 1.10 = 1100 + 300 × 1.08 = 324 → 2504.
+        let details = vec![
+            detail(1000, Some(1080), 8),
+            detail(1000, None, 10),
+            detail(300, Some(0), 8),
+        ];
         assert_eq!(
-            calculate_recommended_total(&details, consts::TAX_ROUND_DOWN),
-            1380
+            calculate_recommended_total_with_settings(
+                &details,
+                consts::TAX_ROUND_DOWN,
+                consts::TAX_INCLUDED
+            ),
+            2504
         );
     }
 
@@ -1939,19 +1966,22 @@ mod tests {
     /// list — the same behaviour the old code had for every input.
     #[test]
     fn test_find_matching_pattern_falls_back_to_priority_when_preferred_mismatches() {
-        // 100円 × 8% → floor(108) = 108 (matches FLOOR+EXCLUDED),
-        // half-up rounds to 108 as well and ceil to 108, so the
-        // priority-ordered fallback lands on FLOOR+EXCLUDED first.
-        // Store the header as INCLUDED (which would sum to 100 verbatim,
-        // not 108) so the preferred check misses.
-        let details = vec![DetailForRecalc {
-            amount: 100,
-            amount_including_tax: Some(0),
-            tax_rate: 8,
-        }];
+        // 333円 × 2 @8%: tax-included sums the per-row prices 359 + 359 = 718,
+        // while tax-excluded grosses up 666 × 1.08 = 719.28 → FLOOR/HALF_UP 719,
+        // CEIL 720. Target 719 with the header stored as HALF_UP + INCLUDED
+        // (→ 718) misses the preferred check, and the priority-ordered
+        // fallback lands on FLOOR + EXCLUDED first.
+        let details = vec![
+            DetailForRecalc {
+                amount: 333,
+                amount_including_tax: Some(359),
+                tax_rate: 8,
+            };
+            2
+        ];
         let preferred = (consts::TAX_ROUND_HALF_UP, consts::TAX_INCLUDED);
         assert_eq!(
-            find_matching_pattern(&details, 108, preferred),
+            find_matching_pattern(&details, 719, preferred),
             Some((consts::TAX_ROUND_DOWN, consts::TAX_EXCLUDED)),
             "fallback must pick the first PATTERNS entry that fits"
         );

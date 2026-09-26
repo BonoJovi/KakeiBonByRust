@@ -695,7 +695,8 @@ function initializeTransactionModal() {
             });
             if (!details || details.length === 0) return;
             const rounding = parseInt(document.getElementById('tax-rounding').value, 10);
-            const recommended = calculateRecommendedTotal(details, rounding);
+            const included = parseInt(document.getElementById('tax-included-type').value, 10);
+            const recommended = calculateRecommendedTotal(details, rounding, included);
             document.getElementById('total-amount').value = recommended;
         } catch (error) {
             console.error('Failed to recompute total preview:', error);

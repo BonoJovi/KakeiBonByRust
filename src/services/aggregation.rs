@@ -828,23 +828,20 @@ ORDER BY {} {}
 ///    sums them. No further rounding happens here, so cross-transaction
 ///    aggregation is exact.
 ///
-/// The amount classification follows the rule we agreed on with the data:
-/// a row counts as "already tax-included" when the *header* declares the
-/// ledger as tax-included (`TAX_INCLUDED_TYPE == TAX_INCLUDED = 0` — the
-/// user typed the AMOUNT column as prices that already contain tax), OR
-/// when `TAX_RATE = 0` (gross-up has no effect anyway), OR when
-/// `AMOUNT = AMOUNT_INCLUDING_TAX` and the tax-included column is
-/// actually populated (a single already-included row inside an otherwise
-/// tax-excluded ledger). Everything else is treated as pre-tax and
-/// grossed up, matching the authoritative Rust classifier in
-/// `services::transaction::calculate_recommended_total_with_settings`.
+/// The amount classification follows the header, because `AMOUNT` is always
+/// tax-excluded (owner decision 2026-09-26):
 ///
-/// The `TAX_INCLUDED_TYPE` branch is what closes Fable-5 review #3:
-/// legacy rows (v2.0 or earlier) whose `AMOUNT_INCLUDING_TAX` is NULL
-/// under a tax-included header used to fall through to the pre-tax bucket
-/// and get grossed up a second time, silently over-reporting the amount
-/// by the tax rate. The header-level check catches those rows before
-/// per-detail heuristics ever run.
+/// - Tax-included header (`TAX_INCLUDED_TYPE == TAX_INCLUDED = 0`): each
+///   row contributes its own tax-included price, `AMOUNT_INCLUDING_TAX`
+///   (derived from `AMOUNT` + `TAX_RATE` when the column is missing).
+/// - Tax-excluded header: each row's `AMOUNT` is pre-tax and grossed up
+///   once per tax rate.
+///
+/// This matches the authoritative Rust classifier in
+/// `services::transaction::calculate_recommended_total_with_settings`.
+/// It supersedes the Fable-5 #3 reading ("tax-included header ⇒ AMOUNT is
+/// tax-included"), which under-reported tax-included details by their tax
+/// (latent-audit H5).
 ///
 /// The two branches remain exhaustive complements so no row silently
 /// drops out of both sums.
@@ -911,30 +908,36 @@ FROM (
             th.CATEGORY1_CODE AS cat1,
             td.TAX_RATE AS tax_rate,
             th.TAX_ROUNDING_TYPE AS rounding_type,
+            -- AMOUNT is always tax-excluded (owner decision 2026-09-26).
+            -- A tax-included header sums each row's own tax-included
+            -- price; a row missing AMOUNT_INCLUDING_TAX (NULL, or the 0
+            -- empty-input sentinel on a non-zero row) derives it from
+            -- AMOUNT and TAX_RATE under the header rounding, mirroring
+            -- `services::transaction::detail_included_amount`. The
+            -- `{tax_included}` placeholder is `consts::TAX_INCLUDED`
+            -- interpolated at build time.
             SUM(CASE
-                -- Fable-5 #3: header-level tax-included declaration wins
-                -- over the per-detail heuristic. Without this, legacy
-                -- rows (AMOUNT_INCLUDING_TAX IS NULL, tax-included
-                -- header) fall into the pretax bucket below and get
-                -- grossed up again, silently over-reporting by the tax
-                -- rate. The `{tax_included}` placeholder is
-                -- `consts::TAX_INCLUDED` interpolated at build time —
-                -- CodeRabbit #124 review: hard-coding a bare `0` here
-                -- couples the SQL to a specific numeric encoding of the
-                -- constant and would silently drift if the constant is
-                -- ever renumbered.
-                WHEN th.TAX_INCLUDED_TYPE = {tax_included}
-                  OR td.TAX_RATE = 0
-                  OR (td.AMOUNT_INCLUDING_TAX IS NOT NULL
-                      AND td.AMOUNT = td.AMOUNT_INCLUDING_TAX)
-                THEN td.AMOUNT ELSE 0
+                WHEN th.TAX_INCLUDED_TYPE = {tax_included} THEN
+                    CASE
+                        WHEN td.AMOUNT_INCLUDING_TAX IS NULL
+                          OR (td.AMOUNT_INCLUDING_TAX = 0 AND td.AMOUNT > 0)
+                        THEN td.AMOUNT + CASE th.TAX_ROUNDING_TYPE
+                            WHEN 1 THEN (td.AMOUNT * td.TAX_RATE + 50) / 100
+                            WHEN 2 THEN (td.AMOUNT * td.TAX_RATE + 99) / 100
+                            ELSE td.AMOUNT * td.TAX_RATE / 100
+                        END
+                        ELSE td.AMOUNT_INCLUDING_TAX
+                    END
+                ELSE 0
             END) AS already_included_sum,
+            -- A tax-excluded header grosses up every row: per tax rate the
+            -- AMOUNTs are summed here and rounded once in the middle query.
+            -- No per-row "AMOUNT = AMOUNT_INCLUDING_TAX" short-circuit: a
+            -- small row whose tax rounds to 0 would match it and skip the
+            -- gross-up (latent-audit L1).
             SUM(CASE
-                WHEN th.TAX_INCLUDED_TYPE != {tax_included}
-                  AND td.TAX_RATE > 0
-                  AND (td.AMOUNT_INCLUDING_TAX IS NULL
-                       OR td.AMOUNT != td.AMOUNT_INCLUDING_TAX)
-                THEN td.AMOUNT ELSE 0
+                WHEN th.TAX_INCLUDED_TYPE != {tax_included} THEN td.AMOUNT
+                ELSE 0
             END) AS pretax_sum
         FROM TRANSACTIONS_HEADER th
         INNER JOIN TRANSACTIONS_DETAIL td
@@ -2633,17 +2636,16 @@ mod tests {
         );
     }
 
-    /// AMOUNT == AMOUNT_INCLUDING_TAX with TAX_RATE > 0 means the user typed
-    /// in a tax-included receipt verbatim. The new query has to recognise
-    /// this and pass the value through untouched, instead of grossing it up
-    /// a second time with `× (100 + tax_rate) / 100`.
+    /// Under a tax-included header each row contributes its stored
+    /// tax-included price (`AMOUNT_INCLUDING_TAX`) untouched, instead of
+    /// grossing up anything a second time with `× (100 + tax_rate) / 100`.
     #[tokio::test]
     async fn test_detail_query_passes_tax_included_input_through() {
         let pool = setup_aggregation_test_db().await;
 
         let txn = insert_test_header(&pool, 1, 0, /*tax_included*/ 0, 0).await;
-        // 216 円, both columns equal → already tax-included.
-        insert_detail(&pool, 1, txn, 1, "FOOD", 216, 8, Some(216)).await;
+        // AMOUNT 200 (tax-excluded), tax-included price 216.
+        insert_detail(&pool, 1, txn, 1, "FOOD", 200, 8, Some(216)).await;
 
         let request = june_2024_request(GroupBy::Category2);
         let (sql, binds) = build_query(&request, "ja");
@@ -2656,7 +2658,7 @@ mod tests {
         .unwrap();
 
         assert_eq!(results.len(), 1);
-        // If we mistakenly grossed this up, we'd get -233 (= -floor(216 × 1.08)).
+        // Grossing up the stored price again would give -233 (= -floor(216 × 1.08)).
         assert_eq!(
             results[0].total_amount, -216,
             "tax-included input must not be grossed up a second time"
@@ -2729,35 +2731,20 @@ mod tests {
         );
     }
 
-    /// Fable-5 review #3 — legacy (v2.0-era) transactions saved before
-    /// `AMOUNT_INCLUDING_TAX` existed carry `AMOUNT_INCLUDING_TAX = NULL`
-    /// under a `TAX_INCLUDED_TYPE = TAX_INCLUDED (0)` header, with the
-    /// per-detail AMOUNT already containing tax. Prior to the fix, the
-    /// detail-side classifier looked at the per-row shape only
-    /// (`AMOUNT_INCLUDING_TAX IS NOT NULL AND AMOUNT = AMOUNT_INCLUDING_TAX`)
-    /// and, finding the row failed that pattern, dropped it into the
-    /// pretax bucket. The gross-up then multiplied the tax-included
-    /// AMOUNT by (1 + rate) again — a 10 % row went from ¥110 to ¥121,
-    /// a permanent silent 10 % over-count on legacy tax-included rows.
-    ///
-    /// The corrected classifier now consults the header first:
-    /// `TAX_INCLUDED_TYPE = 0` means the whole ledger is tax-included,
-    /// so every AMOUNT in it goes straight into `already_included_sum`
-    /// regardless of the per-detail column. This aligns detail
-    /// aggregation with `calculate_recommended_total_with_settings`,
-    /// which has taken the header type into account since v2.0.
+    /// Tax-included header whose detail row predates `AMOUNT_INCLUDING_TAX`
+    /// (NULL). `AMOUNT` has always been tax-excluded (owner decision
+    /// 2026-09-26, superseding the Fable-5 #3 reading that such AMOUNTs were
+    /// tax-included), so the row's tax-included price is derived from
+    /// `AMOUNT` + `TAX_RATE` under the header rounding: 100 × 1.10 = 110.
+    /// The startup migration backfills these rows; this pins the fallback.
     #[tokio::test]
-    async fn test_detail_query_included_header_legacy_null_row_no_double_taxation() {
+    async fn test_detail_query_included_header_derives_null_tax_included_row() {
         let pool = setup_aggregation_test_db().await;
 
-        // TAX_INCLUDED_TYPE = 0 (INCLUDED) header. TOTAL_AMOUNT would
-        // have been stamped as 110 by a v2.0-era `save_transaction`
-        // path; we set 0 here so we can prove the detail-side
-        // computation stands on its own.
+        // TAX_INCLUDED_TYPE = 0 (INCLUDED) header. TOTAL_AMOUNT is 0 so the
+        // detail-side computation has to stand on its own.
         let txn = insert_test_header(&pool, 1, /*floor*/ 0, /*tax_included*/ 0, 0).await;
-        // Legacy row: AMOUNT is the tax-included price (110), TAX_RATE
-        // is stored but AMOUNT_INCLUDING_TAX was not yet a column.
-        insert_detail(&pool, 1, txn, 1, "FOOD", 110, 10, /*NULL*/ None).await;
+        insert_detail(&pool, 1, txn, 1, "FOOD", 100, 10, /*NULL*/ None).await;
 
         let request = june_2024_request(GroupBy::Category2);
         let (sql, binds) = build_query(&request, "ja");
@@ -2770,21 +2757,17 @@ mod tests {
         .unwrap();
 
         assert_eq!(results.len(), 1);
-        // Pre-fix: -121 (110 × 1.10). Post-fix: -110.
         assert_eq!(
             results[0].total_amount, -110,
-            "tax-included header must not gross up its details a second time"
+            "missing AMOUNT_INCLUDING_TAX must be derived from the tax-excluded AMOUNT"
         );
     }
 
-    /// Fable-5 review #3 companion — legacy tax-included row with a
-    /// zero `AMOUNT_INCLUDING_TAX` (the frontend's empty-input sentinel).
-    /// Same root cause as the NULL variant: pre-fix, the row failed the
-    /// `AMOUNT = AMOUNT_INCLUDING_TAX` short-circuit (0 ≠ 100), fell into
-    /// the pretax bucket, and was grossed up. Post-fix, the header
-    /// `TAX_INCLUDED_TYPE = 0` catches it first.
+    /// Same fallback for the `AMOUNT_INCLUDING_TAX = 0` empty-input
+    /// sentinel on a non-zero row under a tax-included header:
+    /// 100 × 1.08 = 108.
     #[tokio::test]
-    async fn test_detail_query_included_header_zero_col_no_double_taxation() {
+    async fn test_detail_query_included_header_derives_zero_tax_included_row() {
         let pool = setup_aggregation_test_db().await;
 
         let txn = insert_test_header(&pool, 1, 0, /*tax_included*/ 0, 0).await;
@@ -2802,19 +2785,18 @@ mod tests {
 
         assert_eq!(results.len(), 1);
         assert_eq!(
-            results[0].total_amount, -100,
-            "tax-included header must treat AMOUNT verbatim regardless of AMOUNT_INCLUDING_TAX column shape"
+            results[0].total_amount, -108,
+            "the 0 sentinel must be derived from the tax-excluded AMOUNT"
         );
     }
 
     /// Fable-5 review #4 — under a tax-included header, the header-dim
     /// aggregation (`SUM(th.TOTAL_AMOUNT)`) and the detail-dim
     /// aggregation (reconstruct from details) must agree on the same
-    /// transaction. Prior to the #3 fix, the two diverged for any
-    /// legacy tax-included row: the header side would return the stored
-    /// 110, the detail side would gross it up to 121, and switching the
-    /// group_by axis appeared to change the money. With #3 fixed, both
-    /// sides now return the same value. Uses `GroupBy::Date` for the
+    /// transaction, otherwise switching the group_by axis appears to
+    /// change the money. The detail carries the tax-excluded AMOUNT (100)
+    /// and its tax-included price (110); the detail side must sum the
+    /// latter, matching the stored TOTAL_AMOUNT. Uses `GroupBy::Date` for the
     /// header side to avoid the CATEGORY1_I18N join (this test's fixture
     /// DB doesn't seed the i18n tables); Date shares `build_header_query`
     /// with Category1 / Shop, so the invariant is proved for the whole
@@ -2823,10 +2805,10 @@ mod tests {
     async fn test_detail_query_matches_header_query_for_included_ledger() {
         let pool = setup_aggregation_test_db().await;
 
-        // TOTAL_AMOUNT = 110 stamped by `save_transaction`, exact match
-        // for the AMOUNT the detail carries under a tax-included header.
+        // TOTAL_AMOUNT = 110 = SUM(AMOUNT_INCLUDING_TAX) under a
+        // tax-included header; AMOUNT is the tax-excluded 100.
         let txn = insert_test_header(&pool, 1, 0, /*tax_included*/ 0, 110).await;
-        insert_detail(&pool, 1, txn, 1, "FOOD", 110, 10, None).await;
+        insert_detail(&pool, 1, txn, 1, "FOOD", 100, 10, Some(110)).await;
 
         let header_request = june_2024_request(GroupBy::Date);
         let (header_sql, header_binds) = build_query(&header_request, "ja");
