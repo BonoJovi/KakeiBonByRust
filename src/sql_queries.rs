@@ -1692,6 +1692,17 @@ INSERT INTO SHOPS (USER_ID, SHOP_NAME, MEMO, DISPLAY_ORDER, ENTRY_DT)
 VALUES (?, ?, ?, ?, datetime('now'))
 "#;
 
+/// Re-adding a logically deleted shop name revives that row instead of
+/// inserting (latent-audit H6): UNIQUE(USER_ID, SHOP_NAME) covers deleted
+/// rows too, so a plain INSERT would fail. Deleted shops are never
+/// referenced (the delete lock rejects in-use shops), so reviving is safe.
+/// Binds: (memo, display_order, user_id, shop_name).
+pub const SHOP_REVIVE_DELETED_BY_NAME: &str = r#"
+UPDATE SHOPS
+SET IS_DISABLED = 0, MEMO = ?, DISPLAY_ORDER = ?, UPDATE_DT = datetime('now')
+WHERE USER_ID = ? AND SHOP_NAME = ? AND IS_DISABLED = 1
+"#;
+
 pub const SHOP_UPDATE: &str = r#"
 UPDATE SHOPS
 SET SHOP_NAME = ?, MEMO = ?, DISPLAY_ORDER = ?, UPDATE_DT = datetime('now')
@@ -1722,10 +1733,13 @@ FROM SHOPS
 WHERE USER_ID = ? AND SHOP_NAME = ? AND IS_DISABLED = 0
 "#;
 
+/// Counts logically deleted rows too: UNIQUE(USER_ID, SHOP_NAME) covers
+/// them, so renaming onto a deleted shop's name must surface as
+/// duplicate_name rather than a raw constraint error (latent-audit H6).
 pub const SHOP_CHECK_DUPLICATE_FOR_UPDATE: &str = r#"
 SELECT COUNT(*) as count
 FROM SHOPS
-WHERE USER_ID = ? AND SHOP_NAME = ? AND SHOP_ID != ? AND IS_DISABLED = 0
+WHERE USER_ID = ? AND SHOP_NAME = ? AND SHOP_ID != ?
 "#;
 
 // ============================================================================

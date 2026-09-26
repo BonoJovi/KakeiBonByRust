@@ -84,13 +84,26 @@ pub async fn add_shop(
     )
     .await?;
 
-    sqlx::query(sql_queries::SHOP_INSERT)
-        .bind(user_id)
-        .bind(&request.shop_name)
+    // A logically deleted shop with the same name still holds the UNIQUE
+    // slot, so bring it back instead of inserting (latent-audit H6).
+    let revived = sqlx::query(sql_queries::SHOP_REVIVE_DELETED_BY_NAME)
         .bind(&request.memo)
         .bind(display_order)
+        .bind(user_id)
+        .bind(&request.shop_name)
         .execute(pool)
-        .await?;
+        .await?
+        .rows_affected();
+
+    if revived == 0 {
+        sqlx::query(sql_queries::SHOP_INSERT)
+            .bind(user_id)
+            .bind(&request.shop_name)
+            .bind(&request.memo)
+            .bind(display_order)
+            .execute(pool)
+            .await?;
+    }
 
     Ok("Shop added successfully".to_string())
 }

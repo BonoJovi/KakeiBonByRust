@@ -21,7 +21,6 @@ async fn setup_production_schema_db() -> (SqlitePool, i64) {
 /// Expected: either success (revive/reuse the row) or a structured
 /// `duplicate_name` error — never ApiError code `database`.
 #[tokio::test]
-#[ignore = "latent-audit H6"]
 async fn latent_h6_readd_deleted_shop_name_is_not_database_error() {
     let (pool, user_id) = setup_production_schema_db().await;
 
@@ -56,4 +55,63 @@ async fn latent_h6_readd_deleted_shop_name_is_not_database_error() {
             err
         );
     }
+}
+
+/// H6 (chosen fix): re-adding a deleted shop name revives the original row
+/// — same SHOP_ID, active again, carrying the new memo — rather than
+/// inserting a second row.
+#[tokio::test]
+async fn latent_h6_readd_deleted_shop_name_revives_original_row() {
+    let (pool, user_id) = setup_production_schema_db().await;
+
+    add_shop(
+        &pool,
+        user_id,
+        AddShopRequest { shop_name: "イオン".to_string(), memo: None },
+    )
+    .await
+    .expect("initial add");
+    let original_id = get_shops(&pool, user_id).await.expect("list")[0].shop_id;
+    delete_shop(&pool, user_id, original_id).await.expect("logical delete");
+
+    add_shop(
+        &pool,
+        user_id,
+        AddShopRequest { shop_name: "イオン".to_string(), memo: Some("再登録".to_string()) },
+    )
+    .await
+    .expect("re-adding a deleted shop name must succeed");
+
+    let shops = get_shops(&pool, user_id).await.expect("list");
+    let matching: Vec<_> = shops.iter().filter(|s| s.shop_name == "イオン").collect();
+    assert_eq!(matching.len(), 1, "exactly one active shop with the name: {:?}", shops);
+    assert_eq!(matching[0].shop_id, original_id, "the original row must be revived");
+    assert_eq!(matching[0].memo.as_deref(), Some("再登録"));
+}
+
+/// H6 (chosen fix): renaming a shop onto a deleted shop's name is rejected
+/// as a structured duplicate_name error, not a raw UNIQUE violation.
+#[tokio::test]
+async fn latent_h6_rename_onto_deleted_shop_name_is_duplicate_name() {
+    let (pool, user_id) = setup_production_schema_db().await;
+
+    for name in ["イオン", "ダイソー"] {
+        add_shop(&pool, user_id, AddShopRequest { shop_name: name.to_string(), memo: None })
+            .await
+            .expect("add");
+    }
+    let shops = get_shops(&pool, user_id).await.expect("list");
+    let id_of = |name: &str| shops.iter().find(|s| s.shop_name == name).expect(name).shop_id;
+    let (aeon, daiso) = (id_of("イオン"), id_of("ダイソー"));
+    delete_shop(&pool, user_id, aeon).await.expect("logical delete");
+
+    let err = update_shop(
+        &pool,
+        user_id,
+        daiso,
+        UpdateShopRequest { shop_name: "イオン".to_string(), memo: None, display_order: 1 },
+    )
+    .await
+    .expect_err("renaming onto a deleted shop's name must be rejected");
+    assert_eq!(err.code, ApiError::CODE_DUPLICATE_NAME, "{:?}", err);
 }

@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-08-26 JST  
-**Total Tests**: 357 (delta-tracked; the full authoritative count from `cargo test --lib` is 597, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 361 (delta-tracked; the full authoritative count from `cargo test --lib` is 601, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -450,8 +450,11 @@ Shop management service tests. Empty/duplicate assertion tests renamed to `_retu
 | `test_delete_shop_rejected_when_referenced_by_transaction` | Delete rejected with `ApiError { code: "in_use", entity: "shop" }` when any TRANSACTIONS_HEADER row names the shop (master delete-lock) | src/services/shop.rs | 346 |
 | `test_delete_shop_rejected_when_referenced_by_recurring_rule` | Delete rejected with `ApiError { code: "in_use" }` when any RECURRING_RULES row names the shop (master delete-lock) | src/services/shop.rs | 372 |
 | `test_delete_shop_ignores_other_users_references` | Cross-user references to the same SHOP_ID do NOT block delete — scoping is by USER_ID (master delete-lock) | src/services/shop.rs | 394 |
+| `latent_h6_readd_deleted_shop_name_is_not_database_error` | Re-adding a deleted shop name never surfaces a generic database error (latent-audit H6) | src/services/latent_audit/shop.rs | 24 |
+| `latent_h6_readd_deleted_shop_name_revives_original_row` | Re-adding a deleted shop name revives the original row (same SHOP_ID, new memo) (latent-audit H6) | src/services/latent_audit/shop.rs | 64 |
+| `latent_h6_rename_onto_deleted_shop_name_is_duplicate_name` | Renaming onto a deleted shop name is rejected with duplicate_name (latent-audit H6) | src/services/latent_audit/shop.rs | 95 |
 
-**Total**: 12 tests
+**Total**: 15 tests
 
 ### services/transaction.rs
 
@@ -578,8 +581,9 @@ Recurring transaction rule service tests.
 | `validation_preserves_message_and_omits_entity` | RecurringError::Validation maps to ApiError::CODE_VALIDATION with the message preserved (PR2a) | src/services/recurring.rs | 1840 |
 | `database_error_maps_to_database_code` | RecurringError::Database maps to ApiError::CODE_DATABASE (PR2a) | src/services/recurring.rs | 1851 |
 | `field_needle_message_survives_conversion_for_frontend_routing` | Four field needles (`"Rule name must be"` etc.) survive at the head of the wire message so the frontend `startsWith` routing keeps working (PR2a) | src/services/recurring.rs | 1858 |
+| `latent_h2_cascade_delete_keeps_confirmed_headers` | Cascade rule delete removes only still-scheduled occurrences; confirmed (IS_SCHEDULED = 0) headers survive, detached (latent-audit H2) | src/services/latent_audit/recurring.rs | 196 |
 
-**Total**: 5 tests
+**Total**: 6 tests
 
 ### lib.rs
 
@@ -605,7 +609,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **331** |
+| **Inline Tests** | **335** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -621,14 +625,14 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/category.rs | 25 |
 | services/manufacturer.rs | 12 |
 | services/product.rs | 15 |
-| services/shop.rs | 12 |
+| services/shop.rs | 15 |
 | services/transaction.rs | 41 |
 | services/aggregation.rs | 20 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
-| services/recurring.rs | 5 |
+| services/recurring.rs | 6 |
 | lib.rs | 6 |
-| **Total** | **357** |
+| **Total** | **361** |
 
 ---
 
