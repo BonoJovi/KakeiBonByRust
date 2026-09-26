@@ -445,6 +445,38 @@ async fn latent_m9_restore_keeps_edit_on_a_header_the_recalc_changed() {
     );
 }
 
+/// M9 follow-up (CodeRabbit on #147): two recalc runs in quick succession
+/// get separate backups / journals, so the first run can still be rolled
+/// back after the second one.
+#[tokio::test]
+async fn latent_m9_back_to_back_recalcs_keep_separate_journals() {
+    let (_home, pool) = sandboxed_file_db().await;
+    let service = TransactionService::new(pool.clone());
+    // 105 @10% = 115.5 → FLOOR 115 / HALF_UP 116. Saved as FLOOR with 116,
+    // so the first recalc corrects the rounding to HALF_UP.
+    let txn_id = service
+        .save_transaction_header(USER, header_request(116, consts::TAX_ROUND_DOWN, consts::TAX_EXCLUDED))
+        .await
+        .unwrap();
+    service
+        .add_transaction_detail(USER, txn_id, detail_request(105, 10, 10, Some(115)))
+        .await
+        .unwrap();
+
+    let first = service.recalculate_all_transaction_totals(USER).await.unwrap();
+    // Nothing left to change: the second run's journal is empty.
+    let second = service.recalculate_all_transaction_totals(USER).await.unwrap();
+    assert_ne!(first.backup_path, second.backup_path, "each run needs its own backup");
+
+    let restore = service
+        .restore_totals_from_backup(USER, &first.backup_path)
+        .await
+        .unwrap();
+    assert_eq!(restore.restored, 1, "the first run must still be restorable");
+    let (total, rounding, _) = header_cols(&pool, txn_id).await;
+    assert_eq!((total, rounding), (116, consts::TAX_ROUND_DOWN));
+}
+
 /// M9: without the change journal next to the backup, the rollback refuses
 /// and changes nothing (it no longer falls back to overwriting every total).
 #[tokio::test]

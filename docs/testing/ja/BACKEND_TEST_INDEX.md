@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-09-06 JST  
-**総テスト数**: 392件 (差分反映後。`cargo test --lib` の権威的総数は 632 で、既存の未反映分は別 PR でバックフィル予定)
+**総テスト数**: 393件 (差分反映後。`cargo test --lib` の権威的総数は 633 で、既存の未反映分は別 PR でバックフィル予定)
 
 ---
 
@@ -528,8 +528,9 @@ AES-256-GCM暗号化・復号化のテスト。
 | `latent_m9_restore_keeps_edit_on_a_header_the_recalc_changed` | 再計算が変えた後にユーザーが編集したヘッダーは編集が残る (潜在監査 M9) | src/services/latent_audit/transaction.rs | 414 |
 | `latent_m9_restore_without_journal_is_rejected` | バックアップ横の変更記録が無いロールバックは拒否され何も変更しない (潜在監査 M9) | src/services/latent_audit/transaction.rs | 451 |
 | `latent_l4_restore_detaches_backup_when_update_fails` | 失敗したロールバック後に `recalc_backup` が ATTACH されたまま残らない (M9 でロールバックが ATTACH しなくなり解消、潜在監査 L4) | src/services/latent_audit/transaction.rs | 657 |
+| `latent_m9_back_to_back_recalcs_keep_separate_journals` | 連続した一括再計算は別々のバックアップ・変更記録を使い、1 回目も取り消せる (潜在監査 M9) | src/services/latent_audit/transaction.rs | 452 |
 
-**合計**: 51件
+**合計**: 52件
 
 ### services/aggregation.rs
 
@@ -640,7 +641,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **366件** |
+| **インラインテスト** | **367件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -657,13 +658,13 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/manufacturer.rs | 15 |
 | services/product.rs | 18 |
 | services/shop.rs | 16 |
-| services/transaction.rs | 51 |
+| services/transaction.rs | 52 |
 | services/aggregation.rs | 20 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 12 |
 | lib.rs | 6 |
-| **総計** | **392件** |
+| **総計** | **393件** |
 
 ---
 

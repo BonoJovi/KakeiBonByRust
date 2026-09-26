@@ -1571,11 +1571,20 @@ impl TransactionService {
         let dir = main_path.parent().ok_or_else(|| {
             TransactionError::DatabaseError("DB path has no parent directory".to_string())
         })?;
-        let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S");
-        let backup_path = dir.join(format!(
-            "KakeiBonDB.sqlite3.backup_before_recalc_{}",
-            timestamp
-        ));
+        // Each run gets its own backup (and therefore its own change
+        // journal): millisecond precision plus a numeric suffix when a file
+        // with that name already exists. Two runs in the same second used to
+        // share one path, so the second overwrote the first run's backup and
+        // journal and the first rollback restored nothing (CodeRabbit on
+        // #147).
+        let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S_%3f");
+        let base_name = format!("KakeiBonDB.sqlite3.backup_before_recalc_{}", timestamp);
+        let mut backup_path = dir.join(&base_name);
+        let mut suffix = 2;
+        while backup_path.exists() || recalc_journal_path(&backup_path).exists() {
+            backup_path = dir.join(format!("{}_{}", base_name, suffix));
+            suffix += 1;
+        }
         std::fs::copy(&main_path, &backup_path).map_err(|e| {
             TransactionError::DatabaseError(format!(
                 "Failed to copy DB to backup path {:?}: {}",
