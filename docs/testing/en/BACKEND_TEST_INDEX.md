@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-08-26 JST  
-**Total Tests**: 372 (delta-tracked; the full authoritative count from `cargo test --lib` is 612, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 373 (delta-tracked; the full authoritative count from `cargo test --lib` is 613, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -514,8 +514,9 @@ Transaction management service tests.
 | `latent_h4_compute_recommended_total_is_none_without_details` | `compute_recommended_total` returns None for a header without details (latent-audit H4) | src/services/latent_audit/transaction.rs | 666 |
 | `latent_m1_update_header_persists_is_scheduled` | Header update persists the IS_SCHEDULED checkbox (latent-audit M1) | src/services/latent_audit/transaction.rs | 273 |
 | `latent_m1_update_header_without_flag_keeps_is_scheduled` | Header update with `is_scheduled: None` keeps the stored flag (latent-audit M1) | src/services/latent_audit/transaction.rs | 679 |
+| `latent_m1_invalid_is_scheduled_is_rejected` | Save and update reject an IS_SCHEDULED value other than 0/1 (latent-audit M1) | src/services/latent_audit/transaction.rs | 698 |
 
-**Total**: 45 tests
+**Total**: 46 tests
 
 ### services/aggregation.rs
 
@@ -620,7 +621,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **346** |
+| **Inline Tests** | **347** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -637,13 +638,13 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/manufacturer.rs | 15 |
 | services/product.rs | 18 |
 | services/shop.rs | 16 |
-| services/transaction.rs | 45 |
+| services/transaction.rs | 46 |
 | services/aggregation.rs | 20 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 6 |
 | lib.rs | 6 |
-| **Total** | **372** |
+| **Total** | **373** |
 
 ---
 

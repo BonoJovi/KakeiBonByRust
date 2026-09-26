@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-09-06 JST  
-**総テスト数**: 372件 (差分反映後。`cargo test --lib` の権威的総数は 612 で、既存の未反映分は別 PR でバックフィル予定)
+**総テスト数**: 373件 (差分反映後。`cargo test --lib` の権威的総数は 613 で、既存の未反映分は別 PR でバックフィル予定)
 
 ---
 
@@ -514,8 +514,9 @@ AES-256-GCM暗号化・復号化のテスト。
 | `latent_h4_compute_recommended_total_is_none_without_details` | 明細なしヘッダーの `compute_recommended_total` は None を返す (潜在監査 H4) | src/services/latent_audit/transaction.rs | 666 |
 | `latent_m1_update_header_persists_is_scheduled` | ヘッダー更新で予定チェック (IS_SCHEDULED) が保存される (潜在監査 M1) | src/services/latent_audit/transaction.rs | 273 |
 | `latent_m1_update_header_without_flag_keeps_is_scheduled` | `is_scheduled: None` のヘッダー更新は既存の値を保つ (潜在監査 M1) | src/services/latent_audit/transaction.rs | 679 |
+| `latent_m1_invalid_is_scheduled_is_rejected` | 保存・更新で 0/1 以外の IS_SCHEDULED を拒否する (潜在監査 M1) | src/services/latent_audit/transaction.rs | 698 |
 
-**合計**: 45件
+**合計**: 46件
 
 ### services/aggregation.rs
 
@@ -620,7 +621,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **346件** |
+| **インラインテスト** | **347件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -637,13 +638,13 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/manufacturer.rs | 15 |
 | services/product.rs | 18 |
 | services/shop.rs | 16 |
-| services/transaction.rs | 45 |
+| services/transaction.rs | 46 |
 | services/aggregation.rs | 20 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 6 |
 | lib.rs | 6 |
-| **総計** | **372件** |
+| **総計** | **373件** |
 
 ---
 

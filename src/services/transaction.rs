@@ -555,6 +555,15 @@ impl TransactionService {
             ));
         }
 
+        // IS_SCHEDULED is a 0/1 flag. CodeRabbit on #144 — any other value
+        // (e.g. 2) would be stored verbatim, and since the regular list only
+        // shows IS_SCHEDULED = 0 rows, the transaction would vanish from it.
+        if !matches!(request.is_scheduled, None | Some(0) | Some(1)) {
+            return Err(TransactionError::ValidationError(
+                "Invalid scheduled flag".to_string(),
+            ));
+        }
+
         // Fable-5 review #20 — TRANSFER with the same FROM and TO
         // account is meaningless (net movement is zero) and used to
         // sneak through both entry points. The dashboard-side
@@ -1029,6 +1038,15 @@ impl TransactionService {
         {
             return Err(TransactionError::ValidationError(
                 "Invalid tax included type".to_string(),
+            ));
+        }
+
+        // IS_SCHEDULED is a 0/1 flag. CodeRabbit on #144 — any other value
+        // (e.g. 2) would be stored verbatim, and since the regular list only
+        // shows IS_SCHEDULED = 0 rows, the transaction would vanish from it.
+        if !matches!(request.is_scheduled, None | Some(0) | Some(1)) {
+            return Err(TransactionError::ValidationError(
+                "Invalid scheduled flag".to_string(),
             ));
         }
 
