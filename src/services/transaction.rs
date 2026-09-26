@@ -4681,3 +4681,7 @@ mod tests {
     }
 }
 
+
+#[cfg(test)]
+#[path = "latent_audit/transaction.rs"]
+mod latent_audit;

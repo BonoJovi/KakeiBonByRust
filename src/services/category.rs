@@ -2158,3 +2158,7 @@ mod tests {
         );
     }
 }
+
+#[cfg(test)]
+#[path = "latent_audit/category.rs"]
+mod latent_audit;

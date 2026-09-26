@@ -599,3 +599,7 @@ mod tests {
         assert!(err.message.contains("boom"), "message must be preserved for logs: {}", err.message);
     }
 }
+
+#[cfg(test)]
+#[path = "latent_audit/auth.rs"]
+mod latent_audit;

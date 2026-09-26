@@ -3064,3 +3064,7 @@ mod tests {
         );
     }
 }
+
+#[cfg(test)]
+#[path = "latent_audit/aggregation.rs"]
+mod latent_audit;

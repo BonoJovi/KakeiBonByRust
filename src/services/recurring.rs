@@ -1880,3 +1880,7 @@ mod tests {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "latent_audit/recurring.rs"]
+mod latent_audit;

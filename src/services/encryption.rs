@@ -754,3 +754,7 @@ mod tests {
         );
     }
 }
+
+#[cfg(test)]
+#[path = "latent_audit/encryption.rs"]
+mod latent_audit;

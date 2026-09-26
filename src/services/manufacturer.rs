@@ -596,3 +596,7 @@ mod tests {
             "error should reference the limit: {}", err.message);
     }
 }
+
+#[cfg(test)]
+#[path = "latent_audit/manufacturer.rs"]
+mod latent_audit;

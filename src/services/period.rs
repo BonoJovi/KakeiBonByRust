@@ -349,3 +349,7 @@ mod tests {
         );
     }
 }
+
+#[cfg(test)]
+#[path = "latent_audit/period.rs"]
+mod latent_audit;

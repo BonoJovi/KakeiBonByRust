@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-09-06 JST  
-**総テスト数**: 346件 (差分反映後。`cargo test --lib` の権威的総数は 588 で、既存の未反映分は別 PR でバックフィル予定)
+**総テスト数**: 349件 (差分反映後。`cargo test --lib` の権威的総数は 591 で、既存の未反映分は別 PR でバックフィル予定)
 
 ---
 
@@ -518,8 +518,11 @@ AES-256-GCM暗号化・復号化のテスト。
 | `test_build_query_shop_uses_empty_string_fallback_no_hardcoded_ja` | Shop 集計が `COALESCE(s.SHOP_NAME, '')` 空文字 sentinel を返し、日本語ハードコード `'指定なし'` を含まないこと (Fable-5 #22) | src/services/aggregation.rs | 2024 |
 | `test_build_query_product_uses_empty_string_fallback_no_hardcoded_ja` | Product 集計が `COALESCE(p.PRODUCT_NAME, '')` 空文字 sentinel を返し、日本語ハードコード `'指定なし'` を含まないこと (Fable-5 #22) | src/services/aggregation.rs | 2044 |
 | `test_build_query_account_uses_empty_string_for_none_no_hardcoded_ja` | Account 集計が `account_code = 'NONE'` を空文字にマップし、欠損行では `COALESCE(a.ACCOUNT_NAME, '')` を返し、日本語ハードコード `'指定なし'` を含まないこと (Fable-5 #22) | src/services/aggregation.rs | 2064 |
+| `latent_h1_category2_null_code_goes_to_unspecified_group` | CATEGORY2_CODE が NULL の明細があっても費目2集計が成功し「指定なし」('') グループに入る（潜在監査 H1 の回帰防止） | src/services/latent_audit/aggregation.rs | 240 |
+| `latent_h1_category3_null_code_goes_to_unspecified_group` | CATEGORY2/3 が NULL でも費目3集計が成功し「指定なし」グループに入る（潜在監査 H1 の回帰防止） | src/services/latent_audit/aggregation.rs | 256 |
+| `latent_h1_category3_only_code3_null_does_not_fail` | CATEGORY3_CODE のみ NULL でも費目3集計が失敗しない（潜在監査 H1 の回帰防止） | src/services/latent_audit/aggregation.rs | 271 |
 
-**合計**: 16件
+**合計**: 19件
 
 ### services/session.rs
 
@@ -594,7 +597,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **320件** |
+| **インラインテスト** | **323件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -612,12 +615,12 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/product.rs | 15 |
 | services/shop.rs | 12 |
 | services/transaction.rs | 35 |
-| services/aggregation.rs | 16 |
+| services/aggregation.rs | 19 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 5 |
 | lib.rs | 6 |
-| **総計** | **346件** |
+| **総計** | **349件** |
 
 ---
 
