@@ -24,6 +24,7 @@ async fn run_startup(db: &Database) {
     db.migrate_encryption_salt().await.expect("migrate_encryption_salt");
     db.migrate_shops_unique().await.expect("migrate_shops_unique");
     db.migrate_shops_user_id_cascade().await.expect("migrate_shops_user_id_cascade");
+    db.cleanup_orphan_user_categories().await.expect("cleanup_orphan_user_categories");
 }
 
 /// H5-migration: AMOUNT_INCLUDING_TAX IS NULL の旧明細 (AMOUNT は税抜) が補完されない。
@@ -97,4 +98,38 @@ async fn latent_h5_migration_backfills_null_amount_including_tax() {
             amount, tax, rate
         );
     }
+}
+
+/// M3 (existing data): category rows left behind by user deletes before the
+/// fix are swept at startup, while a live user's categories are untouched.
+#[tokio::test]
+async fn latent_m3_startup_removes_orphan_user_categories() {
+    let db = memory_db().await;
+    run_startup(&db).await;
+    let pool = db.pool();
+
+    for stmt in [
+        "INSERT INTO USERS (USER_ID, NAME, PAW, ROLE, ENTRY_DT) VALUES (2, 'live_user', 'hash', 1, datetime('now'))",
+        // Live user 2 and deleted user 3 (no USERS row) each own a category tree.
+        "INSERT INTO CATEGORY1 (USER_ID, CATEGORY1_CODE, DISPLAY_ORDER, CATEGORY1_NAME, ENTRY_DT) VALUES (2, 'EXPENSE', 1, '支出', datetime('now'))",
+        "INSERT INTO CATEGORY1 (USER_ID, CATEGORY1_CODE, DISPLAY_ORDER, CATEGORY1_NAME, ENTRY_DT) VALUES (3, 'EXPENSE', 1, '支出', datetime('now'))",
+        "INSERT INTO CATEGORY1_I18N (USER_ID, CATEGORY1_CODE, LANG_CODE, CATEGORY1_NAME_I18N, ENTRY_DT) VALUES (3, 'EXPENSE', 'ja', '支出', datetime('now'))",
+        "INSERT INTO CATEGORY2 (USER_ID, CATEGORY1_CODE, CATEGORY2_CODE, DISPLAY_ORDER, CATEGORY2_NAME, ENTRY_DT) VALUES (2, 'EXPENSE', 'C2_E_1', 1, '食費', datetime('now'))",
+        "INSERT INTO CATEGORY2 (USER_ID, CATEGORY1_CODE, CATEGORY2_CODE, DISPLAY_ORDER, CATEGORY2_NAME, ENTRY_DT) VALUES (3, 'EXPENSE', 'C2_E_1', 1, '独自費目', datetime('now'))",
+    ] {
+        sqlx::query(stmt).execute(pool).await.expect(stmt);
+    }
+
+    // Next app start.
+    run_startup(&db).await;
+
+    let count = |table: &'static str, user: i64| async move {
+        let sql = format!("SELECT COUNT(*) FROM {} WHERE USER_ID = ?", table);
+        sqlx::query_scalar::<_, i64>(&sql).bind(user).fetch_one(pool).await.unwrap()
+    };
+    for table in ["CATEGORY1", "CATEGORY1_I18N", "CATEGORY2"] {
+        assert_eq!(count(table, 3).await, 0, "{}: orphan rows of deleted USER_ID 3 must be removed", table);
+    }
+    assert_eq!(count("CATEGORY1", 2).await, 1, "live user's CATEGORY1 must be kept");
+    assert_eq!(count("CATEGORY2", 2).await, 1, "live user's CATEGORY2 must be kept");
 }

@@ -50,9 +50,19 @@ impl std::fmt::Display for UserManagementError {
     }
 }
 
-/// Issue #37 Phase 2-3 — USERS.NAME length guard. Counts characters, not
-/// bytes, mirroring the frontend `maxlength` and char counter.
-fn validate_username_length(username: &str) -> Result<(), UserManagementError> {
+/// USERS.NAME guard.
+///
+/// - Rejects an empty / whitespace-only name (latent-audit M13): the login
+///   form cannot submit a blank username, so such a user could never log
+///   in again — including the admin, with no recovery path.
+/// - Issue #37 Phase 2-3 — length guard. Counts characters, not bytes,
+///   mirroring the frontend `maxlength` and char counter.
+fn validate_username(username: &str) -> Result<(), UserManagementError> {
+    if username.trim().is_empty() {
+        return Err(UserManagementError::Validation(
+            "Username cannot be empty".to_string(),
+        ));
+    }
     crate::validation::validate_max_chars("Username", username, consts::MAX_NAME_LEN)
         .map_err(UserManagementError::Validation)
 }
@@ -155,7 +165,7 @@ impl UserManagementService {
         username: &str,
         password: &str,
     ) -> Result<i64, UserManagementError> {
-        validate_username_length(username)?;
+        validate_username(username)?;
 
         let now = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
 
@@ -204,7 +214,7 @@ impl UserManagementService {
         user_id: i64,
         new_username: &str,
     ) -> Result<(), UserManagementError> {
-        validate_username_length(new_username)?;
+        validate_username(new_username)?;
         let _user = self.get_user(user_id).await?;
 
         let exists = sqlx::query(sql_queries::USER_CHECK_NAME_EXISTS_EXCLUDING_ID)
@@ -235,7 +245,7 @@ impl UserManagementService {
         user_id: i64,
         new_username: &str,
     ) -> Result<(), UserManagementError> {
-        validate_username_length(new_username)?;
+        validate_username(new_username)?;
 
         let row = sqlx::query(sql_queries::USER_CHECK_NAME_EXISTS_EXCLUDING_ID)
             .bind(new_username)
@@ -279,7 +289,7 @@ impl UserManagementService {
         // Validate the new username up front so we fail before touching
         // any encrypted rows on validation errors.
         if let Some(name) = new_username {
-            validate_username_length(name)?;
+            validate_username(name)?;
         }
 
         // Verify old password against the current hash.
@@ -461,11 +471,22 @@ impl UserManagementService {
             return Err(UserManagementError::InvalidRole);
         }
         
+        // One transaction: the USERS delete cascades to every table with an
+        // FK to USERS (transactions, accounts, masters, ...), but the
+        // category tables have none and must be removed explicitly — else a
+        // later user reusing this USER_ID (MAX + 1) inherits them
+        // (latent-audit M3). USERS goes first so the cascaded transactions
+        // no longer reference CATEGORY1 when it is deleted.
+        let mut tx = self.pool.begin().await?;
         sqlx::query(sql_queries::USER_DELETE)
             .bind(user_id)
-            .execute(&self.pool)
+            .execute(&mut *tx)
             .await?;
-        
+        for sql in sql_queries::USER_DELETE_CATEGORIES {
+            sqlx::query(sql).bind(user_id).execute(&mut *tx).await?;
+        }
+        tx.commit().await?;
+
         Ok(())
     }
 

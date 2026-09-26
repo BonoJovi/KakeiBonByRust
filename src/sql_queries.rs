@@ -92,6 +92,31 @@ pub const USER_GET_PASSWORD_BY_ID: &str = "SELECT PAW FROM USERS WHERE USER_ID =
 
 pub const USER_DELETE: &str = "DELETE FROM USERS WHERE USER_ID = ?";
 
+/// Delete one user's rows from the per-user category tables, leaf → root.
+/// These tables have no FK to USERS, so a USERS delete does not cascade to
+/// them; `delete_general_user` runs these explicitly (latent-audit M3).
+/// Leaf-first order keeps every child's FK to its parent satisfied.
+pub const USER_DELETE_CATEGORIES: [&str; 6] = [
+    "DELETE FROM CATEGORY3_I18N WHERE USER_ID = ?",
+    "DELETE FROM CATEGORY3 WHERE USER_ID = ?",
+    "DELETE FROM CATEGORY2_I18N WHERE USER_ID = ?",
+    "DELETE FROM CATEGORY2 WHERE USER_ID = ?",
+    "DELETE FROM CATEGORY1_I18N WHERE USER_ID = ?",
+    "DELETE FROM CATEGORY1 WHERE USER_ID = ?",
+];
+
+/// Startup cleanup: remove category rows whose user no longer exists, left
+/// by user deletes before latent-audit M3 was fixed. USER_ID is assigned as
+/// MAX + 1, so a later user could otherwise reuse the id and inherit them.
+pub const ORPHAN_USER_CATEGORIES_DELETE: [&str; 6] = [
+    "DELETE FROM CATEGORY3_I18N WHERE USER_ID NOT IN (SELECT USER_ID FROM USERS)",
+    "DELETE FROM CATEGORY3 WHERE USER_ID NOT IN (SELECT USER_ID FROM USERS)",
+    "DELETE FROM CATEGORY2_I18N WHERE USER_ID NOT IN (SELECT USER_ID FROM USERS)",
+    "DELETE FROM CATEGORY2 WHERE USER_ID NOT IN (SELECT USER_ID FROM USERS)",
+    "DELETE FROM CATEGORY1_I18N WHERE USER_ID NOT IN (SELECT USER_ID FROM USERS)",
+    "DELETE FROM CATEGORY1 WHERE USER_ID NOT IN (SELECT USER_ID FROM USERS)",
+];
+
 pub const USER_GET_PERIOD_SETTINGS: &str = r#"
 SELECT MONTH_PERIOD_START_DAY, YEAR_PERIOD_START_MONTH, YEAR_PERIOD_START_DAY,
        COALESCE(MONTH_PERIOD_HOLIDAY_SHIFT, 0)

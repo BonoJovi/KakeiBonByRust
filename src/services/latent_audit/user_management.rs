@@ -61,7 +61,6 @@ async fn count_category2_named(pool: &SqlitePool, user_id: i64, name: &str) -> i
 /// (no FK/CASCADE to USERS, delete_general_user only deletes the USERS row).
 /// Expected: after deletion no category row for that USER_ID remains.
 #[tokio::test]
-#[ignore = "latent-audit M3"]
 async fn latent_m3_delete_user_removes_categories() {
     let pool = setup_test_db().await;
     create_test_admin(&pool, "admin", ADMIN_CREDENTIAL).await;
@@ -90,7 +89,6 @@ async fn latent_m3_delete_user_removes_categories() {
 /// categories (populate_default_categories skips because CATEGORY2 rows exist).
 /// Expected: the new user gets exactly the default category set.
 #[tokio::test]
-#[ignore = "latent-audit M3"]
 async fn latent_m3_reused_user_id_gets_default_categories() {
     let pool = setup_test_db().await;
     create_test_admin(&pool, "admin", ADMIN_CREDENTIAL).await;
@@ -134,7 +132,6 @@ async fn latent_m3_reused_user_id_gets_default_categories() {
 /// an account nobody can log in to.
 /// Expected: both are rejected and no USERS row is created.
 #[tokio::test]
-#[ignore = "latent-audit M13"]
 async fn latent_m13_create_rejects_blank_username() {
     let pool = setup_test_db().await;
     create_test_admin(&pool, "admin", ADMIN_CREDENTIAL).await;
@@ -158,7 +155,6 @@ async fn latent_m13_create_rejects_blank_username() {
 /// the admin) out with no recovery path.
 /// Expected: every update path rejects a blank name and keeps the old name.
 #[tokio::test]
-#[ignore = "latent-audit M13"]
 async fn latent_m13_update_rejects_blank_username() {
     let pool = setup_test_db().await;
     let admin_id = create_test_admin(&pool, "admin", ADMIN_CREDENTIAL).await;
