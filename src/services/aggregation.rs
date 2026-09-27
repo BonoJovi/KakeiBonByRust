@@ -1314,7 +1314,8 @@ pub fn monthly_aggregation(
     validate_month(month)?;
     validate_start_day(start_day)?;
 
-    let (start_date, end_date) = monthly_period_bounds(year, month, start_day);
+    let (start_date, end_date) =
+        monthly_period_bounds(year, month, start_day).ok_or(AggregationError::InvalidYear(year))?;
 
     let filter = AggregationFilter::new(DateFilter::Between(start_date, end_date));
 
@@ -1438,33 +1439,35 @@ pub fn weekly_aggregation(
     Ok(request)
 }
 
-/// Calculate the start and end date for a given week
+/// Calculate the start and end date for a given week.
+///
+/// Week numbers follow ISO 8601, like the frontend's `getWeekNumber`
+/// (aggregation-common.js): week 1 is the Monday-start week containing
+/// January 4th, so it may begin in the previous December, and a year has 52
+/// or 53 weeks. With `WeekStart::Sunday` the same-numbered week starts one
+/// day earlier (the Sunday before the ISO Monday). The old computation
+/// started week 1 at the first Monday / Sunday on or after January 1st,
+/// which left the first days of the year in no week at all and disagreed
+/// with the frontend's numbering (latent-audit L11). A week number the year
+/// does not have (e.g. 53 in a 52-week year) is rejected.
 fn calculate_week_range(
     year: i32,
     week: u32,
     week_start: WeekStart,
 ) -> Result<(NaiveDate, NaiveDate), AggregationError> {
-    use chrono::Weekday;
-    
-    // Get January 1st of the year
-    let jan_1 = NaiveDate::from_ymd_opt(year, 1, 1)
-        .ok_or(AggregationError::InvalidYear(year))?;
-    
-    // Find the first target weekday
-    let target_weekday = match week_start {
-        WeekStart::Sunday => Weekday::Sun,
-        WeekStart::Monday => Weekday::Mon,
+    let iso_monday = NaiveDate::from_isoywd_opt(year, week, chrono::Weekday::Mon)
+        .ok_or(AggregationError::InvalidMonth(week))?; // Reuse error type, as the 1..=53 check does
+
+    let start_date = match week_start {
+        WeekStart::Monday => iso_monday,
+        WeekStart::Sunday => iso_monday
+            .pred_opt()
+            .ok_or(AggregationError::InvalidYear(year))?,
     };
-    
-    let days_to_first_week_start = (7 + target_weekday.num_days_from_monday() as i32
-        - jan_1.weekday().num_days_from_monday() as i32) % 7;
-    
-    let first_week_start = jan_1 + chrono::Duration::days(days_to_first_week_start as i64);
-    
-    // Calculate the start of the target week
-    let start_date = first_week_start + chrono::Duration::weeks((week - 1) as i64);
-    let end_date = start_date + chrono::Duration::days(6);
-    
+    let end_date = start_date
+        .checked_add_days(chrono::Days::new(6))
+        .ok_or(AggregationError::InvalidYear(year))?;
+
     Ok((start_date, end_date))
 }
 
@@ -1546,7 +1549,8 @@ pub fn yearly_aggregation(
     validate_start_month(start_month)?;
     validate_start_day(start_day)?;
 
-    let (start_date, end_date) = yearly_period_bounds(year, start_month, start_day);
+    let (start_date, end_date) = yearly_period_bounds(year, start_month, start_day)
+        .ok_or(AggregationError::InvalidYear(year))?;
 
     let filter = AggregationFilter::new(DateFilter::Between(start_date, end_date));
 

@@ -517,3 +517,36 @@ async fn latent_l2_recurring_rejects_foreign_shop_and_product() {
         "another user's PRODUCT_ID must be rejected"
     );
 }
+
+// ---------------------------------------------------------------------------
+// L10 follow-up (recurring path)
+// ---------------------------------------------------------------------------
+
+/// Run `f` on its own thread and give up after `secs`: an infinite loop in
+/// the code under test fails the test instead of hanging the whole run.
+fn finishes_within<T: Send + 'static>(secs: u64, f: impl FnOnce() -> T + Send + 'static) -> Option<T> {
+    let (tx, rx) = std::sync::mpsc::channel();
+    std::thread::spawn(move || {
+        let _ = tx.send(f());
+    });
+    rx.recv_timeout(std::time::Duration::from_secs(secs)).ok()
+}
+
+/// L10 follow-up (CodeRabbit on #153): once the period helpers stopped
+/// panicking, monthly / yearly generation near the end of chrono's range
+/// could loop forever — the loop only stopped when the next month's 1st was
+/// past `end`, and that date could no longer be built. It must terminate.
+#[test]
+fn latent_l10_generation_terminates_at_the_end_of_the_date_range() {
+    use chrono::Datelike;
+    let last_year = NaiveDate::MAX.year();
+    let start = NaiveDate::from_ymd_opt(last_year, 11, 1).unwrap();
+    let end = NaiveDate::MAX;
+
+    for rule in [MonthlyDayRule::EndOfMonth, MonthlyDayRule::DayOfMonth { day: 15 }] {
+        let monthly = finishes_within(5, move || generate_monthly(1, &rule, start, end));
+        assert!(monthly.is_some(), "monthly generation with {:?} must terminate", rule);
+        let yearly = finishes_within(5, move || generate_yearly(1, 12, &rule, start, end));
+        assert!(yearly.is_some(), "yearly generation with {:?} must terminate", rule);
+    }
+}

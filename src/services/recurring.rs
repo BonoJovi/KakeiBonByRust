@@ -217,8 +217,8 @@ fn generate_monthly(
     loop {
         let candidate = match *rule {
             MonthlyDayRule::DayOfMonth { day } => NaiveDate::from_ymd_opt(year, month, day),
-            MonthlyDayRule::DayOfMonthOrEnd { day } => Some(crate::services::period::resolve_day_or_end(year, month, day)),
-            MonthlyDayRule::EndOfMonth => Some(end_of_month(year, month)),
+            MonthlyDayRule::DayOfMonthOrEnd { day } => crate::services::period::resolve_day_or_end(year, month, day),
+            MonthlyDayRule::EndOfMonth => end_of_month(year, month),
             MonthlyDayRule::NthWeekday { week, weekday } => {
                 nth_weekday_of_month(year, month, week, weekday)
             }
@@ -233,9 +233,13 @@ fn generate_monthly(
         }
         // 候補日が無い月（DayOfMonth=31 の 2 月など）は黙ってスキップ。
         // 「その月の 1 日が end を超えていれば break」で無限ループを防ぐ。
+        // 1 日すら作れない（chrono の表現範囲外）なら、それ以降の月も end
+        // 以前にはなり得ないので終了する。以前はここを素通りし、範囲外の年で
+        // 無限ループになり得た (CodeRabbit on #153)。
         match NaiveDate::from_ymd_opt(year, month, 1) {
             Some(first) if first > end => break,
-            _ => {}
+            Some(_) => {}
+            None => break,
         }
         // interval ヶ月進める。month は 1..=12、m_zero は 0 起点で計算してから戻す。
         let m_zero = month as i32 - 1 + interval as i32;
@@ -258,8 +262,8 @@ fn generate_yearly(
     loop {
         let candidate = match *rule {
             MonthlyDayRule::DayOfMonth { day } => NaiveDate::from_ymd_opt(year, month, day),
-            MonthlyDayRule::DayOfMonthOrEnd { day } => Some(crate::services::period::resolve_day_or_end(year, month, day)),
-            MonthlyDayRule::EndOfMonth => Some(end_of_month(year, month)),
+            MonthlyDayRule::DayOfMonthOrEnd { day } => crate::services::period::resolve_day_or_end(year, month, day),
+            MonthlyDayRule::EndOfMonth => end_of_month(year, month),
             MonthlyDayRule::NthWeekday { week, weekday } => {
                 nth_weekday_of_month(year, month, week, weekday)
             }
@@ -274,9 +278,12 @@ fn generate_yearly(
         }
         // 候補が無い年（うるう年以外の 2/29 など）は年だけ進める。
         // 「指定月の 1 日が end を超えていれば break」で無限ループを防ぐ。
+        // 1 日すら作れない（chrono の表現範囲外）なら終了する
+        // (CodeRabbit on #153)。
         match NaiveDate::from_ymd_opt(year, month, 1) {
             Some(first) if first > end => break,
-            _ => {}
+            Some(_) => {}
+            None => break,
         }
         year += interval as i32;
     }

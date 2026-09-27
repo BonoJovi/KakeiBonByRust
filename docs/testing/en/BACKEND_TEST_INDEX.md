@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-08-26 JST  
-**Total Tests**: 415 (delta-tracked; the full authoritative count from `cargo test --lib` is 655, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 422 (delta-tracked; the full authoritative count from `cargo test --lib` is 662, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -32,6 +32,7 @@ This document provides a complete index of all backend tests implemented in Rust
   - [services/shop.rs](#servicesshoprs)
   - [services/transaction.rs](#servicestransactionrs)
   - [services/aggregation.rs](#servicesaggregationrs)
+  - [services/period.rs](#servicesperiodrs)
   - [services/session.rs](#servicessessionrs)
   - [services/i18n.rs](#servicesi18nrs)
   - [services/recurring.rs](#servicesrecurringrs)
@@ -579,8 +580,23 @@ Aggregation service tests.
 | `latent_h1_category3_null_code_goes_to_unspecified_group` | Category3 grouping with NULL CATEGORY2/3 codes succeeds and lands in the unspecified group (latent-audit H1 regression guard) | src/services/latent_audit/aggregation.rs | 256 |
 | `latent_h1_category3_only_code3_null_does_not_fail` | Category3 grouping with only CATEGORY3_CODE NULL does not fail (latent-audit H1 regression guard) | src/services/latent_audit/aggregation.rs | 271 |
 | `latent_h5_included_header_category2_uses_amount_including_tax` | Category2 aggregation of a tax-included header uses AMOUNT_INCLUDING_TAX (latent-audit H5) | src/services/latent_audit/aggregation.rs | 438 |
+| `latent_l11_weekly_week1_covers_jan1_and_matches_iso` | Week 1 covers January 1st and every week number matches ISO 8601 (the frontend's getWeekNumber) (latent-audit L11) | src/services/latent_audit/aggregation.rs | 369 |
+| `latent_l11_weekly_every_day_of_year_is_covered` | Every day of the year falls in some week 1..=53, for Monday and Sunday starts (latent-audit L11) | src/services/latent_audit/aggregation.rs | 404 |
+| `latent_l11_week_53_and_sunday_start_follow_iso_weeks` | Week 53 is rejected in a 52-week year; a Sunday-start week begins the day before the ISO week (latent-audit L11) | src/services/latent_audit/aggregation.rs | 425 |
 
-**Total**: 20 tests
+**Total**: 23 tests
+
+### services/period.rs
+
+Monthly / yearly period boundary helpers.
+
+| Test Function | Description | File | Line |
+|---------------|-------------|------|------|
+| `latent_l10_monthly_bounds_rejects_out_of_range_year_without_shift` | Monthly bounds return Err (not a panic) for an out-of-range year without holiday shift (latent-audit L10) | src/services/latent_audit/period.rs | 39 |
+| `latent_l10_monthly_bounds_rejects_out_of_range_year_with_shift` | Monthly bounds return Err (not a panic) for an out-of-range year with holiday shift (latent-audit L10) | src/services/latent_audit/period.rs | 55 |
+| `latent_l10_period_helpers_return_none_on_out_of_range_year` | The period helpers return None instead of panicking for dates chrono cannot represent (latent-audit L10) | src/services/latent_audit/period.rs | 70 |
+
+**Total**: 3 tests
 
 ### services/session.rs
 
@@ -636,8 +652,9 @@ Recurring transaction rule service tests.
 | `latent_m16_detail_tax_rate_out_of_range_rejected` | Out-of-range detail tax rate is rejected on rule creation (latent-audit M16) | src/services/latent_audit/recurring.rs | 416 |
 | `transfer_same_account_maps_to_transfer_same_account_code` | `RecurringError::TransferSameAccount` maps to the `transfer_same_account` wire code (latent-audit M16) | src/services/recurring.rs | 1881 |
 | `latent_l2_recurring_rejects_foreign_shop_and_product` | Recurring rule creation accepts own shop / product and rejects another user's (latent-audit L2) | src/services/latent_audit/recurring.rs | 481 |
+| `latent_l10_generation_terminates_at_the_end_of_the_date_range` | Monthly / yearly generation near the end of chrono's range terminates instead of looping forever (latent-audit L10) | src/services/latent_audit/recurring.rs | 540 |
 
-**Total**: 13 tests
+**Total**: 14 tests
 
 ### lib.rs
 
@@ -663,7 +680,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **389** |
+| **Inline Tests** | **396** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -681,12 +698,13 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/product.rs | 18 |
 | services/shop.rs | 16 |
 | services/transaction.rs | 61 |
-| services/aggregation.rs | 20 |
+| services/aggregation.rs | 23 |
+| services/period.rs | 3 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
-| services/recurring.rs | 13 |
+| services/recurring.rs | 14 |
 | lib.rs | 6 |
-| **Total** | **415** |
+| **Total** | **422** |
 
 ---
 

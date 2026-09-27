@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-09-06 JST  
-**総テスト数**: 415件 (差分反映後。`cargo test --lib` の権威的総数は 655 で、既存の未反映分は別 PR でバックフィル予定)
+**総テスト数**: 422件 (差分反映後。`cargo test --lib` の権威的総数は 662 で、既存の未反映分は別 PR でバックフィル予定)
 
 ---
 
@@ -32,6 +32,7 @@
   - [services/shop.rs](#servicesshoprs)
   - [services/transaction.rs](#servicestransactionrs)
   - [services/aggregation.rs](#servicesaggregationrs)
+  - [services/period.rs](#servicesperiodrs)
   - [services/session.rs](#servicessessionrs)
   - [services/i18n.rs](#servicesi18nrs)
   - [services/recurring.rs](#servicesrecurringrs)
@@ -579,8 +580,23 @@ AES-256-GCM暗号化・復号化のテスト。
 | `latent_h1_category3_null_code_goes_to_unspecified_group` | CATEGORY2/3 が NULL でも費目3集計が成功し「指定なし」グループに入る（潜在監査 H1 の回帰防止） | src/services/latent_audit/aggregation.rs | 256 |
 | `latent_h1_category3_only_code3_null_does_not_fail` | CATEGORY3_CODE のみ NULL でも費目3集計が失敗しない（潜在監査 H1 の回帰防止） | src/services/latent_audit/aggregation.rs | 271 |
 | `latent_h5_included_header_category2_uses_amount_including_tax` | 税込ヘッダーの費目2集計が AMOUNT_INCLUDING_TAX を使う (潜在監査 H5) | src/services/latent_audit/aggregation.rs | 438 |
+| `latent_l11_weekly_week1_covers_jan1_and_matches_iso` | 1週目が1月1日を含み、週番号が ISO 8601 (フロントの getWeekNumber) と一致 (潜在監査 L11) | src/services/latent_audit/aggregation.rs | 369 |
+| `latent_l11_weekly_every_day_of_year_is_covered` | 月曜・日曜始まりとも、年内の全日がいずれかの週 (1..=53) に入る (潜在監査 L11) | src/services/latent_audit/aggregation.rs | 404 |
+| `latent_l11_week_53_and_sunday_start_follow_iso_weeks` | 52 週の年の 53 週目は拒否、日曜始まりの週は ISO 週の前日から始まる (潜在監査 L11) | src/services/latent_audit/aggregation.rs | 425 |
 
-**合計**: 20件
+**合計**: 23件
+
+### services/period.rs
+
+月次・年次の期間境界の計算。
+
+| テスト関数 | 説明 | ファイル | 行 |
+|-----------|------|---------|-----|
+| `latent_l10_monthly_bounds_rejects_out_of_range_year_without_shift` | 休日シフトなしの月次境界は範囲外の年でパニックせず Err (潜在監査 L10) | src/services/latent_audit/period.rs | 39 |
+| `latent_l10_monthly_bounds_rejects_out_of_range_year_with_shift` | 休日シフトありの月次境界も範囲外の年でパニックせず Err (潜在監査 L10) | src/services/latent_audit/period.rs | 55 |
+| `latent_l10_period_helpers_return_none_on_out_of_range_year` | 期間計算の関数は表現できない日付でパニックせず None を返す (潜在監査 L10) | src/services/latent_audit/period.rs | 70 |
+
+**合計**: 3件
 
 ### services/session.rs
 
@@ -636,8 +652,9 @@ AES-256-GCM暗号化・復号化のテスト。
 | `latent_m16_detail_tax_rate_out_of_range_rejected` | 範囲外の税率でのルール作成を拒否 (潜在監査 M16) | src/services/latent_audit/recurring.rs | 416 |
 | `transfer_same_account_maps_to_transfer_same_account_code` | `RecurringError::TransferSameAccount` が `transfer_same_account` コードに変換される (潜在監査 M16) | src/services/recurring.rs | 1881 |
 | `latent_l2_recurring_rejects_foreign_shop_and_product` | 繰り返しルール作成で自分の店舗・商品は受理し、他ユーザーのものは拒否 (潜在監査 L2) | src/services/latent_audit/recurring.rs | 481 |
+| `latent_l10_generation_terminates_at_the_end_of_the_date_range` | chrono の表現範囲の終わり付近でも月次・年次の日付生成が無限ループせず終了する (潜在監査 L10) | src/services/latent_audit/recurring.rs | 540 |
 
-**合計**: 13件
+**合計**: 14件
 
 ### lib.rs
 
@@ -663,7 +680,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **389件** |
+| **インラインテスト** | **396件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -681,12 +698,13 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/product.rs | 18 |
 | services/shop.rs | 16 |
 | services/transaction.rs | 61 |
-| services/aggregation.rs | 20 |
+| services/aggregation.rs | 23 |
+| services/period.rs | 3 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
-| services/recurring.rs | 13 |
+| services/recurring.rs | 14 |
 | lib.rs | 6 |
-| **総計** | **415件** |
+| **総計** | **422件** |
 
 ---
 

@@ -366,7 +366,6 @@ async fn latent_l9_category2_sum_matches_header_total_across_groups() {
 /// day of 2026 whose ISO week-year is 2026, the Monday-start range for its
 /// ISO week number contains that day.
 #[test]
-#[ignore = "latent-audit L11"]
 fn latent_l11_weekly_week1_covers_jan1_and_matches_iso() {
     let jan1 = NaiveDate::from_ymd_opt(2026, 1, 1).unwrap();
     let (s, e) = calculate_week_range(2026, 1, WeekStart::Monday).expect("week 1");
@@ -402,7 +401,6 @@ fn latent_l11_weekly_week1_covers_jan1_and_matches_iso() {
 ///
 /// Expected: no day of 2026 is left uncovered (currently Jan 1–3/4 are).
 #[test]
-#[ignore = "latent-audit L11"]
 fn latent_l11_weekly_every_day_of_year_is_covered() {
     for ws in [WeekStart::Monday, WeekStart::Sunday] {
         let ranges: Vec<(NaiveDate, NaiveDate)> = (1..=53)
@@ -419,6 +417,26 @@ fn latent_l11_weekly_every_day_of_year_is_covered() {
             d = d.succ_opt().unwrap();
         }
     }
+}
+
+/// L11 (chosen fix): ISO week numbering — a year without week 53 rejects
+/// it, and a Sunday-start week begins the day before the same ISO week.
+#[test]
+fn latent_l11_week_53_and_sunday_start_follow_iso_weeks() {
+    // 2025 has 52 ISO weeks; 2026 has 53.
+    assert!(calculate_week_range(2025, 53, WeekStart::Monday).is_err());
+    assert!(calculate_week_range(2026, 53, WeekStart::Monday).is_ok());
+
+    // 2026-W01 is Mon 2025-12-29 .. Sun 2026-01-04.
+    let d = |y, m, dd| NaiveDate::from_ymd_opt(y, m, dd).unwrap();
+    assert_eq!(
+        calculate_week_range(2026, 1, WeekStart::Monday).unwrap(),
+        (d(2025, 12, 29), d(2026, 1, 4))
+    );
+    assert_eq!(
+        calculate_week_range(2026, 1, WeekStart::Sunday).unwrap(),
+        (d(2025, 12, 28), d(2026, 1, 3))
+    );
 }
 
 // -----------------------------------------------------------------------------
