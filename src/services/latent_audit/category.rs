@@ -137,7 +137,6 @@ async fn latent_m8_enable_already_enabled_category2_keeps_hidden_children() {
 ///
 /// Expected: `not_found`.
 #[tokio::test]
-#[ignore = "latent-audit L18"]
 async fn latent_l18_update_missing_category2_returns_not_found() {
     let (_pool, service, user_id) = setup().await;
     let result = service
@@ -151,7 +150,6 @@ async fn latent_l18_update_missing_category2_returns_not_found() {
 ///
 /// Expected: `not_found`.
 #[tokio::test]
-#[ignore = "latent-audit L18"]
 async fn latent_l18_update_missing_category3_returns_not_found() {
     let (_pool, service, user_id) = setup().await;
     let food = service.add_category2(user_id, "EXPENSE", "食費", "Food").await.unwrap();
@@ -171,7 +169,6 @@ async fn latent_l18_update_missing_category3_returns_not_found() {
 ///
 /// Expected: the add fails AND leaves no partial CATEGORY2 row.
 #[tokio::test]
-#[ignore = "latent-audit L18"]
 async fn latent_l18_add_category2_is_atomic_on_i18n_failure() {
     let (pool, service, user_id) = setup().await;
 
@@ -217,7 +214,6 @@ async fn latent_l18_add_category2_is_atomic_on_i18n_failure() {
 ///
 /// Expected: structured `not_found`.
 #[tokio::test]
-#[ignore = "latent-audit L19"]
 async fn latent_l19_move_missing_category2_returns_not_found() {
     let (_pool, service, user_id) = setup().await;
     let result = service.move_category2_up(user_id, "EXPENSE", "C2_E_999").await;
@@ -229,7 +225,6 @@ async fn latent_l19_move_missing_category2_returns_not_found() {
 ///
 /// Expected: structured `not_found`.
 #[tokio::test]
-#[ignore = "latent-audit L19"]
 async fn latent_l19_move_missing_category3_returns_not_found() {
     let (_pool, service, user_id) = setup().await;
     let food = service.add_category2(user_id, "EXPENSE", "食費", "Food").await.unwrap();
@@ -256,7 +251,6 @@ async fn latent_l19_enable_missing_category2_returns_not_found() {
 ///
 /// Expected: structured `not_found`.
 #[tokio::test]
-#[ignore = "latent-audit L19"]
 async fn latent_l19_enable_missing_category3_returns_not_found() {
     let (_pool, service, user_id) = setup().await;
     let food = service.add_category2(user_id, "EXPENSE", "食費", "Food").await.unwrap();
@@ -279,7 +273,6 @@ async fn latent_l19_enable_missing_category3_returns_not_found() {
 ///
 /// Expected: generated CATEGORY3 codes are unique per user across the tree.
 #[tokio::test]
-#[ignore = "latent-audit L20"]
 async fn latent_l20_category3_code_unique_across_category2_parents() {
     let (_pool, service, user_id) = setup().await;
 
@@ -316,7 +309,6 @@ async fn latent_l20_category3_code_unique_across_category2_parents() {
 ///
 /// Expected: an `Err` (validation / not_found), never a panic.
 #[tokio::test]
-#[ignore = "latent-audit L20"]
 async fn latent_l20_add_category2_empty_category1_code_does_not_panic() {
     let (_pool, service, user_id) = setup().await;
     let result = service.add_category2(user_id, "", "食費", "Food").await;
@@ -328,7 +320,6 @@ async fn latent_l20_add_category2_empty_category1_code_does_not_panic() {
 ///
 /// Expected: an `Err` (validation / not_found), never a panic.
 #[tokio::test]
-#[ignore = "latent-audit L20"]
 async fn latent_l20_add_category2_multibyte_category1_code_does_not_panic() {
     let (_pool, service, user_id) = setup().await;
     let result = service.add_category2(user_id, "支出", "食費", "Food").await;
@@ -339,7 +330,6 @@ async fn latent_l20_add_category2_multibyte_category1_code_does_not_panic() {
 ///
 /// Expected: an `Err` (validation / not_found), never a panic.
 #[tokio::test]
-#[ignore = "latent-audit L20"]
 async fn latent_l20_add_category3_multibyte_category1_code_does_not_panic() {
     let (_pool, service, user_id) = setup().await;
     let result = service

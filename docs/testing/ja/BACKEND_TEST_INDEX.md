@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-09-06 JST  
-**総テスト数**: 422件 (差分反映後。`cargo test --lib` の権威的総数は 662 で、既存の未反映分は別 PR でバックフィル予定)
+**総テスト数**: 432件 (差分反映後。`cargo test --lib` の権威的総数は 672 で、既存の未反映分は別 PR でバックフィル予定)
 
 ---
 
@@ -405,8 +405,18 @@ AES-256-GCM暗号化・復号化のテスト。
 | `latent_m8_enable_category2_restores_cascaded_category3` | 非表示にした中分類を表示に戻すと、一緒に非表示になった小分類も戻る (潜在監査 M8) | src/services/latent_audit/category.rs | 83 |
 | `latent_l19_enable_missing_category2_returns_not_found` | 存在しない中分類の表示復帰は not_found (潜在監査 L19、中分類の表示復帰のみ) | src/services/latent_audit/category.rs | 223 |
 | `latent_m8_enable_already_enabled_category2_keeps_hidden_children` | 表示中の中分類への表示復帰は何もせず、個別に非表示にした小分類は非表示のまま (潜在監査 M8) | src/services/latent_audit/category.rs | 110 |
+| `latent_l18_update_missing_category2_returns_not_found` | 存在しない中分類の名前変更は成功扱いにせず not_found (潜在監査 L18) | src/services/latent_audit/category.rs | 140 |
+| `latent_l18_update_missing_category3_returns_not_found` | 存在しない小分類の名前変更は not_found (潜在監査 L18) | src/services/latent_audit/category.rs | 153 |
+| `latent_l18_add_category2_is_atomic_on_i18n_failure` | i18n の追加失敗で中途半端な中分類が残らない (追加を単一トランザクションで実行、潜在監査 L18) | src/services/latent_audit/category.rs | 172 |
+| `latent_l19_move_missing_category2_returns_not_found` | 存在しない中分類の移動は生の RowNotFound ではなく not_found (潜在監査 L19) | src/services/latent_audit/category.rs | 217 |
+| `latent_l19_move_missing_category3_returns_not_found` | 存在しない小分類の移動は not_found (潜在監査 L19) | src/services/latent_audit/category.rs | 228 |
+| `latent_l19_enable_missing_category3_returns_not_found` | 存在しない小分類の再表示は not_found (潜在監査 L19) | src/services/latent_audit/category.rs | 254 |
+| `latent_l20_category3_code_unique_across_category2_parents` | C2_E_1 と C2_E_11 の配下で小分類コードが衝突しない (親コード全体から生成しユーザー内で一意、潜在監査 L20) | src/services/latent_audit/category.rs | 276 |
+| `latent_l20_add_category2_empty_category1_code_does_not_panic` | 空の費目1コードはパニックせず拒否 (潜在監査 L20) | src/services/latent_audit/category.rs | 312 |
+| `latent_l20_add_category2_multibyte_category1_code_does_not_panic` | 存在しないマルチバイトの費目1コードはパニックせず拒否 (潜在監査 L20) | src/services/latent_audit/category.rs | 323 |
+| `latent_l20_add_category3_multibyte_category1_code_does_not_panic` | 存在しないマルチバイトの費目1配下への小分類追加はパニックせず拒否 (潜在監査 L20) | src/services/latent_audit/category.rs | 333 |
 
-**合計**: 28件
+**合計**: 38件
 
 ### services/manufacturer.rs
 
@@ -680,7 +690,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **396件** |
+| **インラインテスト** | **406件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -693,7 +703,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/user_management.rs | 23 |
 | services/encryption.rs | 8 |
 | services/account.rs | 11 |
-| services/category.rs | 28 |
+| services/category.rs | 38 |
 | services/manufacturer.rs | 15 |
 | services/product.rs | 18 |
 | services/shop.rs | 16 |
@@ -704,7 +714,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/i18n.rs | 8 |
 | services/recurring.rs | 14 |
 | lib.rs | 6 |
-| **総計** | **422件** |
+| **総計** | **432件** |
 
 ---
 

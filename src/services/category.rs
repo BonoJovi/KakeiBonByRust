@@ -68,6 +68,16 @@ pub struct CategoryService {
     pool: SqlitePool,
 }
 
+/// First character of a CATEGORY1 code, used in generated CATEGORY2 codes
+/// (`C2_<initial>_<n>`). Taken by character, not by byte: `&code[0..1]`
+/// panicked on an empty or multibyte code (latent-audit L20).
+fn category1_initial(category1_code: &str) -> Result<char, CategoryError> {
+    category1_code
+        .chars()
+        .next()
+        .ok_or(CategoryError::NotFound)
+}
+
 impl CategoryService {
     pub fn new(pool: SqlitePool) -> Self {
         Self { pool }
@@ -204,12 +214,15 @@ impl CategoryService {
         category2_code: &str,
         delta: i64,
     ) -> Result<(), CategoryError> {
+        // A missing row is `not_found`, not a raw RowNotFound database error
+        // (latent-audit L19).
         let current_order: i64 = sqlx::query_scalar(sql_queries::CATEGORY2_GET_ORDER)
             .bind(user_id)
             .bind(category1_code)
             .bind(category2_code)
-            .fetch_one(&self.pool)
-            .await?;
+            .fetch_optional(&self.pool)
+            .await?
+            .ok_or(CategoryError::NotFound)?;
 
         let target_order = current_order + delta;
 
@@ -256,13 +269,16 @@ impl CategoryService {
         category3_code: &str,
         delta: i64,
     ) -> Result<(), CategoryError> {
+        // A missing row is `not_found`, not a raw RowNotFound database error
+        // (latent-audit L19).
         let current_order: i64 = sqlx::query_scalar(sql_queries::CATEGORY3_GET_ORDER)
             .bind(user_id)
             .bind(category1_code)
             .bind(category2_code)
             .bind(category3_code)
-            .fetch_one(&self.pool)
-            .await?;
+            .fetch_optional(&self.pool)
+            .await?
+            .ok_or(CategoryError::NotFound)?;
 
         let target_order = current_order + delta;
 
@@ -647,13 +663,18 @@ impl CategoryService {
         category2_code: &str,
         category3_code: &str,
     ) -> Result<(), CategoryError> {
-        sqlx::query(sql_queries::CATEGORY3_ENABLE)
+        let result = sqlx::query(sql_queries::CATEGORY3_ENABLE)
             .bind(user_id)
             .bind(category1_code)
             .bind(category2_code)
             .bind(category3_code)
             .execute(&self.pool)
             .await?;
+        // Must hit exactly one row; zero means the CATEGORY3 does not exist
+        // (latent-audit L19).
+        if result.rows_affected() == 0 {
+            return Err(CategoryError::NotFound);
+        }
         Ok(())
     }
 
@@ -678,23 +699,52 @@ impl CategoryService {
         )
         .await?;
 
-        // Generate new category2_code
+        // Everything below runs in one transaction, so a failure (e.g. on
+        // an i18n insert) leaves no half-created CATEGORY2 behind
+        // (latent-audit L18).
+        let mut tx = self.pool.begin().await?;
+
+        // The parent must exist. This also rejects an empty or unknown
+        // code before it is used to build the new code (latent-audit L20).
+        let category1_exists = sqlx::query(sql_queries::CATEGORY1_EXISTS)
+            .bind(user_id)
+            .bind(category1_code)
+            .fetch_optional(&mut *tx)
+            .await?
+            .is_some();
+        if !category1_exists {
+            return Err(CategoryError::NotFound);
+        }
+        let initial = category1_initial(category1_code)?;
+
+        // Generate new category2_code: count + 1, skipping any code already
+        // taken under this CATEGORY1 (e.g. after rows were added out of
+        // sequence).
         let count: i64 = sqlx::query_scalar(sql_queries::CATEGORY2_COUNT_BY_USER_AND_CATEGORY1)
             .bind(user_id)
             .bind(category1_code)
-            .fetch_one(&self.pool)
+            .fetch_one(&mut *tx)
             .await?;
-        
-        let category2_code = format!("C2_{}_{}", 
-            &category1_code[0..1], 
-            count + 1
-        );
+        let mut n = count + 1;
+        let category2_code = loop {
+            let candidate = format!("C2_{}_{}", initial, n);
+            let taken: Option<i64> = sqlx::query_scalar(sql_queries::CATEGORY2_GET_ORDER)
+                .bind(user_id)
+                .bind(category1_code)
+                .bind(&candidate)
+                .fetch_optional(&mut *tx)
+                .await?;
+            if taken.is_none() {
+                break candidate;
+            }
+            n += 1;
+        };
         
         // Get max display_order
         let max_order_row = sqlx::query(sql_queries::CATEGORY2_GET_MAX_ORDER)
             .bind(user_id)
             .bind(category1_code)
-            .fetch_one(&self.pool)
+            .fetch_one(&mut *tx)
             .await?;
         let max_order: i64 = max_order_row.get("max_order");
         let new_order = max_order + 1;
@@ -706,27 +756,21 @@ impl CategoryService {
             .bind(&category2_code)
             .bind(new_order)
             .bind(category2_name_en) // Default name (English)
-            .execute(&self.pool)
+            .execute(&mut *tx)
             .await?;
         
         // Insert i18n records
-        sqlx::query(sql_queries::CATEGORY2_I18N_INSERT)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(&category2_code)
-            .bind("ja")
-            .bind(category2_name_ja)
-            .execute(&self.pool)
-            .await?;
-        
-        sqlx::query(sql_queries::CATEGORY2_I18N_INSERT)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(&category2_code)
-            .bind("en")
-            .bind(category2_name_en)
-            .execute(&self.pool)
-            .await?;
+        for (lang, name) in [("ja", category2_name_ja), ("en", category2_name_en)] {
+            sqlx::query(sql_queries::CATEGORY2_I18N_INSERT)
+                .bind(user_id)
+                .bind(category1_code)
+                .bind(&category2_code)
+                .bind(lang)
+                .bind(name)
+                .execute(&mut *tx)
+                .await?;
+        }
+        tx.commit().await?;
         
         Ok(category2_code)
     }
@@ -755,26 +799,58 @@ impl CategoryService {
         )
         .await?;
 
-        // Generate new category3_code
+        // One transaction for the whole insert (latent-audit L18).
+        let mut tx = self.pool.begin().await?;
+
+        // The parent CATEGORY2 (and so its CATEGORY1) must exist; this also
+        // rejects an empty or unknown code before any code is built from it
+        // (latent-audit L20).
+        let parent_exists: Option<i64> = sqlx::query_scalar(sql_queries::CATEGORY2_GET_ORDER)
+            .bind(user_id)
+            .bind(category1_code)
+            .bind(category2_code)
+            .fetch_optional(&mut *tx)
+            .await?;
+        if parent_exists.is_none() {
+            return Err(CategoryError::NotFound);
+        }
+
+        // Generate new category3_code from the parent's full code: C2_E_11
+        // → C3_E_11_<n>, matching the seed data (C3_E_1_1 under C2_E_1).
+        // The old code used only the parent code's last character, so
+        // C2_E_1 and C2_E_11 both produced C3_E_1_<n>. The transaction
+        // search filters on the CATEGORY3 code alone, so such a collision
+        // matched the wrong transactions (latent-audit L20). The number
+        // starts at count + 1 and skips any code used anywhere in the
+        // user's tree.
+        let parent_part = category2_code.strip_prefix("C2_").unwrap_or(category2_code);
         let count: i64 = sqlx::query_scalar(sql_queries::CATEGORY3_COUNT_BY_USER_AND_CATEGORY2)
             .bind(user_id)
             .bind(category1_code)
             .bind(category2_code)
-            .fetch_one(&self.pool)
+            .fetch_one(&mut *tx)
             .await?;
-        
-        let category3_code = format!("C3_{}_{}_{}", 
-            &category1_code[0..1],
-            &category2_code.chars().rev().take(1).collect::<String>(),
-            count + 1
-        );
+        let mut n = count + 1;
+        let category3_code = loop {
+            let candidate = format!("C3_{}_{}", parent_part, n);
+            let taken = sqlx::query(sql_queries::CATEGORY3_CODE_EXISTS_FOR_USER)
+                .bind(user_id)
+                .bind(&candidate)
+                .fetch_optional(&mut *tx)
+                .await?
+                .is_some();
+            if !taken {
+                break candidate;
+            }
+            n += 1;
+        };
         
         // Get max display_order
         let max_order_row = sqlx::query(sql_queries::CATEGORY3_GET_MAX_ORDER)
             .bind(user_id)
             .bind(category1_code)
             .bind(category2_code)
-            .fetch_one(&self.pool)
+            .fetch_one(&mut *tx)
             .await?;
         let max_order: i64 = max_order_row.get("max_order");
         let new_order = max_order + 1;
@@ -787,29 +863,22 @@ impl CategoryService {
             .bind(&category3_code)
             .bind(new_order)
             .bind(category3_name_en) // Default name (English)
-            .execute(&self.pool)
+            .execute(&mut *tx)
             .await?;
         
         // Insert i18n records
-        sqlx::query(sql_queries::CATEGORY3_I18N_INSERT)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(category2_code)
-            .bind(&category3_code)
-            .bind("ja")
-            .bind(category3_name_ja)
-            .execute(&self.pool)
-            .await?;
-        
-        sqlx::query(sql_queries::CATEGORY3_I18N_INSERT)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(category2_code)
-            .bind(&category3_code)
-            .bind("en")
-            .bind(category3_name_en)
-            .execute(&self.pool)
-            .await?;
+        for (lang, name) in [("ja", category3_name_ja), ("en", category3_name_en)] {
+            sqlx::query(sql_queries::CATEGORY3_I18N_INSERT)
+                .bind(user_id)
+                .bind(category1_code)
+                .bind(category2_code)
+                .bind(&category3_code)
+                .bind(lang)
+                .bind(name)
+                .execute(&mut *tx)
+                .await?;
+        }
+        tx.commit().await?;
         
         Ok(category3_code)
     }
@@ -891,26 +960,25 @@ impl CategoryService {
         )
         .await?;
 
-        // Update Japanese name
-        sqlx::query(sql_queries::CATEGORY2_I18N_UPDATE)
-            .bind(name_ja)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(category2_code)
-            .bind("ja")
-            .execute(&self.pool)
-            .await?;
-        
-        // Update English name
-        sqlx::query(sql_queries::CATEGORY2_I18N_UPDATE)
-            .bind(name_en)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(category2_code)
-            .bind("en")
-            .execute(&self.pool)
-            .await?;
-        
+        // Both names in one transaction, and each must hit its row: a missing
+        // CATEGORY2 is `not_found` instead of a silent success, and a
+        // failure leaves neither name changed (latent-audit L18).
+        let mut tx = self.pool.begin().await?;
+        for (name, lang) in [(name_ja, "ja"), (name_en, "en")] {
+            let result = sqlx::query(sql_queries::CATEGORY2_I18N_UPDATE)
+                .bind(name)
+                .bind(user_id)
+                .bind(category1_code)
+                .bind(category2_code)
+                .bind(lang)
+                .execute(&mut *tx)
+                .await?;
+            if result.rows_affected() == 0 {
+                return Err(CategoryError::NotFound);
+            }
+        }
+        tx.commit().await?;
+
         Ok(())
     }
     
@@ -939,28 +1007,26 @@ impl CategoryService {
         )
         .await?;
 
-        // Update Japanese name
-        sqlx::query(sql_queries::CATEGORY3_I18N_UPDATE)
-            .bind(name_ja)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(category2_code)
-            .bind(category3_code)
-            .bind("ja")
-            .execute(&self.pool)
-            .await?;
-        
-        // Update English name
-        sqlx::query(sql_queries::CATEGORY3_I18N_UPDATE)
-            .bind(name_en)
-            .bind(user_id)
-            .bind(category1_code)
-            .bind(category2_code)
-            .bind(category3_code)
-            .bind("en")
-            .execute(&self.pool)
-            .await?;
-        
+        // Both names in one transaction, and each must hit its row: a missing
+        // CATEGORY3 is `not_found` instead of a silent success, and a
+        // failure leaves neither name changed (latent-audit L18).
+        let mut tx = self.pool.begin().await?;
+        for (name, lang) in [(name_ja, "ja"), (name_en, "en")] {
+            let result = sqlx::query(sql_queries::CATEGORY3_I18N_UPDATE)
+                .bind(name)
+                .bind(user_id)
+                .bind(category1_code)
+                .bind(category2_code)
+                .bind(category3_code)
+                .bind(lang)
+                .execute(&mut *tx)
+                .await?;
+            if result.rows_affected() == 0 {
+                return Err(CategoryError::NotFound);
+            }
+        }
+        tx.commit().await?;
+
         Ok(())
     }
     
