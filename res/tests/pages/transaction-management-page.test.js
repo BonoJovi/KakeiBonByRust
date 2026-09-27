@@ -169,7 +169,7 @@ describe('transaction management screen — regression (latent audit 2026-09)', 
         expect(callsOf(invoke, 'get_transactions').length).toBeGreaterThan(0);
     });
 
-    test('[L8] a blank transaction date is rejected before update_transaction_header', async () => {
+    test('[L8] should reject the save without calling update_transaction_header when the transaction date is blank', async () => {
         const editBtn = rowButtons('common.edit')[0];
         editBtn.click();
         await flush(10);

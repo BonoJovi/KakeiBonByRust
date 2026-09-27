@@ -671,7 +671,7 @@
 | テスト | 説明 |
 |--------|------|
 | `[H4] saving a header without details does not prompt to overwrite the total with ¥0` | 明細なしヘッダーの保存で ¥0 上書き確認が出ず、`update_transaction_header_total` も送られず、保存フローが一覧再読込まで完了する |
-| `[L8] a blank transaction date is rejected before update_transaction_header` | 日時が空欄なら `validation.required` を表示して送信せず、モーダルを開いたままにする (潜在監査 L8) |
+| `[L8] should reject the save without calling update_transaction_header when the transaction date is blank` | 日時が空欄なら `validation.required` を表示して送信せず、モーダルを開いたままにする (潜在監査 L8) |
 
 **ファイル**: res/tests/pages/transaction-management-page.test.js
 

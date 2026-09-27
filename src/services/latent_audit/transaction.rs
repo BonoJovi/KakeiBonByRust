@@ -604,10 +604,26 @@ async fn latent_l2_update_detail_rejects_foreign_product_id() {
         .await
         .unwrap();
 
-    let mut req = detail_request(1000, 8, 80, Some(1080));
+    let before = service.get_transaction_details(USER, txn_id).await.unwrap();
+
+    // A changed amount alongside the foreign product: a rejected update must
+    // leave every column untouched, not just the product link.
+    let mut req = detail_request(2000, 8, 160, Some(2160));
     req.product_id = Some(foreign_product);
     let result = service.update_transaction_detail(USER, detail_id, req).await;
-    assert!(result.is_err(), "another user's PRODUCT_ID must be rejected on update");
+    assert!(
+        matches!(result, Err(TransactionError::ValidationError(_))),
+        "another user's PRODUCT_ID must be rejected with a validation error, got {:?}",
+        result
+    );
+
+    let after = service.get_transaction_details(USER, txn_id).await.unwrap();
+    assert_eq!(after.len(), 1);
+    assert_eq!(
+        (after[0].amount, after[0].product_id),
+        (before[0].amount, before[0].product_id),
+        "a rejected update must not change the detail"
+    );
 }
 
 /// L2: TRANSACTION_HEADER_GET_WITH_INFO の SHOPS JOIN に USER_ID 条件が無く、他ユーザーの店舗名が漏れる。
