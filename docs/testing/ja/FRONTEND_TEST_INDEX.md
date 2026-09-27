@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-09-27 JST  
-**総テスト数**: 812件 (jest suite 41 ファイル、`npm test` 実測)
+**総テスト数**: 814件 (jest suite 42 ファイル、`npm test` 実測)
 
 ---
 
@@ -45,6 +45,7 @@
   - [pages/recurring-rule-double-submit.test.js](#pagesrecurring-rule-double-submittestjs)
   - [single-flight.test.js](#single-flighttestjs)
   - [pages/product-management-page.test.js](#pagesproduct-management-pagetestjs)
+  - [pages/product-management-link-draft.test.js](#pagesproduct-management-link-drafttestjs)
   - [pages/aggregation-monthly-page.test.js](#pagesaggregation-monthly-pagetestjs)
   - [pages/aggregation-yearly-total-count.test.js](#pagesaggregation-yearly-total-counttestjs)
   - [pages/index-setup-page.test.js](#pagesindex-setup-pagetestjs)
@@ -777,6 +778,21 @@
 
 ---
 
+### pages/product-management-link-draft.test.js
+
+明細 → 商品マスタへのジャンプ (`?return_to=`) で商品を追加したときの回帰テスト (潜在監査 L17)。明細の下書きには名前が完全一致した商品だけを紐付け、検索の別候補を紐付けない。
+
+**テスト数**: 2件
+
+| テスト | 説明 |
+|--------|------|
+| `[L17] should leave the detail draft alone when no product name matches exactly` | 完全一致が無ければ、下書きの商品紐付けと品名を変えない |
+| `[L17] should link the detail draft to the product whose name matches exactly` | 部分一致の候補が先に並んでも、完全一致の商品を紐付ける |
+
+**ファイル**: res/tests/pages/product-management-link-draft.test.js
+
+---
+
 ### pages/aggregation-monthly-page.test.js
 
 実際の月次集計画面の回帰テスト (潜在監査 M11 / M12)。
@@ -1049,7 +1065,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **389件** |
+| **機能別テスト** | **391件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 29 |
@@ -1073,6 +1089,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | pages/recurring-rule-double-submit.test.js | 1 |
 | single-flight.test.js | 4 |
 | pages/product-management-page.test.js | 1 |
+| pages/product-management-link-draft.test.js | 2 |
 | pages/aggregation-monthly-page.test.js | 5 |
 | pages/aggregation-yearly-total-count.test.js | 1 |
 | pages/index-setup-page.test.js | 3 |
@@ -1086,7 +1103,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **812件** |
+| **総計 (jest)** | **814件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 

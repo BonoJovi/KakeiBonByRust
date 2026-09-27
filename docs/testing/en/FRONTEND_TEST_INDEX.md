@@ -3,7 +3,7 @@
 This document provides a complete index of all frontend tests implemented in JavaScript.
 
 **Last Updated**: 2026-09-27 JST  
-**Total Tests**: 812 (jest suites; 41 test files, per `npm test`)
+**Total Tests**: 814 (jest suites; 42 test files, per `npm test`)
 
 ---
 
@@ -30,7 +30,7 @@ and are **not** added again to the grand total.
 - **login.test.js** - Login tests (58)
 - **user-deletion.test.js** - User deletion tests (46)
 
-### Feature-Specific Tests (389 tests)
+### Feature-Specific Tests (391 tests)
 
 - **transaction-edit.test.js** - Transaction edit tests (112)
 - **transaction-detail-management.test.js** - Transaction detail management tests (51)
@@ -55,6 +55,7 @@ and are **not** added again to the grand total.
 - **pages/recurring-rule-double-submit.test.js** - Boots the real recurring rule page: a double submit while `create_recurring_rule` is in flight invokes it only once (latent-audit M19) (1)
 - **single-flight.test.js** - `singleFlight` submit guard (latent-audit M19): ignores re-entrant calls, calls `preventDefault` on every submit, releases after resolve and after throw (4)
 - **pages/product-management-page.test.js** - Boots the real product master page: editing a product whose manufacturer is disabled keeps `manufacturer_id` on save (latent-audit M5) (1)
+- **pages/product-management-link-draft.test.js** - Boots the real product master page from the detail → product-master jump (`?return_to=`): after adding a product, the detail draft is linked only to the product whose name matches exactly, never to another search candidate (latent-audit L17) (2)
 - **pages/aggregation-monthly-page.test.js** - Boots the real monthly aggregation page: an empty `group_name` renders as `common.unspecified` (latent-audit M12); the total row shows "—" for count / average on the account and category2 axes, and still sums the count on category1 (latent-audit M11); negative amounts render as "-¥1,234" (latent-audit L12) (5)
 - **pages/aggregation-yearly-total-count.test.js** - Boots the real yearly aggregation page: the shared renderer's total row shows "—" for count / average on the account axis (latent-audit M11) (1)
 - **pages/index-setup-page.test.js** - Boots the real setup forms (menu.js on index.html): a blank username is stopped before `register_admin`, a backend "Username cannot be empty" is reported as the username error (not the password one), and `duplicate_name` shows `error.username_duplicate` (latent-audit L25) (3)
@@ -95,7 +96,7 @@ and are **not** added again to the grand total.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **Feature-Specific Tests** | **389** |
+| **Feature-Specific Tests** | **391** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 29 |
@@ -119,6 +120,7 @@ and are **not** added again to the grand total.
 | pages/recurring-rule-double-submit.test.js | 1 |
 | single-flight.test.js | 4 |
 | pages/product-management-page.test.js | 1 |
+| pages/product-management-link-draft.test.js | 2 |
 | pages/aggregation-monthly-page.test.js | 5 |
 | pages/aggregation-yearly-total-count.test.js | 1 |
 | pages/index-setup-page.test.js | 3 |
@@ -132,7 +134,7 @@ and are **not** added again to the grand total.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **Total (jest)** | **812** |
+| **Total (jest)** | **814** |
 
 Grand total is Screen + Feature + Aggregation (Common Test Suites are helper
 libraries invoked from Screen-Specific files and their assertions are already
