@@ -174,7 +174,7 @@ async function executeAggregation() {
         });
 
         console.log('Aggregation results:', results);
-        displayResults(results);
+        displayResults(results, groupBy);
 
         // Update result count
         const resultCount = document.getElementById('result-count');
@@ -189,7 +189,7 @@ async function executeAggregation() {
     }
 }
 
-function displayResults(results) {
+function displayResults(results, groupBy) {
     const tbody = document.getElementById('results-list');
     const tfoot = document.getElementById('results-footer');
 
@@ -221,7 +221,7 @@ function displayResults(results) {
         const avgPrefix = result.avg_amount >= 0 ? '+' : '';
 
         tr.innerHTML = `
-            <td>${escapeHtml(result.group_name)}</td>
+            <td>${escapeHtml(result.group_name || i18n.t('common.unspecified'))}</td>
             <td class="amount ${amountClass}">${amountPrefix}${formatAmount(result.total_amount)}</td>
             <td class="amount">${result.count.toLocaleString()}</td>
             <td class="amount ${avgClass}">${avgPrefix}${formatAmount(result.avg_amount)}</td>
@@ -233,18 +233,21 @@ function displayResults(results) {
         totalCount += result.count;
     });
 
-    // Calculate overall average
+    // Calculate overall average. On axes where a transaction can sit in
+    // several rows the summed count would over-count it (latent-audit M11),
+    // so count / average are omitted from the total row.
     const avgAmount = totalCount > 0 ? Math.round(totalAmount / totalCount) : 0;
     const totalAmountClass = totalAmount >= 0 ? 'amount-positive' : 'amount-negative';
     const totalAvgClass = avgAmount >= 0 ? 'amount-positive' : 'amount-negative';
+    const additive = AggCommon.isCountAdditive(groupBy);
 
     // Display totals in footer
     const footerTr = document.createElement('tr');
     footerTr.innerHTML = `
         <td>${i18n.t('aggregation.total') || 'Total'}</td>
         <td class="amount ${totalAmountClass}">${totalAmount >= 0 ? '+' : ''}${formatAmount(totalAmount)}</td>
-        <td class="amount">${totalCount.toLocaleString()}</td>
-        <td class="amount ${totalAvgClass}">${avgAmount >= 0 ? '+' : ''}${formatAmount(avgAmount)}</td>
+        <td class="amount">${additive ? totalCount.toLocaleString() : AggCommon.NOT_APPLICABLE}</td>
+        <td class="amount ${additive ? totalAvgClass : ''}">${additive ? `${avgAmount >= 0 ? '+' : ''}${formatAmount(avgAmount)}` : AggCommon.NOT_APPLICABLE}</td>
     `;
     tfoot.appendChild(footerTr);
 }

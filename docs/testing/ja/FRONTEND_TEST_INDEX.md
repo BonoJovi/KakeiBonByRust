@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-09-27 JST  
-**総テスト数**: 788件 (jest suite 32 ファイル、`npm test` 実測)
+**総テスト数**: 794件 (jest suite 35 ファイル、`npm test` 実測)
 
 ---
 
@@ -43,6 +43,9 @@
   - [pages/recurring-rule-page.test.js](#pagesrecurring-rule-pagetestjs)
   - [pages/recurring-rule-double-submit.test.js](#pagesrecurring-rule-double-submittestjs)
   - [single-flight.test.js](#single-flighttestjs)
+  - [pages/product-management-page.test.js](#pagesproduct-management-pagetestjs)
+  - [pages/aggregation-monthly-page.test.js](#pagesaggregation-monthly-pagetestjs)
+  - [pages/aggregation-yearly-total-count.test.js](#pagesaggregation-yearly-total-counttestjs)
 - [集計機能テスト](#集計機能テスト)
   - [aggregation-daily.test.js](#aggregation-dailytestjs)
   - [aggregation-weekly.test.js](#aggregation-weeklytestjs)
@@ -735,6 +738,51 @@
 
 ---
 
+### pages/product-management-page.test.js
+
+実際の商品マスタ画面の回帰テスト (潜在監査 M5)。
+
+**テスト数**: 1件
+
+| テスト | 説明 |
+|--------|------|
+| `[M5] editing a product of a disabled manufacturer keeps manufacturer_id on save` | 無効化されたメーカーに紐付く商品を無変更で保存しても `manufacturer_id` が保たれる (無効メーカーを「（非表示）」付きで選択肢に追加) |
+
+**ファイル**: res/tests/pages/product-management-page.test.js
+
+---
+
+### pages/aggregation-monthly-page.test.js
+
+実際の月次集計画面の回帰テスト (潜在監査 M11 / M12)。
+
+**テスト数**: 4件
+
+| テスト | 説明 |
+|--------|------|
+| `[M12] empty group_name renders as common.unspecified` | 空の `group_name` を `common.unspecified` で表示 |
+| `[M11] account axis: ...` | 口座軸の合計行は件数・平均を「—」で表示 (振替の二重計上を避ける) |
+| `[M11] category2 axis: ...` | 費目2軸の合計行も件数・平均を「—」で表示 |
+| `[M11] category1 axis still sums the count into the total row` | 費目1軸では従来どおり件数を合計 (比較用) |
+
+**ファイル**: res/tests/pages/aggregation-monthly-page.test.js
+
+---
+
+### pages/aggregation-yearly-total-count.test.js
+
+実際の年次集計画面 (共通レンダラ `renderResults`) の回帰テスト (潜在監査 M11)。
+
+**テスト数**: 1件
+
+| テスト | 説明 |
+|--------|------|
+| `[M11] account axis: one transfer is not counted twice in the shared total row` | 口座軸の合計行は件数・平均を「—」で表示 |
+
+**ファイル**: res/tests/pages/aggregation-yearly-total-count.test.js
+
+---
+
 ## 集計機能テスト
 
 ### aggregation-daily.test.js
@@ -899,7 +947,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **365件** |
+| **機能別テスト** | **371件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 29 |
@@ -921,13 +969,16 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | pages/recurring-rule-page.test.js | 3 |
 | pages/recurring-rule-double-submit.test.js | 1 |
 | single-flight.test.js | 4 |
+| pages/product-management-page.test.js | 1 |
+| pages/aggregation-monthly-page.test.js | 4 |
+| pages/aggregation-yearly-total-count.test.js | 1 |
 | **集計機能テスト** | **115件** |
 | aggregation-daily.test.js | 16 |
 | aggregation-weekly.test.js | 22 |
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **788件** |
+| **総計 (jest)** | **794件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 
