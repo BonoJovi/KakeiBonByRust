@@ -69,8 +69,8 @@ const LEGACY_ZERO_INCL_DETAIL = {
     category3_name: 'Veg',
     item_name: 'Legacy row',
     amount: 1000,
-    tax_rate: 0,
-    tax_amount: 0,
+    tax_rate: 10,
+    tax_amount: 100,
     amount_including_tax: 0,
     product_id: null,
     memo_text: null,
@@ -177,9 +177,8 @@ describe('transaction detail screen — regression (latent audit 2026-09)', () =
         expect(row).not.toBeNull();
         const amountCell = row.querySelectorAll('td')[2];
         const text = amountCell.textContent.trim();
-        // AMOUNT is 1000 (tax-excluded, 0% tax) — the display must fall
-        // back to a non-zero value instead of the stored 0.
-        expect(text).not.toBe('¥0');
-        expect(text).toMatch(/¥1,\d00/);
+        // AMOUNT 1000 (tax-excluded) + TAX_AMOUNT 100: the exact total, so a
+        // regression that shows AMOUNT alone (¥1,000) fails too.
+        expect(text).toBe('¥1,100');
     });
 });
