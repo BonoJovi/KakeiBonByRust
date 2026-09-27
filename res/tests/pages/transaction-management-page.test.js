@@ -218,9 +218,11 @@ describe('transaction management screen — regression (latent audit 2026-09)', 
         const current = parseInt(text('current-page'), 10);
         const totalPages = parseInt(text('total-pages'), 10);
         expect(totalPages).toBe(2);
-        expect(current).toBeLessThanOrEqual(totalPages);
+        // The last existing page — not an arbitrary one such as page 1.
+        expect(current).toBe(2);
         expect(document.querySelectorAll('#transaction-list .transaction-item').length).toBeGreaterThan(0);
     });
+
     test('[L5] should keep the newer page when an older page response resolves late', async () => {
         seedTransactions(3 * PER_PAGE);
         document.getElementById('clear-filter-btn').click();
@@ -229,12 +231,14 @@ describe('transaction management screen — regression (latent audit 2026-09)', 
 
         pendingPageRequests = [];
         document.getElementById('next-page-btn').click(); // request page 2
-        document.getElementById('next-page-btn').click(); // request page 3 (unless ignored while loading)
+        document.getElementById('next-page-btn').click(); // request page 3
         await flush(5);
         const requests = pendingPageRequests;
         pendingPageRequests = null;
-        expect(requests.length).toBeGreaterThanOrEqual(1);
-        const lastPage = requests[requests.length - 1].page;
+        // Both clicks must reach the backend, so the out-of-order race is
+        // really exercised.
+        expect(requests.map((request) => request.page)).toEqual([2, 3]);
+        const lastPage = 3;
 
         // Answer in reverse order: newest first, oldest last.
         for (let i = requests.length - 1; i >= 0; i--) {

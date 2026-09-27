@@ -769,7 +769,7 @@
 | `[M11] account axis: ...` | 口座軸の合計行は件数・平均を「—」で表示 (振替の二重計上を避ける) |
 | `[M11] category2 axis: ...` | 費目2軸の合計行も件数・平均を「—」で表示 |
 | `[M11] category1 axis still sums the count into the total row` | 費目1軸では従来どおり件数を合計 (比較用) |
-| `[L12] should put the minus sign before the yen symbol for negative amounts` | 負の金額を「-¥1,234」と表示 (潜在監査 L12) |
+| `[L12] should put the minus sign before the yen symbol when the amount is negative` | 負の金額を「-¥1,234」と表示 (潜在監査 L12) |
 
 **ファイル**: res/tests/pages/aggregation-monthly-page.test.js
 

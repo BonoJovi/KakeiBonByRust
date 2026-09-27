@@ -101,7 +101,7 @@ describe('monthly aggregation screen — regression (latent audit 2026-09)', () 
         expect(footerCells()[3]).not.toBe(NOT_APPLICABLE);
     });
 
-    test('[L12] should put the minus sign before the yen symbol for negative amounts', async () => {
+    test('[L12] should put the minus sign before the yen symbol when the amount is negative', async () => {
         await runAggregation('category1', [
             { group_key: 'EXPENSE', group_name: 'Expense', total_amount: -1234, count: 1, avg_amount: -1234 },
         ]);
