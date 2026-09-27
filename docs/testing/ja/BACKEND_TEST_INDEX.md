@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-09-06 JST  
-**総テスト数**: 393件 (差分反映後。`cargo test --lib` の権威的総数は 633 で、既存の未反映分は別 PR でバックフィル予定)
+**総テスト数**: 401件 (差分反映後。`cargo test --lib` の権威的総数は 641 で、既存の未反映分は別 PR でバックフィル予定)
 
 ---
 
@@ -529,8 +529,15 @@ AES-256-GCM暗号化・復号化のテスト。
 | `latent_m9_restore_without_journal_is_rejected` | バックアップ横の変更記録が無いロールバックは拒否され何も変更しない (潜在監査 M9) | src/services/latent_audit/transaction.rs | 451 |
 | `latent_l4_restore_detaches_backup_when_update_fails` | 失敗したロールバック後に `recalc_backup` が ATTACH されたまま残らない (M9 でロールバックが ATTACH しなくなり解消、潜在監査 L4) | src/services/latent_audit/transaction.rs | 657 |
 | `latent_m9_back_to_back_recalcs_keep_separate_journals` | 連続した一括再計算は別々のバックアップ・変更記録を使い、1 回目も取り消せる (潜在監査 M9) | src/services/latent_audit/transaction.rs | 452 |
+| `latent_l2_save_header_rejects_foreign_shop_id` | 他ユーザーの SHOP_ID でのヘッダー保存を拒否 (潜在監査 L2) | src/services/latent_audit/transaction.rs | 512 |
+| `latent_l2_update_header_rejects_foreign_shop_id` | 他ユーザーの SHOP_ID へのヘッダー更新を拒否 (潜在監査 L2) | src/services/latent_audit/transaction.rs | 531 |
+| `latent_l2_add_detail_rejects_foreign_product_id` | 他ユーザーの PRODUCT_ID での明細追加を拒否 (潜在監査 L2) | src/services/latent_audit/transaction.rs | 554 |
+| `latent_l2_update_detail_rejects_foreign_product_id` | 他ユーザーの PRODUCT_ID への明細更新を拒否 (潜在監査 L2) | src/services/latent_audit/transaction.rs | 583 |
+| `latent_l2_header_with_info_does_not_leak_foreign_shop_name` | ヘッダー詳細取得で他ユーザーの店舗名が出ない (SHOPS 結合を USER_ID で限定、潜在監査 L2) | src/services/latent_audit/transaction.rs | 616 |
+| `latent_l8_save_header_rejects_malformed_datetime` | 不正・実在しない日時でのヘッダー保存を拒否 (潜在監査 L8) | src/services/latent_audit/transaction.rs | 752 |
+| `latent_l8_update_header_rejects_malformed_datetime` | 不正・実在しない日時でのヘッダー更新を拒否 (潜在監査 L8) | src/services/latent_audit/transaction.rs | 766 |
 
-**合計**: 52件
+**合計**: 59件
 
 ### services/aggregation.rs
 
@@ -614,8 +621,9 @@ AES-256-GCM暗号化・復号化のテスト。
 | `latent_m16_detail_amount_out_of_range_rejected` | 範囲外の明細金額でのルール作成を拒否 (潜在監査 M16) | src/services/latent_audit/recurring.rs | 395 |
 | `latent_m16_detail_tax_rate_out_of_range_rejected` | 範囲外の税率でのルール作成を拒否 (潜在監査 M16) | src/services/latent_audit/recurring.rs | 416 |
 | `transfer_same_account_maps_to_transfer_same_account_code` | `RecurringError::TransferSameAccount` が `transfer_same_account` コードに変換される (潜在監査 M16) | src/services/recurring.rs | 1881 |
+| `latent_l2_recurring_rejects_foreign_shop_and_product` | 繰り返しルール作成で自分の店舗・商品は受理し、他ユーザーのものは拒否 (潜在監査 L2) | src/services/latent_audit/recurring.rs | 481 |
 
-**合計**: 12件
+**合計**: 13件
 
 ### lib.rs
 
@@ -641,7 +649,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **367件** |
+| **インラインテスト** | **375件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -658,13 +666,13 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/manufacturer.rs | 15 |
 | services/product.rs | 18 |
 | services/shop.rs | 16 |
-| services/transaction.rs | 52 |
+| services/transaction.rs | 59 |
 | services/aggregation.rs | 20 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
-| services/recurring.rs | 12 |
+| services/recurring.rs | 13 |
 | lib.rs | 6 |
-| **総計** | **393件** |
+| **総計** | **401件** |
 
 ---
 

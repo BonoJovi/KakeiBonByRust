@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-08-26 JST  
-**Total Tests**: 393 (delta-tracked; the full authoritative count from `cargo test --lib` is 633, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 401 (delta-tracked; the full authoritative count from `cargo test --lib` is 641, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -529,8 +529,15 @@ Transaction management service tests.
 | `latent_m9_restore_without_journal_is_rejected` | Rollback without the change journal next to the backup is rejected and changes nothing (latent-audit M9) | src/services/latent_audit/transaction.rs | 451 |
 | `latent_l4_restore_detaches_backup_when_update_fails` | A failed rollback leaves no `recalc_backup` attached (resolved by M9: rollback no longer ATTACHes the backup) (latent-audit L4) | src/services/latent_audit/transaction.rs | 657 |
 | `latent_m9_back_to_back_recalcs_keep_separate_journals` | Two recalc runs in quick succession get separate backups / journals, so the first stays restorable (latent-audit M9) | src/services/latent_audit/transaction.rs | 452 |
+| `latent_l2_save_header_rejects_foreign_shop_id` | Saving a header with another user's SHOP_ID is rejected (latent-audit L2) | src/services/latent_audit/transaction.rs | 512 |
+| `latent_l2_update_header_rejects_foreign_shop_id` | Updating a header to another user's SHOP_ID is rejected (latent-audit L2) | src/services/latent_audit/transaction.rs | 531 |
+| `latent_l2_add_detail_rejects_foreign_product_id` | Adding a detail with another user's PRODUCT_ID is rejected (latent-audit L2) | src/services/latent_audit/transaction.rs | 554 |
+| `latent_l2_update_detail_rejects_foreign_product_id` | Updating a detail to another user's PRODUCT_ID is rejected (latent-audit L2) | src/services/latent_audit/transaction.rs | 583 |
+| `latent_l2_header_with_info_does_not_leak_foreign_shop_name` | Header-with-info does not expose another user's shop name (SHOPS JOIN scoped to USER_ID) (latent-audit L2) | src/services/latent_audit/transaction.rs | 616 |
+| `latent_l8_save_header_rejects_malformed_datetime` | Saving a header with a malformed / impossible datetime is rejected (latent-audit L8) | src/services/latent_audit/transaction.rs | 752 |
+| `latent_l8_update_header_rejects_malformed_datetime` | Updating a header with a malformed / impossible datetime is rejected (latent-audit L8) | src/services/latent_audit/transaction.rs | 766 |
 
-**Total**: 52 tests
+**Total**: 59 tests
 
 ### services/aggregation.rs
 
@@ -614,8 +621,9 @@ Recurring transaction rule service tests.
 | `latent_m16_detail_amount_out_of_range_rejected` | Out-of-range detail amount is rejected on rule creation (latent-audit M16) | src/services/latent_audit/recurring.rs | 395 |
 | `latent_m16_detail_tax_rate_out_of_range_rejected` | Out-of-range detail tax rate is rejected on rule creation (latent-audit M16) | src/services/latent_audit/recurring.rs | 416 |
 | `transfer_same_account_maps_to_transfer_same_account_code` | `RecurringError::TransferSameAccount` maps to the `transfer_same_account` wire code (latent-audit M16) | src/services/recurring.rs | 1881 |
+| `latent_l2_recurring_rejects_foreign_shop_and_product` | Recurring rule creation accepts own shop / product and rejects another user's (latent-audit L2) | src/services/latent_audit/recurring.rs | 481 |
 
-**Total**: 12 tests
+**Total**: 13 tests
 
 ### lib.rs
 
@@ -641,7 +649,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **367** |
+| **Inline Tests** | **375** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -658,13 +666,13 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/manufacturer.rs | 15 |
 | services/product.rs | 18 |
 | services/shop.rs | 16 |
-| services/transaction.rs | 52 |
+| services/transaction.rs | 59 |
 | services/aggregation.rs | 20 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
-| services/recurring.rs | 12 |
+| services/recurring.rs | 13 |
 | lib.rs | 6 |
-| **Total** | **393** |
+| **Total** | **401** |
 
 ---
 

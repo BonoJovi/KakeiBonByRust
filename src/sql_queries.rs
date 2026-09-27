@@ -2016,6 +2016,24 @@ LIMIT 20
 /// binding `manufacturer_id` into `PRODUCT_INSERT` / `PRODUCT_UPDATE` so
 /// a request from user B cannot attach one of B's products to a
 /// manufacturer_id that belongs to user A. See Fable-5 review #13.
+/// Ownership guards for the SHOP_ID / PRODUCT_ID a transaction header,
+/// detail or recurring rule references (latent-audit L2): the FKs only check
+/// that some row exists, not that it belongs to the user.
+/// Binds: (shop_id | product_id, user_id).
+pub const SHOP_EXISTS_FOR_USER: &str = r#"
+SELECT 1
+FROM SHOPS
+WHERE SHOP_ID = ? AND USER_ID = ?
+LIMIT 1
+"#;
+
+pub const PRODUCT_EXISTS_FOR_USER: &str = r#"
+SELECT 1
+FROM PRODUCTS
+WHERE PRODUCT_ID = ? AND USER_ID = ?
+LIMIT 1
+"#;
+
 pub const MANUFACTURER_EXISTS_FOR_USER: &str = r#"
 SELECT 1
 FROM MANUFACTURERS
@@ -2196,7 +2214,7 @@ SELECT
     h.ENTRY_DT,
     h.UPDATE_DT
 FROM TRANSACTIONS_HEADER h
-LEFT JOIN SHOPS s ON h.SHOP_ID = s.SHOP_ID
+LEFT JOIN SHOPS s ON h.SHOP_ID = s.SHOP_ID AND h.USER_ID = s.USER_ID
 LEFT JOIN ACCOUNTS fa ON h.FROM_ACCOUNT_CODE = fa.ACCOUNT_CODE AND h.USER_ID = fa.USER_ID
 LEFT JOIN ACCOUNTS ta ON h.TO_ACCOUNT_CODE = ta.ACCOUNT_CODE AND h.USER_ID = ta.USER_ID
 LEFT JOIN MEMOS m ON h.MEMO_ID = m.MEMO_ID

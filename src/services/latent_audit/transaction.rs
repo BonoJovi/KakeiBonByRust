@@ -509,7 +509,6 @@ async fn latent_m9_restore_without_journal_is_rejected() {
 /// L2: ヘッダー保存時に SHOP_ID の所有者検証が無く、他ユーザーの店舗を紐付けられる。
 /// Expected: 他ユーザーの SHOP_ID を指定した save は Err。
 #[tokio::test]
-#[ignore = "latent-audit L2"]
 async fn latent_l2_save_header_rejects_foreign_shop_id() {
     let pool = setup_test_db().await;
     let foreign_shop: i64 = sqlx::query("INSERT INTO SHOPS (USER_ID, SHOP_NAME) VALUES (?, '他人の店')")
@@ -529,7 +528,6 @@ async fn latent_l2_save_header_rejects_foreign_shop_id() {
 /// L2: ヘッダー更新時に SHOP_ID の所有者検証が無い。
 /// Expected: 他ユーザーの SHOP_ID を指定した update は Err。
 #[tokio::test]
-#[ignore = "latent-audit L2"]
 async fn latent_l2_update_header_rejects_foreign_shop_id() {
     let pool = setup_test_db().await;
     let foreign_shop: i64 = sqlx::query("INSERT INTO SHOPS (USER_ID, SHOP_NAME) VALUES (?, '他人の店')")
@@ -553,7 +551,6 @@ async fn latent_l2_update_header_rejects_foreign_shop_id() {
 /// L2: 明細追加時に PRODUCT_ID の所有者検証が無く、他ユーザーの商品を紐付けられる。
 /// Expected: 他ユーザーの PRODUCT_ID を指定した add_transaction_detail は Err。
 #[tokio::test]
-#[ignore = "latent-audit L2"]
 async fn latent_l2_add_detail_rejects_foreign_product_id() {
     let pool = setup_test_db().await;
     sqlx::query("INSERT INTO USERS (USER_ID, NAME, PAW, ROLE, ENTRY_DT) VALUES (?, 'otheruser', 'hash', 1, datetime('now'))")
@@ -580,10 +577,42 @@ async fn latent_l2_add_detail_rejects_foreign_product_id() {
     assert!(result.is_err(), "another user's PRODUCT_ID must be rejected, got {:?}", result);
 }
 
+/// L2: 明細更新時も PRODUCT_ID の所有者を検証する。
+/// Expected: 他ユーザーの PRODUCT_ID への update_transaction_detail は Err で、明細は変わらない。
+#[tokio::test]
+async fn latent_l2_update_detail_rejects_foreign_product_id() {
+    let pool = setup_test_db().await;
+    sqlx::query("INSERT INTO USERS (USER_ID, NAME, PAW, ROLE, ENTRY_DT) VALUES (?, 'otheruser', 'hash', 1, datetime('now'))")
+        .bind(OTHER_USER)
+        .execute(&pool)
+        .await
+        .unwrap();
+    let foreign_product: i64 =
+        sqlx::query("INSERT INTO PRODUCTS (USER_ID, PRODUCT_NAME) VALUES (?, '他人の商品')")
+            .bind(OTHER_USER)
+            .execute(&pool)
+            .await
+            .unwrap()
+            .last_insert_rowid();
+    let service = TransactionService::new(pool);
+    let txn_id = service
+        .save_transaction_header(USER, header_request(1080, consts::TAX_ROUND_DOWN, consts::TAX_EXCLUDED))
+        .await
+        .unwrap();
+    let detail_id = service
+        .add_transaction_detail(USER, txn_id, detail_request(1000, 8, 80, Some(1080)))
+        .await
+        .unwrap();
+
+    let mut req = detail_request(1000, 8, 80, Some(1080));
+    req.product_id = Some(foreign_product);
+    let result = service.update_transaction_detail(USER, detail_id, req).await;
+    assert!(result.is_err(), "another user's PRODUCT_ID must be rejected on update");
+}
+
 /// L2: TRANSACTION_HEADER_GET_WITH_INFO の SHOPS JOIN に USER_ID 条件が無く、他ユーザーの店舗名が漏れる。
 /// Expected: ヘッダーの SHOP_ID が他ユーザーの店舗を指していても shop_name は None。
 #[tokio::test]
-#[ignore = "latent-audit L2"]
 async fn latent_l2_header_with_info_does_not_leak_foreign_shop_name() {
     let pool = setup_test_db().await;
     let foreign_shop: i64 = sqlx::query("INSERT INTO SHOPS (USER_ID, SHOP_NAME) VALUES (?, '他人の店')")
@@ -720,7 +749,6 @@ async fn latent_l4_restore_detaches_backup_when_update_fails() {
 /// L8: 取引日時のバックエンド検証が「長さ 19」だけで、不正な日時文字列を保存できる。
 /// Expected: 19 文字でも YYYY-MM-DD HH:MM:SS として不正な値は save で Err。
 #[tokio::test]
-#[ignore = "latent-audit L8"]
 async fn latent_l8_save_header_rejects_malformed_datetime() {
     let pool = setup_test_db().await;
     let service = TransactionService::new(pool);
@@ -735,7 +763,6 @@ async fn latent_l8_save_header_rejects_malformed_datetime() {
 /// L8: update_transaction_header も長さ 19 のみの検証。
 /// Expected: 19 文字でも不正な日時文字列は update で Err。
 #[tokio::test]
-#[ignore = "latent-audit L8"]
 async fn latent_l8_update_header_rejects_malformed_datetime() {
     let pool = setup_test_db().await;
     let service = TransactionService::new(pool);

@@ -737,6 +737,21 @@ impl RecurringService {
                 "DETAIL.tax_amount cannot be negative".to_string(),
             ));
         }
+        // The shop / product must belong to this user (latent-audit L2).
+        use crate::services::transaction::owned_by_user;
+        if !owned_by_user(&self.pool, sql_queries::SHOP_EXISTS_FOR_USER, user_id, request.shop_id).await? {
+            return Err(RecurringError::Validation("Shop not found".to_string()));
+        }
+        if !owned_by_user(
+            &self.pool,
+            sql_queries::PRODUCT_EXISTS_FOR_USER,
+            user_id,
+            request.detail.product_id,
+        )
+        .await?
+        {
+            return Err(RecurringError::Validation("Product not found".to_string()));
+        }
 
         // Bounded-field length checks (Issue #37 Phase 2-3, character count).
         validation::validate_optional_max_chars(
