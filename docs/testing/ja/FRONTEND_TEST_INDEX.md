@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-09-27 JST  
-**総テスト数**: 802件 (jest suite 36 ファイル、`npm test` 実測)
+**総テスト数**: 804件 (jest suite 37 ファイル、`npm test` 実測)
 
 ---
 
@@ -47,6 +47,7 @@
   - [pages/aggregation-monthly-page.test.js](#pagesaggregation-monthly-pagetestjs)
   - [pages/aggregation-yearly-total-count.test.js](#pagesaggregation-yearly-total-counttestjs)
   - [pages/index-setup-page.test.js](#pagesindex-setup-pagetestjs)
+  - [pages/category-management-page.test.js](#pagescategory-management-pagetestjs)
 - [集計機能テスト](#集計機能テスト)
   - [aggregation-daily.test.js](#aggregation-dailytestjs)
   - [aggregation-weekly.test.js](#aggregation-weeklytestjs)
@@ -805,6 +806,21 @@
 
 ---
 
+### pages/category-management-page.test.js
+
+実際の費目管理画面の回帰テスト (潜在監査 L19)。
+
+**テスト数**: 2件
+
+| テスト | 説明 |
+|--------|------|
+| `[L19] should show the not-found message and reload the tree when moving a vanished category` | 存在しなくなった費目の移動で `category_mgmt.not_found` を表示しツリーを再読込 |
+| `[L19] should show the not-found message and reload the tree when showing a vanished category` | 存在しなくなった費目の再表示でも同様 |
+
+**ファイル**: res/tests/pages/category-management-page.test.js
+
+---
+
 ## 集計機能テスト
 
 ### aggregation-daily.test.js
@@ -969,7 +985,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **379件** |
+| **機能別テスト** | **381件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 29 |
@@ -995,13 +1011,14 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | pages/aggregation-monthly-page.test.js | 5 |
 | pages/aggregation-yearly-total-count.test.js | 1 |
 | pages/index-setup-page.test.js | 3 |
+| pages/category-management-page.test.js | 2 |
 | **集計機能テスト** | **115件** |
 | aggregation-daily.test.js | 16 |
 | aggregation-weekly.test.js | 22 |
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **802件** |
+| **総計 (jest)** | **804件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 
