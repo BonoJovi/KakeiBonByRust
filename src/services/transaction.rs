@@ -1007,12 +1007,21 @@ impl TransactionService {
     /// reference (typically shared > 1 for updates, or leftover > 0 after
     /// the caller already released its reference).
     async fn memo_usage_count(&self, memo_id: i64) -> Result<i64, TransactionError> {
+        Self::memo_usage_count_on(&self.pool, memo_id).await
+    }
+
+    /// [`memo_usage_count`] on any executor, so a caller can count inside its
+    /// own transaction.
+    async fn memo_usage_count_on<'e, E>(executor: E, memo_id: i64) -> Result<i64, TransactionError>
+    where
+        E: sqlx::Executor<'e, Database = sqlx::Sqlite>,
+    {
         let count: i64 = sqlx::query_scalar(sql_queries::MEMO_COUNT_USAGE)
             .bind(memo_id)
             .bind(memo_id)
             .bind(memo_id)
             .bind(memo_id)
-            .fetch_one(&self.pool)
+            .fetch_one(executor)
             .await?;
         Ok(count)
     }
@@ -1414,13 +1423,20 @@ impl TransactionService {
             return Err(TransactionError::ValidationError("Product not found".to_string()));
         }
 
+        // Everything below — the memo resolution / in-place update, the
+        // detail update and the old memo's cleanup — runs in one transaction.
+        // The memo used to be updated on the pool first, so a detail update
+        // that then failed (FK error, concurrent delete) left the memo text
+        // changed anyway (latent-audit L3).
+        let mut tx = self.pool.begin().await?;
+
         // Get existing detail to check memo_id
         let existing: Option<TransactionDetail> = sqlx::query_as(
             sql_queries::TRANSACTION_DETAIL_GET_BY_ID
         )
         .bind(detail_id)
         .bind(user_id)
-        .fetch_optional(&self.pool)
+        .fetch_optional(&mut *tx)
         .await?;
 
         let existing_detail = existing.ok_or(TransactionError::NotFound)?;
@@ -1436,28 +1452,32 @@ impl TransactionService {
         // (PRAGMA foreign_keys = ON), so the delete must run only once the
         // reference has been released.
         let (memo_id, deferred_memo_delete) = if let Some(text) = &request.memo {
-            if !text.trim().is_empty() {
+            // Stored trimmed, like every other memo write: MEMO_FIND_BY_TEXT
+            // dedups on the trimmed text, so an untrimmed in-place update
+            // could create duplicate memo rows (latent-audit L3).
+            let text = text.trim();
+            if !text.is_empty() {
                 validate_memo_length(text)?;
 
                 let resolved = if let Some(old_memo_id) = existing_detail.memo_id {
-                    let shared = self.memo_usage_count(old_memo_id).await? > 1;
+                    let shared = Self::memo_usage_count_on(&mut *tx, old_memo_id).await? > 1;
                     if shared {
                         // Old memo has other references — must not mutate it.
                         // Point this detail at a fresh/reused memo instead.
-                        self.get_or_create_memo_id(user_id, Some(text)).await?
+                        Self::get_or_create_memo_id_in_tx(&mut tx, user_id, Some(text)).await?
                     } else {
                         // Only this detail uses the old memo — safe in place.
                         sqlx::query(sql_queries::MEMO_UPDATE)
                             .bind(text)
                             .bind(old_memo_id)
-                            .execute(&self.pool)
+                            .execute(&mut *tx)
                             .await?;
                         Some(old_memo_id)
                     }
                 } else {
                     // No prior memo — find-or-create to avoid duplicate rows
                     // when the same text already lives in MEMOS.
-                    self.get_or_create_memo_id(user_id, Some(text)).await?
+                    Self::get_or_create_memo_id_in_tx(&mut tx, user_id, Some(text)).await?
                 };
                 (resolved, None)
             } else {
@@ -1483,7 +1503,7 @@ impl TransactionService {
             .bind(memo_id)
             .bind(detail_id)
             .bind(user_id)
-            .execute(&self.pool)
+            .execute(&mut *tx)
             .await?;
 
         if result.rows_affected() == 0 {
@@ -1494,13 +1514,15 @@ impl TransactionService {
         // clean up the old memo row if the user cleared the memo text and
         // nothing else still points at it.
         if let Some(old_memo_id) = deferred_memo_delete {
-            if self.memo_usage_count(old_memo_id).await? == 0 {
+            if Self::memo_usage_count_on(&mut *tx, old_memo_id).await? == 0 {
                 sqlx::query(sql_queries::MEMO_DELETE)
                     .bind(old_memo_id)
-                    .execute(&self.pool)
+                    .execute(&mut *tx)
                     .await?;
             }
         }
+
+        tx.commit().await?;
 
         Ok(())
     }

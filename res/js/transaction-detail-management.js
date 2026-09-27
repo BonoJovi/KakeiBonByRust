@@ -586,6 +586,25 @@ async function loadTransactionHeader() {
     }
 }
 
+/**
+ * Tax-included price of a detail row for display. AMOUNT is always
+ * tax-excluded; when AMOUNT_INCLUDING_TAX is missing (null, or the 0
+ * empty-input sentinel on a non-zero row, as in legacy data) it is shown as
+ * AMOUNT + TAX_AMOUNT. `(0).toLocaleString()` is the truthy string "0", so
+ * the old `incl?.toLocaleString() || amount` fallback never kicked in and
+ * such rows showed ¥0 (latent-audit L7).
+ *
+ * @param {{amount: number, amount_including_tax: number|null, tax_amount: number|null}} detail
+ * @returns {number}
+ */
+function detailIncludedAmount(detail) {
+    const included = detail.amount_including_tax;
+    if (included === null || included === undefined || (included === 0 && detail.amount > 0)) {
+        return detail.amount + (detail.tax_amount || 0);
+    }
+    return included;
+}
+
 async function loadDetails() {
     try {
         console.log('Loading details for transaction ID:', transactionId);
@@ -624,7 +643,7 @@ async function loadDetails() {
             <tr data-detail-id="${detail.detail_id}">
                 <td>${escapeHtml(detail.item_name)}</td>
                 <td>${escapeHtml(detail.category2_name)} / ${escapeHtml(detail.category3_name)}</td>
-                <td style="text-align: right;">¥${detail.amount_including_tax?.toLocaleString() || detail.amount.toLocaleString()}</td>
+                <td style="text-align: right;">¥${detailIncludedAmount(detail).toLocaleString()}</td>
                 <td style="text-align: right;">¥${detail.tax_amount.toLocaleString()}</td>
                 <td class="actions">
                     <button class="btn btn-small btn-secondary edit-detail-btn" data-detail-id="${detail.detail_id}" data-i18n="common.edit">Edit</button>

@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-08-26 JST  
-**Total Tests**: 413 (delta-tracked; the full authoritative count from `cargo test --lib` is 653, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 415 (delta-tracked; the full authoritative count from `cargo test --lib` is 655, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -548,8 +548,10 @@ Transaction management service tests.
 | `latent_l2_header_with_info_does_not_leak_foreign_shop_name` | Header-with-info does not expose another user's shop name (SHOPS JOIN scoped to USER_ID) (latent-audit L2) | src/services/latent_audit/transaction.rs | 616 |
 | `latent_l8_save_header_rejects_malformed_datetime` | Saving a header with a malformed / impossible datetime is rejected (latent-audit L8) | src/services/latent_audit/transaction.rs | 752 |
 | `latent_l8_update_header_rejects_malformed_datetime` | Updating a header with a malformed / impossible datetime is rejected (latent-audit L8) | src/services/latent_audit/transaction.rs | 766 |
+| `latent_l3_failed_detail_update_rolls_back_memo_change` | A detail update that fails rolls back its memo change too (memo handling runs in the same transaction) (latent-audit L3) | src/services/latent_audit/transaction.rs | 674 |
+| `latent_l3_in_place_memo_update_is_trimmed` | An in-place memo update stores the trimmed text, matching memo dedup (latent-audit L3) | src/services/latent_audit/transaction.rs | 702 |
 
-**Total**: 59 tests
+**Total**: 61 tests
 
 ### services/aggregation.rs
 
@@ -661,7 +663,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **387** |
+| **Inline Tests** | **389** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -678,13 +680,13 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/manufacturer.rs | 15 |
 | services/product.rs | 18 |
 | services/shop.rs | 16 |
-| services/transaction.rs | 59 |
+| services/transaction.rs | 61 |
 | services/aggregation.rs | 20 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 13 |
 | lib.rs | 6 |
-| **Total** | **413** |
+| **Total** | **415** |
 
 ---
 

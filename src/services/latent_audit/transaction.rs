@@ -671,7 +671,6 @@ async fn memo_text_of_detail(pool: &SqlitePool, detail_id: i64) -> Option<String
 /// L3: update_transaction_detail のメモ更新 (MEMO_UPDATE) が DETAIL 更新の tx 外で先に確定する。
 /// Expected: DETAIL 更新が失敗したら、メモ本文の変更もロールバックされる (元の本文のまま)。
 #[tokio::test]
-#[ignore = "latent-audit L3"]
 async fn latent_l3_failed_detail_update_rolls_back_memo_change() {
     let pool = setup_test_db_with_foreign_keys().await;
     let service = TransactionService::new(pool.clone());
@@ -700,7 +699,6 @@ async fn latent_l3_failed_detail_update_rolls_back_memo_change() {
 /// L3: in-place の MEMO_UPDATE が trim していない値を書く (新規作成経路は trim する)。
 /// Expected: 前後空白付きのメモで更新しても、保存される MEMO_TEXT は trim 済み。
 #[tokio::test]
-#[ignore = "latent-audit L3"]
 async fn latent_l3_in_place_memo_update_is_trimmed() {
     let pool = setup_test_db().await;
     let service = TransactionService::new(pool.clone());

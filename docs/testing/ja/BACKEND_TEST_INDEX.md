@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-09-06 JST  
-**総テスト数**: 413件 (差分反映後。`cargo test --lib` の権威的総数は 653 で、既存の未反映分は別 PR でバックフィル予定)
+**総テスト数**: 415件 (差分反映後。`cargo test --lib` の権威的総数は 655 で、既存の未反映分は別 PR でバックフィル予定)
 
 ---
 
@@ -548,8 +548,10 @@ AES-256-GCM暗号化・復号化のテスト。
 | `latent_l2_header_with_info_does_not_leak_foreign_shop_name` | ヘッダー詳細取得で他ユーザーの店舗名が出ない (SHOPS 結合を USER_ID で限定、潜在監査 L2) | src/services/latent_audit/transaction.rs | 616 |
 | `latent_l8_save_header_rejects_malformed_datetime` | 不正・実在しない日時でのヘッダー保存を拒否 (潜在監査 L8) | src/services/latent_audit/transaction.rs | 752 |
 | `latent_l8_update_header_rejects_malformed_datetime` | 不正・実在しない日時でのヘッダー更新を拒否 (潜在監査 L8) | src/services/latent_audit/transaction.rs | 766 |
+| `latent_l3_failed_detail_update_rolls_back_memo_change` | 明細更新が失敗したらメモの変更も戻る (メモ処理を同じトランザクションで実行、潜在監査 L3) | src/services/latent_audit/transaction.rs | 674 |
+| `latent_l3_in_place_memo_update_is_trimmed` | メモの上書き更新は前後の空白を除いた内容で保存し、重複排除と一致させる (潜在監査 L3) | src/services/latent_audit/transaction.rs | 702 |
 
-**合計**: 59件
+**合計**: 61件
 
 ### services/aggregation.rs
 
@@ -661,7 +663,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **387件** |
+| **インラインテスト** | **389件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -678,13 +680,13 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/manufacturer.rs | 15 |
 | services/product.rs | 18 |
 | services/shop.rs | 16 |
-| services/transaction.rs | 59 |
+| services/transaction.rs | 61 |
 | services/aggregation.rs | 20 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 13 |
 | lib.rs | 6 |
-| **総計** | **413件** |
+| **総計** | **415件** |
 
 ---
 
