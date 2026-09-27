@@ -1314,7 +1314,8 @@ pub fn monthly_aggregation(
     validate_month(month)?;
     validate_start_day(start_day)?;
 
-    let (start_date, end_date) = monthly_period_bounds(year, month, start_day);
+    let (start_date, end_date) =
+        monthly_period_bounds(year, month, start_day).ok_or(AggregationError::InvalidYear(year))?;
 
     let filter = AggregationFilter::new(DateFilter::Between(start_date, end_date));
 
@@ -1546,7 +1547,8 @@ pub fn yearly_aggregation(
     validate_start_month(start_month)?;
     validate_start_day(start_day)?;
 
-    let (start_date, end_date) = yearly_period_bounds(year, start_month, start_day);
+    let (start_date, end_date) = yearly_period_bounds(year, start_month, start_day)
+        .ok_or(AggregationError::InvalidYear(year))?;
 
     let filter = AggregationFilter::new(DateFilter::Between(start_date, end_date));
 

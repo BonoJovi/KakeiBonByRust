@@ -36,7 +36,6 @@ async fn call_monthly_bounds(
 /// (reachable via direct invoke of the monthly period/aggregation commands).
 /// Expected: returns `Err` for out-of-range years instead of panicking.
 #[tokio::test]
-#[ignore = "latent-audit L10"]
 async fn latent_l10_monthly_bounds_rejects_out_of_range_year_without_shift() {
     for year in out_of_range_years() {
         let outcome = call_monthly_bounds(year, 12, HolidayShift::None).await;
@@ -53,7 +52,6 @@ async fn latent_l10_monthly_bounds_rejects_out_of_range_year_without_shift() {
 /// still reaches `end_of_month(year + 1, 1)` and panics.
 /// Expected: returns `Err` instead of panicking.
 #[tokio::test]
-#[ignore = "latent-audit L10"]
 async fn latent_l10_monthly_bounds_rejects_out_of_range_year_with_shift() {
     for year in out_of_range_years() {
         let outcome = call_monthly_bounds(year, 12, HolidayShift::Next).await;
@@ -65,47 +63,22 @@ async fn latent_l10_monthly_bounds_rejects_out_of_range_year_with_shift() {
     }
 }
 
-/// L10: the public helpers in `services::period` panic via `.expect` on
-/// out-of-range years instead of reporting an error.
-/// Expected: none of them panics (a fix is expected to make them fallible;
-/// once they return `Result`, tighten this to assert `is_err()`).
+/// L10: the public helpers in `services::period` panicked via `.expect` on
+/// out-of-range years. They now return `None` there (callers turn that into
+/// an "invalid year" error).
 #[test]
-#[ignore = "latent-audit L10"]
-fn latent_l10_period_helpers_do_not_panic_on_out_of_range_year() {
+fn latent_l10_period_helpers_return_none_on_out_of_range_year() {
     let holidays: HashSet<NaiveDate> = HashSet::new();
     let year = 300_000;
     let last = {
         use chrono::Datelike;
         NaiveDate::MAX.year()
     };
-
-    let cases: Vec<(&str, Box<dyn Fn() + std::panic::RefUnwindSafe>)> = vec![
-        ("end_of_month(300000, 1)", Box::new(move || {
-            let _ = end_of_month(year, 1);
-        })),
-        ("resolve_day_or_end(300000, 1, 31)", Box::new(move || {
-            let _ = resolve_day_or_end(year, 1, 31);
-        })),
-        ("monthly_period_bounds(MAX year, 12, 1)", Box::new(move || {
-            let _ = monthly_period_bounds(last, 12, 1);
-        })),
-        ("monthly_period_bounds_with_shift(MAX year, 12, 1, Next)", Box::new(move || {
-            let _ = monthly_period_bounds_with_shift(last, 12, 1, HolidayShift::Next, &holidays.clone());
-        })),
-        ("yearly_period_bounds(MAX year, 1, 1)", Box::new(move || {
-            let _ = yearly_period_bounds(last, 1, 1);
-        })),
-    ];
-
-    let mut panicked = Vec::new();
-    for (label, f) in &cases {
-        if std::panic::catch_unwind(|| f()).is_err() {
-            panicked.push(*label);
-        }
-    }
-    assert!(
-        panicked.is_empty(),
-        "period helpers panicked on out-of-range years: {:?}",
-        panicked
-    );
+    assert_eq!(end_of_month(year, 1), None);
+    assert_eq!(resolve_day_or_end(year, 1, 31), None);
+    assert_eq!(monthly_period_bounds(last, 12, 1), None);
+    assert_eq!(monthly_period_bounds_with_shift(last, 12, 1, HolidayShift::Next, &holidays), None);
+    assert_eq!(yearly_period_bounds(last, 1, 1), None);
+    // In range they still resolve.
+    assert!(monthly_period_bounds(2026, 12, 1).is_some());
 }

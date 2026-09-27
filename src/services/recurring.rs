@@ -217,8 +217,8 @@ fn generate_monthly(
     loop {
         let candidate = match *rule {
             MonthlyDayRule::DayOfMonth { day } => NaiveDate::from_ymd_opt(year, month, day),
-            MonthlyDayRule::DayOfMonthOrEnd { day } => Some(crate::services::period::resolve_day_or_end(year, month, day)),
-            MonthlyDayRule::EndOfMonth => Some(end_of_month(year, month)),
+            MonthlyDayRule::DayOfMonthOrEnd { day } => crate::services::period::resolve_day_or_end(year, month, day),
+            MonthlyDayRule::EndOfMonth => end_of_month(year, month),
             MonthlyDayRule::NthWeekday { week, weekday } => {
                 nth_weekday_of_month(year, month, week, weekday)
             }
@@ -258,8 +258,8 @@ fn generate_yearly(
     loop {
         let candidate = match *rule {
             MonthlyDayRule::DayOfMonth { day } => NaiveDate::from_ymd_opt(year, month, day),
-            MonthlyDayRule::DayOfMonthOrEnd { day } => Some(crate::services::period::resolve_day_or_end(year, month, day)),
-            MonthlyDayRule::EndOfMonth => Some(end_of_month(year, month)),
+            MonthlyDayRule::DayOfMonthOrEnd { day } => crate::services::period::resolve_day_or_end(year, month, day),
+            MonthlyDayRule::EndOfMonth => end_of_month(year, month),
             MonthlyDayRule::NthWeekday { week, weekday } => {
                 nth_weekday_of_month(year, month, week, weekday)
             }

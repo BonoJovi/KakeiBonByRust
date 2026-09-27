@@ -769,7 +769,8 @@ async fn update_user_settings(
 /// into `resolve_day_or_end(_, 14, _)` → `end_of_month(_, 14)` and
 /// panicked on `.expect("end_of_month: year/month must be valid")`.
 /// Reject invalid months before either branch runs so no path below can
-/// crash the backend thread.
+/// crash the backend thread. Out-of-range years are reported the same way
+/// (latent-audit L10).
 async fn monthly_bounds_with_shift_for(
     pool: &sqlx::SqlitePool,
     user_id: i64,
@@ -782,22 +783,30 @@ async fn monthly_bounds_with_shift_for(
         return Err(format!("Invalid month: {} (expected 1..=12)", month));
     }
 
+    // The period helpers return None for a year chrono cannot represent
+    // (latent-audit L10: they used to panic on `.expect`).
+    let invalid_year = || format!("Invalid year: {}", year);
+
     if matches!(shift, services::holiday::HolidayShift::None) {
-        return Ok(services::period::monthly_period_bounds(year, month, start_day));
+        return services::period::monthly_period_bounds(year, month, start_day)
+            .ok_or_else(invalid_year);
     }
 
     let raw_start = chrono::NaiveDate::from_ymd_opt(year, month, 1)
         .ok_or_else(|| format!("Invalid year/month: {}/{}", year, month))?;
-    let (next_year, next_month) = if month == 12 { (year + 1, 1) } else { (year, month + 1) };
-    let raw_end = services::period::end_of_month(next_year, next_month);
+    let (next_year, next_month) = if month == 12 {
+        (year.checked_add(1).ok_or_else(invalid_year)?, 1)
+    } else {
+        (year, month + 1)
+    };
+    let raw_end = services::period::end_of_month(next_year, next_month).ok_or_else(invalid_year)?;
 
     let holidays = services::holiday::fetch_holidays(pool, user_id, raw_start, raw_end)
         .await
         .map_err(|e| format!("Failed to load holidays: {}", e))?;
 
-    Ok(services::period::monthly_period_bounds_with_shift(
-        year, month, start_day, shift, &holidays,
-    ))
+    services::period::monthly_period_bounds_with_shift(year, month, start_day, shift, &holidays)
+        .ok_or_else(invalid_year)
 }
 
 async fn fetch_period_settings(
