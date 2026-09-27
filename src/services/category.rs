@@ -302,103 +302,115 @@ impl CategoryService {
     /// Populate default categories for a new user
     /// This will be called when a general user is registered
     pub async fn populate_default_categories(&self, user_id: i64) -> Result<(), CategoryError> {
-        // Check if categories already exist for this user (check CATEGORY2, not CATEGORY1)
-        let count: i64 = sqlx::query_scalar(sql_queries::CATEGORY2_COUNT_BY_USER)
-            .bind(user_id)
-            .fetch_one(&self.pool)
-            .await?;
-        
-        if count > 0 {
-            // Categories already populated
-            return Ok(());
-        }
-        
-        // Seed SQL is embedded at compile time. Reading from a CWD-relative
-        // path silently works under `cargo tauri dev` (CWD = project root) but
-        // crashes installed .msi/.exe builds because the install directory is
-        // the CWD and `res/sql/default_categories_seed.sql` isn't shipped there.
-        const DEFAULT_CATEGORIES_SEED: &str = include_str!("../../res/sql/default_categories_seed.sql");
-
-        // Replace :pUserID placeholder with actual user_id
-        let sql_content = DEFAULT_CATEGORIES_SEED.replace(":pUserID", &user_id.to_string());
-        
-        // Start transaction
         let mut tx = self.pool.begin().await?;
-        
-        // First, create CATEGORY1 (fixed categories)
-        let now = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
-        
-        // Insert CATEGORY1 records
-        let category1_data = [
-            ("EXPENSE", 1, "支出"),
-            ("INCOME", 2, "収入"),
-            ("TRANSFER", 3, "振替"),
-        ];
-        
-        for (code, order, name) in category1_data.iter() {
-            sqlx::query(sql_queries::CATEGORY_INSERT_CATEGORY1)
-                .bind(user_id)
-                .bind(code)
-                .bind(order)
-                .bind(name)
-                .bind(&now)
-                .execute(&mut *tx)
-                .await?;
-        }
-        
-        // Insert CATEGORY1_I18N records
-        let cat1_i18n = [
-            ("EXPENSE", "en", "Expense"),
-            ("EXPENSE", "ja", "支出"),
-            ("INCOME", "en", "Income"),
-            ("INCOME", "ja", "収入"),
-            ("TRANSFER", "en", "Transfer"),
-            ("TRANSFER", "ja", "振替"),
-        ];
-        
-        for (code, lang, name) in cat1_i18n.iter() {
-            sqlx::query(sql_queries::CATEGORY_INSERT_CATEGORY1_I18N)
-                .bind(user_id)
-                .bind(code)
-                .bind(lang)
-                .bind(name)
-                .bind(&now)
-                .execute(&mut *tx)
-                .await?;
-        }
-        
-        // Execute SQL statements
-        // Split by semicolon and filter out comments and empty lines
-        for statement in sql_content.split(';') {
-            let stmt = statement.trim();
-            
-            // Skip empty statements
-            if stmt.is_empty() {
-                continue;
-            }
-            
-            // Skip comment-only statements
-            let lines: Vec<&str> = stmt.lines()
-                .map(|l| l.trim())
-                .filter(|l| !l.is_empty() && !l.starts_with("--"))
-                .collect();
-            
-            if lines.is_empty() {
-                continue;
-            }
-            
-            // Reconstruct statement without comment-only lines
-            let clean_stmt = lines.join(" ");
-            
-            sqlx::query(&clean_stmt)
-                .execute(&mut *tx)
-                .await?;
-        }
-        
+        populate_default_categories_in_tx(&mut tx, user_id).await?;
         tx.commit().await?;
-        
         Ok(())
     }
+}
+
+/// Seed the default categories for `user_id` inside the caller's
+/// transaction, so user registration can create the user and its
+/// categories atomically (latent-audit L26). A no-op when the user already
+/// has CATEGORY2 rows.
+pub(crate) async fn populate_default_categories_in_tx(
+    tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+    user_id: i64,
+) -> Result<(), CategoryError> {
+    // Check if categories already exist for this user (check CATEGORY2, not CATEGORY1)
+    let count: i64 = sqlx::query_scalar(sql_queries::CATEGORY2_COUNT_BY_USER)
+        .bind(user_id)
+        .fetch_one(&mut **tx)
+        .await?;
+    
+    if count > 0 {
+        // Categories already populated
+        return Ok(());
+    }
+    
+    // Seed SQL is embedded at compile time. Reading from a CWD-relative
+    // path silently works under `cargo tauri dev` (CWD = project root) but
+    // crashes installed .msi/.exe builds because the install directory is
+    // the CWD and `res/sql/default_categories_seed.sql` isn't shipped there.
+    const DEFAULT_CATEGORIES_SEED: &str = include_str!("../../res/sql/default_categories_seed.sql");
+
+    // Replace :pUserID placeholder with actual user_id
+    let sql_content = DEFAULT_CATEGORIES_SEED.replace(":pUserID", &user_id.to_string());
+    
+    // First, create CATEGORY1 (fixed categories)
+    let now = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
+    
+    // Insert CATEGORY1 records
+    let category1_data = [
+        ("EXPENSE", 1, "支出"),
+        ("INCOME", 2, "収入"),
+        ("TRANSFER", 3, "振替"),
+    ];
+    
+    for (code, order, name) in category1_data.iter() {
+        sqlx::query(sql_queries::CATEGORY_INSERT_CATEGORY1)
+            .bind(user_id)
+            .bind(code)
+            .bind(order)
+            .bind(name)
+            .bind(&now)
+            .execute(&mut **tx)
+            .await?;
+    }
+    
+    // Insert CATEGORY1_I18N records
+    let cat1_i18n = [
+        ("EXPENSE", "en", "Expense"),
+        ("EXPENSE", "ja", "支出"),
+        ("INCOME", "en", "Income"),
+        ("INCOME", "ja", "収入"),
+        ("TRANSFER", "en", "Transfer"),
+        ("TRANSFER", "ja", "振替"),
+    ];
+    
+    for (code, lang, name) in cat1_i18n.iter() {
+        sqlx::query(sql_queries::CATEGORY_INSERT_CATEGORY1_I18N)
+            .bind(user_id)
+            .bind(code)
+            .bind(lang)
+            .bind(name)
+            .bind(&now)
+            .execute(&mut **tx)
+            .await?;
+    }
+    
+    // Execute SQL statements
+    // Split by semicolon and filter out comments and empty lines
+    for statement in sql_content.split(';') {
+        let stmt = statement.trim();
+        
+        // Skip empty statements
+        if stmt.is_empty() {
+            continue;
+        }
+        
+        // Skip comment-only statements
+        let lines: Vec<&str> = stmt.lines()
+            .map(|l| l.trim())
+            .filter(|l| !l.is_empty() && !l.starts_with("--"))
+            .collect();
+        
+        if lines.is_empty() {
+            continue;
+        }
+        
+        // Reconstruct statement without comment-only lines
+        let clean_stmt = lines.join(" ");
+        
+        sqlx::query(&clean_stmt)
+            .execute(&mut **tx)
+            .await?;
+    }
+    
+    Ok(())
+}
+
+impl CategoryService {
     
     /// Get all category1 for a user
     pub async fn get_category1_list(&self, user_id: i64, lang_code: &str) -> Result<Vec<Category1>, CategoryError> {

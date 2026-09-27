@@ -357,23 +357,10 @@ async fn create_general_user(
     validate_password(&password).map_err(api_error::ApiError::validation)?;
 
     let user_mgmt = state.user_mgmt.lock().await;
-    let category = state.category.lock().await;
 
+    // register_general_user creates the user, its unspecified master data
+    // and its default categories in one transaction (latent-audit L26).
     let user_id = user_mgmt.register_general_user(&username, &password).await?;
-    // Populate default categories for the new user. A user without them
-    // cannot record any transaction, so a failure removes the user again
-    // (delete_general_user also drops any category rows already written)
-    // and reports the error instead of leaving a broken account behind
-    // (latent-audit L26).
-    if let Err(e) = category.populate_default_categories(user_id).await {
-        if let Err(cleanup) = user_mgmt.delete_general_user(user_id).await {
-            eprintln!("Failed to remove the new user after a failed category seed: {}", cleanup);
-        }
-        return Err(api_error::ApiError::database(format!(
-            "Failed to populate default categories: {}",
-            e
-        )));
-    }
     Ok(user_id)
 }
 

@@ -92,6 +92,27 @@ fn map_insert_user_error(err: sqlx::Error) -> AuthError {
     }
 }
 
+/// Seed a new user's default categories and NONE account inside the
+/// registration transaction (latent-audit L26).
+async fn seed_new_user_in_tx(
+    tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+    user_id: i64,
+    role_label: &str,
+) -> Result<(), AuthError> {
+    let seed_error = |what: &str, e: String| {
+        AuthError::DatabaseError(sqlx::Error::Configuration(
+            format!("Failed to {} for {}: {}", what, role_label, e).into(),
+        ))
+    };
+    category::populate_default_categories_in_tx(tx, user_id)
+        .await
+        .map_err(|e| seed_error("populate default categories", e.to_string()))?;
+    crate::services::account::initialize_none_account_in_tx(tx, user_id)
+        .await
+        .map_err(|e| seed_error("initialize NONE account", e))?;
+    Ok(())
+}
+
 pub struct AuthService {
     pool: SqlitePool,
 }
@@ -185,10 +206,15 @@ impl AuthService {
             .await
             .map_err(map_insert_user_error)?;
         
-        // Commit user creation first
+        // Seed in the same transaction, so the admin, its default categories
+        // and its NONE account are created together or not at all. Seeding
+        // after a separate commit left an unusable admin behind whenever it
+        // failed (or the app stopped in between), and setup then refused to
+        // run again (latent-audit L26).
+        seed_new_user_in_tx(&mut tx, next_id, "admin").await?;
         tx.commit().await?;
 
-        self.seed_new_user_or_roll_back(next_id, "admin").await
+        Ok(())
     }
 
     /// Register a new general user
@@ -232,50 +258,12 @@ impl AuthService {
             .await
             .map_err(map_insert_user_error)?;
         
-        // Commit user creation first
-        tx.commit().await?;
-        
-        self.seed_new_user_or_roll_back(next_id, "user").await
-    }
-
-    /// Seed a just-registered user's default categories and NONE account.
-    ///
-    /// The seeding runs after the USERS row is committed (each step uses its
-    /// own pool transaction). If it fails, the user is removed again —
-    /// USERS (cascading to ACCOUNTS etc.) and any category rows already
-    /// written — so the setup can simply be retried. Without this, a failed
-    /// seed left a user with no categories or NONE account, on which every
-    /// transaction insert fails, while setup refused to run again
-    /// (latent-audit L26).
-    async fn seed_new_user_or_roll_back(&self, user_id: i64, role_label: &str) -> Result<(), AuthError> {
-        let seeded = async {
-            category::CategoryService::new(self.pool.clone())
-                .populate_default_categories(user_id)
-                .await
-                .map_err(|e| format!("Failed to populate default categories for {}: {}", role_label, e))?;
-            crate::services::account::initialize_none_account(&self.pool, user_id)
-                .await
-                .map_err(|e| format!("Failed to initialize NONE account for {}: {}", role_label, e))
-        }
-        .await;
-
-        let Err(seed_error) = seeded else {
-            return Ok(());
-        };
-
-        let mut tx = self.pool.begin().await?;
-        sqlx::query(sql_queries::USER_DELETE)
-            .bind(user_id)
-            .execute(&mut *tx)
-            .await?;
-        for sql in sql_queries::USER_DELETE_CATEGORIES {
-            // A table the failed seed never reached (or that is missing) must
-            // not block removing the rest.
-            let _ = sqlx::query(sql).bind(user_id).execute(&mut *tx).await;
-        }
+        // Seed in the same transaction (latent-audit L26), see
+        // register_admin_user.
+        seed_new_user_in_tx(&mut tx, next_id, "user").await?;
         tx.commit().await?;
 
-        Err(AuthError::DatabaseError(sqlx::Error::Configuration(seed_error.into())))
+        Ok(())
     }
 
     /// Check if any users exist in the database
