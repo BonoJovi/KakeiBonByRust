@@ -360,10 +360,19 @@ async fn create_general_user(
     let category = state.category.lock().await;
 
     let user_id = user_mgmt.register_general_user(&username, &password).await?;
-    // Populate default categories for the new user
+    // Populate default categories for the new user. A user without them
+    // cannot record any transaction, so a failure removes the user again
+    // (delete_general_user also drops any category rows already written)
+    // and reports the error instead of leaving a broken account behind
+    // (latent-audit L26).
     if let Err(e) = category.populate_default_categories(user_id).await {
-        eprintln!("Warning: Failed to populate default categories for user: {}", e);
-        // Continue even if category population fails
+        if let Err(cleanup) = user_mgmt.delete_general_user(user_id).await {
+            eprintln!("Failed to remove user {} after a failed category seed: {}", user_id, cleanup);
+        }
+        return Err(api_error::ApiError::database(format!(
+            "Failed to populate default categories: {}",
+            e
+        )));
     }
     Ok(user_id)
 }

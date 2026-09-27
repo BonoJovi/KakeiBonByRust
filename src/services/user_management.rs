@@ -2,7 +2,7 @@ use sqlx::sqlite::SqlitePool;
 use sqlx::Row;
 use crate::api_error::ApiError;
 use crate::security::{generate_encryption_salt, hash_password, verify_password, SecurityError};
-use crate::consts::{self, ROLE_ADMIN, ROLE_USER};
+use crate::consts::{ROLE_ADMIN, ROLE_USER};
 use crate::sql_queries;
 use super::encryption::EncryptionService;
 
@@ -58,14 +58,13 @@ impl std::fmt::Display for UserManagementError {
 /// - Issue #37 Phase 2-3 — length guard. Counts characters, not bytes,
 ///   mirroring the frontend `maxlength` and char counter.
 fn validate_username(username: &str) -> Result<(), UserManagementError> {
-    if username.trim().is_empty() {
-        return Err(UserManagementError::Validation(
-            "Username cannot be empty".to_string(),
-        ));
-    }
-    crate::validation::validate_max_chars("Username", username, consts::MAX_NAME_LEN)
+    crate::validation::validate_master_name(USERNAME_LABEL, username)
         .map_err(UserManagementError::Validation)
 }
+
+/// Field label shared with `services::auth` so both user-creation paths
+/// report the same "Username cannot be empty" / length messages.
+pub(crate) const USERNAME_LABEL: &str = "Username";
 
 impl std::error::Error for UserManagementError {}
 
@@ -517,6 +516,7 @@ impl UserManagementService {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::consts;
     use crate::test_helpers::database::{setup_test_db, create_test_admin};
 
     #[tokio::test]

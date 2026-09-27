@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-08-26 JST  
-**Total Tests**: 401 (delta-tracked; the full authoritative count from `cargo test --lib` is 641, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 411 (delta-tracked; the full authoritative count from `cargo test --lib` is 651, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -213,8 +213,12 @@ Settings management functionality tests.
 | `test_save_leaves_no_tmp_sibling_and_target_is_parseable` | Successful save renames tmp away and leaves target valid (Fable-5 #10) | src/settings.rs | 345 |
 | `test_repeated_saves_do_not_accumulate_tmp_files` | Repeated saves keep the filesystem clean (Fable-5 #10) | src/settings.rs | 378 |
 | `test_stale_tmp_file_is_not_loaded` | A leftover `.tmp` from a crashed save is inert; real target still loads (Fable-5 #10) | src/settings.rs | 404 |
+| `latent_l28_null_settings_file_falls_back_to_defaults` | A `null` settings file falls back to defaults instead of failing startup (latent-audit L28) | src/latent_audit/settings.rs | 45 |
+| `latent_l28_array_settings_file_falls_back_to_defaults` | A `[]` settings file falls back to defaults (latent-audit L28) | src/latent_audit/settings.rs | 53 |
+| `latent_l28_truncated_settings_file_falls_back_to_defaults` | A truncated JSON settings file falls back to defaults (latent-audit L28) | src/latent_audit/settings.rs | 61 |
+| `latent_l28_corrupt_settings_file_is_backed_up_and_replaced_on_save` | The unreadable file is kept as `<name>.corrupt` and the next save writes a valid file (latent-audit L28) | src/latent_audit/settings.rs | 68 |
 
-**Total**: 12 tests
+**Total**: 16 tests
 
 ### api_error.rs
 
@@ -286,8 +290,14 @@ Authentication service tests (user registration, login).
 | `invalid_credentials_maps_to_auth_invalid_credentials_code` | `AuthError::InvalidCredentials` → `ApiError { code: "auth_invalid_credentials" }` (PR14, Fable-5 #21) | src/services/auth.rs | 577 |
 | `database_error_maps_to_database_code` | `AuthError::DatabaseError` → `ApiError { code: "database" }` (PR14, Fable-5 #21) | src/services/auth.rs | 585 |
 | `security_error_maps_to_validation_code_with_message` | `AuthError::SecurityError` → `ApiError { code: "validation" }` with message preserved (PR14, Fable-5 #21) | src/services/auth.rs | 593 |
+| `latent_l25_register_rejects_blank_username` | Setup registration rejects an empty / whitespace-only username (latent-audit L25) | src/services/latent_audit/auth.rs | 41 |
+| `latent_l25_register_rejects_overlong_username` | Setup registration rejects an over-long username (latent-audit L25) | src/services/latent_audit/auth.rs | 62 |
+| `latent_l25_register_duplicate_name_maps_to_duplicate_code` | A duplicate username on registration maps to `duplicate_name`, not a raw UNIQUE error (latent-audit L25) | src/services/latent_audit/auth.rs | 82 |
+| `latent_l26_admin_category_seed_failure_rolls_back_user` | A failed category seed on admin registration removes the admin again so setup can be retried (latent-audit L26) | src/services/latent_audit/auth.rs | 120 |
+| `latent_l26_admin_none_account_failure_rolls_back_user_and_categories` | A failed NONE-account seed removes the admin and the categories already written (latent-audit L26) | src/services/latent_audit/auth.rs | 148 |
+| `latent_l26_register_user_seed_failure_rolls_back_user` | A failed seed on general-user registration removes the user again (latent-audit L26) | src/services/latent_audit/auth.rs | 171 |
 
-**Total**: 16 tests
+**Total**: 22 tests
 
 ### services/user_management.rs
 
@@ -649,16 +659,16 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **375** |
+| **Inline Tests** | **385** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
 | db.rs | 14 |
-| settings.rs | 12 |
+| settings.rs | 16 |
 | api_error.rs | 10 |
 | services/master_data.rs | 4 |
 | services/like_escape.rs | 7 |
-| services/auth.rs | 16 |
+| services/auth.rs | 22 |
 | services/user_management.rs | 23 |
 | services/encryption.rs | 8 |
 | services/account.rs | 11 |
@@ -672,7 +682,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/i18n.rs | 8 |
 | services/recurring.rs | 13 |
 | lib.rs | 6 |
-| **Total** | **401** |
+| **Total** | **411** |
 
 ---
 

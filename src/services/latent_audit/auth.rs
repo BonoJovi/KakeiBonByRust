@@ -38,7 +38,6 @@ async fn count_for_user(pool: &SqlitePool, table: &str, user_id: i64) -> i64 {
 /// whitespace-only username (no validation at all on the setup path).
 /// Expected: blank usernames are rejected and no USERS row is created.
 #[tokio::test]
-#[ignore = "latent-audit L25"]
 async fn latent_l25_register_rejects_blank_username() {
     let pool = setup_test_db().await;
     let auth = AuthService::new(pool.clone());
@@ -60,7 +59,6 @@ async fn latent_l25_register_rejects_blank_username() {
 /// user_management applies, so an over-long name is stored.
 /// Expected: a name longer than MAX_NAME_LEN chars is rejected.
 #[tokio::test]
-#[ignore = "latent-audit L25"]
 async fn latent_l25_register_rejects_overlong_username() {
     let pool = setup_test_db().await;
     let auth = AuthService::new(pool.clone());
@@ -81,7 +79,6 @@ async fn latent_l25_register_rejects_overlong_username() {
 /// "UNIQUE constraint failed" message under the generic `database` code.
 /// Expected: it maps to the structured `duplicate_name` ApiError code.
 #[tokio::test]
-#[ignore = "latent-audit L25"]
 async fn latent_l25_register_duplicate_name_maps_to_duplicate_code() {
     let pool = setup_test_db().await;
     let auth = AuthService::new(pool.clone());
@@ -120,7 +117,6 @@ async fn latent_l25_register_duplicate_name_maps_to_duplicate_code() {
 /// table the category seed writes to).
 /// Expected: registration fails AND leaves no user row behind (atomic).
 #[tokio::test]
-#[ignore = "latent-audit L26"]
 async fn latent_l26_admin_category_seed_failure_rolls_back_user() {
     let pool = setup_test_db().await;
     sqlx::query("DROP TABLE CATEGORY3_I18N")
@@ -149,7 +145,6 @@ async fn latent_l26_admin_category_seed_failure_rolls_back_user() {
 /// Expected: registration fails AND leaves neither the user row nor the
 /// categories behind.
 #[tokio::test]
-#[ignore = "latent-audit L26"]
 async fn latent_l26_admin_none_account_failure_rolls_back_user_and_categories() {
     let pool = setup_test_db().await;
     sqlx::query("DELETE FROM ACCOUNT_TEMPLATES WHERE TEMPLATE_CODE = 'NONE'")
@@ -173,7 +168,6 @@ async fn latent_l26_admin_none_account_failure_rolls_back_user_and_categories() 
 /// Expected: a seeding failure leaves no general-user row behind, so
 /// has_general_users() stays false and the setup step can be retried.
 #[tokio::test]
-#[ignore = "latent-audit L26"]
 async fn latent_l26_register_user_seed_failure_rolls_back_user() {
     let pool = setup_test_db().await;
     let auth = AuthService::new(pool.clone());

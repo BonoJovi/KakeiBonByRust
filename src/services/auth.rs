@@ -18,6 +18,12 @@ pub enum AuthError {
     DatabaseError(sqlx::Error),
     SecurityError(SecurityError),
     InvalidCredentials,
+    /// Invalid username on registration (empty / whitespace-only / too
+    /// long) — latent-audit L25.
+    Validation(String),
+    /// The username is already taken (UNIQUE on USERS.NAME) — latent-audit
+    /// L25. Mapped to the same `duplicate_name` code as user management.
+    DuplicateUsername,
 }
 
 impl std::fmt::Display for AuthError {
@@ -26,6 +32,8 @@ impl std::fmt::Display for AuthError {
             AuthError::DatabaseError(e) => write!(f, "Database error: {}", e),
             AuthError::SecurityError(e) => write!(f, "Security error: {}", e),
             AuthError::InvalidCredentials => write!(f, "Invalid credentials"),
+            AuthError::Validation(msg) => write!(f, "{}", msg),
+            AuthError::DuplicateUsername => write!(f, "Username already exists"),
         }
     }
 }
@@ -59,7 +67,28 @@ impl From<AuthError> for crate::api_error::ApiError {
             AuthError::InvalidCredentials => ApiError::auth_invalid_credentials(),
             AuthError::DatabaseError(e) => ApiError::database(e.to_string()),
             AuthError::SecurityError(e) => ApiError::validation(e.to_string()),
+            AuthError::Validation(msg) => ApiError::validation(msg),
+            AuthError::DuplicateUsername => ApiError::duplicate_name("User"),
         }
+    }
+}
+
+/// Validate a username for registration with the same rule user
+/// management applies (latent-audit L25).
+fn validate_registration_username(username: &str) -> Result<(), AuthError> {
+    crate::validation::validate_master_name(
+        crate::services::user_management::USERNAME_LABEL,
+        username,
+    )
+    .map_err(AuthError::Validation)
+}
+
+/// Map an AUTH_INSERT_USER failure: a UNIQUE violation on USERS.NAME is a
+/// taken username, not a raw database error (latent-audit L25).
+fn map_insert_user_error(err: sqlx::Error) -> AuthError {
+    match &err {
+        sqlx::Error::Database(db) if db.is_unique_violation() => AuthError::DuplicateUsername,
+        _ => AuthError::DatabaseError(err),
     }
 }
 
@@ -120,6 +149,7 @@ impl AuthService {
     /// * `Ok(())` - User registered successfully
     /// * `Err(AuthError)` - Database or security error
     pub async fn register_admin_user(&self, username: &str, password: &str) -> Result<(), AuthError> {
+        validate_registration_username(username)?;
         let now = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
 
         // Hash password using Argon2
@@ -152,25 +182,13 @@ impl AuthService {
             .bind(encryption_salt.as_slice())
             .bind(now)
             .execute(&mut *tx)
-            .await?;
+            .await
+            .map_err(map_insert_user_error)?;
         
         // Commit user creation first
         tx.commit().await?;
 
-        // Populate default categories for admin user as template
-        let category_service = category::CategoryService::new(self.pool.clone());
-        category_service.populate_default_categories(next_id).await
-            .map_err(|e| AuthError::DatabaseError(sqlx::Error::Configuration(
-                format!("Failed to populate default categories for admin: {}", e).into()
-            )))?;
-
-        // Initialize NONE account for the admin user
-        crate::services::account::initialize_none_account(&self.pool, next_id).await
-            .map_err(|e| AuthError::DatabaseError(sqlx::Error::Configuration(
-                format!("Failed to initialize NONE account for admin: {}", e).into()
-            )))?;
-
-        Ok(())
+        self.seed_new_user_or_roll_back(next_id, "admin").await
     }
 
     /// Register a new general user
@@ -183,6 +201,7 @@ impl AuthService {
     /// * `Ok(())` - User registered successfully
     /// * `Err(AuthError)` - Database or security error
     pub async fn register_user(&self, username: &str, password: &str) -> Result<(), AuthError> {
+        validate_registration_username(username)?;
         let now = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
 
         // Hash password using Argon2
@@ -210,25 +229,53 @@ impl AuthService {
             .bind(encryption_salt.as_slice())
             .bind(now)
             .execute(&mut *tx)
-            .await?;
+            .await
+            .map_err(map_insert_user_error)?;
         
         // Commit user creation first
         tx.commit().await?;
         
-        // Populate default categories for the new user
-        let category_service = category::CategoryService::new(self.pool.clone());
-        category_service.populate_default_categories(next_id).await
-            .map_err(|e| AuthError::DatabaseError(sqlx::Error::Configuration(
-                format!("Failed to populate default categories: {}", e).into()
-            )))?;
-        
-        // Initialize NONE account for the new user
-        crate::services::account::initialize_none_account(&self.pool, next_id).await
-            .map_err(|e| AuthError::DatabaseError(sqlx::Error::Configuration(
-                format!("Failed to initialize NONE account: {}", e).into()
-            )))?;
-        
-        Ok(())
+        self.seed_new_user_or_roll_back(next_id, "user").await
+    }
+
+    /// Seed a just-registered user's default categories and NONE account.
+    ///
+    /// The seeding runs after the USERS row is committed (each step uses its
+    /// own pool transaction). If it fails, the user is removed again —
+    /// USERS (cascading to ACCOUNTS etc.) and any category rows already
+    /// written — so the setup can simply be retried. Without this, a failed
+    /// seed left a user with no categories or NONE account, on which every
+    /// transaction insert fails, while setup refused to run again
+    /// (latent-audit L26).
+    async fn seed_new_user_or_roll_back(&self, user_id: i64, role_label: &str) -> Result<(), AuthError> {
+        let seeded = async {
+            category::CategoryService::new(self.pool.clone())
+                .populate_default_categories(user_id)
+                .await
+                .map_err(|e| format!("Failed to populate default categories for {}: {}", role_label, e))?;
+            crate::services::account::initialize_none_account(&self.pool, user_id)
+                .await
+                .map_err(|e| format!("Failed to initialize NONE account for {}: {}", role_label, e))
+        }
+        .await;
+
+        let Err(seed_error) = seeded else {
+            return Ok(());
+        };
+
+        let mut tx = self.pool.begin().await?;
+        sqlx::query(sql_queries::USER_DELETE)
+            .bind(user_id)
+            .execute(&mut *tx)
+            .await?;
+        for sql in sql_queries::USER_DELETE_CATEGORIES {
+            // A table the failed seed never reached (or that is missing) must
+            // not block removing the rest.
+            let _ = sqlx::query(sql).bind(user_id).execute(&mut *tx).await;
+        }
+        tx.commit().await?;
+
+        Err(AuthError::DatabaseError(sqlx::Error::Configuration(seed_error.into())))
     }
 
     /// Check if any users exist in the database
