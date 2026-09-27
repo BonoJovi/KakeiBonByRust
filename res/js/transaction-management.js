@@ -968,6 +968,15 @@ async function handleTransactionSubmit(event) {
     // Validation — max memo length (mirrors Rust defense in src/services/transaction.rs)
     clearValidationError(memoInput);
     clearValidationError(totalAmountInput);
+    // Validation — required date. A blank datetime-local used to be sent as
+    // ':00' and surfaced the backend's raw English format error
+    // (latent-audit L8). Throw like the memo check so the modal stays open.
+    const transactionDateEl = document.getElementById('transaction-date');
+    clearValidationError(transactionDateEl);
+    if (!transactionDateInput) {
+        showValidationError(transactionDateEl, i18n.t('validation.required'));
+        throw new Error('Validation error: transaction date required');
+    }
     if (memoRaw && [...memoRaw].length > MAX_MEMO_LEN) {
         showMaxLengthError(memoInput, i18n.t('transaction_mgmt.memo'), MAX_MEMO_LEN);
         throw new Error('Validation error: memo too long');

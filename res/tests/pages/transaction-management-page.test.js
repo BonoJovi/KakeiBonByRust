@@ -10,6 +10,10 @@
  *     Pinned: saving it shows no recalc prompt and never sends
  *     update_transaction_header_total.
  *
+ * L8  A blank transaction date used to be sent as ':00' and surfaced the
+ *     backend's raw English format error. Pinned: the date field shows
+ *     validation.required, nothing is sent, and the modal stays open.
+ *
  * The real page module is booted against res/transaction-management.html via
  * ./_page-harness.js.
  */
@@ -163,5 +167,28 @@ describe('transaction management screen — regression (latent audit 2026-09)', 
         // recommendation must not throw on the way — the pre-fix prompt
         // crashed formatting it and aborted the save flow.
         expect(callsOf(invoke, 'get_transactions').length).toBeGreaterThan(0);
+    });
+
+    test('[L8] a blank transaction date is rejected before update_transaction_header', async () => {
+        const editBtn = rowButtons('common.edit')[0];
+        editBtn.click();
+        await flush(10);
+
+        const dateInput = document.getElementById('transaction-date');
+        dateInput.value = '';
+        document.getElementById('transaction-form').dispatchEvent(
+            new Event('submit', { cancelable: true, bubbles: true })
+        );
+        await flush(10);
+
+        expect(callsOf(invoke, 'update_transaction_header')).toHaveLength(0);
+        const next = dateInput.nextElementSibling;
+        expect(next && next.classList.contains('validation-error') ? next.textContent : null)
+            .toBe('validation.required');
+        // The modal stays open for the user to fill the date in.
+        expect(document.getElementById('transaction-modal').classList.contains('hidden')).toBe(false);
+
+        document.getElementById('cancel-btn')?.click();
+        await flush(5);
     });
 });

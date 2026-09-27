@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-09-27 JST  
-**総テスト数**: 794件 (jest suite 35 ファイル、`npm test` 実測)
+**総テスト数**: 795件 (jest suite 35 ファイル、`npm test` 実測)
 
 ---
 
@@ -666,11 +666,12 @@
 
 実際の入出金画面モジュールを `transaction-management.html` に対して起動する回帰テスト (潜在監査 H4)。
 
-**テスト数**: 1件
+**テスト数**: 2件
 
 | テスト | 説明 |
 |--------|------|
 | `[H4] saving a header without details does not prompt to overwrite the total with ¥0` | 明細なしヘッダーの保存で ¥0 上書き確認が出ず、`update_transaction_header_total` も送られず、保存フローが一覧再読込まで完了する |
+| `[L8] a blank transaction date is rejected before update_transaction_header` | 日時が空欄なら `validation.required` を表示して送信せず、モーダルを開いたままにする (潜在監査 L8) |
 
 **ファイル**: res/tests/pages/transaction-management-page.test.js
 
@@ -947,7 +948,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **371件** |
+| **機能別テスト** | **372件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 29 |
@@ -964,7 +965,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | format-local-date.test.js | 16 |
 | aggregation-render-unspecified.test.js | 5 |
 | pages/transaction-detail-page.test.js | 2 |
-| pages/transaction-management-page.test.js | 1 |
+| pages/transaction-management-page.test.js | 2 |
 | pages/user-management-page.test.js | 2 |
 | pages/recurring-rule-page.test.js | 3 |
 | pages/recurring-rule-double-submit.test.js | 1 |
@@ -978,7 +979,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **794件** |
+| **総計 (jest)** | **795件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 
