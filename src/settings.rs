@@ -84,7 +84,15 @@ impl SettingsManager {
             .join("KakeiBon.json")
     }
     
-    /// Load settings from file
+    /// Load settings from file.
+    ///
+    /// An empty file, or one that is not a valid settings object (`null`,
+    /// `[]`, truncated JSON after an external edit or a disk error), falls
+    /// back to the defaults instead of failing: `SettingsManager::new()`'s
+    /// error aborts the app setup, so the app would not launch until the
+    /// user deleted the file by hand (latent-audit L28). The unreadable file
+    /// is kept next to the original as `<name>.corrupt` so nothing the user
+    /// wrote is silently lost; the next save writes a fresh valid file.
     fn load_from_file(path: &PathBuf) -> Result<UserSettings, SettingsError> {
         let content = fs::read_to_string(path)?;
         
@@ -93,8 +101,21 @@ impl SettingsManager {
             return Ok(UserSettings::default());
         }
         
-        let settings: UserSettings = serde_json::from_str(&content)?;
-        Ok(settings)
+        match serde_json::from_str::<UserSettings>(&content) {
+            Ok(settings) => Ok(settings),
+            Err(e) => {
+                let mut backup = path.clone().into_os_string();
+                backup.push(".corrupt");
+                if let Err(copy_err) = fs::copy(path, &backup) {
+                    eprintln!("Failed to back up corrupt settings file {:?}: {}", path, copy_err);
+                }
+                eprintln!(
+                    "Settings file {:?} is not valid ({}); using defaults (kept a copy as {:?})",
+                    path, e, backup
+                );
+                Ok(UserSettings::default())
+            }
+        }
     }
     
     /// Save settings to file.

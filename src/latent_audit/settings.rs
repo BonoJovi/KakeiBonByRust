@@ -42,7 +42,6 @@ fn assert_recovers_to_defaults(content: &str) {
 /// return Err, which lib.rs setup propagates → app cannot launch.
 /// Expected: fall back to default (empty) settings.
 #[test]
-#[ignore = "latent-audit L28"]
 fn latent_l28_null_settings_file_falls_back_to_defaults() {
     assert_recovers_to_defaults("null");
 }
@@ -51,7 +50,6 @@ fn latent_l28_null_settings_file_falls_back_to_defaults() {
 /// SettingsManager::with_path return Err → app cannot launch.
 /// Expected: fall back to default (empty) settings.
 #[test]
-#[ignore = "latent-audit L28"]
 fn latent_l28_array_settings_file_falls_back_to_defaults() {
     assert_recovers_to_defaults("[]");
 }
@@ -60,7 +58,31 @@ fn latent_l28_array_settings_file_falls_back_to_defaults() {
 /// error) makes SettingsManager::with_path return Err → app cannot launch.
 /// Expected: fall back to default (empty) settings.
 #[test]
-#[ignore = "latent-audit L28"]
 fn latent_l28_truncated_settings_file_falls_back_to_defaults() {
     assert_recovers_to_defaults("{\n  \"language\": \"ja\",\n  \"font_si");
+}
+
+/// L28 — the unreadable file is kept as `<name>.corrupt` (so the user's
+/// content is not silently lost), and a later save writes a valid file.
+#[test]
+fn latent_l28_corrupt_settings_file_is_backed_up_and_replaced_on_save() {
+    let (path, _temp) = make_test_path();
+    fs::create_dir_all(path.parent().unwrap()).unwrap();
+    let corrupt = "{\n  \"language\": \"ja\",\n  \"font_si";
+    fs::write(&path, corrupt).unwrap();
+
+    let mut manager = SettingsManager::with_path(path.clone()).expect("must recover");
+
+    let mut backup = path.clone().into_os_string();
+    backup.push(".corrupt");
+    assert_eq!(
+        fs::read_to_string(&backup).expect("corrupt copy must exist"),
+        corrupt,
+        "the original content must be preserved in the .corrupt copy"
+    );
+
+    manager.set("language", "en").expect("set after recovery");
+    manager.save().expect("save after recovery");
+    let reloaded = SettingsManager::with_path(path).expect("reload");
+    assert_eq!(reloaded.get("language"), Some(&serde_json::json!("en")));
 }
