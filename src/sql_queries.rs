@@ -563,6 +563,14 @@ WHERE USER_ID = ? AND IS_DISABLED = 0
 ORDER BY DISPLAY_ORDER, ACCOUNT_CODE
 "#;
 
+pub const ACCOUNT_LIST_BY_USER_INCLUDING_DISABLED: &str = r#"
+SELECT ACCOUNT_ID, USER_ID, ACCOUNT_CODE, ACCOUNT_NAME, TEMPLATE_CODE,
+       INITIAL_BALANCE, DISPLAY_ORDER, IS_DISABLED, ENTRY_DT, UPDATE_DT
+FROM ACCOUNTS
+WHERE USER_ID = ?
+ORDER BY DISPLAY_ORDER, ACCOUNT_CODE
+"#;
+
 pub const ACCOUNT_GET_BY_CODE: &str = r#"
 SELECT ACCOUNT_ID, USER_ID, ACCOUNT_CODE, ACCOUNT_NAME, TEMPLATE_CODE, 
        INITIAL_BALANCE, DISPLAY_ORDER, IS_DISABLED, ENTRY_DT, UPDATE_DT
@@ -576,36 +584,36 @@ FROM ACCOUNTS
 WHERE USER_ID = ? AND ACCOUNT_CODE = ? AND IS_DISABLED = 0
 "#;
 
-pub const ACCOUNT_INSERT: &str = r#"
-INSERT INTO ACCOUNTS (USER_ID, ACCOUNT_CODE, ACCOUNT_NAME, TEMPLATE_CODE, 
-                      INITIAL_BALANCE, DISPLAY_ORDER, ENTRY_DT)
-VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
-"#;
-
+/// Adds an account, or reuses the row of a disabled account with the same
+/// code (UNIQUE(USER_ID, ACCOUNT_CODE) covers disabled rows too), taking
+/// the new name, template, balance and disabled flag.
+/// Binds: (user_id, code, name, template, initial_balance, display_order,
+/// is_disabled).
 pub const ACCOUNT_UPSERT: &str = r#"
 INSERT INTO ACCOUNTS (USER_ID, ACCOUNT_CODE, ACCOUNT_NAME, TEMPLATE_CODE, 
                       INITIAL_BALANCE, DISPLAY_ORDER, IS_DISABLED, ENTRY_DT)
-VALUES (?, ?, ?, ?, ?, ?, 0, datetime('now'))
+VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
 ON CONFLICT(USER_ID, ACCOUNT_CODE) 
 DO UPDATE SET 
     ACCOUNT_NAME = excluded.ACCOUNT_NAME,
     TEMPLATE_CODE = excluded.TEMPLATE_CODE,
     INITIAL_BALANCE = excluded.INITIAL_BALANCE,
     DISPLAY_ORDER = excluded.DISPLAY_ORDER,
-    IS_DISABLED = 0,
+    IS_DISABLED = excluded.IS_DISABLED,
     UPDATE_DT = datetime('now')
 "#;
 
 pub const ACCOUNT_UPDATE: &str = r#"
 UPDATE ACCOUNTS 
 SET ACCOUNT_NAME = ?, TEMPLATE_CODE = ?, INITIAL_BALANCE = ?, 
-    DISPLAY_ORDER = ?, UPDATE_DT = datetime('now')
+    DISPLAY_ORDER = ?, IS_DISABLED = ?, UPDATE_DT = datetime('now')
 WHERE USER_ID = ? AND ACCOUNT_CODE = ?
 "#;
 
-pub const ACCOUNT_DELETE_LOGICAL: &str = r#"
-UPDATE ACCOUNTS
-SET IS_DISABLED = 1, UPDATE_DT = datetime('now')
+/// Physical delete; only run after ACCOUNT_CHECK_IN_USE finds no reference
+/// (latent-audit M7).
+pub const ACCOUNT_DELETE: &str = r#"
+DELETE FROM ACCOUNTS
 WHERE USER_ID = ? AND ACCOUNT_CODE = ?
 "#;
 
@@ -656,14 +664,8 @@ FROM ACCOUNT_TEMPLATES
 WHERE TEMPLATE_CODE = 'NONE'
 "#;
 
-pub const ACCOUNT_LIST_ALL: &str = r#"
-SELECT ACCOUNT_ID, USER_ID, ACCOUNT_CODE, ACCOUNT_NAME, TEMPLATE_CODE,
-       INITIAL_BALANCE, DISPLAY_ORDER, IS_DISABLED, ENTRY_DT, UPDATE_DT
-FROM ACCOUNTS
-ORDER BY USER_ID, DISPLAY_ORDER
-"#;
-
-/// Running balance of every active account for `user_id`, counted up to and
+/// Running balance of every active account for `user_id` (plus disabled
+/// ones whose balance is not zero), counted up to and
 /// including `?` (as_of_date, `YYYY-MM-DD`). Applies actualised
 /// transactions only (`IS_SCHEDULED = 0`):
 ///   + INCOME  with TO_ACCOUNT   = a.ACCOUNT_CODE
@@ -704,7 +706,8 @@ SELECT
                         AND th.FROM_ACCOUNT_CODE = a.ACCOUNT_CODE
                    THEN -th.TOTAL_AMOUNT ELSE 0 END
         ), 0) AS BALANCE,
-    a.DISPLAY_ORDER
+    a.DISPLAY_ORDER,
+    a.IS_DISABLED
 FROM ACCOUNTS a
 LEFT JOIN TRANSACTIONS_HEADER th
     ON th.USER_ID = a.USER_ID
@@ -712,8 +715,11 @@ LEFT JOIN TRANSACTIONS_HEADER th
    AND DATE(th.TRANSACTION_DATE) <= DATE(?)
    AND ( th.FROM_ACCOUNT_CODE = a.ACCOUNT_CODE
       OR th.TO_ACCOUNT_CODE   = a.ACCOUNT_CODE )
-WHERE a.USER_ID = ? AND a.IS_DISABLED = 0
-GROUP BY a.ACCOUNT_CODE, a.ACCOUNT_NAME, a.INITIAL_BALANCE, a.DISPLAY_ORDER
+WHERE a.USER_ID = ?
+GROUP BY a.ACCOUNT_CODE, a.ACCOUNT_NAME, a.INITIAL_BALANCE, a.DISPLAY_ORDER, a.IS_DISABLED
+-- A disabled account that still holds money stays listed, so its balance
+-- does not silently drop out of the dashboard (latent-audit M7).
+HAVING a.IS_DISABLED = 0 OR BALANCE <> 0
 ORDER BY a.DISPLAY_ORDER
 "#;
 

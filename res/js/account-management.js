@@ -26,6 +26,10 @@ let templates = [];
 let accounts = [];
 let editingAccountCode = null;
 let accountModal = null;
+let showDisabledItems = false;
+// Bumped per loadAccounts() call so a slower, older response (e.g. from a
+// quick double toggle of "show disabled") cannot overwrite a newer list.
+let loadAccountsToken = 0;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
@@ -105,6 +109,7 @@ function initAccountModal() {
                 modalTitle.textContent = i18n.t('account_mgmt.modal_title_add');
                 accountCodeInput.removeAttribute('readonly');
                 editingAccountCode = null;
+                document.getElementById('account-is-disabled').checked = false;
 
                 // Focus on account code input after modal opens
                 setTimeout(() => accountCodeInput.focus(), 0);
@@ -118,6 +123,7 @@ function initAccountModal() {
                 accountNameInput.value = data.account_name;
                 document.getElementById('template-code').value = data.template_code;
                 document.getElementById('initial-balance').value = data.initial_balance;
+                document.getElementById('account-is-disabled').checked = data.is_disabled === 1;
 
                 editingAccountCode = data.account_code;
             }
@@ -139,6 +145,13 @@ function setupEventListeners() {
     // Add account button
     document.getElementById('add-account-btn').addEventListener('click', () => {
         openModal('add');
+    });
+
+    // Toggle disabled items button
+    document.getElementById('toggle-disabled-btn').addEventListener('click', () => {
+        showDisabledItems = !showDisabledItems;
+        updateToggleButton();
+        loadAccounts();
     });
 
     // Account code auto-uppercase
@@ -188,8 +201,20 @@ function populateTemplateDropdown() {
     });
 }
 
+function updateToggleButton() {
+    const btn = document.getElementById('toggle-disabled-btn');
+    if (showDisabledItems) {
+        btn.setAttribute('data-i18n', 'common.hide_disabled');
+        btn.textContent = i18n.t('common.hide_disabled');
+    } else {
+        btn.setAttribute('data-i18n', 'common.show_disabled');
+        btn.textContent = i18n.t('common.show_disabled');
+    }
+}
+
 // Load accounts
 async function loadAccounts() {
+    const token = ++loadAccountsToken;
     const loading = document.getElementById('loading');
     const tbody = document.getElementById('accounts-tbody');
 
@@ -197,7 +222,10 @@ async function loadAccounts() {
     tbody.innerHTML = '';
 
     try {
-        accounts = await invoke('get_accounts', {});
+        const loaded = await invoke('get_accounts', { includeDisabled: showDisabledItems });
+        if (token !== loadAccountsToken) return;
+        accounts = loaded;
+        tbody.innerHTML = '';
         
         // Filter out NONE account (internal use only, not user-editable)
         const displayAccounts = accounts.filter(a => a.account_code !== 'NONE');
@@ -211,10 +239,13 @@ async function loadAccounts() {
             });
         }
     } catch (error) {
+        if (token !== loadAccountsToken) return;
         console.error('Failed to load accounts:', error);
         tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #dc3545;">Error loading accounts: ${escapeHtml(formatApiError(error))}</td></tr>`;
     } finally {
-        loading.style.display = 'none';
+        if (token === loadAccountsToken) {
+            loading.style.display = 'none';
+        }
     }
 }
 
@@ -233,9 +264,19 @@ function createAccountRow(account) {
         ? `<button class="btn-small btn-delete" disabled style="opacity: 0.5; cursor: not-allowed;" data-i18n="common.delete">${i18n.t('common.delete')}</button>`
         : `<button class="btn-small btn-delete" data-code="${escapeHtml(account.account_code)}" data-i18n="common.delete">${i18n.t('common.delete')}</button>`;
 
+    // Disabled accounts: same grey row and label as the other master lists
+    const isDisabled = account.is_disabled === 1;
+    const disabledBadge = isDisabled
+        ? `<span style="color: #ffc107; font-weight: bold; margin-left: 8px;">[${escapeHtml(i18n.t('common.disabled_label'))}]</span>`
+        : '';
+    if (isDisabled) {
+        row.style.backgroundColor = '#6c757d';
+        row.style.color = '#ffffff';
+    }
+
     row.innerHTML = `
         <td>${escapeHtml(account.account_code)}</td>
-        <td>${escapeHtml(account.account_name)}</td>
+        <td>${escapeHtml(account.account_name)}${disabledBadge}</td>
         <td>${escapeHtml(templateName)}</td>
         <td style="text-align: right;">${account.initial_balance.toLocaleString()}</td>
         <td class="actions">
@@ -275,6 +316,7 @@ async function saveAccount() {
     const accountName = accountNameInput.value.trim();
     const templateCode = document.getElementById('template-code').value;
     const initialBalance = parseInt(document.getElementById('initial-balance').value);
+    const isDisabled = document.getElementById('account-is-disabled').checked ? 1 : 0;
 
     clearValidationError(accountNameInput);
 
@@ -326,7 +368,8 @@ async function saveAccount() {
                 accountName: accountName,
                 templateCode: templateCode,
                 initialBalance: initialBalance,
-                displayOrder: accountForUpdate.display_order
+                displayOrder: accountForUpdate.display_order,
+                isDisabled
             });
             showToast(i18n.t('account_mgmt.update_success'), { variant: 'success' });
         } else {
@@ -334,7 +377,8 @@ async function saveAccount() {
                 accountCode: accountCode,
                 accountName: accountName,
                 templateCode: templateCode,
-                initialBalance: initialBalance
+                initialBalance: initialBalance,
+                isDisabled: isDisabled === 1 ? isDisabled : null
             });
             showToast(i18n.t('account_mgmt.add_success'), { variant: 'success' });
         }

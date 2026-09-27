@@ -107,7 +107,7 @@ async function loadCategoryTree() {
 }
 
 async function loadAccounts() {
-    const accounts = await invoke('get_accounts', {});
+    const accounts = await invoke('get_accounts', { includeDisabled: false });
     const fromSel = document.getElementById('from-account');
     const toSel = document.getElementById('to-account');
     fromSel.innerHTML = '';

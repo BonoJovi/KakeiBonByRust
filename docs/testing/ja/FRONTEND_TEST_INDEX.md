@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-09-27 JST  
-**総テスト数**: 820件 (jest suite 44 ファイル、`npm test` 実測)
+**総テスト数**: 826件 (jest suite 46 ファイル、`npm test` 実測)
 
 ---
 
@@ -48,6 +48,8 @@
   - [pages/product-management-link-draft.test.js](#pagesproduct-management-link-drafttestjs)
   - [pages/shop-management-disabled.test.js](#pagesshop-management-disabledtestjs)
   - [pages/transaction-management-disabled-shop.test.js](#pagestransaction-management-disabled-shoptestjs)
+  - [pages/account-management-disabled.test.js](#pagesaccount-management-disabledtestjs)
+  - [pages/transaction-management-disabled-account.test.js](#pagestransaction-management-disabled-accounttestjs)
   - [pages/aggregation-monthly-page.test.js](#pagesaggregation-monthly-pagetestjs)
   - [pages/aggregation-yearly-total-count.test.js](#pagesaggregation-yearly-total-counttestjs)
   - [pages/index-setup-page.test.js](#pagesindex-setup-pagetestjs)
@@ -827,6 +829,38 @@
 
 ---
 
+### pages/account-management-disabled.test.js
+
+口座マスタ画面の無効化の回帰テスト (潜在監査 M7)。使用中の口座は削除できず「代わりに無効化してください」と案内していたが、無効化する手段が無かった。
+
+**テスト数**: 4件
+
+| テスト | 説明 |
+|--------|------|
+| `[M7] should list disabled accounts, marked, only while "show disabled" is on` | 「非表示も表示」で無効な口座を非表示ラベル付きで一覧に出す (NONE は出さない) |
+| `[M7] should not let a late "show disabled" response overwrite a newer list` | 切替の連打で遅れて届いた古い応答が新しい一覧を上書きしない |
+| `[M7] should send the disabled checkbox when adding an account` | 追加時に「非表示」チェックを `isDisabled` として送る |
+| `[M7] should show and send the disabled state when editing an account` | 編集時にチェック状態を表示し、変更を送る (再有効化) |
+
+**ファイル**: res/tests/pages/account-management-disabled.test.js
+
+---
+
+### pages/transaction-management-disabled-account.test.js
+
+入出金画面で無効な口座を使った取引の回帰テスト (潜在監査 M7)。選択肢に無効な口座が無く、保存で口座が失われていた。
+
+**テスト数**: 2件
+
+| テスト | 説明 |
+|--------|------|
+| `[M7] should keep a disabled account selected when editing a transaction that names it` | 編集時は無効な口座を非表示ラベル付きで選択したまま保存する |
+| `[M7] should not offer a disabled account for a new transaction` | 新規取引では無効な口座を選択肢に出さない |
+
+**ファイル**: res/tests/pages/transaction-management-disabled-account.test.js
+
+---
+
 ### pages/aggregation-monthly-page.test.js
 
 実際の月次集計画面の回帰テスト (潜在監査 M11 / M12)。
@@ -1099,7 +1133,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **397件** |
+| **機能別テスト** | **403件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 29 |
@@ -1126,6 +1160,8 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | pages/product-management-link-draft.test.js | 2 |
 | pages/shop-management-disabled.test.js | 4 |
 | pages/transaction-management-disabled-shop.test.js | 2 |
+| pages/account-management-disabled.test.js | 4 |
+| pages/transaction-management-disabled-account.test.js | 2 |
 | pages/aggregation-monthly-page.test.js | 5 |
 | pages/aggregation-yearly-total-count.test.js | 1 |
 | pages/index-setup-page.test.js | 3 |
@@ -1139,7 +1175,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **820件** |
+| **総計 (jest)** | **826件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 

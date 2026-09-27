@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-09-06 JST  
-**総テスト数**: 442件 (差分反映後。`cargo test --lib` の権威的総数は 682 で、既存の未反映分は別 PR でバックフィル予定)
+**総テスト数**: 450件 (差分反映後。`cargo test --lib` の権威的総数は 688 で、既存の未反映分は別 PR でバックフィル予定)
 
 ---
 
@@ -371,8 +371,16 @@ AES-256-GCM暗号化・復号化のテスト。
 | `test_delete_account_ignores_other_users_references` | 他ユーザーの同一 ACCOUNT_CODE 参照は削除をブロックしない（コードはユーザースコープ、マスタ削除ロック） | src/services/account.rs | 881 |
 | `test_delete_account_normalizes_input_before_in_use_check` | `"  cash  "` 入力は正規化されてから CHECK_IN_USE に流れ、ガードが発火する（マスタ削除ロック） | src/services/account.rs | 899 |
 | `test_get_account_balances_as_of_self_transfer_nets_to_zero` | FROM == TO の残存 TRANSFER 行はダッシュボード残高で相殺され、残高が水増しされないこと (Fable-5 #20) | src/services/account.rs | 991 |
+| `test_get_accounts_lists_only_own_accounts` | 管理者を含め、各ユーザーは自分の口座だけを一覧する (潜在監査 M4) | src/services/account.rs | 860 |
+| `test_get_accounts_include_disabled` | 無効な口座は `include_disabled` 指定時だけ一覧に出る (潜在監査 M7) | src/services/account.rs | 887 |
+| `test_delete_disabled_account_removes_row` | 未使用の無効口座も削除でき、行が消える (潜在監査 M7) | src/services/account.rs | 519 |
+| `test_disable_account_allowed_while_referenced` | 取引が使用中の口座は削除できないが無効化・再有効化はできる (潜在監査 M7) | src/services/account.rs | 532 |
+| `test_account_is_disabled_must_be_zero_or_one` | 無効フラグは追加・更新とも 0 / 1 のみ受け付ける (潜在監査 M7) | src/services/account.rs | 553 |
+| `test_none_account_cannot_be_changed` | NONE (未指定) 口座は追加・編集・無効化・削除できない (潜在監査 M7) | src/services/account.rs | 586 |
+| `test_get_account_balances_as_of_keeps_disabled_accounts_with_balance` | 残高が残っている無効口座はダッシュボードに `is_disabled` 付きで残る (潜在監査 M7) | src/services/account.rs | 1235 |
+| `latent_m4_admin_account_list_excludes_other_users_and_deleted` | 管理者に返す口座一覧は管理者自身の有効な口座だけ (潜在監査 M4) | src/services/latent_audit/account.rs | 40 |
 
-**合計**: 11件
+**合計**: 19件
 
 ### services/category.rs
 
@@ -700,7 +708,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **416件** |
+| **インラインテスト** | **424件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -712,7 +720,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/auth.rs | 22 |
 | services/user_management.rs | 23 |
 | services/encryption.rs | 11 |
-| services/account.rs | 11 |
+| services/account.rs | 19 |
 | services/category.rs | 38 |
 | services/manufacturer.rs | 17 |
 | services/product.rs | 20 |
@@ -724,7 +732,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/i18n.rs | 8 |
 | services/recurring.rs | 14 |
 | lib.rs | 6 |
-| **総計** | **442件** |
+| **総計** | **450件** |
 
 ---
 

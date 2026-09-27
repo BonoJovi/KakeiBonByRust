@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-08-26 JST  
-**Total Tests**: 442 (delta-tracked; the full authoritative count from `cargo test --lib` is 682, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 450 (delta-tracked; the full authoritative count from `cargo test --lib` is 688, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -371,8 +371,16 @@ Account management service tests. Assertions on empty-name and duplicate-code pa
 | `test_delete_account_ignores_other_users_references` | Cross-user references to the same ACCOUNT_CODE do NOT block delete — codes are user-scoped (master delete-lock) | src/services/account.rs | 881 |
 | `test_delete_account_normalizes_input_before_in_use_check` | Delete input (`"  cash  "`) is uppercased/trimmed before the CHECK_IN_USE query so the guard fires (master delete-lock) | src/services/account.rs | 899 |
 | `test_get_account_balances_as_of_self_transfer_nets_to_zero` | Stale TRANSFER row with FROM == TO nets to zero on the dashboard instead of inflating the balance (Fable-5 #20) | src/services/account.rs | 991 |
+| `test_get_accounts_lists_only_own_accounts` | Every user, the admin included, lists only their own accounts (latent-audit M4) | src/services/account.rs | 860 |
+| `test_get_accounts_include_disabled` | Disabled accounts are listed only with `include_disabled` (latent-audit M7) | src/services/account.rs | 887 |
+| `test_delete_disabled_account_removes_row` | A disabled account that nothing uses can still be deleted, removing the row (latent-audit M7) | src/services/account.rs | 519 |
+| `test_disable_account_allowed_while_referenced` | An account used by a transaction can be disabled (not deleted) and enabled again (latent-audit M7) | src/services/account.rs | 532 |
+| `test_account_is_disabled_must_be_zero_or_one` | The disabled flag only accepts 0 or 1, on add and update (latent-audit M7) | src/services/account.rs | 553 |
+| `test_none_account_cannot_be_changed` | The NONE (unspecified) account cannot be added, edited, disabled or deleted (latent-audit M7) | src/services/account.rs | 586 |
+| `test_get_account_balances_as_of_keeps_disabled_accounts_with_balance` | A disabled account that still holds money stays on the dashboard, marked `is_disabled` (latent-audit M7) | src/services/account.rs | 1235 |
+| `latent_m4_admin_account_list_excludes_other_users_and_deleted` | The account list served to the admin holds only the admin's own active accounts (latent-audit M4) | src/services/latent_audit/account.rs | 40 |
 
-**Total**: 11 tests
+**Total**: 19 tests
 
 ### services/category.rs
 
@@ -700,7 +708,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **416** |
+| **Inline Tests** | **424** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -712,7 +720,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/auth.rs | 22 |
 | services/user_management.rs | 23 |
 | services/encryption.rs | 11 |
-| services/account.rs | 11 |
+| services/account.rs | 19 |
 | services/category.rs | 38 |
 | services/manufacturer.rs | 17 |
 | services/product.rs | 20 |
@@ -724,7 +732,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/i18n.rs | 8 |
 | services/recurring.rs | 14 |
 | lib.rs | 6 |
-| **Total** | **442** |
+| **Total** | **450** |
 
 ---
 
