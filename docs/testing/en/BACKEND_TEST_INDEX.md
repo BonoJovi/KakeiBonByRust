@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-08-26 JST  
-**Total Tests**: 439 (delta-tracked; the full authoritative count from `cargo test --lib` is 679, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 441 (delta-tracked; the full authoritative count from `cargo test --lib` is 681, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -484,7 +484,9 @@ Shop management service tests. Empty/duplicate assertion tests renamed to `_retu
 |---------------|-------------|------|------|
 | `test_add_shop` | Test shop addition | src/services/shop.rs | 232 |
 | `test_update_shop` | Test shop update | src/services/shop.rs | 249 |
-| `test_delete_shop` | Test shop deletion | src/services/shop.rs | 278 |
+| `test_delete_shop` | An unused shop is removed, not just hidden (latent-audit M7) | src/services/shop.rs | 294 |
+| `test_delete_disabled_shop_removes_row` | A disabled shop that nothing uses can still be deleted, removing the row (latent-audit M7) | src/services/shop.rs | 318 |
+| `test_disable_shop_allowed_while_referenced` | A shop named by a transaction can be disabled (not deleted) and enabled again (latent-audit M7) | src/services/shop.rs | 339 |
 | `test_empty_shop_name_returns_validation_code` | Empty shop name returns `ApiError { code: "validation" }` (Fable-5 #23) | src/services/shop.rs | 301 |
 | `test_add_duplicate_shop_returns_duplicate_name_code` | Duplicate returns `ApiError { code: "duplicate_name", entity: "shop" }` (Fable-5 #23) | src/services/shop.rs | 315 |
 | `test_update_to_duplicate_shop_name_returns_duplicate_name_code` | Update to duplicate returns `ApiError { code: "duplicate_name" }` (Fable-5 #23) | src/services/shop.rs | 337 |
@@ -495,11 +497,11 @@ Shop management service tests. Empty/duplicate assertion tests renamed to `_retu
 | `test_delete_shop_rejected_when_referenced_by_recurring_rule` | Delete rejected with `ApiError { code: "in_use" }` when any RECURRING_RULES row names the shop (master delete-lock) | src/services/shop.rs | 372 |
 | `test_delete_shop_ignores_other_users_references` | Cross-user references to the same SHOP_ID do NOT block delete — scoping is by USER_ID (master delete-lock) | src/services/shop.rs | 394 |
 | `latent_h6_readd_deleted_shop_name_is_not_database_error` | Re-adding a deleted shop name never surfaces a generic database error (latent-audit H6) | src/services/latent_audit/shop.rs | 24 |
-| `latent_h6_readd_deleted_shop_name_revives_original_row` | Re-adding a deleted shop name revives the original row (same SHOP_ID, new memo) (latent-audit H6) | src/services/latent_audit/shop.rs | 64 |
-| `latent_h6_rename_onto_deleted_shop_name_is_duplicate_name` | Renaming onto a deleted shop name is rejected with duplicate_name (latent-audit H6) | src/services/latent_audit/shop.rs | 95 |
+| `latent_h6_readd_disabled_shop_name_revives_original_row` | Re-adding a disabled shop name revives the original row (same SHOP_ID, new memo) (latent-audit H6) | src/services/latent_audit/shop.rs | 89 |
+| `latent_h6_rename_onto_disabled_shop_name_is_duplicate_name` | Renaming onto a disabled shop name is rejected with duplicate_name (latent-audit H6) | src/services/latent_audit/shop.rs | 120 |
 | `latent_h6_insert_unique_violation_maps_to_duplicate_name` | An add_shop INSERT that races past the duplicate pre-check maps the UNIQUE violation to duplicate_name (latent-audit H6) | src/services/latent_audit/shop.rs | 124 |
 
-**Total**: 16 tests
+**Total**: 18 tests
 
 ### services/transaction.rs
 
@@ -697,7 +699,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **413** |
+| **Inline Tests** | **415** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -713,7 +715,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/category.rs | 38 |
 | services/manufacturer.rs | 17 |
 | services/product.rs | 20 |
-| services/shop.rs | 16 |
+| services/shop.rs | 18 |
 | services/transaction.rs | 61 |
 | services/aggregation.rs | 23 |
 | services/period.rs | 3 |
@@ -721,7 +723,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/i18n.rs | 8 |
 | services/recurring.rs | 14 |
 | lib.rs | 6 |
-| **Total** | **439** |
+| **Total** | **441** |
 
 ---
 

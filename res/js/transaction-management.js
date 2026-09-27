@@ -623,6 +623,9 @@ async function deleteTransaction(transactionId) {
 let editingTransactionId = null;
 let categories = [];
 let accounts = [];
+// Disabled shops by id: not offered for new entries, but a transaction that
+// already names one must still show it when edited (latent-audit M7).
+let disabledShopsById = new Map();
 let transactionModal = null;
 
 function initializeTransactionModal() {
@@ -843,7 +846,7 @@ async function loadAccountsForModal() {
 
 async function loadShopsForModal() {
     try {
-        const shops = await invoke('get_shops', {});
+        const shops = await invoke('get_shops', { includeDisabled: true });
 
         // Populate shop dropdown
         const shopSelect = document.getElementById('shop');
@@ -858,8 +861,13 @@ async function loadShopsForModal() {
         noneOption.textContent = unspecifiedText;
         shopSelect.appendChild(noneOption);
 
-        // Add actual shops
+        // Add actual shops; disabled ones are only added on demand by selectShop()
+        disabledShopsById = new Map();
         shops.forEach(shop => {
+            if (shop.is_disabled === 1) {
+                disabledShopsById.set(String(shop.shop_id), shop);
+                return;
+            }
             const option = document.createElement('option');
             option.value = shop.shop_id;
             option.textContent = shop.shop_name;
@@ -870,6 +878,23 @@ async function loadShopsForModal() {
         console.error('Failed to load shops:', error);
         showToast(i18n.t('error.load_shops_failed') + ': ' + formatApiError(error), { variant: 'error' });
     }
+}
+
+// Select a shop in the transaction form. A disabled shop has no option until
+// a transaction that names it is shown; without one, the select would fall
+// back to "Unspecified" and saving would silently drop the shop.
+function selectShop(shopId) {
+    const shopSelect = document.getElementById('shop');
+    const value = shopId ? String(shopId) : '';
+    const hasOption = Array.from(shopSelect.options).some(o => o.value === value);
+    const disabledShop = disabledShopsById.get(value);
+    if (value && !hasOption && disabledShop) {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = `${disabledShop.shop_name} ${i18n.t('common.disabled_label')}`;
+        shopSelect.appendChild(option);
+    }
+    shopSelect.value = value;
 }
 
 function handleCategory1Change(event) {
@@ -1132,7 +1157,7 @@ async function loadTransactionData(transactionId) {
         
         // Populate form fields
         document.getElementById('transaction-date').value = dateTimeLocal;
-        document.getElementById('shop').value = transaction.shop_id || '';
+        selectShop(transaction.shop_id);
         document.getElementById('category1').value = transaction.category1_code;
         document.getElementById('from-account').value = transaction.from_account_code || 'NONE';
         document.getElementById('to-account').value = transaction.to_account_code || 'NONE';
@@ -1223,7 +1248,7 @@ async function restoreModalState() {
                 document.getElementById('transaction-date').value = modalData.transaction_date;
             }
             if (modalData.shop_id && modalData.shop_id !== 'null') {
-                document.getElementById('shop').value = modalData.shop_id;
+                selectShop(modalData.shop_id);
             }
             if (modalData.total_amount) {
                 document.getElementById('total-amount').value = modalData.total_amount;
@@ -1263,7 +1288,7 @@ async function restoreModalState() {
                 document.getElementById('account').value = modalData.account_id;
             }
             if (modalData.shop_id) {
-                document.getElementById('shop').value = modalData.shop_id;
+                selectShop(modalData.shop_id);
             }
             if (modalData.from_account) {
                 document.getElementById('from-account').value = modalData.from_account;

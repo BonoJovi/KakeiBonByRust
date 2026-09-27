@@ -144,7 +144,7 @@ async function loadAccounts() {
 }
 
 async function loadShops() {
-    const shops = await invoke('get_shops', {});
+    const shops = await invoke('get_shops', { includeDisabled: false });
     const shopSel = document.getElementById('shop');
     shopSel.innerHTML = '';
     const noneOpt = document.createElement('option');

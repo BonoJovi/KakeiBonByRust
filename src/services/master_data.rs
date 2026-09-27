@@ -42,9 +42,9 @@ use crate::api_error::ApiError;
 /// - `check_duplicate_for_update_sql` — `SELECT COUNT(*)` bound with
 ///   `(user_id, name, exclude_id)`.
 /// - `delete_sql` — bound with `(user_id, id)`. Must affect at most one
-///   row. Shops still delete logically (`IS_DISABLED = 1`); manufacturers
-///   and products delete physically, since a delete is only allowed once
-///   nothing references the row (latent-audit M7).
+///   row. Shops, manufacturers and products delete physically, since a
+///   delete is only allowed once nothing references the row; hiding a row
+///   that is still in use is what `IS_DISABLED` is for (latent-audit M7).
 pub struct MasterCrudSpec {
     pub entity_label: &'static str,
     pub name_label: &'static str,

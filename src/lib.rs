@@ -1566,17 +1566,19 @@ async fn delete_account(
 
 #[tauri::command]
 async fn get_shops(
+    include_disabled: bool,
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::shop::Shop>, api_error::ApiError> {
     let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
     let db = &state.db;
-    services::shop::get_shops(db.pool(), user_id).await
+    services::shop::get_shops(db.pool(), user_id, include_disabled).await
 }
 
 #[tauri::command]
 async fn add_shop(
     shop_name: String,
     memo: Option<String>,
+    is_disabled: Option<i64>,
     state: tauri::State<'_, AppState>
 ) -> Result<String, api_error::ApiError> {
     let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
@@ -1585,6 +1587,7 @@ async fn add_shop(
     let request = services::shop::AddShopRequest {
         shop_name,
         memo,
+        is_disabled,
     };
 
     services::shop::add_shop(db.pool(), user_id, request).await
@@ -1596,6 +1599,7 @@ async fn update_shop(
     shop_name: String,
     memo: Option<String>,
     display_order: i64,
+    is_disabled: i64,
     state: tauri::State<'_, AppState>
 ) -> Result<String, api_error::ApiError> {
     let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
@@ -1605,6 +1609,7 @@ async fn update_shop(
         shop_name,
         memo,
         display_order,
+        is_disabled,
     };
 
     services::shop::update_shop(db.pool(), user_id, shop_id, request).await

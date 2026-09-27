@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-09-27 JST  
-**総テスト数**: 814件 (jest suite 42 ファイル、`npm test` 実測)
+**総テスト数**: 819件 (jest suite 44 ファイル、`npm test` 実測)
 
 ---
 
@@ -46,6 +46,8 @@
   - [single-flight.test.js](#single-flighttestjs)
   - [pages/product-management-page.test.js](#pagesproduct-management-pagetestjs)
   - [pages/product-management-link-draft.test.js](#pagesproduct-management-link-drafttestjs)
+  - [pages/shop-management-disabled.test.js](#pagesshop-management-disabledtestjs)
+  - [pages/transaction-management-disabled-shop.test.js](#pagestransaction-management-disabled-shoptestjs)
   - [pages/aggregation-monthly-page.test.js](#pagesaggregation-monthly-pagetestjs)
   - [pages/aggregation-yearly-total-count.test.js](#pagesaggregation-yearly-total-counttestjs)
   - [pages/index-setup-page.test.js](#pagesindex-setup-pagetestjs)
@@ -793,6 +795,37 @@
 
 ---
 
+### pages/shop-management-disabled.test.js
+
+店舗マスタ画面の無効化の回帰テスト (潜在監査 M7)。使用中の店舗は削除できず「代わりに無効化してください」と案内していたが、無効化する手段が無かった。
+
+**テスト数**: 3件
+
+| テスト | 説明 |
+|--------|------|
+| `[M7] should list disabled shops, marked, only while "show disabled" is on` | 「非表示も表示」で無効な店舗を非表示ラベル付きで一覧に出す |
+| `[M7] should send the disabled checkbox when adding a shop` | 追加時に「非表示」チェックを `isDisabled` として送る |
+| `[M7] should show and send the disabled state when editing a shop` | 編集時にチェック状態を表示し、変更を送る (再有効化) |
+
+**ファイル**: res/tests/pages/shop-management-disabled.test.js
+
+---
+
+### pages/transaction-management-disabled-shop.test.js
+
+入出金画面で無効な店舗を使った取引の回帰テスト (潜在監査 M7)。選択肢に無効な店舗が無く「未指定」に落ち、保存で店舗が消えていた。
+
+**テスト数**: 2件
+
+| テスト | 説明 |
+|--------|------|
+| `[M7] should keep a disabled shop selected when editing a transaction that names it` | 編集時は無効な店舗を非表示ラベル付きで選択したまま保存する |
+| `[M7] should not offer a disabled shop for a new transaction` | 新規取引では無効な店舗を選択肢に出さない |
+
+**ファイル**: res/tests/pages/transaction-management-disabled-shop.test.js
+
+---
+
 ### pages/aggregation-monthly-page.test.js
 
 実際の月次集計画面の回帰テスト (潜在監査 M11 / M12)。
@@ -1065,7 +1098,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **391件** |
+| **機能別テスト** | **396件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 29 |
@@ -1090,6 +1123,8 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | single-flight.test.js | 4 |
 | pages/product-management-page.test.js | 1 |
 | pages/product-management-link-draft.test.js | 2 |
+| pages/shop-management-disabled.test.js | 3 |
+| pages/transaction-management-disabled-shop.test.js | 2 |
 | pages/aggregation-monthly-page.test.js | 5 |
 | pages/aggregation-yearly-total-count.test.js | 1 |
 | pages/index-setup-page.test.js | 3 |
@@ -1103,7 +1138,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **814件** |
+| **総計 (jest)** | **819件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 
