@@ -888,14 +888,19 @@ async function loadShopsForModal() {
 }
 
 // Select an account in the from / to select. Like selectShop(), a disabled
-// account gets an option only when a transaction that names it is shown, so
-// editing that transaction keeps the account instead of dropping it.
-function selectAccount(selectId, accountCode) {
+// account gets an option only when an existing transaction that names it is
+// shown, so editing that transaction keeps the account instead of dropping
+// it; a new transaction (allowDisabled: false) falls back to "Unspecified".
+function selectAccount(selectId, accountCode, { allowDisabled = true } = {}) {
     const select = document.getElementById(selectId);
     const value = accountCode || 'NONE';
     const hasOption = Array.from(select.options).some(o => o.value === value);
-    const disabledAccount = disabledAccountsByCode.get(value);
-    if (!hasOption && disabledAccount) {
+    if (!hasOption) {
+        const disabledAccount = allowDisabled ? disabledAccountsByCode.get(value) : undefined;
+        if (!disabledAccount) {
+            select.value = 'NONE';
+            return;
+        }
         const option = document.createElement('option');
         option.value = value;
         option.textContent = `${disabledAccount.account_name} ${i18n.t('common.disabled_label')}`;
@@ -1321,10 +1326,10 @@ async function restoreModalState() {
                 selectShop(modalData.shop_id, { allowDisabled: false });
             }
             if (modalData.from_account) {
-                selectAccount('from-account', modalData.from_account);
+                selectAccount('from-account', modalData.from_account, { allowDisabled: false });
             }
             if (modalData.to_account) {
-                selectAccount('to-account', modalData.to_account);
+                selectAccount('to-account', modalData.to_account, { allowDisabled: false });
             }
             if (modalData.total_amount) {
                 document.getElementById('total-amount').value = modalData.total_amount;
