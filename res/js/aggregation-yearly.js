@@ -142,7 +142,7 @@ async function executeAggregation() {
         
         const tbody = document.getElementById('results-list');
         const tfoot = document.getElementById('results-footer');
-        AggCommon.renderResults(results, tbody, tfoot);
+        AggCommon.renderResults(results, tbody, tfoot, groupBy);
 
         const resultCount = document.getElementById('result-count');
         resultCount.textContent = `(${results.length} ${i18n.t('aggregation.items') || 'items'})`;

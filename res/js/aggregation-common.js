@@ -11,7 +11,29 @@ import { formatLocalDate } from './format-local-date.js';
  * @param {HTMLElement} tbody - Table body element
  * @param {HTMLElement} tfoot - Table footer element
  */
-export function renderResults(results, tbody, tfoot) {
+/**
+ * Group-by axes where one transaction can appear in more than one result
+ * row: a TRANSFER is in both its FROM and TO account rows, and a transaction
+ * whose details span several categories / products is in each of those rows.
+ * On these axes the rows' counts cannot be summed into a transaction count
+ * (latent-audit M11), so the total row shows no count or average.
+ */
+const MULTI_ROW_GROUP_BYS = new Set(['account', 'category2', 'category3', 'product']);
+
+/**
+ * Whether per-row `count` values can be summed into the total row's
+ * transaction count for this group-by axis.
+ * @param {string} [groupBy]
+ * @returns {boolean}
+ */
+export function isCountAdditive(groupBy) {
+    return !MULTI_ROW_GROUP_BYS.has(groupBy);
+}
+
+/** Placeholder for total-row cells that have no meaningful value. */
+export const NOT_APPLICABLE = '—';
+
+export function renderResults(results, tbody, tfoot, groupBy) {
     // Clear existing rows
     tbody.innerHTML = '';
     tfoot.innerHTML = '';
@@ -79,8 +101,16 @@ export function renderResults(results, tbody, tfoot) {
         totalCount += result.count;
     });
     
-    // Render total row
+    // Render total row. On axes where a transaction can sit in several rows
+    // the summed count would over-count it, so count / average are omitted.
     const avgAmount = totalCount > 0 ? Math.round(totalAmount / totalCount) : 0;
+    const additive = isCountAdditive(groupBy);
+    const countCellHtml = additive ? `${totalCount}` : NOT_APPLICABLE;
+    const avgCellHtml = additive
+        ? `<td class="amount ${avgAmount >= 0 ? 'amount-positive' : 'amount-negative'}">
+            ${avgAmount >= 0 ? '+' : ''}${formatAmount(avgAmount)}
+        </td>`
+        : `<td class="amount">${NOT_APPLICABLE}</td>`;
     
     const totalRow = document.createElement('tr');
     totalRow.innerHTML = `
@@ -88,10 +118,8 @@ export function renderResults(results, tbody, tfoot) {
         <td class="amount ${totalAmount >= 0 ? 'amount-positive' : 'amount-negative'}">
             ${totalAmount >= 0 ? '+' : ''}${formatAmount(totalAmount)}
         </td>
-        <td>${totalCount}</td>
-        <td class="amount ${avgAmount >= 0 ? 'amount-positive' : 'amount-negative'}">
-            ${avgAmount >= 0 ? '+' : ''}${formatAmount(avgAmount)}
-        </td>
+        <td>${countCellHtml}</td>
+        ${avgCellHtml}
     `;
     tfoot.appendChild(totalRow);
     

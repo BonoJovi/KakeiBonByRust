@@ -1,5 +1,6 @@
 /**
- * Latent audit 2026-09 — shared aggregation renderer (res/js/aggregation-common.js renderResults)
+ * Shared aggregation renderer (res/js/aggregation-common.js renderResults) —
+ * regression test promoted from the 2026-09 latent audit.
  *
  * IDs covered: M11 (aggregation-common half, exercised via the yearly screen)
  *
@@ -7,18 +8,16 @@
  *      axis a TRANSFER is counted in both its FROM and TO rows, so one
  *      transaction shows as 2 in the total row (daily / weekly / yearly /
  *      period screens all share this renderer).
- * Expected (chosen assertion): the total-row count is the distinct
- *      transaction count (1) or is left blank / "-". The rows alone do not
- *      carry enough information to compute it, so a real fix likely needs a
- *      backend-provided total or must suppress the cell for this axis.
- *      仕様確認待ち (see aggregation-monthly-page.test.js for details).
+ * Fixed by omitting the total row's count and average ("—") on axes where
+ *      one transaction can sit in several rows (account, category2/3,
+ *      product). Pinned: the count cell is not the inflated sum.
  *
  * The real yearly page module is booted against res/aggregation-yearly.html
- * via ../pages/_page-harness.js so the renderer sees the real group-by context.
+ * via ./_page-harness.js so the renderer sees the real group-by context.
  */
 
 import { jest } from '@jest/globals';
-import { mockPageModules, loadPageBody, bootPage, flush } from '../pages/_page-harness.js';
+import { mockPageModules, loadPageBody, bootPage, flush } from './_page-harness.js';
 
 mockPageModules(jest, {
     invoke: (cmd) => {
@@ -36,8 +35,8 @@ loadPageBody('aggregation-yearly.html');
 await import('../../js/aggregation-yearly.js');
 await bootPage();
 
-describe('yearly aggregation total row — latent audit 2026-09', () => {
-    test('[latent M11] account axis: one transfer is not counted twice in the shared total row', async () => {
+describe('yearly aggregation total row — regression (latent audit 2026-09)', () => {
+    test('[M11] account axis: one transfer is not counted twice in the shared total row', async () => {
         document.getElementById('group-by').value = 'account';
         document.getElementById('execute-btn').click();
         await flush(10);
@@ -46,6 +45,7 @@ describe('yearly aggregation total row — latent audit 2026-09', () => {
         expect(rows).toHaveLength(2); // sanity
         const footer = Array.from(document.querySelectorAll('#results-footer tr td'))
             .map((td) => td.textContent.trim());
-        expect(['1', '', '-', '—']).toContain(footer[2]);
+        expect(footer[2]).toBe('—');
+        expect(footer[3]).toBe('—');
     });
 });
