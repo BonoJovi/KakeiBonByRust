@@ -104,11 +104,10 @@ impl SettingsManager {
         match serde_json::from_str::<UserSettings>(&content) {
             Ok(settings) => Ok(settings),
             Err(e) => {
-                let mut backup = path.clone().into_os_string();
-                backup.push(".corrupt");
-                if let Err(copy_err) = fs::copy(path, &backup) {
-                    eprintln!("Failed to back up corrupt settings file {:?}: {}", path, copy_err);
-                }
+                // Defaults are only safe once the original is preserved: the
+                // next save replaces the file. If no copy can be made, fail
+                // instead of risking the user's settings (CodeRabbit on #150).
+                let backup = Self::back_up_corrupt_file(path)?;
                 eprintln!(
                     "Settings file {:?} is not valid ({}); using defaults (kept a copy as {:?})",
                     path, e, backup
@@ -116,6 +115,32 @@ impl SettingsManager {
                 Ok(UserSettings::default())
             }
         }
+    }
+
+    /// Copy an unreadable settings file to the first free name among
+    /// `<name>.corrupt`, `<name>.corrupt.2`, … so neither the original nor an
+    /// earlier backup is overwritten. Errors when no copy could be made.
+    fn back_up_corrupt_file(path: &PathBuf) -> Result<PathBuf, SettingsError> {
+        const MAX_BACKUPS: u32 = 100;
+        let mut last_error = None;
+        for n in 1..=MAX_BACKUPS {
+            let mut name = path.clone().into_os_string();
+            name.push(if n == 1 { ".corrupt".to_string() } else { format!(".corrupt.{}", n) });
+            let candidate = PathBuf::from(name);
+            if candidate.exists() {
+                continue;
+            }
+            match fs::copy(path, &candidate) {
+                Ok(_) => return Ok(candidate),
+                Err(e) => last_error = Some(e),
+            }
+        }
+        Err(SettingsError::IoError(last_error.unwrap_or_else(|| {
+            std::io::Error::new(
+                std::io::ErrorKind::AlreadyExists,
+                format!("no free backup name for corrupt settings file {:?}", path),
+            )
+        })))
     }
     
     /// Save settings to file.

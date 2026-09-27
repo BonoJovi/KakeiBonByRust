@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-09-06 JST  
-**総テスト数**: 411件 (差分反映後。`cargo test --lib` の権威的総数は 651 で、既存の未反映分は別 PR でバックフィル予定)
+**総テスト数**: 412件 (差分反映後。`cargo test --lib` の権威的総数は 652 で、既存の未反映分は別 PR でバックフィル予定)
 
 ---
 
@@ -217,8 +217,9 @@ AES-256-GCM暗号化・復号化のテスト。
 | `latent_l28_array_settings_file_falls_back_to_defaults` | `[]` の設定ファイルは既定値にフォールバック (潜在監査 L28) | src/latent_audit/settings.rs | 53 |
 | `latent_l28_truncated_settings_file_falls_back_to_defaults` | 途中で切れた JSON の設定ファイルは既定値にフォールバック (潜在監査 L28) | src/latent_audit/settings.rs | 61 |
 | `latent_l28_corrupt_settings_file_is_backed_up_and_replaced_on_save` | 読めないファイルは `<name>.corrupt` として残し、次の保存で正しいファイルを書く (潜在監査 L28) | src/latent_audit/settings.rs | 68 |
+| `latent_l28_existing_backup_is_kept_and_unbackupable_file_is_not_replaced` | 既存の `.corrupt` は上書きせず空いている名前に控える。控えを作れなければ読み込みを失敗させ元ファイルを守る (潜在監査 L28) | src/latent_audit/settings.rs | 95 |
 
-**合計**: 16件
+**合計**: 17件
 
 ### api_error.rs
 
@@ -659,12 +660,12 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **385件** |
+| **インラインテスト** | **386件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
 | db.rs | 14 |
-| settings.rs | 16 |
+| settings.rs | 17 |
 | api_error.rs | 10 |
 | services/master_data.rs | 4 |
 | services/like_escape.rs | 7 |
@@ -682,7 +683,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/i18n.rs | 8 |
 | services/recurring.rs | 13 |
 | lib.rs | 6 |
-| **総計** | **411件** |
+| **総計** | **412件** |
 
 ---
 

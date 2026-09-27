@@ -86,3 +86,38 @@ fn latent_l28_corrupt_settings_file_is_backed_up_and_replaced_on_save() {
     let reloaded = SettingsManager::with_path(path).expect("reload");
     assert_eq!(reloaded.get("language"), Some(&serde_json::json!("en")));
 }
+
+/// L28 follow-up (CodeRabbit on #150): an existing backup is never
+/// overwritten — a second corruption goes to `<name>.corrupt.2` — and when
+/// no backup can be written at all the load fails instead of letting a later
+/// save replace the only copy.
+#[test]
+fn latent_l28_existing_backup_is_kept_and_unbackupable_file_is_not_replaced() {
+    let (path, _temp) = make_test_path();
+    fs::create_dir_all(path.parent().unwrap()).unwrap();
+    let mut first = path.clone().into_os_string();
+    first.push(".corrupt");
+    fs::write(&first, "earlier backup").unwrap();
+    fs::write(&path, "[]").unwrap();
+
+    SettingsManager::with_path(path.clone()).expect("must recover");
+    assert_eq!(fs::read_to_string(&first).unwrap(), "earlier backup", "an earlier backup must be kept");
+    let mut second = path.clone().into_os_string();
+    second.push(".corrupt.2");
+    assert_eq!(fs::read_to_string(&second).unwrap(), "[]");
+
+    // Every backup name is taken by a directory: no copy is possible.
+    let (path, _temp) = make_test_path();
+    fs::create_dir_all(path.parent().unwrap()).unwrap();
+    fs::write(&path, "null").unwrap();
+    for n in 1..=100u32 {
+        let mut name = path.clone().into_os_string();
+        name.push(if n == 1 { ".corrupt".to_string() } else { format!(".corrupt.{}", n) });
+        fs::create_dir(PathBuf::from(name)).unwrap();
+    }
+    assert!(
+        SettingsManager::with_path(path.clone()).is_err(),
+        "without a backup the corrupt file must not be replaced by defaults"
+    );
+    assert_eq!(fs::read_to_string(&path).unwrap(), "null", "the original must stay untouched");
+}
