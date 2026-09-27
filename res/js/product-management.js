@@ -544,8 +544,10 @@ async function linkNewProductToDraft(productName) {
         const raw = sessionStorage.getItem(DETAIL_DRAFT_KEY);
         if (!raw) return;
         const candidates = await invoke('search_products_by_name', { query: productName });
-        if (!candidates || candidates.length === 0) return;
-        const match = candidates.find(c => c.product_name === productName) || candidates[0];
+        // Link only the product just saved. The search is a partial match,
+        // so any other candidate is a different product (latent-audit L17).
+        const match = (candidates || []).find(c => c.product_name === productName);
+        if (!match) return;
         const draft = JSON.parse(raw);
         draft.selected_product_id = match.product_id;
         draft.item_name = match.product_name;

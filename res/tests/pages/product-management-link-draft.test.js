@@ -1,7 +1,6 @@
 /**
- * Latent audit 2026-09 — product master screen (res/js/product-management.js)
- *
- * IDs covered: L17
+ * Product master screen (res/js/product-management.js) — regression tests
+ * for latent-audit L17 (detail → product-master jump).
  *
  * L17 Bug: after adding a product during the detail → product-master jump,
  *     linkNewProductToDraft() looks the product up by name and, when no
@@ -9,17 +8,18 @@
  *     product gets linked to the detail draft and the typed item name is
  *     replaced with that product's name.
  *     Expected: without an exact name match the draft's product link and
- *     item name are left untouched (no silent pick of candidates[0]).
+ *     item name are left untouched (no silent pick of candidates[0]); an
+ *     exact match is still linked.
  *
  * The real page module is booted against res/product-management.html (with
  * ?return_to=<transaction_id>, i.e. arriving from the detail modal) via
- * ../pages/_page-harness.js.
+ * ./_page-harness.js.
  */
 
 import { jest } from '@jest/globals';
 import {
     mockPageModules, loadPageBody, bootPage, flush, callsOf,
-} from '../pages/_page-harness.js';
+} from './_page-harness.js';
 
 const DETAIL_DRAFT_KEY = 'kakeibon.detail_draft.v1';
 
@@ -73,13 +73,13 @@ function submitProductForm() {
     );
 }
 
-describe('product master screen — latent audit 2026-09', () => {
+describe('product master screen — detail draft link (regression, latent audit 2026-09)', () => {
     beforeEach(() => {
         invoke.mockClear();
         sessionStorage.clear();
     });
 
-    test('[latent L17] no exact name match → the detail draft is not linked to candidates[0]', async () => {
+    test('[L17] should leave the detail draft alone when no product name matches exactly', async () => {
         const originalDraft = {
             transaction_id: '10',
             detail_id: null,
@@ -101,6 +101,30 @@ describe('product master screen — latent audit 2026-09', () => {
 
         const draft = JSON.parse(sessionStorage.getItem(DETAIL_DRAFT_KEY));
         expect(draft.selected_product_id).not.toBe(50);
+        expect(draft.item_name).toBe('Soy Sauce');
+    });
+
+    test('[L17] should link the detail draft to the product whose name matches exactly', async () => {
+        sessionStorage.setItem(DETAIL_DRAFT_KEY, JSON.stringify({
+            transaction_id: '10',
+            detail_id: null,
+            item_name: 'Soy Sauce',
+            selected_product_id: null,
+        }));
+        // The exact match sorts after a partial one.
+        searchResults = [
+            { product_id: 50, product_name: 'Soy Sauce Light', manufacturer_name: null },
+            { product_id: 100, product_name: 'Soy Sauce', manufacturer_name: null },
+        ];
+
+        document.getElementById('add-product-btn').click();
+        await flush(5);
+        document.getElementById('product-name').value = 'Soy Sauce';
+        submitProductForm();
+        await flush(10);
+
+        const draft = JSON.parse(sessionStorage.getItem(DETAIL_DRAFT_KEY));
+        expect(draft.selected_product_id).toBe(100);
         expect(draft.item_name).toBe('Soy Sauce');
     });
 });
