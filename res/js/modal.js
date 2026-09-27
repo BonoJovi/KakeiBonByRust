@@ -53,6 +53,11 @@ class Modal {
         // UNIQUE constraint message.
         this._isSaving = false;
 
+        // Incremented on every open(). A save remembers the session it was
+        // started in, so its completion only acts on that session — not on
+        // one the user re-opened meanwhile (latent-audit L22).
+        this._session = 0;
+
         this._setupEventListeners();
     }
     
@@ -174,6 +179,10 @@ class Modal {
      * @param {Object} data - Data to pass to the modal
      */
     open(mode = 'add', data = {}) {
+        this._session += 1;
+        // A save still in flight belongs to an earlier session; it must not
+        // block saving in this one.
+        this._isSaving = false;
         this.mode = mode;
         this.data = data || {};
 
@@ -297,20 +306,31 @@ class Modal {
             Object.assign(data, this.data);
         }
 
+        // If the user closes and re-opens the modal while this save is in
+        // flight, its completion must leave the new session alone: no
+        // close() (which would also form.reset() what they are typing), no
+        // loading / saving state changes (latent-audit L22).
+        const session = this._session;
+        const isCurrentSession = () => session === this._session;
+
         this.showLoading();
         try {
             // Call onSave callback
             await this.options.onSave(data);
 
             // Close modal on success
-            this.close();
+            if (isCurrentSession()) {
+                this.close();
+            }
         } catch (error) {
             console.error('Error saving:', error);
             // Don't close modal on error
             throw error;
         } finally {
-            this.hideLoading();
-            this._isSaving = false;
+            if (isCurrentSession()) {
+                this.hideLoading();
+                this._isSaving = false;
+            }
         }
     }
 
