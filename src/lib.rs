@@ -367,7 +367,7 @@ async fn create_general_user(
     // (latent-audit L26).
     if let Err(e) = category.populate_default_categories(user_id).await {
         if let Err(cleanup) = user_mgmt.delete_general_user(user_id).await {
-            eprintln!("Failed to remove user {} after a failed category seed: {}", user_id, cleanup);
+            eprintln!("Failed to remove the new user after a failed category seed: {}", cleanup);
         }
         return Err(api_error::ApiError::database(format!(
             "Failed to populate default categories: {}",
