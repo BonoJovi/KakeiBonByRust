@@ -100,8 +100,7 @@ describe('product master screen — detail draft link (regression, latent audit 
         expect(callsOf(invoke, 'add_product')).toHaveLength(1);
 
         const draft = JSON.parse(sessionStorage.getItem(DETAIL_DRAFT_KEY));
-        expect(draft.selected_product_id).not.toBe(50);
-        expect(draft.item_name).toBe('Soy Sauce');
+        expect(draft).toEqual(originalDraft);
     });
 
     test('[L17] should link the detail draft to the product whose name matches exactly', async () => {
