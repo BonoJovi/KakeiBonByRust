@@ -188,6 +188,20 @@ impl EncryptionService {
             }
         }
 
+        // A declared ROWID column shadows the real rowid that re-encryption
+        // reads and updates by.
+        let declared_rowid: Option<String> = sqlx::query_scalar(sql_queries::ENCRYPTION_GET_COLUMN_TYPE)
+            .bind(table_name)
+            .bind("ROWID")
+            .fetch_optional(&mut **tx)
+            .await?;
+        if declared_rowid.is_some() {
+            return Err(EncryptionError::IneligibleField(format!(
+                "{} declares a ROWID column",
+                table_name
+            )));
+        }
+
         let user_id_type: Option<String> = sqlx::query_scalar(sql_queries::ENCRYPTION_GET_COLUMN_TYPE)
             .bind(table_name)
             .bind("USER_ID")
@@ -582,6 +596,7 @@ mod tests {
         for ddl in [
             "CREATE VIEW TEST_VIEW AS SELECT USER_ID, SECRET_NOTE FROM TEST_DATA",
             "CREATE TABLE TEST_NO_ROWID (USER_ID INTEGER PRIMARY KEY, SECRET_NOTE TEXT) WITHOUT ROWID",
+            "CREATE TABLE TEST_ROWID_COL (USER_ID INTEGER, ROWID TEXT, SECRET_NOTE TEXT)",
         ] {
             sqlx::query(ddl).execute(&pool).await.unwrap();
         }
@@ -595,6 +610,7 @@ mod tests {
             ("TEST_DATA", "SECRET_MEMO"),       // already holds plaintext
             ("TEST_VIEW", "SECRET_NOTE"),       // a view
             ("TEST_NO_ROWID", "SECRET_NOTE"),   // re-encryption updates by ROWID
+            ("TEST_ROWID_COL", "SECRET_NOTE"),  // declared ROWID shadows the rowid
         ] {
             let result = service
                 .register_encrypted_field(table, column, None)

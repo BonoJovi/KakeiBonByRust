@@ -348,7 +348,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | `test_encrypt_uses_per_user_salt_not_user_id` | 同じ password/plaintext でもユーザーごとに ciphertext が異なる (Fable-5 #15) | src/services/encryption.rs | 657 |
 | `test_encrypt_decrypt_salt_survives_service_reconstruction` | salt を DB から再取得するため、新しい service インスタンスで round-trip が成立 (Fable-5 #15) | src/services/encryption.rs | 703 |
 | `test_encrypt_errors_when_user_missing` | USERS 行が無い場合は user_id 由来 salt に fallback せずエラー (Fable-5 #15) | src/services/encryption.rs | 722 |
-| `test_register_encrypted_field_rejects_ineligible_fields` | USERS・ユーザー別でないテーブル・TEXT 以外/存在しないカラム・ビュー・WITHOUT ROWID テーブル・平文が既に入っているカラムの登録を拒否。カラム名は大文字小文字を区別しない (潜在監査 L27) | src/services/encryption.rs | 575 |
+| `test_register_encrypted_field_rejects_ineligible_fields` | USERS・ユーザー別でないテーブル・TEXT 以外/存在しないカラム・ビュー・WITHOUT ROWID テーブル・ROWID 列を宣言したテーブル・平文が既に入っているカラムの登録を拒否。カラム名は大文字小文字を区別しない (潜在監査 L27) | src/services/encryption.rs | 589 |
 | `latent_l27_password_change_survives_plaintext_column_registration` | USERS.NAME の登録を試みた後もパスワード変更が成功する (潜在監査 L27) | src/services/latent_audit/encryption.rs | 47 |
 | `latent_l27_password_change_survives_non_text_column_registration` | INTEGER カラムの登録を試みた後もパスワード変更が成功する (潜在監査 L27) | src/services/latent_audit/encryption.rs | 68 |
 
