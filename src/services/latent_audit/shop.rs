@@ -34,27 +34,20 @@ async fn latent_h6_readd_deleted_shop_name_is_not_database_error() {
     let shop_id = get_shops(&pool, user_id, false).await.expect("list")[0].shop_id;
     delete_shop(&pool, user_id, shop_id).await.expect("delete");
 
-    let result = add_shop(
+    // The delete removed the row (latent-audit M7), so the name is free and
+    // re-adding it simply creates an enabled shop again.
+    add_shop(
         &pool,
         user_id,
         AddShopRequest { shop_name: "イオン".to_string(), memo: None, is_disabled: None },
     )
-    .await;
+    .await
+    .expect("re-adding a deleted shop name must succeed");
 
-    if let Err(err) = &result {
-        assert_ne!(
-            err.code,
-            ApiError::CODE_DATABASE,
-            "re-adding a deleted shop name must not surface a generic database error: {:?}",
-            err
-        );
-        assert_eq!(
-            err.code,
-            ApiError::CODE_DUPLICATE_NAME,
-            "if rejected, it must be a structured duplicate_name error: {:?}",
-            err
-        );
-    }
+    let all = get_shops(&pool, user_id, true).await.expect("list");
+    let matching: Vec<_> = all.iter().filter(|s| s.shop_name == "イオン").collect();
+    assert_eq!(matching.len(), 1, "exactly one row with the name: {:?}", all);
+    assert_eq!(matching[0].is_disabled, 0, "the re-added shop must be enabled");
 }
 
 /// Hide a shop through the edit form's "disabled" checkbox. A delete

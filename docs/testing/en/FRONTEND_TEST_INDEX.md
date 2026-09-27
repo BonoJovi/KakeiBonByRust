@@ -3,7 +3,7 @@
 This document provides a complete index of all frontend tests implemented in JavaScript.
 
 **Last Updated**: 2026-09-27 JST  
-**Total Tests**: 819 (jest suites; 44 test files, per `npm test`)
+**Total Tests**: 820 (jest suites; 44 test files, per `npm test`)
 
 ---
 
@@ -30,7 +30,7 @@ and are **not** added again to the grand total.
 - **login.test.js** - Login tests (58)
 - **user-deletion.test.js** - User deletion tests (46)
 
-### Feature-Specific Tests (396 tests)
+### Feature-Specific Tests (397 tests)
 
 - **transaction-edit.test.js** - Transaction edit tests (112)
 - **transaction-detail-management.test.js** - Transaction detail management tests (51)
@@ -56,7 +56,7 @@ and are **not** added again to the grand total.
 - **single-flight.test.js** - `singleFlight` submit guard (latent-audit M19): ignores re-entrant calls, calls `preventDefault` on every submit, releases after resolve and after throw (4)
 - **pages/product-management-page.test.js** - Boots the real product master page: editing a product whose manufacturer is disabled keeps `manufacturer_id` on save (latent-audit M5) (1)
 - **pages/product-management-link-draft.test.js** - Boots the real product master page from the detail → product-master jump (`?return_to=`): after adding a product, the detail draft is linked only to the product whose name matches exactly, never to another search candidate (latent-audit L17) (2)
-- **pages/shop-management-disabled.test.js** - Boots the real shop master page: "show disabled" lists disabled shops with the disabled label, and the add / edit form's "disabled" checkbox is shown and sent as `isDisabled` (latent-audit M7) (3)
+- **pages/shop-management-disabled.test.js** - Boots the real shop master page: "show disabled" lists disabled shops with the disabled label, a late response from a quick double toggle does not overwrite the newer list, and the add / edit form's "disabled" checkbox is shown and sent as `isDisabled` (latent-audit M7) (4)
 - **pages/transaction-management-disabled-shop.test.js** - Boots the real transaction page: editing a transaction whose shop is disabled keeps that shop selected (shown with the disabled label) and saves it, while a new transaction is not offered the disabled shop (latent-audit M7) (2)
 - **pages/aggregation-monthly-page.test.js** - Boots the real monthly aggregation page: an empty `group_name` renders as `common.unspecified` (latent-audit M12); the total row shows "—" for count / average on the account and category2 axes, and still sums the count on category1 (latent-audit M11); negative amounts render as "-¥1,234" (latent-audit L12) (5)
 - **pages/aggregation-yearly-total-count.test.js** - Boots the real yearly aggregation page: the shared renderer's total row shows "—" for count / average on the account axis (latent-audit M11) (1)
@@ -98,7 +98,7 @@ and are **not** added again to the grand total.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **Feature-Specific Tests** | **396** |
+| **Feature-Specific Tests** | **397** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 29 |
@@ -123,7 +123,7 @@ and are **not** added again to the grand total.
 | single-flight.test.js | 4 |
 | pages/product-management-page.test.js | 1 |
 | pages/product-management-link-draft.test.js | 2 |
-| pages/shop-management-disabled.test.js | 3 |
+| pages/shop-management-disabled.test.js | 4 |
 | pages/transaction-management-disabled-shop.test.js | 2 |
 | pages/aggregation-monthly-page.test.js | 5 |
 | pages/aggregation-yearly-total-count.test.js | 1 |
@@ -138,7 +138,7 @@ and are **not** added again to the grand total.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **Total (jest)** | **819** |
+| **Total (jest)** | **820** |
 
 Grand total is Screen + Feature + Aggregation (Common Test Suites are helper
 libraries invoked from Screen-Specific files and their assertions are already

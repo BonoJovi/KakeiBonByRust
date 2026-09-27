@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-09-06 JST  
-**総テスト数**: 441件 (差分反映後。`cargo test --lib` の権威的総数は 681 で、既存の未反映分は別 PR でバックフィル予定)
+**総テスト数**: 442件 (差分反映後。`cargo test --lib` の権威的総数は 682 で、既存の未反映分は別 PR でバックフィル予定)
 
 ---
 
@@ -485,8 +485,9 @@ AES-256-GCM暗号化・復号化のテスト。
 | `test_add_shop` | 店舗追加テスト | src/services/shop.rs | 232 |
 | `test_update_shop` | 店舗更新テスト | src/services/shop.rs | 249 |
 | `test_delete_shop` | 未使用の店舗は非表示ではなく行ごと削除される (潜在監査 M7) | src/services/shop.rs | 294 |
-| `test_delete_disabled_shop_removes_row` | 未使用の無効店舗も削除でき、行が消える (潜在監査 M7) | src/services/shop.rs | 318 |
-| `test_disable_shop_allowed_while_referenced` | 取引が使用中の店舗は削除できないが無効化・再有効化はできる (潜在監査 M7) | src/services/shop.rs | 339 |
+| `test_delete_disabled_shop_removes_row` | 未使用の無効店舗も削除でき、行が消える (潜在監査 M7) | src/services/shop.rs | 320 |
+| `test_shop_is_disabled_must_be_zero_or_one` | 無効フラグは追加・更新とも 0 / 1 のみ受け付ける (それ以外は validation エラー) (潜在監査 M7) | src/services/shop.rs | 340 |
+| `test_disable_shop_allowed_while_referenced` | 取引が使用中の店舗は削除できないが無効化・再有効化はできる (潜在監査 M7) | src/services/shop.rs | 376 |
 | `test_empty_shop_name_returns_validation_code` | 空店舗名は `ApiError { code: "validation" }` (Fable-5 #23) | src/services/shop.rs | 301 |
 | `test_add_duplicate_shop_returns_duplicate_name_code` | 重複は `ApiError { code: "duplicate_name", entity: "shop" }` (Fable-5 #23) | src/services/shop.rs | 315 |
 | `test_update_to_duplicate_shop_name_returns_duplicate_name_code` | 重複への更新は `ApiError { code: "duplicate_name" }` (Fable-5 #23) | src/services/shop.rs | 337 |
@@ -497,11 +498,11 @@ AES-256-GCM暗号化・復号化のテスト。
 | `test_delete_shop_rejected_when_referenced_by_recurring_rule` | RECURRING_RULES が店舗を参照中なら `ApiError { code: "in_use" }` で削除拒否（マスタ削除ロック） | src/services/shop.rs | 372 |
 | `test_delete_shop_ignores_other_users_references` | 他ユーザーの同一 SHOP_ID 参照は削除をブロックしない（USER_ID スコープ、マスタ削除ロック） | src/services/shop.rs | 394 |
 | `latent_h6_readd_deleted_shop_name_is_not_database_error` | 削除済み店舗と同名の再登録で汎用 database エラーにならない (潜在監査 H6) | src/services/latent_audit/shop.rs | 24 |
-| `latent_h6_readd_disabled_shop_name_revives_original_row` | 無効店舗と同名の再登録は元の行を復活させる (同じ SHOP_ID、メモは新しい値) (潜在監査 H6) | src/services/latent_audit/shop.rs | 89 |
-| `latent_h6_rename_onto_disabled_shop_name_is_duplicate_name` | 無効店舗の名前への変更は duplicate_name で拒否 (潜在監査 H6) | src/services/latent_audit/shop.rs | 120 |
+| `latent_h6_readd_disabled_shop_name_revives_original_row` | 無効店舗と同名の再登録は元の行を復活させる (同じ SHOP_ID、メモは新しい値) (潜在監査 H6) | src/services/latent_audit/shop.rs | 82 |
+| `latent_h6_rename_onto_disabled_shop_name_is_duplicate_name` | 無効店舗の名前への変更は duplicate_name で拒否 (潜在監査 H6) | src/services/latent_audit/shop.rs | 113 |
 | `latent_h6_insert_unique_violation_maps_to_duplicate_name` | 重複チェックをすり抜けた add_shop の INSERT が UNIQUE 違反になった場合 duplicate_name を返す (潜在監査 H6) | src/services/latent_audit/shop.rs | 124 |
 
-**合計**: 18件
+**合計**: 19件
 
 ### services/transaction.rs
 
@@ -699,7 +700,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **415件** |
+| **インラインテスト** | **416件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -715,7 +716,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/category.rs | 38 |
 | services/manufacturer.rs | 17 |
 | services/product.rs | 20 |
-| services/shop.rs | 18 |
+| services/shop.rs | 19 |
 | services/transaction.rs | 61 |
 | services/aggregation.rs | 23 |
 | services/period.rs | 3 |
@@ -723,7 +724,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/i18n.rs | 8 |
 | services/recurring.rs | 14 |
 | lib.rs | 6 |
-| **総計** | **441件** |
+| **総計** | **442件** |
 
 ---
 

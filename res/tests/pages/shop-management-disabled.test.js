@@ -15,7 +15,7 @@
 
 import { jest } from '@jest/globals';
 import {
-    mockPageModules, loadPageBody, bootPage, flush, callsOf,
+    mockPageModules, loadPageBody, bootPage, flush, deferred, callsOf,
 } from './_page-harness.js';
 
 const ACTIVE_SHOP = {
@@ -25,11 +25,17 @@ const DISABLED_SHOP = {
     shop_id: 7, user_id: 2, shop_name: 'Old Mart', memo: null, display_order: 2, is_disabled: 1,
 };
 
+// When set, get_shops with includeDisabled parks its response here.
+let pendingIncludeDisabled = null;
+
 const { invoke } = mockPageModules(jest, {
     user: { user_id: 2, name: 'alice', role: 1 },
     invoke: (cmd, args) => {
         switch (cmd) {
             case 'get_shops':
+                if (args && args.includeDisabled && pendingIncludeDisabled) {
+                    return pendingIncludeDisabled.promise;
+                }
                 return args && args.includeDisabled ? [ACTIVE_SHOP, DISABLED_SHOP] : [ACTIVE_SHOP];
             default:
                 return null;
@@ -66,6 +72,21 @@ describe('shop master screen — disable (regression, latent audit 2026-09)', ()
 
         document.getElementById('toggle-disabled-btn').click();
         await flush(5);
+        expect(rows()).toHaveLength(1);
+    });
+
+    test('[M7] should not let a late "show disabled" response overwrite a newer list', async () => {
+        pendingIncludeDisabled = deferred();
+        document.getElementById('toggle-disabled-btn').click(); // on: response parked
+        await flush(2);
+        document.getElementById('toggle-disabled-btn').click(); // off: answers at once
+        await flush(5);
+        expect(rows()).toHaveLength(1);
+
+        pendingIncludeDisabled.resolve([ACTIVE_SHOP, DISABLED_SHOP]);
+        pendingIncludeDisabled = null;
+        await flush(5);
+
         expect(rows()).toHaveLength(1);
     });
 

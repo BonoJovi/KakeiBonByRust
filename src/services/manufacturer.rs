@@ -92,6 +92,7 @@ pub async fn add_manufacturer(
     .await?;
 
     let is_disabled = request.is_disabled.unwrap_or(0);
+    master_data::validate_is_disabled(is_disabled)?;
 
     // A disabled / logically deleted manufacturer with the same name still
     // holds the UNIQUE slot, so reuse that row instead of inserting
@@ -132,6 +133,7 @@ pub async fn update_manufacturer(
         .map_err(ApiError::validation)?;
     validation::validate_memo("Memo", request.memo.as_ref())
         .map_err(ApiError::validation)?;
+    master_data::validate_is_disabled(request.is_disabled)?;
 
     master_data::check_duplicate_for_update(
         &SPEC,

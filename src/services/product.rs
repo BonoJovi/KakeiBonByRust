@@ -138,6 +138,7 @@ pub async fn add_product(
     .await?;
 
     let is_disabled = request.is_disabled.unwrap_or(0);
+    master_data::validate_is_disabled(is_disabled)?;
 
     // A disabled / logically deleted product with the same name still holds
     // the UNIQUE slot, so reuse that row instead of inserting
@@ -206,6 +207,7 @@ pub async fn update_product(
         .map_err(ApiError::validation)?;
     validation::validate_memo("Memo", request.memo.as_ref())
         .map_err(ApiError::validation)?;
+    master_data::validate_is_disabled(request.is_disabled)?;
 
     verify_manufacturer_ownership(pool, user_id, request.manufacturer_id).await?;
 

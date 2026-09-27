@@ -247,6 +247,19 @@ pub fn reject_if_in_use(entity_label: &str, in_use_flag: i64) -> Result<(), ApiE
     Ok(())
 }
 
+/// `IS_DISABLED` is a 0/1 flag; reject any other value before it is
+/// written, since the list queries only recognise 0 as enabled.
+pub fn validate_is_disabled(is_disabled: i64) -> Result<(), ApiError> {
+    if is_disabled == 0 || is_disabled == 1 {
+        Ok(())
+    } else {
+        Err(ApiError::validation(format!(
+            "Disabled flag must be 0 or 1, got {}",
+            is_disabled
+        )))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

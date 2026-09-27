@@ -26,6 +26,9 @@ let shopModal = null;
 let deleteModal = null;
 let shopToDelete = null;
 let showDisabledItems = false;
+// Bumped per loadShops() call so a slower, older response (e.g. from a
+// quick double toggle of "show disabled") cannot overwrite a newer list.
+let loadShopsToken = 0;
 // Screen that side-tripped here (captured once at load, cleared from the
 // session immediately so it cannot go stale if the user leaves without saving)
 let sideTripSource = null;
@@ -211,6 +214,7 @@ function updateToggleButton() {
 }
 
 async function loadShops() {
+    const token = ++loadShopsToken;
     const loading = document.getElementById('loading');
     const table = document.getElementById('shops-table');
 
@@ -219,9 +223,11 @@ async function loadShops() {
         table.style.display = 'none';
 
         console.log('Loading shops, includeDisabled:', showDisabledItems);
-        shops = await invoke('get_shops', {
+        const loaded = await invoke('get_shops', {
             includeDisabled: showDisabledItems
         });
+        if (token !== loadShopsToken) return;
+        shops = loaded;
         console.log('Loaded shops:', shops);
 
         renderShops();
@@ -229,6 +235,7 @@ async function loadShops() {
         loading.style.display = 'none';
         table.style.display = 'table';
     } catch (error) {
+        if (token !== loadShopsToken) return;
         console.error('Failed to load shops:', error);
         loading.textContent = i18n.t('shop_mgmt.failed_to_load');
     }
@@ -262,7 +269,7 @@ function renderShops() {
         // Shop Name
         const nameCell = row.insertCell();
         if (isDisabled) {
-            const badge = `<span style="color: #ffc107; font-weight: bold; margin-left: 8px;">[${i18n.t('common.disabled_label')}]</span>`;
+            const badge = `<span style="color: #ffc107; font-weight: bold; margin-left: 8px;">[${escapeHtml(i18n.t('common.disabled_label'))}]</span>`;
             nameCell.innerHTML = `<span style="color: #ffffff;">${escapeHtml(shop.shop_name)}</span>${badge}`;
         } else {
             nameCell.textContent = shop.shop_name;

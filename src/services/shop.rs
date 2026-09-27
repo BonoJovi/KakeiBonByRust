@@ -96,6 +96,7 @@ pub async fn add_shop(
     .await?;
 
     let is_disabled = request.is_disabled.unwrap_or(0);
+    master_data::validate_is_disabled(is_disabled)?;
 
     // A disabled shop with the same name still holds the UNIQUE slot, so
     // bring it back instead of inserting (latent-audit H6).
@@ -135,6 +136,7 @@ pub async fn update_shop(
         .map_err(ApiError::validation)?;
     validation::validate_memo("Memo", request.memo.as_ref())
         .map_err(ApiError::validation)?;
+    master_data::validate_is_disabled(request.is_disabled)?;
 
     master_data::check_duplicate_for_update(&SPEC, pool, user_id, shop_id, &request.shop_name)
         .await?;
@@ -331,6 +333,41 @@ mod tests {
         delete_shop(&pool, 2, shop_id).await.unwrap();
 
         assert!(get_shops(&pool, 2, true).await.unwrap().is_empty());
+    }
+
+    /// The disabled flag only accepts 0 or 1, on add and on update.
+    #[tokio::test]
+    async fn test_shop_is_disabled_must_be_zero_or_one() {
+        let pool = setup_test_db().await;
+
+        let err = add_shop(&pool, 2, AddShopRequest {
+            shop_name: "イオン新宿店".to_string(),
+            memo: None,
+            is_disabled: Some(2),
+        })
+        .await
+        .unwrap_err();
+        assert_eq!(err.code, ApiError::CODE_VALIDATION);
+        assert!(get_shops(&pool, 2, true).await.unwrap().is_empty());
+
+        add_shop(&pool, 2, AddShopRequest {
+            shop_name: "イオン新宿店".to_string(),
+            memo: None,
+            is_disabled: None,
+        })
+        .await
+        .unwrap();
+        let shop_id = get_shops(&pool, 2, false).await.unwrap()[0].shop_id;
+        let err = update_shop(&pool, 2, shop_id, UpdateShopRequest {
+            shop_name: "イオン新宿店".to_string(),
+            memo: None,
+            display_order: 1,
+            is_disabled: -1,
+        })
+        .await
+        .unwrap_err();
+        assert_eq!(err.code, ApiError::CODE_VALIDATION);
+        assert_eq!(get_shops(&pool, 2, false).await.unwrap().len(), 1);
     }
 
     /// Latent-audit M7: a shop still named by a transaction cannot be
