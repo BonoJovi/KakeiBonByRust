@@ -13,7 +13,7 @@ const SPEC: MasterCrudSpec = MasterCrudSpec {
     name_label: "Product name",
     check_duplicate_for_add_sql: sql_queries::PRODUCT_CHECK_DUPLICATE_FOR_ADD,
     check_duplicate_for_update_sql: sql_queries::PRODUCT_CHECK_DUPLICATE_FOR_UPDATE,
-    delete_logical_sql: sql_queries::PRODUCT_DELETE_LOGICAL,
+    delete_sql: sql_queries::PRODUCT_DELETE,
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
@@ -237,10 +237,11 @@ pub async fn update_product(
     Ok("Product updated successfully".to_string())
 }
 
-/// Delete a product (logical deletion). Rejected with
-/// `ApiError::in_use("Product")` when any transaction detail — from an
-/// active or disabled transaction — still names this product. See
-/// `sql_queries::PRODUCT_CHECK_IN_USE`.
+/// Delete a product. Rejected with `ApiError::in_use("Product")` when any
+/// transaction detail — from an active or disabled transaction — still
+/// names this product (see `sql_queries::PRODUCT_CHECK_IN_USE`); otherwise
+/// the row is removed. Hiding a product that is still in use is what
+/// `IS_DISABLED` is for (latent-audit M7).
 pub async fn delete_product(
     pool: &SqlitePool,
     user_id: i64,
@@ -249,7 +250,7 @@ pub async fn delete_product(
     // Fable-5 review #14 — same TOCTOU-window closure as
     // `delete_shop` / `delete_manufacturer`. Check + delete now
     // run inside one transaction so the reference-count guard
-    // and the `IS_DISABLED=1` write can never be separated by a
+    // and the delete can never be separated by a
     // concurrent transaction-detail insert.
     let mut tx = pool.begin().await?;
     let (in_use,): (i64,) = sqlx::query_as(sql_queries::PRODUCT_CHECK_IN_USE)
@@ -425,9 +426,74 @@ mod tests {
         let result = delete_product(&pool, 2, product_id).await;
         assert!(result.is_ok());
 
-        // Verify product is disabled
-        let products = get_products(&pool, 2, false).await.unwrap();
+        // An unused product is removed, not just hidden (latent-audit M7).
+        let products = get_products(&pool, 2, true).await.unwrap();
         assert_eq!(products.len(), 0);
+    }
+
+    /// Latent-audit M7: a disabled product that nothing uses can still be
+    /// deleted, which removes the row.
+    #[tokio::test]
+    async fn test_delete_disabled_product_removes_row() {
+        let pool = setup_test_db().await;
+
+        add_product(&pool, 2, AddProductRequest {
+            product_name: "サバ缶".to_string(),
+            manufacturer_id: None,
+            memo: None,
+            is_disabled: Some(1),
+        })
+        .await
+        .unwrap();
+        let product_id = get_products(&pool, 2, true).await.unwrap()[0].product_id;
+
+        delete_product(&pool, 2, product_id).await.unwrap();
+
+        assert!(get_products(&pool, 2, true).await.unwrap().is_empty());
+    }
+
+    /// Latent-audit M7: a product still named by a transaction detail cannot
+    /// be deleted, but it can be disabled.
+    #[tokio::test]
+    async fn test_disable_product_allowed_while_referenced() {
+        let pool = setup_test_db().await;
+
+        add_product(&pool, 2, AddProductRequest {
+            product_name: "サバ缶".to_string(),
+            manufacturer_id: None,
+            memo: None,
+            is_disabled: None,
+        })
+        .await
+        .unwrap();
+        let product_id = get_products(&pool, 2, false).await.unwrap()[0].product_id;
+        let transaction_id = sqlx::query(sql_queries::TEST_INSERT_TRANSACTIONS_HEADER_USER_ONLY)
+            .bind(2_i64)
+            .execute(&pool)
+            .await
+            .unwrap()
+            .last_insert_rowid();
+        sqlx::query(sql_queries::TEST_INSERT_TRANSACTIONS_DETAIL_PRODUCT_REF)
+            .bind(transaction_id)
+            .bind(product_id)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        update_product(&pool, 2, product_id, UpdateProductRequest {
+            product_name: "サバ缶".to_string(),
+            manufacturer_id: None,
+            memo: None,
+            display_order: 1,
+            is_disabled: 1,
+        })
+        .await
+        .unwrap();
+
+        assert!(get_products(&pool, 2, false).await.unwrap().is_empty());
+        let all = get_products(&pool, 2, true).await.unwrap();
+        assert_eq!(all.len(), 1);
+        assert_eq!(all[0].is_disabled, 1);
     }
 
     #[tokio::test]

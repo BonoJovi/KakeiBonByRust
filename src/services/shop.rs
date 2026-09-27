@@ -13,7 +13,7 @@ const SPEC: MasterCrudSpec = MasterCrudSpec {
     name_label: "Shop name",
     check_duplicate_for_add_sql: sql_queries::SHOP_CHECK_DUPLICATE_FOR_ADD,
     check_duplicate_for_update_sql: sql_queries::SHOP_CHECK_DUPLICATE_FOR_UPDATE,
-    delete_logical_sql: sql_queries::SHOP_DELETE_LOGICAL,
+    delete_sql: sql_queries::SHOP_DELETE_LOGICAL,
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone, FromRow)]

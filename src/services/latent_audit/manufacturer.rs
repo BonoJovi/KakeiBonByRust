@@ -76,21 +76,46 @@ fn add_req(name: &str, memo: Option<&str>) -> AddManufacturerRequest {
     }
 }
 
-/// M6 (chosen fix, same as shops / H6): adding the name of a disabled /
-/// deleted manufacturer reuses that row — same MANUFACTURER_ID, enabled
-/// again, carrying the new memo — instead of inserting a second row.
+/// Hide a manufacturer through the edit form's "disabled" checkbox. A delete
+/// removes the row instead (latent-audit M7), so it no longer leaves a
+/// disabled row behind.
+async fn disable_manufacturer(pool: &SqlitePool, user_id: i64, id: i64) {
+    let row = get_manufacturers(pool, user_id, true)
+        .await
+        .expect("list")
+        .into_iter()
+        .find(|m| m.manufacturer_id == id)
+        .expect("row to disable");
+    update_manufacturer(
+        pool,
+        user_id,
+        id,
+        UpdateManufacturerRequest {
+            manufacturer_name: row.manufacturer_name,
+            memo: row.memo,
+            display_order: row.display_order,
+            is_disabled: 1,
+        },
+    )
+    .await
+    .expect("disable");
+}
+
+/// M6 (chosen fix, same as shops / H6): adding the name of a disabled
+/// manufacturer reuses that row — same MANUFACTURER_ID, enabled again,
+/// carrying the new memo — instead of inserting a second row.
 #[tokio::test]
-async fn latent_m6_readd_deleted_manufacturer_name_revives_original_row() {
+async fn latent_m6_readd_disabled_manufacturer_name_revives_original_row() {
     let pool = setup_test_db().await;
     let user_id = 2;
 
     add_manufacturer(&pool, user_id, add_req("ニッスイ", None)).await.expect("initial add");
     let original_id = get_manufacturers(&pool, user_id, true).await.expect("list")[0].manufacturer_id;
-    delete_manufacturer(&pool, user_id, original_id).await.expect("logical delete");
+    disable_manufacturer(&pool, user_id, original_id).await;
 
     add_manufacturer(&pool, user_id, add_req("ニッスイ", Some("再登録")))
         .await
-        .expect("re-adding a deleted manufacturer name must succeed");
+        .expect("re-adding a disabled manufacturer name must succeed");
 
     let all = get_manufacturers(&pool, user_id, true).await.expect("list");
     let matching: Vec<_> = all.iter().filter(|m| m.manufacturer_name == "ニッスイ").collect();
@@ -113,7 +138,7 @@ async fn latent_m6_rename_onto_disabled_manufacturer_name_is_duplicate_name() {
     let all = get_manufacturers(&pool, user_id, true).await.expect("list");
     let id_of = |name: &str| all.iter().find(|m| m.manufacturer_name == name).expect(name).manufacturer_id;
     let (nissui, maruha) = (id_of("ニッスイ"), id_of("マルハ"));
-    delete_manufacturer(&pool, user_id, nissui).await.expect("logical delete");
+    disable_manufacturer(&pool, user_id, nissui).await;
 
     let err = update_manufacturer(
         &pool,

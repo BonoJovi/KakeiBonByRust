@@ -80,21 +80,47 @@ fn add_req(name: &str, memo: Option<&str>) -> AddProductRequest {
     }
 }
 
-/// M6 (chosen fix, same as shops / H6): adding the name of a disabled /
-/// deleted product reuses that row — same PRODUCT_ID (so existing detail
-/// links stay valid), enabled again, carrying the new memo.
+/// Hide a product through the edit form's "disabled" checkbox. A delete
+/// removes the row instead (latent-audit M7), so it no longer leaves a
+/// disabled row behind.
+async fn disable_product(pool: &SqlitePool, user_id: i64, id: i64) {
+    let row = get_products(pool, user_id, true)
+        .await
+        .expect("list")
+        .into_iter()
+        .find(|p| p.product_id == id)
+        .expect("row to disable");
+    update_product(
+        pool,
+        user_id,
+        id,
+        UpdateProductRequest {
+            product_name: row.product_name,
+            manufacturer_id: row.manufacturer_id,
+            memo: row.memo,
+            display_order: row.display_order,
+            is_disabled: 1,
+        },
+    )
+    .await
+    .expect("disable");
+}
+
+/// M6 (chosen fix, same as shops / H6): adding the name of a disabled
+/// product reuses that row — same PRODUCT_ID (so existing detail links stay
+/// valid), enabled again, carrying the new memo.
 #[tokio::test]
-async fn latent_m6_readd_deleted_product_name_revives_original_row() {
+async fn latent_m6_readd_disabled_product_name_revives_original_row() {
     let pool = setup_test_db().await;
     let user_id = 2;
 
     add_product(&pool, user_id, add_req("サバ缶", None)).await.expect("initial add");
     let original_id = get_products(&pool, user_id, true).await.expect("list")[0].product_id;
-    delete_product(&pool, user_id, original_id).await.expect("logical delete");
+    disable_product(&pool, user_id, original_id).await;
 
     add_product(&pool, user_id, add_req("サバ缶", Some("再登録")))
         .await
-        .expect("re-adding a deleted product name must succeed");
+        .expect("re-adding a disabled product name must succeed");
 
     let all = get_products(&pool, user_id, true).await.expect("list");
     let matching: Vec<_> = all.iter().filter(|p| p.product_name == "サバ缶").collect();
@@ -117,7 +143,7 @@ async fn latent_m6_rename_onto_disabled_product_name_is_duplicate_name() {
     let all = get_products(&pool, user_id, true).await.expect("list");
     let id_of = |name: &str| all.iter().find(|p| p.product_name == name).expect(name).product_id;
     let (saba, iwashi) = (id_of("サバ缶"), id_of("イワシ缶"));
-    delete_product(&pool, user_id, saba).await.expect("logical delete");
+    disable_product(&pool, user_id, saba).await;
 
     let err = update_product(
         &pool,

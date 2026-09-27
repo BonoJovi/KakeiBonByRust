@@ -1873,9 +1873,10 @@ SET MANUFACTURER_NAME = ?, MEMO = ?, DISPLAY_ORDER = ?, IS_DISABLED = ?, UPDATE_
 WHERE USER_ID = ? AND MANUFACTURER_ID = ?
 "#;
 
-pub const MANUFACTURER_DELETE_LOGICAL: &str = r#"
-UPDATE MANUFACTURERS
-SET IS_DISABLED = 1, UPDATE_DT = datetime('now')
+/// Physical delete; only run after MANUFACTURER_CHECK_IN_USE finds no
+/// reference (latent-audit M7).
+pub const MANUFACTURER_DELETE: &str = r#"
+DELETE FROM MANUFACTURERS
 WHERE USER_ID = ? AND MANUFACTURER_ID = ?
 "#;
 
@@ -1984,9 +1985,10 @@ SET PRODUCT_NAME = ?, MANUFACTURER_ID = ?, MEMO = ?, DISPLAY_ORDER = ?, IS_DISAB
 WHERE USER_ID = ? AND PRODUCT_ID = ?
 "#;
 
-pub const PRODUCT_DELETE_LOGICAL: &str = r#"
-UPDATE PRODUCTS
-SET IS_DISABLED = 1, UPDATE_DT = datetime('now')
+/// Physical delete; only run after PRODUCT_CHECK_IN_USE finds no reference
+/// (latent-audit M7).
+pub const PRODUCT_DELETE: &str = r#"
+DELETE FROM PRODUCTS
 WHERE USER_ID = ? AND PRODUCT_ID = ?
 "#;
 

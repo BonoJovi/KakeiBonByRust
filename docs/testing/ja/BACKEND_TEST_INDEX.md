@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-09-06 JST  
-**総テスト数**: 435件 (差分反映後。`cargo test --lib` の権威的総数は 675 で、既存の未反映分は別 PR でバックフィル予定)
+**総テスト数**: 439件 (差分反映後。`cargo test --lib` の権威的総数は 679 で、既存の未反映分は別 PR でバックフィル予定)
 
 ---
 
@@ -429,7 +429,9 @@ AES-256-GCM暗号化・復号化のテスト。
 |-----------|------|---------|-----|
 | `test_add_manufacturer` | メーカー追加テスト | src/services/manufacturer.rs | 243 |
 | `test_update_manufacturer` | メーカー更新テスト | src/services/manufacturer.rs | 261 |
-| `test_delete_manufacturer` | メーカー削除テスト | src/services/manufacturer.rs | 292 |
+| `test_delete_manufacturer` | 未使用のメーカーは非表示ではなく行ごと削除される (潜在監査 M7) | src/services/manufacturer.rs | 283 |
+| `test_delete_disabled_manufacturer_removes_row` | 未使用の無効メーカーも削除でき、行が消える (潜在監査 M7) | src/services/manufacturer.rs | 309 |
+| `test_disable_manufacturer_allowed_while_referenced` | 商品が使用中のメーカーは削除できないが無効化はでき、商品側にメーカー名は残る (潜在監査 M7) | src/services/manufacturer.rs | 329 |
 | `test_empty_manufacturer_name_returns_validation_code` | 空メーカー名は `ApiError { code: "validation" }` (Fable-5 #23) | src/services/manufacturer.rs | 316 |
 | `test_add_duplicate_manufacturer_returns_duplicate_name_code` | 重複は `ApiError { code: "duplicate_name", entity: "manufacturer" }` (Fable-5 #23) | src/services/manufacturer.rs | 331 |
 | `test_update_to_duplicate_manufacturer_name_returns_duplicate_name_code` | 重複への更新は `ApiError { code: "duplicate_name" }` (Fable-5 #23) | src/services/manufacturer.rs | 355 |
@@ -440,10 +442,10 @@ AES-256-GCM暗号化・復号化のテスト。
 | `test_delete_manufacturer_rejected_when_only_disabled_products_reference` | IS_DISABLED=1 の商品でも参照とみなす（FK は残り、「無効表示」でも一覧に出るため、マスタ削除ロック） | src/services/manufacturer.rs | 402 |
 | `test_delete_manufacturer_ignores_other_users_references` | 他ユーザーの同一 MANUFACTURER_ID 参照は削除をブロックしない（USER_ID スコープ、マスタ削除ロック） | src/services/manufacturer.rs | 429 |
 | `latent_m6_readd_deleted_manufacturer_name_is_not_database_error` | 削除済みメーカーと同名の再登録で汎用 database エラーにならない (潜在監査 M6) | src/services/latent_audit/manufacturer.rs | 26 |
-| `latent_m6_readd_deleted_manufacturer_name_revives_original_row` | 無効 / 削除済みメーカーと同名の追加は元の行を有効化して再利用 (潜在監査 M6) | src/services/latent_audit/manufacturer.rs | 83 |
-| `latent_m6_rename_onto_disabled_manufacturer_name_is_duplicate_name` | 無効メーカーの名前への変更は duplicate_name で拒否 (潜在監査 M6) | src/services/latent_audit/manufacturer.rs | 106 |
+| `latent_m6_readd_disabled_manufacturer_name_revives_original_row` | 無効メーカーと同名の追加は元の行を有効化して再利用 (潜在監査 M6) | src/services/latent_audit/manufacturer.rs | 108 |
+| `latent_m6_rename_onto_disabled_manufacturer_name_is_duplicate_name` | 無効メーカーの名前への変更は duplicate_name で拒否 (潜在監査 M6) | src/services/latent_audit/manufacturer.rs | 131 |
 
-**合計**: 15件
+**合計**: 17件
 
 ### services/product.rs
 
@@ -454,7 +456,9 @@ AES-256-GCM暗号化・復号化のテスト。
 | `test_add_product_without_manufacturer` | メーカーなしの商品追加 | src/services/product.rs | 256 |
 | `test_add_product_with_manufacturer` | メーカーありの商品追加 | src/services/product.rs | 276 |
 | `test_update_product` | 商品更新テスト | src/services/product.rs | 309 |
-| `test_delete_product` | 商品削除テスト | src/services/product.rs | 342 |
+| `test_delete_product` | 未使用の商品は非表示ではなく行ごと削除される (潜在監査 M7) | src/services/product.rs | 410 |
+| `test_delete_disabled_product_removes_row` | 未使用の無効商品も削除でき、行が消える (潜在監査 M7) | src/services/product.rs | 437 |
+| `test_disable_product_allowed_while_referenced` | 明細が使用中の商品は削除できないが無効化はできる (潜在監査 M7) | src/services/product.rs | 458 |
 | `test_empty_product_name` | 空商品名のエラー | src/services/product.rs | 367 |
 | `test_add_duplicate_product` | 重複商品名のエラー | src/services/product.rs | 383 |
 | `test_manufacturer_deletion_rejected_while_product_references_it` | 商品が参照中はメーカー削除が `ApiError { code: "in_use", entity: "manufacturer" }` で拒否される — マスタ削除ロック導入で `test_manufacturer_deletion_sets_product_manufacturer_to_null` からリネーム（旧: 論理削除→CASCADE NULL の fallback） | src/services/product.rs | 512 |
@@ -467,10 +471,10 @@ AES-256-GCM暗号化・復号化のテスト。
 | `test_search_products_escapes_percent_metacharacter` | オートコンプリート検索で `"100%ジ"` が「果汁100%ジュース」だけにマッチし「果汁100リンゴジュース」にマッチしないこと — `%` をエスケープし `LIKE ? ESCAPE '\'` を併用 (Fable-5 #23) | src/services/product.rs | 785 |
 | `test_search_products_escapes_underscore_metacharacter` | オートコンプリート検索で `"A_1"` が literal "A_1" だけにマッチし "AB1" にマッチしないこと — `_` をエスケープ (Fable-5 #23) | src/services/product.rs | 812 |
 | `latent_m6_readd_deleted_product_name_is_not_database_error` | 削除済み商品と同名の再登録で汎用 database エラーにならない (潜在監査 M6) | src/services/latent_audit/product.rs | 27 |
-| `latent_m6_readd_deleted_product_name_revives_original_row` | 無効 / 削除済み商品と同名の追加は元の行 (同じ PRODUCT_ID) を有効化して再利用 (潜在監査 M6) | src/services/latent_audit/product.rs | 87 |
-| `latent_m6_rename_onto_disabled_product_name_is_duplicate_name` | 無効商品の名前への変更は duplicate_name で拒否 (潜在監査 M6) | src/services/latent_audit/product.rs | 110 |
+| `latent_m6_readd_disabled_product_name_revives_original_row` | 無効商品と同名の追加は元の行 (同じ PRODUCT_ID) を有効化して再利用 (潜在監査 M6) | src/services/latent_audit/product.rs | 113 |
+| `latent_m6_rename_onto_disabled_product_name_is_duplicate_name` | 無効商品の名前への変更は duplicate_name で拒否 (潜在監査 M6) | src/services/latent_audit/product.rs | 136 |
 
-**合計**: 18件
+**合計**: 20件
 
 ### services/shop.rs
 
@@ -693,7 +697,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **409件** |
+| **インラインテスト** | **413件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -707,8 +711,8 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/encryption.rs | 11 |
 | services/account.rs | 11 |
 | services/category.rs | 38 |
-| services/manufacturer.rs | 15 |
-| services/product.rs | 18 |
+| services/manufacturer.rs | 17 |
+| services/product.rs | 20 |
 | services/shop.rs | 16 |
 | services/transaction.rs | 61 |
 | services/aggregation.rs | 23 |
@@ -717,7 +721,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/i18n.rs | 8 |
 | services/recurring.rs | 14 |
 | lib.rs | 6 |
-| **総計** | **435件** |
+| **総計** | **439件** |
 
 ---
 

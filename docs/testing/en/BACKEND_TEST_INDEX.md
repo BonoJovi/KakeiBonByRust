@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-08-26 JST  
-**Total Tests**: 435 (delta-tracked; the full authoritative count from `cargo test --lib` is 675, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 439 (delta-tracked; the full authoritative count from `cargo test --lib` is 679, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -429,7 +429,9 @@ Manufacturer management service tests. Empty/duplicate assertion tests renamed t
 |---------------|-------------|------|------|
 | `test_add_manufacturer` | Test manufacturer addition | src/services/manufacturer.rs | 243 |
 | `test_update_manufacturer` | Test manufacturer update | src/services/manufacturer.rs | 261 |
-| `test_delete_manufacturer` | Test manufacturer deletion | src/services/manufacturer.rs | 292 |
+| `test_delete_manufacturer` | An unused manufacturer is removed, not just hidden (latent-audit M7) | src/services/manufacturer.rs | 283 |
+| `test_delete_disabled_manufacturer_removes_row` | A disabled manufacturer that nothing uses can still be deleted, removing the row (latent-audit M7) | src/services/manufacturer.rs | 309 |
+| `test_disable_manufacturer_allowed_while_referenced` | A manufacturer used by a product can be disabled (not deleted); the product still shows its name (latent-audit M7) | src/services/manufacturer.rs | 329 |
 | `test_empty_manufacturer_name_returns_validation_code` | Empty manufacturer name returns `ApiError { code: "validation" }` (Fable-5 #23) | src/services/manufacturer.rs | 316 |
 | `test_add_duplicate_manufacturer_returns_duplicate_name_code` | Duplicate returns `ApiError { code: "duplicate_name", entity: "manufacturer" }` (Fable-5 #23) | src/services/manufacturer.rs | 331 |
 | `test_update_to_duplicate_manufacturer_name_returns_duplicate_name_code` | Update to duplicate returns `ApiError { code: "duplicate_name" }` (Fable-5 #23) | src/services/manufacturer.rs | 355 |
@@ -440,10 +442,10 @@ Manufacturer management service tests. Empty/duplicate assertion tests renamed t
 | `test_delete_manufacturer_rejected_when_only_disabled_products_reference` | Even IS_DISABLED products count as a reference — the FK link exists and the products screen still surfaces them (master delete-lock) | src/services/manufacturer.rs | 402 |
 | `test_delete_manufacturer_ignores_other_users_references` | Cross-user products with the same MANUFACTURER_ID do NOT block delete — scoping is by USER_ID (master delete-lock) | src/services/manufacturer.rs | 429 |
 | `latent_m6_readd_deleted_manufacturer_name_is_not_database_error` | Re-adding a deleted manufacturer name never surfaces a generic database error (latent-audit M6) | src/services/latent_audit/manufacturer.rs | 26 |
-| `latent_m6_readd_deleted_manufacturer_name_revives_original_row` | Re-adding a disabled / deleted manufacturer name reuses the original row, enabled, with the new memo (latent-audit M6) | src/services/latent_audit/manufacturer.rs | 83 |
-| `latent_m6_rename_onto_disabled_manufacturer_name_is_duplicate_name` | Renaming onto a disabled manufacturer name is rejected with duplicate_name (latent-audit M6) | src/services/latent_audit/manufacturer.rs | 106 |
+| `latent_m6_readd_disabled_manufacturer_name_revives_original_row` | Re-adding a disabled manufacturer name reuses the original row, enabled, with the new memo (latent-audit M6) | src/services/latent_audit/manufacturer.rs | 108 |
+| `latent_m6_rename_onto_disabled_manufacturer_name_is_duplicate_name` | Renaming onto a disabled manufacturer name is rejected with duplicate_name (latent-audit M6) | src/services/latent_audit/manufacturer.rs | 131 |
 
-**Total**: 15 tests
+**Total**: 17 tests
 
 ### services/product.rs
 
@@ -454,7 +456,9 @@ Product management service tests.
 | `test_add_product_without_manufacturer` | Add product without manufacturer | src/services/product.rs | 256 |
 | `test_add_product_with_manufacturer` | Add product with manufacturer | src/services/product.rs | 276 |
 | `test_update_product` | Test product update | src/services/product.rs | 309 |
-| `test_delete_product` | Test product deletion | src/services/product.rs | 342 |
+| `test_delete_product` | An unused product is removed, not just hidden (latent-audit M7) | src/services/product.rs | 410 |
+| `test_delete_disabled_product_removes_row` | A disabled product that nothing uses can still be deleted, removing the row (latent-audit M7) | src/services/product.rs | 437 |
+| `test_disable_product_allowed_while_referenced` | A product named by a transaction detail can be disabled (not deleted) (latent-audit M7) | src/services/product.rs | 458 |
 | `test_empty_product_name` | Empty product name error | src/services/product.rs | 367 |
 | `test_add_duplicate_product` | Duplicate product name error | src/services/product.rs | 383 |
 | `test_manufacturer_deletion_rejected_while_product_references_it` | Manufacturer delete rejected with `ApiError { code: "in_use", entity: "manufacturer" }` while any product still references it — renamed from `test_manufacturer_deletion_sets_product_manufacturer_to_null` when the master delete-lock landed (was: fallback ON DELETE SET NULL) | src/services/product.rs | 512 |
@@ -467,10 +471,10 @@ Product management service tests.
 | `test_search_products_escapes_percent_metacharacter` | Autocomplete search of `"100%ジ"` matches only "果汁100%ジュース", not "果汁100リンゴジュース" — `%` is escaped and paired with `LIKE ? ESCAPE '\'` (Fable-5 #23) | src/services/product.rs | 785 |
 | `test_search_products_escapes_underscore_metacharacter` | Autocomplete search of `"A_1"` matches only literal "A_1", not "AB1" — `_` is escaped (Fable-5 #23) | src/services/product.rs | 812 |
 | `latent_m6_readd_deleted_product_name_is_not_database_error` | Re-adding a deleted product name never surfaces a generic database error (latent-audit M6) | src/services/latent_audit/product.rs | 27 |
-| `latent_m6_readd_deleted_product_name_revives_original_row` | Re-adding a disabled / deleted product name reuses the original row (same PRODUCT_ID), enabled, with the new memo (latent-audit M6) | src/services/latent_audit/product.rs | 87 |
-| `latent_m6_rename_onto_disabled_product_name_is_duplicate_name` | Renaming onto a disabled product name is rejected with duplicate_name (latent-audit M6) | src/services/latent_audit/product.rs | 110 |
+| `latent_m6_readd_disabled_product_name_revives_original_row` | Re-adding a disabled product name reuses the original row (same PRODUCT_ID), enabled, with the new memo (latent-audit M6) | src/services/latent_audit/product.rs | 113 |
+| `latent_m6_rename_onto_disabled_product_name_is_duplicate_name` | Renaming onto a disabled product name is rejected with duplicate_name (latent-audit M6) | src/services/latent_audit/product.rs | 136 |
 
-**Total**: 18 tests
+**Total**: 20 tests
 
 ### services/shop.rs
 
@@ -693,7 +697,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **409** |
+| **Inline Tests** | **413** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -707,8 +711,8 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/encryption.rs | 11 |
 | services/account.rs | 11 |
 | services/category.rs | 38 |
-| services/manufacturer.rs | 15 |
-| services/product.rs | 18 |
+| services/manufacturer.rs | 17 |
+| services/product.rs | 20 |
 | services/shop.rs | 16 |
 | services/transaction.rs | 61 |
 | services/aggregation.rs | 23 |
@@ -717,7 +721,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/i18n.rs | 8 |
 | services/recurring.rs | 14 |
 | lib.rs | 6 |
-| **Total** | **435** |
+| **Total** | **439** |
 
 ---
 
