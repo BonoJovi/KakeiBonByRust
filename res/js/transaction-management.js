@@ -22,6 +22,10 @@ let currentUserRole = null;
 
 // Pagination state
 let currentPage = 1;
+// Incremented per loadTransactions call; a response whose token is no longer
+// the latest is dropped, so a slow earlier page request can never overwrite
+// a newer one (latent-audit L5).
+let loadTransactionsToken = 0;
 const perPage = 50;
 
 // Filter state
@@ -330,6 +334,7 @@ async function loadCategoriesForFilter() {
 }
 
 async function loadTransactions() {
+    const token = ++loadTransactionsToken;
     try {
         const listContainer = document.getElementById('transaction-list');
         listContainer.innerHTML = '<div class="loading" data-i18n="common.loading">Loading...</div>';
@@ -349,12 +354,25 @@ async function loadTransactions() {
             perPage: perPage
         });
 
+        if (token !== loadTransactionsToken) return; // superseded by a newer load
+
         console.log('Transactions loaded:', response);
+
+        // Deleting the only row on the last page leaves currentPage past the
+        // end (e.g. 3 of 2), which rendered an empty page. Move back to the
+        // last existing page and load that instead (latent-audit L5).
+        const lastPage = Math.max(1, response.total_pages || 1);
+        if (currentPage > lastPage) {
+            currentPage = lastPage;
+            await loadTransactions();
+            return;
+        }
 
         renderTransactions(response.transactions);
         updatePagination(response);
 
     } catch (error) {
+        if (token !== loadTransactionsToken) return; // superseded by a newer load
         console.error('Failed to load transactions:', error);
         const listContainer = document.getElementById('transaction-list');
         // formatApiError unwraps the { code, message, entity } object

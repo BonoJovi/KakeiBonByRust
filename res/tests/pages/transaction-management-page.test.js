@@ -14,6 +14,12 @@
  *     backend's raw English format error. Pinned: the date field shows
  *     validation.required, nothing is sent, and the modal stays open.
  *
+ * L5  Deleting the only row on the last page reloaded the same page number,
+ *     so the screen showed an empty "3 / 2" page; and without a request
+ *     token an older page response resolving late overwrote a newer one.
+ *     loadTransactions now moves back to the last existing page and drops
+ *     superseded responses. Pinned: both.
+ *
  * The real page module is booted against res/transaction-management.html via
  * ./_page-harness.js.
  */
@@ -190,5 +196,53 @@ describe('transaction management screen — regression (latent audit 2026-09)', 
 
         document.getElementById('cancel-btn')?.click();
         await flush(5);
+    });
+
+    test('[L5] should move back to the last page when its only row is deleted', async () => {
+        // 101 rows → pages of 50/50/1.
+        seedTransactions(2 * PER_PAGE + 1);
+        document.getElementById('clear-filter-btn').click();
+        await flush(10);
+        document.getElementById('next-page-btn').click();
+        await flush(10);
+        document.getElementById('next-page-btn').click();
+        await flush(10);
+        expect(text('current-page')).toBe('3');
+        expect(text('total-pages')).toBe('3');
+
+        const deleteBtns = rowButtons('common.delete');
+        expect(deleteBtns).toHaveLength(1);
+        deleteBtns[0].click();
+        await flush(15);
+
+        const current = parseInt(text('current-page'), 10);
+        const totalPages = parseInt(text('total-pages'), 10);
+        expect(totalPages).toBe(2);
+        expect(current).toBeLessThanOrEqual(totalPages);
+        expect(document.querySelectorAll('#transaction-list .transaction-item').length).toBeGreaterThan(0);
+    });
+    test('[L5] should keep the newer page when an older page response resolves late', async () => {
+        seedTransactions(3 * PER_PAGE);
+        document.getElementById('clear-filter-btn').click();
+        await flush(10);
+        expect(text('current-page')).toBe('1');
+
+        pendingPageRequests = [];
+        document.getElementById('next-page-btn').click(); // request page 2
+        document.getElementById('next-page-btn').click(); // request page 3 (unless ignored while loading)
+        await flush(5);
+        const requests = pendingPageRequests;
+        pendingPageRequests = null;
+        expect(requests.length).toBeGreaterThanOrEqual(1);
+        const lastPage = requests[requests.length - 1].page;
+
+        // Answer in reverse order: newest first, oldest last.
+        for (let i = requests.length - 1; i >= 0; i--) {
+            requests[i].d.resolve(pageResponse(requests[i].page));
+            await flush(5);
+        }
+        await flush(10);
+
+        expect(text('current-page')).toBe(String(lastPage));
     });
 });
