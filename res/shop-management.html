@@ -26,6 +26,7 @@
                 <div class="section">
                     <div class="section-header">
                         <h2 data-i18n="shop_mgmt.shop_list">Shop List</h2>
+                        <button id="toggle-disabled-btn" class="btn-secondary" data-i18n="common.show_disabled">Show Disabled Items</button>
                     </div>
                     <div id="shop-list-container">
                         <div id="loading" class="loading" style="display: none;" data-i18n="common.loading">Loading...</div>
@@ -72,6 +73,13 @@
                         <div class="input-wrapper">
                             <textarea id="shop-memo" name="shop-memo" rows="3"></textarea>
                         </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="shop-is-disabled">
+                            <span data-i18n="common.is_disabled">Disabled</span>
+                        </label>
                     </div>
 
                     <div class="form-actions">

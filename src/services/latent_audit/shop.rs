@@ -27,92 +27,110 @@ async fn latent_h6_readd_deleted_shop_name_is_not_database_error() {
     add_shop(
         &pool,
         user_id,
-        AddShopRequest { shop_name: "イオン".to_string(), memo: None },
+        AddShopRequest { shop_name: "イオン".to_string(), memo: None, is_disabled: None },
     )
     .await
     .expect("initial add");
-    let shop_id = get_shops(&pool, user_id).await.expect("list")[0].shop_id;
-    delete_shop(&pool, user_id, shop_id).await.expect("logical delete");
+    let shop_id = get_shops(&pool, user_id, false).await.expect("list")[0].shop_id;
+    delete_shop(&pool, user_id, shop_id).await.expect("delete");
 
-    let result = add_shop(
+    // The delete removed the row (latent-audit M7), so the name is free and
+    // re-adding it simply creates an enabled shop again.
+    add_shop(
         &pool,
         user_id,
-        AddShopRequest { shop_name: "イオン".to_string(), memo: None },
+        AddShopRequest { shop_name: "イオン".to_string(), memo: None, is_disabled: None },
     )
-    .await;
+    .await
+    .expect("re-adding a deleted shop name must succeed");
 
-    if let Err(err) = &result {
-        assert_ne!(
-            err.code,
-            ApiError::CODE_DATABASE,
-            "re-adding a deleted shop name must not surface a generic database error: {:?}",
-            err
-        );
-        assert_eq!(
-            err.code,
-            ApiError::CODE_DUPLICATE_NAME,
-            "if rejected, it must be a structured duplicate_name error: {:?}",
-            err
-        );
-    }
+    let all = get_shops(&pool, user_id, true).await.expect("list");
+    let matching: Vec<_> = all.iter().filter(|s| s.shop_name == "イオン").collect();
+    assert_eq!(matching.len(), 1, "exactly one row with the name: {:?}", all);
+    assert_eq!(matching[0].is_disabled, 0, "the re-added shop must be enabled");
 }
 
-/// H6 (chosen fix): re-adding a deleted shop name revives the original row
+/// Hide a shop through the edit form's "disabled" checkbox. A delete
+/// removes the row instead (latent-audit M7), so it no longer leaves a
+/// disabled row behind.
+async fn disable_shop(pool: &SqlitePool, user_id: i64, id: i64) {
+    let row = get_shops(pool, user_id, true)
+        .await
+        .expect("list")
+        .into_iter()
+        .find(|s| s.shop_id == id)
+        .expect("row to disable");
+    update_shop(
+        pool,
+        user_id,
+        id,
+        UpdateShopRequest {
+            shop_name: row.shop_name,
+            memo: row.memo,
+            display_order: row.display_order,
+            is_disabled: 1,
+        },
+    )
+    .await
+    .expect("disable");
+}
+
+/// H6 (chosen fix): re-adding a disabled shop name revives the original row
 /// — same SHOP_ID, active again, carrying the new memo — rather than
 /// inserting a second row.
 #[tokio::test]
-async fn latent_h6_readd_deleted_shop_name_revives_original_row() {
+async fn latent_h6_readd_disabled_shop_name_revives_original_row() {
     let (pool, user_id) = setup_production_schema_db().await;
 
     add_shop(
         &pool,
         user_id,
-        AddShopRequest { shop_name: "イオン".to_string(), memo: None },
+        AddShopRequest { shop_name: "イオン".to_string(), memo: None, is_disabled: None },
     )
     .await
     .expect("initial add");
-    let original_id = get_shops(&pool, user_id).await.expect("list")[0].shop_id;
-    delete_shop(&pool, user_id, original_id).await.expect("logical delete");
+    let original_id = get_shops(&pool, user_id, false).await.expect("list")[0].shop_id;
+    disable_shop(&pool, user_id, original_id).await;
 
     add_shop(
         &pool,
         user_id,
-        AddShopRequest { shop_name: "イオン".to_string(), memo: Some("再登録".to_string()) },
+        AddShopRequest { shop_name: "イオン".to_string(), memo: Some("再登録".to_string()), is_disabled: None },
     )
     .await
-    .expect("re-adding a deleted shop name must succeed");
+    .expect("re-adding a disabled shop name must succeed");
 
-    let shops = get_shops(&pool, user_id).await.expect("list");
+    let shops = get_shops(&pool, user_id, false).await.expect("list");
     let matching: Vec<_> = shops.iter().filter(|s| s.shop_name == "イオン").collect();
     assert_eq!(matching.len(), 1, "exactly one active shop with the name: {:?}", shops);
     assert_eq!(matching[0].shop_id, original_id, "the original row must be revived");
     assert_eq!(matching[0].memo.as_deref(), Some("再登録"));
 }
 
-/// H6 (chosen fix): renaming a shop onto a deleted shop's name is rejected
+/// H6 (chosen fix): renaming a shop onto a disabled shop's name is rejected
 /// as a structured duplicate_name error, not a raw UNIQUE violation.
 #[tokio::test]
-async fn latent_h6_rename_onto_deleted_shop_name_is_duplicate_name() {
+async fn latent_h6_rename_onto_disabled_shop_name_is_duplicate_name() {
     let (pool, user_id) = setup_production_schema_db().await;
 
     for name in ["イオン", "ダイソー"] {
-        add_shop(&pool, user_id, AddShopRequest { shop_name: name.to_string(), memo: None })
+        add_shop(&pool, user_id, AddShopRequest { shop_name: name.to_string(), memo: None, is_disabled: None })
             .await
             .expect("add");
     }
-    let shops = get_shops(&pool, user_id).await.expect("list");
+    let shops = get_shops(&pool, user_id, false).await.expect("list");
     let id_of = |name: &str| shops.iter().find(|s| s.shop_name == name).expect(name).shop_id;
     let (aeon, daiso) = (id_of("イオン"), id_of("ダイソー"));
-    delete_shop(&pool, user_id, aeon).await.expect("logical delete");
+    disable_shop(&pool, user_id, aeon).await;
 
     let err = update_shop(
         &pool,
         user_id,
         daiso,
-        UpdateShopRequest { shop_name: "イオン".to_string(), memo: None, display_order: 1 },
+        UpdateShopRequest { shop_name: "イオン".to_string(), memo: None, display_order: 1, is_disabled: 0 },
     )
     .await
-    .expect_err("renaming onto a deleted shop's name must be rejected");
+    .expect_err("renaming onto a disabled shop's name must be rejected");
     assert_eq!(err.code, ApiError::CODE_DUPLICATE_NAME, "{:?}", err);
 }
 
@@ -140,7 +158,7 @@ async fn latent_h6_insert_unique_violation_maps_to_duplicate_name() {
     let err = add_shop(
         &pool,
         user_id,
-        AddShopRequest { shop_name: "イオン".to_string(), memo: None },
+        AddShopRequest { shop_name: "イオン".to_string(), memo: None, is_disabled: None },
     )
     .await
     .expect_err("the raced INSERT must be rejected");

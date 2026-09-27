@@ -42,9 +42,9 @@ use crate::api_error::ApiError;
 /// - `check_duplicate_for_update_sql` — `SELECT COUNT(*)` bound with
 ///   `(user_id, name, exclude_id)`.
 /// - `delete_sql` — bound with `(user_id, id)`. Must affect at most one
-///   row. Shops still delete logically (`IS_DISABLED = 1`); manufacturers
-///   and products delete physically, since a delete is only allowed once
-///   nothing references the row (latent-audit M7).
+///   row. Shops, manufacturers and products delete physically, since a
+///   delete is only allowed once nothing references the row; hiding a row
+///   that is still in use is what `IS_DISABLED` is for (latent-audit M7).
 pub struct MasterCrudSpec {
     pub entity_label: &'static str,
     pub name_label: &'static str,
@@ -245,6 +245,19 @@ pub fn reject_if_in_use(entity_label: &str, in_use_flag: i64) -> Result<(), ApiE
         return Err(ApiError::in_use(entity_label));
     }
     Ok(())
+}
+
+/// `IS_DISABLED` is a 0/1 flag; reject any other value before it is
+/// written, since the list queries only recognise 0 as enabled.
+pub fn validate_is_disabled(is_disabled: i64) -> Result<(), ApiError> {
+    if is_disabled == 0 || is_disabled == 1 {
+        Ok(())
+    } else {
+        Err(ApiError::validation(format!(
+            "Disabled flag must be 0 or 1, got {}",
+            is_disabled
+        )))
+    }
 }
 
 #[cfg(test)]

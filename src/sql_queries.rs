@@ -1755,6 +1755,13 @@ WHERE USER_ID = ? AND IS_DISABLED = 0
 ORDER BY DISPLAY_ORDER, SHOP_NAME
 "#;
 
+pub const SHOP_GET_ALL_INCLUDING_DISABLED: &str = r#"
+SELECT SHOP_ID, USER_ID, SHOP_NAME, MEMO, DISPLAY_ORDER, IS_DISABLED, ENTRY_DT, UPDATE_DT
+FROM SHOPS
+WHERE USER_ID = ?
+ORDER BY DISPLAY_ORDER, SHOP_NAME
+"#;
+
 pub const SHOP_GET_BY_ID: &str = r#"
 SELECT SHOP_ID, USER_ID, SHOP_NAME, MEMO, DISPLAY_ORDER, IS_DISABLED, ENTRY_DT, UPDATE_DT
 FROM SHOPS
@@ -1768,30 +1775,31 @@ WHERE USER_ID = ?
 "#;
 
 pub const SHOP_INSERT: &str = r#"
-INSERT INTO SHOPS (USER_ID, SHOP_NAME, MEMO, DISPLAY_ORDER, ENTRY_DT)
-VALUES (?, ?, ?, ?, datetime('now'))
+INSERT INTO SHOPS (USER_ID, SHOP_NAME, MEMO, DISPLAY_ORDER, IS_DISABLED, ENTRY_DT)
+VALUES (?, ?, ?, ?, ?, datetime('now'))
 "#;
 
-/// Re-adding a logically deleted shop name revives that row instead of
-/// inserting (latent-audit H6): UNIQUE(USER_ID, SHOP_NAME) covers deleted
-/// rows too, so a plain INSERT would fail. Deleted shops are never
-/// referenced (the delete lock rejects in-use shops), so reviving is safe.
-/// Binds: (memo, display_order, user_id, shop_name).
-pub const SHOP_REVIVE_DELETED_BY_NAME: &str = r#"
+/// Adding a name held by a disabled shop reuses that row instead of
+/// inserting (latent-audit H6): UNIQUE(USER_ID, SHOP_NAME) covers disabled
+/// rows too, so a plain INSERT would fail. Transactions that name the shop
+/// keep pointing at the same row.
+/// Binds: (is_disabled, memo, display_order, user_id, shop_name).
+pub const SHOP_REVIVE_DISABLED_BY_NAME: &str = r#"
 UPDATE SHOPS
-SET IS_DISABLED = 0, MEMO = ?, DISPLAY_ORDER = ?, UPDATE_DT = datetime('now')
+SET IS_DISABLED = ?, MEMO = ?, DISPLAY_ORDER = ?, UPDATE_DT = datetime('now')
 WHERE USER_ID = ? AND SHOP_NAME = ? AND IS_DISABLED = 1
 "#;
 
 pub const SHOP_UPDATE: &str = r#"
 UPDATE SHOPS
-SET SHOP_NAME = ?, MEMO = ?, DISPLAY_ORDER = ?, UPDATE_DT = datetime('now')
+SET SHOP_NAME = ?, MEMO = ?, DISPLAY_ORDER = ?, IS_DISABLED = ?, UPDATE_DT = datetime('now')
 WHERE USER_ID = ? AND SHOP_ID = ?
 "#;
 
-pub const SHOP_DELETE_LOGICAL: &str = r#"
-UPDATE SHOPS
-SET IS_DISABLED = 1, UPDATE_DT = datetime('now')
+/// Physical delete; only run after SHOP_CHECK_IN_USE finds no reference
+/// (latent-audit M7).
+pub const SHOP_DELETE: &str = r#"
+DELETE FROM SHOPS
 WHERE USER_ID = ? AND SHOP_ID = ?
 "#;
 
@@ -1813,9 +1821,9 @@ FROM SHOPS
 WHERE USER_ID = ? AND SHOP_NAME = ? AND IS_DISABLED = 0
 "#;
 
-/// Counts logically deleted rows too: UNIQUE(USER_ID, SHOP_NAME) covers
-/// them, so renaming onto a deleted shop's name must surface as
-/// duplicate_name rather than a raw constraint error (latent-audit H6).
+/// Counts disabled rows too: UNIQUE(USER_ID, SHOP_NAME) covers them, so
+/// renaming onto a disabled shop's name must surface as duplicate_name
+/// rather than a raw constraint error (latent-audit H6).
 pub const SHOP_CHECK_DUPLICATE_FOR_UPDATE: &str = r#"
 SELECT COUNT(*) as count
 FROM SHOPS

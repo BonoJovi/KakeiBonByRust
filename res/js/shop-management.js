@@ -12,6 +12,7 @@ import { clearValidationError, attachCharCounter } from './validation-display.js
 import { showToast } from './toast.js';
 import { MAX_NAME_LEN, MAX_MEMO_LEN, SOURCE_SCREEN_TRANSACTION_MGMT } from './consts.js';
 import { saveMasterEntry, API_ERROR_CODES, formatApiError } from './master-crud.js';
+import { escapeHtml } from './escape-html.js';
 
 console.log('=== SHOP-MANAGEMENT.JS LOADED ===');
 
@@ -24,6 +25,10 @@ let editingShopId = null;
 let shopModal = null;
 let deleteModal = null;
 let shopToDelete = null;
+let showDisabledItems = false;
+// Bumped per loadShops() call so a slower, older response (e.g. from a
+// quick double toggle of "show disabled") cannot overwrite a newer list.
+let loadShopsToken = 0;
 // Screen that side-tripped here (captured once at load, cleared from the
 // session immediately so it cannot go stale if the user leaves without saving)
 let sideTripSource = null;
@@ -104,6 +109,7 @@ function initShopModal() {
                 modalTitle.setAttribute('data-i18n', 'shop_mgmt.modal_title_add');
                 modalTitle.textContent = i18n.t('shop_mgmt.modal_title_add');
                 editingShopId = null;
+                document.getElementById('shop-is-disabled').checked = false;
             } else if (mode === 'edit') {
                 modalTitle.setAttribute('data-i18n', 'shop_mgmt.modal_title_edit');
                 modalTitle.textContent = i18n.t('shop_mgmt.modal_title_edit');
@@ -111,6 +117,7 @@ function initShopModal() {
                 // Populate form
                 shopNameEl.value = data.shop_name;
                 shopMemoEl.value = data.memo || '';
+                document.getElementById('shop-is-disabled').checked = data.is_disabled === 1;
 
                 editingShopId = data.shop_id;
             }
@@ -163,6 +170,13 @@ function setupEventListeners() {
         openModal('add');
     });
 
+    // Toggle disabled items button
+    document.getElementById('toggle-disabled-btn').addEventListener('click', () => {
+        showDisabledItems = !showDisabledItems;
+        updateToggleButton();
+        loadShops();
+    });
+
     // Live-clear validation errors as the user edits
     const shopNameInput = document.getElementById('shop-name');
     const memoInput = document.getElementById('shop-memo');
@@ -188,7 +202,19 @@ function clearErrors() {
     });
 }
 
+function updateToggleButton() {
+    const btn = document.getElementById('toggle-disabled-btn');
+    if (showDisabledItems) {
+        btn.setAttribute('data-i18n', 'common.hide_disabled');
+        btn.textContent = i18n.t('common.hide_disabled');
+    } else {
+        btn.setAttribute('data-i18n', 'common.show_disabled');
+        btn.textContent = i18n.t('common.show_disabled');
+    }
+}
+
 async function loadShops() {
+    const token = ++loadShopsToken;
     const loading = document.getElementById('loading');
     const table = document.getElementById('shops-table');
 
@@ -196,8 +222,12 @@ async function loadShops() {
         loading.style.display = 'block';
         table.style.display = 'none';
 
-        console.log('Loading shops');
-        shops = await invoke('get_shops', {});
+        console.log('Loading shops, includeDisabled:', showDisabledItems);
+        const loaded = await invoke('get_shops', {
+            includeDisabled: showDisabledItems
+        });
+        if (token !== loadShopsToken) return;
+        shops = loaded;
         console.log('Loaded shops:', shops);
 
         renderShops();
@@ -205,6 +235,7 @@ async function loadShops() {
         loading.style.display = 'none';
         table.style.display = 'table';
     } catch (error) {
+        if (token !== loadShopsToken) return;
         console.error('Failed to load shops:', error);
         loading.textContent = i18n.t('shop_mgmt.failed_to_load');
     }
@@ -229,14 +260,29 @@ function renderShops() {
     shops.forEach(shop => {
         const row = tbody.insertRow();
 
+        // Apply styling for disabled items (same as the manufacturer list)
+        const isDisabled = shop.is_disabled === 1;
+        if (isDisabled) {
+            row.style.backgroundColor = '#6c757d';
+        }
+
         // Shop Name
         const nameCell = row.insertCell();
-        nameCell.textContent = shop.shop_name;
+        if (isDisabled) {
+            const badge = `<span style="color: #ffc107; font-weight: bold; margin-left: 8px;">[${escapeHtml(i18n.t('common.disabled_label'))}]</span>`;
+            nameCell.innerHTML = `<span style="color: #ffffff;">${escapeHtml(shop.shop_name)}</span>${badge}`;
+        } else {
+            nameCell.textContent = shop.shop_name;
+        }
 
         // Memo
         const memoCell = row.insertCell();
         memoCell.textContent = shop.memo || '-';
-        memoCell.style.color = shop.memo ? '#212529' : '#999';
+        if (isDisabled) {
+            memoCell.style.color = '#ffffff';
+        } else {
+            memoCell.style.color = shop.memo ? '#212529' : '#999';
+        }
 
         // Actions
         const actionsCell = row.insertCell();
@@ -274,6 +320,7 @@ async function saveShop() {
 
     const shopNameInput = document.getElementById('shop-name');
     const memoInput = document.getElementById('shop-memo');
+    const isDisabled = document.getElementById('shop-is-disabled').checked ? 1 : 0;
 
     const result = await saveMasterEntry({
         nameInput: shopNameInput,
@@ -283,12 +330,14 @@ async function saveShop() {
         invokeAdd: (name, memo) => invoke('add_shop', {
             shopName: name,
             memo,
+            isDisabled: isDisabled === 1 ? isDisabled : null,
         }),
         invokeUpdate: (target, name, memo) => invoke('update_shop', {
             shopId: editingShopId,
             shopName: name,
             memo,
             displayOrder: target.display_order,
+            isDisabled,
         }),
         i18nPrefix: 'shop_mgmt',
         nameFieldI18nKey: 'shop_mgmt.shop_name',

@@ -13,7 +13,7 @@ const SPEC: MasterCrudSpec = MasterCrudSpec {
     name_label: "Shop name",
     check_duplicate_for_add_sql: sql_queries::SHOP_CHECK_DUPLICATE_FOR_ADD,
     check_duplicate_for_update_sql: sql_queries::SHOP_CHECK_DUPLICATE_FOR_UPDATE,
-    delete_sql: sql_queries::SHOP_DELETE_LOGICAL,
+    delete_sql: sql_queries::SHOP_DELETE,
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
@@ -33,6 +33,7 @@ pub struct Shop {
 pub struct AddShopRequest {
     pub shop_name: String,
     pub memo: Option<String>,
+    pub is_disabled: Option<i64>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -40,11 +41,21 @@ pub struct UpdateShopRequest {
     pub shop_name: String,
     pub memo: Option<String>,
     pub display_order: i64,
+    pub is_disabled: i64,
 }
 
-/// Get all shops for a user
-pub async fn get_shops(pool: &SqlitePool, user_id: i64) -> Result<Vec<Shop>, ApiError> {
-    let shops = sqlx::query_as::<_, Shop>(sql_queries::SHOP_GET_ALL)
+/// Get all shops for a user; disabled shops only when `include_disabled`.
+pub async fn get_shops(
+    pool: &SqlitePool,
+    user_id: i64,
+    include_disabled: bool,
+) -> Result<Vec<Shop>, ApiError> {
+    let query = if include_disabled {
+        sql_queries::SHOP_GET_ALL_INCLUDING_DISABLED
+    } else {
+        sql_queries::SHOP_GET_ALL
+    };
+    let shops = sqlx::query_as::<_, Shop>(query)
         .bind(user_id)
         .fetch_all(pool)
         .await?;
@@ -84,9 +95,13 @@ pub async fn add_shop(
     )
     .await?;
 
-    // A logically deleted shop with the same name still holds the UNIQUE
-    // slot, so bring it back instead of inserting (latent-audit H6).
-    let revived = sqlx::query(sql_queries::SHOP_REVIVE_DELETED_BY_NAME)
+    let is_disabled = request.is_disabled.unwrap_or(0);
+    master_data::validate_is_disabled(is_disabled)?;
+
+    // A disabled shop with the same name still holds the UNIQUE slot, so
+    // bring it back instead of inserting (latent-audit H6).
+    let revived = sqlx::query(sql_queries::SHOP_REVIVE_DISABLED_BY_NAME)
+        .bind(is_disabled)
         .bind(&request.memo)
         .bind(display_order)
         .bind(user_id)
@@ -101,6 +116,7 @@ pub async fn add_shop(
             .bind(&request.shop_name)
             .bind(&request.memo)
             .bind(display_order)
+            .bind(is_disabled)
             .execute(pool)
             .await
             .map_err(|e| master_data::map_insert_error(&SPEC, e))?;
@@ -120,6 +136,7 @@ pub async fn update_shop(
         .map_err(ApiError::validation)?;
     validation::validate_memo("Memo", request.memo.as_ref())
         .map_err(ApiError::validation)?;
+    master_data::validate_is_disabled(request.is_disabled)?;
 
     master_data::check_duplicate_for_update(&SPEC, pool, user_id, shop_id, &request.shop_name)
         .await?;
@@ -133,6 +150,7 @@ pub async fn update_shop(
         .bind(&request.shop_name)
         .bind(&request.memo)
         .bind(request.display_order)
+        .bind(request.is_disabled)
         .bind(user_id)
         .bind(shop_id)
         .execute(pool)
@@ -143,11 +161,11 @@ pub async fn update_shop(
     Ok("Shop updated successfully".to_string())
 }
 
-/// Delete a shop (logical deletion). Rejected with
-/// `ApiError::in_use("Shop")` when any transaction or recurring rule
-/// still names this shop; the frontend surfaces that as the "still in
-/// use" toast and steers the user to disable instead. See
-/// `sql_queries::SHOP_CHECK_IN_USE` for the exact scope.
+/// Delete a shop. Rejected with `ApiError::in_use("Shop")` when any
+/// transaction or recurring rule still names this shop; the frontend
+/// surfaces that as the "still in use" toast and steers the user to disable
+/// instead. See `sql_queries::SHOP_CHECK_IN_USE` for the exact scope.
+/// Otherwise the row is removed (latent-audit M7).
 pub async fn delete_shop(
     pool: &SqlitePool,
     user_id: i64,
@@ -234,12 +252,13 @@ mod tests {
         let request = AddShopRequest {
             shop_name: "イオン新宿店".to_string(),
             memo: Some("テストメモ".to_string()),
+            is_disabled: None,
         };
 
         let result = add_shop(&pool, 2, request).await;
         assert!(result.is_ok());
 
-        let shops = get_shops(&pool, 2).await.unwrap();
+        let shops = get_shops(&pool, 2, false).await.unwrap();
         assert_eq!(shops.len(), 1);
         assert_eq!(shops[0].shop_name, "イオン新宿店");
     }
@@ -251,16 +270,18 @@ mod tests {
         let add_request = AddShopRequest {
             shop_name: "イオン新宿店".to_string(),
             memo: None,
+            is_disabled: None,
         };
         add_shop(&pool, 2, add_request).await.unwrap();
 
-        let shops = get_shops(&pool, 2).await.unwrap();
+        let shops = get_shops(&pool, 2, false).await.unwrap();
         let shop_id = shops[0].shop_id;
 
         let update_request = UpdateShopRequest {
             shop_name: "イオン祇園店".to_string(),
             memo: Some("更新後メモ".to_string()),
             display_order: 1,
+            is_disabled: 0,
         };
 
         let result = update_shop(&pool, 2, shop_id, update_request).await;
@@ -278,17 +299,112 @@ mod tests {
         let request = AddShopRequest {
             shop_name: "イオン新宿店".to_string(),
             memo: None,
+            is_disabled: None,
         };
         add_shop(&pool, 2, request).await.unwrap();
 
-        let shops = get_shops(&pool, 2).await.unwrap();
+        let shops = get_shops(&pool, 2, false).await.unwrap();
         let shop_id = shops[0].shop_id;
 
         let result = delete_shop(&pool, 2, shop_id).await;
         assert!(result.is_ok());
 
-        let shops = get_shops(&pool, 2).await.unwrap();
+        // An unused shop is removed, not just hidden (latent-audit M7).
+        let shops = get_shops(&pool, 2, true).await.unwrap();
         assert_eq!(shops.len(), 0);
+    }
+
+    /// Latent-audit M7: a disabled shop that nothing uses can still be
+    /// deleted, which removes the row.
+    #[tokio::test]
+    async fn test_delete_disabled_shop_removes_row() {
+        let pool = setup_test_db().await;
+
+        add_shop(&pool, 2, AddShopRequest {
+            shop_name: "イオン新宿店".to_string(),
+            memo: None,
+            is_disabled: Some(1),
+        })
+        .await
+        .unwrap();
+        assert!(get_shops(&pool, 2, false).await.unwrap().is_empty());
+        let shop_id = get_shops(&pool, 2, true).await.unwrap()[0].shop_id;
+
+        delete_shop(&pool, 2, shop_id).await.unwrap();
+
+        assert!(get_shops(&pool, 2, true).await.unwrap().is_empty());
+    }
+
+    /// The disabled flag only accepts 0 or 1, on add and on update.
+    #[tokio::test]
+    async fn test_shop_is_disabled_must_be_zero_or_one() {
+        let pool = setup_test_db().await;
+
+        let err = add_shop(&pool, 2, AddShopRequest {
+            shop_name: "イオン新宿店".to_string(),
+            memo: None,
+            is_disabled: Some(2),
+        })
+        .await
+        .unwrap_err();
+        assert_eq!(err.code, ApiError::CODE_VALIDATION);
+        assert!(get_shops(&pool, 2, true).await.unwrap().is_empty());
+
+        add_shop(&pool, 2, AddShopRequest {
+            shop_name: "イオン新宿店".to_string(),
+            memo: None,
+            is_disabled: None,
+        })
+        .await
+        .unwrap();
+        let shop_id = get_shops(&pool, 2, false).await.unwrap()[0].shop_id;
+        let err = update_shop(&pool, 2, shop_id, UpdateShopRequest {
+            shop_name: "イオン新宿店".to_string(),
+            memo: None,
+            display_order: 1,
+            is_disabled: -1,
+        })
+        .await
+        .unwrap_err();
+        assert_eq!(err.code, ApiError::CODE_VALIDATION);
+        assert_eq!(get_shops(&pool, 2, false).await.unwrap().len(), 1);
+    }
+
+    /// Latent-audit M7: a shop still named by a transaction cannot be
+    /// deleted, but it can be disabled, and enabled again.
+    #[tokio::test]
+    async fn test_disable_shop_allowed_while_referenced() {
+        let pool = setup_test_db().await;
+
+        add_shop(&pool, 2, AddShopRequest {
+            shop_name: "イオン新宿店".to_string(),
+            memo: None,
+            is_disabled: None,
+        })
+        .await
+        .unwrap();
+        let shop_id = get_shops(&pool, 2, false).await.unwrap()[0].shop_id;
+        sqlx::query(sql_queries::TEST_INSERT_TRANSACTIONS_HEADER_SHOP_REF)
+            .bind(2_i64)
+            .bind(shop_id)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let set_disabled = |is_disabled| UpdateShopRequest {
+            shop_name: "イオン新宿店".to_string(),
+            memo: None,
+            display_order: 1,
+            is_disabled,
+        };
+        update_shop(&pool, 2, shop_id, set_disabled(1)).await.unwrap();
+        assert!(get_shops(&pool, 2, false).await.unwrap().is_empty());
+        let all = get_shops(&pool, 2, true).await.unwrap();
+        assert_eq!(all.len(), 1);
+        assert_eq!(all[0].is_disabled, 1);
+
+        update_shop(&pool, 2, shop_id, set_disabled(0)).await.unwrap();
+        assert_eq!(get_shops(&pool, 2, false).await.unwrap().len(), 1);
     }
 
     #[tokio::test]
@@ -298,6 +414,7 @@ mod tests {
         let request = AddShopRequest {
             shop_name: "   ".to_string(),
             memo: None,
+            is_disabled: None,
         };
 
         let err = add_shop(&pool, 2, request).await.unwrap_err();
@@ -312,12 +429,14 @@ mod tests {
         let request1 = AddShopRequest {
             shop_name: "イオン新宿店".to_string(),
             memo: None,
+            is_disabled: None,
         };
         add_shop(&pool, 2, request1).await.unwrap();
 
         let request2 = AddShopRequest {
             shop_name: "イオン新宿店".to_string(),
             memo: Some("異なるメモ".to_string()),
+            is_disabled: None,
         };
         let err = add_shop(&pool, 2, request2).await.unwrap_err();
         assert_eq!(err.code, ApiError::CODE_DUPLICATE_NAME);
@@ -331,22 +450,25 @@ mod tests {
         let request1 = AddShopRequest {
             shop_name: "イオン新宿店".to_string(),
             memo: None,
+            is_disabled: None,
         };
         add_shop(&pool, 2, request1).await.unwrap();
 
         let request2 = AddShopRequest {
             shop_name: "セブンイレブン".to_string(),
             memo: None,
+            is_disabled: None,
         };
         add_shop(&pool, 2, request2).await.unwrap();
 
-        let shops = get_shops(&pool, 2).await.unwrap();
+        let shops = get_shops(&pool, 2, false).await.unwrap();
         let shop_id = shops[1].shop_id;
 
         let update_request = UpdateShopRequest {
             shop_name: "イオン新宿店".to_string(),
             memo: None,
             display_order: 1,
+            is_disabled: 0,
         };
         let err = update_shop(&pool, 2, shop_id, update_request).await.unwrap_err();
         assert_eq!(err.code, ApiError::CODE_DUPLICATE_NAME);
@@ -360,6 +482,7 @@ mod tests {
             shop_name: "存在しない".to_string(),
             memo: None,
             display_order: 1,
+            is_disabled: 0,
         };
         let err = update_shop(&pool, 2, 9999, update_request).await.unwrap_err();
         assert_eq!(err.code, ApiError::CODE_NOT_FOUND);
@@ -380,9 +503,10 @@ mod tests {
         let request = AddShopRequest {
             shop_name: "イオン新宿店".to_string(),
             memo: None,
+            is_disabled: None,
         };
         add_shop(&pool, 2, request).await.unwrap();
-        let shop_id = get_shops(&pool, 2).await.unwrap()[0].shop_id;
+        let shop_id = get_shops(&pool, 2, false).await.unwrap()[0].shop_id;
 
         sqlx::query(sql_queries::TEST_INSERT_TRANSACTIONS_HEADER_SHOP_REF)
             .bind(2_i64)
@@ -395,8 +519,8 @@ mod tests {
         assert_eq!(err.code, ApiError::CODE_IN_USE);
         assert_eq!(err.entity.as_deref(), Some("shop"));
 
-        // Shop still visible — the guard aborted before the logical delete.
-        assert_eq!(get_shops(&pool, 2).await.unwrap().len(), 1);
+        // Shop still visible — the guard aborted before the delete.
+        assert_eq!(get_shops(&pool, 2, false).await.unwrap().len(), 1);
     }
 
     #[tokio::test]
@@ -406,9 +530,10 @@ mod tests {
         let request = AddShopRequest {
             shop_name: "イオン新宿店".to_string(),
             memo: None,
+            is_disabled: None,
         };
         add_shop(&pool, 2, request).await.unwrap();
-        let shop_id = get_shops(&pool, 2).await.unwrap()[0].shop_id;
+        let shop_id = get_shops(&pool, 2, false).await.unwrap()[0].shop_id;
 
         sqlx::query(sql_queries::TEST_INSERT_RECURRING_RULES_SHOP_REF)
             .bind(2_i64)
@@ -428,9 +553,10 @@ mod tests {
         let request = AddShopRequest {
             shop_name: "イオン新宿店".to_string(),
             memo: None,
+            is_disabled: None,
         };
         add_shop(&pool, 2, request).await.unwrap();
-        let shop_id = get_shops(&pool, 2).await.unwrap()[0].shop_id;
+        let shop_id = get_shops(&pool, 2, false).await.unwrap()[0].shop_id;
 
         // Reference belongs to user 1, so user 2's delete must succeed.
         sqlx::query(sql_queries::TEST_INSERT_TRANSACTIONS_HEADER_SHOP_REF)
@@ -451,16 +577,18 @@ mod tests {
         let request = AddShopRequest {
             shop_name: "イオン新宿店".to_string(),
             memo: Some("元のメモ".to_string()),
+            is_disabled: None,
         };
         add_shop(&pool, 2, request).await.unwrap();
 
-        let shops = get_shops(&pool, 2).await.unwrap();
+        let shops = get_shops(&pool, 2, false).await.unwrap();
         let shop_id = shops[0].shop_id;
 
         let update_request = UpdateShopRequest {
             shop_name: "イオン新宿店".to_string(),
             memo: Some("新しいメモ".to_string()),
             display_order: 1,
+            is_disabled: 0,
         };
         let result = update_shop(&pool, 2, shop_id, update_request).await;
         assert!(result.is_ok());
@@ -479,6 +607,7 @@ mod tests {
         let request = AddShopRequest {
             shop_name: "あ".repeat(consts::MAX_NAME_LEN),
             memo: None,
+            is_disabled: None,
         };
         let result = add_shop(&pool, 2, request).await;
         assert!(result.is_ok(), "expected MAX_NAME_LEN multibyte chars to be accepted: {:?}", result.err());
@@ -491,6 +620,7 @@ mod tests {
         let request = AddShopRequest {
             shop_name: "あ".repeat(consts::MAX_NAME_LEN + 1),
             memo: None,
+            is_disabled: None,
         };
         let err = add_shop(&pool, 2, request).await.unwrap_err();
         assert_eq!(err.code, ApiError::CODE_VALIDATION);
@@ -505,6 +635,7 @@ mod tests {
         let request = AddShopRequest {
             shop_name: "店".to_string(),
             memo: Some("メ".repeat(consts::MAX_MEMO_LEN)),
+            is_disabled: None,
         };
         let result = add_shop(&pool, 2, request).await;
         assert!(result.is_ok(), "expected MAX_MEMO_LEN multibyte chars to be accepted: {:?}", result.err());
@@ -517,6 +648,7 @@ mod tests {
         let request = AddShopRequest {
             shop_name: "店".to_string(),
             memo: Some("メ".repeat(consts::MAX_MEMO_LEN + 1)),
+            is_disabled: None,
         };
         let err = add_shop(&pool, 2, request).await.unwrap_err();
         assert_eq!(err.code, ApiError::CODE_VALIDATION);
@@ -531,15 +663,17 @@ mod tests {
         let add_request = AddShopRequest {
             shop_name: "店".to_string(),
             memo: None,
+            is_disabled: None,
         };
         add_shop(&pool, 2, add_request).await.unwrap();
-        let shops = get_shops(&pool, 2).await.unwrap();
+        let shops = get_shops(&pool, 2, false).await.unwrap();
         let shop_id = shops[0].shop_id;
 
         let update_request = UpdateShopRequest {
             shop_name: "あ".repeat(consts::MAX_NAME_LEN + 1),
             memo: None,
             display_order: 1,
+            is_disabled: 0,
         };
         let err = update_shop(&pool, 2, shop_id, update_request).await.unwrap_err();
         assert_eq!(err.code, ApiError::CODE_VALIDATION);
@@ -554,15 +688,17 @@ mod tests {
         let add_request = AddShopRequest {
             shop_name: "店".to_string(),
             memo: None,
+            is_disabled: None,
         };
         add_shop(&pool, 2, add_request).await.unwrap();
-        let shops = get_shops(&pool, 2).await.unwrap();
+        let shops = get_shops(&pool, 2, false).await.unwrap();
         let shop_id = shops[0].shop_id;
 
         let update_request = UpdateShopRequest {
             shop_name: "店".to_string(),
             memo: Some("メ".repeat(consts::MAX_MEMO_LEN + 1)),
             display_order: 1,
+            is_disabled: 0,
         };
         let err = update_shop(&pool, 2, shop_id, update_request).await.unwrap_err();
         assert_eq!(err.code, ApiError::CODE_VALIDATION);
