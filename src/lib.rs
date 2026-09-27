@@ -799,7 +799,11 @@ async fn monthly_bounds_with_shift_for(
     } else {
         (year, month + 1)
     };
-    let raw_end = services::period::end_of_month(next_year, next_month).ok_or_else(invalid_year)?;
+    // The holiday window only needs to reach past the period; when the month
+    // after next is beyond chrono's range, the last representable date will
+    // do (CodeRabbit on #153).
+    let raw_end = services::period::end_of_month(next_year, next_month)
+        .unwrap_or(chrono::NaiveDate::MAX);
 
     let holidays = services::holiday::fetch_holidays(pool, user_id, raw_start, raw_end)
         .await

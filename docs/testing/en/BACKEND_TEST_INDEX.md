@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-08-26 JST  
-**Total Tests**: 421 (delta-tracked; the full authoritative count from `cargo test --lib` is 661, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 422 (delta-tracked; the full authoritative count from `cargo test --lib` is 662, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -652,8 +652,9 @@ Recurring transaction rule service tests.
 | `latent_m16_detail_tax_rate_out_of_range_rejected` | Out-of-range detail tax rate is rejected on rule creation (latent-audit M16) | src/services/latent_audit/recurring.rs | 416 |
 | `transfer_same_account_maps_to_transfer_same_account_code` | `RecurringError::TransferSameAccount` maps to the `transfer_same_account` wire code (latent-audit M16) | src/services/recurring.rs | 1881 |
 | `latent_l2_recurring_rejects_foreign_shop_and_product` | Recurring rule creation accepts own shop / product and rejects another user's (latent-audit L2) | src/services/latent_audit/recurring.rs | 481 |
+| `latent_l10_generation_terminates_at_the_end_of_the_date_range` | Monthly / yearly generation near the end of chrono's range terminates instead of looping forever (latent-audit L10) | src/services/latent_audit/recurring.rs | 540 |
 
-**Total**: 13 tests
+**Total**: 14 tests
 
 ### lib.rs
 
@@ -679,7 +680,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **395** |
+| **Inline Tests** | **396** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -701,9 +702,9 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/period.rs | 3 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
-| services/recurring.rs | 13 |
+| services/recurring.rs | 14 |
 | lib.rs | 6 |
-| **Total** | **421** |
+| **Total** | **422** |
 
 ---
 
