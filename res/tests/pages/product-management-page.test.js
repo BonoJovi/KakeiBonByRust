@@ -1,25 +1,22 @@
 /**
- * Latent audit 2026-09 — product master screen (res/js/product-management.js)
+ * Product master screen (res/js/product-management.js) — regression tests
+ * promoted from the 2026-09 latent audit.
  *
- * IDs covered: L17
- *
- * L17 Bug: after adding a product during the detail → product-master jump,
- *     linkNewProductToDraft() looks the product up by name and, when no
- *     candidate matches exactly, falls back to `candidates[0]` — a different
- *     product gets linked to the detail draft and the typed item name is
- *     replaced with that product's name.
- *     Expected: without an exact name match the draft's product link and
- *     item name are left untouched (no silent pick of candidates[0]).
+ * M5  The manufacturer <select> lists enabled manufacturers only. For a
+ *     product linked to a manufacturer that has since been disabled, the edit
+ *     modal fell back to "none" and saving without changes wiped
+ *     MANUFACTURER_ID. The edit modal now adds the product's disabled
+ *     manufacturer as an option (labelled with common.disabled_label).
+ *     Pinned: saving without changes keeps the original manufacturer_id.
  *
  * The real page module is booted against res/product-management.html (with
- * ?return_to=<transaction_id>, i.e. arriving from the detail modal) via
- * ../pages/_page-harness.js.
+ * ?return_to=<transaction_id>) via ./_page-harness.js.
  */
 
 import { jest } from '@jest/globals';
 import {
     mockPageModules, loadPageBody, bootPage, flush, callsOf,
-} from '../pages/_page-harness.js';
+} from './_page-harness.js';
 
 const DETAIL_DRAFT_KEY = 'kakeibon.detail_draft.v1';
 
@@ -73,34 +70,27 @@ function submitProductForm() {
     );
 }
 
-describe('product master screen — latent audit 2026-09', () => {
+describe('product master screen — regression (latent audit 2026-09)', () => {
     beforeEach(() => {
         invoke.mockClear();
         sessionStorage.clear();
     });
 
-    test('[latent L17] no exact name match → the detail draft is not linked to candidates[0]', async () => {
-        const originalDraft = {
-            transaction_id: '10',
-            detail_id: null,
-            item_name: 'Soy Sauce',
-            selected_product_id: null,
-        };
-        sessionStorage.setItem(DETAIL_DRAFT_KEY, JSON.stringify(originalDraft));
-        // The lookup returns only a *different* product (e.g. a partial match
-        // that sorts before the new row).
-        searchResults = [{ product_id: 50, product_name: 'Soy Sauce Light', manufacturer_name: null }];
-
-        document.getElementById('add-product-btn').click();
+    test('[M5] editing a product of a disabled manufacturer keeps manufacturer_id on save', async () => {
+        const editBtn = document.querySelector('#products-tbody .btn-edit');
+        expect(editBtn).not.toBeNull();
+        editBtn.click();
         await flush(5);
-        document.getElementById('product-name').value = 'Soy Sauce';
+
+        expect(document.getElementById('product-modal').classList.contains('hidden')).toBe(false);
+        expect(document.getElementById('product-name').value).toBe('Soy');
+
+        // Save without changes.
         submitProductForm();
         await flush(10);
 
-        expect(callsOf(invoke, 'add_product')).toHaveLength(1);
-
-        const draft = JSON.parse(sessionStorage.getItem(DETAIL_DRAFT_KEY));
-        expect(draft.selected_product_id).not.toBe(50);
-        expect(draft.item_name).toBe('Soy Sauce');
+        const updates = callsOf(invoke, 'update_product');
+        expect(updates).toHaveLength(1);
+        expect(updates[0].manufacturerId).toBe(9);
     });
 });

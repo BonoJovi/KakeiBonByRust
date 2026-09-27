@@ -171,7 +171,19 @@ function initProductModal() {
 
                 // Populate form
                 productNameInput.value = data.product_name;
-                document.getElementById('product-manufacturer').value = data.manufacturer_id || '';
+                const manufacturerSelect = document.getElementById('product-manufacturer');
+                // The dropdown lists enabled manufacturers only. A product
+                // linked to a disabled one would otherwise land on "none" and
+                // saving it (even unchanged) would drop the link
+                // (latent-audit M5), so keep its manufacturer selectable.
+                if (data.manufacturer_id != null
+                    && !manufacturers.some(m => m.manufacturer_id === data.manufacturer_id)) {
+                    const option = document.createElement('option');
+                    option.value = data.manufacturer_id;
+                    option.textContent = `${data.manufacturer_name || ''} ${i18n.t('common.disabled_label')}`.trim();
+                    manufacturerSelect.appendChild(option);
+                }
+                manufacturerSelect.value = data.manufacturer_id || '';
                 productMemoInput.value = data.memo || '';
                 document.getElementById('product-is-disabled').checked = data.is_disabled === 1;
 
