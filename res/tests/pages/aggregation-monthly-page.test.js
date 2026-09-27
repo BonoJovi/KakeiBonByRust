@@ -14,6 +14,9 @@
  *     row's count and average ("—") on those axes. Pinned: the count cell is
  *     not the inflated sum.
  *
+ * L12 Negative amounts were formatted as '¥' + (-1234).toLocaleString() →
+ *     "¥-1,234". Pinned: "-¥1,234", matching the "+¥1,234" positives.
+ *
  * The real page module is booted against res/aggregation.html via
  * ./_page-harness.js.
  */
@@ -96,5 +99,15 @@ describe('monthly aggregation screen — regression (latent audit 2026-09)', () 
         ]);
         expect(footerCells()[2]).toBe('3');
         expect(footerCells()[3]).not.toBe(NOT_APPLICABLE);
+    });
+
+    test('[L12] should put the minus sign before the yen symbol when the amount is negative', async () => {
+        await runAggregation('category1', [
+            { group_key: 'EXPENSE', group_name: 'Expense', total_amount: -1234, count: 1, avg_amount: -1234 },
+        ]);
+        const [, amount, , avg] = bodyCells(0);
+        expect(amount).toBe('-¥1,234');
+        expect(avg).toBe('-¥1,234');
+        expect(footerCells()[1]).toBe('-¥1,234');
     });
 });
