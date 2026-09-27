@@ -15,6 +15,11 @@
  *     (res/js/single-flight.js). Pinned: add_transaction_detail is invoked
  *     exactly once.
  *
+ * L7  The detail list rendered `amount_including_tax?.toLocaleString() ||
+ *     amount`; for a legacy row with amount_including_tax = 0 the string "0"
+ *     is truthy, so the row showed ¥0. Pinned: such a row shows AMOUNT +
+ *     TAX_AMOUNT instead.
+ *
  * The real page module is booted against res/transaction-detail-management.html
  * via ./_page-harness.js; Tauri invoke is routed per command below.
  */
@@ -165,5 +170,16 @@ describe('transaction detail screen — regression (latent audit 2026-09)', () =
         await flush(10);
 
         expect(adds).toHaveLength(1);
+    });
+
+    test('[L7] should show the row total instead of ¥0 when a legacy row has amount_including_tax = 0', () => {
+        const row = document.querySelector('#detail-list tr[data-detail-id="2"]');
+        expect(row).not.toBeNull();
+        const amountCell = row.querySelectorAll('td')[2];
+        const text = amountCell.textContent.trim();
+        // AMOUNT is 1000 (tax-excluded, 0% tax) — the display must fall
+        // back to a non-zero value instead of the stored 0.
+        expect(text).not.toBe('¥0');
+        expect(text).toMatch(/¥1,\d00/);
     });
 });

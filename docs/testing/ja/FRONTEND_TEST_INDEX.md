@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-09-27 JST  
-**総テスト数**: 798件 (jest suite 36 ファイル、`npm test` 実測)
+**総テスト数**: 799件 (jest suite 36 ファイル、`npm test` 実測)
 
 ---
 
@@ -652,12 +652,13 @@
 
 実際の明細画面モジュールを `transaction-detail-management.html` に対して起動する回帰テスト (潜在監査 H3)。共通ハーネスは `pages/_page-harness.js`。
 
-**テスト数**: 2件
+**テスト数**: 3件
 
 | テスト | 説明 |
 |--------|------|
 | `[H3] saving a product-linked detail without changes keeps its productId` | 商品に紐付いた明細を開いて無変更で保存しても `update_transaction_detail` に元の `productId` が送られる |
 | `[M19] double submit of the add-detail form invokes add_transaction_detail once` | 保存中の二重送信で `add_transaction_detail` が 1 回しか呼ばれない (潜在監査 M19) |
+| `[L7] should show the row total instead of ¥0 when a legacy row has amount_including_tax = 0` | 税込額が 0 の古い明細は ¥0 ではなく AMOUNT + TAX_AMOUNT を表示 (潜在監査 L7) |
 
 **ファイル**: res/tests/pages/transaction-detail-page.test.js
 
@@ -965,7 +966,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **375件** |
+| **機能別テスト** | **376件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 29 |
@@ -981,7 +982,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | parse-amount-strict.test.js | 24 |
 | format-local-date.test.js | 16 |
 | aggregation-render-unspecified.test.js | 5 |
-| pages/transaction-detail-page.test.js | 2 |
+| pages/transaction-detail-page.test.js | 3 |
 | pages/transaction-management-page.test.js | 2 |
 | pages/user-management-page.test.js | 2 |
 | pages/recurring-rule-page.test.js | 3 |
@@ -997,7 +998,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **798件** |
+| **総計 (jest)** | **799件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 
