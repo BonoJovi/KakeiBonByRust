@@ -26,6 +26,7 @@
                 <div class="section">
                     <div class="section-header">
                         <h2 data-i18n="account_mgmt.account_list">Account List</h2>
+                        <button id="toggle-disabled-btn" class="btn-secondary" data-i18n="common.show_disabled">Show Disabled Items</button>
                     </div>
                     <div id="account-list-container">
                         <div id="loading" class="loading" style="display: none;" data-i18n="common.loading">Loading...</div>
@@ -90,6 +91,13 @@
                         <div class="input-wrapper">
                             <input type="number" id="initial-balance" name="initial-balance" value="0" required />
                         </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="account-is-disabled">
+                            <span data-i18n="common.is_disabled">Disabled</span>
+                        </label>
                     </div>
 
                     <div class="form-actions">

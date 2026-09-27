@@ -1102,8 +1102,13 @@ async function loadAccountBalancesAsOf(year, month) {
     tbody.innerHTML = visible
         .map((b) => {
             const cls = b.balance < 0 ? 'balance-negative' : 'balance-positive';
+            // A disabled (closed) account is listed only while it still holds
+            // money; mark it so the user knows why it is here.
+            const disabledLabel = b.is_disabled === 1
+                ? ` ${escapeHtml(i18n.t('common.disabled_label'))}`
+                : '';
             return `<tr>
-                <td>${escapeHtml(b.account_name)}</td>
+                <td>${escapeHtml(b.account_name)}${disabledLabel}</td>
                 <td class="balance-col ${cls}">¥${b.balance.toLocaleString()}</td>
             </tr>`;
         })

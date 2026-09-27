@@ -1487,22 +1487,15 @@ async fn get_account_balances_as_of(
 
 #[tauri::command]
 async fn get_accounts(
+    include_disabled: bool,
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::account::Account>, api_error::ApiError> {
-    // PR10 (Fable-5 #33): route through the shared `get_session_user`
-    // helper instead of duplicating the session-lookup inline. This was
-    // the last command that read `state.session.get_user()` directly
-    // — every other tauri command in this file uses `get_session_user`
-    // or `get_session_user_id`.
-    let session_user = get_session_user(&state).map_err(api_error::ApiError::validation)?;
+    let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
     let db = &state.db;
 
-    // Admin (role 0) can see all accounts, regular users see only their own.
-    if session_user.role == crate::consts::ROLE_ADMIN {
-        services::account::get_all_accounts(db.pool()).await
-    } else {
-        services::account::get_accounts(db.pool(), session_user.user_id).await
-    }
+    // Everyone, the admin included, sees only their own accounts
+    // (latent-audit M4).
+    services::account::get_accounts(db.pool(), user_id, include_disabled).await
 }
 
 #[tauri::command]
@@ -1511,6 +1504,7 @@ async fn add_account(
     account_name: String,
     template_code: String,
     initial_balance: i64,
+    is_disabled: Option<i64>,
     state: tauri::State<'_, AppState>
 ) -> Result<String, api_error::ApiError> {
     let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
@@ -1521,6 +1515,7 @@ async fn add_account(
         account_name,
         template_code,
         initial_balance,
+        is_disabled,
     };
 
     services::account::add_account(db.pool(), user_id, request).await
@@ -1533,6 +1528,7 @@ async fn update_account(
     template_code: String,
     initial_balance: i64,
     display_order: i64,
+    is_disabled: i64,
     state: tauri::State<'_, AppState>
 ) -> Result<String, api_error::ApiError> {
     let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
@@ -1544,6 +1540,7 @@ async fn update_account(
         template_code,
         initial_balance,
         display_order,
+        is_disabled,
     };
 
     services::account::update_account(db.pool(), user_id, request).await

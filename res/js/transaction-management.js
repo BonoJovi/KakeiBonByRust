@@ -626,6 +626,8 @@ let accounts = [];
 // Disabled shops by id: not offered for new entries, but a transaction that
 // already names one must still show it when edited (latent-audit M7).
 let disabledShopsById = new Map();
+// Same for disabled accounts, by account code.
+let disabledAccountsByCode = new Map();
 let transactionModal = null;
 
 function initializeTransactionModal() {
@@ -800,7 +802,12 @@ async function loadCategoriesForModal() {
 
 async function loadAccountsForModal() {
     try {
-        accounts = await invoke('get_accounts', {});
+        const loaded = await invoke('get_accounts', { includeDisabled: true });
+        // Disabled accounts are only added on demand by selectAccount()
+        disabledAccountsByCode = new Map(
+            loaded.filter(a => a.is_disabled === 1).map(a => [a.account_code, a])
+        );
+        accounts = loaded.filter(a => a.is_disabled !== 1);
         
         // Populate account dropdowns
         const fromAccountSelect = document.getElementById('from-account');
@@ -878,6 +885,28 @@ async function loadShopsForModal() {
         console.error('Failed to load shops:', error);
         showToast(i18n.t('error.load_shops_failed') + ': ' + formatApiError(error), { variant: 'error' });
     }
+}
+
+// Select an account in the from / to select. Like selectShop(), a disabled
+// account gets an option only when an existing transaction that names it is
+// shown, so editing that transaction keeps the account instead of dropping
+// it; a new transaction (allowDisabled: false) falls back to "Unspecified".
+function selectAccount(selectId, accountCode, { allowDisabled = true } = {}) {
+    const select = document.getElementById(selectId);
+    const value = accountCode || 'NONE';
+    const hasOption = Array.from(select.options).some(o => o.value === value);
+    if (!hasOption) {
+        const disabledAccount = allowDisabled ? disabledAccountsByCode.get(value) : undefined;
+        if (!disabledAccount) {
+            select.value = 'NONE';
+            return;
+        }
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = `${disabledAccount.account_name} ${i18n.t('common.disabled_label')}`;
+        select.appendChild(option);
+    }
+    select.value = value;
 }
 
 // Select a shop in the transaction form. A disabled shop has no option until
@@ -1165,8 +1194,8 @@ async function loadTransactionData(transactionId) {
         document.getElementById('transaction-date').value = dateTimeLocal;
         selectShop(transaction.shop_id);
         document.getElementById('category1').value = transaction.category1_code;
-        document.getElementById('from-account').value = transaction.from_account_code || 'NONE';
-        document.getElementById('to-account').value = transaction.to_account_code || 'NONE';
+        selectAccount('from-account', transaction.from_account_code);
+        selectAccount('to-account', transaction.to_account_code);
         document.getElementById('total-amount').value = transaction.total_amount;
         document.getElementById('tax-rounding').value = transaction.tax_rounding_type || 0;
         document.getElementById('tax-included-type').value = transaction.tax_included_type !== undefined ? transaction.tax_included_type : 1;
@@ -1297,10 +1326,10 @@ async function restoreModalState() {
                 selectShop(modalData.shop_id, { allowDisabled: false });
             }
             if (modalData.from_account) {
-                document.getElementById('from-account').value = modalData.from_account;
+                selectAccount('from-account', modalData.from_account, { allowDisabled: false });
             }
             if (modalData.to_account) {
-                document.getElementById('to-account').value = modalData.to_account;
+                selectAccount('to-account', modalData.to_account, { allowDisabled: false });
             }
             if (modalData.total_amount) {
                 document.getElementById('total-amount').value = modalData.total_amount;

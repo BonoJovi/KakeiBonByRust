@@ -7,6 +7,17 @@ use crate::validation;
 
 const NAME_LABEL: &str = "Account name";
 const ENTITY_LABEL: &str = "Account";
+/// The per-user "unspecified" account. Transactions and recurring rules
+/// point at it (through a foreign key) when a side has no account, so it
+/// must never be deleted, disabled or edited.
+const NONE_ACCOUNT_CODE: &str = "NONE";
+
+fn reject_none_account(account_code: &str) -> Result<(), ApiError> {
+    if account_code == NONE_ACCOUNT_CODE {
+        return Err(ApiError::validation("The unspecified account cannot be changed"));
+    }
+    Ok(())
+}
 
 /// Normalize account code to uppercase
 fn normalize_account_code(code: &str) -> String {
@@ -50,6 +61,7 @@ pub struct AccountBalance {
     pub account_name: String,
     pub balance: i64,
     pub display_order: i64,
+    pub is_disabled: i64,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -58,6 +70,7 @@ pub struct AddAccountRequest {
     pub account_name: String,
     pub template_code: String,
     pub initial_balance: i64,
+    pub is_disabled: Option<i64>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -67,6 +80,7 @@ pub struct UpdateAccountRequest {
     pub template_code: String,
     pub initial_balance: i64,
     pub display_order: i64,
+    pub is_disabled: i64,
 }
 
 /// Get all account templates
@@ -78,9 +92,20 @@ pub async fn get_account_templates(pool: &SqlitePool) -> Result<Vec<AccountTempl
     Ok(templates)
 }
 
-/// Get all accounts for a user
-pub async fn get_accounts(pool: &SqlitePool, user_id: i64) -> Result<Vec<Account>, ApiError> {
-    let accounts = sqlx::query_as::<_, Account>(sql_queries::ACCOUNT_LIST_BY_USER)
+/// Get a user's accounts; disabled accounts only when `include_disabled`.
+/// Every user, the admin included, sees only their own accounts
+/// (latent-audit M4).
+pub async fn get_accounts(
+    pool: &SqlitePool,
+    user_id: i64,
+    include_disabled: bool,
+) -> Result<Vec<Account>, ApiError> {
+    let query = if include_disabled {
+        sql_queries::ACCOUNT_LIST_BY_USER_INCLUDING_DISABLED
+    } else {
+        sql_queries::ACCOUNT_LIST_BY_USER
+    };
+    let accounts = sqlx::query_as::<_, Account>(query)
         .bind(user_id)
         .fetch_all(pool)
         .await?;
@@ -100,7 +125,8 @@ pub async fn get_accounts(pool: &SqlitePool, user_id: i64) -> Result<Vec<Account
 ///
 /// The single-pass CASE keeps each transaction visible to both the source
 /// and destination accounts of a TRANSFER, with the sign flipped per side.
-/// Disabled accounts are excluded.
+/// A disabled account is listed only while its balance is not zero, so money
+/// left in a closed account stays visible (latent-audit M7).
 pub async fn get_account_balances_as_of(
     pool: &SqlitePool,
     user_id: i64,
@@ -113,15 +139,6 @@ pub async fn get_account_balances_as_of(
         .await?;
 
     Ok(balances)
-}
-
-/// Get all accounts (for admin users)
-pub async fn get_all_accounts(pool: &SqlitePool) -> Result<Vec<Account>, ApiError> {
-    let accounts = sqlx::query_as::<_, Account>(sql_queries::ACCOUNT_LIST_ALL)
-        .fetch_all(pool)
-        .await?;
-
-    Ok(accounts)
 }
 
 /// Get a single account by code. Kept for module tests only after the
@@ -157,7 +174,7 @@ async fn check_duplicate_code(
     .await
 }
 
-/// Add a new account (or reactivate if deleted)
+/// Add a new account, or reuse a disabled account with the same code
 pub async fn add_account(
     pool: &SqlitePool,
     user_id: i64,
@@ -170,6 +187,9 @@ pub async fn add_account(
     if request.account_code.is_empty() {
         return Err(ApiError::validation("Account code cannot be empty"));
     }
+    reject_none_account(&request.account_code)?;
+    let is_disabled = request.is_disabled.unwrap_or(0);
+    master_data::validate_is_disabled(is_disabled)?;
 
     // `validate_master_name` bundles the non-empty and max-length checks that
     // shop/manufacturer/product go through. Using the same helper (rather than
@@ -192,7 +212,7 @@ pub async fn add_account(
     )
     .await?;
 
-    // Upsert account (insert or reactivate if deleted)
+    // Upsert account (insert, or reuse a disabled account with the same code)
     sqlx::query(sql_queries::ACCOUNT_UPSERT)
         .bind(user_id)
         .bind(&request.account_code)
@@ -200,6 +220,7 @@ pub async fn add_account(
         .bind(&request.template_code)
         .bind(request.initial_balance)
         .bind(display_order)
+        .bind(is_disabled)
         .execute(pool)
         .await?;
 
@@ -214,6 +235,7 @@ pub async fn update_account(
 ) -> Result<String, ApiError> {
     // Normalize account code to uppercase
     request.account_code = normalize_account_code(&request.account_code);
+    reject_none_account(&request.account_code)?;
 
     // `validate_master_name` bundles the non-empty and max-length checks that
     // shop/manufacturer/product go through. Using the same helper (rather than
@@ -222,6 +244,7 @@ pub async fn update_account(
     // account-management.js:286-288 — could persist an all-whitespace name.
     validation::validate_master_name(NAME_LABEL, &request.account_name)
         .map_err(ApiError::validation)?;
+    master_data::validate_is_disabled(request.is_disabled)?;
 
     // Pre-check `get_account_by_code().ok_or(NotFound)?` was removed here
     // (Fable-5 review #26): rows_affected from the UPDATE tells us the
@@ -234,6 +257,7 @@ pub async fn update_account(
         .bind(&request.template_code)
         .bind(request.initial_balance)
         .bind(request.display_order)
+        .bind(request.is_disabled)
         .bind(user_id)
         .bind(&request.account_code)
         .execute(pool)
@@ -246,12 +270,13 @@ pub async fn update_account(
     Ok("Account updated successfully".to_string())
 }
 
-/// Delete an account (logical deletion). Rejected with
-/// `ApiError::in_use("Account")` when any transaction or recurring rule
-/// still names this account on either side (FROM/TO). See
-/// `sql_queries::ACCOUNT_CHECK_IN_USE`. Kept off the shared
-/// `MasterCrudSpec` path because the account handle is a String CODE,
-/// not an i64 id (Fable-5 #26 note in `account.rs`).
+/// Delete an account. Rejected with `ApiError::in_use("Account")` when any
+/// transaction or recurring rule still names this account on either side
+/// (FROM/TO) — see `sql_queries::ACCOUNT_CHECK_IN_USE` — and otherwise the
+/// row is removed; an account still in use is retired by disabling it
+/// (latent-audit M7). Kept off the shared `MasterCrudSpec` path because the
+/// account handle is a String CODE, not an i64 id (Fable-5 #26 note in
+/// `account.rs`).
 pub async fn delete_account(
     pool: &SqlitePool,
     user_id: i64,
@@ -259,7 +284,11 @@ pub async fn delete_account(
 ) -> Result<String, ApiError> {
     // Normalize account code to uppercase
     let account_code = normalize_account_code(account_code);
+    reject_none_account(&account_code)?;
 
+    // Check and delete in one transaction, like the other masters
+    // (latent-audit L21).
+    let mut tx = pool.begin().await?;
     let (in_use,): (i64,) = sqlx::query_as(sql_queries::ACCOUNT_CHECK_IN_USE)
         .bind(user_id)
         .bind(&account_code)
@@ -267,23 +296,23 @@ pub async fn delete_account(
         .bind(user_id)
         .bind(&account_code)
         .bind(&account_code)
-        .fetch_one(pool)
+        .fetch_one(&mut *tx)
         .await?;
     master_data::reject_if_in_use(ENTITY_LABEL, in_use)?;
 
     // Same rows_affected treatment as delete_shop / delete_manufacturer /
-    // delete_product (PR3, Fable-5 #26): a single logical-delete UPDATE
-    // that maps 0-rows → NotFound eliminates the earlier pre-check +
-    // execute pair and its TOCTOU window.
-    let affected = sqlx::query(sql_queries::ACCOUNT_DELETE_LOGICAL)
+    // delete_product (PR3, Fable-5 #26): 0 rows maps to NotFound instead of
+    // a separate pre-check.
+    let affected = sqlx::query(sql_queries::ACCOUNT_DELETE)
         .bind(user_id)
         .bind(&account_code)
-        .execute(pool)
+        .execute(&mut *tx)
         .await?
         .rows_affected();
     if affected == 0 {
         return Err(ApiError::not_found(ENTITY_LABEL));
     }
+    tx.commit().await?;
 
     Ok("Account deleted successfully".to_string())
 }
@@ -342,6 +371,7 @@ pub(crate) async fn initialize_none_account_in_tx(
         .bind("NONE")
         .bind(0_i64)
         .bind(display_order)
+        .bind(0_i64)
         .execute(&mut **tx)
         .await
         .map_err(|e| format!("Failed to initialize NONE account: {}", e))?;
@@ -417,12 +447,13 @@ mod tests {
             account_name: "Test Account".to_string(),
             template_code: "BANK".to_string(),
             initial_balance: 10000,
+            is_disabled: None,
         };
 
         let result = add_account(&pool, 2, request).await;
         assert!(result.is_ok());
 
-        let accounts = get_accounts(&pool, 2).await.unwrap();
+        let accounts = get_accounts(&pool, 2, false).await.unwrap();
         assert_eq!(accounts.len(), 1);
         assert_eq!(accounts[0].account_code, "TEST");
     }
@@ -437,6 +468,7 @@ mod tests {
             account_name: "Test Account".to_string(),
             template_code: "BANK".to_string(),
             initial_balance: 10000,
+            is_disabled: None,
         };
         add_account(&pool, 2, add_request).await.unwrap();
 
@@ -447,6 +479,7 @@ mod tests {
             template_code: "CASH".to_string(),
             initial_balance: 20000,
             display_order: 1,
+            is_disabled: 0,
         };
 
         let result = update_account(&pool, 2, update_request).await;
@@ -467,6 +500,7 @@ mod tests {
             account_name: "Test Account".to_string(),
             template_code: "CASH".to_string(),
             initial_balance: 0,
+            is_disabled: None,
         };
         add_account(&pool, 2, request).await.unwrap();
 
@@ -474,9 +508,109 @@ mod tests {
         let result = delete_account(&pool, 2, "TEST").await;
         assert!(result.is_ok());
 
-        // Verify account is disabled
-        let accounts = get_accounts(&pool, 2).await.unwrap();
+        // An unused account is removed, not just hidden (latent-audit M7).
+        let accounts = get_accounts(&pool, 2, true).await.unwrap();
         assert_eq!(accounts.len(), 0);
+    }
+
+    /// Latent-audit M7: a disabled account that nothing uses can still be
+    /// deleted, which removes the row.
+    #[tokio::test]
+    async fn test_delete_disabled_account_removes_row() {
+        let pool = setup_test_db().await;
+        add_test_account(&pool, "CASH", 0).await;
+        set_account_disabled(&pool, "CASH", 1).await;
+
+        delete_account(&pool, 2, "CASH").await.unwrap();
+
+        assert!(get_accounts(&pool, 2, true).await.unwrap().is_empty());
+    }
+
+    /// Latent-audit M7: an account still used by a transaction cannot be
+    /// deleted, but it can be disabled and enabled again.
+    #[tokio::test]
+    async fn test_disable_account_allowed_while_referenced() {
+        let pool = setup_test_db().await;
+        add_test_account(&pool, "CASH", 0).await;
+        sqlx::query(sql_queries::TEST_INSERT_TRANSACTIONS_HEADER_ACCOUNT_REF)
+            .bind(2_i64)
+            .bind("CASH")
+            .bind("BANK")
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        set_account_disabled(&pool, "CASH", 1).await;
+        assert!(get_accounts(&pool, 2, false).await.unwrap().is_empty());
+        assert_eq!(get_accounts(&pool, 2, true).await.unwrap()[0].is_disabled, 1);
+
+        set_account_disabled(&pool, "CASH", 0).await;
+        assert_eq!(get_accounts(&pool, 2, false).await.unwrap().len(), 1);
+    }
+
+    /// The disabled flag only accepts 0 or 1, on add and on update.
+    #[tokio::test]
+    async fn test_account_is_disabled_must_be_zero_or_one() {
+        let pool = setup_test_db().await;
+
+        let err = add_account(&pool, 2, AddAccountRequest {
+            account_code: "CASH".to_string(),
+            account_name: "Cash".to_string(),
+            template_code: "CASH".to_string(),
+            initial_balance: 0,
+            is_disabled: Some(2),
+        })
+        .await
+        .unwrap_err();
+        assert_eq!(err.code, ApiError::CODE_VALIDATION);
+
+        add_test_account(&pool, "CASH", 0).await;
+        let err = update_account(&pool, 2, UpdateAccountRequest {
+            account_code: "CASH".to_string(),
+            account_name: "Cash".to_string(),
+            template_code: "CASH".to_string(),
+            initial_balance: 0,
+            display_order: 1,
+            is_disabled: -1,
+        })
+        .await
+        .unwrap_err();
+        assert_eq!(err.code, ApiError::CODE_VALIDATION);
+        assert_eq!(get_accounts(&pool, 2, false).await.unwrap().len(), 1);
+    }
+
+    /// The NONE ("unspecified") account backs every transaction side without
+    /// an account (through a foreign key), so it cannot be added, edited,
+    /// disabled or deleted through the account commands.
+    #[tokio::test]
+    async fn test_none_account_cannot_be_changed() {
+        let pool = setup_test_db().await;
+
+        let err = add_account(&pool, 2, AddAccountRequest {
+            account_code: "none".to_string(),
+            account_name: "Unspecified".to_string(),
+            template_code: "CASH".to_string(),
+            initial_balance: 0,
+            is_disabled: None,
+        })
+        .await
+        .unwrap_err();
+        assert_eq!(err.code, ApiError::CODE_VALIDATION);
+
+        let err = update_account(&pool, 2, UpdateAccountRequest {
+            account_code: "NONE".to_string(),
+            account_name: "Unspecified".to_string(),
+            template_code: "CASH".to_string(),
+            initial_balance: 0,
+            display_order: 1,
+            is_disabled: 1,
+        })
+        .await
+        .unwrap_err();
+        assert_eq!(err.code, ApiError::CODE_VALIDATION);
+
+        let err = delete_account(&pool, 2, " none ").await.unwrap_err();
+        assert_eq!(err.code, ApiError::CODE_VALIDATION);
     }
 
     #[tokio::test]
@@ -488,6 +622,7 @@ mod tests {
             account_name: "Test Account".to_string(),
             template_code: "CASH".to_string(),
             initial_balance: 0,
+            is_disabled: None,
         };
 
         // Add first time - should succeed
@@ -511,6 +646,7 @@ mod tests {
             account_name: "あ".repeat(consts::MAX_NAME_LEN),
             template_code: "BANK".to_string(),
             initial_balance: 0,
+            is_disabled: None,
         };
         let result = add_account(&pool, 2, request).await;
         assert!(result.is_ok(), "expected MAX_NAME_LEN multibyte chars to be accepted: {:?}", result.err());
@@ -525,6 +661,7 @@ mod tests {
             account_name: "あ".repeat(consts::MAX_NAME_LEN + 1),
             template_code: "BANK".to_string(),
             initial_balance: 0,
+            is_disabled: None,
         };
         let err = add_account(&pool, 2, request).await.unwrap_err();
         assert_eq!(err.code, ApiError::CODE_VALIDATION);
@@ -541,6 +678,7 @@ mod tests {
             account_name: "Test".to_string(),
             template_code: "BANK".to_string(),
             initial_balance: 0,
+            is_disabled: None,
         };
         add_account(&pool, 2, add_request).await.unwrap();
 
@@ -550,6 +688,7 @@ mod tests {
             template_code: "BANK".to_string(),
             initial_balance: 0,
             display_order: 1,
+            is_disabled: 0,
         };
         let result = update_account(&pool, 2, update_request).await;
         assert!(result.is_ok(), "expected MAX_NAME_LEN multibyte chars to be accepted: {:?}", result.err());
@@ -564,6 +703,7 @@ mod tests {
             account_name: "Test".to_string(),
             template_code: "BANK".to_string(),
             initial_balance: 0,
+            is_disabled: None,
         };
         add_account(&pool, 2, add_request).await.unwrap();
 
@@ -573,6 +713,7 @@ mod tests {
             template_code: "BANK".to_string(),
             initial_balance: 0,
             display_order: 1,
+            is_disabled: 0,
         };
         let err = update_account(&pool, 2, update_request).await.unwrap_err();
         assert_eq!(err.code, ApiError::CODE_VALIDATION);
@@ -596,6 +737,7 @@ mod tests {
             account_name: String::new(),
             template_code: "BANK".to_string(),
             initial_balance: 0,
+            is_disabled: None,
         };
         let err = add_account(&pool, 2, request).await.unwrap_err();
         assert_eq!(err.code, ApiError::CODE_VALIDATION);
@@ -611,6 +753,7 @@ mod tests {
             account_name: "   \t\n".to_string(),
             template_code: "BANK".to_string(),
             initial_balance: 0,
+            is_disabled: None,
         };
         let err = add_account(&pool, 2, request).await.unwrap_err();
         assert_eq!(err.code, ApiError::CODE_VALIDATION);
@@ -626,6 +769,7 @@ mod tests {
             account_name: "Test".to_string(),
             template_code: "BANK".to_string(),
             initial_balance: 0,
+            is_disabled: None,
         };
         add_account(&pool, 2, add_request).await.unwrap();
 
@@ -635,6 +779,7 @@ mod tests {
             template_code: "BANK".to_string(),
             initial_balance: 0,
             display_order: 1,
+            is_disabled: 0,
         };
         let err = update_account(&pool, 2, update_request).await.unwrap_err();
         assert_eq!(err.code, ApiError::CODE_VALIDATION);
@@ -647,6 +792,7 @@ mod tests {
             account_name: format!("{} account", code),
             template_code: "CASH".to_string(),
             initial_balance,
+            is_disabled: None,
         };
         add_account(pool, 2, request).await.unwrap();
     }
@@ -693,8 +839,25 @@ mod tests {
         assert!(account.is_none());
     }
 
+    /// Disable an account through the edit form's "disabled" checkbox.
+    async fn set_account_disabled(pool: &SqlitePool, code: &str, is_disabled: i64) {
+        let account = get_account_by_code(pool, 2, code).await.unwrap().unwrap();
+        update_account(pool, 2, UpdateAccountRequest {
+            account_code: code.to_string(),
+            account_name: account.account_name,
+            template_code: account.template_code,
+            initial_balance: account.initial_balance,
+            display_order: account.display_order,
+            is_disabled,
+        })
+        .await
+        .unwrap();
+    }
+
+    /// Latent-audit M4: every user, the admin included, lists only their own
+    /// accounts.
     #[tokio::test]
-    async fn test_get_all_accounts_spans_users() {
+    async fn test_get_accounts_lists_only_own_accounts() {
         let pool = setup_test_db().await;
         add_test_account(&pool, "CASH", 0).await;
         add_account(
@@ -705,26 +868,31 @@ mod tests {
                 account_name: "Admin account".to_string(),
                 template_code: "BANK".to_string(),
                 initial_balance: 0,
+                is_disabled: None,
             },
         )
         .await
         .unwrap();
 
-        let accounts = get_all_accounts(&pool).await.unwrap();
-
-        assert_eq!(accounts.len(), 2);
-        assert_eq!(accounts[0].user_id, 1, "should be ordered by USER_ID");
-        assert_eq!(accounts[1].user_id, 2);
+        let admin = get_accounts(&pool, 1, true).await.unwrap();
+        assert_eq!(admin.len(), 1);
+        assert_eq!(admin[0].account_code, "ADMIN");
+        let user = get_accounts(&pool, 2, true).await.unwrap();
+        assert_eq!(user.len(), 1);
+        assert_eq!(user[0].account_code, "CASH");
     }
 
+    /// Latent-audit M7: disabled accounts are listed only on request.
     #[tokio::test]
-    async fn test_get_all_accounts_includes_disabled() {
+    async fn test_get_accounts_include_disabled() {
         let pool = setup_test_db().await;
         add_test_account(&pool, "CASH", 0).await;
-        delete_account(&pool, 2, "CASH").await.unwrap();
+        set_account_disabled(&pool, "CASH", 1).await;
 
-        assert!(get_accounts(&pool, 2).await.unwrap().is_empty());
-        assert_eq!(get_all_accounts(&pool).await.unwrap().len(), 1);
+        assert!(get_accounts(&pool, 2, false).await.unwrap().is_empty());
+        let all = get_accounts(&pool, 2, true).await.unwrap();
+        assert_eq!(all.len(), 1);
+        assert_eq!(all[0].is_disabled, 1);
     }
 
     #[tokio::test]
@@ -739,6 +907,7 @@ mod tests {
                 account_name: "Cash".to_string(),
                 template_code: "CASH".to_string(),
                 initial_balance: 0,
+                is_disabled: None,
             },
         )
         .await
@@ -759,6 +928,7 @@ mod tests {
                 account_name: "Cash".to_string(),
                 template_code: "CASH".to_string(),
                 initial_balance: 0,
+                is_disabled: None,
             },
         )
         .await
@@ -769,10 +939,10 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_add_account_reactivates_deleted_account() {
+    async fn test_add_account_reactivates_disabled_account() {
         let pool = setup_test_db().await;
         add_test_account(&pool, "CASH", 1000).await;
-        delete_account(&pool, 2, "CASH").await.unwrap();
+        set_account_disabled(&pool, "CASH", 1).await;
 
         add_test_account(&pool, "CASH", 2000).await;
 
@@ -783,7 +953,7 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(is_disabled, 0, "re-adding should reactivate the account");
-        assert_eq!(get_accounts(&pool, 2).await.unwrap().len(), 1);
+        assert_eq!(get_accounts(&pool, 2, false).await.unwrap().len(), 1);
     }
 
     #[tokio::test]
@@ -799,6 +969,7 @@ mod tests {
                 template_code: "CASH".to_string(),
                 initial_balance: 0,
                 display_order: 1,
+                is_disabled: 0,
             },
         )
         .await
@@ -835,6 +1006,7 @@ mod tests {
                 template_code: "CASH".to_string(),
                 initial_balance: 0,
                 display_order: 1,
+                is_disabled: 0,
             },
         )
         .await
@@ -869,7 +1041,7 @@ mod tests {
         assert_eq!(err.code, ApiError::CODE_IN_USE);
         assert_eq!(err.entity.as_deref(), Some("account"));
 
-        assert_eq!(get_accounts(&pool, 2).await.unwrap().len(), 1);
+        assert_eq!(get_accounts(&pool, 2, false).await.unwrap().len(), 1);
     }
 
     #[tokio::test]
@@ -955,7 +1127,7 @@ mod tests {
         // Second call swallows the duplicate-code error and still succeeds
         initialize_none_account(&pool, 2).await.unwrap();
 
-        let accounts = get_accounts(&pool, 2).await.unwrap();
+        let accounts = get_accounts(&pool, 2, false).await.unwrap();
         assert_eq!(accounts.len(), 1);
         assert_eq!(accounts[0].account_code, "NONE");
         assert_eq!(accounts[0].template_code, "NONE");
@@ -1040,20 +1212,43 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_get_account_balances_as_of_excludes_disabled_accounts() {
+    async fn test_get_account_balances_as_of_excludes_disabled_accounts_without_balance() {
         let pool = setup_test_db().await;
         sqlx::query(sql_queries::TEST_TRANSACTION_CREATE_HEADER_TABLE)
             .execute(&pool)
             .await
             .unwrap();
-        add_test_account(&pool, "CASH", 1000).await;
-        delete_account(&pool, 2, "CASH").await.unwrap();
+        add_test_account(&pool, "CASH", 0).await;
+        set_account_disabled(&pool, "CASH", 1).await;
 
         let balances = get_account_balances_as_of(&pool, 2, "2026-01-31")
             .await
             .unwrap();
 
         assert!(balances.is_empty());
+    }
+
+    /// Latent-audit M7: a disabled (closed) account that still holds money
+    /// stays on the dashboard, marked as disabled, so its balance and history
+    /// do not become unreachable.
+    #[tokio::test]
+    async fn test_get_account_balances_as_of_keeps_disabled_accounts_with_balance() {
+        let pool = setup_test_db().await;
+        sqlx::query(sql_queries::TEST_TRANSACTION_CREATE_HEADER_TABLE)
+            .execute(&pool)
+            .await
+            .unwrap();
+        add_test_account(&pool, "CASH", 1000).await;
+        set_account_disabled(&pool, "CASH", 1).await;
+
+        let balances = get_account_balances_as_of(&pool, 2, "2026-01-31")
+            .await
+            .unwrap();
+
+        assert_eq!(balances.len(), 1);
+        assert_eq!(balances[0].account_code, "CASH");
+        assert_eq!(balances[0].balance, 1000);
+        assert_eq!(balances[0].is_disabled, 1);
     }
 
     #[tokio::test]
@@ -1064,7 +1259,7 @@ mod tests {
 
         let err = initialize_none_account(&pool, 2).await.unwrap_err();
         assert!(err.contains("NONE template"), "unexpected error: {}", err);
-        assert!(get_accounts(&pool, 2).await.unwrap().is_empty());
+        assert!(get_accounts(&pool, 2, false).await.unwrap().is_empty());
     }
 }
 
