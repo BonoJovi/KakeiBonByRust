@@ -263,8 +263,11 @@ function clearResults() {
 }
 
 function formatAmount(amount) {
-    // Format as Japanese yen style
-    return '¥' + amount.toLocaleString();
+    // Format as Japanese yen style, sign before the currency symbol:
+    // "-¥1,234" rather than "¥-1,234", matching the "+¥1,234" positives
+    // (latent-audit L12).
+    const formatted = '¥' + Math.abs(amount).toLocaleString();
+    return amount < 0 ? `-${formatted}` : formatted;
 }
 
 function escapeHtml(text) {

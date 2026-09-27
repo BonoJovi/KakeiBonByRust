@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-09-27 JST  
-**総テスト数**: 799件 (jest suite 36 ファイル、`npm test` 実測)
+**総テスト数**: 802件 (jest suite 36 ファイル、`npm test` 実測)
 
 ---
 
@@ -668,12 +668,14 @@
 
 実際の入出金画面モジュールを `transaction-management.html` に対して起動する回帰テスト (潜在監査 H4)。
 
-**テスト数**: 2件
+**テスト数**: 4件
 
 | テスト | 説明 |
 |--------|------|
 | `[H4] saving a header without details does not prompt to overwrite the total with ¥0` | 明細なしヘッダーの保存で ¥0 上書き確認が出ず、`update_transaction_header_total` も送られず、保存フローが一覧再読込まで完了する |
 | `[L8] should reject the save without calling update_transaction_header when the transaction date is blank` | 日時が空欄なら `validation.required` を表示して送信せず、モーダルを開いたままにする (潜在監査 L8) |
+| `[L5] should move back to the last page when its only row is deleted` | 最終ページの唯一の行を削除すると最後に存在するページへ戻る (潜在監査 L5) |
+| `[L5] should keep the newer page when an older page response resolves late` | 古いページ要求の応答が遅れて届いても新しいページの表示を上書きしない (潜在監査 L5) |
 
 **ファイル**: res/tests/pages/transaction-management-page.test.js
 
@@ -759,7 +761,7 @@
 
 実際の月次集計画面の回帰テスト (潜在監査 M11 / M12)。
 
-**テスト数**: 4件
+**テスト数**: 5件
 
 | テスト | 説明 |
 |--------|------|
@@ -767,6 +769,7 @@
 | `[M11] account axis: ...` | 口座軸の合計行は件数・平均を「—」で表示 (振替の二重計上を避ける) |
 | `[M11] category2 axis: ...` | 費目2軸の合計行も件数・平均を「—」で表示 |
 | `[M11] category1 axis still sums the count into the total row` | 費目1軸では従来どおり件数を合計 (比較用) |
+| `[L12] should put the minus sign before the yen symbol for negative amounts` | 負の金額を「-¥1,234」と表示 (潜在監査 L12) |
 
 **ファイル**: res/tests/pages/aggregation-monthly-page.test.js
 
@@ -966,7 +969,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **376件** |
+| **機能別テスト** | **379件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 29 |
@@ -983,13 +986,13 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | format-local-date.test.js | 16 |
 | aggregation-render-unspecified.test.js | 5 |
 | pages/transaction-detail-page.test.js | 3 |
-| pages/transaction-management-page.test.js | 2 |
+| pages/transaction-management-page.test.js | 4 |
 | pages/user-management-page.test.js | 2 |
 | pages/recurring-rule-page.test.js | 3 |
 | pages/recurring-rule-double-submit.test.js | 1 |
 | single-flight.test.js | 4 |
 | pages/product-management-page.test.js | 1 |
-| pages/aggregation-monthly-page.test.js | 4 |
+| pages/aggregation-monthly-page.test.js | 5 |
 | pages/aggregation-yearly-total-count.test.js | 1 |
 | pages/index-setup-page.test.js | 3 |
 | **集計機能テスト** | **115件** |
@@ -998,7 +1001,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **799件** |
+| **総計 (jest)** | **802件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 
