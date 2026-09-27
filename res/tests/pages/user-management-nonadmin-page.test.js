@@ -1,5 +1,5 @@
 /**
- * Latent audit 2026-09 — user management screen, general-user session (res/js/user-management.js)
+ * Regression tests (promoted from the 2026-09 latent audit) — user management screen, general-user session (res/js/user-management.js)
  *
  * IDs covered: L30
  *
@@ -11,13 +11,13 @@
  *      the user's own row has no delete button.
  *
  * The real page module is booted against res/user-management.html via
- * ../pages/_page-harness.js with a general-user (role 1) session.
+ * ./_page-harness.js with a general-user (role 1) session.
  */
 
 import { jest } from '@jest/globals';
 import {
     mockPageModules, loadPageBody, bootPage, isHiddenOrAbsent,
-} from '../pages/_page-harness.js';
+} from './_page-harness.js';
 
 const SELF = { user_id: 2, name: 'alice', role: 1 };
 
@@ -37,13 +37,13 @@ loadPageBody('user-management.html');
 await import('../../js/user-management.js');
 await bootPage();
 
-describe('user management (general user) — latent audit 2026-09', () => {
-    test('[latent L30] a non-admin user is not offered the Add User button', () => {
+describe('user management (general user) — regression (latent audit 2026-09)', () => {
+    test('[L30] a non-admin user is not offered the Add User button', () => {
         const addBtn = document.getElementById('add-user-btn');
         expect(isHiddenOrAbsent(addBtn) || addBtn.disabled).toBe(true);
     });
 
-    test('[latent L30] a non-admin user has no delete button on their own row', () => {
+    test('[L30] a non-admin user has no delete button on their own row', () => {
         const rows = Array.from(document.querySelectorAll('#user-list tr'));
         expect(rows).toHaveLength(1); // sanity: list rendered
         const deleteBtn = rows[0].querySelector('.btn-delete');

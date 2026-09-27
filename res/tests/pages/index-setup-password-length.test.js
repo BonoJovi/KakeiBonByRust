@@ -1,5 +1,5 @@
 /**
- * Latent audit 2026-09 — initial admin / user setup forms (res/js/menu.js)
+ * Regression tests (promoted from the 2026-09 latent audit) — initial admin / user setup forms (res/js/menu.js)
  *
  * IDs covered: L31 (menu.js half; user-management half is in
  *              user-management-admin-page.test.js)
@@ -12,14 +12,14 @@
  *      password itself (register_admin / register_user not invoked) and shows
  *      `error.password_too_short`.
  *
- * The real menu.js is booted against res/index.html via ../pages/_page-harness.js
+ * The real menu.js is booted against res/index.html via ./_page-harness.js
  * (menu.js itself is NOT mocked here).
  */
 
 import { jest } from '@jest/globals';
 import {
     mockPageModules, loadPageBody, bootPage, flush, callsOf,
-} from '../pages/_page-harness.js';
+} from './_page-harness.js';
 
 const { invoke } = mockPageModules(jest, {
     keepMenu: true,
@@ -51,10 +51,10 @@ function submit(formId) {
     );
 }
 
-describe('setup forms password length — latent audit 2026-09', () => {
+describe('setup forms password length — regression (latent audit 2026-09)', () => {
     beforeEach(() => invoke.mockClear());
 
-    test('[latent L31] admin setup rejects 8 emoji (8 chars) on the frontend', async () => {
+    test('[L31] admin setup rejects 8 emoji (8 chars) on the frontend', async () => {
         expect(EIGHT_EMOJI.length).toBe(16);
         document.getElementById('admin-username').value = 'admin';
         document.getElementById('admin-password').value = EIGHT_EMOJI;
@@ -66,7 +66,7 @@ describe('setup forms password length — latent audit 2026-09', () => {
         expect(document.getElementById('setup-message').textContent).toBe('error.password_too_short');
     });
 
-    test('[latent L31] user setup rejects 8 emoji (8 chars) on the frontend', async () => {
+    test('[L31] user setup rejects 8 emoji (8 chars) on the frontend', async () => {
         document.getElementById('user-username').value = 'alice';
         document.getElementById('user-password').value = EIGHT_EMOJI;
         document.getElementById('user-password-confirm').value = EIGHT_EMOJI;

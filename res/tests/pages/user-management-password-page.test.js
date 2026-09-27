@@ -1,5 +1,5 @@
 /**
- * Latent audit 2026-09 — user management screen, admin session (res/js/user-management.js)
+ * Regression tests (promoted from the 2026-09 latent audit) — user management screen, admin session (res/js/user-management.js)
  *
  * IDs covered: L24, L31 (user-management half; menu.js half is in
  *              index-setup-password-length.test.js)
@@ -24,13 +24,13 @@
  *     invoked) with the `error.password_too_short` message.
  *
  * The real page module is booted against res/user-management.html via
- * ../pages/_page-harness.js with an admin session.
+ * ./_page-harness.js with an admin session.
  */
 
 import { jest } from '@jest/globals';
 import {
     mockPageModules, loadPageBody, bootPage, flush, callsOf, definedI18nKeys,
-} from '../pages/_page-harness.js';
+} from './_page-harness.js';
 
 const ADMIN = { user_id: 1, name: 'admin', role: 0 };
 
@@ -78,13 +78,13 @@ const inlineErrorOf = (id) => {
     return next && next.classList.contains('validation-error') ? next.textContent : null;
 };
 
-describe('user management (admin) — latent audit 2026-09', () => {
+describe('user management (admin) — regression (latent audit 2026-09)', () => {
     beforeEach(() => {
         invoke.mockClear();
         document.getElementById('cancel-btn')?.click();
     });
 
-    test('[latent L24] 16-space password is reported on the password, not as raw user_mgmt.empty_name on the username', async () => {
+    test('[L24] 16-space password is reported on the password, not as raw user_mgmt.empty_name on the username', async () => {
         // Premise: the key the classifier produces is not a defined resource.
         expect(definedI18nKeys().has('user_mgmt.empty_name')).toBe(false);
 
@@ -100,7 +100,7 @@ describe('user management (admin) — latent audit 2026-09', () => {
         expect(passwordErrorShown).toBe(true);
     });
 
-    test('[latent L31] 8 emoji (16 UTF-16 units, 8 chars) is rejected by the frontend length check', async () => {
+    test('[L31] 8 emoji (16 UTF-16 units, 8 chars) is rejected by the frontend length check', async () => {
         const eightEmoji = '😀'.repeat(8);
         expect(eightEmoji.length).toBe(16);
         expect([...eightEmoji].length).toBe(8);

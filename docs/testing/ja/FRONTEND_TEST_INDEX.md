@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-09-27 JST  
-**総テスト数**: 804件 (jest suite 37 ファイル、`npm test` 実測)
+**総テスト数**: 810件 (jest suite 40 ファイル、`npm test` 実測)
 
 ---
 
@@ -48,6 +48,9 @@
   - [pages/aggregation-yearly-total-count.test.js](#pagesaggregation-yearly-total-counttestjs)
   - [pages/index-setup-page.test.js](#pagesindex-setup-pagetestjs)
   - [pages/category-management-page.test.js](#pagescategory-management-pagetestjs)
+  - [pages/user-management-password-page.test.js](#pagesuser-management-password-pagetestjs)
+  - [pages/user-management-nonadmin-page.test.js](#pagesuser-management-nonadmin-pagetestjs)
+  - [pages/index-setup-password-length.test.js](#pagesindex-setup-password-lengthtestjs)
 - [集計機能テスト](#集計機能テスト)
   - [aggregation-daily.test.js](#aggregation-dailytestjs)
   - [aggregation-weekly.test.js](#aggregation-weeklytestjs)
@@ -821,6 +824,51 @@
 
 ---
 
+### pages/user-management-password-page.test.js
+
+ユーザー管理画面 (管理者セッション) のパスワード検証の回帰テスト (潜在監査 L24 / L31)。
+
+**テスト数**: 2件
+
+| テスト | 説明 |
+|--------|------|
+| `[L24] 16-space password is reported on the password, ...` | 空白16文字のパスワードは、未定義キー `user_mgmt.empty_name` をユーザー名欄に出さず、パスワードのエラーとして表示 |
+| `[L31] 8 emoji (16 UTF-16 units, 8 chars) is rejected by the frontend length check` | 文字数を UTF-16 単位ではなく文字 (コードポイント) で数え、絵文字8文字を拒否 |
+
+**ファイル**: res/tests/pages/user-management-password-page.test.js
+
+---
+
+### pages/user-management-nonadmin-page.test.js
+
+ユーザー管理画面 (一般ユーザーセッション) の回帰テスト (潜在監査 L30)。
+
+**テスト数**: 2件
+
+| テスト | 説明 |
+|--------|------|
+| `[L30] a non-admin user is not offered the Add User button` | 一般ユーザーには「ユーザー追加」ボタンを出さない |
+| `[L30] a non-admin user has no delete button on their own row` | 一般ユーザーの自分の行に削除ボタンを出さない |
+
+**ファイル**: res/tests/pages/user-management-nonadmin-page.test.js
+
+---
+
+### pages/index-setup-password-length.test.js
+
+初回セットアップ画面のパスワード文字数の回帰テスト (潜在監査 L31)。
+
+**テスト数**: 2件
+
+| テスト | 説明 |
+|--------|------|
+| `[L31] admin setup rejects 8 emoji (8 chars) on the frontend` | 管理者セットアップで絵文字8文字を拒否 |
+| `[L31] user setup rejects 8 emoji (8 chars) on the frontend` | 一般ユーザーセットアップでも同様 |
+
+**ファイル**: res/tests/pages/index-setup-password-length.test.js
+
+---
+
 ## 集計機能テスト
 
 ### aggregation-daily.test.js
@@ -985,7 +1033,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **381件** |
+| **機能別テスト** | **387件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 29 |
@@ -1012,13 +1060,16 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | pages/aggregation-yearly-total-count.test.js | 1 |
 | pages/index-setup-page.test.js | 3 |
 | pages/category-management-page.test.js | 2 |
+| pages/user-management-password-page.test.js | 2 |
+| pages/user-management-nonadmin-page.test.js | 2 |
+| pages/index-setup-password-length.test.js | 2 |
 | **集計機能テスト** | **115件** |
 | aggregation-daily.test.js | 16 |
 | aggregation-weekly.test.js | 22 |
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **804件** |
+| **総計 (jest)** | **810件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 
