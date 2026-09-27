@@ -39,4 +39,4 @@ const result = await invoke('cmd', { camelCase: args });
 ## Validation
 
 - Frontend + Backend must enforce same rules
-- Unicode: JS `.length` = char count, Rust `.len()` = byte length
+- Unicode length limits count characters (code points) on both sides: JS `[...value].length`, Rust `value.chars().count()`. Not JS `.length` (UTF-16 units: an emoji counts 2) or Rust `.len()` (bytes).

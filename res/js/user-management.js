@@ -407,6 +407,12 @@ async function handleLanguageChange(langCode) {
 function setupModalEventHandlers() {
     const addUserBtn = document.getElementById('add-user-btn');
     addUserBtn?.addEventListener('click', openAddUserModal);
+    // Only an admin can create users (create_general_user is admin-only);
+    // a general user pressing the button just got a raw English error
+    // (latent-audit L30).
+    if (addUserBtn && !isSessionAdmin()) {
+        addUserBtn.hidden = true;
+    }
 
     const periodSettingsBtn = document.getElementById('open-period-settings-btn');
     periodSettingsBtn?.addEventListener('click', () => periodSettingsModal.open('edit', {}));
@@ -486,6 +492,11 @@ async function loadUsers() {
     }
 }
 
+/** Whether the logged-in user is the admin (admin-only actions). */
+function isSessionAdmin() {
+    return currentSessionUser?.role === ROLE_ADMIN;
+}
+
 function createUserRow(user) {
     const row = document.createElement('tr');
     
@@ -498,7 +509,10 @@ function createUserRow(user) {
     const editText = i18n.t('user_mgmt.edit');
     const deleteText = i18n.t('user_mgmt.delete');
     
-    const deleteButton = isAdmin ? '' : 
+    // Deleting a user is admin-only, and the admin row itself is never
+    // deletable; a general user saw a delete button on their own row that
+    // only led to a raw English error (latent-audit L30).
+    const deleteButton = (isAdmin || !isSessionAdmin()) ? '' :
         `<button class="btn-small btn-delete" data-user-id="${user.user_id}">${deleteText}</button>`;
     
     row.innerHTML = `
@@ -566,7 +580,18 @@ async function handleUserSave() {
         throw new Error('Password mismatch');
     }
 
-    if (password && password.length < 16) {
+    // A whitespace-only password is rejected by the backend as "Password
+    // cannot be empty!"; catch it here with the password message
+    // (latent-audit L24).
+    if (password && password.trim() === '') {
+        showMessage('form-message', i18n.t('error.password_empty'), 'error');
+        throw new Error('Password empty');
+    }
+
+    // Count characters (code points) like the backend's chars().count(),
+    // not UTF-16 units: 8 emoji are 16 units but only 8 characters
+    // (latent-audit L31).
+    if (password && [...password].length < 16) {
         showMessage('form-message', i18n.t('error.password_too_short'), 'error');
         throw new Error('Password too short');
     }
@@ -606,6 +631,25 @@ async function handleUserSave() {
             showValidationError(oldPasswordInput, i18n.t('error.old_password_incorrect'));
             showMessage('form-message', '', '');
             throw error;
+        }
+
+        // Password / username validation from the backend. The shared
+        // classifier maps any 'cannot be empty' to `user_mgmt.empty_name`,
+        // an undefined key shown raw under the username field — even for
+        // "Password cannot be empty!" (latent-audit L24). Route these by
+        // their leading label instead.
+        if (error && typeof error === 'object' && error.code === API_ERROR_CODES.VALIDATION) {
+            const message = String(error.message || '');
+            if (message.startsWith('Password')) {
+                const key = message.includes('at least') ? 'error.password_too_short' : 'error.password_empty';
+                showMessage('form-message', i18n.t(key), 'error');
+                throw error;
+            }
+            if (message.startsWith('Username') && message.includes('cannot be empty')) {
+                showMessage('form-message', '', '');
+                showValidationError(usernameInput, i18n.t('validation.required'));
+                throw error;
+            }
         }
 
         // Backend not_found means the edit target was deleted between

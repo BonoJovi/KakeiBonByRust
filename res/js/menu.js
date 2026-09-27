@@ -544,7 +544,9 @@ async function handleAdminSetup(e) {
         return;
     }
     
-    if (password.length < 16) {
+    // Characters (code points), like the backend's chars().count()
+    // (latent-audit L31).
+    if ([...password].length < 16) {
         messageDiv.textContent = i18n.t('error.password_too_short');
         messageDiv.className = 'message error';
         return;
@@ -610,7 +612,9 @@ async function handleUserSetup(e) {
         return;
     }
     
-    if (password.length < 16) {
+    // Characters (code points), like the backend's chars().count()
+    // (latent-audit L31).
+    if ([...password].length < 16) {
         messageDiv.textContent = i18n.t('error.password_too_short');
         messageDiv.className = 'message error';
         return;
