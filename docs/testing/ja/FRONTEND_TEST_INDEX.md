@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-09-27 JST  
-**総テスト数**: 810件 (jest suite 40 ファイル、`npm test` 実測)
+**総テスト数**: 812件 (jest suite 41 ファイル、`npm test` 実測)
 
 ---
 
@@ -31,6 +31,7 @@
   - [product-draft.test.js](#product-drafttestjs)
   - [product-master-jump-draft.test.js](#product-master-jump-drafttestjs)
   - [modal-double-submit.test.js](#modal-double-submittestjs)
+  - [modal-stale-save-close.test.js](#modal-stale-save-closetestjs)
   - [master-crud.test.js](#master-crudtestjs)
   - [attach-char-counter-ime.test.js](#attach-char-counter-imetestjs)
   - [aggregation-error-translate.test.js](#aggregation-error-translatetestjs)
@@ -552,6 +553,21 @@
 
 ---
 
+### modal-stale-save-close.test.js
+
+共有 `Modal` クラス (`res/js/modal.js`) の保存セッションに対する回帰テスト (潜在監査 L22)。保存中にモーダルを閉じて開き直した後、先の保存が完了しても、開き直したモーダルを閉じたり保存ガードを解除したりしない。
+
+**テスト数**: 2件
+
+| テスト | 説明 |
+|--------|------|
+| `[L22] should not close or reset a re-opened modal when an earlier save finishes` | 先の保存が完了しても、開き直したモーダルは開いたまま・ローディング表示も維持 |
+| `[L22] should let a re-opened modal save while an earlier save is still pending` | 先の保存が未完了でも、開き直したモーダルから保存でき、完了時に閉じる |
+
+**ファイル**: res/tests/modal-stale-save-close.test.js
+
+---
+
 ### master-crud.test.js
 
 共有 `res/js/master-crud.js` の `saveMasterEntry` オーケストレーターと `mapMasterErrorCode` 分類器の単体テスト (Fable-5 レビュー #D3/#D4/#23)。Rust 側 `ApiError { code, message, entity? }` を JS 側で `err.code` ベースに分類し、i18n key へマップする契約を検証。
@@ -1033,7 +1049,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **387件** |
+| **機能別テスト** | **389件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 29 |
@@ -1043,6 +1059,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | product-draft.test.js | 11 |
 | product-master-jump-draft.test.js | 11 |
 | modal-double-submit.test.js | 6 |
+| modal-stale-save-close.test.js | 2 |
 | master-crud.test.js | 30 |
 | attach-char-counter-ime.test.js | 8 |
 | aggregation-error-translate.test.js | 13 |
@@ -1069,7 +1086,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **810件** |
+| **総計 (jest)** | **812件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 

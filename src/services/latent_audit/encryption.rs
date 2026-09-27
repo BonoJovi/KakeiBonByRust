@@ -1,7 +1,4 @@
-//! Latent-audit 2026-09 regression tests (TDD red phase) for
-//! `services::encryption`. Every test is `#[ignore]`d and asserts the
-//! CORRECT behaviour, so it fails on the current code and passes once the
-//! corresponding bug is fixed.
+//! Latent-audit 2026-09 regression tests for `services::encryption`.
 
 use super::*;
 use crate::security::verify_password;
@@ -47,7 +44,6 @@ async fn change_password_after_registering(
 /// Expected: after such a registration attempt, a password change still
 /// succeeds (either the registration is rejected or the column is ignored).
 #[tokio::test]
-#[ignore = "latent-audit L27"]
 async fn latent_l27_password_change_survives_plaintext_column_registration() {
     let (result, pool, user_id) = change_password_after_registering("USERS", "NAME").await;
     assert!(
@@ -69,7 +65,6 @@ async fn latent_l27_password_change_survives_plaintext_column_registration() {
 /// aborts and the password change is refused.
 /// Expected: the password change still succeeds.
 #[tokio::test]
-#[ignore = "latent-audit L27"]
 async fn latent_l27_password_change_survives_non_text_column_registration() {
     let (result, _pool, _user_id) =
         change_password_after_registering("ACCOUNTS", "INITIAL_BALANCE").await;

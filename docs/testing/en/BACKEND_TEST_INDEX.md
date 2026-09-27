@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-08-26 JST  
-**Total Tests**: 432 (delta-tracked; the full authoritative count from `cargo test --lib` is 672, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 435 (delta-tracked; the full authoritative count from `cargo test --lib` is 675, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -348,8 +348,11 @@ Encryption service tests (field encryption, re-encryption).
 | `test_encrypt_uses_per_user_salt_not_user_id` | Same password/plaintext produces distinct ciphertext across users (Fable-5 #15) | src/services/encryption.rs | 657 |
 | `test_encrypt_decrypt_salt_survives_service_reconstruction` | Salt is refetched from DB so a new service instance round-trips ciphertext (Fable-5 #15) | src/services/encryption.rs | 703 |
 | `test_encrypt_errors_when_user_missing` | Missing USERS row errors loudly instead of falling back to user_id salt (Fable-5 #15) | src/services/encryption.rs | 722 |
+| `test_register_encrypted_field_rejects_ineligible_fields` | Registration rejects USERS, non-per-user tables, non-TEXT/missing columns, views, WITHOUT ROWID tables, tables declaring a ROWID column, and columns already holding plaintext; column names match case-insensitively (latent-audit L27) | src/services/encryption.rs | 589 |
+| `latent_l27_password_change_survives_plaintext_column_registration` | Password change still succeeds after an attempt to register USERS.NAME (latent-audit L27) | src/services/latent_audit/encryption.rs | 47 |
+| `latent_l27_password_change_survives_non_text_column_registration` | Password change still succeeds after an attempt to register an INTEGER column (latent-audit L27) | src/services/latent_audit/encryption.rs | 68 |
 
-**Total**: 8 tests
+**Total**: 11 tests
 
 ### services/account.rs
 
@@ -690,7 +693,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **406** |
+| **Inline Tests** | **409** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -701,7 +704,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/like_escape.rs | 7 |
 | services/auth.rs | 22 |
 | services/user_management.rs | 23 |
-| services/encryption.rs | 8 |
+| services/encryption.rs | 11 |
 | services/account.rs | 11 |
 | services/category.rs | 38 |
 | services/manufacturer.rs | 15 |
@@ -714,7 +717,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/i18n.rs | 8 |
 | services/recurring.rs | 14 |
 | lib.rs | 6 |
-| **Total** | **432** |
+| **Total** | **435** |
 
 ---
 

@@ -1,9 +1,10 @@
 /**
- * Latent audit 2026-09 — shared Modal class (res/js/modal.js)
+ * Shared Modal class (res/js/modal.js) — regression tests promoted from the
+ * 2026-09 latent audit.
  *
  * IDs covered: L22
  *
- * Bug: Modal._handleSave() awaits onSave() and then unconditionally calls
+ * Bug: Modal._handleSave() awaited onSave() and then unconditionally called
  *      this.close(). If the user closes the modal while a save is in flight
  *      and opens it again (e.g. to edit another row), the completion of the
  *      FIRST save closes — and form.reset()s — the NEW session, discarding
@@ -15,8 +16,8 @@
  * res/tests/modal-double-submit.test.js).
  */
 
-import { Modal } from '../../js/modal.js';
-import { deferred, flush } from '../pages/_page-harness.js';
+import { Modal } from '../js/modal.js';
+import { deferred, flush } from './pages/_page-harness.js';
 
 function buildModalDom() {
     document.body.innerHTML = `
@@ -33,8 +34,8 @@ function buildModalDom() {
     `;
 }
 
-describe('Modal — stale save completion (latent audit 2026-09)', () => {
-    test('[latent L22] a save that finishes after close + re-open does not close/reset the new session', async () => {
+describe('Modal — stale save completion (regression, latent audit 2026-09)', () => {
+    test('[L22] should not close or reset a re-opened modal when an earlier save finishes', async () => {
         buildModalDom();
         const inflight = deferred();
         let calls = 0;
@@ -69,5 +70,37 @@ describe('Modal — stale save completion (latent audit 2026-09)', () => {
         expect(modal.modal.classList.contains('hidden')).toBe(false);
         expect(modal.getData()).toEqual({ rowId: 2 });
         expect(document.getElementById('field').value).toBe('row 2 typing');
+    });
+
+    test('[L22] should let a re-opened modal save while an earlier save is still pending', async () => {
+        buildModalDom();
+        const inflight = deferred();
+        const saved = [];
+        const modal = new Modal('test-modal', {
+            formId: 'test-form',
+            closeButtonId: 'close-btn',
+            cancelButtonId: 'cancel-btn',
+            onSave: (data) => {
+                saved.push(data.rowId);
+                return data.rowId === 1 ? inflight.promise : Promise.resolve();
+            },
+        });
+
+        modal.open('edit', { rowId: 1 });
+        document.getElementById('test-form').dispatchEvent(new Event('submit', { cancelable: true }));
+        await flush();
+        document.getElementById('close-btn').click();
+
+        // The re-opened session saves before the first save has finished.
+        modal.open('edit', { rowId: 2 });
+        expect(document.getElementById('save-btn').disabled).toBe(false);
+        document.getElementById('test-form').dispatchEvent(new Event('submit', { cancelable: true }));
+        await flush();
+
+        expect(saved).toEqual([1, 2]);
+        expect(modal.modal.classList.contains('hidden')).toBe(true); // row 2 saved and closed
+
+        inflight.resolve();
+        await flush();
     });
 });

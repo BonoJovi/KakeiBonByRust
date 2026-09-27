@@ -3,7 +3,7 @@
 This document provides a complete index of all frontend tests implemented in JavaScript.
 
 **Last Updated**: 2026-09-27 JST  
-**Total Tests**: 810 (jest suites; 40 test files, per `npm test`)
+**Total Tests**: 812 (jest suites; 41 test files, per `npm test`)
 
 ---
 
@@ -30,7 +30,7 @@ and are **not** added again to the grand total.
 - **login.test.js** - Login tests (58)
 - **user-deletion.test.js** - User deletion tests (46)
 
-### Feature-Specific Tests (387 tests)
+### Feature-Specific Tests (389 tests)
 
 - **transaction-edit.test.js** - Transaction edit tests (112)
 - **transaction-detail-management.test.js** - Transaction detail management tests (51)
@@ -41,6 +41,7 @@ and are **not** added again to the grand total.
 - **product-draft.test.js** - Product draft-state tests (11)
 - **product-master-jump-draft.test.js** - Product master jump / draft handoff tests (11)
 - **modal-double-submit.test.js** - Shared `Modal._handleSave` re-entrancy guard + unhandled-rejection swallow tests (6)
+- **modal-stale-save-close.test.js** - Shared `Modal`: a save that finishes after the modal was closed and re-opened does not close or reset the re-opened session, and the re-opened modal can save while the earlier save is still pending (latent-audit L22) (2)
 - **master-crud.test.js** - Shared `saveMasterEntry` + `mapMasterErrorCode` + `formatApiError` (Fable-5 #D3/#D4/#23) tests (30)
 - **attach-char-counter-ime.test.js** - `attachCharCounter` baseline + IME composition guard (Fable-5 #D1) tests (8)
 - **aggregation-error-translate.test.js** - `translateAggregationError` shape-guard tests (Fable-5 #9): coerces `Err(String)` / `ApiError { code, message }` / `Error` to a substring-matchable string before routing to i18n keys, and swaps unusable coerced values (`"[object Object]"`, `"null"`, `"undefined"`, `""`) for the localised generic banner, so the aggregation banner never renders those literals (13)
@@ -75,7 +76,7 @@ and are **not** added again to the grand total.
 - **backend-validation-standalone.js** - Node-standalone runner (`node backend-validation-standalone.js`)
 - **login-test-standalone.js** - Node-standalone runner (`node login-test-standalone.js`)
 - **aggregation-test-helpers.js** - Shared mock/fixture helpers imported by the aggregation `.test.js` files
-- **pages/_page-harness.js** - Shared jsdom page harness (module mocks, page body loading, boot) used by `pages/*.test.js` and the isolated `latent-audit/*.test.js`
+- **pages/_page-harness.js** - Shared jsdom page harness (module mocks, page body loading, boot) used by `pages/*.test.js`, `modal-stale-save-close.test.js`, and the isolated `latent-audit/*.test.js`
 
 ---
 
@@ -94,7 +95,7 @@ and are **not** added again to the grand total.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **Feature-Specific Tests** | **387** |
+| **Feature-Specific Tests** | **389** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 29 |
@@ -104,6 +105,7 @@ and are **not** added again to the grand total.
 | product-draft.test.js | 11 |
 | product-master-jump-draft.test.js | 11 |
 | modal-double-submit.test.js | 6 |
+| modal-stale-save-close.test.js | 2 |
 | master-crud.test.js | 30 |
 | attach-char-counter-ime.test.js | 8 |
 | aggregation-error-translate.test.js | 13 |
@@ -130,7 +132,7 @@ and are **not** added again to the grand total.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **Total (jest)** | **810** |
+| **Total (jest)** | **812** |
 
 Grand total is Screen + Feature + Aggregation (Common Test Suites are helper
 libraries invoked from Screen-Specific files and their assertions are already

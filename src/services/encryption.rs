@@ -21,6 +21,7 @@ pub enum EncryptionError {
     EncryptionFailed(String),
     NoEncryptedFields,
     InvalidIdentifier(String),
+    IneligibleField(String),
 }
 
 impl std::fmt::Display for EncryptionError {
@@ -33,6 +34,9 @@ impl std::fmt::Display for EncryptionError {
             EncryptionError::NoEncryptedFields => write!(f, "No encrypted fields defined"),
             EncryptionError::InvalidIdentifier(name) => {
                 write!(f, "Invalid SQL identifier: {}", name)
+            }
+            EncryptionError::IneligibleField(reason) => {
+                write!(f, "Field cannot be encrypted: {}", reason)
             }
         }
     }
@@ -116,10 +120,15 @@ impl EncryptionService {
         validate_sql_identifier(table_name)?;
         validate_sql_identifier(column_name)?;
 
+        // Check and insert in one transaction, so no plaintext value can land
+        // in the column between the eligibility check and the registration.
+        let mut tx = self.pool.begin().await?;
+        Self::ensure_field_eligible(&mut tx, table_name, column_name).await?;
+
         let now = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
 
         let result = sqlx::query(sql_queries::ENCRYPTION_GET_NEXT_FIELD_ID)
-            .fetch_one(&self.pool)
+            .fetch_one(&mut *tx)
             .await?;
         let next_id: i64 = result.get(0);
 
@@ -129,10 +138,119 @@ impl EncryptionService {
             .bind(column_name)
             .bind(description)
             .bind(now)
-            .execute(&self.pool)
+            .execute(&mut *tx)
             .await?;
 
+        tx.commit().await?;
+
         Ok(next_id)
+    }
+
+    /// Reject a field that password re-encryption could not handle
+    /// (latent-audit L27). Every registered field is decrypted and
+    /// re-encrypted on each password change, so a column holding plaintext
+    /// or non-text values would make every password change fail. A field
+    /// must be a TEXT column of a per-user table (one with USER_ID) other
+    /// than USERS, and must not hold any values yet: existing values were
+    /// never encrypted, and nothing encrypts them retroactively. The table
+    /// must be an ordinary rowid table, since re-encryption updates rows by
+    /// ROWID.
+    async fn ensure_field_eligible(
+        tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+        table_name: &str,
+        column_name: &str,
+    ) -> Result<(), EncryptionError> {
+        let field = format!("{}.{}", table_name, column_name);
+        if table_name.eq_ignore_ascii_case("USERS") {
+            return Err(EncryptionError::IneligibleField(format!(
+                "{} holds credentials and key material",
+                field
+            )));
+        }
+
+        let table_kind: Option<(String, i64)> = sqlx::query_as(sql_queries::ENCRYPTION_GET_TABLE_KIND)
+            .bind(table_name)
+            .fetch_optional(&mut **tx)
+            .await?;
+        match table_kind {
+            Some((kind, without_rowid)) if kind == "table" && without_rowid == 0 => {}
+            Some(_) => {
+                return Err(EncryptionError::IneligibleField(format!(
+                    "{} is not an ordinary rowid table",
+                    table_name
+                )));
+            }
+            None => {
+                return Err(EncryptionError::IneligibleField(format!(
+                    "{} does not exist",
+                    table_name
+                )));
+            }
+        }
+
+        // A declared ROWID column shadows the real rowid that re-encryption
+        // reads and updates by.
+        let declared_rowid: Option<String> = sqlx::query_scalar(sql_queries::ENCRYPTION_GET_COLUMN_TYPE)
+            .bind(table_name)
+            .bind("ROWID")
+            .fetch_optional(&mut **tx)
+            .await?;
+        if declared_rowid.is_some() {
+            return Err(EncryptionError::IneligibleField(format!(
+                "{} declares a ROWID column",
+                table_name
+            )));
+        }
+
+        let user_id_type: Option<String> = sqlx::query_scalar(sql_queries::ENCRYPTION_GET_COLUMN_TYPE)
+            .bind(table_name)
+            .bind("USER_ID")
+            .fetch_optional(&mut **tx)
+            .await?;
+        if user_id_type.is_none() {
+            return Err(EncryptionError::IneligibleField(format!(
+                "{} is not a per-user table",
+                table_name
+            )));
+        }
+
+        let column_type: Option<String> = sqlx::query_scalar(sql_queries::ENCRYPTION_GET_COLUMN_TYPE)
+            .bind(table_name)
+            .bind(column_name)
+            .fetch_optional(&mut **tx)
+            .await?;
+        match column_type.as_deref() {
+            Some("TEXT") => {}
+            Some(other) => {
+                return Err(EncryptionError::IneligibleField(format!(
+                    "{} is {}, not TEXT",
+                    field, other
+                )));
+            }
+            None => {
+                return Err(EncryptionError::IneligibleField(format!(
+                    "{} does not exist",
+                    field
+                )));
+            }
+        }
+
+        // Identifiers were validated by the caller and confirmed to exist.
+        let has_values_query = format!(
+            "SELECT EXISTS (SELECT 1 FROM {} WHERE {} IS NOT NULL)",
+            table_name, column_name
+        );
+        let has_values: bool = sqlx::query_scalar(&has_values_query)
+            .fetch_one(&mut **tx)
+            .await?;
+        if has_values {
+            return Err(EncryptionError::IneligibleField(format!(
+                "{} already holds unencrypted values",
+                field
+            )));
+        }
+
+        Ok(())
     }
 
     /// Re-encrypt all encrypted fields for a user, committing its own
@@ -463,6 +581,57 @@ mod tests {
         }
 
         assert!(service.get_encrypted_fields().await.unwrap().is_empty());
+    }
+
+    /// Latent-audit L27: fields that password re-encryption could not
+    /// decrypt are refused at registration.
+    #[tokio::test]
+    async fn test_register_encrypted_field_rejects_ineligible_fields() {
+        let pool = setup_test_db().await;
+        let service = EncryptionService::new(pool.clone());
+        sqlx::query("INSERT INTO TEST_DATA (USER_ID, SECRET_MEMO) VALUES (1, 'plain')")
+            .execute(&pool)
+            .await
+            .unwrap();
+        for ddl in [
+            "CREATE VIEW TEST_VIEW AS SELECT USER_ID, SECRET_NOTE FROM TEST_DATA",
+            "CREATE TABLE TEST_NO_ROWID (USER_ID INTEGER PRIMARY KEY, SECRET_NOTE TEXT) WITHOUT ROWID",
+            "CREATE TABLE TEST_ROWID_COL (USER_ID INTEGER, ROWID TEXT, SECRET_NOTE TEXT)",
+        ] {
+            sqlx::query(ddl).execute(&pool).await.unwrap();
+        }
+
+        for (table, column) in [
+            ("USERS", "NAME"),                  // credentials table
+            ("I18N_RESOURCES", "RESOURCE_VALUE"), // not a per-user table
+            ("ACCOUNTS", "INITIAL_BALANCE"),    // not TEXT
+            ("TEST_DATA", "NO_SUCH_COLUMN"),    // does not exist
+            ("NO_SUCH_TABLE", "SECRET_NOTE"),   // does not exist
+            ("TEST_DATA", "SECRET_MEMO"),       // already holds plaintext
+            ("TEST_VIEW", "SECRET_NOTE"),       // a view
+            ("TEST_NO_ROWID", "SECRET_NOTE"),   // re-encryption updates by ROWID
+            ("TEST_ROWID_COL", "SECRET_NOTE"),  // declared ROWID shadows the rowid
+        ] {
+            let result = service
+                .register_encrypted_field(table, column, None)
+                .await;
+            assert!(
+                matches!(result, Err(EncryptionError::IneligibleField(_))),
+                "expected rejection for {}.{}: {:?}",
+                table,
+                column,
+                result
+            );
+        }
+
+        assert!(service.get_encrypted_fields().await.unwrap().is_empty());
+
+        // Column names match case-insensitively, as SQLite identifiers do.
+        service
+            .register_encrypted_field("TEST_DATA", "secret_note", None)
+            .await
+            .unwrap();
+        assert_eq!(service.get_encrypted_fields().await.unwrap().len(), 1);
     }
 
     #[tokio::test]
