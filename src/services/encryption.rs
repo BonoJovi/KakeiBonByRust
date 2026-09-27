@@ -119,12 +119,16 @@ impl EncryptionService {
     ) -> Result<i64, EncryptionError> {
         validate_sql_identifier(table_name)?;
         validate_sql_identifier(column_name)?;
-        self.ensure_field_eligible(table_name, column_name).await?;
+
+        // Check and insert in one transaction, so no plaintext value can land
+        // in the column between the eligibility check and the registration.
+        let mut tx = self.pool.begin().await?;
+        Self::ensure_field_eligible(&mut tx, table_name, column_name).await?;
 
         let now = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
 
         let result = sqlx::query(sql_queries::ENCRYPTION_GET_NEXT_FIELD_ID)
-            .fetch_one(&self.pool)
+            .fetch_one(&mut *tx)
             .await?;
         let next_id: i64 = result.get(0);
 
@@ -134,8 +138,10 @@ impl EncryptionService {
             .bind(column_name)
             .bind(description)
             .bind(now)
-            .execute(&self.pool)
+            .execute(&mut *tx)
             .await?;
+
+        tx.commit().await?;
 
         Ok(next_id)
     }
@@ -146,9 +152,11 @@ impl EncryptionService {
     /// or non-text values would make every password change fail. A field
     /// must be a TEXT column of a per-user table (one with USER_ID) other
     /// than USERS, and must not hold any values yet: existing values were
-    /// never encrypted, and nothing encrypts them retroactively.
+    /// never encrypted, and nothing encrypts them retroactively. The table
+    /// must be an ordinary rowid table, since re-encryption updates rows by
+    /// ROWID.
     async fn ensure_field_eligible(
-        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
         table_name: &str,
         column_name: &str,
     ) -> Result<(), EncryptionError> {
@@ -160,10 +168,30 @@ impl EncryptionService {
             )));
         }
 
+        let table_kind: Option<(String, i64)> = sqlx::query_as(sql_queries::ENCRYPTION_GET_TABLE_KIND)
+            .bind(table_name)
+            .fetch_optional(&mut **tx)
+            .await?;
+        match table_kind {
+            Some((kind, without_rowid)) if kind == "table" && without_rowid == 0 => {}
+            Some(_) => {
+                return Err(EncryptionError::IneligibleField(format!(
+                    "{} is not an ordinary rowid table",
+                    table_name
+                )));
+            }
+            None => {
+                return Err(EncryptionError::IneligibleField(format!(
+                    "{} does not exist",
+                    table_name
+                )));
+            }
+        }
+
         let user_id_type: Option<String> = sqlx::query_scalar(sql_queries::ENCRYPTION_GET_COLUMN_TYPE)
             .bind(table_name)
             .bind("USER_ID")
-            .fetch_optional(&self.pool)
+            .fetch_optional(&mut **tx)
             .await?;
         if user_id_type.is_none() {
             return Err(EncryptionError::IneligibleField(format!(
@@ -175,7 +203,7 @@ impl EncryptionService {
         let column_type: Option<String> = sqlx::query_scalar(sql_queries::ENCRYPTION_GET_COLUMN_TYPE)
             .bind(table_name)
             .bind(column_name)
-            .fetch_optional(&self.pool)
+            .fetch_optional(&mut **tx)
             .await?;
         match column_type.as_deref() {
             Some("TEXT") => {}
@@ -199,7 +227,7 @@ impl EncryptionService {
             table_name, column_name
         );
         let has_values: bool = sqlx::query_scalar(&has_values_query)
-            .fetch_one(&self.pool)
+            .fetch_one(&mut **tx)
             .await?;
         if has_values {
             return Err(EncryptionError::IneligibleField(format!(
@@ -551,6 +579,12 @@ mod tests {
             .execute(&pool)
             .await
             .unwrap();
+        for ddl in [
+            "CREATE VIEW TEST_VIEW AS SELECT USER_ID, SECRET_NOTE FROM TEST_DATA",
+            "CREATE TABLE TEST_NO_ROWID (USER_ID INTEGER PRIMARY KEY, SECRET_NOTE TEXT) WITHOUT ROWID",
+        ] {
+            sqlx::query(ddl).execute(&pool).await.unwrap();
+        }
 
         for (table, column) in [
             ("USERS", "NAME"),                  // credentials table
@@ -559,6 +593,8 @@ mod tests {
             ("TEST_DATA", "NO_SUCH_COLUMN"),    // does not exist
             ("NO_SUCH_TABLE", "SECRET_NOTE"),   // does not exist
             ("TEST_DATA", "SECRET_MEMO"),       // already holds plaintext
+            ("TEST_VIEW", "SECRET_NOTE"),       // a view
+            ("TEST_NO_ROWID", "SECRET_NOTE"),   // re-encryption updates by ROWID
         ] {
             let result = service
                 .register_encrypted_field(table, column, None)
@@ -573,6 +609,13 @@ mod tests {
         }
 
         assert!(service.get_encrypted_fields().await.unwrap().is_empty());
+
+        // Column names match case-insensitively, as SQLite identifiers do.
+        service
+            .register_encrypted_field("TEST_DATA", "secret_note", None)
+            .await
+            .unwrap();
+        assert_eq!(service.get_encrypted_fields().await.unwrap().len(), 1);
     }
 
     #[tokio::test]

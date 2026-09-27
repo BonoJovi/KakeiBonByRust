@@ -348,7 +348,7 @@ Encryption service tests (field encryption, re-encryption).
 | `test_encrypt_uses_per_user_salt_not_user_id` | Same password/plaintext produces distinct ciphertext across users (Fable-5 #15) | src/services/encryption.rs | 657 |
 | `test_encrypt_decrypt_salt_survives_service_reconstruction` | Salt is refetched from DB so a new service instance round-trips ciphertext (Fable-5 #15) | src/services/encryption.rs | 703 |
 | `test_encrypt_errors_when_user_missing` | Missing USERS row errors loudly instead of falling back to user_id salt (Fable-5 #15) | src/services/encryption.rs | 722 |
-| `test_register_encrypted_field_rejects_ineligible_fields` | Registration rejects USERS, non-per-user tables, non-TEXT/missing columns, and columns already holding plaintext (latent-audit L27) | src/services/encryption.rs | 547 |
+| `test_register_encrypted_field_rejects_ineligible_fields` | Registration rejects USERS, non-per-user tables, non-TEXT/missing columns, views and WITHOUT ROWID tables, and columns already holding plaintext; column names match case-insensitively (latent-audit L27) | src/services/encryption.rs | 575 |
 | `latent_l27_password_change_survives_plaintext_column_registration` | Password change still succeeds after an attempt to register USERS.NAME (latent-audit L27) | src/services/latent_audit/encryption.rs | 47 |
 | `latent_l27_password_change_survives_non_text_column_registration` | Password change still succeeds after an attempt to register an INTEGER column (latent-audit L27) | src/services/latent_audit/encryption.rs | 68 |
 
