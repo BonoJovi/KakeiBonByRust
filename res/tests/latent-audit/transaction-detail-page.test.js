@@ -1,12 +1,7 @@
 /**
  * Latent audit 2026-09 — transaction detail screen (res/js/transaction-detail-management.js)
  *
- * IDs covered: M19 (detail form half), L7
- *
- * M19 Bug: handleDetailFormSubmit has no re-entrancy guard; a double click on
- *     Save / double Enter while add_transaction_detail is in flight invokes
- *     the command twice → duplicate detail rows.
- *     Expected: add_transaction_detail is invoked exactly once.
+ * IDs covered: L7
  *
  * L7  Bug: detail list renders `detail.amount_including_tax?.toLocaleString()
  *     || detail.amount...`; for legacy rows where amount_including_tax is 0,
@@ -135,29 +130,5 @@ describe('transaction detail screen — latent audit 2026-09', () => {
         // back to a non-zero value instead of the stored 0.
         expect(text).not.toBe('¥0');
         expect(text).toMatch(/¥1,\d00/);
-    });
-
-    test('[latent M19] double submit of the add-detail form invokes add_transaction_detail once', async () => {
-        document.getElementById('add-detail-btn').click();
-        await flush(10);
-        expect(document.getElementById('detail-modal').classList.contains('hidden')).toBe(false);
-
-        document.getElementById('item-name').value = 'New item';
-        document.getElementById('tax-rate').value = '10';
-        document.getElementById('amount-excluding-tax').value = '1000';
-        document.getElementById('amount-including-tax').value = '1100';
-        document.getElementById('tax-amount').value = '100';
-
-        addInflight = deferred();
-        submitDetailForm();
-        submitDetailForm();
-        await flush(5);
-
-        const adds = callsOf(invoke, 'add_transaction_detail');
-        addInflight.resolve(null);
-        addInflight = null;
-        await flush(10);
-
-        expect(adds).toHaveLength(1);
     });
 });

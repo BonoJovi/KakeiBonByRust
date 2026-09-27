@@ -10,6 +10,7 @@ import { setupTaxCalculationListeners } from './detail-tax-calc.js';
 import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
 import { MAX_RULE_NAME_LEN, MAX_ITEM_NAME_LEN, MAX_MEMO_LEN } from './consts.js';
 import { formatApiError, API_ERROR_CODES } from './master-crud.js';
+import { singleFlight } from './single-flight.js';
 import { parseAmountStrict } from './parse-amount-strict.js';
 import { formatLocalDate } from './format-local-date.js';
 
@@ -264,7 +265,9 @@ function setupDetailTaxCalculation() {
 // ----- Form submit -----
 
 function setupFormSubmit() {
-    document.getElementById('recurring-rule-form').addEventListener('submit', async (e) => {
+    // singleFlight: a double click / repeated Enter while the rule is being
+    // created must not create it (and its occurrences) twice (latent-audit M19).
+    document.getElementById('recurring-rule-form').addEventListener('submit', singleFlight(async (e) => {
         e.preventDefault();
         hideResult();
 
@@ -490,7 +493,7 @@ function setupFormSubmit() {
             const prefix = i18n.t('recurring_rule.create_failed') || 'Failed to create rule:';
             showResult('error', `${prefix} ${formatApiError(err)}`);
         }
-    });
+    }));
 }
 
 function setupResetButton() {

@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-08-26 JST  
-**Total Tests**: 387 (delta-tracked; the full authoritative count from `cargo test --lib` is 627, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 393 (delta-tracked; the full authoritative count from `cargo test --lib` is 633, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -523,8 +523,14 @@ Transaction management service tests.
 | `latent_m1_update_header_persists_is_scheduled` | Header update persists the IS_SCHEDULED checkbox (latent-audit M1) | src/services/latent_audit/transaction.rs | 273 |
 | `latent_m1_update_header_without_flag_keeps_is_scheduled` | Header update with `is_scheduled: None` keeps the stored flag (latent-audit M1) | src/services/latent_audit/transaction.rs | 679 |
 | `latent_m1_invalid_is_scheduled_is_rejected` | Save and update reject an IS_SCHEDULED value other than 0/1 (latent-audit M1) | src/services/latent_audit/transaction.rs | 698 |
+| `latent_m9_restore_reverts_tax_settings_changed_by_recalc` | Rollback restores the tax settings the recalc changed, not only TOTAL_AMOUNT (latent-audit M9) | src/services/latent_audit/transaction.rs | 341 |
+| `latent_m9_restore_keeps_edits_made_after_recalc` | Rollback leaves a header the recalc did not change (and the user edited afterwards) alone (latent-audit M9) | src/services/latent_audit/transaction.rs | 380 |
+| `latent_m9_restore_keeps_edit_on_a_header_the_recalc_changed` | A header the recalc changed and the user then edited keeps the edit (latent-audit M9) | src/services/latent_audit/transaction.rs | 414 |
+| `latent_m9_restore_without_journal_is_rejected` | Rollback without the change journal next to the backup is rejected and changes nothing (latent-audit M9) | src/services/latent_audit/transaction.rs | 451 |
+| `latent_l4_restore_detaches_backup_when_update_fails` | A failed rollback leaves no `recalc_backup` attached (resolved by M9: rollback no longer ATTACHes the backup) (latent-audit L4) | src/services/latent_audit/transaction.rs | 657 |
+| `latent_m9_back_to_back_recalcs_keep_separate_journals` | Two recalc runs in quick succession get separate backups / journals, so the first stays restorable (latent-audit M9) | src/services/latent_audit/transaction.rs | 452 |
 
-**Total**: 46 tests
+**Total**: 52 tests
 
 ### services/aggregation.rs
 
@@ -635,7 +641,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **361** |
+| **Inline Tests** | **367** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -652,13 +658,13 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/manufacturer.rs | 15 |
 | services/product.rs | 18 |
 | services/shop.rs | 16 |
-| services/transaction.rs | 46 |
+| services/transaction.rs | 52 |
 | services/aggregation.rs | 20 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 12 |
 | lib.rs | 6 |
-| **Total** | **387** |
+| **Total** | **393** |
 
 ---
 

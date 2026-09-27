@@ -1592,6 +1592,19 @@ WHERE TRANSACTION_ID = ? AND USER_ID = ?
 /// bulk recalc flow when a different (rounding, included) pattern matches the
 /// user-entered TOTAL_AMOUNT — we adopt the matching pattern so future
 /// recalculations stay in agreement, but we leave TOTAL_AMOUNT alone.
+/// Bulk-recalc rollback (latent-audit M9): restore one header's total and
+/// tax settings, but only while it still holds the values the recalc wrote —
+/// a header edited since then keeps the edit.
+/// Binds: (before total, before rounding, before included, transaction_id,
+/// user_id, after total, after rounding, after included).
+pub const TRANSACTION_HEADER_REVERT_RECALC: &str = r#"
+UPDATE TRANSACTIONS_HEADER
+SET TOTAL_AMOUNT = ?, TAX_ROUNDING_TYPE = ?, TAX_INCLUDED_TYPE = ?,
+    UPDATE_DT = datetime('now')
+WHERE TRANSACTION_ID = ? AND USER_ID = ?
+  AND TOTAL_AMOUNT = ? AND TAX_ROUNDING_TYPE = ? AND TAX_INCLUDED_TYPE = ?
+"#;
+
 pub const TRANSACTION_HEADER_UPDATE_TAX_SETTINGS_ONLY: &str = r#"
 UPDATE TRANSACTIONS_HEADER
 SET TAX_ROUNDING_TYPE = ?, TAX_INCLUDED_TYPE = ?, UPDATE_DT = datetime('now')

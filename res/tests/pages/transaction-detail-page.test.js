@@ -9,6 +9,12 @@
  *     detail → Save without changes" silently dropped the PRODUCT_ID link.
  *     Pinned: update_transaction_detail receives the original productId.
  *
+ * M19 (detail form half) handleDetailFormSubmit had no re-entrancy guard,
+ *     so a double click on Save / double Enter while add_transaction_detail
+ *     was in flight added the detail twice. Fixed with singleFlight
+ *     (res/js/single-flight.js). Pinned: add_transaction_detail is invoked
+ *     exactly once.
+ *
  * The real page module is booted against res/transaction-detail-management.html
  * via ./_page-harness.js; Tauri invoke is routed per command below.
  */
@@ -135,5 +141,29 @@ describe('transaction detail screen — regression (latent audit 2026-09)', () =
         const updates = callsOf(invoke, 'update_transaction_detail');
         expect(updates).toHaveLength(1);
         expect(updates[0].productId).toBe(7);
+    });
+
+    test('[M19] double submit of the add-detail form invokes add_transaction_detail once', async () => {
+        document.getElementById('add-detail-btn').click();
+        await flush(10);
+        expect(document.getElementById('detail-modal').classList.contains('hidden')).toBe(false);
+
+        document.getElementById('item-name').value = 'New item';
+        document.getElementById('tax-rate').value = '10';
+        document.getElementById('amount-excluding-tax').value = '1000';
+        document.getElementById('amount-including-tax').value = '1100';
+        document.getElementById('tax-amount').value = '100';
+
+        addInflight = deferred();
+        submitDetailForm();
+        submitDetailForm();
+        await flush(5);
+
+        const adds = callsOf(invoke, 'add_transaction_detail');
+        addInflight.resolve(null);
+        addInflight = null;
+        await flush(10);
+
+        expect(adds).toHaveLength(1);
     });
 });

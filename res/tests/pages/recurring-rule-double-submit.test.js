@@ -1,24 +1,25 @@
 /**
- * Latent audit 2026-09 — recurring rule form (res/js/recurring-rule.js)
+ * Recurring rule form (res/js/recurring-rule.js) — regression test promoted
+ * from the 2026-09 latent audit.
  *
- * IDs covered: M19 (recurring-rule half)
- *
- * Bug: the #recurring-rule-form submit handler has no re-entrancy guard and
- *      never disables the submit button, so a double click on "Create rule"
+ * M19 (recurring-rule half)
+ * Bug: the #recurring-rule-form submit handler had no re-entrancy guard and
+ *      never disabled the submit button, so a double click on "Create rule"
  *      (or Enter pressed twice) while create_recurring_rule is still in
  *      flight invokes the command twice → the rule AND all of its generated
  *      scheduled transactions are registered twice.
- * Expected: while the first create_recurring_rule call is pending, further
+ * Fixed by wrapping the handler in singleFlight (res/js/single-flight.js).
+ * Pinned: while the first create_recurring_rule call is pending, further
  *      submits are ignored — the command is invoked exactly once.
  *
  * The real page module is booted against res/recurring-rule.html via
- * ../pages/_page-harness.js.
+ * ./_page-harness.js.
  */
 
 import { jest } from '@jest/globals';
 import {
     mockPageModules, loadPageBody, bootPage, flush, deferred, callsOf,
-} from '../pages/_page-harness.js';
+} from './_page-harness.js';
 
 const CATEGORY_TREE = [
     {
@@ -76,8 +77,8 @@ function submitForm() {
     );
 }
 
-describe('recurring rule form — latent audit 2026-09', () => {
-    test('[latent M19] double submit invokes create_recurring_rule only once', async () => {
+describe('recurring rule form — regression (latent audit 2026-09)', () => {
+    test('[M19] double submit invokes create_recurring_rule only once', async () => {
         fillValidForm();
         await flush();
 
