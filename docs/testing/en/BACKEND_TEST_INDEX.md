@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-08-26 JST  
-**Total Tests**: 422 (delta-tracked; the full authoritative count from `cargo test --lib` is 662, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 432 (delta-tracked; the full authoritative count from `cargo test --lib` is 672, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -405,8 +405,18 @@ Category management service tests (3-tier category CRUD). Internal `CategoryErro
 | `latent_m8_enable_category2_restores_cascaded_category3` | Showing a hidden CATEGORY2 again also re-enables the CATEGORY3 rows hiding it disabled (latent-audit M8) | src/services/latent_audit/category.rs | 83 |
 | `latent_l19_enable_missing_category2_returns_not_found` | Enabling a non-existent CATEGORY2 returns not_found (latent-audit L19, CATEGORY2 enable only) | src/services/latent_audit/category.rs | 223 |
 | `latent_m8_enable_already_enabled_category2_keeps_hidden_children` | Enabling an already enabled CATEGORY2 is a no-op that keeps a separately hidden CATEGORY3 hidden (latent-audit M8) | src/services/latent_audit/category.rs | 110 |
+| `latent_l18_update_missing_category2_returns_not_found` | Renaming a non-existent CATEGORY2 returns not_found instead of a silent success (latent-audit L18) | src/services/latent_audit/category.rs | 140 |
+| `latent_l18_update_missing_category3_returns_not_found` | Renaming a non-existent CATEGORY3 returns not_found (latent-audit L18) | src/services/latent_audit/category.rs | 153 |
+| `latent_l18_add_category2_is_atomic_on_i18n_failure` | A failed i18n insert leaves no half-created CATEGORY2 (add runs in one transaction) (latent-audit L18) | src/services/latent_audit/category.rs | 172 |
+| `latent_l19_move_missing_category2_returns_not_found` | Moving a non-existent CATEGORY2 returns not_found, not a raw RowNotFound (latent-audit L19) | src/services/latent_audit/category.rs | 217 |
+| `latent_l19_move_missing_category3_returns_not_found` | Moving a non-existent CATEGORY3 returns not_found (latent-audit L19) | src/services/latent_audit/category.rs | 228 |
+| `latent_l19_enable_missing_category3_returns_not_found` | Showing a non-existent CATEGORY3 returns not_found (latent-audit L19) | src/services/latent_audit/category.rs | 254 |
+| `latent_l20_category3_code_unique_across_category2_parents` | CATEGORY3 codes under C2_E_1 and C2_E_11 no longer collide (code built from the full parent code, unique per user) (latent-audit L20) | src/services/latent_audit/category.rs | 276 |
+| `latent_l20_add_category2_empty_category1_code_does_not_panic` | An empty CATEGORY1 code is rejected instead of panicking (latent-audit L20) | src/services/latent_audit/category.rs | 312 |
+| `latent_l20_add_category2_multibyte_category1_code_does_not_panic` | An unknown multibyte CATEGORY1 code is rejected instead of panicking (latent-audit L20) | src/services/latent_audit/category.rs | 323 |
+| `latent_l20_add_category3_multibyte_category1_code_does_not_panic` | Adding a CATEGORY3 under an unknown multibyte CATEGORY1 is rejected instead of panicking (latent-audit L20) | src/services/latent_audit/category.rs | 333 |
 
-**Total**: 28 tests
+**Total**: 38 tests
 
 ### services/manufacturer.rs
 
@@ -680,7 +690,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **396** |
+| **Inline Tests** | **406** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -693,7 +703,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/user_management.rs | 23 |
 | services/encryption.rs | 8 |
 | services/account.rs | 11 |
-| services/category.rs | 28 |
+| services/category.rs | 38 |
 | services/manufacturer.rs | 15 |
 | services/product.rs | 18 |
 | services/shop.rs | 16 |
@@ -704,7 +714,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/i18n.rs | 8 |
 | services/recurring.rs | 14 |
 | lib.rs | 6 |
-| **Total** | **422** |
+| **Total** | **432** |
 
 ---
 

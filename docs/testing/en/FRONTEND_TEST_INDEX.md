@@ -3,7 +3,7 @@
 This document provides a complete index of all frontend tests implemented in JavaScript.
 
 **Last Updated**: 2026-09-27 JST  
-**Total Tests**: 802 (jest suites; 36 test files, per `npm test`)
+**Total Tests**: 804 (jest suites; 37 test files, per `npm test`)
 
 ---
 
@@ -30,7 +30,7 @@ and are **not** added again to the grand total.
 - **login.test.js** - Login tests (58)
 - **user-deletion.test.js** - User deletion tests (46)
 
-### Feature-Specific Tests (379 tests)
+### Feature-Specific Tests (381 tests)
 
 - **transaction-edit.test.js** - Transaction edit tests (112)
 - **transaction-detail-management.test.js** - Transaction detail management tests (51)
@@ -57,6 +57,7 @@ and are **not** added again to the grand total.
 - **pages/aggregation-monthly-page.test.js** - Boots the real monthly aggregation page: an empty `group_name` renders as `common.unspecified` (latent-audit M12); the total row shows "—" for count / average on the account and category2 axes, and still sums the count on category1 (latent-audit M11); negative amounts render as "-¥1,234" (latent-audit L12) (5)
 - **pages/aggregation-yearly-total-count.test.js** - Boots the real yearly aggregation page: the shared renderer's total row shows "—" for count / average on the account axis (latent-audit M11) (1)
 - **pages/index-setup-page.test.js** - Boots the real setup forms (menu.js on index.html): a blank username is stopped before `register_admin`, a backend "Username cannot be empty" is reported as the username error (not the password one), and `duplicate_name` shows `error.username_duplicate` (latent-audit L25) (3)
+- **pages/category-management-page.test.js** - Boots the real category management page: moving or showing a category that no longer exists shows `category_mgmt.not_found` and reloads the tree (latent-audit L19) (2)
 
 ### Aggregation Tests (115 tests)
 - **aggregation-daily.test.js** - Daily aggregation (16)
@@ -90,7 +91,7 @@ and are **not** added again to the grand total.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **Feature-Specific Tests** | **379** |
+| **Feature-Specific Tests** | **381** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 29 |
@@ -116,13 +117,14 @@ and are **not** added again to the grand total.
 | pages/aggregation-monthly-page.test.js | 5 |
 | pages/aggregation-yearly-total-count.test.js | 1 |
 | pages/index-setup-page.test.js | 3 |
+| pages/category-management-page.test.js | 2 |
 | **Aggregation Tests** | **115** |
 | aggregation-daily.test.js | 16 |
 | aggregation-weekly.test.js | 22 |
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **Total (jest)** | **802** |
+| **Total (jest)** | **804** |
 
 Grand total is Screen + Feature + Aggregation (Common Test Suites are helper
 libraries invoked from Screen-Specific files and their assertions are already

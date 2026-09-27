@@ -465,6 +465,20 @@ WHERE c.USER_ID = ? AND c.CATEGORY1_CODE = ? AND c.CATEGORY2_CODE = ? AND c.CATE
 // Category Order Management Queries
 // ============================================================================
 
+/// Does the user have this CATEGORY1? Checked before generating a child
+/// code from it (latent-audit L20). Binds: (user_id, category1_code).
+pub const CATEGORY1_EXISTS: &str = r#"
+SELECT 1 FROM CATEGORY1 WHERE USER_ID = ? AND CATEGORY1_CODE = ? LIMIT 1
+"#;
+
+/// Is this CATEGORY3 code already used anywhere in the user's tree, under
+/// any parent? Generated codes must be unique per user because the
+/// transaction search filters on the CATEGORY3 code alone (latent-audit L20).
+/// Binds: (user_id, category3_code).
+pub const CATEGORY3_CODE_EXISTS_FOR_USER: &str = r#"
+SELECT 1 FROM CATEGORY3 WHERE USER_ID = ? AND CATEGORY3_CODE = ? LIMIT 1
+"#;
+
 pub const CATEGORY2_GET_ORDER: &str = r#"
 SELECT DISPLAY_ORDER FROM CATEGORY2 
 WHERE USER_ID = ? AND CATEGORY1_CODE = ? AND CATEGORY2_CODE = ?

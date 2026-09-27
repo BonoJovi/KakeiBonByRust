@@ -943,7 +943,9 @@ async function moveCategoryUp(categoryCode, category1Code, category2Code, level)
         scrollToCategory(categoryCode, level);
     } catch (error) {
         console.error('Failed to move category up:', error);
-        showToast(i18n.t('error.category_move_failed') + ': ' + formatApiError(error), { variant: 'error' });
+        if (!(await handleCategoryNotFound(error))) {
+            showToast(i18n.t('error.category_move_failed') + ': ' + formatApiError(error), { variant: 'error' });
+        }
         
         // Re-enable button on error
         if (button) {
@@ -980,7 +982,9 @@ async function moveCategoryDown(categoryCode, category1Code, category2Code, leve
         scrollToCategory(categoryCode, level);
     } catch (error) {
         console.error('Failed to move category down:', error);
-        showToast(i18n.t('error.category_move_failed') + ': ' + formatApiError(error), { variant: 'error' });
+        if (!(await handleCategoryNotFound(error))) {
+            showToast(i18n.t('error.category_move_failed') + ': ' + formatApiError(error), { variant: 'error' });
+        }
         
         // Re-enable button on error
         if (button) {
@@ -1040,6 +1044,25 @@ async function hideCategory(category1Code, category2Code, category3Code, level, 
     }
 }
 
+/**
+ * Show the dedicated not_found toast and reload the tree when a category
+ * action targeted a row that no longer exists (e.g. changed in another
+ * window). Returns true when it handled the error. Move / show now receive
+ * a structured `not_found` from the backend instead of a raw database error
+ * (latent-audit L19), matching the hide flow.
+ * @param {unknown} error
+ * @returns {Promise<boolean>}
+ */
+async function handleCategoryNotFound(error) {
+    const isNotFound = error !== null
+        && typeof error === 'object'
+        && error.code === API_ERROR_CODES.NOT_FOUND;
+    if (!isNotFound) return false;
+    showToast(i18n.t('category_mgmt.not_found'), { variant: 'error' });
+    await loadCategories();
+    return true;
+}
+
 async function showCategory(category1Code, category2Code, category3Code, level) {
     try {
         if (level === LEVEL_CATEGORY2) {
@@ -1059,6 +1082,7 @@ async function showCategory(category1Code, category2Code, category3Code, level) 
         await loadCategories();
     } catch (error) {
         console.error('Failed to show category:', error);
+        if (await handleCategoryNotFound(error)) return;
         showToast(i18n.t('category_mgmt.failed_to_show') + ': ' + formatApiError(error), { variant: 'error' });
     }
 }
