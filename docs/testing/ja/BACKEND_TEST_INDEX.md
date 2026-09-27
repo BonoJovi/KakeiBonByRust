@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-09-06 JST  
-**総テスト数**: 432件 (差分反映後。`cargo test --lib` の権威的総数は 672 で、既存の未反映分は別 PR でバックフィル予定)
+**総テスト数**: 435件 (差分反映後。`cargo test --lib` の権威的総数は 675 で、既存の未反映分は別 PR でバックフィル予定)
 
 ---
 
@@ -348,8 +348,11 @@ AES-256-GCM暗号化・復号化のテスト。
 | `test_encrypt_uses_per_user_salt_not_user_id` | 同じ password/plaintext でもユーザーごとに ciphertext が異なる (Fable-5 #15) | src/services/encryption.rs | 657 |
 | `test_encrypt_decrypt_salt_survives_service_reconstruction` | salt を DB から再取得するため、新しい service インスタンスで round-trip が成立 (Fable-5 #15) | src/services/encryption.rs | 703 |
 | `test_encrypt_errors_when_user_missing` | USERS 行が無い場合は user_id 由来 salt に fallback せずエラー (Fable-5 #15) | src/services/encryption.rs | 722 |
+| `test_register_encrypted_field_rejects_ineligible_fields` | USERS・ユーザー別でないテーブル・TEXT 以外/存在しないカラム・平文が既に入っているカラムの登録を拒否 (潜在監査 L27) | src/services/encryption.rs | 547 |
+| `latent_l27_password_change_survives_plaintext_column_registration` | USERS.NAME の登録を試みた後もパスワード変更が成功する (潜在監査 L27) | src/services/latent_audit/encryption.rs | 47 |
+| `latent_l27_password_change_survives_non_text_column_registration` | INTEGER カラムの登録を試みた後もパスワード変更が成功する (潜在監査 L27) | src/services/latent_audit/encryption.rs | 68 |
 
-**合計**: 8件
+**合計**: 11件
 
 ### services/account.rs
 
@@ -690,7 +693,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **406件** |
+| **インラインテスト** | **409件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -701,7 +704,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/like_escape.rs | 7 |
 | services/auth.rs | 22 |
 | services/user_management.rs | 23 |
-| services/encryption.rs | 8 |
+| services/encryption.rs | 11 |
 | services/account.rs | 11 |
 | services/category.rs | 38 |
 | services/manufacturer.rs | 15 |
@@ -714,7 +717,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/i18n.rs | 8 |
 | services/recurring.rs | 14 |
 | lib.rs | 6 |
-| **総計** | **432件** |
+| **総計** | **435件** |
 
 ---
 

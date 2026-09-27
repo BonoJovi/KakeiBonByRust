@@ -145,6 +145,12 @@ WHERE IS_ACTIVE = 1
 
 pub const ENCRYPTION_GET_NEXT_FIELD_ID: &str = "SELECT COALESCE(MAX(FIELD_ID), 0) + 1 as next_id FROM ENCRYPTED_FIELDS";
 
+/// Declared type of a column (latent-audit L27). The table name is bound as
+/// the table-valued pragma's argument; no row means the table or column
+/// does not exist.
+pub const ENCRYPTION_GET_COLUMN_TYPE: &str =
+    "SELECT UPPER(type) FROM pragma_table_info(?) WHERE name = ?";
+
 pub const ENCRYPTION_INSERT_FIELD: &str = r#"
 INSERT INTO ENCRYPTED_FIELDS (FIELD_ID, TABLE_NAME, COLUMN_NAME, DESCRIPTION, IS_ACTIVE, ENTRY_DT) 
 VALUES (?, ?, ?, ?, 1, datetime('now'))

@@ -21,6 +21,7 @@ pub enum EncryptionError {
     EncryptionFailed(String),
     NoEncryptedFields,
     InvalidIdentifier(String),
+    IneligibleField(String),
 }
 
 impl std::fmt::Display for EncryptionError {
@@ -33,6 +34,9 @@ impl std::fmt::Display for EncryptionError {
             EncryptionError::NoEncryptedFields => write!(f, "No encrypted fields defined"),
             EncryptionError::InvalidIdentifier(name) => {
                 write!(f, "Invalid SQL identifier: {}", name)
+            }
+            EncryptionError::IneligibleField(reason) => {
+                write!(f, "Field cannot be encrypted: {}", reason)
             }
         }
     }
@@ -115,6 +119,7 @@ impl EncryptionService {
     ) -> Result<i64, EncryptionError> {
         validate_sql_identifier(table_name)?;
         validate_sql_identifier(column_name)?;
+        self.ensure_field_eligible(table_name, column_name).await?;
 
         let now = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
 
@@ -133,6 +138,77 @@ impl EncryptionService {
             .await?;
 
         Ok(next_id)
+    }
+
+    /// Reject a field that password re-encryption could not handle
+    /// (latent-audit L27). Every registered field is decrypted and
+    /// re-encrypted on each password change, so a column holding plaintext
+    /// or non-text values would make every password change fail. A field
+    /// must be a TEXT column of a per-user table (one with USER_ID) other
+    /// than USERS, and must not hold any values yet: existing values were
+    /// never encrypted, and nothing encrypts them retroactively.
+    async fn ensure_field_eligible(
+        &self,
+        table_name: &str,
+        column_name: &str,
+    ) -> Result<(), EncryptionError> {
+        let field = format!("{}.{}", table_name, column_name);
+        if table_name.eq_ignore_ascii_case("USERS") {
+            return Err(EncryptionError::IneligibleField(format!(
+                "{} holds credentials and key material",
+                field
+            )));
+        }
+
+        let user_id_type: Option<String> = sqlx::query_scalar(sql_queries::ENCRYPTION_GET_COLUMN_TYPE)
+            .bind(table_name)
+            .bind("USER_ID")
+            .fetch_optional(&self.pool)
+            .await?;
+        if user_id_type.is_none() {
+            return Err(EncryptionError::IneligibleField(format!(
+                "{} is not a per-user table",
+                table_name
+            )));
+        }
+
+        let column_type: Option<String> = sqlx::query_scalar(sql_queries::ENCRYPTION_GET_COLUMN_TYPE)
+            .bind(table_name)
+            .bind(column_name)
+            .fetch_optional(&self.pool)
+            .await?;
+        match column_type.as_deref() {
+            Some("TEXT") => {}
+            Some(other) => {
+                return Err(EncryptionError::IneligibleField(format!(
+                    "{} is {}, not TEXT",
+                    field, other
+                )));
+            }
+            None => {
+                return Err(EncryptionError::IneligibleField(format!(
+                    "{} does not exist",
+                    field
+                )));
+            }
+        }
+
+        // Identifiers were validated by the caller and confirmed to exist.
+        let has_values_query = format!(
+            "SELECT EXISTS (SELECT 1 FROM {} WHERE {} IS NOT NULL)",
+            table_name, column_name
+        );
+        let has_values: bool = sqlx::query_scalar(&has_values_query)
+            .fetch_one(&self.pool)
+            .await?;
+        if has_values {
+            return Err(EncryptionError::IneligibleField(format!(
+                "{} already holds unencrypted values",
+                field
+            )));
+        }
+
+        Ok(())
     }
 
     /// Re-encrypt all encrypted fields for a user, committing its own
@@ -459,6 +535,40 @@ mod tests {
                 "expected rejection for {}.{}",
                 table,
                 column
+            );
+        }
+
+        assert!(service.get_encrypted_fields().await.unwrap().is_empty());
+    }
+
+    /// Latent-audit L27: fields that password re-encryption could not
+    /// decrypt are refused at registration.
+    #[tokio::test]
+    async fn test_register_encrypted_field_rejects_ineligible_fields() {
+        let pool = setup_test_db().await;
+        let service = EncryptionService::new(pool.clone());
+        sqlx::query("INSERT INTO TEST_DATA (USER_ID, SECRET_MEMO) VALUES (1, 'plain')")
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        for (table, column) in [
+            ("USERS", "NAME"),                  // credentials table
+            ("I18N_RESOURCES", "RESOURCE_VALUE"), // not a per-user table
+            ("ACCOUNTS", "INITIAL_BALANCE"),    // not TEXT
+            ("TEST_DATA", "NO_SUCH_COLUMN"),    // does not exist
+            ("NO_SUCH_TABLE", "SECRET_NOTE"),   // does not exist
+            ("TEST_DATA", "SECRET_MEMO"),       // already holds plaintext
+        ] {
+            let result = service
+                .register_encrypted_field(table, column, None)
+                .await;
+            assert!(
+                matches!(result, Err(EncryptionError::IneligibleField(_))),
+                "expected rejection for {}.{}: {:?}",
+                table,
+                column,
+                result
             );
         }
 
