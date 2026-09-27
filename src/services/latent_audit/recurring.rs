@@ -469,3 +469,51 @@ async fn latent_m18_huge_generation_rejected() {
         ),
     }
 }
+
+// ---------------------------------------------------------------------------
+// L2 (recurring path)
+// ---------------------------------------------------------------------------
+
+/// L2 — the recurring template's SHOP_ID / PRODUCT_ID must belong to the
+/// user, like a normal transaction's; otherwise every generated occurrence
+/// links another user's shop / product.
+#[tokio::test]
+async fn latent_l2_recurring_rejects_foreign_shop_and_product() {
+    let pool = setup_recurring_db().await;
+    for ddl in [
+        "CREATE TABLE SHOPS (SHOP_ID INTEGER PRIMARY KEY, USER_ID INTEGER NOT NULL, SHOP_NAME TEXT NOT NULL)",
+        "CREATE TABLE PRODUCTS (PRODUCT_ID INTEGER PRIMARY KEY, USER_ID INTEGER NOT NULL, PRODUCT_NAME TEXT NOT NULL)",
+        "INSERT INTO SHOPS (SHOP_ID, USER_ID, SHOP_NAME) VALUES (10, 2, 'own shop'), (11, 3, 'foreign shop')",
+        "INSERT INTO PRODUCTS (PRODUCT_ID, USER_ID, PRODUCT_NAME) VALUES (20, 2, 'own product'), (21, 3, 'foreign product')",
+    ] {
+        sqlx::query(ddl).execute(&pool).await.expect(ddl);
+    }
+    let service = RecurringService::new(pool);
+
+    // Own shop + own product: accepted.
+    let mut own = valid_request();
+    own.shop_id = Some(10);
+    own.detail.product_id = Some(20);
+    let r = service.create_rule_with_instances(USER_ID, own).await;
+    assert!(r.is_ok(), "own shop / product must be accepted: {:?}", r.err());
+
+    let mut foreign_shop = valid_request();
+    foreign_shop.shop_id = Some(11);
+    assert!(
+        matches!(
+            service.create_rule_with_instances(USER_ID, foreign_shop).await,
+            Err(RecurringError::Validation(_))
+        ),
+        "another user's SHOP_ID must be rejected"
+    );
+
+    let mut foreign_product = valid_request();
+    foreign_product.detail.product_id = Some(21);
+    assert!(
+        matches!(
+            service.create_rule_with_instances(USER_ID, foreign_product).await,
+            Err(RecurringError::Validation(_))
+        ),
+        "another user's PRODUCT_ID must be rejected"
+    );
+}

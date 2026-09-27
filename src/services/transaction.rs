@@ -394,6 +394,44 @@ pub struct DetailForRecalc {
     pub tax_rate: i64,
 }
 
+/// Validate a transaction datetime as a real `YYYY-MM-DD HH:MM:SS` value
+/// (latent-audit L8). Only the length used to be checked, so strings such as
+/// "2024-13-45 99:99:99" were stored and broke the date-string comparisons
+/// the list filters rely on.
+fn validate_transaction_datetime(value: &str) -> Result<(), TransactionError> {
+    let well_formed = value.len() == 19
+        && chrono::NaiveDateTime::parse_from_str(value, "%Y-%m-%d %H:%M:%S").is_ok();
+    if well_formed {
+        Ok(())
+    } else {
+        Err(TransactionError::ValidationError(
+            "Invalid datetime format. Use YYYY-MM-DD HH:MM:SS".to_string(),
+        ))
+    }
+}
+
+/// Whether an optional SHOP_ID / PRODUCT_ID reference is usable by
+/// `user_id`: `None`, or a row owned by that user. The FKs only check that
+/// some row exists, so without this another user's shop / product could be
+/// linked, and its name then shown on this user's rows (latent-audit L2).
+/// `exists_sql` is `SHOP_EXISTS_FOR_USER` or `PRODUCT_EXISTS_FOR_USER`.
+pub(crate) async fn owned_by_user(
+    pool: &SqlitePool,
+    exists_sql: &str,
+    user_id: i64,
+    id: Option<i64>,
+) -> Result<bool, sqlx::Error> {
+    let Some(id) = id else {
+        return Ok(true);
+    };
+    let found: Option<i64> = sqlx::query_scalar(exists_sql)
+        .bind(id)
+        .bind(user_id)
+        .fetch_optional(pool)
+        .await?;
+    Ok(found.is_some())
+}
+
 /// Round an amount expressed in 1/100ths of a yen back to whole yen under
 /// the given `TAX_ROUNDING_TYPE`. All inputs are non-negative (AMOUNT and
 /// TAX_RATE are validated `>= 0`), so integer division is floor.
@@ -552,10 +590,11 @@ impl TransactionService {
         request: SaveTransactionRequest,
     ) -> Result<i64, TransactionError> {
         // Validate datetime format (YYYY-MM-DD HH:MM:SS)
-        if request.transaction_date.len() != 19 {
-            return Err(TransactionError::ValidationError(
-                "Invalid datetime format. Use YYYY-MM-DD HH:MM:SS".to_string(),
-            ));
+        validate_transaction_datetime(&request.transaction_date)?;
+
+        // The shop must belong to this user (latent-audit L2).
+        if !owned_by_user(&self.pool, sql_queries::SHOP_EXISTS_FOR_USER, user_id, request.shop_id).await? {
+            return Err(TransactionError::ValidationError("Shop not found".to_string()));
         }
 
         // Validate amount (0 is allowed)
@@ -1038,10 +1077,11 @@ impl TransactionService {
         request: SaveTransactionRequest,
     ) -> Result<(), TransactionError> {
         // Validate datetime format (YYYY-MM-DD HH:MM:SS)
-        if request.transaction_date.len() != 19 {
-            return Err(TransactionError::ValidationError(
-                "Invalid datetime format. Use YYYY-MM-DD HH:MM:SS".to_string(),
-            ));
+        validate_transaction_datetime(&request.transaction_date)?;
+
+        // The shop must belong to this user (latent-audit L2).
+        if !owned_by_user(&self.pool, sql_queries::SHOP_EXISTS_FOR_USER, user_id, request.shop_id).await? {
+            return Err(TransactionError::ValidationError("Shop not found".to_string()));
         }
 
         // Validate amount (0 is allowed)
@@ -1261,6 +1301,11 @@ impl TransactionService {
             ));
         }
 
+        // The linked product must belong to this user (latent-audit L2).
+        if !owned_by_user(&self.pool, sql_queries::PRODUCT_EXISTS_FOR_USER, user_id, request.product_id).await? {
+            return Err(TransactionError::ValidationError("Product not found".to_string()));
+        }
+
         // Verify the parent header exists AND belongs to this user. The FK
         // on TRANSACTIONS_DETAIL.TRANSACTION_ID only checks that some header
         // row exists — it does not enforce ownership. Without this guard, a
@@ -1362,6 +1407,11 @@ impl TransactionService {
             return Err(TransactionError::ValidationError(
                 "Tax amount cannot be negative".to_string(),
             ));
+        }
+
+        // The linked product must belong to this user (latent-audit L2).
+        if !owned_by_user(&self.pool, sql_queries::PRODUCT_EXISTS_FOR_USER, user_id, request.product_id).await? {
+            return Err(TransactionError::ValidationError("Product not found".to_string()));
         }
 
         // Get existing detail to check memo_id
