@@ -107,7 +107,7 @@ impl SettingsManager {
                 // Defaults are only safe once the original is preserved: the
                 // next save replaces the file. If no copy can be made, fail
                 // instead of risking the user's settings (CodeRabbit on #150).
-                let backup = Self::back_up_corrupt_file(path)?;
+                let backup = Self::back_up_corrupt_file(path, &content)?;
                 eprintln!(
                     "Settings file {:?} is not valid ({}); using defaults (kept a copy as {:?})",
                     path, e, backup
@@ -117,21 +117,34 @@ impl SettingsManager {
         }
     }
 
-    /// Copy an unreadable settings file to the first free name among
-    /// `<name>.corrupt`, `<name>.corrupt.2`, … so neither the original nor an
-    /// earlier backup is overwritten. Errors when no copy could be made.
-    fn back_up_corrupt_file(path: &PathBuf) -> Result<PathBuf, SettingsError> {
+    /// Write the unreadable settings `content` — exactly what failed to
+    /// parse, not whatever the file holds by now — to the first free name
+    /// among `<name>.corrupt`, `<name>.corrupt.2`, … Each candidate is opened
+    /// with `create_new`, so claiming the name and writing it is one step: a
+    /// concurrent load can never overwrite a backup another one just made,
+    /// and neither the original nor an earlier backup is overwritten
+    /// (CodeRabbit on #150). Errors when no backup could be written.
+    fn back_up_corrupt_file(path: &PathBuf, content: &str) -> Result<PathBuf, SettingsError> {
+        use std::io::Write;
+
         const MAX_BACKUPS: u32 = 100;
         let mut last_error = None;
         for n in 1..=MAX_BACKUPS {
             let mut name = path.clone().into_os_string();
             name.push(if n == 1 { ".corrupt".to_string() } else { format!(".corrupt.{}", n) });
             let candidate = PathBuf::from(name);
-            if candidate.exists() {
-                continue;
-            }
-            match fs::copy(path, &candidate) {
-                Ok(_) => return Ok(candidate),
+            let file = fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&candidate);
+            match file {
+                Ok(mut file) => {
+                    file.write_all(content.as_bytes())?;
+                    file.sync_all()?;
+                    return Ok(candidate);
+                }
+                // Taken (by a file, a directory, or a concurrent backup).
+                Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => continue,
                 Err(e) => last_error = Some(e),
             }
         }
@@ -142,7 +155,7 @@ impl SettingsManager {
             )
         })))
     }
-    
+
     /// Save settings to file.
     ///
     /// Uses the classic write-tmp-then-rename pattern so a crash (or a

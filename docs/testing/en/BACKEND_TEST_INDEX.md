@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-08-26 JST  
-**Total Tests**: 412 (delta-tracked; the full authoritative count from `cargo test --lib` is 652, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 413 (delta-tracked; the full authoritative count from `cargo test --lib` is 653, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -218,8 +218,9 @@ Settings management functionality tests.
 | `latent_l28_truncated_settings_file_falls_back_to_defaults` | A truncated JSON settings file falls back to defaults (latent-audit L28) | src/latent_audit/settings.rs | 61 |
 | `latent_l28_corrupt_settings_file_is_backed_up_and_replaced_on_save` | The unreadable file is kept as `<name>.corrupt` and the next save writes a valid file (latent-audit L28) | src/latent_audit/settings.rs | 68 |
 | `latent_l28_existing_backup_is_kept_and_unbackupable_file_is_not_replaced` | An earlier `.corrupt` backup is never overwritten (next free name is used); with no backup possible the load fails and the original stays untouched (latent-audit L28) | src/latent_audit/settings.rs | 95 |
+| `latent_l28_backup_holds_the_content_that_failed_to_parse` | The `.corrupt` backup holds exactly the content that failed to parse, even if the file changed after it was read (latent-audit L28) | src/latent_audit/settings.rs | 128 |
 
-**Total**: 17 tests
+**Total**: 18 tests
 
 ### api_error.rs
 
@@ -660,12 +661,12 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **386** |
+| **Inline Tests** | **387** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
 | db.rs | 14 |
-| settings.rs | 17 |
+| settings.rs | 18 |
 | api_error.rs | 10 |
 | services/master_data.rs | 4 |
 | services/like_escape.rs | 7 |
@@ -683,7 +684,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/i18n.rs | 8 |
 | services/recurring.rs | 13 |
 | lib.rs | 6 |
-| **Total** | **412** |
+| **Total** | **413** |
 
 ---
 

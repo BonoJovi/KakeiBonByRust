@@ -121,3 +121,16 @@ fn latent_l28_existing_backup_is_kept_and_unbackupable_file_is_not_replaced() {
     );
     assert_eq!(fs::read_to_string(&path).unwrap(), "null", "the original must stay untouched");
 }
+
+/// L28 follow-up (CodeRabbit on #150): the backup holds exactly the content
+/// that failed to parse, even if the file changed after it was read.
+#[test]
+fn latent_l28_backup_holds_the_content_that_failed_to_parse() {
+    let (path, _temp) = make_test_path();
+    fs::create_dir_all(path.parent().unwrap()).unwrap();
+    // The file on disk has already been replaced by another process.
+    fs::write(&path, "{\"language\":\"en\"}").unwrap();
+
+    let backup = SettingsManager::back_up_corrupt_file(&path, "[1, 2").expect("backup");
+    assert_eq!(fs::read_to_string(&backup).unwrap(), "[1, 2");
+}
