@@ -905,14 +905,20 @@ function selectAccount(selectId, accountCode) {
 }
 
 // Select a shop in the transaction form. A disabled shop has no option until
-// a transaction that names it is shown; without one, the select would fall
-// back to "Unspecified" and saving would silently drop the shop.
-function selectShop(shopId) {
+// an existing transaction that names it is shown; without one, the select
+// would fall back to "Unspecified" and saving would silently drop the shop.
+// A new transaction (allowDisabled: false) is never given a disabled shop,
+// even when restoring a draft picked before the shop was disabled.
+function selectShop(shopId, { allowDisabled = true } = {}) {
     const shopSelect = document.getElementById('shop');
     const value = shopId ? String(shopId) : '';
     const hasOption = Array.from(shopSelect.options).some(o => o.value === value);
-    const disabledShop = disabledShopsById.get(value);
-    if (value && !hasOption && disabledShop) {
+    if (value && !hasOption) {
+        const disabledShop = allowDisabled ? disabledShopsById.get(value) : undefined;
+        if (!disabledShop) {
+            shopSelect.value = '';
+            return;
+        }
         const option = document.createElement('option');
         option.value = value;
         option.textContent = `${disabledShop.shop_name} ${i18n.t('common.disabled_label')}`;
@@ -1312,7 +1318,7 @@ async function restoreModalState() {
                 document.getElementById('account').value = modalData.account_id;
             }
             if (modalData.shop_id) {
-                selectShop(modalData.shop_id);
+                selectShop(modalData.shop_id, { allowDisabled: false });
             }
             if (modalData.from_account) {
                 selectAccount('from-account', modalData.from_account);
