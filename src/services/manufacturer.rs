@@ -12,7 +12,7 @@ const SPEC: MasterCrudSpec = MasterCrudSpec {
     name_label: "Manufacturer name",
     check_duplicate_for_add_sql: sql_queries::MANUFACTURER_CHECK_DUPLICATE_FOR_ADD,
     check_duplicate_for_update_sql: sql_queries::MANUFACTURER_CHECK_DUPLICATE_FOR_UPDATE,
-    delete_logical_sql: sql_queries::MANUFACTURER_DELETE_LOGICAL,
+    delete_sql: sql_queries::MANUFACTURER_DELETE,
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
@@ -160,10 +160,11 @@ pub async fn update_manufacturer(
     Ok("Manufacturer updated successfully".to_string())
 }
 
-/// Delete a manufacturer (logical deletion). Rejected with
-/// `ApiError::in_use("Manufacturer")` when any product row (active or
-/// disabled) still points at it via `MANUFACTURER_ID`. See
-/// `sql_queries::MANUFACTURER_CHECK_IN_USE`.
+/// Delete a manufacturer. Rejected with `ApiError::in_use("Manufacturer")`
+/// when any product row (active or disabled) still points at it via
+/// `MANUFACTURER_ID` (see `sql_queries::MANUFACTURER_CHECK_IN_USE`);
+/// otherwise the row is removed. Hiding a manufacturer that is still in use
+/// is what `IS_DISABLED` is for (latent-audit M7).
 pub async fn delete_manufacturer(
     pool: &SqlitePool,
     user_id: i64,
@@ -297,9 +298,69 @@ mod tests {
         let result = delete_manufacturer(&pool, 2, manufacturer_id).await;
         assert!(result.is_ok());
 
-        // Verify manufacturer is disabled
-        let manufacturers = get_manufacturers(&pool, 2, false).await.unwrap();
+        // An unused manufacturer is removed, not just hidden (latent-audit M7).
+        let manufacturers = get_manufacturers(&pool, 2, true).await.unwrap();
         assert_eq!(manufacturers.len(), 0);
+    }
+
+    /// Latent-audit M7: a disabled manufacturer that nothing uses can still
+    /// be deleted, which removes the row.
+    #[tokio::test]
+    async fn test_delete_disabled_manufacturer_removes_row() {
+        let pool = setup_test_db().await;
+
+        add_manufacturer(&pool, 2, AddManufacturerRequest {
+            manufacturer_name: "ニッスイ".to_string(),
+            memo: None,
+            is_disabled: Some(1),
+        })
+        .await
+        .unwrap();
+        let manufacturer_id = get_manufacturers(&pool, 2, true).await.unwrap()[0].manufacturer_id;
+
+        delete_manufacturer(&pool, 2, manufacturer_id).await.unwrap();
+
+        assert!(get_manufacturers(&pool, 2, true).await.unwrap().is_empty());
+    }
+
+    /// Latent-audit M7: a manufacturer still used by a product cannot be
+    /// deleted, but it can be disabled; the product keeps showing its name.
+    #[tokio::test]
+    async fn test_disable_manufacturer_allowed_while_referenced() {
+        let pool = setup_test_db().await;
+
+        add_manufacturer(&pool, 2, AddManufacturerRequest {
+            manufacturer_name: "ニッスイ".to_string(),
+            memo: None,
+            is_disabled: None,
+        })
+        .await
+        .unwrap();
+        let manufacturer_id = get_manufacturers(&pool, 2, false).await.unwrap()[0].manufacturer_id;
+        sqlx::query(sql_queries::TEST_INSERT_PRODUCT_WITH_MANUFACTURER)
+            .bind(2_i64)
+            .bind("サバ缶")
+            .bind(manufacturer_id)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        update_manufacturer(&pool, 2, manufacturer_id, UpdateManufacturerRequest {
+            manufacturer_name: "ニッスイ".to_string(),
+            memo: None,
+            display_order: 1,
+            is_disabled: 1,
+        })
+        .await
+        .unwrap();
+
+        assert!(get_manufacturers(&pool, 2, false).await.unwrap().is_empty());
+        let all = get_manufacturers(&pool, 2, true).await.unwrap();
+        assert_eq!(all.len(), 1);
+        assert_eq!(all[0].is_disabled, 1);
+
+        let products = crate::services::product::get_products(&pool, 2, false).await.unwrap();
+        assert_eq!(products[0].manufacturer_name.as_deref(), Some("ニッスイ"));
     }
 
     #[tokio::test]

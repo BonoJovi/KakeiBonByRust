@@ -41,14 +41,16 @@ use crate::api_error::ApiError;
 ///   `(user_id, name)`.
 /// - `check_duplicate_for_update_sql` — `SELECT COUNT(*)` bound with
 ///   `(user_id, name, exclude_id)`.
-/// - `delete_logical_sql` — bound with `(user_id, id)`. Must use logical
-///   delete semantics that update at most one row.
+/// - `delete_sql` — bound with `(user_id, id)`. Must affect at most one
+///   row. Shops still delete logically (`IS_DISABLED = 1`); manufacturers
+///   and products delete physically, since a delete is only allowed once
+///   nothing references the row (latent-audit M7).
 pub struct MasterCrudSpec {
     pub entity_label: &'static str,
     pub name_label: &'static str,
     pub check_duplicate_for_add_sql: &'static str,
     pub check_duplicate_for_update_sql: &'static str,
-    pub delete_logical_sql: &'static str,
+    pub delete_sql: &'static str,
 }
 
 /// Fetch a single master row scoped to `user_id`, or `None` when it does not exist.
@@ -175,10 +177,10 @@ pub async fn check_duplicate_for_update(
 /// deleted between the check and the execute, and the caller would still
 /// report success. Threading the count back and mapping `0 → NotFound`
 /// eliminates both.
-/// Execute the caller's `spec.delete_logical_sql` on a caller-owned
+/// Execute the caller's `spec.delete_sql` on a caller-owned
 /// transaction and translate `0 → NotFound`. Used by the per-master
 /// delete paths (shop / product / manufacturer) so the `CHECK_IN_USE`
-/// guard and the `IS_DISABLED=1` write share one transaction —
+/// guard and the delete share one transaction —
 /// Fable-5 #14 closed the pre-fix window where the two ran on
 /// independently pooled connections. Callers open the tx with
 /// `pool.begin()` (sqlx default: `BEGIN DEFERRED`) and commit after
@@ -189,7 +191,7 @@ pub async fn run_delete_expect_one_in_tx(
     user_id: i64,
     id: i64,
 ) -> Result<(), ApiError> {
-    let affected = sqlx::query(spec.delete_logical_sql)
+    let affected = sqlx::query(spec.delete_sql)
         .bind(user_id)
         .bind(id)
         .execute(&mut **tx)
@@ -257,7 +259,7 @@ mod tests {
         name_label: "Shop name",
         check_duplicate_for_add_sql: "SELECT 1",
         check_duplicate_for_update_sql: "SELECT 1",
-        delete_logical_sql: "DELETE",
+        delete_sql: "DELETE",
     };
 
     #[test]
