@@ -181,8 +181,9 @@ class Modal {
     open(mode = 'add', data = {}) {
         this._session += 1;
         // A save still in flight belongs to an earlier session; it must not
-        // block saving in this one.
+        // block saving in this one (guard and save button alike).
         this._isSaving = false;
+        this.hideLoading();
         this.mode = mode;
         this.data = data || {};
 

@@ -93,6 +93,7 @@ describe('Modal — stale save completion (regression, latent audit 2026-09)', (
 
         // The re-opened session saves before the first save has finished.
         modal.open('edit', { rowId: 2 });
+        expect(document.getElementById('save-btn').disabled).toBe(false);
         document.getElementById('test-form').dispatchEvent(new Event('submit', { cancelable: true }));
         await flush();
 
