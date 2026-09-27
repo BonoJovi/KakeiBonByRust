@@ -84,7 +84,15 @@ impl SettingsManager {
             .join("KakeiBon.json")
     }
     
-    /// Load settings from file
+    /// Load settings from file.
+    ///
+    /// An empty file, or one that is not a valid settings object (`null`,
+    /// `[]`, truncated JSON after an external edit or a disk error), falls
+    /// back to the defaults instead of failing: `SettingsManager::new()`'s
+    /// error aborts the app setup, so the app would not launch until the
+    /// user deleted the file by hand (latent-audit L28). The unreadable file
+    /// is kept next to the original as `<name>.corrupt` so nothing the user
+    /// wrote is silently lost; the next save writes a fresh valid file.
     fn load_from_file(path: &PathBuf) -> Result<UserSettings, SettingsError> {
         let content = fs::read_to_string(path)?;
         
@@ -93,10 +101,61 @@ impl SettingsManager {
             return Ok(UserSettings::default());
         }
         
-        let settings: UserSettings = serde_json::from_str(&content)?;
-        Ok(settings)
+        match serde_json::from_str::<UserSettings>(&content) {
+            Ok(settings) => Ok(settings),
+            Err(e) => {
+                // Defaults are only safe once the original is preserved: the
+                // next save replaces the file. If no copy can be made, fail
+                // instead of risking the user's settings (CodeRabbit on #150).
+                let backup = Self::back_up_corrupt_file(path, &content)?;
+                eprintln!(
+                    "Settings file {:?} is not valid ({}); using defaults (kept a copy as {:?})",
+                    path, e, backup
+                );
+                Ok(UserSettings::default())
+            }
+        }
     }
-    
+
+    /// Write the unreadable settings `content` — exactly what failed to
+    /// parse, not whatever the file holds by now — to the first free name
+    /// among `<name>.corrupt`, `<name>.corrupt.2`, … Each candidate is opened
+    /// with `create_new`, so claiming the name and writing it is one step: a
+    /// concurrent load can never overwrite a backup another one just made,
+    /// and neither the original nor an earlier backup is overwritten
+    /// (CodeRabbit on #150). Errors when no backup could be written.
+    fn back_up_corrupt_file(path: &PathBuf, content: &str) -> Result<PathBuf, SettingsError> {
+        use std::io::Write;
+
+        const MAX_BACKUPS: u32 = 100;
+        let mut last_error = None;
+        for n in 1..=MAX_BACKUPS {
+            let mut name = path.clone().into_os_string();
+            name.push(if n == 1 { ".corrupt".to_string() } else { format!(".corrupt.{}", n) });
+            let candidate = PathBuf::from(name);
+            let file = fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&candidate);
+            match file {
+                Ok(mut file) => {
+                    file.write_all(content.as_bytes())?;
+                    file.sync_all()?;
+                    return Ok(candidate);
+                }
+                // Taken (by a file, a directory, or a concurrent backup).
+                Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => continue,
+                Err(e) => last_error = Some(e),
+            }
+        }
+        Err(SettingsError::IoError(last_error.unwrap_or_else(|| {
+            std::io::Error::new(
+                std::io::ErrorKind::AlreadyExists,
+                format!("no free backup name for corrupt settings file {:?}", path),
+            )
+        })))
+    }
+
     /// Save settings to file.
     ///
     /// Uses the classic write-tmp-then-rename pattern so a crash (or a

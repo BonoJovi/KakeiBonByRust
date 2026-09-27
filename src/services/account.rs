@@ -290,33 +290,62 @@ pub async fn delete_account(
 
 /// Initialize NONE account for a new user
 /// This is required for irregular transactions that don't specify an account.
-/// Kept on the old `Result<_, String>` return type because this is called
-/// from `lib.rs` setup (not a Tauri command) and its callers already handle
-/// String errors — the ApiError from `add_account` is unwrapped to its
-/// message here.
+///
+/// Standalone form of [`initialize_none_account_in_tx`]. Registration now
+/// seeds inside its own transaction (latent-audit L26); this wrapper is kept
+/// because the module tests exercise the NONE-account contract through it.
+#[allow(dead_code)]
 pub async fn initialize_none_account(pool: &SqlitePool, user_id: i64) -> Result<(), String> {
-    // Get NONE template
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|e| format!("Failed to initialize NONE account: {}", e))?;
+    initialize_none_account_in_tx(&mut tx, user_id).await?;
+    tx.commit()
+        .await
+        .map_err(|e| format!("Failed to initialize NONE account: {}", e))
+}
+
+/// Create the user's NONE account inside the caller's transaction, so user
+/// registration can create the user, its categories and this account
+/// atomically (latent-audit L26). An existing active NONE account is left
+/// alone (re-initialization is a no-op).
+pub(crate) async fn initialize_none_account_in_tx(
+    tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+    user_id: i64,
+) -> Result<(), String> {
     let none_template = sqlx::query_as::<_, AccountTemplate>(sql_queries::ACCOUNT_TEMPLATE_GET_NONE)
-        .fetch_one(pool)
+        .fetch_one(&mut **tx)
         .await
         .map_err(|e| format!("Failed to get NONE template: {}", e))?;
 
-    // Create NONE account
-    let request = AddAccountRequest {
-        account_code: "NONE".to_string(),
-        account_name: none_template.template_name_ja.clone(),
-        template_code: "NONE".to_string(),
-        initial_balance: 0,
-    };
-
-    // The NONE account may already exist (re-initialization); anything else is
-    // a real failure and must be propagated. Match on the ApiError code, not
-    // the message text.
-    match add_account(pool, user_id, request).await {
-        Ok(_) => Ok(()),
-        Err(e) if e.code == ApiError::CODE_DUPLICATE_CODE => Ok(()),
-        Err(e) => Err(format!("Failed to initialize NONE account: {}", e)),
+    let (existing,): (i64,) = sqlx::query_as(sql_queries::ACCOUNT_CHECK_DUPLICATE_CODE)
+        .bind(user_id)
+        .bind("NONE")
+        .fetch_one(&mut **tx)
+        .await
+        .map_err(|e| format!("Failed to initialize NONE account: {}", e))?;
+    if existing > 0 {
+        return Ok(());
     }
+
+    let (display_order,): (i64,) = sqlx::query_as(sql_queries::ACCOUNT_GET_NEXT_DISPLAY_ORDER)
+        .bind(user_id)
+        .fetch_one(&mut **tx)
+        .await
+        .map_err(|e| format!("Failed to initialize NONE account: {}", e))?;
+
+    sqlx::query(sql_queries::ACCOUNT_UPSERT)
+        .bind(user_id)
+        .bind("NONE")
+        .bind(&none_template.template_name_ja)
+        .bind("NONE")
+        .bind(0_i64)
+        .bind(display_order)
+        .execute(&mut **tx)
+        .await
+        .map_err(|e| format!("Failed to initialize NONE account: {}", e))?;
+    Ok(())
 }
 
 #[cfg(test)]

@@ -28,10 +28,24 @@ function mapAuthErrorCode(err) {
             return i18n.t('error.setup_completed');
         case API_ERROR_CODES.VALIDATION: {
             const msg = String(err.message || '');
-            if (msg.includes('cannot be empty')) return i18n.t('error.password_empty');
-            if (msg.includes('at least')) return i18n.t('error.password_too_short');
+            // Latent-audit L25: the backend now also validates the username
+            // ("Username cannot be empty"), so tell the fields apart by the
+            // message's leading label instead of matching 'cannot be empty'
+            // alone — that used to report a blank username as a blank
+            // password.
+            if (msg.startsWith('Username') && msg.includes('cannot be empty')) {
+                return i18n.t('error.username_required');
+            }
+            if (msg.startsWith('Password') && msg.includes('cannot be empty')) {
+                return i18n.t('error.password_empty');
+            }
+            if (msg.startsWith('Password') && msg.includes('at least')) {
+                return i18n.t('error.password_too_short');
+            }
             return null;
         }
+        case API_ERROR_CODES.DUPLICATE_NAME:
+            return i18n.t('error.username_duplicate');
         default:
             return null;
     }
@@ -516,6 +530,14 @@ async function handleAdminSetup(e) {
     const passwordConfirm = document.getElementById('admin-password-confirm').value;
     const messageDiv = document.getElementById('setup-message');
     
+    // Latent-audit L25: a whitespace-only username passes the input's
+    // `required` attribute, but nobody could log in with it.
+    if (!username || username.trim() === '') {
+        messageDiv.textContent = i18n.t('error.username_required');
+        messageDiv.className = 'message error';
+        return;
+    }
+
     if (!password || password.trim() === '') {
         messageDiv.textContent = i18n.t('error.password_empty');
         messageDiv.className = 'message error';
@@ -574,6 +596,14 @@ async function handleUserSetup(e) {
     const passwordConfirm = document.getElementById('user-password-confirm').value;
     const messageDiv = document.getElementById('user-setup-message');
     
+    // Latent-audit L25: a whitespace-only username passes the input's
+    // `required` attribute, but nobody could log in with it.
+    if (!username || username.trim() === '') {
+        messageDiv.textContent = i18n.t('error.username_required');
+        messageDiv.className = 'message error';
+        return;
+    }
+
     if (!password || password.trim() === '') {
         messageDiv.textContent = i18n.t('error.password_empty');
         messageDiv.className = 'message error';

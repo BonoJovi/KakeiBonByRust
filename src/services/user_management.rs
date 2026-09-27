@@ -2,7 +2,7 @@ use sqlx::sqlite::SqlitePool;
 use sqlx::Row;
 use crate::api_error::ApiError;
 use crate::security::{generate_encryption_salt, hash_password, verify_password, SecurityError};
-use crate::consts::{self, ROLE_ADMIN, ROLE_USER};
+use crate::consts::{ROLE_ADMIN, ROLE_USER};
 use crate::sql_queries;
 use super::encryption::EncryptionService;
 
@@ -58,14 +58,13 @@ impl std::fmt::Display for UserManagementError {
 /// - Issue #37 Phase 2-3 — length guard. Counts characters, not bytes,
 ///   mirroring the frontend `maxlength` and char counter.
 fn validate_username(username: &str) -> Result<(), UserManagementError> {
-    if username.trim().is_empty() {
-        return Err(UserManagementError::Validation(
-            "Username cannot be empty".to_string(),
-        ));
-    }
-    crate::validation::validate_max_chars("Username", username, consts::MAX_NAME_LEN)
+    crate::validation::validate_master_name(USERNAME_LABEL, username)
         .map_err(UserManagementError::Validation)
 }
+
+/// Field label shared with `services::auth` so both user-creation paths
+/// report the same "Username cannot be empty" / length messages.
+pub(crate) const USERNAME_LABEL: &str = "Username";
 
 impl std::error::Error for UserManagementError {}
 
@@ -183,8 +182,14 @@ impl UserManagementService {
         // Per-user Argon2 encryption salt (Fable-5 review #15).
         let encryption_salt = generate_encryption_salt();
 
+        // One transaction for the user and everything it needs to be usable
+        // (unspecified master data + default categories): a failure, or the
+        // app stopping midway, must not leave a user without categories, on
+        // which every transaction insert fails (latent-audit L26).
+        let mut tx = self.pool.begin().await?;
+
         let result = sqlx::query(sql_queries::USER_GET_NEXT_ID)
-            .fetch_one(&self.pool)
+            .fetch_one(&mut *tx)
             .await?;
         let next_id: i64 = result.get(0);
 
@@ -195,11 +200,23 @@ impl UserManagementService {
             .bind(ROLE_USER)
             .bind(encryption_salt.as_slice())
             .bind(now)
-            .execute(&self.pool)
+            .execute(&mut *tx)
             .await?;
 
         // Insert "Unspecified" master data for the new user
-        self.insert_unspecified_data(next_id).await?;
+        insert_unspecified_data(&mut tx, next_id).await?;
+
+        // Default categories (formerly seeded by the tauri command after
+        // this returned, outside any transaction).
+        crate::services::category::populate_default_categories_in_tx(&mut tx, next_id)
+            .await
+            .map_err(|e| {
+                UserManagementError::DatabaseError(sqlx::Error::Configuration(
+                    format!("Failed to populate default categories: {}", e).into(),
+                ))
+            })?;
+
+        tx.commit().await?;
 
         Ok(next_id)
     }
@@ -489,34 +506,39 @@ impl UserManagementService {
 
         Ok(())
     }
+}
 
-    /// Insert "Unspecified" master data for a new user
-    async fn insert_unspecified_data(&self, user_id: i64) -> Result<(), UserManagementError> {
-        // Insert "Unspecified" account
-        sqlx::query(sql_queries::INSERT_UNSPECIFIED_ACCOUNT)
-            .bind(user_id)
-            .execute(&self.pool)
-            .await?;
-        
-        // Insert "Unspecified" CATEGORY2 for each CATEGORY1
-        sqlx::query(sql_queries::INSERT_UNSPECIFIED_CATEGORY2)
-            .bind(user_id)
-            .execute(&self.pool)
-            .await?;
-        
-        // Insert "Unspecified" CATEGORY3 for each CATEGORY2
-        sqlx::query(sql_queries::INSERT_UNSPECIFIED_CATEGORY3)
-            .bind(user_id)
-            .execute(&self.pool)
-            .await?;
-        
-        Ok(())
-    }
+/// Insert "Unspecified" master data for a new user, inside the caller's
+/// registration transaction.
+async fn insert_unspecified_data(
+    tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+    user_id: i64,
+) -> Result<(), UserManagementError> {
+    // Insert "Unspecified" account
+    sqlx::query(sql_queries::INSERT_UNSPECIFIED_ACCOUNT)
+        .bind(user_id)
+        .execute(&mut **tx)
+        .await?;
+
+    // Insert "Unspecified" CATEGORY2 for each CATEGORY1
+    sqlx::query(sql_queries::INSERT_UNSPECIFIED_CATEGORY2)
+        .bind(user_id)
+        .execute(&mut **tx)
+        .await?;
+
+    // Insert "Unspecified" CATEGORY3 for each CATEGORY2
+    sqlx::query(sql_queries::INSERT_UNSPECIFIED_CATEGORY3)
+        .bind(user_id)
+        .execute(&mut **tx)
+        .await?;
+
+    Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::consts;
     use crate::test_helpers::database::{setup_test_db, create_test_admin};
 
     #[tokio::test]

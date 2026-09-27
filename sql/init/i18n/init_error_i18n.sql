@@ -52,3 +52,11 @@ VALUES
 (2446, 'error.current_password_required', 'ja', 'パスワードを変更するには現在のパスワードを入力してください。', 'error', '新パスワード指定時に旧パスワード未入力のガード', datetime('now')),
 (2447, 'error.old_password_incorrect', 'en', 'Current password is incorrect.', 'error', 'Surface for SecurityError::InvalidPassword on password change', datetime('now')),
 (2448, 'error.old_password_incorrect', 'ja', '現在のパスワードが正しくありません。', 'error', 'パスワード変更時の旧パスワード不一致の表示', datetime('now'));
+
+-- Latent-audit L25: registration / setup username errors
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT)
+VALUES
+(2459, 'error.username_required', 'en', 'Please enter a username.', 'error', 'Registration / setup: blank or whitespace-only username (latent-audit L25)', datetime('now')),
+(2460, 'error.username_required', 'ja', 'ユーザー名を入力してください。', 'error', '登録・初回セットアップで空または空白のみのユーザー名 (潜在監査 L25)', datetime('now')),
+(2461, 'error.username_duplicate', 'en', 'This username is already taken.', 'error', 'Registration / setup: username already exists (latent-audit L25)', datetime('now')),
+(2462, 'error.username_duplicate', 'ja', 'このユーザー名は既に使われています。', 'error', '登録・初回セットアップでユーザー名が重複 (潜在監査 L25)', datetime('now'));

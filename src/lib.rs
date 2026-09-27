@@ -357,14 +357,10 @@ async fn create_general_user(
     validate_password(&password).map_err(api_error::ApiError::validation)?;
 
     let user_mgmt = state.user_mgmt.lock().await;
-    let category = state.category.lock().await;
 
+    // register_general_user creates the user, its unspecified master data
+    // and its default categories in one transaction (latent-audit L26).
     let user_id = user_mgmt.register_general_user(&username, &password).await?;
-    // Populate default categories for the new user
-    if let Err(e) = category.populate_default_categories(user_id).await {
-        eprintln!("Warning: Failed to populate default categories for user: {}", e);
-        // Continue even if category population fails
-    }
     Ok(user_id)
 }
 

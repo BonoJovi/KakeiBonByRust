@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-09-27 JST  
-**総テスト数**: 795件 (jest suite 35 ファイル、`npm test` 実測)
+**総テスト数**: 798件 (jest suite 36 ファイル、`npm test` 実測)
 
 ---
 
@@ -46,6 +46,7 @@
   - [pages/product-management-page.test.js](#pagesproduct-management-pagetestjs)
   - [pages/aggregation-monthly-page.test.js](#pagesaggregation-monthly-pagetestjs)
   - [pages/aggregation-yearly-total-count.test.js](#pagesaggregation-yearly-total-counttestjs)
+  - [pages/index-setup-page.test.js](#pagesindex-setup-pagetestjs)
 - [集計機能テスト](#集計機能テスト)
   - [aggregation-daily.test.js](#aggregation-dailytestjs)
   - [aggregation-weekly.test.js](#aggregation-weeklytestjs)
@@ -784,6 +785,22 @@
 
 ---
 
+### pages/index-setup-page.test.js
+
+初回セットアップ画面 (`index.html` 上の menu.js) の回帰テスト (潜在監査 L25)。
+
+**テスト数**: 3件
+
+| テスト | 説明 |
+|--------|------|
+| `[L25] should reject the admin setup without calling register_admin when the username is blank` | 空白のみのユーザー名は `register_admin` を送らず `error.username_required` を表示 |
+| `[L25] should report the username, not the password, when the backend rejects a blank username` | バックエンドの「Username cannot be empty」をパスワードではなくユーザー名のエラーとして表示 |
+| `[L25] should show the duplicate-username message when the backend reports duplicate_name` | `duplicate_name` で `error.username_duplicate` を表示 |
+
+**ファイル**: res/tests/pages/index-setup-page.test.js
+
+---
+
 ## 集計機能テスト
 
 ### aggregation-daily.test.js
@@ -948,7 +965,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **372件** |
+| **機能別テスト** | **375件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 29 |
@@ -973,13 +990,14 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | pages/product-management-page.test.js | 1 |
 | pages/aggregation-monthly-page.test.js | 4 |
 | pages/aggregation-yearly-total-count.test.js | 1 |
+| pages/index-setup-page.test.js | 3 |
 | **集計機能テスト** | **115件** |
 | aggregation-daily.test.js | 16 |
 | aggregation-weekly.test.js | 22 |
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **795件** |
+| **総計 (jest)** | **798件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 

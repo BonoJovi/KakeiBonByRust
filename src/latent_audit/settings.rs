@@ -42,7 +42,6 @@ fn assert_recovers_to_defaults(content: &str) {
 /// return Err, which lib.rs setup propagates → app cannot launch.
 /// Expected: fall back to default (empty) settings.
 #[test]
-#[ignore = "latent-audit L28"]
 fn latent_l28_null_settings_file_falls_back_to_defaults() {
     assert_recovers_to_defaults("null");
 }
@@ -51,7 +50,6 @@ fn latent_l28_null_settings_file_falls_back_to_defaults() {
 /// SettingsManager::with_path return Err → app cannot launch.
 /// Expected: fall back to default (empty) settings.
 #[test]
-#[ignore = "latent-audit L28"]
 fn latent_l28_array_settings_file_falls_back_to_defaults() {
     assert_recovers_to_defaults("[]");
 }
@@ -60,7 +58,79 @@ fn latent_l28_array_settings_file_falls_back_to_defaults() {
 /// error) makes SettingsManager::with_path return Err → app cannot launch.
 /// Expected: fall back to default (empty) settings.
 #[test]
-#[ignore = "latent-audit L28"]
 fn latent_l28_truncated_settings_file_falls_back_to_defaults() {
     assert_recovers_to_defaults("{\n  \"language\": \"ja\",\n  \"font_si");
+}
+
+/// L28 — the unreadable file is kept as `<name>.corrupt` (so the user's
+/// content is not silently lost), and a later save writes a valid file.
+#[test]
+fn latent_l28_corrupt_settings_file_is_backed_up_and_replaced_on_save() {
+    let (path, _temp) = make_test_path();
+    fs::create_dir_all(path.parent().unwrap()).unwrap();
+    let corrupt = "{\n  \"language\": \"ja\",\n  \"font_si";
+    fs::write(&path, corrupt).unwrap();
+
+    let mut manager = SettingsManager::with_path(path.clone()).expect("must recover");
+
+    let mut backup = path.clone().into_os_string();
+    backup.push(".corrupt");
+    assert_eq!(
+        fs::read_to_string(&backup).expect("corrupt copy must exist"),
+        corrupt,
+        "the original content must be preserved in the .corrupt copy"
+    );
+
+    manager.set("language", "en").expect("set after recovery");
+    manager.save().expect("save after recovery");
+    let reloaded = SettingsManager::with_path(path).expect("reload");
+    assert_eq!(reloaded.get("language"), Some(&serde_json::json!("en")));
+}
+
+/// L28 follow-up (CodeRabbit on #150): an existing backup is never
+/// overwritten — a second corruption goes to `<name>.corrupt.2` — and when
+/// no backup can be written at all the load fails instead of letting a later
+/// save replace the only copy.
+#[test]
+fn latent_l28_existing_backup_is_kept_and_unbackupable_file_is_not_replaced() {
+    let (path, _temp) = make_test_path();
+    fs::create_dir_all(path.parent().unwrap()).unwrap();
+    let mut first = path.clone().into_os_string();
+    first.push(".corrupt");
+    fs::write(&first, "earlier backup").unwrap();
+    fs::write(&path, "[]").unwrap();
+
+    SettingsManager::with_path(path.clone()).expect("must recover");
+    assert_eq!(fs::read_to_string(&first).unwrap(), "earlier backup", "an earlier backup must be kept");
+    let mut second = path.clone().into_os_string();
+    second.push(".corrupt.2");
+    assert_eq!(fs::read_to_string(&second).unwrap(), "[]");
+
+    // Every backup name is taken by a directory: no copy is possible.
+    let (path, _temp) = make_test_path();
+    fs::create_dir_all(path.parent().unwrap()).unwrap();
+    fs::write(&path, "null").unwrap();
+    for n in 1..=100u32 {
+        let mut name = path.clone().into_os_string();
+        name.push(if n == 1 { ".corrupt".to_string() } else { format!(".corrupt.{}", n) });
+        fs::create_dir(PathBuf::from(name)).unwrap();
+    }
+    assert!(
+        SettingsManager::with_path(path.clone()).is_err(),
+        "without a backup the corrupt file must not be replaced by defaults"
+    );
+    assert_eq!(fs::read_to_string(&path).unwrap(), "null", "the original must stay untouched");
+}
+
+/// L28 follow-up (CodeRabbit on #150): the backup holds exactly the content
+/// that failed to parse, even if the file changed after it was read.
+#[test]
+fn latent_l28_backup_holds_the_content_that_failed_to_parse() {
+    let (path, _temp) = make_test_path();
+    fs::create_dir_all(path.parent().unwrap()).unwrap();
+    // The file on disk has already been replaced by another process.
+    fs::write(&path, "{\"language\":\"en\"}").unwrap();
+
+    let backup = SettingsManager::back_up_corrupt_file(&path, "[1, 2").expect("backup");
+    assert_eq!(fs::read_to_string(&backup).unwrap(), "[1, 2");
 }

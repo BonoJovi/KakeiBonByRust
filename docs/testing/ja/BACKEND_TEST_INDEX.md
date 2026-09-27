@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-09-06 JST  
-**総テスト数**: 401件 (差分反映後。`cargo test --lib` の権威的総数は 641 で、既存の未反映分は別 PR でバックフィル予定)
+**総テスト数**: 413件 (差分反映後。`cargo test --lib` の権威的総数は 653 で、既存の未反映分は別 PR でバックフィル予定)
 
 ---
 
@@ -213,8 +213,14 @@ AES-256-GCM暗号化・復号化のテスト。
 | `test_save_leaves_no_tmp_sibling_and_target_is_parseable` | save 成功後に tmp ファイルが残らず、target は読み込み可能 (Fable-5 #10) | src/settings.rs | 345 |
 | `test_repeated_saves_do_not_accumulate_tmp_files` | 繰り返しの save で tmp ファイルが累積しない (Fable-5 #10) | src/settings.rs | 378 |
 | `test_stale_tmp_file_is_not_loaded` | クラッシュ由来の tmp が残っていても real target を優先ロード (Fable-5 #10) | src/settings.rs | 404 |
+| `latent_l28_null_settings_file_falls_back_to_defaults` | `null` の設定ファイルは起動失敗ではなく既定値にフォールバック (潜在監査 L28) | src/latent_audit/settings.rs | 45 |
+| `latent_l28_array_settings_file_falls_back_to_defaults` | `[]` の設定ファイルは既定値にフォールバック (潜在監査 L28) | src/latent_audit/settings.rs | 53 |
+| `latent_l28_truncated_settings_file_falls_back_to_defaults` | 途中で切れた JSON の設定ファイルは既定値にフォールバック (潜在監査 L28) | src/latent_audit/settings.rs | 61 |
+| `latent_l28_corrupt_settings_file_is_backed_up_and_replaced_on_save` | 読めないファイルは `<name>.corrupt` として残し、次の保存で正しいファイルを書く (潜在監査 L28) | src/latent_audit/settings.rs | 68 |
+| `latent_l28_existing_backup_is_kept_and_unbackupable_file_is_not_replaced` | 既存の `.corrupt` は上書きせず空いている名前に控える。控えを作れなければ読み込みを失敗させ元ファイルを守る (潜在監査 L28) | src/latent_audit/settings.rs | 95 |
+| `latent_l28_backup_holds_the_content_that_failed_to_parse` | `.corrupt` の控えは、読み込み後にファイルが変わっても解析に失敗した中身そのものを保持する (潜在監査 L28) | src/latent_audit/settings.rs | 128 |
 
-**合計**: 12件
+**合計**: 18件
 
 ### api_error.rs
 
@@ -286,8 +292,14 @@ AES-256-GCM暗号化・復号化のテスト。
 | `invalid_credentials_maps_to_auth_invalid_credentials_code` | `AuthError::InvalidCredentials` → `ApiError { code: "auth_invalid_credentials" }` (PR14, Fable-5 #21) | src/services/auth.rs | 577 |
 | `database_error_maps_to_database_code` | `AuthError::DatabaseError` → `ApiError { code: "database" }` (PR14, Fable-5 #21) | src/services/auth.rs | 585 |
 | `security_error_maps_to_validation_code_with_message` | `AuthError::SecurityError` → `ApiError { code: "validation" }` で message 保持 (PR14, Fable-5 #21) | src/services/auth.rs | 593 |
+| `latent_l25_register_rejects_blank_username` | 初回登録で空・空白のみのユーザー名を拒否 (潜在監査 L25) | src/services/latent_audit/auth.rs | 41 |
+| `latent_l25_register_rejects_overlong_username` | 初回登録で長すぎるユーザー名を拒否 (潜在監査 L25) | src/services/latent_audit/auth.rs | 62 |
+| `latent_l25_register_duplicate_name_maps_to_duplicate_code` | 初回登録のユーザー名重複は生の UNIQUE エラーではなく `duplicate_name` (潜在監査 L25) | src/services/latent_audit/auth.rs | 82 |
+| `latent_l26_admin_category_seed_failure_rolls_back_user` | 管理者登録で費目投入に失敗したら管理者を削除し、再セットアップ可能にする (潜在監査 L26) | src/services/latent_audit/auth.rs | 120 |
+| `latent_l26_admin_none_account_failure_rolls_back_user_and_categories` | 指定なし口座の作成失敗で管理者と作成済みの費目を削除 (潜在監査 L26) | src/services/latent_audit/auth.rs | 148 |
+| `latent_l26_register_user_seed_failure_rolls_back_user` | 一般ユーザー登録で投入に失敗したらユーザーを削除 (潜在監査 L26) | src/services/latent_audit/auth.rs | 171 |
 
-**合計**: 16件
+**合計**: 22件
 
 ### services/user_management.rs
 
@@ -649,16 +661,16 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **375件** |
+| **インラインテスト** | **387件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
 | db.rs | 14 |
-| settings.rs | 12 |
+| settings.rs | 18 |
 | api_error.rs | 10 |
 | services/master_data.rs | 4 |
 | services/like_escape.rs | 7 |
-| services/auth.rs | 16 |
+| services/auth.rs | 22 |
 | services/user_management.rs | 23 |
 | services/encryption.rs | 8 |
 | services/account.rs | 11 |
@@ -672,7 +684,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/i18n.rs | 8 |
 | services/recurring.rs | 13 |
 | lib.rs | 6 |
-| **総計** | **401件** |
+| **総計** | **413件** |
 
 ---
 
