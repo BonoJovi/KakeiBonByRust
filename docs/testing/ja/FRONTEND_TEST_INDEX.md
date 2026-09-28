@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-09-27 JST  
-**総テスト数**: 839件 (jest suite 51 ファイル、`npm test` 実測)
+**総テスト数**: 843件 (jest suite 54 ファイル、`npm test` 実測)
 
 ---
 
@@ -55,6 +55,9 @@
   - [pages/account-management-disabled.test.js](#pagesaccount-management-disabledtestjs)
   - [pages/transaction-management-disabled-account.test.js](#pagestransaction-management-disabled-accounttestjs)
   - [pages/transaction-management-category1-has-details.test.js](#pagestransaction-management-category1-has-detailstestjs)
+  - [modal-open-awaits-onopen.test.js](#modal-open-awaits-onopentestjs)
+  - [pages/transaction-management-restore-draft.test.js](#pagestransaction-management-restore-drafttestjs)
+  - [pages/transaction-management-restore-disabled-shop.test.js](#pagestransaction-management-restore-disabled-shoptestjs)
   - [pages/aggregation-monthly-page.test.js](#pagesaggregation-monthly-pagetestjs)
   - [pages/aggregation-yearly-total-count.test.js](#pagesaggregation-yearly-total-counttestjs)
   - [pages/index-setup-page.test.js](#pagesindex-setup-pagetestjs)
@@ -944,6 +947,49 @@
 
 ---
 
+### modal-open-awaits-onopen.test.js
+
+共有 `Modal` クラスの `open()` の回帰テスト (潜在監査 L6)。`onOpen` の完了を待たずに戻っていたため、入出金画面の下書き復元が後から走る初期化で上書きされていた。
+
+**テスト数**: 2件
+
+| テスト | 説明 |
+|--------|------|
+| `[L6] should settle only after an async onOpen has finished` | 非同期の `onOpen` が終わるまで `open()` の Promise は完了しない (モーダルはすぐ表示) |
+| `[L6] should settle at once for a synchronous onOpen` | 同期の `onOpen` ならすぐ完了する |
+
+**ファイル**: res/tests/modal-open-awaits-onopen.test.js
+
+---
+
+### pages/transaction-management-restore-draft.test.js
+
+入出金画面の新規取引の下書き復元の回帰テスト (潜在監査 L6)。
+
+**テスト数**: 1件
+
+| テスト | 説明 |
+|--------|------|
+| `[L6] should keep the restored draft instead of the modal's late defaults` | 復元した日付・店舗・メモが、モーダル自身の初期化 (フォームのリセット・現在日時) で上書きされない |
+
+**ファイル**: res/tests/pages/transaction-management-restore-draft.test.js
+
+---
+
+### pages/transaction-management-restore-disabled-shop.test.js
+
+下書き保存後に無効化された店舗の復元の回帰テスト (潜在監査 M7、L6 修正で到達可能になった)。
+
+**テスト数**: 1件
+
+| テスト | 説明 |
+|--------|------|
+| `[M7] should not give a restored new transaction a shop disabled since the draft was saved` | 新規取引の復元では無効化された店舗を選ばず「未指定」にする |
+
+**ファイル**: res/tests/pages/transaction-management-restore-disabled-shop.test.js
+
+---
+
 ### pages/aggregation-monthly-page.test.js
 
 実際の月次集計画面の回帰テスト (潜在監査 M11 / M12)。
@@ -1216,7 +1262,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **416件** |
+| **機能別テスト** | **420件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 29 |
@@ -1250,6 +1296,9 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | pages/account-management-disabled.test.js | 4 |
 | pages/transaction-management-disabled-account.test.js | 2 |
 | pages/transaction-management-category1-has-details.test.js | 1 |
+| modal-open-awaits-onopen.test.js | 2 |
+| pages/transaction-management-restore-draft.test.js | 1 |
+| pages/transaction-management-restore-disabled-shop.test.js | 1 |
 | pages/aggregation-monthly-page.test.js | 5 |
 | pages/aggregation-yearly-total-count.test.js | 1 |
 | pages/index-setup-page.test.js | 3 |
@@ -1263,7 +1312,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **839件** |
+| **総計 (jest)** | **843件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 

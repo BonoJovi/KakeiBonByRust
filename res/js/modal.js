@@ -177,6 +177,9 @@ class Modal {
      * Open the modal
      * @param {string} mode - Mode of the modal (e.g., 'add', 'edit')
      * @param {Object} data - Data to pass to the modal
+     * @returns {Promise<void>} Settles when `onOpen` has finished (it may be
+     *   async), so a caller can fill the form in afterwards without the
+     *   modal's own initialisation overwriting it (latent-audit L6).
      */
     open(mode = 'add', data = {}) {
         this._session += 1;
@@ -199,7 +202,7 @@ class Modal {
         this.previousActiveElement = document.activeElement;
         
         // Call onOpen callback
-        this.options.onOpen(mode, data);
+        const opened = this.options.onOpen(mode, data);
         
         // Show modal
         this.modal.classList.remove('hidden');
@@ -217,6 +220,8 @@ class Modal {
         if (this.focusableElements.length > 0) {
             this.focusableElements[0].focus();
         }
+
+        return Promise.resolve(opened);
     }
     
     /**

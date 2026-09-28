@@ -3,7 +3,7 @@
 This document provides a complete index of all frontend tests implemented in JavaScript.
 
 **Last Updated**: 2026-09-27 JST  
-**Total Tests**: 839 (jest suites; 51 test files, per `npm test`)
+**Total Tests**: 843 (jest suites; 54 test files, per `npm test`)
 
 ---
 
@@ -30,7 +30,7 @@ and are **not** added again to the grand total.
 - **login.test.js** - Login tests (58)
 - **user-deletion.test.js** - User deletion tests (46)
 
-### Feature-Specific Tests (416 tests)
+### Feature-Specific Tests (420 tests)
 
 - **transaction-edit.test.js** - Transaction edit tests (112)
 - **transaction-detail-management.test.js** - Transaction detail management tests (51)
@@ -65,6 +65,9 @@ and are **not** added again to the grand total.
 - **pages/account-management-disabled.test.js** - Boots the real account master page: "show disabled" lists disabled accounts with the disabled label (NONE never listed), a late response from a quick double toggle does not overwrite the newer list, and the add / edit form's "disabled" checkbox is shown and sent as `isDisabled` (latent-audit M7) (4)
 - **pages/transaction-management-disabled-account.test.js** - Boots the real transaction page: editing a transaction whose account is disabled keeps that account selected (shown with the disabled label) and saves it, while a new transaction is not offered the disabled account (latent-audit M7) (2)
 - **pages/transaction-management-category1-has-details.test.js** - Boots the real transaction page: when the backend refuses to change the category1 of a transaction with details (`category1_has_details`), the screen shows `transaction_mgmt.category1_has_details` and keeps the modal open (latent-audit M2) (1)
+- **modal-open-awaits-onopen.test.js** - `Modal.open()` returns a promise that settles only after an async `onOpen` has finished (and at once for a synchronous one), so callers can fill the form in afterwards (latent-audit L6) (2)
+- **pages/transaction-management-restore-draft.test.js** - Boots the real transaction page with a saved new-transaction draft: the restored date, shop and memo survive the modal's own initialisation (latent-audit L6) (1)
+- **pages/transaction-management-restore-disabled-shop.test.js** - Boots the real transaction page with a saved draft whose shop was disabled since: the restored new transaction falls back to "Unspecified" (latent-audit M7, reachable since L6) (1)
 - **pages/aggregation-monthly-page.test.js** - Boots the real monthly aggregation page: an empty `group_name` renders as `common.unspecified` (latent-audit M12); the total row shows "—" for count / average on the account and category2 axes, and still sums the count on category1 (latent-audit M11); negative amounts render as "-¥1,234" (latent-audit L12) (5)
 - **pages/aggregation-yearly-total-count.test.js** - Boots the real yearly aggregation page: the shared renderer's total row shows "—" for count / average on the account axis (latent-audit M11) (1)
 - **pages/index-setup-page.test.js** - Boots the real setup forms (menu.js on index.html): a blank username is stopped before `register_admin`, a backend "Username cannot be empty" is reported as the username error (not the password one), and `duplicate_name` shows `error.username_duplicate` (latent-audit L25) (3)
@@ -105,7 +108,7 @@ and are **not** added again to the grand total.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **Feature-Specific Tests** | **416** |
+| **Feature-Specific Tests** | **420** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 29 |
@@ -139,6 +142,9 @@ and are **not** added again to the grand total.
 | pages/account-management-disabled.test.js | 4 |
 | pages/transaction-management-disabled-account.test.js | 2 |
 | pages/transaction-management-category1-has-details.test.js | 1 |
+| modal-open-awaits-onopen.test.js | 2 |
+| pages/transaction-management-restore-draft.test.js | 1 |
+| pages/transaction-management-restore-disabled-shop.test.js | 1 |
 | pages/aggregation-monthly-page.test.js | 5 |
 | pages/aggregation-yearly-total-count.test.js | 1 |
 | pages/index-setup-page.test.js | 3 |
@@ -152,7 +158,7 @@ and are **not** added again to the grand total.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **Total (jest)** | **839** |
+| **Total (jest)** | **843** |
 
 Grand total is Screen + Feature + Aggregation (Common Test Suites are helper
 libraries invoked from Screen-Specific files and their assertions are already

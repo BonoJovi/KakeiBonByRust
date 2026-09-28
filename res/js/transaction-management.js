@@ -762,10 +762,13 @@ async function openTransactionModal(transactionId = null) {
         transactionId = null;
     }
     
+    // Wait for onOpen (master lists, form reset, default date, and for an
+    // edit the saved values) so a caller that fills the form in afterwards —
+    // restoreModalState — is not overwritten by it (latent-audit L6).
     if (transactionId) {
-        transactionModal.open('edit', { transactionId });
+        await transactionModal.open('edit', { transactionId });
     } else {
-        transactionModal.open('add', {});
+        await transactionModal.open('add', {});
     }
 }
 
@@ -1282,10 +1285,7 @@ async function restoreModalState() {
         if (modalData.editing_transaction_id) {
             // Editing mode - open with transaction data
             await openTransactionModal(modalData.editing_transaction_id);
-            
-            // Wait for modal to be fully populated
-            await new Promise(resolve => setTimeout(resolve, 200));
-            
+
             // Override with saved values (in case user made changes before navigating away)
             if (modalData.transaction_date) {
                 document.getElementById('transaction-date').value = modalData.transaction_date;
