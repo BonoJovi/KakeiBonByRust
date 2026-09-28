@@ -1061,8 +1061,14 @@ async function handleRollbackTotals() {
  * the user's monthly period (custom start day and holiday shift applied), so
  * the balances line up with the charts' period (latent-audit L14).
  */
+// Bumped per loadAccountBalancesAsOf() call: when the month changes quickly,
+// a slower, older request must not overwrite the newer month's label or rows.
+let accountBalancesToken = 0;
+
 async function loadAccountBalancesAsOf(year, month) {
+    const token = ++accountBalancesToken;
     const asOf = await fetchMonthlyPeriodEndDate(year, month);
+    if (token !== accountBalancesToken) return;
 
     const asOfDateEl = document.getElementById('account-balances-as-of-date');
     const tbody = document.getElementById('account-balances-tbody');
@@ -1078,11 +1084,13 @@ async function loadAccountBalancesAsOf(year, month) {
     try {
         balances = await invoke('get_account_balances_as_of', { asOfDate: asOf });
     } catch (error) {
+        if (token !== accountBalancesToken) return;
         tbody.innerHTML = `<tr><td colspan="2" class="account-balances-empty">${
             i18n.t('dashboard.balances_error') || 'Failed to load balances'
         }: ${error.message || error}</td></tr>`;
         return;
     }
+    if (token !== accountBalancesToken) return;
 
     if (!balances || balances.length === 0) {
         tbody.innerHTML = `<tr><td colspan="2" class="account-balances-empty">${
