@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-09-06 JST  
-**総テスト数**: 450件 (差分反映後。`cargo test --lib` の権威的総数は 688 で、既存の未反映分は別 PR でバックフィル予定)
+**総テスト数**: 455件 (差分反映後。`cargo test --lib` の権威的総数は 693 で、既存の未反映分は別 PR でバックフィル予定)
 
 ---
 
@@ -193,8 +193,10 @@ AES-256-GCM暗号化・復号化のテスト。
 | `user_delete_cascades_to_shops_after_migration` | CASCADE マイグレーション後、SHOPS 行を持つユーザーの削除が成功し、SHOPS 行も同時に削除される。修正前は `FOREIGN KEY constraint failed` でロールバックしていた (Fable-5 #11) | src/db.rs | 1823 |
 | `latent_h5_migration_backfills_null_amount_including_tax` | 起動時マイグレーションが NULL の AMOUNT_INCLUDING_TAX を AMOUNT + TAX_AMOUNT で補完 (潜在監査 H5) | src/latent_audit/db.rs | 33 |
 | `latent_m3_startup_removes_orphan_user_categories` | 起動時の掃除で削除済みユーザーの費目を消し、存在するユーザーの費目は残す (潜在監査 M3) | src/latent_audit/db.rs | 106 |
+| `latent_m2_startup_repairs_header_category1_mismatch` | 明細と大分類が食い違うヘッダーを起動時に明細側の大分類へ戻し、口座も対応する側へ移す。明細が混在するヘッダーと整合しているヘッダーは変えない (潜在監査 M2) | src/latent_audit/db.rs | 142 |
+| `latent_m2_accounts_follow_category1_side` | 口座は新しい大分類が使う側へ移る (支出: FROM、収入: TO) (潜在監査 M2) | src/latent_audit/db.rs | 226 |
 
-**合計**: 14件
+**合計**: 16件
 
 ### settings.rs
 
@@ -567,6 +569,9 @@ AES-256-GCM暗号化・復号化のテスト。
 | `latent_m9_restore_reverts_tax_settings_changed_by_recalc` | ロールバックで再計算が変えた税設定も元に戻る (潜在監査 M9) | src/services/latent_audit/transaction.rs | 341 |
 | `latent_m9_restore_keeps_edits_made_after_recalc` | 再計算が変えなかったヘッダーへの再計算後の編集はロールバックで上書きされない (潜在監査 M9) | src/services/latent_audit/transaction.rs | 380 |
 | `latent_m9_restore_keeps_edit_on_a_header_the_recalc_changed` | 再計算が変えた後にユーザーが編集したヘッダーは編集が残る (潜在監査 M9) | src/services/latent_audit/transaction.rs | 414 |
+| `latent_m2_header_category1_change_keeps_details_consistent` | 明細があるヘッダーの大分類変更は拒否され (`Category1HasDetails`)、ヘッダーと明細は一致したまま (潜在監査 M2) | src/services/latent_audit/transaction.rs | 297 |
+| `latent_m2_header_without_details_can_change_category1` | 明細のないヘッダーは大分類を変更できる (潜在監査 M2) | src/services/latent_audit/transaction.rs | 339 |
+| `latent_m2_detail_category1_must_match_header` | ヘッダーと異なる大分類の明細は追加・編集できない (潜在監査 M2) | src/services/latent_audit/transaction.rs | 363 |
 | `latent_m9_restore_without_journal_is_rejected` | バックアップ横の変更記録が無いロールバックは拒否され何も変更しない (潜在監査 M9) | src/services/latent_audit/transaction.rs | 451 |
 | `latent_l4_restore_detaches_backup_when_update_fails` | 失敗したロールバック後に `recalc_backup` が ATTACH されたまま残らない (M9 でロールバックが ATTACH しなくなり解消、潜在監査 L4) | src/services/latent_audit/transaction.rs | 657 |
 | `latent_m9_back_to_back_recalcs_keep_separate_journals` | 連続した一括再計算は別々のバックアップ・変更記録を使い、1 回目も取り消せる (潜在監査 M9) | src/services/latent_audit/transaction.rs | 452 |
@@ -580,7 +585,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | `latent_l3_failed_detail_update_rolls_back_memo_change` | 明細更新が失敗したらメモの変更も戻る (メモ処理を同じトランザクションで実行、潜在監査 L3) | src/services/latent_audit/transaction.rs | 674 |
 | `latent_l3_in_place_memo_update_is_trimmed` | メモの上書き更新は前後の空白を除いた内容で保存し、重複排除と一致させる (潜在監査 L3) | src/services/latent_audit/transaction.rs | 702 |
 
-**合計**: 61件
+**合計**: 64件
 
 ### services/aggregation.rs
 
@@ -708,11 +713,11 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **424件** |
+| **インラインテスト** | **429件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
-| db.rs | 14 |
+| db.rs | 16 |
 | settings.rs | 18 |
 | api_error.rs | 10 |
 | services/master_data.rs | 4 |
@@ -725,14 +730,14 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/manufacturer.rs | 17 |
 | services/product.rs | 20 |
 | services/shop.rs | 19 |
-| services/transaction.rs | 61 |
+| services/transaction.rs | 64 |
 | services/aggregation.rs | 23 |
 | services/period.rs | 3 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 14 |
 | lib.rs | 6 |
-| **総計** | **450件** |
+| **総計** | **455件** |
 
 ---
 
