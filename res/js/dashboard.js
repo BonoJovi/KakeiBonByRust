@@ -6,7 +6,7 @@ import { fitWindowToScreen } from './window-fit.js';
 import { HTML_FILES } from './html-files.js';
 import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
 import { createMenuBar } from './menu.js';
-import { getPeriodSettings, formatMonthlyPeriodLabel, formatMonthlyPeriodBaseLabel, fetchMonthlyPeriodBounds } from './period.js';
+import { getPeriodSettings, formatMonthlyPeriodLabel, formatMonthlyPeriodBaseLabel, fetchMonthlyPeriodBounds, fetchMonthlyPeriodEndDate } from './period.js';
 import { showToast } from './toast.js';
 
 console.log('dashboard.js loaded');
@@ -1056,17 +1056,13 @@ async function handleRollbackTotals() {
 // =============================================================================
 
 /**
- * Load the per-account balance snapshot for the end of the given month and
- * render it into the table. The "as of" date displayed to the user is the
- * last day of `month`, computed locally so it stays meaningful for past
- * months that are not the current one.
+ * Load the per-account balance snapshot for the end of the given month's
+ * period and render it into the table. The "as of" date is the last day of
+ * the user's monthly period (custom start day and holiday shift applied), so
+ * the balances line up with the charts' period (latent-audit L14).
  */
 async function loadAccountBalancesAsOf(year, month) {
-    // JS Date trick: day=0 of month+1 == last day of month. month is 1-indexed
-    // here, so passing it directly to the constructor (which is 0-indexed)
-    // gives "the next month", and day=0 rolls back one day.
-    const lastDay = new Date(year, month, 0).getDate();
-    const asOf = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+    const asOf = await fetchMonthlyPeriodEndDate(year, month);
 
     const asOfDateEl = document.getElementById('account-balances-as-of-date');
     const tbody = document.getElementById('account-balances-tbody');

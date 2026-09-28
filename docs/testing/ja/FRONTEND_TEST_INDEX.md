@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-09-27 JST  
-**総テスト数**: 826件 (jest suite 46 ファイル、`npm test` 実測)
+**総テスト数**: 828件 (jest suite 47 ファイル、`npm test` 実測)
 
 ---
 
@@ -37,6 +37,7 @@
   - [aggregation-error-translate.test.js](#aggregation-error-translatetestjs)
   - [parse-amount-strict.test.js](#parse-amount-stricttestjs)
   - [format-local-date.test.js](#format-local-datetestjs)
+  - [period-end-date.test.js](#period-end-datetestjs)
   - [aggregation-render-unspecified.test.js](#aggregation-render-unspecifiedtestjs)
   - [pages/transaction-detail-page.test.js](#pagestransaction-detail-pagetestjs)
   - [pages/transaction-management-page.test.js](#pagestransaction-management-pagetestjs)
@@ -658,6 +659,21 @@
 
 ---
 
+### period-end-date.test.js
+
+`res/js/period.js` の `fetchMonthlyPeriodEndDate` のテスト (潜在監査 L14)。ダッシュボードの口座残高がカレンダーの月末基準で、起算日のカスタマイズ (例: 25 日始まり) とずれていた。
+
+**テスト数**: 2件
+
+| テスト | 説明 |
+|--------|------|
+| `[L14] should return the last day of the user's monthly period` | `get_monthly_period_bounds` の期間最終日を返す (起算日・休日シフト適用済み) |
+| `[L14] should fall back to the calendar month end when the backend fails` | バックエンドが失敗したらカレンダーの月末 (うるう年対応) を返す |
+
+**ファイル**: res/tests/period-end-date.test.js
+
+---
+
 ### aggregation-render-unspecified.test.js
 
 `res/js/aggregation-common.js` の `renderResults` における unspecified グループの i18n スワップテスト (Fable-5 レビュー #22)。バックエンド (`aggregation.rs`) は SHOP_ID / PRODUCT_ID が NULL のケース、および `account_code === 'NONE'` のケースで空文字を返すよう修正済み。renderResults 側で空文字を `i18n.t('common.unspecified')` に置換することで、英語 UI で「指定なし」のハードコード漏れが banner に出るのを防ぐ。
@@ -1133,7 +1149,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **403件** |
+| **機能別テスト** | **405件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 29 |
@@ -1149,6 +1165,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | aggregation-error-translate.test.js | 13 |
 | parse-amount-strict.test.js | 24 |
 | format-local-date.test.js | 16 |
+| period-end-date.test.js | 2 |
 | aggregation-render-unspecified.test.js | 5 |
 | pages/transaction-detail-page.test.js | 3 |
 | pages/transaction-management-page.test.js | 4 |
@@ -1175,7 +1192,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **826件** |
+| **総計 (jest)** | **828件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 

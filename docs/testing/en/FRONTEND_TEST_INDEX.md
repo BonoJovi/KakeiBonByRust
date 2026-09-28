@@ -3,7 +3,7 @@
 This document provides a complete index of all frontend tests implemented in JavaScript.
 
 **Last Updated**: 2026-09-27 JST  
-**Total Tests**: 826 (jest suites; 46 test files, per `npm test`)
+**Total Tests**: 828 (jest suites; 47 test files, per `npm test`)
 
 ---
 
@@ -30,7 +30,7 @@ and are **not** added again to the grand total.
 - **login.test.js** - Login tests (58)
 - **user-deletion.test.js** - User deletion tests (46)
 
-### Feature-Specific Tests (403 tests)
+### Feature-Specific Tests (405 tests)
 
 - **transaction-edit.test.js** - Transaction edit tests (112)
 - **transaction-detail-management.test.js** - Transaction detail management tests (51)
@@ -47,6 +47,7 @@ and are **not** added again to the grand total.
 - **aggregation-error-translate.test.js** - `translateAggregationError` shape-guard tests (Fable-5 #9): coerces `Err(String)` / `ApiError { code, message }` / `Error` to a substring-matchable string before routing to i18n keys, and swaps unusable coerced values (`"[object Object]"`, `"null"`, `"undefined"`, `""`) for the localised generic banner, so the aggregation banner never renders those literals (13)
 - **parse-amount-strict.test.js** - `parseAmountStrict` money-field strict integer parser (Fable-5 #10): replaces `parseInt(el.value) || 0` across the detail / transaction / recurring-rule submit paths, rejecting decimals, locale commas, scientific notation, sign prefixes, full-width digits, trailing garbage, and precision-losing integers past `Number.MAX_SAFE_INTEGER` (24)
 - **format-local-date.test.js** - `formatLocalDate` timezone-safe `YYYY-MM-DD` formatter (Fable-5 #13): replaces `new Date().toISOString().slice(0, 10)` in the recurring-rule modal so JST users opening the form before 09:00 no longer see yesterday's date in start-date / end-date / anchor-date defaults; test file pins `TZ=Asia/Tokyo` so a UTC regression is actually caught (16)
+- **period-end-date.test.js** - `fetchMonthlyPeriodEndDate` (period.js): the dashboard account balances are taken as of the last day of the user's monthly period (custom start day / holiday shift from `get_monthly_period_bounds`), falling back to the calendar month end if the backend fails (latent-audit L14) (2)
 - **aggregation-render-unspecified.test.js** - `renderResults` unspecified-group i18n swap (Fable-5 #22): backend now returns an empty `group_name` string when the SHOP / PRODUCT / ACCOUNT reference is unspecified, and the renderer swaps it for `i18n.t('common.unspecified')` so English users don't see Japanese "指定なし" leaking through (5)
 - **pages/transaction-detail-page.test.js** - Boots the real detail page against `transaction-detail-management.html`: opening a product-linked detail and saving without changes keeps its `productId` (latent-audit H3), a double submit adds the detail only once (latent-audit M19), and a legacy row with `amount_including_tax = 0` shows AMOUNT + TAX_AMOUNT instead of ¥0 (latent-audit L7) (3)
 - **pages/transaction-management-page.test.js** - Boots the real transaction page against `transaction-management.html`: saving a header without details shows no ¥0 recalc prompt and completes the save flow (latent-audit H4); a blank transaction date is rejected with `validation.required` before sending (latent-audit L8); deleting the only row on the last page moves back to the last page, and a late older page response does not overwrite a newer one (latent-audit L5) (4)
@@ -100,7 +101,7 @@ and are **not** added again to the grand total.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **Feature-Specific Tests** | **403** |
+| **Feature-Specific Tests** | **405** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 29 |
@@ -116,6 +117,7 @@ and are **not** added again to the grand total.
 | aggregation-error-translate.test.js | 13 |
 | parse-amount-strict.test.js | 24 |
 | format-local-date.test.js | 16 |
+| period-end-date.test.js | 2 |
 | aggregation-render-unspecified.test.js | 5 |
 | pages/transaction-detail-page.test.js | 3 |
 | pages/transaction-management-page.test.js | 4 |
@@ -142,7 +144,7 @@ and are **not** added again to the grand total.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **Total (jest)** | **826** |
+| **Total (jest)** | **828** |
 
 Grand total is Screen + Feature + Aggregation (Common Test Suites are helper
 libraries invoked from Screen-Specific files and their assertions are already
