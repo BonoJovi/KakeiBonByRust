@@ -146,7 +146,6 @@ fn valid_request() -> SaveRecurringRuleRequest {
         category1_code: "EXPENSE".to_string(),
         from_account_code: "BANK".to_string(),
         to_account_code: "NONE".to_string(),
-        total_amount: 100,
         tax_rounding_type: consts::TAX_ROUND_DOWN,
         tax_included_type: consts::TAX_EXCLUDED,
         header_memo: None,
@@ -514,6 +513,63 @@ fn latent_m15_m18_period_limits_follow_seeded_years() {
     let (first, last) = recurring_period_limits(today);
     assert_eq!(first, NaiveDate::from_ymd_opt(2021, 1, 1).unwrap());
     assert_eq!(last, NaiveDate::from_ymd_opt(2036, 12, 31).unwrap());
+}
+
+// ---------------------------------------------------------------------------
+// M17
+// ---------------------------------------------------------------------------
+
+/// M17: the rule's total was typed separately (defaulting to 0) and never
+/// checked against the detail, so 0-yen occurrences could be generated.
+/// Spec (2026-09-28): the total is derived from the single detail, like a
+/// transaction's recommended total.
+#[tokio::test]
+async fn latent_m17_total_is_derived_from_the_detail() {
+    let pool = setup_recurring_db().await;
+    let service = RecurringService::new(pool.clone());
+
+    // (tax_included_type, rounding, amount, rate, amount_including_tax, expected total)
+    let cases = [
+        // tax-excluded: 1005 @ 8% = 1085.4 → floor 1085 / half-up 1085 / ceil 1086
+        (consts::TAX_EXCLUDED, consts::TAX_ROUND_DOWN, 1005, 8, Some(1085), 1085),
+        (consts::TAX_EXCLUDED, consts::TAX_ROUND_UP, 1005, 8, Some(1086), 1086),
+        // tax-included: the detail's own tax-included price
+        (consts::TAX_INCLUDED, consts::TAX_ROUND_DOWN, 1000, 10, Some(1100), 1100),
+        // tax-included without a price: derived from amount and rate
+        (consts::TAX_INCLUDED, consts::TAX_ROUND_DOWN, 1000, 10, None, 1100),
+    ];
+    for (included, rounding, amount, rate, including, expected) in cases {
+        let mut request = valid_request();
+        request.tax_included_type = included;
+        request.tax_rounding_type = rounding;
+        request.detail.amount = amount;
+        request.detail.tax_rate = rate;
+        request.detail.amount_including_tax = including;
+        let created = service
+            .create_rule_with_instances(USER_ID, request)
+            .await
+            .expect("create rule");
+
+        let totals: Vec<i64> = sqlx::query_scalar(
+            "SELECT TOTAL_AMOUNT FROM TRANSACTIONS_HEADER WHERE RULE_ID = ?",
+        )
+        .bind(created.rule_id)
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+        assert!(!totals.is_empty());
+        assert!(
+            totals.iter().all(|t| *t == expected),
+            "included={} rounding={} amount={} rate={} → expected {}, got {:?}",
+            included, rounding, amount, rate, expected, totals
+        );
+        let rule_total: i64 = sqlx::query_scalar("SELECT TOTAL_AMOUNT FROM RECURRING_RULES WHERE RULE_ID = ?")
+            .bind(created.rule_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(rule_total, expected);
+    }
 }
 
 // ---------------------------------------------------------------------------

@@ -645,7 +645,7 @@ pub struct SaveRecurringRuleRequest {
     pub category1_code: String,
     pub from_account_code: String,
     pub to_account_code: String,
-    pub total_amount: i64,
+    // No total: it is derived from the detail (latent-audit M17).
     pub tax_rounding_type: i64,
     pub tax_included_type: i64,
     pub header_memo: Option<String>,
@@ -727,11 +727,6 @@ impl RecurringService {
         if start < first || end > last {
             return Err(RecurringError::PeriodOutOfRange { first, last });
         }
-        if request.total_amount < 0 || request.total_amount > 999_999_999 {
-            return Err(RecurringError::Validation(
-                "TOTAL_AMOUNT must be between 0 and 999,999,999".to_string(),
-            ));
-        }
         if request.detail.item_name.trim().is_empty() {
             return Err(RecurringError::Validation(
                 "DETAIL.item_name must not be empty".to_string(),
@@ -772,6 +767,25 @@ impl RecurringService {
         if request.detail.tax_amount < 0 {
             return Err(RecurringError::Validation(
                 "DETAIL.tax_amount cannot be negative".to_string(),
+            ));
+        }
+        // Latent-audit M17 — the rule has exactly one detail, so its total
+        // is derived from it the same way a transaction header's
+        // recommended total is; the request's `total_amount` is ignored.
+        // A typed total defaulted to 0 and was never checked against the
+        // detail, which generated 0-yen occurrences.
+        let total_amount = crate::services::transaction::calculate_recommended_total_with_settings(
+            &[crate::services::transaction::DetailForRecalc {
+                amount: request.detail.amount,
+                amount_including_tax: request.detail.amount_including_tax,
+                tax_rate: i64::from(request.detail.tax_rate),
+            }],
+            request.tax_rounding_type,
+            request.tax_included_type,
+        );
+        if !(0..=999_999_999).contains(&total_amount) {
+            return Err(RecurringError::Validation(
+                "TOTAL_AMOUNT must be between 0 and 999,999,999".to_string(),
             ));
         }
         // The shop / product must belong to this user (latent-audit L2).
@@ -883,7 +897,7 @@ impl RecurringService {
             .bind(&request.category1_code)
             .bind(&request.from_account_code)
             .bind(&request.to_account_code)
-            .bind(request.total_amount)
+            .bind(total_amount)
             .bind(request.tax_rounding_type)
             .bind(request.tax_included_type)
             .bind(header_memo_id)
@@ -918,7 +932,7 @@ impl RecurringService {
                     .bind(&request.category1_code)
                     .bind(&request.from_account_code)
                     .bind(&request.to_account_code)
-                    .bind(request.total_amount)
+                    .bind(total_amount)
                     .bind(request.tax_rounding_type)
                     .bind(request.tax_included_type)
                     .bind(header_memo_id)
@@ -1826,7 +1840,6 @@ mod tests {
             category1_code: "EXPENSE".to_string(),
             from_account_code: "BANK".to_string(),
             to_account_code: "OUT".to_string(),
-            total_amount: 100,
             tax_rounding_type: 0,
             tax_included_type: 1,
             header_memo: None,

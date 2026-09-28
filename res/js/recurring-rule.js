@@ -16,6 +16,7 @@ import { formatApiError, API_ERROR_CODES } from './master-crud.js';
 import { singleFlight } from './single-flight.js';
 import { parseAmountStrict } from './parse-amount-strict.js';
 import { formatLocalDate } from './format-local-date.js';
+import { calculateRecommendedTotal } from './tax-calc.js';
 
 console.log('=== RECURRING-RULE.JS LOADED ===');
 
@@ -56,6 +57,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         setupCycleKindToggle();
         setupCategoryChainHandlers();
         setupDetailTaxCalculation();
+        setupDerivedTotal();
         setupBoundedFieldCounters();
         setupFormSubmit();
         setupResetButton();
@@ -273,6 +275,41 @@ function setupDetailTaxCalculation() {
     );
 }
 
+// ----- Total derived from the detail (latent-audit M17) -----
+
+// The rule has exactly one detail, so its total is that detail's price under
+// the header's rounding / tax-included settings — the same value the Rust
+// side stores. The field is read-only; it used to be typed separately,
+// defaulted to 0, and was never checked against the detail.
+function updateDerivedTotal() {
+    const amount = parseAmountStrict(document.getElementById('amount-excluding-tax').value);
+    const taxRate = parseAmountStrict(document.getElementById('tax-rate').value);
+    const includingRaw = document.getElementById('amount-including-tax').value.trim();
+    const including = includingRaw === '' ? null : parseAmountStrict(includingRaw);
+    const totalInput = document.getElementById('total-amount');
+    if (amount === null || taxRate === null || (includingRaw !== '' && including === null)) {
+        totalInput.value = '';
+        return;
+    }
+    totalInput.value = calculateRecommendedTotal(
+        [{ amount, amount_including_tax: including, tax_rate: taxRate }],
+        parseInt(document.getElementById('tax-rounding-type').value, 10) || 0,
+        parseInt(document.getElementById('tax-included-type').value, 10),
+    );
+}
+
+function setupDerivedTotal() {
+    // Registered after setupDetailTaxCalculation(), so the tax fields it
+    // fills in are already updated when these handlers run.
+    for (const id of ['amount-excluding-tax', 'amount-including-tax', 'tax-amount', 'tax-rate']) {
+        document.getElementById(id)?.addEventListener('input', updateDerivedTotal);
+    }
+    for (const id of ['tax-rate', 'tax-rounding-type', 'tax-included-type']) {
+        document.getElementById(id)?.addEventListener('change', updateDerivedTotal);
+    }
+    updateDerivedTotal();
+}
+
 // ----- Form submit -----
 
 function setupFormSubmit() {
@@ -305,21 +342,18 @@ function setupFormSubmit() {
         // Fable-5 review #10 — money fields on this form used to be
         // read with `parseInt(el.value) || 0` (or `intOrNull`), which
         // silently truncated decimals and locale-comma inputs. The
-        // five money / rate fields are now parsed with the strict
+        // money / rate fields are now parsed with the strict
         // helper up front; a rejection surfaces a field-level error
         // and aborts before we build the request.
-        const totalAmountInput = document.getElementById('total-amount');
         const amountExcludingTaxInput = document.getElementById('amount-excluding-tax');
         const taxAmountInput = document.getElementById('tax-amount');
         const taxRateInput = document.getElementById('tax-rate');
         const amountIncludingTaxInput = document.getElementById('amount-including-tax');
-        clearValidationError(totalAmountInput);
         clearValidationError(amountExcludingTaxInput);
         clearValidationError(taxAmountInput);
         clearValidationError(taxRateInput);
         clearValidationError(amountIncludingTaxInput);
 
-        const totalAmount = parseAmountStrict(totalAmountInput.value);
         const amountExcludingTax = parseAmountStrict(amountExcludingTaxInput.value);
         const taxAmount = parseAmountStrict(taxAmountInput.value);
         const taxRate = parseAmountStrict(taxRateInput.value);
@@ -331,10 +365,6 @@ function setupFormSubmit() {
             ? null
             : parseAmountStrict(amountIncludingTaxRaw);
 
-        if (totalAmount === null) {
-            showValidationError(totalAmountInput, i18n.t('common.error_amount_not_integer'));
-            return;
-        }
         if (amountExcludingTax === null) {
             showValidationError(amountExcludingTaxInput, i18n.t('common.error_amount_not_integer'));
             return;
@@ -394,7 +424,6 @@ function setupFormSubmit() {
             category1_code: document.getElementById('category1').value,
             from_account_code: document.getElementById('from-account').value,
             to_account_code: document.getElementById('to-account').value,
-            total_amount: totalAmount,
             tax_rounding_type: parseInt(document.getElementById('tax-rounding-type').value, 10),
             tax_included_type: parseInt(document.getElementById('tax-included-type').value, 10),
             header_memo: stringOrNull(document.getElementById('header-memo').value),
@@ -542,6 +571,7 @@ function setupResetButton() {
     document.getElementById('reset-btn').addEventListener('click', () => {
         document.getElementById('recurring-rule-form').reset();
         hideResult();
+        updateDerivedTotal();
         // form.reset() does not fire 'input', so refresh counters manually.
         ['rule-name', 'header-memo', 'item-name', 'detail-memo'].forEach((id) => {
             const el = document.getElementById(id);
