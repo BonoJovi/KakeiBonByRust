@@ -506,6 +506,41 @@ async fn latent_m15_m18_period_limits_are_inclusive() {
     }
 }
 
+/// M15: an app left running across New Year has one seeded year less ahead
+/// than the date-based limits assume; the rule must stay within the years
+/// actually seeded.
+#[tokio::test]
+async fn latent_m15_period_limit_follows_seeded_holidays() {
+    let pool = setup_recurring_db().await;
+    let service = RecurringService::new(pool.clone());
+    let (_, last) = recurring_period_limits(Local::now().date_naive());
+    // Seeded only up to the year before the date-based last year.
+    let seeded_last_year = last.year() - 1;
+    sqlx::query(
+        "INSERT INTO HOLIDAYS_STANDARD (LOCALE, HOLIDAY_DATE, HOLIDAY_NAME) VALUES ('JP', ?, '元日')",
+    )
+    .bind(format!("{}-01-01", seeded_last_year))
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    let mut request = valid_request();
+    request.start_date = format!("{}-01-01", last.year());
+    request.end_date = format!("{}-01-03", last.year());
+    let result = service.create_rule_with_instances(USER_ID, request).await;
+    assert!(
+        matches!(result, Err(RecurringError::PeriodOutOfRange { .. })),
+        "a year without seeded holidays must be rejected: {:?}",
+        result.map(|r| r.generated_count)
+    );
+
+    let mut request = valid_request();
+    request.start_date = format!("{}-12-29", seeded_last_year);
+    request.end_date = format!("{}-12-31", seeded_last_year);
+    let result = service.create_rule_with_instances(USER_ID, request).await;
+    assert!(result.is_ok(), "the last seeded year is allowed: {:?}", result.err());
+}
+
 /// M15 / M18: the limits follow the holiday seeding window.
 #[test]
 fn latent_m15_m18_period_limits_follow_seeded_years() {

@@ -733,10 +733,6 @@ impl RecurringService {
                 "Holiday shift is not available for a daily rule".to_string(),
             ));
         }
-        let (first, last) = recurring_period_limits(chrono::Local::now().date_naive());
-        if start < first || end > last {
-            return Err(RecurringError::PeriodOutOfRange { first, last });
-        }
         if request.detail.item_name.trim().is_empty() {
             return Err(RecurringError::Validation(
                 "DETAIL.item_name must not be empty".to_string(),
@@ -831,6 +827,28 @@ impl RecurringService {
             .map_err(RecurringError::Validation)?;
         validation::validate_memo("Detail memo", request.detail.detail_memo.as_ref())
             .map_err(RecurringError::Validation)?;
+
+        // Latent-audit M15 / M18 — the period must stay within the years with
+        // seeded holiday data. Checked after the input-only validation above,
+        // since it reads the holiday table.
+        let (mut first, mut last) = recurring_period_limits(chrono::Local::now().date_naive());
+        // Holidays are seeded at startup, so an app left running across New
+        // Year has one year less ahead than the limits above assume; stay
+        // within the years actually seeded.
+        let (seeded_first, seeded_last): (Option<String>, Option<String>) =
+            sqlx::query_as(sql_queries::HOLIDAYS_STANDARD_JP_DATE_RANGE)
+                .fetch_one(&self.pool)
+                .await?;
+        let year_of = |d: &str| d.get(..4).and_then(|y| y.parse::<i32>().ok());
+        if let Some(y) = seeded_first.as_deref().and_then(year_of) {
+            first = first.max(NaiveDate::from_ymd_opt(y, 1, 1).unwrap_or(first));
+        }
+        if let Some(y) = seeded_last.as_deref().and_then(year_of) {
+            last = last.min(NaiveDate::from_ymd_opt(y, 12, 31).unwrap_or(last));
+        }
+        if start < first || end > last {
+            return Err(RecurringError::PeriodOutOfRange { first, last });
+        }
 
         let anchor_date = match &request.anchor_date {
             Some(s) => Some(
