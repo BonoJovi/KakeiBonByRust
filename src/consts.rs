@@ -36,6 +36,14 @@ pub const TAX_INCLUDED: i64 = 0;  // 内税 - tax is included in prices
 #[allow(dead_code)]
 pub const TAX_EXCLUDED: i64 = 1;  // 外税 - tax is calculated separately
 
+// Years of Japanese holidays seeded at every startup, relative to the current
+// year (db.rs::seed_japanese_holidays). Recurring rules may only span these
+// years, so their holiday shift always has holiday data (latent-audit M15)
+// and a typo in the year cannot generate an unbounded number of occurrences
+// (latent-audit M18). Mirrored in res/js/consts.js.
+pub const HOLIDAY_SEED_YEARS_BACK: i32 = 5;
+pub const HOLIDAY_SEED_YEARS_AHEAD: i32 = 10;
+
 // Recurring scheduled transactions (v2.1.0) — HOLIDAY_SHIFT_TYPE column values
 pub const HOLIDAY_SHIFT_NONE: i32 = 0;
 pub const HOLIDAY_SHIFT_PREV: i32 = 1;

@@ -45,6 +45,9 @@ export const API_ERROR_CODES = Object.freeze({
     // Fable-5 #20 — TRANSFER save/update rejected because FROM and
     // TO are the same account.
     TRANSFER_SAME_ACCOUNT: 'transfer_same_account',
+    // Latent-audit M15 / M18 — recurring rule period outside the years
+    // with seeded holiday data.
+    RECURRING_PERIOD_OUT_OF_RANGE: 'recurring_period_out_of_range',
 });
 
 /**

@@ -238,18 +238,17 @@ async fn latent_h2_cascade_delete_keeps_confirmed_headers() {
 }
 
 // ---------------------------------------------------------------------------
-// M15 (仕様確認待ち)
+// M15
 // ---------------------------------------------------------------------------
 
-/// M15 (proposal / 仕様確認待ち): holidays are only seeded for
-/// [this year - 5, this year + 10]; a rule reaching beyond that range gets no
-/// holiday data, so HolidayShift silently does nothing on e.g. New Year's Day
-/// and the occurrence is fixed at creation time.
-/// Expected (either is acceptable): creation is rejected with an error, OR the
-/// out-of-range year's holidays are available so the shift is applied (no
-/// occurrence on a known Japanese holiday).
+/// M15: holidays are only seeded for [this year - 5, this year + 10]; a rule
+/// reaching beyond that range got no holiday data, so HolidayShift silently
+/// did nothing on e.g. New Year's Day and the occurrence was fixed at
+/// creation time.
+/// Spec (2026-09-28): a rule may only span the seeded years, so creating one
+/// beyond them is rejected (`PeriodOutOfRange`); the test also still accepts
+/// the alternative outcome (no occurrence on a known holiday).
 #[tokio::test]
-#[ignore = "latent-audit M15"]
 async fn latent_m15_holiday_shift_applies_beyond_seeded_range() {
     use jpholiday::jpholiday::JPHoliday;
 
@@ -300,6 +299,11 @@ async fn latent_m15_holiday_shift_applies_beyond_seeded_range() {
     let service = RecurringService::new(pool.clone());
     let result = service.create_rule_with_instances(USER_ID, request).await;
 
+    assert!(
+        matches!(result, Err(RecurringError::PeriodOutOfRange { .. }) | Ok(_)),
+        "unexpected error: {:?}",
+        result.as_ref().err()
+    );
     if let Ok(created) = result {
         let dates: Vec<String> = sqlx::query_scalar(
             "SELECT substr(TRANSACTION_DATE, 1, 10) FROM TRANSACTIONS_HEADER WHERE RULE_ID = ?",
@@ -432,18 +436,16 @@ async fn latent_m16_detail_tax_rate_out_of_range_rejected() {
 }
 
 // ---------------------------------------------------------------------------
-// M18 (仕様確認待ち)
+// M18
 // ---------------------------------------------------------------------------
 
-/// M18 (proposal / 仕様確認待ち): there is no cap on period length or
-/// occurrence count; a year typo (e.g. end 9999-12-31 on a daily rule) makes
-/// one transaction insert ~2.9 million rows while holding the DB, freezing
-/// the app.
-/// Expected: such an unreasonably large generation is rejected with an error
-/// (the exact limit is left to the fix). A 10 s timeout turns "still
-/// generating" into a failure instead of hanging the test run.
+/// M18: there was no cap on period length or occurrence count; a year typo
+/// (e.g. end 9999-12-31 on a daily rule) made one transaction insert ~2.9
+/// million rows while holding the DB, freezing the app.
+/// Spec (2026-09-28): the end date may be at most Dec 31 of (this year + 10),
+/// so such a rule is rejected (`PeriodOutOfRange`). A 10 s timeout turns
+/// "still generating" into a failure instead of hanging the test run.
 #[tokio::test]
-#[ignore = "latent-audit M18"]
 async fn latent_m18_huge_generation_rejected() {
     let pool = setup_recurring_db().await;
     let service = RecurringService::new(pool.clone());
@@ -459,7 +461,8 @@ async fn latent_m18_huge_generation_rejected() {
     .await;
 
     match outcome {
-        Ok(Err(_)) => {}
+        Ok(Err(RecurringError::PeriodOutOfRange { .. })) => {}
+        Ok(Err(e)) => panic!("expected PeriodOutOfRange, got {:?}", e),
         Ok(Ok(created)) => panic!(
             "daily rule 2026-01-01..9999-12-31 must be rejected, but generated {} rows",
             created.generated_count
@@ -468,6 +471,49 @@ async fn latent_m18_huge_generation_rejected() {
             "daily rule 2026-01-01..9999-12-31 was not rejected: still generating after 10s"
         ),
     }
+}
+
+/// M15 / M18: the allowed period is exactly the seeded holiday years — its
+/// first and last day are accepted, one day outside is rejected.
+#[tokio::test]
+async fn latent_m15_m18_period_limits_are_inclusive() {
+    let pool = setup_recurring_db().await;
+    let service = RecurringService::new(pool.clone());
+    let (first, last) = recurring_period_limits(Local::now().date_naive());
+    let day = |d: NaiveDate| d.format("%Y-%m-%d").to_string();
+
+    for (start, end) in [(first, first), (last, last)] {
+        let mut request = valid_request();
+        request.start_date = day(start);
+        request.end_date = day(end);
+        let result = service.create_rule_with_instances(USER_ID, request).await;
+        assert!(result.is_ok(), "{}..{} must be accepted: {:?}", start, end, result.err());
+    }
+    for (start, end) in [
+        (first.pred_opt().unwrap(), first),
+        (last, last.succ_opt().unwrap()),
+    ] {
+        let mut request = valid_request();
+        request.start_date = day(start);
+        request.end_date = day(end);
+        let result = service.create_rule_with_instances(USER_ID, request).await;
+        assert!(
+            matches!(result, Err(RecurringError::PeriodOutOfRange { .. })),
+            "{}..{} must be rejected: {:?}",
+            start,
+            end,
+            result.map(|r| r.generated_count)
+        );
+    }
+}
+
+/// M15 / M18: the limits follow the holiday seeding window.
+#[test]
+fn latent_m15_m18_period_limits_follow_seeded_years() {
+    let today = NaiveDate::from_ymd_opt(2026, 9, 28).unwrap();
+    let (first, last) = recurring_period_limits(today);
+    assert_eq!(first, NaiveDate::from_ymd_opt(2021, 1, 1).unwrap());
+    assert_eq!(last, NaiveDate::from_ymd_opt(2036, 12, 31).unwrap());
 }
 
 // ---------------------------------------------------------------------------

@@ -8,7 +8,10 @@ import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
 import { createMenuBar, setupLanguageMenu, setupLanguageMenuHandlers } from './menu.js';
 import { setupTaxCalculationListeners } from './detail-tax-calc.js';
 import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
-import { MAX_RULE_NAME_LEN, MAX_ITEM_NAME_LEN, MAX_MEMO_LEN } from './consts.js';
+import {
+    MAX_RULE_NAME_LEN, MAX_ITEM_NAME_LEN, MAX_MEMO_LEN,
+    HOLIDAY_SEED_YEARS_BACK, HOLIDAY_SEED_YEARS_AHEAD,
+} from './consts.js';
 import { formatApiError, API_ERROR_CODES } from './master-crud.js';
 import { singleFlight } from './single-flight.js';
 import { parseAmountStrict } from './parse-amount-strict.js';
@@ -71,6 +74,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         const oneYearLater = new Date(today.getFullYear() + 1, today.getMonth(), today.getDate());
         document.getElementById('start-date').value = formatLocalDate(today);
         document.getElementById('end-date').value = formatLocalDate(oneYearLater);
+        // A rule may only span the years with holiday data (latent-audit
+        // M15 / M18); the date pickers stop at the same bounds.
+        const limits = recurringPeriodLimits(today);
+        for (const id of ['start-date', 'end-date']) {
+            const input = document.getElementById(id);
+            input.min = limits.min;
+            input.max = limits.max;
+        }
         document.getElementById('anchor-date').value = formatLocalDate(today);
 
         await fitWindowToScreen();
@@ -354,6 +365,16 @@ function setupFormSubmit() {
             return;
         }
 
+        // Latent-audit M15 / M18 — the period must stay within the years
+        // with holiday data; the Rust side enforces the same bounds.
+        const limits = recurringPeriodLimits(new Date());
+        const startDate = document.getElementById('start-date').value;
+        const endDate = document.getElementById('end-date').value;
+        if (startDate < limits.min || endDate > limits.max) {
+            showResult('error', periodOutOfRangeMessage(limits.min, limits.max));
+            return;
+        }
+
         const request = {
             rule_name: stringOrNull(document.getElementById('rule-name').value),
             period_unit: cycleKind,
@@ -490,10 +511,31 @@ function setupFormSubmit() {
                 return;
             }
 
+            if (err && typeof err === 'object'
+                && err.code === API_ERROR_CODES.RECURRING_PERIOD_OUT_OF_RANGE) {
+                const limits = recurringPeriodLimits(new Date());
+                showResult('error', periodOutOfRangeMessage(limits.min, limits.max));
+                return;
+            }
+
             const prefix = i18n.t('recurring_rule.create_failed') || 'Failed to create rule:';
             showResult('error', `${prefix} ${formatApiError(err)}`);
         }
     }));
+}
+
+// First and last date (YYYY-MM-DD) a recurring rule may cover: the years
+// whose holidays are seeded (latent-audit M15 / M18).
+function recurringPeriodLimits(today) {
+    const year = today.getFullYear();
+    return {
+        min: `${year - HOLIDAY_SEED_YEARS_BACK}-01-01`,
+        max: `${year + HOLIDAY_SEED_YEARS_AHEAD}-12-31`,
+    };
+}
+
+function periodOutOfRangeMessage(min, max) {
+    return i18n.t('recurring_rule.period_out_of_range', { start: min, end: max });
 }
 
 function setupResetButton() {

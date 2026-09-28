@@ -66,6 +66,9 @@ impl ApiError {
     // `transaction_mgmt.transfer_same_account` toast instead of the
     // raw English fallback via `formatApiError`.
     pub const CODE_TRANSFER_SAME_ACCOUNT: &'static str = "transfer_same_account";
+    // Latent-audit M15 / M18 — a recurring rule's period falls outside the
+    // years with seeded holiday data.
+    pub const CODE_RECURRING_PERIOD_OUT_OF_RANGE: &'static str = "recurring_period_out_of_range";
 
     // ---- Constructors --------------------------------------------------
 
@@ -197,6 +200,16 @@ impl ApiError {
         Self {
             code: Self::CODE_TRANSFER_SAME_ACCOUNT.to_string(),
             message: "Transfer source and destination accounts must be different".to_string(),
+            entity: None,
+        }
+    }
+
+    /// Recurring rule refused because its period is outside `first..=last`,
+    /// the years with seeded holiday data (latent-audit M15 / M18).
+    pub fn recurring_period_out_of_range(first: &str, last: &str) -> Self {
+        Self {
+            code: Self::CODE_RECURRING_PERIOD_OUT_OF_RANGE.to_string(),
+            message: format!("The rule period must be between {} and {}", first, last),
             entity: None,
         }
     }

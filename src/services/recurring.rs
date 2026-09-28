@@ -551,6 +551,23 @@ pub enum RecurringError {
     /// (latent-audit M16). Mapped to the same `transfer_same_account` code
     /// the transaction screen uses, so the UI can show its i18n message.
     TransferSameAccount,
+    /// The rule's start / end date is outside the years with seeded holiday
+    /// data, `first..=last` (latent-audit M15 / M18).
+    PeriodOutOfRange { first: NaiveDate, last: NaiveDate },
+}
+
+/// The first and last date a recurring rule may cover: the years whose
+/// holidays are seeded at startup (consts::HOLIDAY_SEED_YEARS_*). Outside
+/// them a holiday shift would silently find no holidays (latent-audit M15),
+/// and the cap bounds how many occurrences one rule can generate
+/// (latent-audit M18).
+pub fn recurring_period_limits(today: NaiveDate) -> (NaiveDate, NaiveDate) {
+    let first_year = today.year() - consts::HOLIDAY_SEED_YEARS_BACK;
+    let last_year = today.year() + consts::HOLIDAY_SEED_YEARS_AHEAD;
+    (
+        NaiveDate::from_ymd_opt(first_year, 1, 1).unwrap_or(NaiveDate::MIN),
+        NaiveDate::from_ymd_opt(last_year, 12, 31).unwrap_or(NaiveDate::MAX),
+    )
 }
 
 impl std::fmt::Display for RecurringError {
@@ -561,6 +578,9 @@ impl std::fmt::Display for RecurringError {
             RecurringError::NotFound => write!(f, "Recurring rule not found"),
             RecurringError::TransferSameAccount => {
                 write!(f, "Transfer source and destination accounts must differ")
+            }
+            RecurringError::PeriodOutOfRange { first, last } => {
+                write!(f, "The rule period must be between {} and {}", first, last)
             }
         }
     }
@@ -593,6 +613,12 @@ impl From<RecurringError> for ApiError {
             RecurringError::NotFound => ApiError::not_found(ENTITY_LABEL),
             RecurringError::Validation(msg) => ApiError::validation(msg),
             RecurringError::TransferSameAccount => ApiError::transfer_same_account(),
+            RecurringError::PeriodOutOfRange { first, last } => {
+                ApiError::recurring_period_out_of_range(
+                    &first.format("%Y-%m-%d").to_string(),
+                    &last.format("%Y-%m-%d").to_string(),
+                )
+            }
             RecurringError::Database(e) => ApiError::database(e.to_string()),
         }
     }
@@ -696,6 +722,10 @@ impl RecurringService {
             return Err(RecurringError::Validation(
                 "start_date must be on or before end_date".to_string(),
             ));
+        }
+        let (first, last) = recurring_period_limits(chrono::Local::now().date_naive());
+        if start < first || end > last {
+            return Err(RecurringError::PeriodOutOfRange { first, last });
         }
         if request.total_amount < 0 || request.total_amount > 999_999_999 {
             return Err(RecurringError::Validation(

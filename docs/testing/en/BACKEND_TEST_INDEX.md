@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-08-26 JST  
-**Total Tests**: 450 (delta-tracked; the full authoritative count from `cargo test --lib` is 688, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 454 (delta-tracked; the full authoritative count from `cargo test --lib` is 692, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -676,13 +676,17 @@ Recurring transaction rule service tests.
 | `latent_m16_transfer_same_account_rejected` | Creating a TRANSFER rule with from == to account is rejected (latent-audit M16) | src/services/latent_audit/recurring.rs | 331 |
 | `latent_m16_tax_rounding_type_out_of_range_rejected` | Out-of-range tax rounding type is rejected on rule creation (latent-audit M16) | src/services/latent_audit/recurring.rs | 353 |
 | `latent_m16_tax_included_type_out_of_range_rejected` | Out-of-range tax included type is rejected on rule creation (latent-audit M16) | src/services/latent_audit/recurring.rs | 374 |
+| `latent_m15_holiday_shift_applies_beyond_seeded_range` | A rule beyond the seeded holiday years is rejected (`PeriodOutOfRange`) instead of silently skipping the holiday shift (latent-audit M15) | src/services/latent_audit/recurring.rs | 252 |
+| `latent_m18_huge_generation_rejected` | A daily rule ending 9999-12-31 is rejected (`PeriodOutOfRange`) instead of generating millions of rows (latent-audit M18) | src/services/latent_audit/recurring.rs | 449 |
+| `latent_m15_m18_period_limits_are_inclusive` | The first and last allowed day are accepted; one day outside is rejected (latent-audit M15 / M18) | src/services/latent_audit/recurring.rs | 479 |
+| `latent_m15_m18_period_limits_follow_seeded_years` | The limits are Jan 1 of (year − 5) .. Dec 31 of (year + 10), the holiday seeding window (latent-audit M15 / M18) | src/services/latent_audit/recurring.rs | 512 |
 | `latent_m16_detail_amount_out_of_range_rejected` | Out-of-range detail amount is rejected on rule creation (latent-audit M16) | src/services/latent_audit/recurring.rs | 395 |
 | `latent_m16_detail_tax_rate_out_of_range_rejected` | Out-of-range detail tax rate is rejected on rule creation (latent-audit M16) | src/services/latent_audit/recurring.rs | 416 |
 | `transfer_same_account_maps_to_transfer_same_account_code` | `RecurringError::TransferSameAccount` maps to the `transfer_same_account` wire code (latent-audit M16) | src/services/recurring.rs | 1881 |
 | `latent_l2_recurring_rejects_foreign_shop_and_product` | Recurring rule creation accepts own shop / product and rejects another user's (latent-audit L2) | src/services/latent_audit/recurring.rs | 481 |
 | `latent_l10_generation_terminates_at_the_end_of_the_date_range` | Monthly / yearly generation near the end of chrono's range terminates instead of looping forever (latent-audit L10) | src/services/latent_audit/recurring.rs | 540 |
 
-**Total**: 14 tests
+**Total**: 18 tests
 
 ### lib.rs
 
@@ -708,7 +712,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **424** |
+| **Inline Tests** | **428** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -730,9 +734,9 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/period.rs | 3 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
-| services/recurring.rs | 14 |
+| services/recurring.rs | 18 |
 | lib.rs | 6 |
-| **Total** | **450** |
+| **Total** | **454** |
 
 ---
 
