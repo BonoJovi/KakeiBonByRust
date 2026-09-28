@@ -193,6 +193,13 @@ function updateCycleVisibility() {
     const isMonthNth = isMonth && monthlyMode === 'NTH_WEEKDAY';
 
     document.getElementById('anchor-date-group').classList.toggle('visible', isDay);
+    // Latent-audit L13 — a daily rule has no holiday shift: moving a daily
+    // occurrence off a holiday lands it on a day that already has one.
+    const holidayShift = document.getElementById('holiday-shift-type');
+    if (holidayShift) {
+        if (isDay) holidayShift.value = '0';
+        holidayShift.disabled = isDay;
+    }
     document.getElementById('monthly-mode-group').classList.toggle('visible', isMonth);
     document.getElementById('day-of-month-group').classList.toggle('visible', isMonthDay);
     document.getElementById('week-of-month-group').classList.toggle('visible', isMonthNth);
@@ -330,8 +337,12 @@ function setupFormSubmit() {
         let dayOfWeek = null;
         if (cycleKind === 'MONTH') {
             if (monthlyMode === 'DAY') {
-                monthDayRuleType = 'DAY';
+                // Latent-audit M14 — a day the month does not have (29–31)
+                // falls on the month's last day instead of being skipped.
+                monthDayRuleType = 'DAY_OR_END';
                 dayOfMonth = parseInt(document.getElementById('day-of-month').value, 10);
+            } else if (monthlyMode === 'END') {
+                monthDayRuleType = 'END';
             } else if (monthlyMode === 'NTH_WEEKDAY') {
                 monthDayRuleType = 'NTH_WEEKDAY';
                 weekOfMonth = parseInt(document.getElementById('week-of-month').value, 10);

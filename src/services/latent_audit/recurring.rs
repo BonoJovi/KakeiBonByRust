@@ -573,6 +573,47 @@ async fn latent_m17_total_is_derived_from_the_detail() {
 }
 
 // ---------------------------------------------------------------------------
+// L13
+// ---------------------------------------------------------------------------
+
+/// L13: a daily rule with a holiday shift produced two occurrences on the
+/// same day, or one past the end date. Spec (2026-09-28): a daily rule has
+/// no holiday shift; other cycles keep it.
+#[tokio::test]
+async fn latent_l13_daily_rule_rejects_holiday_shift() {
+    let pool = setup_recurring_db().await;
+    let service = RecurringService::new(pool.clone());
+
+    for shift in [consts::HOLIDAY_SHIFT_PREV, consts::HOLIDAY_SHIFT_NEXT] {
+        let mut request = valid_request();
+        request.period_unit = consts::PERIOD_UNIT_DAY.to_string();
+        request.holiday_shift_type = shift;
+        let result = service.create_rule_with_instances(USER_ID, request).await;
+        assert!(
+            matches!(result, Err(RecurringError::Validation(_))),
+            "daily rule with shift {} must be rejected: {:?}",
+            shift,
+            result.map(|r| r.generated_count)
+        );
+    }
+
+    let mut daily = valid_request();
+    daily.period_unit = consts::PERIOD_UNIT_DAY.to_string();
+    daily.holiday_shift_type = consts::HOLIDAY_SHIFT_NONE;
+    let result = service.create_rule_with_instances(USER_ID, daily).await;
+    assert!(result.is_ok(), "daily rule without shift: {:?}", result.err());
+
+    let mut monthly = valid_request();
+    monthly.period_unit = consts::PERIOD_UNIT_MONTH.to_string();
+    monthly.anchor_date = None;
+    monthly.month_day_rule_type = Some(consts::MONTH_DAY_RULE_TYPE_DAY_OR_END.to_string());
+    monthly.day_of_month = Some(31);
+    monthly.holiday_shift_type = consts::HOLIDAY_SHIFT_NEXT;
+    let result = service.create_rule_with_instances(USER_ID, monthly).await;
+    assert!(result.is_ok(), "monthly rule keeps its holiday shift: {:?}", result.err());
+}
+
+// ---------------------------------------------------------------------------
 // L2 (recurring path)
 // ---------------------------------------------------------------------------
 

@@ -723,6 +723,16 @@ impl RecurringService {
                 "start_date must be on or before end_date".to_string(),
             ));
         }
+        // Latent-audit L13 — shifting a daily occurrence off a holiday lands
+        // it on a day that already has one (or past the end date), so a
+        // daily rule has no holiday shift.
+        if request.period_unit == consts::PERIOD_UNIT_DAY
+            && request.holiday_shift_type != consts::HOLIDAY_SHIFT_NONE
+        {
+            return Err(RecurringError::Validation(
+                "Holiday shift is not available for a daily rule".to_string(),
+            ));
+        }
         let (first, last) = recurring_period_limits(chrono::Local::now().date_naive());
         if start < first || end > last {
             return Err(RecurringError::PeriodOutOfRange { first, last });
