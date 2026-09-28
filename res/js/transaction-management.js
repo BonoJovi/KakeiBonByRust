@@ -1154,6 +1154,14 @@ async function handleTransactionSubmit(event) {
             throw error;
         }
 
+        // Latent-audit M2 — the category1 of a transaction with details
+        // cannot change (their category2/3 belong to it).
+        if (error && typeof error === 'object'
+            && error.code === API_ERROR_CODES.CATEGORY1_HAS_DETAILS) {
+            showToast(i18n.t('transaction_mgmt.category1_has_details'), { variant: 'error' });
+            throw error;
+        }
+
         // Route bounded-field validation errors to the offending input.
         // Rust now emits a structured `ApiError { code: 'validation',
         // message: '...' }` (PR2b); the `code === 'validation'` gate

@@ -147,6 +147,10 @@ impl Database {
         // Add IS_SCHEDULED column if it doesn't exist (for tables created before this column was added)
         self.ensure_is_scheduled_column().await?;
 
+        // Put headers whose category1 disagrees with their details back in
+        // line with the details (latent-audit M2)
+        self.repair_header_category1_mismatch().await?;
+
         // Add PRODUCT_ID column for v2.6.0 master integration
         self.ensure_product_id_column().await?;
 
@@ -761,6 +765,45 @@ impl Database {
         Ok(())
     }
 
+    /// Repair headers whose category1 disagrees with their details — left by
+    /// changing a header's category1 after details were entered, which
+    /// update_transaction_header now refuses (latent-audit M2). The details'
+    /// category2/3 belong to their category1, so the header is set back to
+    /// the details' category1, and its account moves to the side that
+    /// category uses (expense: FROM, income: TO). Headers whose details mix
+    /// category1 values are left alone, and so are headers whose details are
+    /// a transfer: an income / expense header holds only one account, and a
+    /// transfer needs both. A no-op once nothing disagrees.
+    async fn repair_header_category1_mismatch(&self) -> Result<(), sqlx::Error> {
+        let rows: Vec<(i64, String, String, String, String)> =
+            sqlx::query_as(sql_queries::TRANSACTION_HEADERS_WITH_CATEGORY1_MISMATCH)
+                .fetch_all(&self.pool)
+                .await?;
+        if rows.is_empty() {
+            return Ok(());
+        }
+
+        let mut tx = self.pool.begin().await?;
+        for (transaction_id, header_category1, from_account, to_account, detail_category1) in rows {
+            let Some((from_account, to_account)) = accounts_for_category1_change(
+                &header_category1,
+                &detail_category1,
+                from_account,
+                to_account,
+            ) else {
+                continue;
+            };
+            sqlx::query(sql_queries::TRANSACTION_HEADER_SET_CATEGORY1_AND_ACCOUNTS)
+                .bind(&detail_category1)
+                .bind(&from_account)
+                .bind(&to_account)
+                .bind(transaction_id)
+                .execute(&mut *tx)
+                .await?;
+        }
+        tx.commit().await
+    }
+
     /// Backfill `AMOUNT_INCLUDING_TAX` so every detail row carries its
     /// tax-included price. `AMOUNT` has always been tax-excluded, so the
     /// header total / aggregation for tax-included headers can then sum
@@ -774,6 +817,28 @@ impl Database {
             .execute(&self.pool)
             .await?;
         Ok(())
+    }
+}
+
+/// Move a header's account to the side its new category1 uses: an expense
+/// spends from FROM, an income arrives in TO. The side a category does not
+/// use is the NONE account. `None` when the accounts cannot be derived:
+/// becoming a transfer needs both accounts, which a header that was an
+/// income / expense never had.
+fn accounts_for_category1_change(
+    old_category1: &str,
+    new_category1: &str,
+    from_account: String,
+    to_account: String,
+) -> Option<(String, String)> {
+    const NONE: &str = "NONE";
+    match (old_category1, new_category1) {
+        ("INCOME", "EXPENSE") => Some((to_account, NONE.to_string())),
+        ("EXPENSE", "INCOME") => Some((NONE.to_string(), from_account)),
+        ("TRANSFER", "EXPENSE") => Some((from_account, NONE.to_string())),
+        ("TRANSFER", "INCOME") => Some((NONE.to_string(), to_account)),
+        (_, "TRANSFER") => None,
+        _ => Some((from_account, to_account)),
     }
 }
 

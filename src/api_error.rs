@@ -69,6 +69,10 @@ impl ApiError {
     // Latent-audit M15 / M18 — a recurring rule's period falls outside the
     // years with seeded holiday data.
     pub const CODE_RECURRING_PERIOD_OUT_OF_RANGE: &'static str = "recurring_period_out_of_range";
+    // Latent-audit M2 — a header's category1 (income / expense / transfer)
+    // cannot change while it has details, whose category2/3 belong to the
+    // old category1.
+    pub const CODE_CATEGORY1_HAS_DETAILS: &'static str = "category1_has_details";
 
     // ---- Constructors --------------------------------------------------
 
@@ -210,6 +214,16 @@ impl ApiError {
         Self {
             code: Self::CODE_RECURRING_PERIOD_OUT_OF_RANGE.to_string(),
             message: format!("The rule period must be between {} and {}", first, last),
+            entity: None,
+        }
+    }
+
+    /// Header update refused because it changes category1 while the
+    /// transaction has details (latent-audit M2).
+    pub fn category1_has_details() -> Self {
+        Self {
+            code: Self::CODE_CATEGORY1_HAS_DETAILS.to_string(),
+            message: "Category cannot be changed while the transaction has details".to_string(),
             entity: None,
         }
     }

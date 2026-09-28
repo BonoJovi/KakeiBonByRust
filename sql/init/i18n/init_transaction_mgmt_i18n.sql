@@ -136,3 +136,9 @@ INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESO
 VALUES
 (2449, 'transaction_mgmt.transfer_same_account', 'en', 'Transfer source and destination accounts must be different.', 'transaction_mgmt', 'Frontend guard against TRANSFER with FROM == TO', datetime('now')),
 (2450, 'transaction_mgmt.transfer_same_account', 'ja', '振替元口座と振替先口座は別の口座を指定してください。', 'transaction_mgmt', 'TRANSFER で FROM==TO のフロント側ガード', datetime('now'));
+
+-- Latent-audit M2: toast when changing the category1 of a header that has details.
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT)
+VALUES
+(2463, 'transaction_mgmt.category1_has_details', 'en', 'The category cannot be changed while the transaction has details. Delete the details first.', 'transaction_mgmt', 'Toast when changing the category1 of a header that has details (latent-audit M2)', datetime('now')),
+(2464, 'transaction_mgmt.category1_has_details', 'ja', '明細がある取引は大分類を変更できません。明細を削除してから変更してください。', 'transaction_mgmt', '明細があるヘッダーの大分類変更を拒否したときのトースト (潜在監査 M2)', datetime('now'));

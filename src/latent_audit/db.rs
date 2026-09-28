@@ -133,3 +133,130 @@ async fn latent_m3_startup_removes_orphan_user_categories() {
     assert_eq!(count("CATEGORY1", 2).await, 1, "live user's CATEGORY1 must be kept");
     assert_eq!(count("CATEGORY2", 2).await, 1, "live user's CATEGORY2 must be kept");
 }
+
+/// M2 (existing data): a header whose category1 was changed after its
+/// details were entered is set back to the details' category1 at startup,
+/// with its account moved to the side that category uses. A header whose
+/// details mix category1 values, one whose details are a transfer (its
+/// other account is unknown), and a consistent header are left alone.
+#[tokio::test]
+async fn latent_m2_startup_repairs_header_category1_mismatch() {
+    let db = memory_db().await;
+    run_startup(&db).await;
+    let pool = db.pool();
+
+    for stmt in [
+        "INSERT INTO USERS (USER_ID, NAME, PAW, ROLE, ENTRY_DT) VALUES (2, 'latent_user', 'hash', 1, datetime('now'))",
+        "INSERT INTO CATEGORY1 (USER_ID, CATEGORY1_CODE, DISPLAY_ORDER, CATEGORY1_NAME, ENTRY_DT) VALUES (2, 'EXPENSE', 1, '支出', datetime('now'))",
+        "INSERT INTO CATEGORY1 (USER_ID, CATEGORY1_CODE, DISPLAY_ORDER, CATEGORY1_NAME, ENTRY_DT) VALUES (2, 'INCOME', 2, '収入', datetime('now'))",
+        "INSERT INTO CATEGORY1 (USER_ID, CATEGORY1_CODE, DISPLAY_ORDER, CATEGORY1_NAME, ENTRY_DT) VALUES (2, 'TRANSFER', 3, '振替', datetime('now'))",
+        "INSERT INTO ACCOUNTS (USER_ID, ACCOUNT_CODE, ACCOUNT_NAME, TEMPLATE_CODE) VALUES (2, 'NONE', '指定なし', 'NONE')",
+        "INSERT INTO ACCOUNTS (USER_ID, ACCOUNT_CODE, ACCOUNT_NAME, TEMPLATE_CODE) VALUES (2, 'CASH', '現金', 'CASH')",
+    ] {
+        sqlx::query(stmt).execute(pool).await.expect(stmt);
+    }
+
+    async fn header(pool: &SqlitePool, category1: &str, from: &str, to: &str) -> i64 {
+        sqlx::query(
+            "INSERT INTO TRANSACTIONS_HEADER (USER_ID, CATEGORY1_CODE, FROM_ACCOUNT_CODE, TO_ACCOUNT_CODE, \
+             TRANSACTION_DATE, TOTAL_AMOUNT, TAX_ROUNDING_TYPE, TAX_INCLUDED_TYPE) \
+             VALUES (2, ?, ?, ?, '2026-01-01 10:00:00', 100, 0, 1)",
+        )
+        .bind(category1)
+        .bind(from)
+        .bind(to)
+        .execute(pool)
+        .await
+        .expect("insert header")
+        .last_insert_rowid()
+    }
+    async fn detail(pool: &SqlitePool, transaction_id: i64, category1: &str) {
+        sqlx::query(
+            "INSERT INTO TRANSACTIONS_DETAIL (TRANSACTION_ID, USER_ID, CATEGORY1_CODE, ITEM_NAME, AMOUNT) \
+             VALUES (?, 2, ?, 'item', 100)",
+        )
+        .bind(transaction_id)
+        .bind(category1)
+        .execute(pool)
+        .await
+        .expect("insert detail");
+    }
+
+    // Entered as an expense from CASH, then switched to income (TO = CASH).
+    let mismatched = header(pool, "INCOME", "NONE", "CASH").await;
+    detail(pool, mismatched, "EXPENSE").await;
+    detail(pool, mismatched, "EXPENSE").await;
+    // Details disagree with each other: nothing to go back to.
+    let mixed = header(pool, "INCOME", "NONE", "CASH").await;
+    detail(pool, mixed, "EXPENSE").await;
+    detail(pool, mixed, "INCOME").await;
+    // Consistent.
+    let consistent = header(pool, "EXPENSE", "CASH", "NONE").await;
+    detail(pool, consistent, "EXPENSE").await;
+    // Details are a transfer, but the expense header holds only FROM: the
+    // transfer's destination is unknown, so it is not repaired.
+    let to_transfer = header(pool, "EXPENSE", "CASH", "NONE").await;
+    detail(pool, to_transfer, "TRANSFER").await;
+
+    // Next app start.
+    run_startup(&db).await;
+
+    let header_row = |id: i64| async move {
+        let row = sqlx::query(
+            "SELECT CATEGORY1_CODE, FROM_ACCOUNT_CODE, TO_ACCOUNT_CODE FROM TRANSACTIONS_HEADER WHERE TRANSACTION_ID = ?",
+        )
+        .bind(id)
+        .fetch_one(pool)
+        .await
+        .unwrap();
+        (row.get::<String, _>(0), row.get::<String, _>(1), row.get::<String, _>(2))
+    };
+    assert_eq!(
+        header_row(mismatched).await,
+        ("EXPENSE".to_string(), "CASH".to_string(), "NONE".to_string()),
+        "the header must go back to the details' category1, spending from CASH"
+    );
+    assert_eq!(
+        header_row(mixed).await,
+        ("INCOME".to_string(), "NONE".to_string(), "CASH".to_string()),
+        "a header whose details mix category1 values is left alone"
+    );
+    assert_eq!(
+        header_row(consistent).await,
+        ("EXPENSE".to_string(), "CASH".to_string(), "NONE".to_string())
+    );
+    assert_eq!(
+        header_row(to_transfer).await,
+        ("EXPENSE".to_string(), "CASH".to_string(), "NONE".to_string()),
+        "a header that would become a transfer with an unknown destination is left alone"
+    );
+}
+
+/// M2: the account moves to the side the new category1 uses; a header that
+/// would become a transfer is not repaired (its other account is unknown).
+#[test]
+fn latent_m2_accounts_follow_category1_side() {
+    let s = |v: &str| v.to_string();
+    assert_eq!(
+        accounts_for_category1_change("INCOME", "EXPENSE", s("NONE"), s("CASH")),
+        Some((s("CASH"), s("NONE")))
+    );
+    assert_eq!(
+        accounts_for_category1_change("EXPENSE", "INCOME", s("CASH"), s("NONE")),
+        Some((s("NONE"), s("CASH")))
+    );
+    assert_eq!(
+        accounts_for_category1_change("TRANSFER", "EXPENSE", s("BANK"), s("CASH")),
+        Some((s("BANK"), s("NONE")))
+    );
+    assert_eq!(
+        accounts_for_category1_change("TRANSFER", "INCOME", s("BANK"), s("CASH")),
+        Some((s("NONE"), s("CASH")))
+    );
+    assert_eq!(
+        accounts_for_category1_change("EXPENSE", "TRANSFER", s("CASH"), s("NONE")),
+        None,
+        "a transfer needs both accounts; an expense header had only one"
+    );
+    assert_eq!(accounts_for_category1_change("INCOME", "TRANSFER", s("NONE"), s("CASH")), None);
+}
