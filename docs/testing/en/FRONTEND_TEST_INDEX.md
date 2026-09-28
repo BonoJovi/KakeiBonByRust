@@ -3,7 +3,7 @@
 This document provides a complete index of all frontend tests implemented in JavaScript.
 
 **Last Updated**: 2026-09-27 JST  
-**Total Tests**: 830 (jest suites; 47 test files, per `npm test`)
+**Total Tests**: 835 (jest suites; 49 test files, per `npm test`)
 
 ---
 
@@ -30,7 +30,7 @@ and are **not** added again to the grand total.
 - **login.test.js** - Login tests (58)
 - **user-deletion.test.js** - User deletion tests (46)
 
-### Feature-Specific Tests (407 tests)
+### Feature-Specific Tests (412 tests)
 
 - **transaction-edit.test.js** - Transaction edit tests (112)
 - **transaction-detail-management.test.js** - Transaction detail management tests (51)
@@ -54,6 +54,8 @@ and are **not** added again to the grand total.
 - **pages/recurring-rule-page.test.js** - Boots the real recurring rule page: a TRANSFER template from an account to itself is rejected with `transaction_mgmt.transfer_same_account` before `create_recurring_rule`, while two different accounts still go through, and a backend `transfer_same_account` rejection shows the same message (latent-audit M16) (3)
 - **pages/recurring-rule-double-submit.test.js** - Boots the real recurring rule page: a double submit while `create_recurring_rule` is in flight invokes it only once (latent-audit M19) (1)
 - **pages/recurring-rule-period-range.test.js** - Boots the real recurring rule page: the start / end date pickers are bounded to the seeded holiday years, an out-of-range period is stopped before `create_recurring_rule` with `recurring_rule.period_out_of_range`, and a backend `recurring_period_out_of_range` rejection shows the same message (latent-audit M15 / M18) (4)
+- **pages/recurring-rule-derived-total.test.js** - Boots the real recurring rule page: the total field is read-only and follows the detail and the header's rounding / tax-included settings, and `create_recurring_rule` receives no typed total (latent-audit M17) (2)
+- **pages/recurring-rule-cycle-options.test.js** - Boots the real recurring rule page: the day-of-month mode sends `DAY_OR_END` and the new end-of-month mode sends `END` (latent-audit M14); choosing "daily" resets the holiday shift to "no shift" and disables it (latent-audit L13) (3)
 - **single-flight.test.js** - `singleFlight` submit guard (latent-audit M19): ignores re-entrant calls, calls `preventDefault` on every submit, releases after resolve and after throw (4)
 - **pages/product-management-page.test.js** - Boots the real product master page: editing a product whose manufacturer is disabled keeps `manufacturer_id` on save (latent-audit M5) (1)
 - **pages/product-management-link-draft.test.js** - Boots the real product master page from the detail → product-master jump (`?return_to=`): after adding a product, the detail draft is linked only to the product whose name matches exactly, never to another search candidate (latent-audit L17) (2)
@@ -101,7 +103,7 @@ and are **not** added again to the grand total.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **Feature-Specific Tests** | **407** |
+| **Feature-Specific Tests** | **412** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 29 |
@@ -124,6 +126,8 @@ and are **not** added again to the grand total.
 | pages/recurring-rule-page.test.js | 3 |
 | pages/recurring-rule-double-submit.test.js | 1 |
 | pages/recurring-rule-period-range.test.js | 4 |
+| pages/recurring-rule-derived-total.test.js | 2 |
+| pages/recurring-rule-cycle-options.test.js | 3 |
 | single-flight.test.js | 4 |
 | pages/product-management-page.test.js | 1 |
 | pages/product-management-link-draft.test.js | 2 |
@@ -144,7 +148,7 @@ and are **not** added again to the grand total.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **Total (jest)** | **830** |
+| **Total (jest)** | **835** |
 
 Grand total is Screen + Feature + Aggregation (Common Test Suites are helper
 libraries invoked from Screen-Specific files and their assertions are already

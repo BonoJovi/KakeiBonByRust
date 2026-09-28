@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-09-27 JST  
-**総テスト数**: 830件 (jest suite 47 ファイル、`npm test` 実測)
+**総テスト数**: 835件 (jest suite 49 ファイル、`npm test` 実測)
 
 ---
 
@@ -44,6 +44,8 @@
   - [pages/recurring-rule-page.test.js](#pagesrecurring-rule-pagetestjs)
   - [pages/recurring-rule-double-submit.test.js](#pagesrecurring-rule-double-submittestjs)
   - [pages/recurring-rule-period-range.test.js](#pagesrecurring-rule-period-rangetestjs)
+  - [pages/recurring-rule-derived-total.test.js](#pagesrecurring-rule-derived-totaltestjs)
+  - [pages/recurring-rule-cycle-options.test.js](#pagesrecurring-rule-cycle-optionstestjs)
   - [single-flight.test.js](#single-flighttestjs)
   - [pages/product-management-page.test.js](#pagesproduct-management-pagetestjs)
   - [pages/product-management-link-draft.test.js](#pagesproduct-management-link-drafttestjs)
@@ -769,6 +771,37 @@
 
 ---
 
+### pages/recurring-rule-derived-total.test.js
+
+繰り返し予定の合計金額の回帰テスト (潜在監査 M17)。合計は手入力で初期値 0、明細との整合チェックがなく、0 円の予定が生成されていた。
+
+**テスト数**: 2件
+
+| テスト | 説明 |
+|--------|------|
+| `[M17] should show a read-only total that follows the detail and tax settings` | 合計欄は読み取り専用で、明細とヘッダーの丸め・内税/外税設定から自動計算される |
+| `[M17] should not send a typed total to create_recurring_rule` | `create_recurring_rule` に合計を送らない (バックエンドが明細から計算) |
+
+**ファイル**: res/tests/pages/recurring-rule-derived-total.test.js
+
+---
+
+### pages/recurring-rule-cycle-options.test.js
+
+繰り返し予定の周期オプションの回帰テスト (潜在監査 M14 / L13)。29〜31 日指定は該当日のない月を黙って飛ばし、毎日 + 祝日シフトは同日重複や終了日後の予定を生んでいた。
+
+**テスト数**: 3件
+
+| テスト | 説明 |
+|--------|------|
+| `[M14] should send DAY_OR_END for a day of the month` | 日付指定は `DAY_OR_END` で送る (該当日のない月は月末) |
+| `[M14] should offer an end-of-month mode that sends END` | 「月末」モードを選ぶと `END` を送り、日付欄は隠れる |
+| `[L13] should reset and disable the holiday shift for a daily rule` | 「毎日」を選ぶと祝日シフトを「なし」に戻して無効化し、他の周期では再び選べる |
+
+**ファイル**: res/tests/pages/recurring-rule-cycle-options.test.js
+
+---
+
 ### single-flight.test.js
 
 送信ハンドラの二重実行防止 `singleFlight` (`res/js/single-flight.js`) のテスト (潜在監査 M19)。
@@ -1151,7 +1184,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **407件** |
+| **機能別テスト** | **412件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 29 |
@@ -1174,6 +1207,8 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | pages/recurring-rule-page.test.js | 3 |
 | pages/recurring-rule-double-submit.test.js | 1 |
 | pages/recurring-rule-period-range.test.js | 4 |
+| pages/recurring-rule-derived-total.test.js | 2 |
+| pages/recurring-rule-cycle-options.test.js | 3 |
 | single-flight.test.js | 4 |
 | pages/product-management-page.test.js | 1 |
 | pages/product-management-link-draft.test.js | 2 |
@@ -1194,7 +1229,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **830件** |
+| **総計 (jest)** | **835件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 
