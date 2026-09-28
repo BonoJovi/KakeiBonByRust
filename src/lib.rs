@@ -2403,6 +2403,22 @@ async fn list_recurring_rules(
     Ok(recurring.list_rules(user_id).await?)
 }
 
+/// The first and last date (`YYYY-MM-DD`) a recurring rule may cover right
+/// now — the same bounds `create_recurring_rule` enforces (latent-audit M15 /
+/// M18). The recurring screen uses them for its date pickers and messages.
+#[tauri::command]
+async fn get_recurring_period_limits(
+    state: tauri::State<'_, AppState>,
+) -> Result<serde_json::Value, api_error::ApiError> {
+    get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
+    let recurring = state.recurring.lock().await;
+    let (first, last) = recurring.period_limits().await?;
+    Ok(serde_json::json!({
+        "first": first.format("%Y-%m-%d").to_string(),
+        "last": last.format("%Y-%m-%d").to_string(),
+    }))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -2523,6 +2539,7 @@ pub fn run() {
             get_yearly_aggregation,
             get_monthly_aggregation_by_category,
             create_recurring_rule,
+            get_recurring_period_limits,
             delete_recurring_rule,
             list_recurring_rules
         ])

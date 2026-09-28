@@ -704,6 +704,28 @@ impl RecurringService {
     /// Returns the new RULE_ID, the number of occurrences generated, and the
     /// first generated TRANSACTION_ID (if any) for callers that want to surface
     /// it in a result message.
+    /// The first and last date a recurring rule may cover right now:
+    /// `recurring_period_limits` for today, clamped to the years actually
+    /// seeded in HOLIDAYS_STANDARD (holidays are seeded at startup, so an app
+    /// left running across New Year has one seeded year less ahead). The
+    /// recurring screen asks for these so its date pickers, pre-check and
+    /// error message use the same bounds (latent-audit M15 / M18).
+    pub async fn period_limits(&self) -> Result<(NaiveDate, NaiveDate), RecurringError> {
+        let (mut first, mut last) = recurring_period_limits(chrono::Local::now().date_naive());
+        let (seeded_first, seeded_last): (Option<String>, Option<String>) =
+            sqlx::query_as(sql_queries::HOLIDAYS_STANDARD_JP_DATE_RANGE)
+                .fetch_one(&self.pool)
+                .await?;
+        let year_of = |d: &str| d.get(..4).and_then(|y| y.parse::<i32>().ok());
+        if let Some(y) = seeded_first.as_deref().and_then(year_of) {
+            first = first.max(NaiveDate::from_ymd_opt(y, 1, 1).unwrap_or(first));
+        }
+        if let Some(y) = seeded_last.as_deref().and_then(year_of) {
+            last = last.min(NaiveDate::from_ymd_opt(y, 12, 31).unwrap_or(last));
+        }
+        Ok((first, last))
+    }
+
     pub async fn create_rule_with_instances(
         &self,
         user_id: i64,
@@ -831,21 +853,7 @@ impl RecurringService {
         // Latent-audit M15 / M18 — the period must stay within the years with
         // seeded holiday data. Checked after the input-only validation above,
         // since it reads the holiday table.
-        let (mut first, mut last) = recurring_period_limits(chrono::Local::now().date_naive());
-        // Holidays are seeded at startup, so an app left running across New
-        // Year has one year less ahead than the limits above assume; stay
-        // within the years actually seeded.
-        let (seeded_first, seeded_last): (Option<String>, Option<String>) =
-            sqlx::query_as(sql_queries::HOLIDAYS_STANDARD_JP_DATE_RANGE)
-                .fetch_one(&self.pool)
-                .await?;
-        let year_of = |d: &str| d.get(..4).and_then(|y| y.parse::<i32>().ok());
-        if let Some(y) = seeded_first.as_deref().and_then(year_of) {
-            first = first.max(NaiveDate::from_ymd_opt(y, 1, 1).unwrap_or(first));
-        }
-        if let Some(y) = seeded_last.as_deref().and_then(year_of) {
-            last = last.min(NaiveDate::from_ymd_opt(y, 12, 31).unwrap_or(last));
-        }
+        let (first, last) = self.period_limits().await?;
         if start < first || end > last {
             return Err(RecurringError::PeriodOutOfRange { first, last });
         }

@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-09-06 JST  
-**総テスト数**: 465件 (差分反映後。`cargo test --lib` の権威的総数は 703 で、既存の未反映分は別 PR でバックフィル予定)
+**総テスト数**: 466件 (差分反映後。`cargo test --lib` の権威的総数は 704 で、既存の未反映分は別 PR でバックフィル予定)
 
 ---
 
@@ -680,24 +680,25 @@ AES-256-GCM暗号化・復号化のテスト。
 | `validation_preserves_message_and_omits_entity` | RecurringError::Validation が ApiError::CODE_VALIDATION に変換され、メッセージが保持されること (PR2a) | src/services/recurring.rs | 1840 |
 | `database_error_maps_to_database_code` | RecurringError::Database が ApiError::CODE_DATABASE に変換されること (PR2a) | src/services/recurring.rs | 1851 |
 | `field_needle_message_survives_conversion_for_frontend_routing` | 4 つのフィールド needle (`"Rule name must be"` 等) が変換後もそのまま先頭に残り、フロントの `startsWith` ルーティングを維持できること (PR2a) | src/services/recurring.rs | 1858 |
-| `latent_h2_cascade_delete_keeps_confirmed_headers` | ルールのカスケード削除は未確定の予定取引だけを消し、確定済み (IS_SCHEDULED = 0) は残して紐付けを外す (潜在監査 H2) | src/services/latent_audit/recurring.rs | 196 |
-| `latent_m16_transfer_same_account_rejected` | 出金元と入金先が同じ振替ルールの作成を拒否 (潜在監査 M16) | src/services/latent_audit/recurring.rs | 331 |
-| `latent_m16_tax_rounding_type_out_of_range_rejected` | 範囲外の端数処理種別でのルール作成を拒否 (潜在監査 M16) | src/services/latent_audit/recurring.rs | 353 |
-| `latent_m16_tax_included_type_out_of_range_rejected` | 範囲外の内税/外税種別でのルール作成を拒否 (潜在監査 M16) | src/services/latent_audit/recurring.rs | 374 |
-| `latent_m15_holiday_shift_applies_beyond_seeded_range` | 祝日データの範囲外の年にかかるルールは、休日シフトを黙って飛ばさずに拒否される (`PeriodOutOfRange`) (潜在監査 M15) | src/services/latent_audit/recurring.rs | 252 |
-| `latent_m18_huge_generation_rejected` | 9999-12-31 までの毎日ルールは数百万件を生成せずに拒否される (`PeriodOutOfRange`) (潜在監査 M18) | src/services/latent_audit/recurring.rs | 449 |
-| `latent_m15_m18_period_limits_are_inclusive` | 許可範囲の初日・最終日は受け付け、1 日外れると拒否 (潜在監査 M15 / M18) | src/services/latent_audit/recurring.rs | 479 |
+| `latent_h2_cascade_delete_keeps_confirmed_headers` | ルールのカスケード削除は未確定の予定取引だけを消し、確定済み (IS_SCHEDULED = 0) は残して紐付けを外す (潜在監査 H2) | src/services/latent_audit/recurring.rs | 195 |
+| `latent_m16_transfer_same_account_rejected` | 出金元と入金先が同じ振替ルールの作成を拒否 (潜在監査 M16) | src/services/latent_audit/recurring.rs | 334 |
+| `latent_m16_tax_rounding_type_out_of_range_rejected` | 範囲外の端数処理種別でのルール作成を拒否 (潜在監査 M16) | src/services/latent_audit/recurring.rs | 356 |
+| `latent_m16_tax_included_type_out_of_range_rejected` | 範囲外の内税/外税種別でのルール作成を拒否 (潜在監査 M16) | src/services/latent_audit/recurring.rs | 377 |
+| `latent_m15_holiday_shift_applies_beyond_seeded_range` | 祝日データの範囲外の年にかかるルールは、休日シフトを黙って飛ばさずに拒否される (`PeriodOutOfRange`) (潜在監査 M15) | src/services/latent_audit/recurring.rs | 251 |
+| `latent_m18_huge_generation_rejected` | 9999-12-31 までの毎日ルールは数百万件を生成せずに拒否される (`PeriodOutOfRange`) (潜在監査 M18) | src/services/latent_audit/recurring.rs | 448 |
+| `latent_m15_m18_period_limits_are_inclusive` | 許可範囲の初日・最終日は受け付け、1 日外れると拒否 (潜在監査 M15 / M18) | src/services/latent_audit/recurring.rs | 478 |
 | `latent_m15_period_limit_follows_seeded_holidays` | 祝日が日付基準の上限の前年までしか入っていない場合 (起動したまま年をまたいだ場合)、最後の 1 年は拒否される (潜在監査 M15) | src/services/latent_audit/recurring.rs | 513 |
-| `latent_m15_m18_period_limits_follow_seeded_years` | 上下限は (今年 − 5) 年 1/1 〜 (今年 + 10) 年 12/31 で、祝日シードの範囲と一致 (潜在監査 M15 / M18) | src/services/latent_audit/recurring.rs | 512 |
-| `latent_m17_total_is_derived_from_the_detail` | ルールと各予定の合計は、1 件の明細からヘッダーの丸め・内税/外税設定で計算される (潜在監査 M17) | src/services/latent_audit/recurring.rs | 527 |
-| `latent_l13_daily_rule_rejects_holiday_shift` | 毎日のルールに祝日シフトは指定できない。シフトなしの毎日・シフトありの毎月は受け付ける (潜在監査 L13) | src/services/latent_audit/recurring.rs | 583 |
-| `latent_m16_detail_amount_out_of_range_rejected` | 範囲外の明細金額でのルール作成を拒否 (潜在監査 M16) | src/services/latent_audit/recurring.rs | 395 |
-| `latent_m16_detail_tax_rate_out_of_range_rejected` | 範囲外の税率でのルール作成を拒否 (潜在監査 M16) | src/services/latent_audit/recurring.rs | 416 |
+| `latent_m15_m18_period_limits_service_clamps_to_seeded_years` | `RecurringService::period_limits` (`get_recurring_period_limits` で画面に渡し、作成時にも適用) は日付基準の範囲を祝日シード済みの年で絞ったもの (潜在監査 M15 / M18) | src/services/latent_audit/recurring.rs | 548 |
+| `latent_m15_m18_period_limits_follow_seeded_years` | 上下限は (今年 − 5) 年 1/1 〜 (今年 + 10) 年 12/31 で、祝日シードの範囲と一致 (潜在監査 M15 / M18) | src/services/latent_audit/recurring.rs | 575 |
+| `latent_m17_total_is_derived_from_the_detail` | ルールと各予定の合計は、1 件の明細からヘッダーの丸め・内税/外税設定で計算される (潜在監査 M17) | src/services/latent_audit/recurring.rs | 591 |
+| `latent_l13_daily_rule_rejects_holiday_shift` | 毎日のルールに祝日シフトは指定できない。シフトなしの毎日・シフトありの毎月は受け付ける (潜在監査 L13) | src/services/latent_audit/recurring.rs | 647 |
+| `latent_m16_detail_amount_out_of_range_rejected` | 範囲外の明細金額でのルール作成を拒否 (潜在監査 M16) | src/services/latent_audit/recurring.rs | 398 |
+| `latent_m16_detail_tax_rate_out_of_range_rejected` | 範囲外の税率でのルール作成を拒否 (潜在監査 M16) | src/services/latent_audit/recurring.rs | 419 |
 | `transfer_same_account_maps_to_transfer_same_account_code` | `RecurringError::TransferSameAccount` が `transfer_same_account` コードに変換される (潜在監査 M16) | src/services/recurring.rs | 1881 |
-| `latent_l2_recurring_rejects_foreign_shop_and_product` | 繰り返しルール作成で自分の店舗・商品は受理し、他ユーザーのものは拒否 (潜在監査 L2) | src/services/latent_audit/recurring.rs | 481 |
-| `latent_l10_generation_terminates_at_the_end_of_the_date_range` | chrono の表現範囲の終わり付近でも月次・年次の日付生成が無限ループせず終了する (潜在監査 L10) | src/services/latent_audit/recurring.rs | 540 |
+| `latent_l2_recurring_rejects_foreign_shop_and_product` | 繰り返しルール作成で自分の店舗・商品は受理し、他ユーザーのものは拒否 (潜在監査 L2) | src/services/latent_audit/recurring.rs | 688 |
+| `latent_l10_generation_terminates_at_the_end_of_the_date_range` | chrono の表現範囲の終わり付近でも月次・年次の日付生成が無限ループせず終了する (潜在監査 L10) | src/services/latent_audit/recurring.rs | 747 |
 
-**合計**: 21件
+**合計**: 22件
 
 ### lib.rs
 
@@ -723,7 +724,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **439件** |
+| **インラインテスト** | **440件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -745,9 +746,9 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/period.rs | 3 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
-| services/recurring.rs | 21 |
+| services/recurring.rs | 22 |
 | lib.rs | 6 |
-| **総計** | **465件** |
+| **総計** | **466件** |
 
 ---
 

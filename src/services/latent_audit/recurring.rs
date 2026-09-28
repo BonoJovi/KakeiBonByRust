@@ -541,6 +541,35 @@ async fn latent_m15_period_limit_follows_seeded_holidays() {
     assert!(result.is_ok(), "the last seeded year is allowed: {:?}", result.err());
 }
 
+/// M15 / M18: `period_limits` (what the screen shows and create enforces)
+/// is the date-based window clamped to the seeded years, and is the plain
+/// date-based window when no holidays are seeded.
+#[tokio::test]
+async fn latent_m15_m18_period_limits_service_clamps_to_seeded_years() {
+    let pool = setup_recurring_db().await;
+    let service = RecurringService::new(pool.clone());
+    let date_based = recurring_period_limits(Local::now().date_naive());
+    assert_eq!(service.period_limits().await.unwrap(), date_based);
+
+    let year = Local::now().year();
+    for y in [year - 2, year + 3] {
+        sqlx::query(
+            "INSERT INTO HOLIDAYS_STANDARD (LOCALE, HOLIDAY_DATE, HOLIDAY_NAME) VALUES ('JP', ?, '元日')",
+        )
+        .bind(format!("{}-01-01", y))
+        .execute(&pool)
+        .await
+        .unwrap();
+    }
+    assert_eq!(
+        service.period_limits().await.unwrap(),
+        (
+            NaiveDate::from_ymd_opt(year - 2, 1, 1).unwrap(),
+            NaiveDate::from_ymd_opt(year + 3, 12, 31).unwrap(),
+        )
+    );
+}
+
 /// M15 / M18: the limits follow the holiday seeding window.
 #[test]
 fn latent_m15_m18_period_limits_follow_seeded_years() {

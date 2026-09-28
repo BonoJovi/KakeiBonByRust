@@ -5,11 +5,12 @@
  * M15 / M18 A rule could span any years: beyond the seeded holiday years
  *     its holiday shift silently did nothing, and a year typo (e.g. 9999)
  *     generated millions of occurrences and froze the app. A rule may now
- *     only span the seeded years (this year − 5 .. this year + 10). Pinned:
- *     the date pickers carry those bounds, an out-of-range period is
- *     stopped before create_recurring_rule with
- *     recurring_rule.period_out_of_range, and a backend
- *     recurring_period_out_of_range rejection shows the same message.
+ *     only span the seeded years. The screen asks the backend for those
+ *     bounds (get_recurring_period_limits) — they can lag the calendar when
+ *     the app runs across New Year. Pinned: the date pickers carry the
+ *     backend's bounds, an out-of-range period is stopped before
+ *     create_recurring_rule with recurring_rule.period_out_of_range, and a
+ *     backend recurring_period_out_of_range rejection shows the same message.
  *
  * The real page module is booted against res/recurring-rule.html via
  * ./_page-harness.js.
@@ -36,6 +37,11 @@ const CATEGORY_TREE = [
     },
 ];
 
+const BACKEND_LIMITS = {
+    first: `${new Date().getFullYear() - 4}-01-01`,
+    last: `${new Date().getFullYear() + 9}-12-31`,
+};
+
 // When set, create_recurring_rule rejects with this error once.
 let createRejection = null;
 
@@ -53,6 +59,8 @@ const { invoke } = mockPageModules(jest, {
                 return [];
             case 'list_recurring_rules':
                 return [];
+            case 'get_recurring_period_limits':
+                return BACKEND_LIMITS;
             case 'create_recurring_rule':
                 if (createRejection) {
                     const err = createRejection;
@@ -71,8 +79,10 @@ await import('../../js/recurring-rule.js');
 await bootPage();
 
 const year = new Date().getFullYear();
-const MIN = `${year - 5}-01-01`;
-const MAX = `${year + 10}-12-31`;
+// Deliberately narrower than the local "this year − 5 .. + 10" fallback, so
+// the tests prove the backend's bounds are the ones used.
+const MIN = `${year - 4}-01-01`;
+const MAX = `${year + 9}-12-31`;
 const OUT_OF_RANGE_MESSAGE = `recurring_rule.period_out_of_range(start=${MIN},end=${MAX})`;
 
 async function fillExpenseForm() {
@@ -112,7 +122,7 @@ describe('recurring rule form — period range (regression, latent audit 2026-09
     test('[M15/M18] should stop an end date past the limit before create_recurring_rule', async () => {
         await fillExpenseForm();
         document.getElementById('start-date').value = `${year}-01-01`;
-        document.getElementById('end-date').value = '9999-12-31';
+        document.getElementById('end-date').value = `${year + 10}-01-01`; // inside the local fallback, outside the backend bound
 
         await submitForm();
 
@@ -124,7 +134,7 @@ describe('recurring rule form — period range (regression, latent audit 2026-09
 
     test('[M15/M18] should stop a start date before the limit before create_recurring_rule', async () => {
         await fillExpenseForm();
-        document.getElementById('start-date').value = `${year - 6}-12-31`;
+        document.getElementById('start-date').value = `${year - 5}-06-01`; // inside the local fallback, outside the backend bound
         document.getElementById('end-date').value = `${year}-12-31`;
 
         await submitForm();

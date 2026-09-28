@@ -77,8 +77,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('start-date').value = formatLocalDate(today);
         document.getElementById('end-date').value = formatLocalDate(oneYearLater);
         // A rule may only span the years with holiday data (latent-audit
-        // M15 / M18); the date pickers stop at the same bounds.
-        const limits = recurringPeriodLimits(today);
+        // M15 / M18); the date pickers stop at the bounds the backend enforces.
+        const limits = await loadPeriodLimits();
         for (const id of ['start-date', 'end-date']) {
             const input = document.getElementById(id);
             input.min = limits.min;
@@ -408,7 +408,7 @@ function setupFormSubmit() {
 
         // Latent-audit M15 / M18 — the period must stay within the years
         // with holiday data; the Rust side enforces the same bounds.
-        const limits = recurringPeriodLimits(new Date());
+        const limits = await loadPeriodLimits();
         const startDate = document.getElementById('start-date').value;
         const endDate = document.getElementById('end-date').value;
         if (startDate < limits.min || endDate > limits.max) {
@@ -553,7 +553,7 @@ function setupFormSubmit() {
 
             if (err && typeof err === 'object'
                 && err.code === API_ERROR_CODES.RECURRING_PERIOD_OUT_OF_RANGE) {
-                const limits = recurringPeriodLimits(new Date());
+                const limits = await loadPeriodLimits();
                 showResult('error', periodOutOfRangeMessage(limits.min, limits.max));
                 return;
             }
@@ -564,8 +564,23 @@ function setupFormSubmit() {
     }));
 }
 
-// First and last date (YYYY-MM-DD) a recurring rule may cover: the years
-// whose holidays are seeded (latent-audit M15 / M18).
+// First and last date (YYYY-MM-DD) a recurring rule may cover, as the
+// backend enforces them (latent-audit M15 / M18): the seeded holiday years,
+// which can lag the calendar when the app runs across New Year. Asked on
+// every use so the pickers, the pre-check and the message stay in step with
+// the backend; the local calculation is only a fallback.
+async function loadPeriodLimits() {
+    try {
+        const limits = await invoke('get_recurring_period_limits');
+        return { min: limits.first, max: limits.last };
+    } catch (error) {
+        console.warn('Failed to load recurring period limits, using the local calculation:', error);
+        return recurringPeriodLimits(new Date());
+    }
+}
+
+// Local fallback for loadPeriodLimits(): the years whose holidays are seeded
+// at startup, counted from this year.
 function recurringPeriodLimits(today) {
     const year = today.getFullYear();
     return {
