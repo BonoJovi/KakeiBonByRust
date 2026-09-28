@@ -104,3 +104,9 @@ VALUES
 (2086, 'aggregation.week_range_label', 'ja', '集計対象週', 'aggregation', '週範囲表示ラベル', datetime('now')),
 (2455, 'aggregation.error_generic', 'en', 'An unexpected error occurred while aggregating.', 'aggregation', 'Generic aggregation error banner shown when the backend error has no recognisable shape (Fable-5 #9)', datetime('now')),
 (2456, 'aggregation.error_generic', 'ja', '集計中に予期しないエラーが発生しました。', 'aggregation', '認識できない形状のバックエンドエラーが返った時に集計バナーに出す汎用エラー (Fable-5 #9)', datetime('now'));
+
+-- Latent-audit M10: group of detail-less transactions in category2/3 / product aggregation.
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT)
+VALUES
+(2465, 'aggregation.no_details', 'en', '(No details)', 'aggregation', 'Group of transactions without details in category2/3 and product aggregation (latent-audit M10)', datetime('now')),
+(2466, 'aggregation.no_details', 'ja', '（明細なし）', 'aggregation', '中分類・小分類・商品別集計で明細のない取引をまとめるグループ (潜在監査 M10)', datetime('now'));

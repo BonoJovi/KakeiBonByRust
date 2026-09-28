@@ -70,6 +70,12 @@ async fn setup_db() -> sqlx::SqlitePool {
             CATEGORY3_NAME_I18N TEXT,
             PRIMARY KEY (USER_ID, CATEGORY1_CODE, CATEGORY2_CODE, CATEGORY3_CODE, LANG_CODE)
         )",
+        "CREATE TABLE I18N_RESOURCES (
+            RESOURCE_ID INTEGER PRIMARY KEY,
+            RESOURCE_KEY TEXT NOT NULL,
+            LANG_CODE TEXT NOT NULL,
+            RESOURCE_VALUE TEXT NOT NULL
+        )",
         "CREATE TABLE PRODUCTS (
             USER_ID INTEGER NOT NULL,
             PRODUCT_ID INTEGER NOT NULL,
@@ -283,8 +289,7 @@ async fn latent_h1_category3_only_code3_null_does_not_fail() {
 // M10
 // -----------------------------------------------------------------------------
 
-/// M10 (仕様確認待ち: 明細なしヘッダーをどのグループで表現するかは仕様判断) —
-/// A header with no details disappears from Category2/Category3/Product
+/// M10 — A header with no details disappears from Category2/Category3/Product
 /// aggregation because of the INNER JOIN on TRANSACTIONS_DETAIL, so the
 /// trend chart (Category1) and pie chart (Category2) totals disagree.
 ///
@@ -292,7 +297,6 @@ async fn latent_h1_category3_only_code3_null_does_not_fail() {
 /// Category3 and Product each equals the Category1 aggregation total
 /// (the detail-less header is counted somewhere, e.g. an unspecified group).
 #[tokio::test]
-#[ignore = "latent-audit M10"]
 async fn latent_m10_detailless_header_counted_in_detail_groupings() {
     let pool = setup_db().await;
     // Fully categorised txn: 1000 @10% → 1100.
@@ -318,23 +322,56 @@ async fn latent_m10_detailless_header_counted_in_detail_groupings() {
     }
 }
 
+/// M10 (spec 2026-09-28): the detail-less header forms its own group, keyed
+/// `<category1>/__NO_DETAILS__` for Category2 / Category3 (so the dashboard's
+/// `EXPENSE/` prefix filter keeps it in the pie chart) and `__NO_DETAILS__`
+/// for Product, named by the localised `aggregation.no_details` resource.
+#[tokio::test]
+async fn latent_m10_detailless_group_key_and_name() {
+    let pool = setup_db().await;
+    sqlx::query(
+        "INSERT INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE) \
+         VALUES (1, 'aggregation.no_details', 'ja', '（明細なし）')",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+    let _t = insert_header(&pool, 0, 1, 500).await;
+
+    for (gb, key) in [
+        (GroupBy::Category2, "EXPENSE/__NO_DETAILS__"),
+        (GroupBy::Category3, "EXPENSE/__NO_DETAILS__"),
+        (GroupBy::Product, "__NO_DETAILS__"),
+    ] {
+        let label = format!("{:?}", gb);
+        let rows = run(&pool, gb).await.unwrap_or_else(|e| panic!("{}: {}", label, e));
+        assert_eq!(rows.len(), 1, "{}: {:?}", label, rows);
+        assert_eq!(rows[0].group_key, key, "{}", label);
+        assert_eq!(rows[0].group_name, "（明細なし）", "{}", label);
+        assert_eq!(rows[0].total_amount, -500, "{}", label);
+        assert_eq!(rows[0].count, 1, "{}", label);
+    }
+}
+
 // -----------------------------------------------------------------------------
 // L9
 // -----------------------------------------------------------------------------
 
-/// L9 (仕様確認待ち: 修正ではなく差異をドキュメント化する選択肢もある) —
-/// Category2 rounds per (txn × group × rate) slice, while the header total
-/// rounds once per (txn × rate). Splitting one transaction across groups
-/// makes the Category2 sum drift from Category1 by up to (#groups − 1) yen.
+/// L9 (accepted as spec, 2026-09-28) — Category2 rounds per
+/// (txn × group × rate) slice, while the header total rounds once per
+/// (txn × rate). Splitting one transaction across groups makes the
+/// Category2 sum drift from Category1 by up to (#groups − 1) yen per tax
+/// rate; a header-level rounding cannot be split across groups, so the
+/// drift is kept and documented on `build_detail_query`.
 ///
 /// Scenario: floor rounding, 8%, FOOD 999 + DAILY 999.
 /// Header recommended total = floor(1998 × 1.08) = 2157;
 /// per-group rounding gives 1078 + 1078 = 2156.
 ///
-/// Expected: sum of Category2 groups == Category1 total (== -2157).
+/// Pinned: Category1 is −2157, the two Category2 groups sum to −2156
+/// (1 yen = groups − 1, single tax rate).
 #[tokio::test]
-#[ignore = "latent-audit L9"]
-async fn latent_l9_category2_sum_matches_header_total_across_groups() {
+async fn latent_l9_category2_rounding_drift_is_bounded() {
     let pool = setup_db().await;
     let t = insert_header(&pool, /*floor*/ 0, /*excluded*/ 1, 2157).await;
     insert_detail_full(&pool, t, 1, Some("FOOD"), Some("RICE"), Some(1), 999, 8, Some(1078)).await;
@@ -345,10 +382,12 @@ async fn latent_l9_category2_sum_matches_header_total_across_groups() {
 
     let cat2 = run(&pool, GroupBy::Category2).await.expect("Category2");
     assert_eq!(cat2.len(), 2, "{:?}", cat2);
-    assert_eq!(
-        sum_total(&cat2),
-        sum_total(&cat1),
-        "Category2 groups must sum to the header-level total (per-group rounding drift): {:?}",
+    assert_eq!(sum_total(&cat2), -2156, "per-group rounding: {:?}", cat2);
+    let drift = (sum_total(&cat2) - sum_total(&cat1)).abs();
+    assert!(
+        drift <= cat2.len() as i64 - 1,
+        "drift must stay within (groups − 1) yen for a single tax rate: {} for {:?}",
+        drift,
         cat2
     );
 }

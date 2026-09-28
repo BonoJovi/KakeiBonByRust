@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-09-06 JST  
-**総テスト数**: 455件 (差分反映後。`cargo test --lib` の権威的総数は 693 で、既存の未反映分は別 PR でバックフィル予定)
+**総テスト数**: 458件 (差分反映後。`cargo test --lib` の権威的総数は 696 で、既存の未反映分は別 PR でバックフィル予定)
 
 ---
 
@@ -616,8 +616,11 @@ AES-256-GCM暗号化・復号化のテスト。
 | `latent_l11_weekly_week1_covers_jan1_and_matches_iso` | 1週目が1月1日を含み、週番号が ISO 8601 (フロントの getWeekNumber) と一致 (潜在監査 L11) | src/services/latent_audit/aggregation.rs | 369 |
 | `latent_l11_weekly_every_day_of_year_is_covered` | 月曜・日曜始まりとも、年内の全日がいずれかの週 (1..=53) に入る (潜在監査 L11) | src/services/latent_audit/aggregation.rs | 404 |
 | `latent_l11_week_53_and_sunday_start_follow_iso_weeks` | 52 週の年の 53 週目は拒否、日曜始まりの週は ISO 週の前日から始まる (潜在監査 L11) | src/services/latent_audit/aggregation.rs | 425 |
+| `latent_m10_detailless_header_counted_in_detail_groupings` | 明細のないヘッダーも中分類・小分類・商品別に集計され、それぞれ大分類の合計と一致する (潜在監査 M10) | src/services/latent_audit/aggregation.rs | 300 |
+| `latent_m10_detailless_group_key_and_name` | 明細なしグループのキーは `<大分類>/__NO_DETAILS__` (商品別は `__NO_DETAILS__`)、名前は `aggregation.no_details` (潜在監査 M10) | src/services/latent_audit/aggregation.rs | 330 |
+| `latent_l9_category2_rounding_drift_is_bounded` | 仕様として受容: 1 取引を複数の中分類に分けると、大分類との差は税率ごとに (グループ数 − 1) 円以内 (潜在監査 L9) | src/services/latent_audit/aggregation.rs | 374 |
 
-**合計**: 23件
+**合計**: 26件
 
 ### services/period.rs
 
@@ -713,7 +716,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **429件** |
+| **インラインテスト** | **432件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -731,13 +734,13 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/product.rs | 20 |
 | services/shop.rs | 19 |
 | services/transaction.rs | 64 |
-| services/aggregation.rs | 23 |
+| services/aggregation.rs | 26 |
 | services/period.rs | 3 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 14 |
 | lib.rs | 6 |
-| **総計** | **455件** |
+| **総計** | **458件** |
 
 ---
 
