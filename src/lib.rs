@@ -514,89 +514,6 @@ async fn register_encrypted_field(
     }
 }
 
-#[tauri::command]
-async fn get_setting(
-    key: String,
-    state: tauri::State<'_, AppState>
-) -> Result<Option<serde_json::Value>, String> {
-    let settings = state.settings.lock().await;
-    Ok(settings.get(&key).cloned())
-}
-
-#[tauri::command]
-async fn get_setting_string(
-    key: String,
-    state: tauri::State<'_, AppState>
-) -> Result<String, String> {
-    let settings = state.settings.lock().await;
-    settings.get_string(&key)
-        .map_err(|e| format!("Failed to get setting: {}", e))
-}
-
-#[tauri::command]
-async fn get_setting_int(
-    key: String,
-    state: tauri::State<'_, AppState>
-) -> Result<i64, String> {
-    let settings = state.settings.lock().await;
-    settings.get_int(&key)
-        .map_err(|e| format!("Failed to get setting: {}", e))
-}
-
-#[tauri::command]
-async fn get_setting_bool(
-    key: String,
-    state: tauri::State<'_, AppState>
-) -> Result<bool, String> {
-    let settings = state.settings.lock().await;
-    settings.get_bool(&key)
-        .map_err(|e| format!("Failed to get setting: {}", e))
-}
-
-#[tauri::command]
-async fn set_setting(
-    key: String,
-    value: serde_json::Value,
-    state: tauri::State<'_, AppState>
-) -> Result<(), String> {
-    let mut settings = state.settings.lock().await;
-    settings.set(&key, value)
-        .map_err(|e| format!("Failed to set setting: {}", e))?;
-    settings.save()
-        .map_err(|e| format!("Failed to save settings: {}", e))
-}
-
-#[tauri::command]
-async fn remove_setting(
-    key: String,
-    state: tauri::State<'_, AppState>
-) -> Result<bool, String> {
-    let mut settings = state.settings.lock().await;
-    let removed = settings.remove(&key).is_some();
-    if removed {
-        settings.save()
-            .map_err(|e| format!("Failed to save settings: {}", e))?;
-    }
-    Ok(removed)
-}
-
-#[tauri::command]
-async fn list_setting_keys(
-    state: tauri::State<'_, AppState>
-) -> Result<Vec<String>, String> {
-    let settings = state.settings.lock().await;
-    Ok(settings.keys())
-}
-
-#[tauri::command]
-async fn reload_settings(
-    state: tauri::State<'_, AppState>
-) -> Result<(), String> {
-    let mut settings = state.settings.lock().await;
-    settings.reload()
-        .map_err(|e| format!("Failed to reload settings: {}", e))
-}
-
 /// Validate a language name/code and normalize it to a stored language code.
 fn normalize_language(language: &str) -> Result<&'static str, String> {
     match language {
@@ -2454,14 +2371,6 @@ pub fn run() {
             delete_general_user_info,
             list_encrypted_fields,
             register_encrypted_field,
-            get_setting,
-            get_setting_string,
-            get_setting_int,
-            get_setting_bool,
-            set_setting,
-            remove_setting,
-            list_setting_keys,
-            reload_settings,
             set_language,
             get_language,
             get_i18n_resource,
