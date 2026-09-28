@@ -1269,13 +1269,14 @@ async function saveModalState() {
     await setSessionModalState(JSON.stringify(modalData));
 }
 
-// While restoreModalState awaits the modal's initialisation the user may
-// close it or open another transaction; the saved draft then belongs to a
-// form that is gone and must not be written into the new one.
-function isStillRestoring(expectedTransactionId) {
+// While restoreModalState awaits (the modal's initialisation, the category
+// lists) the user may close the modal or open it again; the saved draft then
+// belongs to a form that is gone and must not be written into the new one.
+// `session` is the modal session the restore opened.
+function isStillRestoring(session) {
     const modal = document.getElementById('transaction-modal');
     return !!modal && !modal.classList.contains('hidden')
-        && (editingTransactionId ?? null) === (expectedTransactionId ?? null);
+        && transactionModal.session === session;
 }
 
 async function restoreModalState() {
@@ -1293,8 +1294,10 @@ async function restoreModalState() {
         // Open modal
         if (modalData.editing_transaction_id) {
             // Editing mode - open with transaction data
+            // open() bumps the session synchronously, so this is the one it opens
+            const session = transactionModal.session + 1;
             await openTransactionModal(modalData.editing_transaction_id);
-            if (!isStillRestoring(modalData.editing_transaction_id)) return;
+            if (!isStillRestoring(session)) return;
 
             // Override with saved values (in case user made changes before navigating away)
             if (modalData.transaction_date) {
@@ -1311,8 +1314,9 @@ async function restoreModalState() {
             }
         } else {
             // New transaction mode
+            const session = transactionModal.session + 1;
             await openTransactionModal();
-            if (!isStillRestoring(null)) return;
+            if (!isStillRestoring(session)) return;
             
             // Restore form values
             if (modalData.transaction_date) {
@@ -1322,9 +1326,11 @@ async function restoreModalState() {
                 document.getElementById('category1').value = modalData.category1;
                 // Trigger change to load dependent dropdowns
                 await handleCategory1Change({ target: document.getElementById('category1') });
+                if (!isStillRestoring(session)) return;
                 
                 // Wait a bit for category2 to load
                 await new Promise(resolve => setTimeout(resolve, 100));
+                if (!isStillRestoring(session)) return;
                 
                 if (modalData.category2) {
                     document.getElementById('category2').value = modalData.category2;
@@ -1332,6 +1338,7 @@ async function restoreModalState() {
                     document.getElementById('category2').dispatchEvent(new Event('change'));
                     
                     await new Promise(resolve => setTimeout(resolve, 100));
+                    if (!isStillRestoring(session)) return;
                     
                     if (modalData.category3) {
                         document.getElementById('category3').value = modalData.category3;

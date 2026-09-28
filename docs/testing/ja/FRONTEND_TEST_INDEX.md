@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-09-27 JST  
-**総テスト数**: 843件 (jest suite 54 ファイル、`npm test` 実測)
+**総テスト数**: 844件 (jest suite 55 ファイル、`npm test` 実測)
 
 ---
 
@@ -58,6 +58,7 @@
   - [modal-open-awaits-onopen.test.js](#modal-open-awaits-onopentestjs)
   - [pages/transaction-management-restore-draft.test.js](#pagestransaction-management-restore-drafttestjs)
   - [pages/transaction-management-restore-disabled-shop.test.js](#pagestransaction-management-restore-disabled-shoptestjs)
+  - [pages/transaction-management-restore-reopened.test.js](#pagestransaction-management-restore-reopenedtestjs)
   - [pages/aggregation-monthly-page.test.js](#pagesaggregation-monthly-pagetestjs)
   - [pages/aggregation-yearly-total-count.test.js](#pagesaggregation-yearly-total-counttestjs)
   - [pages/index-setup-page.test.js](#pagesindex-setup-pagetestjs)
@@ -990,6 +991,20 @@
 
 ---
 
+### pages/transaction-management-restore-reopened.test.js
+
+下書き復元の途中でモーダルを閉じて開き直した場合の回帰テスト (潜在監査 L6)。
+
+**テスト数**: 1件
+
+| テスト | 説明 |
+|--------|------|
+| `[L6] should not write the draft into a modal reopened while the restore was waiting` | 復元が待っている間に閉じて開き直したモーダルには、古い下書きを書き込まない |
+
+**ファイル**: res/tests/pages/transaction-management-restore-reopened.test.js
+
+---
+
 ### pages/aggregation-monthly-page.test.js
 
 実際の月次集計画面の回帰テスト (潜在監査 M11 / M12)。
@@ -1262,7 +1277,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **420件** |
+| **機能別テスト** | **421件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 29 |
@@ -1299,6 +1314,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | modal-open-awaits-onopen.test.js | 2 |
 | pages/transaction-management-restore-draft.test.js | 1 |
 | pages/transaction-management-restore-disabled-shop.test.js | 1 |
+| pages/transaction-management-restore-reopened.test.js | 1 |
 | pages/aggregation-monthly-page.test.js | 5 |
 | pages/aggregation-yearly-total-count.test.js | 1 |
 | pages/index-setup-page.test.js | 3 |
@@ -1312,7 +1328,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **843件** |
+| **総計 (jest)** | **844件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 

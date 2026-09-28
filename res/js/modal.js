@@ -174,6 +174,16 @@ class Modal {
     }
     
     /**
+     * Counter bumped by every open(). A caller that awaits after opening can
+     * compare it with the value it captured to tell whether the modal it
+     * opened is still the one on screen (latent-audit L6).
+     * @returns {number}
+     */
+    get session() {
+        return this._session;
+    }
+
+    /**
      * Open the modal
      * @param {string} mode - Mode of the modal (e.g., 'add', 'edit')
      * @param {Object} data - Data to pass to the modal
