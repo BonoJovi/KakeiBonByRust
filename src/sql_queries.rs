@@ -1024,6 +1024,40 @@ CREATE TABLE IF NOT EXISTS TRANSACTIONS_HEADER (
 )
 "#;
 
+/// Does the transaction have any detail? Binds: (transaction_id).
+pub const TRANSACTION_HAS_DETAILS: &str =
+    "SELECT EXISTS (SELECT 1 FROM TRANSACTIONS_DETAIL WHERE TRANSACTION_ID = ?)";
+
+/// Headers whose category1 disagrees with their details, where all the
+/// details share one category1 that exists for the user (latent-audit M2).
+/// Returns (TRANSACTION_ID, CATEGORY1_CODE, FROM_ACCOUNT_CODE,
+/// TO_ACCOUNT_CODE, DETAIL_CATEGORY1).
+pub const TRANSACTION_HEADERS_WITH_CATEGORY1_MISMATCH: &str = r#"
+SELECT m.TRANSACTION_ID, m.CATEGORY1_CODE, m.FROM_ACCOUNT_CODE, m.TO_ACCOUNT_CODE, m.DETAIL_CATEGORY1
+FROM (
+    SELECT th.TRANSACTION_ID, th.USER_ID, th.CATEGORY1_CODE,
+           th.FROM_ACCOUNT_CODE, th.TO_ACCOUNT_CODE,
+           MIN(td.CATEGORY1_CODE) AS DETAIL_CATEGORY1,
+           COUNT(DISTINCT td.CATEGORY1_CODE) AS DETAIL_CATEGORY1_COUNT
+    FROM TRANSACTIONS_HEADER th
+    JOIN TRANSACTIONS_DETAIL td ON td.TRANSACTION_ID = th.TRANSACTION_ID
+    GROUP BY th.TRANSACTION_ID
+) m
+WHERE m.DETAIL_CATEGORY1_COUNT = 1
+  AND m.DETAIL_CATEGORY1 <> m.CATEGORY1_CODE
+  AND EXISTS (
+      SELECT 1 FROM CATEGORY1 c
+      WHERE c.USER_ID = m.USER_ID AND c.CATEGORY1_CODE = m.DETAIL_CATEGORY1
+  )
+"#;
+
+/// Binds: (category1_code, from_account_code, to_account_code, transaction_id).
+pub const TRANSACTION_HEADER_SET_CATEGORY1_AND_ACCOUNTS: &str = r#"
+UPDATE TRANSACTIONS_HEADER
+SET CATEGORY1_CODE = ?, FROM_ACCOUNT_CODE = ?, TO_ACCOUNT_CODE = ?, UPDATE_DT = datetime('now')
+WHERE TRANSACTION_ID = ?
+"#;
+
 pub const CREATE_TRANSACTIONS_DETAIL_TABLE: &str = r#"
 CREATE TABLE IF NOT EXISTS TRANSACTIONS_DETAIL (
     DETAIL_ID INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1604,11 +1638,12 @@ WHERE TRANSACTION_ID = ? AND USER_ID = ?
 /// bypasses the frontend (e.g. a direct `invoke` with another user's
 /// transaction_id) would attach one user's detail to another user's
 /// header.
-pub const TRANSACTION_HEADER_EXISTS_FOR_USER: &str = r#"
-SELECT 1
+/// The header's category1, scoped to its owner; no row when the transaction
+/// is missing or belongs to someone else. Binds: (transaction_id, user_id).
+pub const TRANSACTION_HEADER_CATEGORY1_FOR_USER: &str = r#"
+SELECT CATEGORY1_CODE
 FROM TRANSACTIONS_HEADER
 WHERE TRANSACTION_ID = ? AND USER_ID = ?
-LIMIT 1
 "#;
 
 /// Update only TOTAL_AMOUNT (and the audit timestamp). Used when the header
