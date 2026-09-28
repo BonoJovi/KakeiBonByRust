@@ -78,12 +78,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('end-date').value = formatLocalDate(oneYearLater);
         // A rule may only span the years with holiday data (latent-audit
         // M15 / M18); the date pickers stop at the bounds the backend enforces.
-        const limits = await loadPeriodLimits();
-        for (const id of ['start-date', 'end-date']) {
-            const input = document.getElementById(id);
-            input.min = limits.min;
-            input.max = limits.max;
-        }
+        applyPeriodLimits(await loadPeriodLimits());
         document.getElementById('anchor-date').value = formatLocalDate(today);
 
         await fitWindowToScreen();
@@ -409,6 +404,7 @@ function setupFormSubmit() {
         // Latent-audit M15 / M18 — the period must stay within the years
         // with holiday data; the Rust side enforces the same bounds.
         const limits = await loadPeriodLimits();
+        applyPeriodLimits(limits);
         const startDate = document.getElementById('start-date').value;
         const endDate = document.getElementById('end-date').value;
         if (startDate < limits.min || endDate > limits.max) {
@@ -554,6 +550,7 @@ function setupFormSubmit() {
             if (err && typeof err === 'object'
                 && err.code === API_ERROR_CODES.RECURRING_PERIOD_OUT_OF_RANGE) {
                 const limits = await loadPeriodLimits();
+                applyPeriodLimits(limits);
                 showResult('error', periodOutOfRangeMessage(limits.min, limits.max));
                 return;
             }
@@ -576,6 +573,16 @@ async function loadPeriodLimits() {
     } catch (error) {
         console.warn('Failed to load recurring period limits, using the local calculation:', error);
         return recurringPeriodLimits(new Date());
+    }
+}
+
+// Keep the date pickers on the latest bounds, so a date they offer is never
+// one the pre-check or the backend then rejects.
+function applyPeriodLimits(limits) {
+    for (const id of ['start-date', 'end-date']) {
+        const input = document.getElementById(id);
+        input.min = limits.min;
+        input.max = limits.max;
     }
 }
 

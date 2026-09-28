@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-09-27 JST  
-**総テスト数**: 838件 (jest suite 51 ファイル、`npm test` 実測)
+**総テスト数**: 839件 (jest suite 51 ファイル、`npm test` 実測)
 
 ---
 
@@ -775,13 +775,14 @@
 
 繰り返し予定の期間の回帰テスト (潜在監査 M15 / M18)。祝日データのある年の範囲外では休日シフトが効かず、年の打ち間違い (9999 年など) で大量の予定が生成されていた。
 
-**テスト数**: 4件
+**テスト数**: 5件
 
 | テスト | 説明 |
 |--------|------|
 | `[M15/M18] should bound the date pickers to the seeded holiday years` | 開始日・終了日の入力欄に (今年 − 5) 年 1/1 〜 (今年 + 10) 年 12/31 の min / max を設定 |
 | `[M15/M18] should stop an end date past the limit before create_recurring_rule` | 終了日が上限を超えたら送信せず `recurring_rule.period_out_of_range` を表示 |
 | `[M15/M18] should stop a start date before the limit before create_recurring_rule` | 開始日が下限より前でも同様 |
+| `[M15/M18] should move the date pickers to bounds that changed since the page loaded` | 送信時に取得した範囲が画面表示時と変わっていたら、日付入力欄の上限・下限も更新する |
 | `[M15/M18] should show the same message for a backend recurring_period_out_of_range rejection` | バックエンドの `recurring_period_out_of_range` も同じメッセージで表示 |
 
 **ファイル**: res/tests/pages/recurring-rule-period-range.test.js
@@ -1215,7 +1216,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **415件** |
+| **機能別テスト** | **416件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 29 |
@@ -1238,7 +1239,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | pages/user-management-page.test.js | 2 |
 | pages/recurring-rule-page.test.js | 3 |
 | pages/recurring-rule-double-submit.test.js | 1 |
-| pages/recurring-rule-period-range.test.js | 4 |
+| pages/recurring-rule-period-range.test.js | 5 |
 | pages/recurring-rule-derived-total.test.js | 2 |
 | pages/recurring-rule-cycle-options.test.js | 3 |
 | single-flight.test.js | 4 |
@@ -1262,7 +1263,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **838件** |
+| **総計 (jest)** | **839件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 

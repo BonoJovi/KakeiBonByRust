@@ -37,7 +37,7 @@ const CATEGORY_TREE = [
     },
 ];
 
-const BACKEND_LIMITS = {
+let BACKEND_LIMITS = {
     first: `${new Date().getFullYear() - 4}-01-01`,
     last: `${new Date().getFullYear() + 9}-12-31`,
 };
@@ -141,6 +141,30 @@ describe('recurring rule form — period range (regression, latent audit 2026-09
 
         expect(callsOf(invoke, 'create_recurring_rule')).toHaveLength(0);
         expect(document.getElementById('result-box').textContent).toBe(OUT_OF_RANGE_MESSAGE);
+    });
+
+    test('[M15/M18] should move the date pickers to bounds that changed since the page loaded', async () => {
+        const initial = BACKEND_LIMITS;
+        // e.g. the app kept running across New Year, or the first lookup fell back
+        BACKEND_LIMITS = { first: `${year - 3}-01-01`, last: `${year + 8}-12-31` };
+        try {
+            await fillExpenseForm();
+            document.getElementById('start-date').value = `${year}-01-01`;
+            document.getElementById('end-date').value = `${year + 9}-06-01`;
+
+            await submitForm();
+
+            expect(callsOf(invoke, 'create_recurring_rule')).toHaveLength(0);
+            for (const id of ['start-date', 'end-date']) {
+                expect(document.getElementById(id).min).toBe(BACKEND_LIMITS.first);
+                expect(document.getElementById(id).max).toBe(BACKEND_LIMITS.last);
+            }
+        } finally {
+            BACKEND_LIMITS = initial;
+            document.getElementById('end-date').value = `${year}-12-31`;
+            await submitForm(); // puts the pickers back on the initial bounds
+            invoke.mockClear();
+        }
     });
 
     test('[M15/M18] should show the same message for a backend recurring_period_out_of_range rejection', async () => {
