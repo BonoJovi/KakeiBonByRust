@@ -13,37 +13,40 @@
  */
 
 import { jest } from '@jest/globals';
-import { mockPageModules, loadPageBody, bootPage } from './_page-harness.js';
+import {
+    mockPageModules, loadPageBody, bootPage, flush, deferred,
+} from './_page-harness.js';
 
 const ACTIVE_SHOP = { shop_id: 1, shop_name: 'New Mart', is_disabled: 0 };
 const DISABLED_SHOP = { shop_id: 7, shop_name: 'Old Mart', is_disabled: 1 };
 
-// Master lists answer only after a macrotask, like a real IPC round trip,
-// so onOpen's reset really runs after restoreModalState would have written.
-// The first round of master lists (the restore's modal) answers slowly, later
-// rounds at once, so the reopened modal finishes its initialisation first and
-// the interrupted restore resumes afterwards — the case the guard must stop.
-let firstRound = true;
-const later = (value) => {
-    const delay = firstRound ? 150 : 0;
-    return new Promise((resolve) => setTimeout(() => resolve(value), delay));
-};
+// The restore modal's first master list (the 2nd category-tree call; the
+// 1st is the page's own filter) is held until the test releases it; every
+// other call answers after one macrotask. So the reopened modal finishes its
+// initialisation first and the interrupted restore resumes afterwards — the
+// case the guard must stop.
+const restoreGate = deferred();
+let categoryTreeCalls = 0;
+const soon = (value) => new Promise((resolve) => setTimeout(() => resolve(value), 0));
 
 mockPageModules(jest, {
     user: { user_id: 2, name: 'alice', role: 1 },
     invoke: (cmd, args) => {
         switch (cmd) {
-            case 'get_category_tree_with_lang':
-                return later([{
+            case 'get_category_tree_with_lang': {
+                const tree = [{
                     category1: { category1_code: 'EXPENSE', category1_name_i18n: 'Expense' },
                     children: [],
-                }]);
+                }];
+                categoryTreeCalls += 1;
+                return categoryTreeCalls === 2 ? restoreGate.promise.then(() => tree) : soon(tree);
+            }
             case 'get_transactions':
                 return { transactions: [], total_count: 0, page: 1, per_page: 50, total_pages: 1 };
             case 'get_accounts':
-                return later([]);
+                return soon([]);
             case 'get_shops':
-                return later(args && args.includeDisabled ? [ACTIVE_SHOP, DISABLED_SHOP] : [ACTIVE_SHOP]);
+                return soon(args && args.includeDisabled ? [ACTIVE_SHOP, DISABLED_SHOP] : [ACTIVE_SHOP]);
             default:
                 return null;
         }
@@ -72,10 +75,14 @@ for (let i = 0; i < 200 && modalEl.classList.contains('hidden'); i++) {
     await new Promise((r) => setTimeout(r, 0));
 }
 if (modalEl.classList.contains('hidden')) throw new Error('restore never opened the modal');
-firstRound = false;
 document.getElementById('cancel-transaction-btn').click();
 document.getElementById('add-transaction-btn').click();
-await new Promise((r) => setTimeout(r, 400));
+// Let the reopened modal finish its initialisation, then release the
+// restore's held lists so its onOpen — and the restore after it — run to the
+// end. From here every step answers within a macrotask.
+await flush(20);
+restoreGate.resolve();
+await flush(20);
 
 
 describe('transaction management screen — draft restore interrupted (regression, latent audit 2026-09)', () => {
