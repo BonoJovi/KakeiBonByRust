@@ -613,7 +613,7 @@ Aggregation service tests.
 | `latent_l11_week_53_and_sunday_start_follow_iso_weeks` | Week 53 is rejected in a 52-week year; a Sunday-start week begins the day before the ISO week (latent-audit L11) | src/services/latent_audit/aggregation.rs | 425 |
 | `latent_m10_detailless_header_counted_in_detail_groupings` | A header without details is counted in Category2 / Category3 / Product, so each sums to the Category1 total (latent-audit M10) | src/services/latent_audit/aggregation.rs | 300 |
 | `latent_m10_detailless_group_key_and_name` | The detail-less group is keyed `<category1>/__NO_DETAILS__` (Product: `__NO_DETAILS__`) and named by `aggregation.no_details` (latent-audit M10) | src/services/latent_audit/aggregation.rs | 330 |
-| `latent_l9_category2_rounding_drift_is_bounded` | Accepted spec: Category2 groups of one split transaction may differ from Category1 by up to (groups − 1) yen (latent-audit L9) | src/services/latent_audit/aggregation.rs | 374 |
+| `latent_l9_category2_rounding_drift_is_bounded` | Accepted spec: Category2 groups of one split transaction may differ from Category1 by up to (groups − 1) yen per tax rate (latent-audit L9) | src/services/latent_audit/aggregation.rs | 374 |
 
 **Total**: 26 tests
 

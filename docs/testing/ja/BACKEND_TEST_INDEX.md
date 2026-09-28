@@ -613,7 +613,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | `latent_l11_week_53_and_sunday_start_follow_iso_weeks` | 52 週の年の 53 週目は拒否、日曜始まりの週は ISO 週の前日から始まる (潜在監査 L11) | src/services/latent_audit/aggregation.rs | 425 |
 | `latent_m10_detailless_header_counted_in_detail_groupings` | 明細のないヘッダーも中分類・小分類・商品別に集計され、それぞれ大分類の合計と一致する (潜在監査 M10) | src/services/latent_audit/aggregation.rs | 300 |
 | `latent_m10_detailless_group_key_and_name` | 明細なしグループのキーは `<大分類>/__NO_DETAILS__` (商品別は `__NO_DETAILS__`)、名前は `aggregation.no_details` (潜在監査 M10) | src/services/latent_audit/aggregation.rs | 330 |
-| `latent_l9_category2_rounding_drift_is_bounded` | 仕様として受容: 1 取引を複数の中分類に分けると、大分類との差は (グループ数 − 1) 円以内 (潜在監査 L9) | src/services/latent_audit/aggregation.rs | 374 |
+| `latent_l9_category2_rounding_drift_is_bounded` | 仕様として受容: 1 取引を複数の中分類に分けると、大分類との差は税率ごとに (グループ数 − 1) 円以内 (潜在監査 L9) | src/services/latent_audit/aggregation.rs | 374 |
 
 **合計**: 26件
 

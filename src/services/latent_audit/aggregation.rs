@@ -360,16 +360,16 @@ async fn latent_m10_detailless_group_key_and_name() {
 /// L9 (accepted as spec, 2026-09-28) — Category2 rounds per
 /// (txn × group × rate) slice, while the header total rounds once per
 /// (txn × rate). Splitting one transaction across groups makes the
-/// Category2 sum drift from Category1 by up to (#groups − 1) yen; a
-/// header-level rounding cannot be split across groups, so the drift is
-/// kept and documented on `build_detail_query`.
+/// Category2 sum drift from Category1 by up to (#groups − 1) yen per tax
+/// rate; a header-level rounding cannot be split across groups, so the
+/// drift is kept and documented on `build_detail_query`.
 ///
 /// Scenario: floor rounding, 8%, FOOD 999 + DAILY 999.
 /// Header recommended total = floor(1998 × 1.08) = 2157;
 /// per-group rounding gives 1078 + 1078 = 2156.
 ///
 /// Pinned: Category1 is −2157, the two Category2 groups sum to −2156
-/// (1 yen = groups − 1).
+/// (1 yen = groups − 1, single tax rate).
 #[tokio::test]
 async fn latent_l9_category2_rounding_drift_is_bounded() {
     let pool = setup_db().await;
@@ -386,7 +386,7 @@ async fn latent_l9_category2_rounding_drift_is_bounded() {
     let drift = (sum_total(&cat2) - sum_total(&cat1)).abs();
     assert!(
         drift <= cat2.len() as i64 - 1,
-        "drift must stay within (groups − 1) yen: {} for {:?}",
+        "drift must stay within (groups − 1) yen for a single tax rate: {} for {:?}",
         drift,
         cat2
     );

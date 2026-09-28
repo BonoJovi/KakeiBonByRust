@@ -853,8 +853,9 @@ pub const NO_DETAILS_GROUP_KEY: &str = "__NO_DETAILS__";
 /// (transaction × group × tax rate) slice, while the header total rounds once
 /// per (transaction × tax rate), so when one transaction is split across
 /// groups the group totals can differ from the Category1 total by up to
-/// (groups − 1) yen per transaction. This drift is accepted (latent-audit L9):
-/// a header-level rounding cannot be split across groups.
+/// (groups sharing that rate − 1) yen for each tax rate of the transaction.
+/// This drift is accepted (latent-audit L9): a header-level rounding cannot
+/// be split across groups.
 fn build_detail_query(request: &AggregationRequest, lang: &str) -> (String, Vec<BindValue>) {
     let (where_clause, where_binds) = build_where_clause(request.user_id, &request.filter);
     let order_field = request.order_by.to_order_by_field();
