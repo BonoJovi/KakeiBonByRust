@@ -1269,6 +1269,15 @@ async function saveModalState() {
     await setSessionModalState(JSON.stringify(modalData));
 }
 
+// While restoreModalState awaits the modal's initialisation the user may
+// close it or open another transaction; the saved draft then belongs to a
+// form that is gone and must not be written into the new one.
+function isStillRestoring(expectedTransactionId) {
+    const modal = document.getElementById('transaction-modal');
+    return !!modal && !modal.classList.contains('hidden')
+        && (editingTransactionId ?? null) === (expectedTransactionId ?? null);
+}
+
 async function restoreModalState() {
     const modalStateJson = await getSessionModalState();
     if (!modalStateJson) {
@@ -1285,6 +1294,7 @@ async function restoreModalState() {
         if (modalData.editing_transaction_id) {
             // Editing mode - open with transaction data
             await openTransactionModal(modalData.editing_transaction_id);
+            if (!isStillRestoring(modalData.editing_transaction_id)) return;
 
             // Override with saved values (in case user made changes before navigating away)
             if (modalData.transaction_date) {
@@ -1302,6 +1312,7 @@ async function restoreModalState() {
         } else {
             // New transaction mode
             await openTransactionModal();
+            if (!isStillRestoring(null)) return;
             
             // Restore form values
             if (modalData.transaction_date) {
