@@ -845,6 +845,16 @@ ORDER BY {} {}
 ///
 /// The two branches remain exhaustive complements so no row silently
 /// drops out of both sums.
+/// Group key of the Category2 / Category3 / Product group that holds headers
+/// without details (latent-audit M10).
+pub const NO_DETAILS_GROUP_KEY: &str = "__NO_DETAILS__";
+
+/// Category2 / Category3 / Product aggregation. Tax is rounded per
+/// (transaction × group × tax rate) slice, while the header total rounds once
+/// per (transaction × tax rate), so when one transaction is split across
+/// groups the group totals can differ from the Category1 total by up to
+/// (groups − 1) yen per transaction. This drift is accepted (latent-audit L9):
+/// a header-level rounding cannot be split across groups.
 fn build_detail_query(request: &AggregationRequest, lang: &str) -> (String, Vec<BindValue>) {
     let (where_clause, where_binds) = build_where_clause(request.user_id, &request.filter);
     let order_field = request.order_by.to_order_by_field();
@@ -906,7 +916,7 @@ FROM (
             {gk} AS group_key,
             {gn} AS group_name,
             th.CATEGORY1_CODE AS cat1,
-            td.TAX_RATE AS tax_rate,
+            COALESCE(td.TAX_RATE, 0) AS tax_rate,
             th.TAX_ROUNDING_TYPE AS rounding_type,
             -- AMOUNT is always tax-excluded (owner decision 2026-09-26).
             -- A tax-included header sums each row's own tax-included
@@ -917,6 +927,10 @@ FROM (
             -- `{tax_included}` placeholder is `consts::TAX_INCLUDED`
             -- interpolated at build time.
             SUM(CASE
+                -- A header without details (LEFT JOIN miss) counts with its
+                -- own TOTAL_AMOUNT, as in the Category1 aggregation
+                -- (latent-audit M10).
+                WHEN td.DETAIL_ID IS NULL THEN th.TOTAL_AMOUNT
                 WHEN th.TAX_INCLUDED_TYPE = {tax_included} THEN
                     CASE
                         WHEN td.AMOUNT_INCLUDING_TAX IS NULL
@@ -936,11 +950,12 @@ FROM (
             -- small row whose tax rounds to 0 would match it and skip the
             -- gross-up (latent-audit L1).
             SUM(CASE
+                WHEN td.DETAIL_ID IS NULL THEN 0
                 WHEN th.TAX_INCLUDED_TYPE != {tax_included} THEN td.AMOUNT
                 ELSE 0
             END) AS pretax_sum
         FROM TRANSACTIONS_HEADER th
-        INNER JOIN TRANSACTIONS_DETAIL td
+        LEFT JOIN TRANSACTIONS_DETAIL td
             ON th.USER_ID = td.USER_ID AND th.TRANSACTION_ID = td.TRANSACTION_ID
         {joins}
         WHERE {where_clause}
@@ -984,9 +999,21 @@ fn build_detail_group_pieces(
     group_by: &GroupBy,
     lang: &str,
 ) -> (String, String, String, Vec<BindValue>) {
-    match group_by {
+    // A header without details (latent-audit M10) has no category2/3 or
+    // product, so it gets its own group: NO_DETAILS_GROUP_KEY, prefixed with
+    // the header's category1 for the category groupings (the dashboard picks
+    // pie-chart slices by that prefix), named by the localised
+    // `aggregation.no_details` resource.
+    let no_details_join = "LEFT JOIN I18N_RESOURCES ndr ON ndr.RESOURCE_KEY = 'aggregation.no_details' \
+                           AND ndr.LANG_CODE = ?";
+    let no_details_name = "COALESCE(ndr.RESOURCE_VALUE, '')";
+    let (key, name, joins, mut binds) = match group_by {
         GroupBy::Category2 => (
-            "td.CATEGORY1_CODE || '/' || td.CATEGORY2_CODE".to_string(),
+            format!(
+                "CASE WHEN td.DETAIL_ID IS NULL THEN th.CATEGORY1_CODE || '/{nd}' \
+                 ELSE td.CATEGORY1_CODE || '/' || td.CATEGORY2_CODE END",
+                nd = NO_DETAILS_GROUP_KEY
+            ),
             "COALESCE(c2i.CATEGORY2_NAME_I18N, c2.CATEGORY2_NAME)".to_string(),
             "LEFT JOIN CATEGORY2 c2 ON td.USER_ID = c2.USER_ID \
              AND td.CATEGORY1_CODE = c2.CATEGORY1_CODE \
@@ -999,8 +1026,11 @@ fn build_detail_group_pieces(
             vec![BindValue::Str(lang.to_string())],
         ),
         GroupBy::Category3 => (
-            "td.CATEGORY1_CODE || '/' || td.CATEGORY2_CODE || '/' || td.CATEGORY3_CODE"
-                .to_string(),
+            format!(
+                "CASE WHEN td.DETAIL_ID IS NULL THEN th.CATEGORY1_CODE || '/{nd}' \
+                 ELSE td.CATEGORY1_CODE || '/' || td.CATEGORY2_CODE || '/' || td.CATEGORY3_CODE END",
+                nd = NO_DETAILS_GROUP_KEY
+            ),
             "COALESCE(c3i.CATEGORY3_NAME_I18N, c3.CATEGORY3_NAME)".to_string(),
             "LEFT JOIN CATEGORY3 c3 ON td.USER_ID = c3.USER_ID \
              AND td.CATEGORY1_CODE = c3.CATEGORY1_CODE \
@@ -1015,7 +1045,11 @@ fn build_detail_group_pieces(
             vec![BindValue::Str(lang.to_string())],
         ),
         GroupBy::Product => (
-            "CAST(COALESCE(td.PRODUCT_ID, 0) AS TEXT)".to_string(),
+            format!(
+                "CASE WHEN td.DETAIL_ID IS NULL THEN '{nd}' \
+                 ELSE CAST(COALESCE(td.PRODUCT_ID, 0) AS TEXT) END",
+                nd = NO_DETAILS_GROUP_KEY
+            ),
             // Fable-5 review #22 — empty string sentinel, swapped to
             // `i18n.t('common.unspecified')` on the frontend. See
             // the matching comment on the Shop branch above.
@@ -1027,7 +1061,16 @@ fn build_detail_group_pieces(
         _ => unreachable!(
             "build_detail_group_pieces is only valid for Category2/Category3/Product"
         ),
-    }
+    };
+    binds.push(BindValue::Str(lang.to_string()));
+    (
+        key,
+        format!(
+            "CASE WHEN td.DETAIL_ID IS NULL THEN {no_details_name} ELSE {name} END"
+        ),
+        format!("{joins}\n{no_details_join}"),
+        binds,
+    )
 }
 
 /// Build account aggregation query using UNION ALL approach
@@ -1896,7 +1939,7 @@ mod tests {
             sql
         );
         assert!(
-            !sql.contains("INNER JOIN TRANSACTIONS_DETAIL"),
+            !sql.contains("JOIN TRANSACTIONS_DETAIL"),
             "Category1 must not join TRANSACTIONS_DETAIL: {}",
             sql
         );
@@ -1951,8 +1994,8 @@ mod tests {
             sql
         );
         assert!(
-            sql.contains("INNER JOIN TRANSACTIONS_DETAIL td"),
-            "inner FROM must join TRANSACTIONS_DETAIL: {}",
+            sql.contains("LEFT JOIN TRANSACTIONS_DETAIL td"),
+            "inner FROM must LEFT JOIN TRANSACTIONS_DETAIL (detail-less headers count, latent-audit M10): {}",
             sql
         );
         assert!(
@@ -2410,6 +2453,12 @@ mod tests {
                 LANG_CODE TEXT NOT NULL,
                 CATEGORY2_NAME_I18N TEXT,
                 PRIMARY KEY (USER_ID, CATEGORY1_CODE, CATEGORY2_CODE, LANG_CODE)
+            )",
+            "CREATE TABLE I18N_RESOURCES (
+                RESOURCE_ID INTEGER PRIMARY KEY,
+                RESOURCE_KEY TEXT NOT NULL,
+                LANG_CODE TEXT NOT NULL,
+                RESOURCE_VALUE TEXT NOT NULL
             )",
             "CREATE TABLE TRANSACTIONS_HEADER (
                 USER_ID INTEGER NOT NULL,

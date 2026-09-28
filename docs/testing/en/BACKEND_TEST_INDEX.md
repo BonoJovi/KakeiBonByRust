@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-08-26 JST  
-**Total Tests**: 450 (delta-tracked; the full authoritative count from `cargo test --lib` is 688, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 453 (delta-tracked; the full authoritative count from `cargo test --lib` is 691, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -611,8 +611,11 @@ Aggregation service tests.
 | `latent_l11_weekly_week1_covers_jan1_and_matches_iso` | Week 1 covers January 1st and every week number matches ISO 8601 (the frontend's getWeekNumber) (latent-audit L11) | src/services/latent_audit/aggregation.rs | 369 |
 | `latent_l11_weekly_every_day_of_year_is_covered` | Every day of the year falls in some week 1..=53, for Monday and Sunday starts (latent-audit L11) | src/services/latent_audit/aggregation.rs | 404 |
 | `latent_l11_week_53_and_sunday_start_follow_iso_weeks` | Week 53 is rejected in a 52-week year; a Sunday-start week begins the day before the ISO week (latent-audit L11) | src/services/latent_audit/aggregation.rs | 425 |
+| `latent_m10_detailless_header_counted_in_detail_groupings` | A header without details is counted in Category2 / Category3 / Product, so each sums to the Category1 total (latent-audit M10) | src/services/latent_audit/aggregation.rs | 300 |
+| `latent_m10_detailless_group_key_and_name` | The detail-less group is keyed `<category1>/__NO_DETAILS__` (Product: `__NO_DETAILS__`) and named by `aggregation.no_details` (latent-audit M10) | src/services/latent_audit/aggregation.rs | 330 |
+| `latent_l9_category2_rounding_drift_is_bounded` | Accepted spec: Category2 groups of one split transaction may differ from Category1 by up to (groups − 1) yen (latent-audit L9) | src/services/latent_audit/aggregation.rs | 374 |
 
-**Total**: 23 tests
+**Total**: 26 tests
 
 ### services/period.rs
 
@@ -708,7 +711,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **424** |
+| **Inline Tests** | **427** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -726,13 +729,13 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/product.rs | 20 |
 | services/shop.rs | 19 |
 | services/transaction.rs | 61 |
-| services/aggregation.rs | 23 |
+| services/aggregation.rs | 26 |
 | services/period.rs | 3 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 14 |
 | lib.rs | 6 |
-| **Total** | **450** |
+| **Total** | **453** |
 
 ---
 
