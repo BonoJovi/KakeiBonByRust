@@ -137,7 +137,8 @@ async fn latent_m3_startup_removes_orphan_user_categories() {
 /// M2 (existing data): a header whose category1 was changed after its
 /// details were entered is set back to the details' category1 at startup,
 /// with its account moved to the side that category uses. A header whose
-/// details mix category1 values, and a consistent header, are left alone.
+/// details mix category1 values, one whose details are a transfer (its
+/// other account is unknown), and a consistent header are left alone.
 #[tokio::test]
 async fn latent_m2_startup_repairs_header_category1_mismatch() {
     let db = memory_db().await;
@@ -148,6 +149,7 @@ async fn latent_m2_startup_repairs_header_category1_mismatch() {
         "INSERT INTO USERS (USER_ID, NAME, PAW, ROLE, ENTRY_DT) VALUES (2, 'latent_user', 'hash', 1, datetime('now'))",
         "INSERT INTO CATEGORY1 (USER_ID, CATEGORY1_CODE, DISPLAY_ORDER, CATEGORY1_NAME, ENTRY_DT) VALUES (2, 'EXPENSE', 1, '支出', datetime('now'))",
         "INSERT INTO CATEGORY1 (USER_ID, CATEGORY1_CODE, DISPLAY_ORDER, CATEGORY1_NAME, ENTRY_DT) VALUES (2, 'INCOME', 2, '収入', datetime('now'))",
+        "INSERT INTO CATEGORY1 (USER_ID, CATEGORY1_CODE, DISPLAY_ORDER, CATEGORY1_NAME, ENTRY_DT) VALUES (2, 'TRANSFER', 3, '振替', datetime('now'))",
         "INSERT INTO ACCOUNTS (USER_ID, ACCOUNT_CODE, ACCOUNT_NAME, TEMPLATE_CODE) VALUES (2, 'NONE', '指定なし', 'NONE')",
         "INSERT INTO ACCOUNTS (USER_ID, ACCOUNT_CODE, ACCOUNT_NAME, TEMPLATE_CODE) VALUES (2, 'CASH', '現金', 'CASH')",
     ] {
@@ -191,6 +193,10 @@ async fn latent_m2_startup_repairs_header_category1_mismatch() {
     // Consistent.
     let consistent = header(pool, "EXPENSE", "CASH", "NONE").await;
     detail(pool, consistent, "EXPENSE").await;
+    // Details are a transfer, but the expense header holds only FROM: the
+    // transfer's destination is unknown, so it is not repaired.
+    let to_transfer = header(pool, "EXPENSE", "CASH", "NONE").await;
+    detail(pool, to_transfer, "TRANSFER").await;
 
     // Next app start.
     run_startup(&db).await;
@@ -219,31 +225,38 @@ async fn latent_m2_startup_repairs_header_category1_mismatch() {
         header_row(consistent).await,
         ("EXPENSE".to_string(), "CASH".to_string(), "NONE".to_string())
     );
+    assert_eq!(
+        header_row(to_transfer).await,
+        ("EXPENSE".to_string(), "CASH".to_string(), "NONE".to_string()),
+        "a header that would become a transfer with an unknown destination is left alone"
+    );
 }
 
-/// M2: the account moves to the side the new category1 uses.
+/// M2: the account moves to the side the new category1 uses; a header that
+/// would become a transfer is not repaired (its other account is unknown).
 #[test]
 fn latent_m2_accounts_follow_category1_side() {
     let s = |v: &str| v.to_string();
     assert_eq!(
         accounts_for_category1_change("INCOME", "EXPENSE", s("NONE"), s("CASH")),
-        (s("CASH"), s("NONE"))
+        Some((s("CASH"), s("NONE")))
     );
     assert_eq!(
         accounts_for_category1_change("EXPENSE", "INCOME", s("CASH"), s("NONE")),
-        (s("NONE"), s("CASH"))
+        Some((s("NONE"), s("CASH")))
     );
     assert_eq!(
         accounts_for_category1_change("TRANSFER", "EXPENSE", s("BANK"), s("CASH")),
-        (s("BANK"), s("NONE"))
+        Some((s("BANK"), s("NONE")))
     );
     assert_eq!(
         accounts_for_category1_change("TRANSFER", "INCOME", s("BANK"), s("CASH")),
-        (s("NONE"), s("CASH"))
+        Some((s("NONE"), s("CASH")))
     );
     assert_eq!(
         accounts_for_category1_change("EXPENSE", "TRANSFER", s("CASH"), s("NONE")),
-        (s("CASH"), s("NONE")),
-        "turning into a transfer keeps both sides as they were"
+        None,
+        "a transfer needs both accounts; an expense header had only one"
     );
+    assert_eq!(accounts_for_category1_change("INCOME", "TRANSFER", s("NONE"), s("CASH")), None);
 }

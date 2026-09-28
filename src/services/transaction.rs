@@ -1363,10 +1363,19 @@ impl TransactionService {
         // `delete_transaction_detail` already do the equivalent check via
         // `fetch_optional` on the existing detail row (see below); this
         // brings `add` to the same standard so the three CRUD paths are
-        // symmetric. It runs inside the tx below, before MEMO_INSERT, so a
-        // rejected add cannot leave an orphaned MEMOS row behind and the
-        // header's category1 cannot change between the check and the insert
-        // (latent-audit M2).
+        // symmetric. Runs before MEMO_INSERT so a rejected add cannot leave
+        // an orphaned MEMOS row behind. Read on the pool rather than inside
+        // the tx below: a read before the tx's first write would make that
+        // write fail with SQLITE_BUSY_SNAPSHOT if another write landed in
+        // between.
+        let header_category1: String =
+            sqlx::query_scalar(sql_queries::TRANSACTION_HEADER_CATEGORY1_FOR_USER)
+                .bind(transaction_id)
+                .bind(user_id)
+                .fetch_optional(&self.pool)
+                .await?
+                .ok_or(TransactionError::NotFound)?;
+        ensure_detail_category1_matches(&request.category1_code, &header_category1)?;
 
         // Fable-5 review #7 — the two writes below (MEMO insert +
         // TRANSACTIONS_DETAIL insert) used to run on separate pool
@@ -1385,15 +1394,6 @@ impl TransactionService {
         // the MEMO insert only becomes visible when the DETAIL insert
         // also succeeds.
         let mut tx = self.pool.begin().await?;
-
-        let header_category1: String =
-            sqlx::query_scalar(sql_queries::TRANSACTION_HEADER_CATEGORY1_FOR_USER)
-                .bind(transaction_id)
-                .bind(user_id)
-                .fetch_optional(&mut *tx)
-                .await?
-                .ok_or(TransactionError::NotFound)?;
-        ensure_detail_category1_matches(&request.category1_code, &header_category1)?;
 
         let memo_id = Self::get_or_create_memo_id_in_tx(
             &mut tx,

@@ -771,7 +771,9 @@ impl Database {
     /// category2/3 belong to their category1, so the header is set back to
     /// the details' category1, and its account moves to the side that
     /// category uses (expense: FROM, income: TO). Headers whose details mix
-    /// category1 values are left alone. A no-op once nothing disagrees.
+    /// category1 values are left alone, and so are headers whose details are
+    /// a transfer: an income / expense header holds only one account, and a
+    /// transfer needs both. A no-op once nothing disagrees.
     async fn repair_header_category1_mismatch(&self) -> Result<(), sqlx::Error> {
         let rows: Vec<(i64, String, String, String, String)> =
             sqlx::query_as(sql_queries::TRANSACTION_HEADERS_WITH_CATEGORY1_MISMATCH)
@@ -783,12 +785,14 @@ impl Database {
 
         let mut tx = self.pool.begin().await?;
         for (transaction_id, header_category1, from_account, to_account, detail_category1) in rows {
-            let (from_account, to_account) = accounts_for_category1_change(
+            let Some((from_account, to_account)) = accounts_for_category1_change(
                 &header_category1,
                 &detail_category1,
                 from_account,
                 to_account,
-            );
+            ) else {
+                continue;
+            };
             sqlx::query(sql_queries::TRANSACTION_HEADER_SET_CATEGORY1_AND_ACCOUNTS)
                 .bind(&detail_category1)
                 .bind(&from_account)
@@ -817,21 +821,24 @@ impl Database {
 }
 
 /// Move a header's account to the side its new category1 uses: an expense
-/// spends from FROM, an income arrives in TO, and a transfer uses both.
-/// The side a category does not use is the NONE account.
+/// spends from FROM, an income arrives in TO. The side a category does not
+/// use is the NONE account. `None` when the accounts cannot be derived:
+/// becoming a transfer needs both accounts, which a header that was an
+/// income / expense never had.
 fn accounts_for_category1_change(
     old_category1: &str,
     new_category1: &str,
     from_account: String,
     to_account: String,
-) -> (String, String) {
+) -> Option<(String, String)> {
     const NONE: &str = "NONE";
     match (old_category1, new_category1) {
-        ("INCOME", "EXPENSE") => (to_account, NONE.to_string()),
-        ("EXPENSE", "INCOME") => (NONE.to_string(), from_account),
-        ("TRANSFER", "EXPENSE") => (from_account, NONE.to_string()),
-        ("TRANSFER", "INCOME") => (NONE.to_string(), to_account),
-        _ => (from_account, to_account),
+        ("INCOME", "EXPENSE") => Some((to_account, NONE.to_string())),
+        ("EXPENSE", "INCOME") => Some((NONE.to_string(), from_account)),
+        ("TRANSFER", "EXPENSE") => Some((from_account, NONE.to_string())),
+        ("TRANSFER", "INCOME") => Some((NONE.to_string(), to_account)),
+        (_, "TRANSFER") => None,
+        _ => Some((from_account, to_account)),
     }
 }
 
