@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-09-27 JST  
-**総テスト数**: 828件 (jest suite 47 ファイル、`npm test` 実測)
+**総テスト数**: 829件 (jest suite 48 ファイル、`npm test` 実測)
 
 ---
 
@@ -51,6 +51,7 @@
   - [pages/transaction-management-disabled-shop.test.js](#pagestransaction-management-disabled-shoptestjs)
   - [pages/account-management-disabled.test.js](#pagesaccount-management-disabledtestjs)
   - [pages/transaction-management-disabled-account.test.js](#pagestransaction-management-disabled-accounttestjs)
+  - [pages/transaction-management-category1-has-details.test.js](#pagestransaction-management-category1-has-detailstestjs)
   - [pages/aggregation-monthly-page.test.js](#pagesaggregation-monthly-pagetestjs)
   - [pages/aggregation-yearly-total-count.test.js](#pagesaggregation-yearly-total-counttestjs)
   - [pages/index-setup-page.test.js](#pagesindex-setup-pagetestjs)
@@ -877,6 +878,20 @@
 
 ---
 
+### pages/transaction-management-category1-has-details.test.js
+
+明細がある取引の大分類変更の回帰テスト (潜在監査 M2)。ヘッダーの大分類だけが変わり、収入の明細が支出の円グラフに混ざっていた。
+
+**テスト数**: 1件
+
+| テスト | 説明 |
+|--------|------|
+| `[M2] should explain why the category cannot change and keep the modal open` | バックエンドの `category1_has_details` を受けて `transaction_mgmt.category1_has_details` を表示し、モーダルを開いたままにする |
+
+**ファイル**: res/tests/pages/transaction-management-category1-has-details.test.js
+
+---
+
 ### pages/aggregation-monthly-page.test.js
 
 実際の月次集計画面の回帰テスト (潜在監査 M11 / M12)。
@@ -1149,7 +1164,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **405件** |
+| **機能別テスト** | **406件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 29 |
@@ -1179,6 +1194,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | pages/transaction-management-disabled-shop.test.js | 2 |
 | pages/account-management-disabled.test.js | 4 |
 | pages/transaction-management-disabled-account.test.js | 2 |
+| pages/transaction-management-category1-has-details.test.js | 1 |
 | pages/aggregation-monthly-page.test.js | 5 |
 | pages/aggregation-yearly-total-count.test.js | 1 |
 | pages/index-setup-page.test.js | 3 |
@@ -1192,7 +1208,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **828件** |
+| **総計 (jest)** | **829件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 

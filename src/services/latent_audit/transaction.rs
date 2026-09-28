@@ -287,14 +287,13 @@ async fn latent_m1_update_header_persists_is_scheduled() {
 }
 
 // ============================================================================
-// M2 (仕様確認待ち)
+// M2
 // ============================================================================
 
-/// M2 (仕様確認待ち): ヘッダーの CATEGORY1 変更が明細の CATEGORY1_CODE に追従しない。
-/// Expected: 更新後、ヘッダーと全明細の CATEGORY1_CODE が一致する
-/// (明細へ伝播する / 明細があれば更新を拒否する、のどちらでも可。不整合状態だけを拒否)。
+/// M2: ヘッダーの CATEGORY1 変更が明細の CATEGORY1_CODE に追従せず、収入の明細が支出の円グラフに混ざる。
+/// 仕様 (2026-09-28): 明細があるヘッダーは大分類を変更できない (`Category1HasDetails`)。
+/// Expected: 更新は拒否され、ヘッダーと全明細の CATEGORY1_CODE は一致したまま。
 #[tokio::test]
-#[ignore = "latent-audit M2"]
 async fn latent_m2_header_category1_change_keeps_details_consistent() {
     let pool = setup_test_db().await;
     sqlx::query("INSERT INTO CATEGORY1 (USER_ID, CATEGORY1_CODE, CATEGORY1_NAME) VALUES (2, 'INCOME', '収入')")
@@ -313,7 +312,11 @@ async fn latent_m2_header_category1_change_keeps_details_consistent() {
 
     let mut req = header_request(1080, consts::TAX_ROUND_DOWN, consts::TAX_EXCLUDED);
     req.category1_code = "INCOME".to_string();
-    let _ = service.update_transaction_header(USER, txn_id, req).await; // Ok or Err both acceptable
+    let err = service
+        .update_transaction_header(USER, txn_id, req)
+        .await
+        .expect_err("changing category1 of a header with details must be refused");
+    assert!(matches!(err, TransactionError::Category1HasDetails), "{:?}", err);
 
     let header = service.get_transaction_header(USER, txn_id).await.unwrap();
     let detail_codes: Vec<String> =
@@ -329,6 +332,73 @@ async fn latent_m2_header_category1_change_keeps_details_consistent() {
             "detail CATEGORY1_CODE must match header after category1 update"
         );
     }
+}
+
+/// M2: a header without details can still change its category1.
+#[tokio::test]
+async fn latent_m2_header_without_details_can_change_category1() {
+    let pool = setup_test_db().await;
+    sqlx::query("INSERT INTO CATEGORY1 (USER_ID, CATEGORY1_CODE, CATEGORY1_NAME) VALUES (2, 'INCOME', '収入')")
+        .execute(&pool)
+        .await
+        .unwrap();
+    let service = TransactionService::new(pool.clone());
+    let txn_id = service
+        .save_transaction_header(USER, header_request(1080, consts::TAX_ROUND_DOWN, consts::TAX_EXCLUDED))
+        .await
+        .unwrap();
+
+    let mut req = header_request(1080, consts::TAX_ROUND_DOWN, consts::TAX_EXCLUDED);
+    req.category1_code = "INCOME".to_string();
+    service.update_transaction_header(USER, txn_id, req).await.expect("no details: allowed");
+
+    let header = service.get_transaction_header(USER, txn_id).await.unwrap();
+    assert_eq!(header.category1_code, "INCOME");
+}
+
+/// M2: a detail always carries its header's category1, so a detail cannot
+/// be added or edited with a different one (only reachable by a direct
+/// `invoke`; the detail screen takes category1 from the header).
+#[tokio::test]
+async fn latent_m2_detail_category1_must_match_header() {
+    let pool = setup_test_db().await;
+    sqlx::query("INSERT INTO CATEGORY1 (USER_ID, CATEGORY1_CODE, CATEGORY1_NAME) VALUES (2, 'INCOME', '収入')")
+        .execute(&pool)
+        .await
+        .unwrap();
+    let service = TransactionService::new(pool.clone());
+    let txn_id = service
+        .save_transaction_header(USER, header_request(1080, consts::TAX_ROUND_DOWN, consts::TAX_EXCLUDED))
+        .await
+        .unwrap();
+
+    let mut income_detail = detail_request(1000, 8, 80, Some(1080));
+    income_detail.category1_code = "INCOME".to_string();
+    let err = service
+        .add_transaction_detail(USER, txn_id, income_detail)
+        .await
+        .expect_err("a detail with another category1 must be refused");
+    assert!(matches!(err, TransactionError::ValidationError(_)), "{:?}", err);
+
+    let detail_id = service
+        .add_transaction_detail(USER, txn_id, detail_request(1000, 8, 80, Some(1080)))
+        .await
+        .unwrap();
+    let mut income_detail = detail_request(1000, 8, 80, Some(1080));
+    income_detail.category1_code = "INCOME".to_string();
+    let err = service
+        .update_transaction_detail(USER, detail_id, income_detail)
+        .await
+        .expect_err("editing a detail onto another category1 must be refused");
+    assert!(matches!(err, TransactionError::ValidationError(_)), "{:?}", err);
+
+    let codes: Vec<String> =
+        sqlx::query_scalar("SELECT CATEGORY1_CODE FROM TRANSACTIONS_DETAIL WHERE TRANSACTION_ID = ?")
+            .bind(txn_id)
+            .fetch_all(&pool)
+            .await
+            .unwrap();
+    assert_eq!(codes, vec!["EXPENSE".to_string()]);
 }
 
 // ============================================================================

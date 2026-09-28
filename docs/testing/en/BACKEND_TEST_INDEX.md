@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-08-26 JST  
-**Total Tests**: 450 (delta-tracked; the full authoritative count from `cargo test --lib` is 688, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 455 (delta-tracked; the full authoritative count from `cargo test --lib` is 693, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -193,8 +193,10 @@ Database initialization and migration tests.
 | `user_delete_cascades_to_shops_after_migration` | End-to-end guarantee: after the cascade migration, deleting a user with SHOPS rows succeeds and takes those rows with it — the pre-fix DELETE aborted with `FOREIGN KEY constraint failed` (Fable-5 #11) | src/db.rs | 1823 |
 | `latent_h5_migration_backfills_null_amount_including_tax` | Startup migration backfills NULL AMOUNT_INCLUDING_TAX from AMOUNT + TAX_AMOUNT (latent-audit H5) | src/latent_audit/db.rs | 33 |
 | `latent_m3_startup_removes_orphan_user_categories` | Startup cleanup removes category rows of deleted users and keeps live users' (latent-audit M3) | src/latent_audit/db.rs | 106 |
+| `latent_m2_startup_repairs_header_category1_mismatch` | Startup sets a header whose category1 disagrees with its details back to the details' category1 and moves its account to that side; mixed-detail and consistent headers are left alone (latent-audit M2) | src/latent_audit/db.rs | 142 |
+| `latent_m2_accounts_follow_category1_side` | The account moves to the side the new category1 uses (expense: FROM, income: TO) (latent-audit M2) | src/latent_audit/db.rs | 226 |
 
-**Total**: 14 tests
+**Total**: 16 tests
 
 ### settings.rs
 
@@ -567,6 +569,9 @@ Transaction management service tests.
 | `latent_m9_restore_reverts_tax_settings_changed_by_recalc` | Rollback restores the tax settings the recalc changed, not only TOTAL_AMOUNT (latent-audit M9) | src/services/latent_audit/transaction.rs | 341 |
 | `latent_m9_restore_keeps_edits_made_after_recalc` | Rollback leaves a header the recalc did not change (and the user edited afterwards) alone (latent-audit M9) | src/services/latent_audit/transaction.rs | 380 |
 | `latent_m9_restore_keeps_edit_on_a_header_the_recalc_changed` | A header the recalc changed and the user then edited keeps the edit (latent-audit M9) | src/services/latent_audit/transaction.rs | 414 |
+| `latent_m2_header_category1_change_keeps_details_consistent` | Changing the category1 of a header with details is refused (`Category1HasDetails`); header and details stay consistent (latent-audit M2) | src/services/latent_audit/transaction.rs | 297 |
+| `latent_m2_header_without_details_can_change_category1` | A header without details can still change its category1 (latent-audit M2) | src/services/latent_audit/transaction.rs | 339 |
+| `latent_m2_detail_category1_must_match_header` | A detail cannot be added or edited with a category1 other than its header's (latent-audit M2) | src/services/latent_audit/transaction.rs | 363 |
 | `latent_m9_restore_without_journal_is_rejected` | Rollback without the change journal next to the backup is rejected and changes nothing (latent-audit M9) | src/services/latent_audit/transaction.rs | 451 |
 | `latent_l4_restore_detaches_backup_when_update_fails` | A failed rollback leaves no `recalc_backup` attached (resolved by M9: rollback no longer ATTACHes the backup) (latent-audit L4) | src/services/latent_audit/transaction.rs | 657 |
 | `latent_m9_back_to_back_recalcs_keep_separate_journals` | Two recalc runs in quick succession get separate backups / journals, so the first stays restorable (latent-audit M9) | src/services/latent_audit/transaction.rs | 452 |
@@ -580,7 +585,7 @@ Transaction management service tests.
 | `latent_l3_failed_detail_update_rolls_back_memo_change` | A detail update that fails rolls back its memo change too (memo handling runs in the same transaction) (latent-audit L3) | src/services/latent_audit/transaction.rs | 674 |
 | `latent_l3_in_place_memo_update_is_trimmed` | An in-place memo update stores the trimmed text, matching memo dedup (latent-audit L3) | src/services/latent_audit/transaction.rs | 702 |
 
-**Total**: 61 tests
+**Total**: 64 tests
 
 ### services/aggregation.rs
 
@@ -708,11 +713,11 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **424** |
+| **Inline Tests** | **429** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
-| db.rs | 14 |
+| db.rs | 16 |
 | settings.rs | 18 |
 | api_error.rs | 10 |
 | services/master_data.rs | 4 |
@@ -725,14 +730,14 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/manufacturer.rs | 17 |
 | services/product.rs | 20 |
 | services/shop.rs | 19 |
-| services/transaction.rs | 61 |
+| services/transaction.rs | 64 |
 | services/aggregation.rs | 23 |
 | services/period.rs | 3 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 14 |
 | lib.rs | 6 |
-| **Total** | **450** |
+| **Total** | **455** |
 
 ---
 
