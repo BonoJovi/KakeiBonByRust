@@ -49,3 +49,9 @@ export const MAX_I18N_NAME_LEN = 256;   // category i18n names
 export const MAX_ITEM_NAME_LEN = 200;   // transaction detail item_name, recurring rule detail item_name
 export const MAX_RULE_NAME_LEN = 200;   // recurring rule name
 export const MAX_MEMO_LEN = 1000;       // memo fields (transactions, recurring rules, shops, etc.)
+
+// Years of holidays seeded at startup, relative to the current year; a
+// recurring rule may only span them (latent-audit M15 / M18). Mirrors
+// consts::HOLIDAY_SEED_YEARS_BACK / _AHEAD in src/consts.rs.
+export const HOLIDAY_SEED_YEARS_BACK = 5;
+export const HOLIDAY_SEED_YEARS_AHEAD = 10;

@@ -8,11 +8,15 @@ import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
 import { createMenuBar, setupLanguageMenu, setupLanguageMenuHandlers } from './menu.js';
 import { setupTaxCalculationListeners } from './detail-tax-calc.js';
 import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
-import { MAX_RULE_NAME_LEN, MAX_ITEM_NAME_LEN, MAX_MEMO_LEN } from './consts.js';
+import {
+    MAX_RULE_NAME_LEN, MAX_ITEM_NAME_LEN, MAX_MEMO_LEN,
+    HOLIDAY_SEED_YEARS_BACK, HOLIDAY_SEED_YEARS_AHEAD,
+} from './consts.js';
 import { formatApiError, API_ERROR_CODES } from './master-crud.js';
 import { singleFlight } from './single-flight.js';
 import { parseAmountStrict } from './parse-amount-strict.js';
 import { formatLocalDate } from './format-local-date.js';
+import { calculateRecommendedTotal } from './tax-calc.js';
 
 console.log('=== RECURRING-RULE.JS LOADED ===');
 
@@ -53,6 +57,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         setupCycleKindToggle();
         setupCategoryChainHandlers();
         setupDetailTaxCalculation();
+        setupDerivedTotal();
         setupBoundedFieldCounters();
         setupFormSubmit();
         setupResetButton();
@@ -71,6 +76,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         const oneYearLater = new Date(today.getFullYear() + 1, today.getMonth(), today.getDate());
         document.getElementById('start-date').value = formatLocalDate(today);
         document.getElementById('end-date').value = formatLocalDate(oneYearLater);
+        // A rule may only span the years with holiday data (latent-audit
+        // M15 / M18); the date pickers stop at the bounds the backend enforces.
+        applyPeriodLimits(await loadPeriodLimits());
         document.getElementById('anchor-date').value = formatLocalDate(today);
 
         await fitWindowToScreen();
@@ -180,6 +188,13 @@ function updateCycleVisibility() {
     const isMonthNth = isMonth && monthlyMode === 'NTH_WEEKDAY';
 
     document.getElementById('anchor-date-group').classList.toggle('visible', isDay);
+    // Latent-audit L13 — a daily rule has no holiday shift: moving a daily
+    // occurrence off a holiday lands it on a day that already has one.
+    const holidayShift = document.getElementById('holiday-shift-type');
+    if (holidayShift) {
+        if (isDay) holidayShift.value = '0';
+        holidayShift.disabled = isDay;
+    }
     document.getElementById('monthly-mode-group').classList.toggle('visible', isMonth);
     document.getElementById('day-of-month-group').classList.toggle('visible', isMonthDay);
     document.getElementById('week-of-month-group').classList.toggle('visible', isMonthNth);
@@ -262,6 +277,41 @@ function setupDetailTaxCalculation() {
     );
 }
 
+// ----- Total derived from the detail (latent-audit M17) -----
+
+// The rule has exactly one detail, so its total is that detail's price under
+// the header's rounding / tax-included settings — the same value the Rust
+// side stores. The field is read-only; it used to be typed separately,
+// defaulted to 0, and was never checked against the detail.
+function updateDerivedTotal() {
+    const amount = parseAmountStrict(document.getElementById('amount-excluding-tax').value);
+    const taxRate = parseAmountStrict(document.getElementById('tax-rate').value);
+    const includingRaw = document.getElementById('amount-including-tax').value.trim();
+    const including = includingRaw === '' ? null : parseAmountStrict(includingRaw);
+    const totalInput = document.getElementById('total-amount');
+    if (amount === null || taxRate === null || (includingRaw !== '' && including === null)) {
+        totalInput.value = '';
+        return;
+    }
+    totalInput.value = calculateRecommendedTotal(
+        [{ amount, amount_including_tax: including, tax_rate: taxRate }],
+        parseInt(document.getElementById('tax-rounding-type').value, 10) || 0,
+        parseInt(document.getElementById('tax-included-type').value, 10),
+    );
+}
+
+function setupDerivedTotal() {
+    // Registered after setupDetailTaxCalculation(), so the tax fields it
+    // fills in are already updated when these handlers run.
+    for (const id of ['amount-excluding-tax', 'amount-including-tax', 'tax-amount', 'tax-rate']) {
+        document.getElementById(id)?.addEventListener('input', updateDerivedTotal);
+    }
+    for (const id of ['tax-rate', 'tax-rounding-type', 'tax-included-type']) {
+        document.getElementById(id)?.addEventListener('change', updateDerivedTotal);
+    }
+    updateDerivedTotal();
+}
+
 // ----- Form submit -----
 
 function setupFormSubmit() {
@@ -282,8 +332,12 @@ function setupFormSubmit() {
         let dayOfWeek = null;
         if (cycleKind === 'MONTH') {
             if (monthlyMode === 'DAY') {
-                monthDayRuleType = 'DAY';
+                // Latent-audit M14 — a day the month does not have (29–31)
+                // falls on the month's last day instead of being skipped.
+                monthDayRuleType = 'DAY_OR_END';
                 dayOfMonth = parseInt(document.getElementById('day-of-month').value, 10);
+            } else if (monthlyMode === 'END') {
+                monthDayRuleType = 'END';
             } else if (monthlyMode === 'NTH_WEEKDAY') {
                 monthDayRuleType = 'NTH_WEEKDAY';
                 weekOfMonth = parseInt(document.getElementById('week-of-month').value, 10);
@@ -294,21 +348,18 @@ function setupFormSubmit() {
         // Fable-5 review #10 — money fields on this form used to be
         // read with `parseInt(el.value) || 0` (or `intOrNull`), which
         // silently truncated decimals and locale-comma inputs. The
-        // five money / rate fields are now parsed with the strict
+        // money / rate fields are now parsed with the strict
         // helper up front; a rejection surfaces a field-level error
         // and aborts before we build the request.
-        const totalAmountInput = document.getElementById('total-amount');
         const amountExcludingTaxInput = document.getElementById('amount-excluding-tax');
         const taxAmountInput = document.getElementById('tax-amount');
         const taxRateInput = document.getElementById('tax-rate');
         const amountIncludingTaxInput = document.getElementById('amount-including-tax');
-        clearValidationError(totalAmountInput);
         clearValidationError(amountExcludingTaxInput);
         clearValidationError(taxAmountInput);
         clearValidationError(taxRateInput);
         clearValidationError(amountIncludingTaxInput);
 
-        const totalAmount = parseAmountStrict(totalAmountInput.value);
         const amountExcludingTax = parseAmountStrict(amountExcludingTaxInput.value);
         const taxAmount = parseAmountStrict(taxAmountInput.value);
         const taxRate = parseAmountStrict(taxRateInput.value);
@@ -320,10 +371,6 @@ function setupFormSubmit() {
             ? null
             : parseAmountStrict(amountIncludingTaxRaw);
 
-        if (totalAmount === null) {
-            showValidationError(totalAmountInput, i18n.t('common.error_amount_not_integer'));
-            return;
-        }
         if (amountExcludingTax === null) {
             showValidationError(amountExcludingTaxInput, i18n.t('common.error_amount_not_integer'));
             return;
@@ -354,6 +401,17 @@ function setupFormSubmit() {
             return;
         }
 
+        // Latent-audit M15 / M18 — the period must stay within the years
+        // with holiday data; the Rust side enforces the same bounds.
+        const limits = await loadPeriodLimits();
+        applyPeriodLimits(limits);
+        const startDate = document.getElementById('start-date').value;
+        const endDate = document.getElementById('end-date').value;
+        if (startDate < limits.min || endDate > limits.max) {
+            showResult('error', periodOutOfRangeMessage(limits.min, limits.max));
+            return;
+        }
+
         const request = {
             rule_name: stringOrNull(document.getElementById('rule-name').value),
             period_unit: cycleKind,
@@ -373,7 +431,6 @@ function setupFormSubmit() {
             category1_code: document.getElementById('category1').value,
             from_account_code: document.getElementById('from-account').value,
             to_account_code: document.getElementById('to-account').value,
-            total_amount: totalAmount,
             tax_rounding_type: parseInt(document.getElementById('tax-rounding-type').value, 10),
             tax_included_type: parseInt(document.getElementById('tax-included-type').value, 10),
             header_memo: stringOrNull(document.getElementById('header-memo').value),
@@ -490,16 +547,64 @@ function setupFormSubmit() {
                 return;
             }
 
+            if (err && typeof err === 'object'
+                && err.code === API_ERROR_CODES.RECURRING_PERIOD_OUT_OF_RANGE) {
+                const limits = await loadPeriodLimits();
+                applyPeriodLimits(limits);
+                showResult('error', periodOutOfRangeMessage(limits.min, limits.max));
+                return;
+            }
+
             const prefix = i18n.t('recurring_rule.create_failed') || 'Failed to create rule:';
             showResult('error', `${prefix} ${formatApiError(err)}`);
         }
     }));
 }
 
+// First and last date (YYYY-MM-DD) a recurring rule may cover, as the
+// backend enforces them (latent-audit M15 / M18): the seeded holiday years,
+// which can lag the calendar when the app runs across New Year. Asked on
+// every use so the pickers, the pre-check and the message stay in step with
+// the backend; the local calculation is only a fallback.
+async function loadPeriodLimits() {
+    try {
+        const limits = await invoke('get_recurring_period_limits');
+        return { min: limits.first, max: limits.last };
+    } catch (error) {
+        console.warn('Failed to load recurring period limits, using the local calculation:', error);
+        return recurringPeriodLimits(new Date());
+    }
+}
+
+// Keep the date pickers on the latest bounds, so a date they offer is never
+// one the pre-check or the backend then rejects.
+function applyPeriodLimits(limits) {
+    for (const id of ['start-date', 'end-date']) {
+        const input = document.getElementById(id);
+        input.min = limits.min;
+        input.max = limits.max;
+    }
+}
+
+// Local fallback for loadPeriodLimits(): the years whose holidays are seeded
+// at startup, counted from this year.
+function recurringPeriodLimits(today) {
+    const year = today.getFullYear();
+    return {
+        min: `${year - HOLIDAY_SEED_YEARS_BACK}-01-01`,
+        max: `${year + HOLIDAY_SEED_YEARS_AHEAD}-12-31`,
+    };
+}
+
+function periodOutOfRangeMessage(min, max) {
+    return i18n.t('recurring_rule.period_out_of_range', { start: min, end: max });
+}
+
 function setupResetButton() {
     document.getElementById('reset-btn').addEventListener('click', () => {
         document.getElementById('recurring-rule-form').reset();
         hideResult();
+        updateDerivedTotal();
         // form.reset() does not fire 'input', so refresh counters manually.
         ['rule-name', 'header-memo', 'item-name', 'detail-memo'].forEach((id) => {
             const el = document.getElementById(id);

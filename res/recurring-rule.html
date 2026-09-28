@@ -110,6 +110,7 @@
                                 <label data-i18n="recurring_rule.monthly_mode">Monthly day rule:</label>
                                 <div class="cycle-radios">
                                     <label><input type="radio" name="monthly-mode" value="DAY" checked /> <span data-i18n="recurring_rule.monthly_mode_day_of_month">Day of month</span></label>
+                                    <label><input type="radio" name="monthly-mode" value="END" /> <span data-i18n="recurring_rule.monthly_mode_end_of_month">End of month</span></label>
                                     <label><input type="radio" name="monthly-mode" value="NTH_WEEKDAY" /> <span data-i18n="recurring_rule.monthly_mode_nth_weekday">Nth weekday</span></label>
                                 </div>
                             </div>
@@ -119,6 +120,7 @@
                                 <div class="input-wrapper">
                                     <input type="number" id="day-of-month" min="1" max="31" />
                                 </div>
+                                <small id="day-of-month-hint" data-i18n="recurring_rule.day_of_month_or_end_hint">In a month without that day, the last day of the month is used.</small>
                             </div>
 
                             <div class="form-group conditional" id="week-of-month-group">
@@ -211,7 +213,8 @@
                             <div class="form-group">
                                 <label for="total-amount" data-i18n="recurring_rule.total_amount">Total amount:</label>
                                 <div class="input-wrapper">
-                                    <input type="number" id="total-amount" min="0" max="999999999" value="0" required />
+                                    <!-- Derived from the detail (latent-audit M17); not typed -->
+                                    <input type="number" id="total-amount" value="0" readonly tabindex="-1" />
                                 </div>
                             </div>
 

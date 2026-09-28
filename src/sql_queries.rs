@@ -1024,6 +1024,12 @@ CREATE TABLE IF NOT EXISTS TRANSACTIONS_HEADER (
 )
 "#;
 
+/// First and last seeded Japanese holiday (YYYY-MM-DD); both NULL when none
+/// are seeded. Bounds the years a recurring rule may cover (latent-audit
+/// M15).
+pub const HOLIDAYS_STANDARD_JP_DATE_RANGE: &str =
+    "SELECT MIN(HOLIDAY_DATE), MAX(HOLIDAY_DATE) FROM HOLIDAYS_STANDARD WHERE LOCALE = 'JP'";
+
 /// Does the transaction have any detail? Binds: (transaction_id).
 pub const TRANSACTION_HAS_DETAILS: &str =
     "SELECT EXISTS (SELECT 1 FROM TRANSACTIONS_DETAIL WHERE TRANSACTION_ID = ?)";

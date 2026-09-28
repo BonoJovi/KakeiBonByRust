@@ -551,6 +551,23 @@ pub enum RecurringError {
     /// (latent-audit M16). Mapped to the same `transfer_same_account` code
     /// the transaction screen uses, so the UI can show its i18n message.
     TransferSameAccount,
+    /// The rule's start / end date is outside the years with seeded holiday
+    /// data, `first..=last` (latent-audit M15 / M18).
+    PeriodOutOfRange { first: NaiveDate, last: NaiveDate },
+}
+
+/// The first and last date a recurring rule may cover: the years whose
+/// holidays are seeded at startup (consts::HOLIDAY_SEED_YEARS_*). Outside
+/// them a holiday shift would silently find no holidays (latent-audit M15),
+/// and the cap bounds how many occurrences one rule can generate
+/// (latent-audit M18).
+pub fn recurring_period_limits(today: NaiveDate) -> (NaiveDate, NaiveDate) {
+    let first_year = today.year() - consts::HOLIDAY_SEED_YEARS_BACK;
+    let last_year = today.year() + consts::HOLIDAY_SEED_YEARS_AHEAD;
+    (
+        NaiveDate::from_ymd_opt(first_year, 1, 1).unwrap_or(NaiveDate::MIN),
+        NaiveDate::from_ymd_opt(last_year, 12, 31).unwrap_or(NaiveDate::MAX),
+    )
 }
 
 impl std::fmt::Display for RecurringError {
@@ -561,6 +578,9 @@ impl std::fmt::Display for RecurringError {
             RecurringError::NotFound => write!(f, "Recurring rule not found"),
             RecurringError::TransferSameAccount => {
                 write!(f, "Transfer source and destination accounts must differ")
+            }
+            RecurringError::PeriodOutOfRange { first, last } => {
+                write!(f, "The rule period must be between {} and {}", first, last)
             }
         }
     }
@@ -593,6 +613,12 @@ impl From<RecurringError> for ApiError {
             RecurringError::NotFound => ApiError::not_found(ENTITY_LABEL),
             RecurringError::Validation(msg) => ApiError::validation(msg),
             RecurringError::TransferSameAccount => ApiError::transfer_same_account(),
+            RecurringError::PeriodOutOfRange { first, last } => {
+                ApiError::recurring_period_out_of_range(
+                    &first.format("%Y-%m-%d").to_string(),
+                    &last.format("%Y-%m-%d").to_string(),
+                )
+            }
             RecurringError::Database(e) => ApiError::database(e.to_string()),
         }
     }
@@ -619,7 +645,7 @@ pub struct SaveRecurringRuleRequest {
     pub category1_code: String,
     pub from_account_code: String,
     pub to_account_code: String,
-    pub total_amount: i64,
+    // No total: it is derived from the detail (latent-audit M17).
     pub tax_rounding_type: i64,
     pub tax_included_type: i64,
     pub header_memo: Option<String>,
@@ -678,6 +704,28 @@ impl RecurringService {
     /// Returns the new RULE_ID, the number of occurrences generated, and the
     /// first generated TRANSACTION_ID (if any) for callers that want to surface
     /// it in a result message.
+    /// The first and last date a recurring rule may cover right now:
+    /// `recurring_period_limits` for today, clamped to the years actually
+    /// seeded in HOLIDAYS_STANDARD (holidays are seeded at startup, so an app
+    /// left running across New Year has one seeded year less ahead). The
+    /// recurring screen asks for these so its date pickers, pre-check and
+    /// error message use the same bounds (latent-audit M15 / M18).
+    pub async fn period_limits(&self) -> Result<(NaiveDate, NaiveDate), RecurringError> {
+        let (mut first, mut last) = recurring_period_limits(chrono::Local::now().date_naive());
+        let (seeded_first, seeded_last): (Option<String>, Option<String>) =
+            sqlx::query_as(sql_queries::HOLIDAYS_STANDARD_JP_DATE_RANGE)
+                .fetch_one(&self.pool)
+                .await?;
+        let year_of = |d: &str| d.get(..4).and_then(|y| y.parse::<i32>().ok());
+        if let Some(y) = seeded_first.as_deref().and_then(year_of) {
+            first = first.max(NaiveDate::from_ymd_opt(y, 1, 1).unwrap_or(first));
+        }
+        if let Some(y) = seeded_last.as_deref().and_then(year_of) {
+            last = last.min(NaiveDate::from_ymd_opt(y, 12, 31).unwrap_or(last));
+        }
+        Ok((first, last))
+    }
+
     pub async fn create_rule_with_instances(
         &self,
         user_id: i64,
@@ -697,9 +745,14 @@ impl RecurringService {
                 "start_date must be on or before end_date".to_string(),
             ));
         }
-        if request.total_amount < 0 || request.total_amount > 999_999_999 {
+        // Latent-audit L13 — shifting a daily occurrence off a holiday lands
+        // it on a day that already has one (or past the end date), so a
+        // daily rule has no holiday shift.
+        if request.period_unit == consts::PERIOD_UNIT_DAY
+            && request.holiday_shift_type != consts::HOLIDAY_SHIFT_NONE
+        {
             return Err(RecurringError::Validation(
-                "TOTAL_AMOUNT must be between 0 and 999,999,999".to_string(),
+                "Holiday shift is not available for a daily rule".to_string(),
             ));
         }
         if request.detail.item_name.trim().is_empty() {
@@ -744,6 +797,25 @@ impl RecurringService {
                 "DETAIL.tax_amount cannot be negative".to_string(),
             ));
         }
+        // Latent-audit M17 — the rule has exactly one detail, so its total
+        // is derived from it the same way a transaction header's
+        // recommended total is; the request's `total_amount` is ignored.
+        // A typed total defaulted to 0 and was never checked against the
+        // detail, which generated 0-yen occurrences.
+        let total_amount = crate::services::transaction::calculate_recommended_total_with_settings(
+            &[crate::services::transaction::DetailForRecalc {
+                amount: request.detail.amount,
+                amount_including_tax: request.detail.amount_including_tax,
+                tax_rate: i64::from(request.detail.tax_rate),
+            }],
+            request.tax_rounding_type,
+            request.tax_included_type,
+        );
+        if !(0..=999_999_999).contains(&total_amount) {
+            return Err(RecurringError::Validation(
+                "TOTAL_AMOUNT must be between 0 and 999,999,999".to_string(),
+            ));
+        }
         // The shop / product must belong to this user (latent-audit L2).
         use crate::services::transaction::owned_by_user;
         if !owned_by_user(&self.pool, sql_queries::SHOP_EXISTS_FOR_USER, user_id, request.shop_id).await? {
@@ -777,6 +849,14 @@ impl RecurringService {
             .map_err(RecurringError::Validation)?;
         validation::validate_memo("Detail memo", request.detail.detail_memo.as_ref())
             .map_err(RecurringError::Validation)?;
+
+        // Latent-audit M15 / M18 — the period must stay within the years with
+        // seeded holiday data. Checked after the input-only validation above,
+        // since it reads the holiday table.
+        let (first, last) = self.period_limits().await?;
+        if start < first || end > last {
+            return Err(RecurringError::PeriodOutOfRange { first, last });
+        }
 
         let anchor_date = match &request.anchor_date {
             Some(s) => Some(
@@ -853,7 +933,7 @@ impl RecurringService {
             .bind(&request.category1_code)
             .bind(&request.from_account_code)
             .bind(&request.to_account_code)
-            .bind(request.total_amount)
+            .bind(total_amount)
             .bind(request.tax_rounding_type)
             .bind(request.tax_included_type)
             .bind(header_memo_id)
@@ -888,7 +968,7 @@ impl RecurringService {
                     .bind(&request.category1_code)
                     .bind(&request.from_account_code)
                     .bind(&request.to_account_code)
-                    .bind(request.total_amount)
+                    .bind(total_amount)
                     .bind(request.tax_rounding_type)
                     .bind(request.tax_included_type)
                     .bind(header_memo_id)
@@ -1796,7 +1876,6 @@ mod tests {
             category1_code: "EXPENSE".to_string(),
             from_account_code: "BANK".to_string(),
             to_account_code: "OUT".to_string(),
-            total_amount: 100,
             tax_rounding_type: 0,
             tax_included_type: 1,
             header_memo: None,

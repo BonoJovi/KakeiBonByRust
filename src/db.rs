@@ -377,8 +377,8 @@ impl Database {
 
         let jp = JPHoliday::new();
         let current_year = Local::now().year();
-        let start_year = current_year - 5;
-        let end_year = current_year + 10;
+        let start_year = current_year - crate::consts::HOLIDAY_SEED_YEARS_BACK;
+        let end_year = current_year + crate::consts::HOLIDAY_SEED_YEARS_AHEAD;
 
         for year in start_year..=end_year {
             for (date, name) in jp.year_holidays(year) {
