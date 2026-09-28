@@ -66,6 +66,10 @@ impl ApiError {
     // `transaction_mgmt.transfer_same_account` toast instead of the
     // raw English fallback via `formatApiError`.
     pub const CODE_TRANSFER_SAME_ACCOUNT: &'static str = "transfer_same_account";
+    // Latent-audit M2 — a header's category1 (income / expense / transfer)
+    // cannot change while it has details, whose category2/3 belong to the
+    // old category1.
+    pub const CODE_CATEGORY1_HAS_DETAILS: &'static str = "category1_has_details";
 
     // ---- Constructors --------------------------------------------------
 
@@ -197,6 +201,16 @@ impl ApiError {
         Self {
             code: Self::CODE_TRANSFER_SAME_ACCOUNT.to_string(),
             message: "Transfer source and destination accounts must be different".to_string(),
+            entity: None,
+        }
+    }
+
+    /// Header update refused because it changes category1 while the
+    /// transaction has details (latent-audit M2).
+    pub fn category1_has_details() -> Self {
+        Self {
+            code: Self::CODE_CATEGORY1_HAS_DETAILS.to_string(),
+            message: "Category cannot be changed while the transaction has details".to_string(),
             entity: None,
         }
     }

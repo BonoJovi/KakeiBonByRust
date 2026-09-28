@@ -222,6 +222,12 @@ pub enum TransactionError {
     /// with an i18n key, instead of leaking the raw English message
     /// through `formatApiError` on a ja-JP UI.
     TransferSameAccount,
+    /// Latent-audit M2 — the update changes the header's category1 while
+    /// the transaction has details. Their category2/3 belong to the old
+    /// category1, so the change is refused (mapped to the
+    /// `category1_has_details` code) instead of leaving header and details
+    /// disagreeing on income / expense.
+    Category1HasDetails,
 }
 
 impl std::fmt::Display for TransactionError {
@@ -232,6 +238,9 @@ impl std::fmt::Display for TransactionError {
             TransactionError::NotFound => write!(f, "Transaction not found"),
             TransactionError::TransferSameAccount => {
                 write!(f, "Transfer source and destination accounts must be different")
+            }
+            TransactionError::Category1HasDetails => {
+                write!(f, "Category cannot be changed while the transaction has details")
             }
         }
     }
@@ -269,6 +278,7 @@ impl From<TransactionError> for ApiError {
             TransactionError::ValidationError(msg) => ApiError::validation(msg),
             TransactionError::DatabaseError(msg) => ApiError::database(msg),
             TransactionError::TransferSameAccount => ApiError::transfer_same_account(),
+            TransactionError::Category1HasDetails => ApiError::category1_has_details(),
         }
     }
 }
@@ -277,6 +287,20 @@ impl From<TransactionError> for ApiError {
 fn validate_memo_length(memo_text: &str) -> Result<(), TransactionError> {
     validation::validate_max_chars("Memo", memo_text, consts::MAX_MEMO_LEN)
         .map_err(TransactionError::ValidationError)
+}
+
+/// A detail always carries its header's category1: its category2/3 belong
+/// to it, and aggregation groups details by it (latent-audit M2).
+fn ensure_detail_category1_matches(
+    detail_category1: &str,
+    header_category1: &str,
+) -> Result<(), TransactionError> {
+    if detail_category1 != header_category1 {
+        return Err(TransactionError::ValidationError(
+            "Detail category must match the transaction's category".to_string(),
+        ));
+    }
+    Ok(())
 }
 
 /// TRANSACTIONS_DETAIL.ITEM_NAME length guard.
@@ -1151,6 +1175,19 @@ impl TransactionService {
         // Get current transaction header to check current memo_id
         let current_header = self.get_transaction_header(user_id, transaction_id).await?;
 
+        // The details' category2/3 belong to the header's category1, so it
+        // cannot change while there are details (latent-audit M2).
+        if request.category1_code != current_header.category1_code {
+            let has_details: bool =
+                sqlx::query_scalar(sql_queries::TRANSACTION_HAS_DETAILS)
+                    .bind(transaction_id)
+                    .fetch_one(&self.pool)
+                    .await?;
+            if has_details {
+                return Err(TransactionError::Category1HasDetails);
+            }
+        }
+
         // Get or create memo_id (handles shared memo_id case)
         let memo_id = self
             .get_memo_id_for_update(user_id, request.memo.as_deref(), current_header.memo_id)
@@ -1326,15 +1363,14 @@ impl TransactionService {
         // brings `add` to the same standard so the three CRUD paths are
         // symmetric. Runs before MEMO_INSERT so a rejected add cannot leave
         // an orphaned MEMOS row behind.
-        let parent_exists: Option<i64> =
-            sqlx::query_scalar(sql_queries::TRANSACTION_HEADER_EXISTS_FOR_USER)
+        let header_category1: Option<String> =
+            sqlx::query_scalar(sql_queries::TRANSACTION_HEADER_CATEGORY1_FOR_USER)
                 .bind(transaction_id)
                 .bind(user_id)
                 .fetch_optional(&self.pool)
                 .await?;
-        if parent_exists.is_none() {
-            return Err(TransactionError::NotFound);
-        }
+        let header_category1 = header_category1.ok_or(TransactionError::NotFound)?;
+        ensure_detail_category1_matches(&request.category1_code, &header_category1)?;
 
         // Fable-5 review #7 — the two writes below (MEMO insert +
         // TRANSACTIONS_DETAIL insert) used to run on separate pool
@@ -1440,6 +1476,15 @@ impl TransactionService {
         .await?;
 
         let existing_detail = existing.ok_or(TransactionError::NotFound)?;
+
+        let header_category1: String =
+            sqlx::query_scalar(sql_queries::TRANSACTION_HEADER_CATEGORY1_FOR_USER)
+                .bind(existing_detail.transaction_id)
+                .bind(user_id)
+                .fetch_optional(&mut *tx)
+                .await?
+                .ok_or(TransactionError::NotFound)?;
+        ensure_detail_category1_matches(&request.category1_code, &header_category1)?;
 
         // Handle memo update. The old code mutated / deleted the referenced
         // memo row directly, which corrupts any header or sibling detail that
