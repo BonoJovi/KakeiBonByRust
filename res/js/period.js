@@ -30,6 +30,21 @@ export async function fetchMonthlyPeriodBounds(year, month) {
     };
 }
 
+/// Last day (YYYY-MM-DD) of the user's monthly period for (year, month),
+/// following the custom start day and holiday shift (latent-audit L14). Falls
+/// back to the calendar month end when the backend cannot answer.
+export async function fetchMonthlyPeriodEndDate(year, month) {
+    try {
+        const b = await invoke('get_monthly_period_bounds', { year, month });
+        return b.end;
+    } catch (e) {
+        console.warn('Failed to load period bounds, using the calendar month end:', e);
+        // day 0 of the next month is the last day of this one (month is 1-based)
+        const lastDay = new Date(year, month, 0).getDate();
+        return `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+    }
+}
+
 export function invalidatePeriodSettingsCache() {
     cachedSettings = null;
 }
