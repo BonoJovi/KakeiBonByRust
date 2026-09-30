@@ -77,9 +77,10 @@ await bootPage();
 
 describe('scan2-M8 transaction list NONE account label', () => {
     test('renders the NONE side with common.unspecified, not the stored name', () => {
-        // The list header row uses the same class; keep the data rows only.
-        const cells = Array.from(document.querySelectorAll('.transaction-account'))
-            .filter((el) => !el.querySelector('[data-i18n]'));
+        // The list header row uses the same class; take the data rows only.
+        const cells = Array.from(
+            document.querySelectorAll('#transaction-list .transaction-item .transaction-account')
+        );
         // Precondition: the row was rendered.
         expect(cells).toHaveLength(1);
         const text = cells[0].textContent;
