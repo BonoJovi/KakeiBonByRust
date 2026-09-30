@@ -757,3 +757,236 @@ fn latent_l10_generation_terminates_at_the_end_of_the_date_range() {
         assert!(yearly.is_some(), "yearly generation with {:?} must terminate", rule);
     }
 }
+
+// ===========================================================================
+// Latent-bug scan 2 (2026-09-29): R1, R2, R6, R7
+// (R3 lives in src/latent_audit/db.rs; R4, R5, R8 are Jest tests under
+// res/tests/latent-audit/scan2-r*.test.js)
+// ===========================================================================
+
+async fn occurrence_dates(pool: &SqlitePool, rule_id: i64) -> Vec<String> {
+    sqlx::query_scalar(
+        "SELECT substr(TRANSACTION_DATE, 1, 10) FROM TRANSACTIONS_HEADER \
+         WHERE RULE_ID = ? ORDER BY TRANSACTION_DATE",
+    )
+    .bind(rule_id)
+    .fetch_all(pool)
+    .await
+    .unwrap()
+}
+
+fn monthly_day_request(day: u32, shift: i32, start: &str, end: &str) -> SaveRecurringRuleRequest {
+    let mut request = valid_request();
+    request.period_unit = consts::PERIOD_UNIT_MONTH.to_string();
+    request.anchor_date = None;
+    request.month_day_rule_type = Some(consts::MONTH_DAY_RULE_TYPE_DAY.to_string());
+    request.day_of_month = Some(day);
+    request.holiday_shift_type = shift;
+    request.start_date = start.to_string();
+    request.end_date = end.to_string();
+    request
+}
+
+/// scan2-R1: the period filter runs on the calendar date BEFORE the holiday
+/// shift, so an occurrence whose calendar date is just outside the period
+/// but whose shifted date is inside it is dropped.
+/// Expected: Monthly day 25 / Next, start Mon 2026-10-26 → the October debit
+/// (Sun 10-25 → Mon 10-26) is generated; Monthly day 25 / Prev, end
+/// 2027-04-24 → the April payday (Sun 04-25 → Fri 04-23) is generated.
+#[tokio::test]
+#[ignore = "latent-audit scan2-R1"]
+async fn latent_scan2_r1_shifted_date_inside_period_is_kept() {
+    let pool = setup_recurring_db().await;
+    let service = RecurringService::new(pool.clone());
+
+    // Start boundary.
+    let created = service
+        .create_rule_with_instances(
+            USER_ID,
+            monthly_day_request(25, consts::HOLIDAY_SHIFT_NEXT, "2026-10-26", "2027-10-26"),
+        )
+        .await
+        .expect("create rule (Next)");
+    let dates = occurrence_dates(&pool, created.rule_id).await;
+    assert!(
+        dates.contains(&"2026-10-26".to_string()),
+        "Next shift of Sun 2026-10-25 lands on 2026-10-26 (inside the period) and must be \
+         generated; got {:?}",
+        dates
+    );
+
+    // End boundary.
+    let created = service
+        .create_rule_with_instances(
+            USER_ID,
+            monthly_day_request(25, consts::HOLIDAY_SHIFT_PREV, "2026-05-01", "2027-04-24"),
+        )
+        .await
+        .expect("create rule (Prev)");
+    let dates = occurrence_dates(&pool, created.rule_id).await;
+    assert!(
+        dates.contains(&"2027-04-23".to_string()),
+        "Prev shift of Sun 2027-04-25 lands on 2027-04-23 (inside the period) and must be \
+         generated; got {:?}",
+        dates
+    );
+}
+
+/// scan2-R2: a daily rule's anchor is never checked against the period.
+/// An anchor after the end date creates a rule with 0 occurrences as a
+/// success, and a blank anchor (the UI sends "" after the field is cleared)
+/// fails with the raw `Invalid anchor_date: `.
+/// Expected (bug-list fix direction): a blank anchor falls back to the start
+/// date, and an anchor after the end date is rejected as a validation error.
+#[tokio::test]
+#[ignore = "latent-audit scan2-R2"]
+async fn latent_scan2_r2_daily_anchor_is_checked_against_the_period() {
+    let pool = setup_recurring_db().await;
+    let service = RecurringService::new(pool.clone());
+    assert_baseline_ok(&service).await;
+
+    // Blank anchor → start_date (2026-01-01..03, interval 1 → 3 occurrences).
+    let mut blank = valid_request();
+    blank.anchor_date = Some(String::new());
+    let result = service.create_rule_with_instances(USER_ID, blank).await;
+    match result {
+        Ok(created) => {
+            let dates = occurrence_dates(&pool, created.rule_id).await;
+            assert_eq!(
+                dates,
+                vec!["2026-01-01", "2026-01-02", "2026-01-03"],
+                "a blank anchor must fall back to the start date"
+            );
+        }
+        Err(e) => panic!("a blank anchor must fall back to the start date, got error {:?}", e),
+    }
+
+    // Anchor after the end date → rejected, not a silent 0-occurrence rule.
+    let mut late = valid_request();
+    late.anchor_date = Some("2026-02-01".to_string());
+    let result = service.create_rule_with_instances(USER_ID, late).await;
+    assert!(
+        matches!(result, Err(RecurringError::Validation(_))),
+        "an anchor after end_date must be rejected; got {:?}",
+        result.map(|r| r.generated_count)
+    );
+}
+
+/// scan2-R6: the recurring path skips the M2 guard, so a detail whose
+/// CATEGORY1 differs from the header's (header INCOME, detail EXPENSE) is
+/// stored in every occurrence; the regular edit path later rejects it.
+/// Expected: rejected as a validation error, or the detail is stored with
+/// the header's CATEGORY1.
+#[tokio::test]
+#[ignore = "latent-audit scan2-R6"]
+async fn latent_scan2_r6_detail_category1_must_match_header() {
+    let pool = setup_recurring_db().await;
+    let service = RecurringService::new(pool.clone());
+    assert_baseline_ok(&service).await;
+
+    let mut request = valid_request();
+    request.category1_code = "INCOME".to_string();
+    request.from_account_code = "NONE".to_string();
+    request.to_account_code = "BANK".to_string();
+    request.detail.category1_code = "EXPENSE".to_string();
+    let result = service.create_rule_with_instances(USER_ID, request).await;
+
+    match result {
+        Err(RecurringError::Validation(_)) => {}
+        Err(e) => panic!("unexpected error: {:?}", e),
+        Ok(created) => {
+            let mismatched: i64 = sqlx::query_scalar(
+                "SELECT COUNT(*) FROM TRANSACTIONS_DETAIL d \
+                 JOIN TRANSACTIONS_HEADER h ON h.TRANSACTION_ID = d.TRANSACTION_ID \
+                 WHERE h.RULE_ID = ? AND d.CATEGORY1_CODE <> h.CATEGORY1_CODE",
+            )
+            .bind(created.rule_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+            let rule_detail: String = sqlx::query_scalar(
+                "SELECT CATEGORY1_CODE FROM RECURRING_RULE_DETAILS WHERE RULE_ID = ?",
+            )
+            .bind(created.rule_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+            assert_eq!(
+                mismatched, 0,
+                "{} of {} occurrences store a detail CATEGORY1 that differs from the header's",
+                mismatched, created.generated_count
+            );
+            assert_eq!(rule_detail, "INCOME", "rule detail CATEGORY1 must follow the header");
+        }
+    }
+}
+
+/// scan2-R7: `period_limits` lets a rule end on Dec 31 of the last seeded
+/// year, and a Next shift from a weekend Dec 31 walks into January of the
+/// following, unseeded year, where 元日 counts as a business day.
+/// The DB here is seeded through 2028 only — the state production reaches
+/// when the last seeded year is the last allowed year (e.g. an app left
+/// running across New Year, see `period_limits`). 2028-12-31 is a Sunday
+/// and 2029-01-01 (Mon) is 元日, so the correct date is 2029-01-02.
+/// Expected: either the period is rejected (the limit leaves room for the
+/// shift) or the occurrence does not land on a holiday / weekend.
+#[tokio::test]
+#[ignore = "latent-audit scan2-R7"]
+async fn latent_scan2_r7_next_shift_past_the_last_seeded_year() {
+    use jpholiday::jpholiday::JPHoliday;
+
+    let pool = setup_recurring_db().await;
+    let jp = JPHoliday::new();
+    let last_seeded = 2028;
+    for year in (Local::now().year() - consts::HOLIDAY_SEED_YEARS_BACK)..=last_seeded {
+        for (date, name) in jp.year_holidays(year) {
+            sqlx::query(
+                "INSERT OR IGNORE INTO HOLIDAYS_STANDARD (LOCALE, HOLIDAY_DATE, HOLIDAY_NAME) \
+                 VALUES ('JP', ?, ?)",
+            )
+            .bind(date.format("%Y-%m-%d").to_string())
+            .bind(name)
+            .execute(&pool)
+            .await
+            .unwrap();
+        }
+    }
+    assert_eq!(
+        NaiveDate::from_ymd_opt(2028, 12, 31).unwrap().weekday(),
+        Weekday::Sun,
+        "precondition"
+    );
+
+    let mut request = valid_request();
+    request.period_unit = consts::PERIOD_UNIT_MONTH.to_string();
+    request.anchor_date = None;
+    request.month_day_rule_type = Some(consts::MONTH_DAY_RULE_TYPE_END.to_string());
+    request.holiday_shift_type = consts::HOLIDAY_SHIFT_NEXT;
+    request.start_date = "2028-12-01".to_string();
+    request.end_date = "2028-12-31".to_string();
+
+    let service = RecurringService::new(pool.clone());
+    match service.create_rule_with_instances(USER_ID, request).await {
+        Err(RecurringError::PeriodOutOfRange { .. }) => {}
+        Err(e) => panic!("unexpected error: {:?}", e),
+        Ok(created) => {
+            let dates = occurrence_dates(&pool, created.rule_id).await;
+            let holidays: Vec<String> = jp
+                .year_holidays(2029)
+                .iter()
+                .map(|(d, _)| d.format("%Y-%m-%d").to_string())
+                .collect();
+            for d in &dates {
+                let date = NaiveDate::parse_from_str(d, "%Y-%m-%d").unwrap();
+                assert!(
+                    !holidays.contains(d)
+                        && !matches!(date.weekday(), Weekday::Sat | Weekday::Sun),
+                    "Next shift from Sun 2028-12-31 landed on non-business day {} \
+                     (2029 holidays are not seeded); generated dates = {:?}",
+                    d,
+                    dates
+                );
+            }
+        }
+    }
+}

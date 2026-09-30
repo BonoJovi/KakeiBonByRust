@@ -178,3 +178,31 @@ async fn latent_m13_update_rejects_blank_username() {
     assert_eq!(service.get_user(user_id).await.unwrap().name, "alice");
     assert_eq!(service.get_user(admin_id).await.unwrap().name, "admin");
 }
+
+/// scan2-C5 — deleting the only general user (ROLE_USER) is allowed, after
+/// which check_needs_user_setup forces the "register user" setup screen on
+/// every admin login.
+/// Expected (owner decision 2026-10-01): the backend delete path refuses to
+/// delete the last general user and keeps the row; deleting one of two is
+/// still allowed.
+#[tokio::test]
+#[ignore = "latent-audit scan2-C5"]
+async fn latent_scan2_c5_delete_last_general_user_is_refused() {
+    let pool = setup_test_db().await;
+    create_test_admin(&pool, "admin", ADMIN_CREDENTIAL).await;
+    let service = UserManagementService::new(pool.clone());
+    let alice = create_general_user_like_command(&pool, "alice").await;
+    let bob = create_general_user_like_command(&pool, "bob").await;
+
+    service
+        .delete_general_user(alice)
+        .await
+        .expect("deleting one of two general users must be allowed");
+
+    let r = service.delete_general_user(bob).await;
+    assert!(r.is_err(), "deleting the last general user must be refused, got {:?}", r);
+    assert_eq!(
+        service.get_user(bob).await.expect("last general user must remain").name,
+        "bob"
+    );
+}

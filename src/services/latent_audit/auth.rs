@@ -188,3 +188,49 @@ async fn latent_l26_register_user_seed_failure_rolls_back_user() {
     );
     assert_eq!(count_users(&pool).await, 1);
 }
+
+// ---------------------------------------------------------------------------
+// scan2-C1 — setup keeps surrounding whitespace in usernames
+// ---------------------------------------------------------------------------
+
+/// C1 — register_admin_user / register_user store a username with surrounding
+/// whitespace verbatim ("bono " typed via IME), while login looks the name up
+/// exactly and the edit screen trims it: the user is locked out with the
+/// visible name, or silently renamed on the next profile edit.
+/// Expected: the setup paths either reject surrounding whitespace or store
+/// the trimmed name, so logging in with the visible name works.
+#[tokio::test]
+#[ignore = "latent-audit scan2-C1"]
+async fn latent_scan2_c1_register_does_not_keep_surrounding_whitespace() {
+    let pool = setup_test_db().await;
+    let auth = AuthService::new(pool.clone());
+    let credential = test_credential();
+
+    let cases = [("bono ", "bono", true), ("\u{3000}member", "member", false)];
+    for (typed, visible, admin) in cases {
+        let r = if admin {
+            auth.register_admin_user(typed, &credential).await
+        } else {
+            auth.register_user(typed, &credential).await
+        };
+        if r.is_err() {
+            // Rejecting surrounding whitespace is an acceptable fix; the
+            // admin must still exist for the register_user case below.
+            if admin {
+                auth.register_admin_user(visible, &credential).await.unwrap();
+            }
+            continue;
+        }
+        let stored: Vec<String> = sqlx::query_scalar("SELECT NAME FROM USERS")
+            .fetch_all(&pool)
+            .await
+            .expect("names");
+        assert!(
+            stored.iter().all(|n| n.trim() == n.as_str()),
+            "stored username keeps surrounding whitespace: {:?}",
+            stored
+        );
+        let login = auth.authenticate_user(visible, &credential).await.unwrap();
+        assert!(login.is_some(), "login with the visible name {:?} must succeed", visible);
+    }
+}

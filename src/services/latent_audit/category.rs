@@ -337,3 +337,210 @@ async fn latent_l20_add_category3_multibyte_category1_code_does_not_panic() {
         .await;
     assert!(result.is_err(), "unknown multibyte category1_code must be rejected, got {:?}", result);
 }
+
+// ---------------------------------------------------------------------------
+// scan2 (2026-09-29 latent scan) — masters
+// ---------------------------------------------------------------------------
+
+/// CATEGORY2 codes under `cat1`, in the order `get_category_tree` lists them.
+fn cat2_codes_in_tree(tree: &serde_json::Value, cat1: &str) -> Vec<String> {
+    tree.as_array()
+        .and_then(|a| a.iter().find(|n| n["category1"]["category1_code"] == cat1))
+        .and_then(|n| n["children"].as_array())
+        .map(|children| {
+            children
+                .iter()
+                .filter_map(|c| c["category2"]["category2_code"].as_str().map(str::to_string))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// scan2-M5: `swap_category2_with_sibling` swaps with the row at
+/// DISPLAY_ORDER ± 1 regardless of IS_DISABLED. With children A(1),
+/// B(2, hidden), C(3), "↑" on C swaps it with the hidden B, so the visible
+/// order (and the picker order) stays A, C — the click appears to do nothing.
+///
+/// Expected: "↑" moves C above the nearest *enabled* sibling, so the
+/// enabled tree lists C before A after one click.
+#[tokio::test]
+#[ignore = "latent-audit scan2-M5"]
+async fn latent_scan2_m5_move_up_skips_hidden_sibling() {
+    let (_pool, service, user_id) = setup().await;
+    let a = service.add_category2(user_id, "EXPENSE", "食費", "Food").await.unwrap();
+    let b = service.add_category2(user_id, "EXPENSE", "外食", "Dining").await.unwrap();
+    let c = service.add_category2(user_id, "EXPENSE", "日用品", "Daily goods").await.unwrap();
+    service.disable_category2(user_id, "EXPENSE", &b).await.unwrap();
+
+    let before = cat2_codes_in_tree(&service.get_category_tree(user_id, "ja").await.unwrap(), "EXPENSE");
+    assert_eq!(before, vec![a.clone(), c.clone()], "precondition: visible order is A, C");
+
+    service.move_category2_up(user_id, "EXPENSE", &c).await.unwrap();
+
+    let after = cat2_codes_in_tree(&service.get_category_tree(user_id, "ja").await.unwrap(), "EXPENSE");
+    assert_eq!(
+        after,
+        vec![c.clone(), a.clone()],
+        "one \"up\" click on C must move it above the enabled sibling A, skipping the hidden B"
+    );
+}
+
+/// Minimal transaction schema (same as the transaction module tests) plus
+/// the CATEGORY2/3 i18n tables, for USER 2 with EXPENSE / FOOD / GROCERY.
+async fn setup_transaction_db() -> SqlitePool {
+    let pool = SqlitePool::connect(":memory:").await.unwrap();
+    for stmt in [
+        sql_queries::TEST_TRANSACTION_CREATE_USERS_TABLE,
+        sql_queries::TEST_TRANSACTION_INSERT_USER,
+        sql_queries::TEST_TRANSACTION_CREATE_MEMOS_TABLE,
+        sql_queries::TEST_TRANSACTION_CREATE_CATEGORY1_TABLE,
+        sql_queries::TEST_TRANSACTION_INSERT_CATEGORY1,
+        sql_queries::TEST_TRANSACTION_CREATE_ACCOUNTS_TABLE,
+        sql_queries::TEST_TRANSACTION_INSERT_ACCOUNT_CASH,
+        sql_queries::TEST_TRANSACTION_INSERT_ACCOUNT_BANK,
+        sql_queries::TEST_TRANSACTION_CREATE_HEADER_TABLE,
+        sql_queries::TEST_TRANSACTION_CREATE_SHOPS_TABLE,
+        sql_queries::TEST_TRANSACTION_CREATE_CATEGORY2_TABLE,
+        sql_queries::TEST_TRANSACTION_INSERT_CATEGORY2,
+        sql_queries::TEST_TRANSACTION_CREATE_CATEGORY3_TABLE,
+        sql_queries::TEST_TRANSACTION_INSERT_CATEGORY3,
+        sql_queries::TEST_MANUFACTURER_CREATE_TABLE,
+        sql_queries::TEST_PRODUCT_CREATE_TABLE,
+        sql_queries::TEST_TRANSACTION_CREATE_DETAIL_TABLE,
+        sql_queries::CREATE_RECURRING_RULES_TABLE,
+        sql_queries::CREATE_RECURRING_RULE_DETAILS_TABLE,
+        // Same DDL as res/sql/dbaccess.sql (SQL_10000011 / SQL_10000012).
+        "CREATE TABLE CATEGORY2_I18N (
+            USER_ID INTEGER NOT NULL,
+            CATEGORY1_CODE VARCHAR(64) NOT NULL,
+            CATEGORY2_CODE VARCHAR(64) NOT NULL,
+            LANG_CODE VARCHAR(10) NOT NULL,
+            CATEGORY2_NAME_I18N VARCHAR(256) NOT NULL,
+            ENTRY_DT DATETIME NOT NULL,
+            UPDATE_DT DATETIME,
+            PRIMARY KEY(USER_ID, CATEGORY1_CODE, CATEGORY2_CODE, LANG_CODE)
+        )",
+        "CREATE TABLE CATEGORY3_I18N (
+            USER_ID INTEGER NOT NULL,
+            CATEGORY1_CODE VARCHAR(64) NOT NULL,
+            CATEGORY2_CODE VARCHAR(64) NOT NULL,
+            CATEGORY3_CODE VARCHAR(64) NOT NULL,
+            LANG_CODE VARCHAR(10) NOT NULL,
+            CATEGORY3_NAME_I18N VARCHAR(256) NOT NULL,
+            ENTRY_DT DATETIME NOT NULL,
+            UPDATE_DT DATETIME,
+            PRIMARY KEY(USER_ID, CATEGORY1_CODE, CATEGORY2_CODE, CATEGORY3_CODE, LANG_CODE)
+        )",
+    ] {
+        sqlx::query(stmt).execute(&pool).await.unwrap();
+    }
+    for (lang, name) in [("ja", "食費"), ("en", "Food")] {
+        sqlx::query(sql_queries::CATEGORY2_I18N_INSERT)
+            .bind(2_i64)
+            .bind("EXPENSE")
+            .bind("FOOD")
+            .bind(lang)
+            .bind(name)
+            .execute(&pool)
+            .await
+            .unwrap();
+    }
+    for (lang, name) in [("ja", "食料品"), ("en", "Groceries")] {
+        sqlx::query(sql_queries::CATEGORY3_I18N_INSERT)
+            .bind(2_i64)
+            .bind("EXPENSE")
+            .bind("FOOD")
+            .bind("GROCERY")
+            .bind(lang)
+            .bind(name)
+            .execute(&pool)
+            .await
+            .unwrap();
+    }
+    pool
+}
+
+/// scan2-M3: renames only touch CATEGORY2_I18N / CATEGORY3_I18N, but
+/// `TRANSACTION_DETAIL_GET_WITH_INFO` selects the base CATEGORY2_NAME /
+/// CATEGORY3_NAME with no i18n join. After renaming 食費 → 食材 the pickers
+/// and aggregation show the new name while the detail list keeps showing
+/// 食費 (and base names are EN for user-added categories / JA for seeded
+/// ones regardless of the UI language).
+///
+/// Expected: the detail list shows the renamed (i18n) names. The assertion
+/// accepts either language so it does not depend on how the session
+/// language reaches the query.
+#[tokio::test]
+#[ignore = "latent-audit scan2-M3"]
+async fn latent_scan2_m3_detail_list_shows_renamed_category_names() {
+    use crate::services::transaction::{
+        SaveTransactionDetailRequest, SaveTransactionRequest, TransactionService,
+    };
+    let user_id = 2;
+    let pool = setup_transaction_db().await;
+    let category = CategoryService::new(pool.clone());
+    let transaction = TransactionService::new(pool.clone());
+
+    let txn_id = transaction
+        .save_transaction_header(
+            user_id,
+            SaveTransactionRequest {
+                shop_id: None,
+                category1_code: "EXPENSE".to_string(),
+                from_account_code: "CASH".to_string(),
+                to_account_code: "BANK".to_string(),
+                transaction_date: "2024-01-01 10:00:00".to_string(),
+                total_amount: 1000,
+                tax_rounding_type: 0,
+                tax_included_type: 0,
+                memo: None,
+                is_scheduled: None,
+            },
+        )
+        .await
+        .unwrap();
+    transaction
+        .add_transaction_detail(
+            user_id,
+            txn_id,
+            SaveTransactionDetailRequest {
+                detail_id: None,
+                category1_code: "EXPENSE".to_string(),
+                category2_code: Some("FOOD".to_string()),
+                category3_code: Some("GROCERY".to_string()),
+                item_name: "Rice".to_string(),
+                amount: 1000,
+                tax_rate: 8,
+                tax_amount: 80,
+                amount_including_tax: None,
+                product_id: None,
+                memo: None,
+            },
+        )
+        .await
+        .unwrap();
+
+    category
+        .update_category2_i18n(user_id, "EXPENSE", "FOOD", "食材", "Ingredients")
+        .await
+        .unwrap();
+    category
+        .update_category3_i18n(user_id, "EXPENSE", "FOOD", "GROCERY", "生鮮食品", "Fresh food")
+        .await
+        .unwrap();
+
+    let details = transaction.get_transaction_details(user_id, txn_id).await.unwrap();
+    assert_eq!(details.len(), 1, "precondition: one detail");
+    let cat2 = details[0].category2_name.clone().unwrap_or_default();
+    let cat3 = details[0].category3_name.clone().unwrap_or_default();
+    assert!(
+        cat2 == "食材" || cat2 == "Ingredients",
+        "detail list must show the renamed CATEGORY2 name, got {:?}",
+        cat2
+    );
+    assert!(
+        cat3 == "生鮮食品" || cat3 == "Fresh food",
+        "detail list must show the renamed CATEGORY3 name, got {:?}",
+        cat3
+    );
+}
