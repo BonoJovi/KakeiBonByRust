@@ -2,8 +2,8 @@
 
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
-**最終更新**: 2026-09-06 JST  
-**総テスト数**: 466件 (差分反映後。`cargo test --lib` の権威的総数は 704 で、既存の未反映分は別 PR でバックフィル予定)
+**最終更新**: 2026-10-01 JST  
+**総テスト数**: 468件 (差分反映後。`cargo test --lib` の権威的総数は 706 で、既存の未反映分は別 PR でバックフィル予定)
 
 ---
 
@@ -619,8 +619,10 @@ AES-256-GCM暗号化・復号化のテスト。
 | `latent_m10_detailless_header_counted_in_detail_groupings` | 明細のないヘッダーも中分類・小分類・商品別に集計され、それぞれ大分類の合計と一致する (潜在監査 M10) | src/services/latent_audit/aggregation.rs | 300 |
 | `latent_m10_detailless_group_key_and_name` | 明細なしグループのキーは `<大分類>/__NO_DETAILS__` (商品別は `__NO_DETAILS__`)、名前は `aggregation.no_details` (潜在監査 M10) | src/services/latent_audit/aggregation.rs | 330 |
 | `latent_l9_category2_rounding_drift_is_bounded` | 仕様として受容: 1 取引を複数の中分類に分けると、大分類との差は税率ごとに (グループ数 − 1) 円以内 (潜在監査 L9) | src/services/latent_audit/aggregation.rs | 374 |
+| `latent_scan2_a6_category2_missing_code_keeps_category1_in_key` | 中分類コードのない明細も集計キーに大分類 (`EXPENSE/` / `INCOME/`) を残し、支出と収入が 1 行に相殺されない (潜在スキャン scan2-A6) | src/services/latent_audit/aggregation.rs | 598 |
+| `latent_scan2_a6_category3_missing_code_keeps_category1_in_key` | 小分類軸でも同様に、中分類・小分類コードがなくてもキーの大分類を残す (潜在スキャン scan2-A6) | src/services/latent_audit/aggregation.rs | 615 |
 
-**合計**: 26件
+**合計**: 28件
 
 ### services/period.rs
 
@@ -724,7 +726,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **440件** |
+| **インラインテスト** | **442件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -742,13 +744,13 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/product.rs | 20 |
 | services/shop.rs | 19 |
 | services/transaction.rs | 64 |
-| services/aggregation.rs | 26 |
+| services/aggregation.rs | 28 |
 | services/period.rs | 3 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 22 |
 | lib.rs | 6 |
-| **総計** | **466件** |
+| **総計** | **468件** |
 
 ---
 

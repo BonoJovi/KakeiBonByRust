@@ -3,7 +3,7 @@
 This document provides a complete index of all frontend tests implemented in JavaScript.
 
 **Last Updated**: 2026-10-01 JST  
-**Total Tests**: 847 (jest suites; 57 test files, per `npm test`)
+**Total Tests**: 848 (jest suites; 58 test files, per `npm test`)
 
 ---
 
@@ -30,7 +30,7 @@ and are **not** added again to the grand total.
 - **login.test.js** - Login tests (58)
 - **user-deletion.test.js** - User deletion tests (46)
 
-### Feature-Specific Tests (424 tests)
+### Feature-Specific Tests (425 tests)
 
 - **transaction-edit.test.js** - Transaction edit tests (112)
 - **transaction-detail-management.test.js** - Transaction detail management tests (51)
@@ -73,6 +73,7 @@ and are **not** added again to the grand total.
 - **pages/transaction-management-restore-reopened.test.js** - Boots the real transaction page with a saved draft, then closes and reopens the modal while the restore is still waiting: the draft is not written into the reopened form (latent-audit L6) (1)
 - **pages/aggregation-monthly-page.test.js** - Boots the real monthly aggregation page: an empty `group_name` renders as `common.unspecified` (latent-audit M12); the total row shows "—" for count / average on the account and category2 axes, and still sums the count on category1 (latent-audit M11); negative amounts render as "-¥1,234" (latent-audit L12) (5)
 - **pages/aggregation-yearly-total-count.test.js** - Boots the real yearly aggregation page: the shared renderer's total row shows "—" for count / average on the account axis (latent-audit M11) (1)
+- **pages/dashboard-bar-top10.test.js** - Boots the real dashboard: the category bar chart lists the largest expenses first (by magnitude, since expense totals are negative) and its top 10 keeps the largest one (latent-audit scan2-A1) (1)
 - **pages/index-setup-page.test.js** - Boots the real setup forms (menu.js on index.html): a blank username is stopped before `register_admin`, a backend "Username cannot be empty" is reported as the username error (not the password one), and `duplicate_name` shows `error.username_duplicate` (latent-audit L25) (3)
 - **pages/category-management-page.test.js** - Boots the real category management page: moving or showing a category that no longer exists shows `category_mgmt.not_found` and reloads the tree (latent-audit L19) (2)
 - **pages/user-management-password-page.test.js** - Admin session: a 16-space password is reported as the password error, not as the raw `user_mgmt.empty_name` key on the username (latent-audit L24); 8 emoji (16 UTF-16 units, 8 characters) are rejected by the frontend length check (latent-audit L31) (2)
@@ -111,7 +112,7 @@ and are **not** added again to the grand total.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **Feature-Specific Tests** | **424** |
+| **Feature-Specific Tests** | **425** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 30 |
@@ -153,6 +154,7 @@ and are **not** added again to the grand total.
 | pages/transaction-management-restore-reopened.test.js | 1 |
 | pages/aggregation-monthly-page.test.js | 5 |
 | pages/aggregation-yearly-total-count.test.js | 1 |
+| pages/dashboard-bar-top10.test.js | 1 |
 | pages/index-setup-page.test.js | 3 |
 | pages/category-management-page.test.js | 2 |
 | pages/user-management-password-page.test.js | 2 |
@@ -164,7 +166,7 @@ and are **not** added again to the grand total.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **Total (jest)** | **847** |
+| **Total (jest)** | **848** |
 
 Grand total is Screen + Feature + Aggregation (Common Test Suites are helper
 libraries invoked from Screen-Specific files and their assertions are already

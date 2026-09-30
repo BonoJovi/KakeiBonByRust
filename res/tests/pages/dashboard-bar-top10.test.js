@@ -1,4 +1,4 @@
-// latent-audit scan2-A1: dashboard "Category Comparison" bar chart sorts negative expense totals descending, so it shows the SMALLEST categories and drops the largest
+// Dashboard category bar chart: largest expenses first, and the top 10 keeps the largest (latent-audit scan2-A1)
 /**
  * Expense totals from the category2 aggregation are negative (EXPENSE is
  * signed x-1 in the backend). updateCategoryBarChart sorts them with
@@ -14,7 +14,7 @@
  */
 
 import { jest } from '@jest/globals';
-import { mockPageModules, loadPageBody, bootPage } from '../pages/_page-harness.js';
+import { mockPageModules, loadPageBody, bootPage } from './_page-harness.js';
 
 const charts = [];
 class FakeChart {

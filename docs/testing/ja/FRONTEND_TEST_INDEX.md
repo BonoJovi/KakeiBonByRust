@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-10-01 JST  
-**総テスト数**: 847件 (jest suite 57 ファイル、`npm test` 実測)
+**総テスト数**: 848件 (jest suite 58 ファイル、`npm test` 実測)
 
 ---
 
@@ -63,6 +63,7 @@
   - [pages/transaction-management-restore-reopened.test.js](#pagestransaction-management-restore-reopenedtestjs)
   - [pages/aggregation-monthly-page.test.js](#pagesaggregation-monthly-pagetestjs)
   - [pages/aggregation-yearly-total-count.test.js](#pagesaggregation-yearly-total-counttestjs)
+  - [pages/dashboard-bar-top10.test.js](#pagesdashboard-bar-top10testjs)
   - [pages/index-setup-page.test.js](#pagesindex-setup-pagetestjs)
   - [pages/category-management-page.test.js](#pagescategory-management-pagetestjs)
   - [pages/user-management-password-page.test.js](#pagesuser-management-password-pagetestjs)
@@ -1062,6 +1063,18 @@
 
 **ファイル**: res/tests/pages/aggregation-yearly-total-count.test.js
 
+### pages/dashboard-bar-top10.test.js
+
+実際のダッシュボードを起動する回帰テスト (潜在スキャン scan2-A1)。支出の合計は負の値なのに符号付きで降順に並べていたため、棒グラフには小さい支出から並び、上位 10 件から最大の支出 (家賃など) が落ちていた。
+
+**テスト数**: 1件
+
+| テスト | 説明 |
+|--------|------|
+| `[scan2-A1] largest expense category is drawn first and kept in the top 10` | 支出を金額の大きさ順に並べ、最大の支出が先頭に来て上位 10 件に残る |
+
+**ファイル**: res/tests/pages/dashboard-bar-top10.test.js
+
 ---
 
 ### pages/index-setup-page.test.js
@@ -1304,7 +1317,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **424件** |
+| **機能別テスト** | **425件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 30 |
@@ -1346,6 +1359,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | pages/transaction-management-restore-reopened.test.js | 1 |
 | pages/aggregation-monthly-page.test.js | 5 |
 | pages/aggregation-yearly-total-count.test.js | 1 |
+| pages/dashboard-bar-top10.test.js | 1 |
 | pages/index-setup-page.test.js | 3 |
 | pages/category-management-page.test.js | 2 |
 | pages/user-management-password-page.test.js | 2 |
@@ -1357,7 +1371,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **847件** |
+| **総計 (jest)** | **848件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 

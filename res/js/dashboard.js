@@ -328,7 +328,7 @@ function updateExpensePieChart(data, colorMap) {
     charts.expensePie = new Chart(ctx, {
         type: 'pie',
         data: {
-            labels: expenses.map(d => d.group_name),
+            labels: expenses.map(groupLabel),
             datasets: [{
                 data: expenses.map(d => Math.abs(d.total_amount)),
                 backgroundColor: colors,
@@ -362,15 +362,21 @@ function updateExpensePieChart(data, colorMap) {
     });
 }
 
+// Details without a category2 form a group with an empty name; label it like
+// the aggregation screens do (latent-scan2 A6).
+function groupLabel(d) {
+    return d.group_name || i18n.t('common.unspecified');
+}
+
 function updateCategoryBarChart(data, colorMap) {
     const ctx = document.getElementById('category-bar-chart');
     const noDataEl = document.getElementById('category-bar-no-data');
 
-    // Separate expenses and income by group_key prefix
+    // The bar chart plots expenses only, so a month with income alone has
+    // nothing to draw and shows the "no data" message (latent-scan2 A1).
     const expenses = data.filter(d => d.group_key && d.group_key.startsWith('EXPENSE/'));
-    const income = data.filter(d => d.group_key && d.group_key.startsWith('INCOME/'));
 
-    if (expenses.length === 0 && income.length === 0) {
+    if (expenses.length === 0) {
         if (charts.categoryBar) {
             charts.categoryBar.destroy();
             charts.categoryBar = null;
@@ -388,8 +394,13 @@ function updateCategoryBarChart(data, colorMap) {
         charts.categoryBar.destroy();
     }
 
-    // Sort expenses by amount (largest first, descending order)
-    const sortedExpenses = [...expenses].sort((a, b) => b.total_amount - a.total_amount);
+    // Largest expense first. Expense totals are negative (signed by
+    // category1), so sort by magnitude; sorting the signed values put the
+    // smallest expenses first and dropped the largest from the top 10
+    // (latent-scan2 A1).
+    const sortedExpenses = [...expenses].sort(
+        (a, b) => Math.abs(b.total_amount) - Math.abs(a.total_amount)
+    );
     const top10Expenses = sortedExpenses.slice(0, 10);
 
     // Use color map for consistent colors with pie chart
@@ -398,7 +409,7 @@ function updateCategoryBarChart(data, colorMap) {
     charts.categoryBar = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: top10Expenses.map(d => truncateLabel(d.group_name, 15)),
+            labels: top10Expenses.map(d => truncateLabel(groupLabel(d), 15)),
             datasets: [{
                 label: i18n.t('dashboard.expense') || 'Expense',
                 data: top10Expenses.map(d => Math.abs(d.total_amount)),

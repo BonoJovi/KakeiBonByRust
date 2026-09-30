@@ -2,8 +2,8 @@
 
 This document provides a complete index of all backend tests implemented in Rust.
 
-**Last Updated**: 2026-08-26 JST  
-**Total Tests**: 466 (delta-tracked; the full authoritative count from `cargo test --lib` is 704, and a follow-up pass will backfill the remaining pre-existing gap)
+**Last Updated**: 2026-10-01 JST  
+**Total Tests**: 468 (delta-tracked; the full authoritative count from `cargo test --lib` is 706, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -619,8 +619,10 @@ Aggregation service tests.
 | `latent_m10_detailless_header_counted_in_detail_groupings` | A header without details is counted in Category2 / Category3 / Product, so each sums to the Category1 total (latent-audit M10) | src/services/latent_audit/aggregation.rs | 300 |
 | `latent_m10_detailless_group_key_and_name` | The detail-less group is keyed `<category1>/__NO_DETAILS__` (Product: `__NO_DETAILS__`) and named by `aggregation.no_details` (latent-audit M10) | src/services/latent_audit/aggregation.rs | 330 |
 | `latent_l9_category2_rounding_drift_is_bounded` | Accepted spec: Category2 groups of one split transaction may differ from Category1 by up to (groups − 1) yen per tax rate (latent-audit L9) | src/services/latent_audit/aggregation.rs | 374 |
+| `latent_scan2_a6_category2_missing_code_keeps_category1_in_key` | Category2 details with no CATEGORY2_CODE keep their category1 in the group key (`EXPENSE/`, `INCOME/`), so expense and income are not netted into one group (latent-audit scan2-A6) | src/services/latent_audit/aggregation.rs | 598 |
+| `latent_scan2_a6_category3_missing_code_keeps_category1_in_key` | Same on the Category3 axis: a missing CATEGORY2/3 code keeps the key's category1 prefix (latent-audit scan2-A6) | src/services/latent_audit/aggregation.rs | 615 |
 
-**Total**: 26 tests
+**Total**: 28 tests
 
 ### services/period.rs
 
@@ -724,7 +726,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **440** |
+| **Inline Tests** | **442** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -742,13 +744,13 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/product.rs | 20 |
 | services/shop.rs | 19 |
 | services/transaction.rs | 64 |
-| services/aggregation.rs | 26 |
+| services/aggregation.rs | 28 |
 | services/period.rs | 3 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 22 |
 | lib.rs | 6 |
-| **Total** | **466** |
+| **Total** | **468** |
 
 ---
 

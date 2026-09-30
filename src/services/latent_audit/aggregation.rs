@@ -595,7 +595,6 @@ fn assert_scan2_a6_groups(rows: &[AggregationResult], categorised_key: &str, lab
 /// Expected: the key keeps category1 when the lower code is missing
 /// (e.g. `EXPENSE/`), so the expense and income stay separate.
 #[tokio::test]
-#[ignore = "latent-audit scan2-A6"]
 async fn latent_scan2_a6_category2_missing_code_keeps_category1_in_key() {
     let pool = setup_db().await;
     insert_scan2_txn(&pool, "EXPENSE", Some("FOOD"), Some("RICE"), 3000).await;
@@ -613,7 +612,6 @@ async fn latent_scan2_a6_category2_missing_code_keeps_category1_in_key() {
 /// Expected: the uncategorised-category3 expense stays under an `EXPENSE/`
 /// key and the income under an `INCOME/` key.
 #[tokio::test]
-#[ignore = "latent-audit scan2-A6"]
 async fn latent_scan2_a6_category3_missing_code_keeps_category1_in_key() {
     let pool = setup_db().await;
     insert_scan2_txn(&pool, "EXPENSE", Some("FOOD"), Some("RICE"), 3000).await;
