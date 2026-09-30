@@ -251,11 +251,11 @@ describe('Transaction Detail Tax Calculation Tests', () => {
     // with the authoritative `round(excluded * rate)`. That left THREE
     // inconsistent numbers on the DB row (AMOUNT / TAX_AMOUNT /
     // AMOUNT_INCLUDING_TAX) and the aggregation pipeline produced a
-    // FOURTH one downstream. The new pure helper always derives `tax`
-    // from the authoritative formula and returns `includedCorrected =
-    // excluded + tax`; the caller rewrites the tax-included input to
-    // that corrected value, so the DB never sees the inconsistent
-    // triple.
+    // FOURTH one downstream. The pure helper now always returns a split
+    // with `excluded + tax == typed amount`, preferring one that matches
+    // the authoritative `round(excluded * rate)`; for prices that have
+    // none, the tax is carved out of the typed amount instead of forcing
+    // the price to a neighbour (latent-scan2 T2).
     // ========================================================================
     describe('calculateFromIncluding — three-value self-consistency (Fable-5 #8)', () => {
 
@@ -268,71 +268,77 @@ describe('Transaction Detail Tax Calculation Tests', () => {
             // reproducing the typed input exactly. The helper now scans
             // `[base, base+1, base-1]` and prefers the candidate that matches
             // the typed input, so this common shape stays at 101 円.
-            const { excluded, tax, includedCorrected } =
+            const { excluded, tax } =
                 calculateFromIncluding(/*includedInput*/ 101, /*rate*/ 10, /*floor*/ 0);
 
             expect(excluded).toBe(92);
             expect(tax).toBe(9);
-            expect(includedCorrected).toBe(101);
-            expect(excluded + tax).toBe(includedCorrected);
+            expect(excluded + tax).toBe(101);
         });
 
         it('preserves the typed input under CEIL by picking base-1 (91, not the ceil base 92)', () => {
             // Same typed 101, but with CEIL. base = ceil(101/1.1) = 92, and
             // 92 + ceil(92*0.1) = 102 (does NOT match). base-1 = 91 with
             // ceil(91*0.1) = 10 yields 101 — pick that so the input stays.
-            const { excluded, tax, includedCorrected } =
+            const { excluded, tax } =
                 calculateFromIncluding(101, 10, /*ceil*/ 2);
 
             expect(excluded).toBe(91);
             expect(tax).toBe(10);
-            expect(includedCorrected).toBe(101);
         });
 
         it('leaves the tax-included input untouched when the split is already exact', () => {
             // 330 = 300 + 30 under FLOOR + 10 %; base wins immediately.
-            const { excluded, tax, includedCorrected } =
+            const { excluded, tax } =
                 calculateFromIncluding(330, 10, 0);
 
             expect(excluded).toBe(300);
             expect(tax).toBe(30);
-            expect(includedCorrected).toBe(330);
         });
 
         it('produces consistent numbers under half-up rounding when the base already matches', () => {
             // 325 / 1.08 ≈ 300.925 → half-up 301, tax = round(301 * 0.08) = 24,
             // 301 + 24 = 325 — base itself matches, no candidate scan needed.
-            const { excluded, tax, includedCorrected } =
+            const { excluded, tax } =
                 calculateFromIncluding(325, 8, /*half-up*/ 1);
 
             expect(excluded).toBe(301);
             expect(tax).toBe(24);
-            expect(includedCorrected).toBe(325);
         });
 
-        it('falls back to the base pair when even base±1 cannot reproduce the input', () => {
+        it('keeps an unreachable typed price and carves the tax out of it (latent-scan2 T2)', () => {
             // 1000 円 at 10 % / FLOOR: base=909, 909+90=999 ≠ 1000; base+1=910,
             // 910+91=1001 ≠ 1000; base-1=908, 908+90=998 ≠ 1000. No candidate
-            // fits, so the helper falls back to (base, tax_of_base,
-            // base+tax_of_base) and the caller rewrites the displayed
-            // tax-included value to 999.
-            const { excluded, tax, includedCorrected } =
-                calculateFromIncluding(1000, 10, 0);
+            // fits the tax-excluded formula, so the typed price is kept and
+            // tax = 1000 - 909 = 91 (owner decision 2026-10-01).
+            const { excluded, tax } = calculateFromIncluding(1000, 10, 0);
 
             expect(excluded).toBe(909);
-            expect(tax).toBe(90);
-            expect(includedCorrected).toBe(999);
-            expect(excluded + tax).toBe(includedCorrected);
+            expect(tax).toBe(91);
+            expect(excluded + tax).toBe(1000);
+        });
+
+        it('keeps every typed price from 1 to 10,000 under all rounding modes (latent-scan2 T2)', () => {
+            for (const rate of [8, 10]) {
+                for (const rounding of [0, 1, 2]) {
+                    for (let included = 1; included <= 10000; included++) {
+                        const { excluded, tax } = calculateFromIncluding(included, rate, rounding);
+                        if (excluded + tax !== included || excluded < 0 || tax < 0) {
+                            throw new Error(`${included} at ${rate} % (rounding ${rounding}) -> ${excluded} + ${tax}`);
+                        }
+                    }
+                }
+            }
         });
 
         it('returns zeros for zero input', () => {
             expect(calculateFromIncluding(0, 10, 0))
-                .toEqual({ excluded: 0, tax: 0, includedCorrected: 0 });
+                .toEqual({ excluded: 0, tax: 0 });
         });
 
         it('treats a 0 % rate as identity (no tax carved out)', () => {
             expect(calculateFromIncluding(500, 0, 0))
-                .toEqual({ excluded: 500, tax: 0, includedCorrected: 500 });
+                .toEqual({ excluded: 500, tax: 0 });
         });
     });
 
