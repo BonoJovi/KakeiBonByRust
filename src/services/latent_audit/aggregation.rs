@@ -504,3 +504,152 @@ async fn latent_h5_included_header_category2_uses_amount_including_tax() {
         "included header must aggregate SUM(AMOUNT_INCLUDING_TAX), not tax-excluded AMOUNT"
     );
 }
+
+// -----------------------------------------------------------------------------
+// Latent scan 2 (2026-09-29)
+// -----------------------------------------------------------------------------
+
+/// Insert a header + single detail on 2024-06-15 with an arbitrary category1.
+async fn insert_scan2_txn(
+    pool: &sqlx::SqlitePool,
+    category1: &str,
+    category2: Option<&str>,
+    category3: Option<&str>,
+    amount: i64,
+) {
+    use sqlx::Row;
+    let row = sqlx::query(
+        "INSERT INTO TRANSACTIONS_HEADER \
+         (USER_ID, CATEGORY1_CODE, FROM_ACCOUNT_CODE, TO_ACCOUNT_CODE, TRANSACTION_DATE, \
+          TOTAL_AMOUNT, TAX_ROUNDING_TYPE, TAX_INCLUDED_TYPE, IS_SCHEDULED) \
+         VALUES (1, ?, 'CASH', NULL, '2024-06-15', ?, 0, 1, 0) \
+         RETURNING TRANSACTION_ID",
+    )
+    .bind(category1)
+    .bind(amount)
+    .fetch_one(pool)
+    .await
+    .unwrap();
+    let txn_id = row.get::<i64, _>("TRANSACTION_ID");
+    sqlx::query(
+        "INSERT INTO TRANSACTIONS_DETAIL \
+         (USER_ID, TRANSACTION_ID, DETAIL_ID, CATEGORY1_CODE, CATEGORY2_CODE, CATEGORY3_CODE, \
+          PRODUCT_ID, ITEM_NAME, AMOUNT, TAX_RATE, AMOUNT_INCLUDING_TAX) \
+         VALUES (1, ?, 1, ?, ?, ?, NULL, 'item', ?, 0, ?)",
+    )
+    .bind(txn_id)
+    .bind(category1)
+    .bind(category2)
+    .bind(category3)
+    .bind(amount)
+    .bind(amount)
+    .execute(pool)
+    .await
+    .unwrap();
+}
+
+/// Checks the three uncategorised amounts stayed in separate, category1-scoped
+/// groups: `EXPENSE/...` -5000 and `INCOME/...` +200000.
+fn assert_scan2_a6_groups(rows: &[AggregationResult], categorised_key: &str, label: &str) {
+    let cat = rows.iter().find(|r| r.group_key == categorised_key);
+    assert_eq!(
+        cat.map(|r| r.total_amount),
+        Some(-3000),
+        "{}: categorised row missing/wrong: {:?}",
+        label,
+        rows
+    );
+    let expense_unspec: Vec<_> = rows
+        .iter()
+        .filter(|r| r.group_key.starts_with("EXPENSE/") && r.group_key != categorised_key)
+        .collect();
+    assert_eq!(
+        expense_unspec.iter().map(|r| r.total_amount).sum::<i64>(),
+        -5000,
+        "{}: the uncategorised EXPENSE detail must stay in an EXPENSE/ group \
+         (dashboard filters on the prefix), not be netted with INCOME: {:?}",
+        label,
+        rows
+    );
+    let income: Vec<_> = rows.iter().filter(|r| r.group_key.starts_with("INCOME/")).collect();
+    assert_eq!(
+        income.iter().map(|r| r.total_amount).sum::<i64>(),
+        200_000,
+        "{}: the uncategorised INCOME detail must stay in an INCOME/ group: {:?}",
+        label,
+        rows
+    );
+    assert!(
+        rows.iter().all(|r| !r.group_key.is_empty()),
+        "{}: no group may have an empty (NULL) key mixing category1s: {:?}",
+        label,
+        rows
+    );
+}
+
+/// scan2-A6 — Category2 axis: a detail without CATEGORY2_CODE gets group_key
+/// `'EXPENSE/' || NULL` = NULL, so every such detail (EXPENSE and INCOME
+/// alike) merges into ONE row whose total is the signed net (+195,000), and
+/// the dashboard's `EXPENSE/` filter drops the -5,000 expense.
+///
+/// Expected: the key keeps category1 when the lower code is missing
+/// (e.g. `EXPENSE/`), so the expense and income stay separate.
+#[tokio::test]
+#[ignore = "latent-audit scan2-A6"]
+async fn latent_scan2_a6_category2_missing_code_keeps_category1_in_key() {
+    let pool = setup_db().await;
+    insert_scan2_txn(&pool, "EXPENSE", Some("FOOD"), Some("RICE"), 3000).await;
+    insert_scan2_txn(&pool, "EXPENSE", None, None, 5000).await;
+    insert_scan2_txn(&pool, "INCOME", None, None, 200_000).await;
+
+    let rows = run(&pool, GroupBy::Category2).await.expect("Category2");
+    assert_scan2_a6_groups(&rows, "EXPENSE/FOOD", "Category2");
+}
+
+/// scan2-A6 — Category3 axis: details that have a category2 but no
+/// category3 collapse into the NULL-key group across category2s and across
+/// EXPENSE/INCOME.
+///
+/// Expected: the uncategorised-category3 expense stays under an `EXPENSE/`
+/// key and the income under an `INCOME/` key.
+#[tokio::test]
+#[ignore = "latent-audit scan2-A6"]
+async fn latent_scan2_a6_category3_missing_code_keeps_category1_in_key() {
+    let pool = setup_db().await;
+    insert_scan2_txn(&pool, "EXPENSE", Some("FOOD"), Some("RICE"), 3000).await;
+    insert_scan2_txn(&pool, "EXPENSE", Some("DAILY"), None, 5000).await;
+    insert_scan2_txn(&pool, "INCOME", Some("SALARY"), None, 200_000).await;
+
+    let rows = run(&pool, GroupBy::Category3).await.expect("Category3");
+    assert_scan2_a6_groups(&rows, "EXPENSE/FOOD/RICE", "Category3");
+}
+
+/// scan2-A5 — `weekly_aggregation_by_date` computes the week with plain
+/// `NaiveDate - Duration` / `+ Duration`, which panic on overflow. The
+/// command's `%Y-%m-%d` parser accepts signed years (`"+262142-12-31"`), so a
+/// direct invoke with a date at the edge of chrono's range panics the
+/// command task instead of returning an error.
+///
+/// Expected: no panic; an `Err` (e.g. `InvalidYear`) for a week that cannot
+/// be represented.
+#[test]
+#[ignore = "latent-audit scan2-A5"]
+fn latent_scan2_a5_weekly_by_date_edge_dates_return_err_not_panic() {
+    let parsed = NaiveDate::parse_from_str("+262142-12-31", "%Y-%m-%d")
+        .expect("sanity: chrono parses a signed year");
+    assert_eq!(parsed, NaiveDate::MAX, "sanity");
+
+    for (date, ws) in [
+        (NaiveDate::MAX, WeekStart::Monday),
+        (NaiveDate::MIN, WeekStart::Sunday),
+    ] {
+        let label = format!("{} / {:?}", date, ws);
+        let result = std::panic::catch_unwind(|| {
+            weekly_aggregation_by_date(1, date, ws, GroupBy::Category1)
+        });
+        match result {
+            Err(_) => panic!("{}: weekly_aggregation_by_date panicked instead of returning Err", label),
+            Ok(r) => assert!(r.is_err(), "{}: expected Err for an unrepresentable week", label),
+        }
+    }
+}

@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
-# Run the isolated latent-audit regression tests (2026-09 audit).
+# Run the isolated latent-audit regression tests (2026-09 audit and scan).
 #
 # These tests pin bugs listed in
-# work/bug_list_opus_5_5_latent_audit_2026-09-26.md and are EXPECTED to fail
+# work/bug_list_opus_5_5_latent_audit_2026-09-26.md and
+# work/bug_list_latent_scan_2026-09-29.md (IDs prefixed `scan2-`, e.g.
+# `#[ignore = "latent-audit scan2-A1"]`, Jest files `scan2-a1-*.test.js`)
+# and are EXPECTED to fail
 # until each bug is fixed. They are excluded from the normal `cargo test` /
 # `npm test` runs (and therefore from CI):
 #   - Rust: `#[ignore = "latent-audit <ID>"]`, function names start with `latent_`

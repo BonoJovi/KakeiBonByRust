@@ -260,3 +260,82 @@ fn latent_m2_accounts_follow_category1_side() {
     );
     assert_eq!(accounts_for_category1_change("INCOME", "TRANSFER", s("NONE"), s("CASH")), None);
 }
+
+/// scan2-R3: jpholiday 0.1.4 lacks the 2021 Olympic holiday moves, so the
+/// seeded JP holidays for 2021 are wrong (海の日 07-19, 山の日 08-11,
+/// スポーツの日 10-11 instead of 07-22, 07-23, 08-08 and the substitute
+/// holiday 08-09), and the INSERT OR IGNORE seeding can never correct rows
+/// that an earlier build already stored.
+/// Expected: a fresh DB has the real 2021 holidays, and re-running the
+/// startup seeding on an existing DB that holds the wrong rows repairs them.
+#[tokio::test]
+#[ignore = "latent-audit scan2-R3"]
+async fn latent_scan2_r3_2021_holidays_are_correct_and_repaired() {
+    use chrono::{Datelike, Local};
+
+    // A fresh DB seeds 2021 only while it is inside the sliding window
+    // (until 2026); the repair of an existing DB is checked in any year.
+    let this_year = Local::now().year();
+    let seeds_2021 = ((this_year - crate::consts::HOLIDAY_SEED_YEARS_BACK)
+        ..=(this_year + crate::consts::HOLIDAY_SEED_YEARS_AHEAD))
+        .contains(&2021);
+
+    const WRONG: [&str; 3] = ["2021-07-19", "2021-08-11", "2021-10-11"];
+    const RIGHT: [&str; 4] = ["2021-07-22", "2021-07-23", "2021-08-08", "2021-08-09"];
+
+    async fn jp_2021(pool: &SqlitePool) -> Vec<String> {
+        sqlx::query_scalar(
+            "SELECT HOLIDAY_DATE FROM HOLIDAYS_STANDARD \
+             WHERE LOCALE = 'JP' AND HOLIDAY_DATE BETWEEN '2021-01-01' AND '2021-12-31' \
+             ORDER BY HOLIDAY_DATE",
+        )
+        .fetch_all(pool)
+        .await
+        .expect("read 2021 holidays")
+    }
+    fn check(stage: &str, dates: &[String]) {
+        let wrong: Vec<&str> = WRONG.iter().copied().filter(|d| dates.iter().any(|x| x == d)).collect();
+        let missing: Vec<&str> = RIGHT.iter().copied().filter(|d| !dates.iter().any(|x| x == d)).collect();
+        assert!(
+            wrong.is_empty() && missing.is_empty(),
+            "{}: wrong 2021 holidays present {:?}, real 2021 holidays missing {:?}",
+            stage,
+            wrong,
+            missing
+        );
+    }
+
+    let db = memory_db().await;
+    run_startup(&db).await;
+    let pool = db.pool();
+
+    // 1. Fresh DB.
+    let fresh = jp_2021(pool).await;
+
+    // 2. Existing DB seeded by an older build: the wrong rows are stored and
+    //    the real ones are absent; the next startup must repair it.
+    for d in RIGHT {
+        sqlx::query("DELETE FROM HOLIDAYS_STANDARD WHERE LOCALE = 'JP' AND HOLIDAY_DATE = ?")
+            .bind(d)
+            .execute(pool)
+            .await
+            .expect("delete");
+    }
+    for (d, name) in [("2021-07-19", "海の日"), ("2021-08-11", "山の日"), ("2021-10-11", "スポーツの日")] {
+        sqlx::query(
+            "INSERT OR IGNORE INTO HOLIDAYS_STANDARD (LOCALE, HOLIDAY_DATE, HOLIDAY_NAME) VALUES ('JP', ?, ?)",
+        )
+        .bind(d)
+        .bind(name)
+        .execute(pool)
+        .await
+        .expect("insert wrong row");
+    }
+    db.migrate_recurring().await.expect("re-run migrate_recurring");
+    let repaired = jp_2021(pool).await;
+
+    if seeds_2021 {
+        check("fresh DB", &fresh);
+    }
+    check("existing DB after startup", &repaired);
+}
