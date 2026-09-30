@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-10-01 JST  
-**総テスト数**: 845件 (jest suite 56 ファイル、`npm test` 実測)
+**総テスト数**: 848件 (jest suite 58 ファイル、`npm test` 実測)
 
 ---
 
@@ -40,6 +40,8 @@
   - [period-end-date.test.js](#period-end-datetestjs)
   - [aggregation-render-unspecified.test.js](#aggregation-render-unspecifiedtestjs)
   - [pages/transaction-detail-page.test.js](#pagestransaction-detail-pagetestjs)
+  - [pages/transaction-detail-included-typing.test.js](#pagestransaction-detail-included-typingtestjs)
+  - [pages/transaction-detail-unreachable-included-price.test.js](#pagestransaction-detail-unreachable-included-pricetestjs)
   - [pages/transaction-management-page.test.js](#pagestransaction-management-pagetestjs)
   - [pages/user-management-page.test.js](#pagesuser-management-pagetestjs)
   - [pages/recurring-rule-page.test.js](#pagesrecurring-rule-pagetestjs)
@@ -451,7 +453,7 @@
 
 取引明細の税計算機能のテスト。
 
-**テスト数**: 29件 (jest 実測)
+**テスト数**: 30件 (jest 実測)
 
 | テストカテゴリ | 説明 |
 |--------------|------|
@@ -460,7 +462,8 @@
 | 丸め誤差検出 | 税計算の丸め誤差検出 |
 | エッジケース | 0円、負の値などのエッジケース |
 | 複数税率 | 異なる税率での計算 |
-| 三者自動整合 (Fable-5 #8) | `calculateFromIncluding` の pure helper: 税込入力が丸め設定で表現不能な場合、`tax = round(excluded * rate)` と `includedCorrected = excluded + tax` の 3 数値を DB に整合的に保存 |
+| 三者自動整合 (Fable-5 #8) | `calculateFromIncluding` の pure helper: `excluded + tax` は常に入力した税込額。`tax = round(excluded * rate)` を満たす分割があればそれを使う |
+| 入力不能な税込額 (潜在スキャン scan2-T2) | 税抜の式で表せない税込額 (10 %・切り捨ての 1000 円など) も入力どおり残し、税額は `税込 - 税抜` で切り出す。1〜10,000 円 × 8/10 % × 3 丸めで全額が保たれることを確認 |
 | pure helper 経路 | `calculateFromExcluding` / `applyTaxRounding` の直接テスト (floor / half-up / ceil / unknown default) |
 
 **ファイル**: res/tests/transaction-detail-tax-calculation.test.js
@@ -711,6 +714,30 @@
 | `[L7] should show the row total instead of ¥0 when a legacy row has amount_including_tax = 0` | 税込額が 0 の古い明細は ¥0 ではなく AMOUNT + TAX_AMOUNT を表示 (潜在監査 L7) |
 
 **ファイル**: res/tests/pages/transaction-detail-page.test.js
+
+### pages/transaction-detail-included-typing.test.js
+
+実際の明細画面で税込額を 1 文字ずつ入力する回帰テスト (潜在スキャン scan2-T1)。以前は入力のたびに税込欄が書き換えられ、途中の「10」が 9 に変わって保存額がずれていた。
+
+**テスト数**: 1件
+
+| テスト | 説明 |
+|--------|------|
+| `[T1] typing "100" tax-included at 10 % (floor) keeps 100 and saves 100 / 91 / 9` | 10 %・切り捨てで「100」を 1 文字ずつ入力しても 100 のまま残り、`add_transaction_detail` に 100 / 91 / 9 が送られる |
+
+**ファイル**: res/tests/pages/transaction-detail-included-typing.test.js
+
+### pages/transaction-detail-unreachable-included-price.test.js
+
+税抜の式で表せない税込額を実際の明細画面で入力する回帰テスト (潜在スキャン scan2-T2)。以前は 1000 円が 999 円に書き換えられていた。
+
+**テスト数**: 1件
+
+| テスト | 説明 |
+|--------|------|
+| `[T2] 1000 tax-included at 10 % (floor) is kept, with excluded 909 and tax 91` | 10 %・切り捨てで 1000 を入力すると 1000 のまま残り、`add_transaction_detail` に 1000 / 909 / 91 が送られる |
+
+**ファイル**: res/tests/pages/transaction-detail-unreachable-included-price.test.js
 
 ---
 
@@ -1290,10 +1317,10 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **422件** |
+| **機能別テスト** | **425件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
-| transaction-detail-tax-calculation.test.js | 29 |
+| transaction-detail-tax-calculation.test.js | 30 |
 | toast.test.js | 14 |
 | tax-calc.test.js | 12 |
 | product-autocomplete.test.js | 10 |
@@ -1309,6 +1336,8 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | period-end-date.test.js | 2 |
 | aggregation-render-unspecified.test.js | 5 |
 | pages/transaction-detail-page.test.js | 3 |
+| pages/transaction-detail-included-typing.test.js | 1 |
+| pages/transaction-detail-unreachable-included-price.test.js | 1 |
 | pages/transaction-management-page.test.js | 4 |
 | pages/user-management-page.test.js | 2 |
 | pages/recurring-rule-page.test.js | 3 |
@@ -1342,7 +1371,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **845件** |
+| **総計 (jest)** | **848件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 

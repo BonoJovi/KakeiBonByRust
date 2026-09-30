@@ -1,4 +1,4 @@
-// latent-audit scan2-T1: typing a tax-included amount digit by digit is rewritten mid-typing, so the saved amount is wrong
+// Typing a tax-included amount digit by digit keeps every digit and saves the typed price (latent-audit scan2-T1)
 /**
  * T1  detail-tax-calc.js calcFromIncluding runs on every `input` event and
  *     writes `includedCorrected` back into the field being typed. Under the
@@ -15,7 +15,7 @@
 import { jest } from '@jest/globals';
 import {
     mockPageModules, loadPageBody, bootPage, flush, callsOf,
-} from '../pages/_page-harness.js';
+} from './_page-harness.js';
 
 const TRANSACTION_ID = 10;
 
