@@ -1254,19 +1254,55 @@ async function saveModalState() {
         editing_transaction_id: editingTransactionId,
         transaction_date: document.getElementById('transaction-date')?.value,
         category1: document.getElementById('category1')?.value,
-        category2: document.getElementById('category2')?.value,
-        category3: document.getElementById('category3')?.value,
-        account_id: document.getElementById('account')?.value,
         shop_id: document.getElementById('shop')?.value,
         from_account: document.getElementById('from-account')?.value,
         to_account: document.getElementById('to-account')?.value,
         total_amount: document.getElementById('total-amount')?.value,
         tax_rounding: document.getElementById('tax-rounding')?.value,
         tax_included_type: document.getElementById('tax-included-type')?.value,
-        memo: document.getElementById('transaction-memo')?.value
+        memo: document.getElementById('transaction-memo')?.value,
+        is_scheduled: document.getElementById('is-scheduled')?.checked
     };
     
     await setSessionModalState(JSON.stringify(modalData));
+}
+
+// Put every field of the draft back into the form, in new and edit mode
+// alike (latent-scan2 T4). The edit restore used to put back only the date,
+// shop, total and memo, so the category, accounts and tax settings came back
+// from the DB while the total was the draft's; the scheduled flag was never
+// saved at all. Category1 goes first because it decides which account
+// fields are shown. A field the user cleared (e.g. the memo) is restored as
+// empty rather than skipped.
+function applyModalDraft(modalData, { allowDisabled }) {
+    const setValue = (id, value) => {
+        const el = document.getElementById(id);
+        if (el && value !== undefined && value !== null) el.value = value;
+    };
+
+    setValue('transaction-date', modalData.transaction_date);
+    if (modalData.category1) {
+        const category1Select = document.getElementById('category1');
+        category1Select.value = modalData.category1;
+        handleCategory1Change({ target: category1Select });
+    }
+    if (modalData.shop_id && modalData.shop_id !== 'null') {
+        selectShop(modalData.shop_id, { allowDisabled });
+    }
+    if (modalData.from_account) {
+        selectAccount('from-account', modalData.from_account, { allowDisabled });
+    }
+    if (modalData.to_account) {
+        selectAccount('to-account', modalData.to_account, { allowDisabled });
+    }
+    if (modalData.tax_rounding) setValue('tax-rounding', modalData.tax_rounding);
+    if (modalData.tax_included_type) setValue('tax-included-type', modalData.tax_included_type);
+    setValue('total-amount', modalData.total_amount);
+    setValue('transaction-memo', modalData.memo);
+    if (typeof modalData.is_scheduled === 'boolean') {
+        const scheduled = document.getElementById('is-scheduled');
+        if (scheduled) scheduled.checked = modalData.is_scheduled;
+    }
 }
 
 // While restoreModalState awaits (the modal's initialisation, the category
@@ -1291,85 +1327,19 @@ async function restoreModalState() {
         // Clear session state
         await clearSessionModalState();
         
-        // Open modal
+        // Open modal (open() bumps the session synchronously, so this is
+        // the one it opens)
+        const session = transactionModal.session + 1;
         if (modalData.editing_transaction_id) {
-            // Editing mode - open with transaction data
-            // open() bumps the session synchronously, so this is the one it opens
-            const session = transactionModal.session + 1;
             await openTransactionModal(modalData.editing_transaction_id);
-            if (!isStillRestoring(session)) return;
-
-            // Override with saved values (in case user made changes before navigating away)
-            if (modalData.transaction_date) {
-                document.getElementById('transaction-date').value = modalData.transaction_date;
-            }
-            if (modalData.shop_id && modalData.shop_id !== 'null') {
-                selectShop(modalData.shop_id);
-            }
-            if (modalData.total_amount) {
-                document.getElementById('total-amount').value = modalData.total_amount;
-            }
-            if (modalData.memo) {
-                document.getElementById('transaction-memo').value = modalData.memo;
-            }
         } else {
-            // New transaction mode
-            const session = transactionModal.session + 1;
             await openTransactionModal();
-            if (!isStillRestoring(session)) return;
-            
-            // Restore form values
-            if (modalData.transaction_date) {
-                document.getElementById('transaction-date').value = modalData.transaction_date;
-            }
-            if (modalData.category1) {
-                document.getElementById('category1').value = modalData.category1;
-                // Trigger change to load dependent dropdowns
-                await handleCategory1Change({ target: document.getElementById('category1') });
-                if (!isStillRestoring(session)) return;
-                
-                // Wait a bit for category2 to load
-                await new Promise(resolve => setTimeout(resolve, 100));
-                if (!isStillRestoring(session)) return;
-                
-                if (modalData.category2) {
-                    document.getElementById('category2').value = modalData.category2;
-                    // Trigger change to load category3
-                    document.getElementById('category2').dispatchEvent(new Event('change'));
-                    
-                    await new Promise(resolve => setTimeout(resolve, 100));
-                    if (!isStillRestoring(session)) return;
-                    
-                    if (modalData.category3) {
-                        document.getElementById('category3').value = modalData.category3;
-                    }
-                }
-            }
-            if (modalData.account_id) {
-                document.getElementById('account').value = modalData.account_id;
-            }
-            if (modalData.shop_id) {
-                selectShop(modalData.shop_id, { allowDisabled: false });
-            }
-            if (modalData.from_account) {
-                selectAccount('from-account', modalData.from_account, { allowDisabled: false });
-            }
-            if (modalData.to_account) {
-                selectAccount('to-account', modalData.to_account, { allowDisabled: false });
-            }
-            if (modalData.total_amount) {
-                document.getElementById('total-amount').value = modalData.total_amount;
-            }
-            if (modalData.tax_rounding) {
-                document.getElementById('tax-rounding').value = modalData.tax_rounding;
-            }
-            if (modalData.tax_included_type) {
-                document.getElementById('tax-included-type').value = modalData.tax_included_type;
-            }
-            if (modalData.memo) {
-                document.getElementById('transaction-memo').value = modalData.memo;
-            }
         }
+        if (!isStillRestoring(session)) return;
+
+        // Override with the values the user had before navigating away. A
+        // disabled shop / account is only kept for an existing transaction.
+        applyModalDraft(modalData, { allowDisabled: Boolean(modalData.editing_transaction_id) });
     } catch (error) {
         console.error('Failed to restore modal state:', error);
         await clearSessionModalState();

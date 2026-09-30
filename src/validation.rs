@@ -43,6 +43,18 @@ pub fn validate_master_name(label: &str, name: &str) -> Result<(), String> {
     validate_max_chars(label, name, consts::MAX_NAME_LEN)
 }
 
+/// Username guard shared by setup, registration and user management: a
+/// master-data name that also has no leading or trailing whitespace. A
+/// stored "bono " could not be logged into with the visible "bono", and the
+/// edit screen (which trims) silently renamed it (latent-scan2 C1).
+pub fn validate_username(label: &str, name: &str) -> Result<(), String> {
+    validate_master_name(label, name)?;
+    if name.trim() != name {
+        return Err(format!("{} must not start or end with whitespace", label));
+    }
+    Ok(())
+}
+
 /// Memo guard shared by master data, transactions and recurring rules.
 pub fn validate_memo(label: &str, memo: Option<&String>) -> Result<(), String> {
     validate_optional_max_chars(label, memo, consts::MAX_MEMO_LEN)

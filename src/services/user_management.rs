@@ -58,7 +58,7 @@ impl std::fmt::Display for UserManagementError {
 /// - Issue #37 Phase 2-3 — length guard. Counts characters, not bytes,
 ///   mirroring the frontend `maxlength` and char counter.
 fn validate_username(username: &str) -> Result<(), UserManagementError> {
-    crate::validation::validate_master_name(USERNAME_LABEL, username)
+    crate::validation::validate_username(USERNAME_LABEL, username)
         .map_err(UserManagementError::Validation)
 }
 

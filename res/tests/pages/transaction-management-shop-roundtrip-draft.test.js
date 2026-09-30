@@ -1,4 +1,4 @@
-// latent-audit scan2-T4: the Manage-shops round trip loses the scheduled flag (new) and the category/account/tax/memo edits (edit)
+// The shop-management round trip keeps the scheduled flag and every header edit (latent-audit scan2-T4)
 /**
  * T4  saveModalState never records `is-scheduled`, and the edit-mode branch
  *     of restoreModalState puts back only date, shop, total and a non-empty
@@ -20,7 +20,7 @@
 import { jest } from '@jest/globals';
 import {
     mockPageModules, loadPageBody, bootPage, flush, callsOf,
-} from '../pages/_page-harness.js';
+} from './_page-harness.js';
 
 const HEADER = {
     transaction_id: 1,
