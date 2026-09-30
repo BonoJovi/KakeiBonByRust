@@ -1005,6 +1005,11 @@ fn build_detail_group_pieces(
     // the header's category1 for the category groupings (the dashboard picks
     // pie-chart slices by that prefix), named by the localised
     // `aggregation.no_details` resource.
+    //
+    // A detail may leave category2/3 empty (NULL). Those codes are COALESCEd
+    // to '' so the key keeps its category1 prefix: `'EXPENSE/' || NULL` is
+    // NULL, which merged every such detail, income and expense alike, into
+    // one netted group the dashboard could not place (latent-scan2 A6).
     let no_details_join = "LEFT JOIN I18N_RESOURCES ndr ON ndr.RESOURCE_KEY = 'aggregation.no_details' \
                            AND ndr.LANG_CODE = ?";
     let no_details_name = "COALESCE(ndr.RESOURCE_VALUE, '')";
@@ -1012,7 +1017,7 @@ fn build_detail_group_pieces(
         GroupBy::Category2 => (
             format!(
                 "CASE WHEN td.DETAIL_ID IS NULL THEN th.CATEGORY1_CODE || '/{nd}' \
-                 ELSE td.CATEGORY1_CODE || '/' || td.CATEGORY2_CODE END",
+                 ELSE td.CATEGORY1_CODE || '/' || COALESCE(td.CATEGORY2_CODE, '') END",
                 nd = NO_DETAILS_GROUP_KEY
             ),
             "COALESCE(c2i.CATEGORY2_NAME_I18N, c2.CATEGORY2_NAME)".to_string(),
@@ -1029,7 +1034,8 @@ fn build_detail_group_pieces(
         GroupBy::Category3 => (
             format!(
                 "CASE WHEN td.DETAIL_ID IS NULL THEN th.CATEGORY1_CODE || '/{nd}' \
-                 ELSE td.CATEGORY1_CODE || '/' || td.CATEGORY2_CODE || '/' || td.CATEGORY3_CODE END",
+                 ELSE td.CATEGORY1_CODE || '/' || COALESCE(td.CATEGORY2_CODE, '') \
+                 || '/' || COALESCE(td.CATEGORY3_CODE, '') END",
                 nd = NO_DETAILS_GROUP_KEY
             ),
             "COALESCE(c3i.CATEGORY3_NAME_I18N, c3.CATEGORY3_NAME)".to_string(),
@@ -1990,7 +1996,7 @@ mod tests {
 
         // Inner layer
         assert!(
-            sql.contains("td.CATEGORY1_CODE || '/' || td.CATEGORY2_CODE"),
+            sql.contains("td.CATEGORY1_CODE || '/' || COALESCE(td.CATEGORY2_CODE, '')"),
             "Category2 group key expression missing: {}",
             sql
         );
@@ -2023,7 +2029,8 @@ mod tests {
 
         assert!(
             sql.contains(
-                "td.CATEGORY1_CODE || '/' || td.CATEGORY2_CODE || '/' || td.CATEGORY3_CODE"
+                "td.CATEGORY1_CODE || '/' || COALESCE(td.CATEGORY2_CODE, '') \
+                 || '/' || COALESCE(td.CATEGORY3_CODE, '')"
             ),
             "Category3 group key must walk down to CATEGORY3_CODE: {}",
             sql
