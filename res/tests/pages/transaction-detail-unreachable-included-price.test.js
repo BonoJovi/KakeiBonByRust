@@ -1,4 +1,4 @@
-// latent-audit scan2-T2: a tax-included price such as 1000 at 10 % (floor) cannot be recorded; it is forced to 999
+// A tax-included price with no exact tax-excluded split (1000 at 10 % floor) is kept as typed (latent-audit scan2-T2)
 /**
  * T2  calculateFromIncluding derives tax as round(excluded * rate), so only
  *     prices n + round(n * rate / 100) are reachable. At 10 % / floor,
@@ -18,7 +18,7 @@
 import { jest } from '@jest/globals';
 import {
     mockPageModules, loadPageBody, bootPage, flush, callsOf,
-} from '../pages/_page-harness.js';
+} from './_page-harness.js';
 
 const TRANSACTION_ID = 10;
 

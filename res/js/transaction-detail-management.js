@@ -248,66 +248,8 @@ function installTaxCalculationListeners() {
     }
     setupTaxCalculationListeners(
         { taxRate, amountExcludingTax, amountIncludingTax, taxAmount },
-        {
-            getRoundingType: () => taxRoundingType,
-            onRoundingDiscrepancy: ({ userInput, calculated }) =>
-                showRoundingWarning(userInput, calculated),
-            onCalculationCleared: clearRoundingWarning,
-        }
+        { getRoundingType: () => taxRoundingType }
     );
-}
-
-/**
- * Show warning message for rounding discrepancy
- */
-function showRoundingWarning(userInput, calculated) {
-    const warningDiv = document.getElementById('rounding-warning');
-    if (!warningDiv) {
-        // Create warning element if it doesn't exist
-        const detailForm = document.getElementById('detail-form');
-        const newWarning = document.createElement('div');
-        newWarning.id = 'rounding-warning';
-        newWarning.className = 'rounding-warning';
-        newWarning.style.cssText = 'background-color: #fff3cd; color: #856404; padding: 10px; margin: 10px 0; border: 1px solid #ffc107; border-radius: 4px;';
-        
-        const amountInputs = detailForm.querySelector('#amount-including-tax').closest('.form-group');
-        amountInputs.parentNode.insertBefore(newWarning, amountInputs.nextSibling);
-    }
-    
-    const warning = document.getElementById('rounding-warning');
-    const diff = Math.abs(userInput - calculated);
-    // Fable-5 #8 — wording now reads "auto-adjusted to N" because the
-    // form actually rewrites the tax-included input rather than
-    // leaving three inconsistent numbers behind for the user to
-    // ignore. Uses the new i18n keys (2451-2454); the older
-    // `rounding_warning_*` keys are dead but stay in the resource
-    // table as a fallback for anything that still resolved them.
-    //
-    // CodeRabbit on #129 — the i18n resource text is DB-sourced, so
-    // in principle a malicious admin could seed an `<img onerror>`
-    // and land it in `innerHTML` here. escapeHtml every dynamic
-    // fragment (the title, the message body after `{userInput}` /
-    // `{calculated}` / `{diff}` substitution) so untrusted characters
-    // render as text.
-    const titleEscaped = escapeHtml(i18n.t('detail_mgmt.rounding_auto_correct_title'));
-    const bodyEscaped = escapeHtml(
-        i18n.t('detail_mgmt.rounding_auto_correct_message')
-            .replace('{userInput}', userInput.toLocaleString())
-            .replace('{calculated}', calculated.toLocaleString())
-            .replace('{diff}', diff)
-    );
-    warning.innerHTML = `<strong>✏️ ${titleEscaped}</strong><br>${bodyEscaped}`;
-    warning.style.display = 'block';
-}
-
-/**
- * Clear rounding warning message
- */
-function clearRoundingWarning() {
-    const warningDiv = document.getElementById('rounding-warning');
-    if (warningDiv) {
-        warningDiv.style.display = 'none';
-    }
 }
 
 function setupEventListeners() {

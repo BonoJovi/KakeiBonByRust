@@ -2,8 +2,8 @@
 
 This document provides a complete index of all frontend tests implemented in JavaScript.
 
-**Last Updated**: 2026-09-27 JST  
-**Total Tests**: 844 (jest suites; 55 test files, per `npm test`)
+**Last Updated**: 2026-10-01 JST  
+**Total Tests**: 847 (jest suites; 57 test files, per `npm test`)
 
 ---
 
@@ -30,11 +30,11 @@ and are **not** added again to the grand total.
 - **login.test.js** - Login tests (58)
 - **user-deletion.test.js** - User deletion tests (46)
 
-### Feature-Specific Tests (421 tests)
+### Feature-Specific Tests (424 tests)
 
 - **transaction-edit.test.js** - Transaction edit tests (112)
 - **transaction-detail-management.test.js** - Transaction detail management tests (51)
-- **transaction-detail-tax-calculation.test.js** - Tax calculation tests (29)
+- **transaction-detail-tax-calculation.test.js** - Tax calculation tests; a typed tax-included price is always kept, with the tax carved out of it when no exact tax-excluded split exists (latent-audit scan2-T2) (30)
 - **toast.test.js** - Toast notification tests (14)
 - **tax-calc.test.js** - Tax calculation utility tests (12)
 - **product-autocomplete.test.js** - Product autocomplete UI tests (10)
@@ -50,6 +50,8 @@ and are **not** added again to the grand total.
 - **period-end-date.test.js** - `fetchMonthlyPeriodEndDate` (period.js): the dashboard account balances are taken as of the last day of the user's monthly period (custom start day / holiday shift from `get_monthly_period_bounds`), falling back to the calendar month end if the backend fails (latent-audit L14) (2)
 - **aggregation-render-unspecified.test.js** - `renderResults` unspecified-group i18n swap (Fable-5 #22): backend now returns an empty `group_name` string when the SHOP / PRODUCT / ACCOUNT reference is unspecified, and the renderer swaps it for `i18n.t('common.unspecified')` so English users don't see Japanese "指定なし" leaking through (5)
 - **pages/transaction-detail-page.test.js** - Boots the real detail page against `transaction-detail-management.html`: opening a product-linked detail and saving without changes keeps its `productId` (latent-audit H3), a double submit adds the detail only once (latent-audit M19), and a legacy row with `amount_including_tax = 0` shows AMOUNT + TAX_AMOUNT instead of ¥0 (latent-audit L7) (3)
+- **pages/transaction-detail-included-typing.test.js** - Boots the real detail page: typing a tax-included amount digit by digit keeps every digit (the field is no longer rewritten mid-typing) and saves the typed price (latent-audit scan2-T1) (1)
+- **pages/transaction-detail-unreachable-included-price.test.js** - Boots the real detail page: a tax-included price with no exact tax-excluded split (1000 at 10 % floor) is kept as typed and saved as 909 + 91 (latent-audit scan2-T2) (1)
 - **pages/transaction-management-page.test.js** - Boots the real transaction page against `transaction-management.html`: saving a header without details shows no ¥0 recalc prompt and completes the save flow (latent-audit H4); a blank transaction date is rejected with `validation.required` before sending (latent-audit L8); deleting the only row on the last page moves back to the last page, and a late older page response does not overwrite a newer one (latent-audit L5) (4)
 - **pages/user-management-page.test.js** - Boots the real user management page (admin session): a whitespace-only username is rejected with the required-field message before `create_general_user`, while a normal name still reaches it (latent-audit M13) (2)
 - **pages/recurring-rule-page.test.js** - Boots the real recurring rule page: a TRANSFER template from an account to itself is rejected with `transaction_mgmt.transfer_same_account` before `create_recurring_rule`, while two different accounts still go through, and a backend `transfer_same_account` rejection shows the same message (latent-audit M16) (3)
@@ -109,10 +111,10 @@ and are **not** added again to the grand total.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **Feature-Specific Tests** | **421** |
+| **Feature-Specific Tests** | **424** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
-| transaction-detail-tax-calculation.test.js | 29 |
+| transaction-detail-tax-calculation.test.js | 30 |
 | toast.test.js | 14 |
 | tax-calc.test.js | 12 |
 | product-autocomplete.test.js | 10 |
@@ -128,6 +130,8 @@ and are **not** added again to the grand total.
 | period-end-date.test.js | 2 |
 | aggregation-render-unspecified.test.js | 5 |
 | pages/transaction-detail-page.test.js | 3 |
+| pages/transaction-detail-included-typing.test.js | 1 |
+| pages/transaction-detail-unreachable-included-price.test.js | 1 |
 | pages/transaction-management-page.test.js | 4 |
 | pages/user-management-page.test.js | 2 |
 | pages/recurring-rule-page.test.js | 3 |
@@ -160,7 +164,7 @@ and are **not** added again to the grand total.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **Total (jest)** | **844** |
+| **Total (jest)** | **847** |
 
 Grand total is Screen + Feature + Aggregation (Common Test Suites are helper
 libraries invoked from Screen-Specific files and their assertions are already
