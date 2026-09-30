@@ -1286,8 +1286,9 @@ function applyModalDraft(modalData, { allowDisabled }) {
         category1Select.value = modalData.category1;
         handleCategory1Change({ target: category1Select });
     }
-    if (modalData.shop_id && modalData.shop_id !== 'null') {
-        selectShop(modalData.shop_id, { allowDisabled });
+    // An empty shop_id is a shop the user cleared, not a missing value.
+    if (modalData.shop_id !== undefined && modalData.shop_id !== null) {
+        selectShop(modalData.shop_id === 'null' ? '' : modalData.shop_id, { allowDisabled });
     }
     if (modalData.from_account) {
         selectAccount('from-account', modalData.from_account, { allowDisabled });
