@@ -1072,8 +1072,11 @@ fn build_detail_group_pieces(
     binds.push(BindValue::Str(lang.to_string()));
     (
         key,
+        // A missing category2/3 code (or product) finds no name row; return
+        // '' explicitly rather than relying on sqlx decoding NULL TEXT as ""
+        // (latent-scan2 A6, CodeRabbit on #169).
         format!(
-            "CASE WHEN td.DETAIL_ID IS NULL THEN {no_details_name} ELSE {name} END"
+            "CASE WHEN td.DETAIL_ID IS NULL THEN {no_details_name} ELSE COALESCE({name}, '') END"
         ),
         format!("{joins}\n{no_details_join}"),
         binds,
