@@ -1281,7 +1281,8 @@ function applyModalDraft(modalData, { allowDisabled }) {
     };
 
     setValue('transaction-date', modalData.transaction_date);
-    if (modalData.category1) {
+    // An empty category1 is one the user cleared, like the shop below.
+    if (modalData.category1 !== undefined && modalData.category1 !== null) {
         const category1Select = document.getElementById('category1');
         category1Select.value = modalData.category1;
         handleCategory1Change({ target: category1Select });
