@@ -500,6 +500,13 @@ pub fn columns_to_cyclic_spec(cols: &CycleColumns) -> Result<CyclicSpec, String>
             cols.period_interval
         ));
     }
+    if cols.period_interval > crate::consts::MAX_PERIOD_INTERVAL {
+        return Err(format!(
+            "PERIOD_INTERVAL must be <= {}, got {}",
+            crate::consts::MAX_PERIOD_INTERVAL,
+            cols.period_interval
+        ));
+    }
 
     let cycle = match cols.period_unit.as_str() {
         PERIOD_UNIT_DAY => {
@@ -1881,6 +1888,23 @@ mod tests {
         cols.day_of_week = Some(0);
         assert!(columns_to_cyclic_spec(&cols).is_err());
         cols.day_of_week = Some(8);
+        assert!(columns_to_cyclic_spec(&cols).is_err());
+    }
+
+    /// An interval above MAX_PERIOD_INTERVAL is rejected: the generators step
+    /// months / years with signed arithmetic, so a huge value turned into a
+    /// negative step (CodeRabbit on #171). The limit itself is accepted.
+    #[test]
+    fn err_interval_above_max() {
+        let mut cols = cyclic_spec_to_columns(&CyclicSpec {
+            cycle: Cycle::Monthly { interval: 1, day_rule: MonthlyDayRule::DayOfMonth { day: 15 } },
+            holiday_shift: HolidayShift::Prev,
+        });
+        cols.period_interval = crate::consts::MAX_PERIOD_INTERVAL;
+        assert!(columns_to_cyclic_spec(&cols).is_ok());
+        cols.period_interval = crate::consts::MAX_PERIOD_INTERVAL + 1;
+        assert!(columns_to_cyclic_spec(&cols).is_err());
+        cols.period_interval = u32::MAX;
         assert!(columns_to_cyclic_spec(&cols).is_err());
     }
 

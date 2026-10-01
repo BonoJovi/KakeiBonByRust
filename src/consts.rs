@@ -44,6 +44,11 @@ pub const TAX_EXCLUDED: i64 = 1;  // 外税 - tax is calculated separately
 pub const HOLIDAY_SEED_YEARS_BACK: i32 = 5;
 pub const HOLIDAY_SEED_YEARS_AHEAD: i32 = 10;
 
+/// Largest recurring-rule interval (days / weeks / months / years); matches
+/// the form's `max="999"`. Larger values overflowed the signed month / year
+/// arithmetic of the generators (CodeRabbit on #171).
+pub const MAX_PERIOD_INTERVAL: u32 = 999;
+
 // Recurring scheduled transactions (v2.1.0) — HOLIDAY_SHIFT_TYPE column values
 pub const HOLIDAY_SHIFT_NONE: i32 = 0;
 pub const HOLIDAY_SHIFT_PREV: i32 = 1;
