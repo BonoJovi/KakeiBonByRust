@@ -258,8 +258,12 @@ fn generate_monthly(
     let mut month = start.month();
     if lo < start {
         let m_zero = month as i32 - 1 - interval as i32;
-        year += m_zero.div_euclid(12);
-        month = (m_zero.rem_euclid(12) + 1) as u32;
+        let (prev_year, prev_month) = (year + m_zero.div_euclid(12), (m_zero.rem_euclid(12) + 1) as u32);
+        // Only step back when that month is representable; otherwise the
+        // loop below would stop before reaching the period (CodeRabbit).
+        if NaiveDate::from_ymd_opt(prev_year, prev_month, 1).is_some() {
+            (year, month) = (prev_year, prev_month);
+        }
     }
     let (start, end) = (lo, hi);
 
@@ -311,7 +315,7 @@ fn generate_yearly(
 ) -> Vec<NaiveDate> {
     let mut out = Vec::new();
     let mut year = start.year();
-    if lo < start {
+    if lo < start && NaiveDate::from_ymd_opt(year - interval as i32, month, 1).is_some() {
         year -= interval as i32;
     }
     let (start, end) = (lo, hi);
