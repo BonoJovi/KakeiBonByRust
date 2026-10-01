@@ -1,4 +1,4 @@
-// latent-audit scan2-M4: the account modal closes (and resets the form) on any save error
+// A failed account save keeps the form open with the input (latent-audit scan2-M4)
 /**
  * Account master screen (res/js/account-management.js).
  *
@@ -15,7 +15,7 @@
 import { jest } from '@jest/globals';
 import {
     mockPageModules, loadPageBody, bootPage, flush, callsOf, isHiddenOrAbsent,
-} from '../pages/_page-harness.js';
+} from './_page-harness.js';
 
 const account = (code, name, order) => ({
     account_id: order,
@@ -77,5 +77,27 @@ describe('scan2-M4 account modal on save error', () => {
         expect(isHiddenOrAbsent(modal)).toBe(false);
         expect(document.getElementById('account-code').value).toBe('BANK1');
         expect(document.getElementById('account-name').value).toBe('Second bank');
+    });
+
+    test('keeps the modal open when a whitespace-only name is stopped before add_account', async () => {
+        invoke.mockClear();
+        const modal = document.getElementById('account-modal');
+        if (isHiddenOrAbsent(modal)) {
+            document.getElementById('add-account-btn').click();
+            await flush(5);
+        }
+
+        document.getElementById('account-code').value = 'BANK2';
+        document.getElementById('account-name').value = '   ';
+        document.getElementById('template-code').value = 'BANK';
+        document.getElementById('initial-balance').value = '0';
+        document.getElementById('account-form').dispatchEvent(
+            new Event('submit', { cancelable: true, bubbles: true })
+        );
+        await flush(10);
+
+        expect(callsOf(invoke, 'add_account')).toHaveLength(0);
+        expect(isHiddenOrAbsent(modal)).toBe(false);
+        expect(document.getElementById('account-code').value).toBe('BANK2');
     });
 });

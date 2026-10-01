@@ -320,31 +320,33 @@ async function saveAccount() {
 
     clearValidationError(accountNameInput);
 
-    // Validation
+    // Validation. A rejected save throws so Modal keeps the form open; a
+    // resolved onSave closes it and resets the input (latent-scan2 M4), as
+    // the other masters already do. Modal's handlers catch the error.
     if (!accountCode) {
         showError('account-code-error', 'Account code is required');
-        return;
+        throw new Error('Validation error: account code required');
     }
 
     if (!accountName) {
         showValidationError(accountNameInput, 'Account name is required');
-        return;
+        throw new Error('Validation error: account name required');
     }
 
     // Validation — max length (mirrors Rust defense in src/services/account.rs)
     if ([...accountName].length > MAX_NAME_LEN) {
         showMaxLengthError(accountNameInput, i18n.t('account_mgmt.account_name'), MAX_NAME_LEN);
-        return;
+        throw new Error('Validation error: account name too long');
     }
 
     if (!templateCode) {
         showError('template-code-error', 'Template is required');
-        return;
+        throw new Error('Validation error: template required');
     }
 
     if (isNaN(initialBalance)) {
         showError('initial-balance-error', 'Initial balance must be a number');
-        return;
+        throw new Error('Validation error: initial balance is not a number');
     }
 
     // Resolve the edit target from the local cache BEFORE invoke so a
@@ -418,6 +420,7 @@ async function saveAccount() {
             showToast(mapped.toastMessage, { variant: 'error' });
         }
         if (mapped.nameMessage) showValidationError(accountNameInput, mapped.nameMessage);
+        throw error;
     }
 }
 

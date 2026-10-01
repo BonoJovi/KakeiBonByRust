@@ -1062,9 +1062,12 @@ async function handleTransactionSubmit(event) {
         showMaxLengthError(memoInput, i18n.t('transaction_mgmt.memo'), MAX_MEMO_LEN);
         throw new Error('Validation error: memo too long');
     }
+    // Every rejected save throws so Modal keeps the form open; a resolved
+    // onSave counts as success and closes it, wiping the input
+    // (latent-scan2 T5). Modal's submit / save handlers catch the error.
     if (totalAmount === null) {
         showValidationError(totalAmountInput, i18n.t('common.error_amount_not_integer'));
-        return;
+        throw new Error('Validation error: total amount is not an integer');
     }
 
     // Fable-5 review #20 — TRANSFER with FROM == TO nets to zero but
@@ -1072,13 +1075,12 @@ async function handleTransactionSubmit(event) {
     // the TO side, inflating the account balance. The backend rejects
     // this outright (returning `ApiError { code: transfer_same_account }`);
     // catch it here first so the user sees a specific toast instead
-    // of even reaching the invoke. Returning (rather than throwing)
-    // keeps this outside the surrounding try and avoids an unhandled
-    // Promise rejection if the caller doesn't await this handler
-    // (CodeRabbit on #127).
+    // of even reaching the invoke. It throws like the other checks so
+    // the form stays open (latent-scan2 T5); the only caller is Modal's
+    // onSave, whose handlers catch it.
     if (category1Code === 'TRANSFER' && fromAccountCode === toAccountCode) {
         showToast(i18n.t('transaction_mgmt.transfer_same_account'), { variant: 'error' });
-        return;
+        throw new Error('Validation error: transfer between the same account');
     }
 
     // Convert datetime-local format (YYYY-MM-DDTHH:mm) to SQLite DATETIME format (YYYY-MM-DD HH:MM:SS)
@@ -1186,6 +1188,7 @@ async function handleTransactionSubmit(event) {
         }
 
         showToast(i18n.t('transaction_mgmt.failed_to_save') + ': ' + formatApiError(error), { variant: 'error' });
+        throw error;
     }
 }
 
