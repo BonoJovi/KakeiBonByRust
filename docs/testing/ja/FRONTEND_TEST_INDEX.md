@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-10-01 JST  
-**総テスト数**: 852件 (jest suite 60 ファイル、`npm test` 実測)
+**総テスト数**: 853件 (jest suite 60 ファイル、`npm test` 実測)
 
 ---
 
@@ -1022,12 +1022,13 @@
 
 入出金の入力中に店舗管理へ移動して戻る往復の回帰テスト (潜在スキャン scan2-T4)。以前は予定フラグが保存されず、編集中の大分類・口座・税設定も DB の値に戻っていた。
 
-**テスト数**: 2件
+**テスト数**: 3件
 
 | テスト | 説明 |
 |--------|------|
 | `[T4a] a new scheduled transaction is still scheduled after the round trip` | 新規で「予定」にチェックして往復しても、チェックが残り予定として保存される |
 | `[T4b] edit-mode edits to rounding, account and memo survive the round trip` | 編集中に変えた丸め・口座と、空にしたメモが往復後も残る |
+| `[T4c] a category1 cleared in edit mode stays cleared after the round trip` | 編集中に空にした大分類が、往復後も DB の値に戻らず空のまま残る (#170 の CodeRabbit 指摘) |
 
 **ファイル**: res/tests/pages/transaction-management-shop-roundtrip-draft.test.js
 
@@ -1345,7 +1346,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **429件** |
+| **機能別テスト** | **430件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 30 |
@@ -1384,7 +1385,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | pages/transaction-management-category1-has-details.test.js | 1 |
 | modal-open-awaits-onopen.test.js | 2 |
 | pages/transaction-management-restore-draft.test.js | 1 |
-| pages/transaction-management-shop-roundtrip-draft.test.js | 2 |
+| pages/transaction-management-shop-roundtrip-draft.test.js | 3 |
 | pages/transaction-management-restore-disabled-shop.test.js | 1 |
 | pages/transaction-management-restore-reopened.test.js | 1 |
 | pages/aggregation-monthly-page.test.js | 5 |
@@ -1401,7 +1402,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **852件** |
+| **総計 (jest)** | **853件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 
