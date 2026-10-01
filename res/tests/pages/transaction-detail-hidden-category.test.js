@@ -1,4 +1,4 @@
-// latent-audit scan2-T3: editing a detail whose category2/3 is hidden silently clears the category on save
+// Editing a detail whose category2/3 is hidden keeps the category (latent-audit scan2-T3)
 /**
  * T3  The detail modal's category2/3 selects are filled from
  *     get_category_tree_with_lang, which lists enabled categories only
@@ -17,7 +17,7 @@
 import { jest } from '@jest/globals';
 import {
     mockPageModules, loadPageBody, bootPage, flush, callsOf,
-} from '../pages/_page-harness.js';
+} from './_page-harness.js';
 
 const TRANSACTION_ID = 10;
 

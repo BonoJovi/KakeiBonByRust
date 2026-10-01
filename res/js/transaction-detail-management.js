@@ -380,7 +380,19 @@ function setupEventListeners() {
 /**
  * Load category dropdowns based on CATEGORY1_CODE from header
  */
-async function loadCategoryDropdowns() {
+// Category options list enabled entries only, plus the hidden category2/3 an
+// existing row already holds (`keep*Code`), labelled as disabled. Without it
+// the select matched no option and saving an old row silently cleared its
+// category (latent-scan2 T3), unlike the shop / account selects.
+function isOfferedCategory(code, isDisabled, keepCode) {
+    return !isDisabled || (keepCode != null && code === keepCode);
+}
+
+function categoryOptionLabel(name, isDisabled) {
+    return isDisabled ? `${name} ${i18n.t('common.disabled_label')}` : name;
+}
+
+async function loadCategoryDropdowns(keepCategory2Code = null) {
     console.log('loadCategoryDropdowns called, category1Code:', category1Code);
     
     if (!category1Code) {
@@ -390,7 +402,7 @@ async function loadCategoryDropdowns() {
     }
     
     try {
-        const categoryTree = await invoke('get_category_tree_with_lang', {
+        const categoryTree = await invoke('get_category_tree_all_with_lang', {
             langCode: i18n.getCurrentLanguage()
         });
         
@@ -415,9 +427,12 @@ async function loadCategoryDropdowns() {
             if (category1Node.children && category1Node.children.length > 0) {
                 category1Node.children.forEach(cat2Item => {
                     const cat2 = cat2Item.category2;
+                    if (!isOfferedCategory(cat2.category2_code, cat2.is_disabled, keepCategory2Code)) {
+                        return;
+                    }
                     const option = document.createElement('option');
                     option.value = cat2.category2_code;
-                    option.textContent = cat2.category2_name_i18n;
+                    option.textContent = categoryOptionLabel(cat2.category2_name_i18n, cat2.is_disabled);
                     category2Select.appendChild(option);
                 });
             }
@@ -438,7 +453,7 @@ async function loadCategoryDropdowns() {
 /**
  * Load CATEGORY3 options based on selected CATEGORY2
  */
-async function loadCategory3Options(category2Code) {
+async function loadCategory3Options(category2Code, keepCategory3Code = null) {
     if (!category2Code) {
         const category3Select = document.getElementById('category3-code');
         if (category3Select) {
@@ -448,7 +463,7 @@ async function loadCategory3Options(category2Code) {
     }
     
     try {
-        const categoryTree = await invoke('get_category_tree_with_lang', {
+        const categoryTree = await invoke('get_category_tree_all_with_lang', {
             langCode: i18n.getCurrentLanguage()
         });
         
@@ -466,9 +481,12 @@ async function loadCategory3Options(category2Code) {
             
             if (category2Node.children && category2Node.children.length > 0) {
                 category2Node.children.forEach(cat3 => {
+                    if (!isOfferedCategory(cat3.category3_code, cat3.is_disabled, keepCategory3Code)) {
+                        return;
+                    }
                     const option = document.createElement('option');
                     option.value = cat3.category3_code;
-                    option.textContent = cat3.category3_name_i18n;
+                    option.textContent = categoryOptionLabel(cat3.category3_name_i18n, cat3.is_disabled);
                     category3Select.appendChild(option);
                 });
             }
@@ -817,8 +835,8 @@ async function openDetailModal(detail = null) {
     // Set CATEGORY1_CODE from header (always needed for both add and edit)
     document.getElementById('category1-code').value = category1Code || '';
 
-    // Load category dropdowns
-    await loadCategoryDropdowns();
+    // Load category dropdowns (an edited row keeps its hidden category2)
+    await loadCategoryDropdowns(detail?.category2_code ?? null);
 
     if (detail) {
         // Edit mode
@@ -835,7 +853,7 @@ async function openDetailModal(detail = null) {
         
         // Set category values after dropdowns are loaded
         document.getElementById('category2-code').value = detail.category2_code;
-        await loadCategory3Options(detail.category2_code);
+        await loadCategory3Options(detail.category2_code, detail.category3_code);
         document.getElementById('category3-code').value = detail.category3_code;
         
         document.getElementById('amount-excluding-tax').value = detail.amount;
@@ -904,8 +922,13 @@ export async function restoreDraftIntoModal(draft) {
         autocompleteState.selectedProductId = setHiddenProductId(draft.selected_product_id);
     }
     if (draft.category2_code) {
+        // A draft of an existing row keeps its hidden category (latent-scan2 T3).
+        const keep = Boolean(draft.detail_id);
+        if (keep) {
+            await loadCategoryDropdowns(draft.category2_code);
+        }
         document.getElementById('category2-code').value = draft.category2_code;
-        await loadCategory3Options(draft.category2_code);
+        await loadCategory3Options(draft.category2_code, keep ? draft.category3_code : null);
         document.getElementById('category3-code').value = draft.category3_code || '';
     }
     document.getElementById('tax-rate').value = draft.tax_rate || '10';

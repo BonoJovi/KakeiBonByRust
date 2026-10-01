@@ -1,4 +1,4 @@
-// latent-audit scan2-T4: the Manage-shops round trip loses the scheduled flag (new) and the category/account/tax/memo edits (edit)
+// The shop-management round trip keeps the scheduled flag and every header edit (latent-audit scan2-T4)
 /**
  * T4  saveModalState never records `is-scheduled`, and the edit-mode branch
  *     of restoreModalState puts back only date, shop, total and a non-empty
@@ -20,7 +20,7 @@
 import { jest } from '@jest/globals';
 import {
     mockPageModules, loadPageBody, bootPage, flush, callsOf,
-} from '../pages/_page-harness.js';
+} from './_page-harness.js';
 
 const HEADER = {
     transaction_id: 1,
@@ -159,5 +159,24 @@ describe('latent-audit scan2 T4 — Manage shops round trip', () => {
         expect(document.getElementById('tax-rounding').value).toBe('1');
         expect(document.getElementById('from-account').value).toBe('BANK');
         expect(document.getElementById('transaction-memo').value).toBe('');
+    });
+
+    test('[T4c] a category1 cleared in edit mode stays cleared after the round trip', async () => {
+        document.getElementById('cancel-transaction-btn').click();
+        await flush(5);
+
+        const editBtn = Array.from(document.querySelectorAll('#transaction-list .transaction-item button'))
+            .find((b) => b.getAttribute('data-i18n') === 'common.edit');
+        editBtn.click();
+        await flush(10);
+        const category1 = document.getElementById('category1');
+        expect(category1.value).toBe('EXPENSE');
+        category1.value = '';
+        category1.dispatchEvent(new Event('change'));
+
+        await roundTripThroughShops();
+
+        // Not reset to the stored EXPENSE (CodeRabbit on #170).
+        expect(document.getElementById('category1').value).toBe('');
     });
 });

@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-10-01 JST  
-**総テスト数**: 472件 (差分反映後。`cargo test --lib` の権威的総数は 710 で、既存の未反映分は別 PR でバックフィル予定)
+**総テスト数**: 476件 (差分反映後。`cargo test --lib` の権威的総数は 714 で、既存の未反映分は別 PR でバックフィル予定)
 
 ---
 
@@ -301,8 +301,11 @@ AES-256-GCM暗号化・復号化のテスト。
 | `latent_l26_admin_category_seed_failure_rolls_back_user` | 管理者登録で費目投入に失敗したら管理者を削除し、再セットアップ可能にする (潜在監査 L26) | src/services/latent_audit/auth.rs | 120 |
 | `latent_l26_admin_none_account_failure_rolls_back_user_and_categories` | 指定なし口座の作成失敗で管理者と作成済みの費目を削除 (潜在監査 L26) | src/services/latent_audit/auth.rs | 148 |
 | `latent_l26_register_user_seed_failure_rolls_back_user` | 一般ユーザー登録で投入に失敗したらユーザーを削除 (潜在監査 L26) | src/services/latent_audit/auth.rs | 171 |
+| `latent_scan2_c1_register_does_not_keep_surrounding_whitespace` | セットアップで前後に空白のあるユーザー名を保存せず、見た目どおりの名前でログインできる (潜在スキャン scan2-C1) | src/services/latent_audit/auth.rs | 203 |
+| `latent_scan2_c1_register_rejects_surrounding_whitespace` | `register_admin_user` / `register_user` は前後に空白のあるユーザー名を拒否 (潜在スキャン scan2-C1) | src/services/latent_audit/auth.rs | 240 |
+| `latent_scan2_c1_login_falls_back_to_trimmed_name` | 前後に空白を付けてログインしても空白を除いた名前で認証でき、旧版で空白付きで保存された名前も完全一致でログインできる (潜在スキャン scan2-C1) | src/services/latent_audit/auth.rs | 261 |
 
-**合計**: 22件
+**合計**: 25件
 
 ### services/user_management.rs
 
@@ -333,8 +336,9 @@ AES-256-GCM暗号化・復号化のテスト。
 | `latent_m3_reused_user_id_gets_default_categories` | 削除済み USER_ID を再利用した新ユーザーは既定の費目を持ち、旧ユーザーの費目を引き継がない (潜在監査 M3) | src/services/latent_audit/user_management.rs | 92 |
 | `latent_m13_create_rejects_blank_username` | 空 / 空白のみの名前でのユーザー作成を拒否 (潜在監査 M13) | src/services/latent_audit/user_management.rs | 135 |
 | `latent_m13_update_rejects_blank_username` | 一般 / 管理者ユーザーの空白名への変更を拒否 (潜在監査 M13) | src/services/latent_audit/user_management.rs | 158 |
+| `latent_scan2_c1_user_management_rejects_surrounding_whitespace` | 一般ユーザーの登録・改名で前後に空白のある名前を拒否 (潜在スキャン scan2-C1) | src/services/latent_audit/user_management.rs | 213 |
 
-**合計**: 23件
+**合計**: 24件
 
 ### services/encryption.rs
 
@@ -730,7 +734,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **446件** |
+| **インラインテスト** | **450件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -739,8 +743,8 @@ AES-256-GCM暗号化・復号化のテスト。
 | api_error.rs | 10 |
 | services/master_data.rs | 4 |
 | services/like_escape.rs | 7 |
-| services/auth.rs | 22 |
-| services/user_management.rs | 23 |
+| services/auth.rs | 25 |
+| services/user_management.rs | 24 |
 | services/encryption.rs | 11 |
 | services/account.rs | 19 |
 | services/category.rs | 38 |
@@ -754,7 +758,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/i18n.rs | 8 |
 | services/recurring.rs | 26 |
 | lib.rs | 6 |
-| **総計** | **472件** |
+| **総計** | **476件** |
 
 ---
 

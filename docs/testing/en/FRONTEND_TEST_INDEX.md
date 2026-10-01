@@ -3,7 +3,7 @@
 This document provides a complete index of all frontend tests implemented in JavaScript.
 
 **Last Updated**: 2026-10-01 JST  
-**Total Tests**: 852 (jest suites; 60 test files, per `npm test`)
+**Total Tests**: 857 (jest suites; 62 test files, per `npm test`)
 
 ---
 
@@ -30,7 +30,7 @@ and are **not** added again to the grand total.
 - **login.test.js** - Login tests (58)
 - **user-deletion.test.js** - User deletion tests (46)
 
-### Feature-Specific Tests (429 tests)
+### Feature-Specific Tests (434 tests)
 
 - **transaction-edit.test.js** - Transaction edit tests (112)
 - **transaction-detail-management.test.js** - Transaction detail management tests (51)
@@ -52,6 +52,7 @@ and are **not** added again to the grand total.
 - **pages/transaction-detail-page.test.js** - Boots the real detail page against `transaction-detail-management.html`: opening a product-linked detail and saving without changes keeps its `productId` (latent-audit H3), a double submit adds the detail only once (latent-audit M19), and a legacy row with `amount_including_tax = 0` shows AMOUNT + TAX_AMOUNT instead of ¥0 (latent-audit L7) (3)
 - **pages/transaction-detail-included-typing.test.js** - Boots the real detail page: typing a tax-included amount digit by digit keeps every digit (the field is no longer rewritten mid-typing) and saves the typed price (latent-audit scan2-T1) (1)
 - **pages/transaction-detail-unreachable-included-price.test.js** - Boots the real detail page: a tax-included price with no exact tax-excluded split (1000 at 10 % floor) is kept as typed and saved as 909 + 91 (latent-audit scan2-T2) (1)
+- **pages/transaction-detail-hidden-category.test.js** - Boots the real detail page: editing a detail whose category2 (with its category3) or category3 alone is hidden keeps the category on a memo-only save, the hidden entry being offered with `common.disabled_label` (latent-audit scan2-T3) (2)
 - **pages/transaction-management-page.test.js** - Boots the real transaction page against `transaction-management.html`: saving a header without details shows no ¥0 recalc prompt and completes the save flow (latent-audit H4); a blank transaction date is rejected with `validation.required` before sending (latent-audit L8); deleting the only row on the last page moves back to the last page, and a late older page response does not overwrite a newer one (latent-audit L5) (4)
 - **pages/user-management-page.test.js** - Boots the real user management page (admin session): a whitespace-only username is rejected with the required-field message before `create_general_user`, while a normal name still reaches it (latent-audit M13) (2)
 - **pages/recurring-rule-page.test.js** - Boots the real recurring rule page: a TRANSFER template from an account to itself is rejected with `transaction_mgmt.transfer_same_account` before `create_recurring_rule`, while two different accounts still go through, and a backend `transfer_same_account` rejection shows the same message (latent-audit M16) ; a backend `recurring_holiday_shift_too_long` rejection shows `recurring_rule.holiday_shift_too_long` (4)
@@ -71,6 +72,7 @@ and are **not** added again to the grand total.
 - **pages/transaction-management-category1-has-details.test.js** - Boots the real transaction page: when the backend refuses to change the category1 of a transaction with details (`category1_has_details`), the screen shows `transaction_mgmt.category1_has_details` and keeps the modal open (latent-audit M2) (1)
 - **modal-open-awaits-onopen.test.js** - `Modal.open()` returns a promise that settles only after an async `onOpen` has finished (and at once for a synchronous one), so callers can fill the form in afterwards (latent-audit L6) (2)
 - **pages/transaction-management-restore-draft.test.js** - Boots the real transaction page with a saved new-transaction draft: the restored date, shop and memo survive the modal's own initialisation (latent-audit L6) (1)
+- **pages/transaction-management-shop-roundtrip-draft.test.js** - Boots the real transaction page through the Manage-shops round trip: a new transaction keeps its scheduled flag, an edited one keeps its rounding, account and cleared memo, and a category1 cleared in edit mode stays cleared (latent-audit scan2-T4) (3)
 - **pages/transaction-management-restore-disabled-shop.test.js** - Boots the real transaction page with a saved draft whose shop was disabled since: the restored new transaction falls back to "Unspecified" (latent-audit M7, reachable since L6) (1)
 - **pages/transaction-management-restore-reopened.test.js** - Boots the real transaction page with a saved draft, then closes and reopens the modal while the restore is still waiting: the draft is not written into the reopened form (latent-audit L6) (1)
 - **pages/aggregation-monthly-page.test.js** - Boots the real monthly aggregation page: an empty `group_name` renders as `common.unspecified` (latent-audit M12); the total row shows "—" for count / average on the account and category2 axes, and still sums the count on category1 (latent-audit M11); negative amounts render as "-¥1,234" (latent-audit L12) (5)
@@ -114,7 +116,7 @@ and are **not** added again to the grand total.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **Feature-Specific Tests** | **429** |
+| **Feature-Specific Tests** | **434** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 30 |
@@ -135,6 +137,7 @@ and are **not** added again to the grand total.
 | pages/transaction-detail-page.test.js | 3 |
 | pages/transaction-detail-included-typing.test.js | 1 |
 | pages/transaction-detail-unreachable-included-price.test.js | 1 |
+| pages/transaction-detail-hidden-category.test.js | 2 |
 | pages/transaction-management-page.test.js | 4 |
 | pages/user-management-page.test.js | 2 |
 | pages/recurring-rule-page.test.js | 4 |
@@ -154,6 +157,7 @@ and are **not** added again to the grand total.
 | pages/transaction-management-category1-has-details.test.js | 1 |
 | modal-open-awaits-onopen.test.js | 2 |
 | pages/transaction-management-restore-draft.test.js | 1 |
+| pages/transaction-management-shop-roundtrip-draft.test.js | 3 |
 | pages/transaction-management-restore-disabled-shop.test.js | 1 |
 | pages/transaction-management-restore-reopened.test.js | 1 |
 | pages/aggregation-monthly-page.test.js | 5 |
@@ -170,7 +174,7 @@ and are **not** added again to the grand total.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **Total (jest)** | **852** |
+| **Total (jest)** | **857** |
 
 Grand total is Screen + Feature + Aggregation (Common Test Suites are helper
 libraries invoked from Screen-Specific files and their assertions are already
