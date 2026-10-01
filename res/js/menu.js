@@ -525,7 +525,9 @@ async function handleAdminSetup(e) {
     e.preventDefault();
     console.log('Admin setup form submitted');
     
-    const username = document.getElementById('admin-username').value;
+    // Surrounding whitespace is dropped (latent-scan2 C1): a stored "bono "
+    // cannot be logged into with the visible "bono".
+    const username = document.getElementById('admin-username').value.trim();
     const password = document.getElementById('admin-password').value;
     const passwordConfirm = document.getElementById('admin-password-confirm').value;
     const messageDiv = document.getElementById('setup-message');
@@ -593,7 +595,8 @@ async function handleUserSetup(e) {
     e.preventDefault();
     console.log('User setup form submitted');
     
-    const username = document.getElementById('user-username').value;
+    // Surrounding whitespace is dropped (latent-scan2 C1).
+    const username = document.getElementById('user-username').value.trim();
     const password = document.getElementById('user-password').value;
     const passwordConfirm = document.getElementById('user-password-confirm').value;
     const messageDiv = document.getElementById('user-setup-message');

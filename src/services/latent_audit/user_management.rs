@@ -206,3 +206,26 @@ async fn latent_scan2_c5_delete_last_general_user_is_refused() {
         "bob"
     );
 }
+
+/// scan2-C1 — user management rejects a username with surrounding whitespace
+/// on registration and on rename (the setup paths are covered in auth).
+#[tokio::test]
+async fn latent_scan2_c1_user_management_rejects_surrounding_whitespace() {
+    let pool = setup_test_db().await;
+    create_test_admin(&pool, "admin", ADMIN_CREDENTIAL).await;
+    let service = UserManagementService::new(pool.clone());
+
+    assert!(matches!(
+        service.register_general_user("member ", USER_CREDENTIAL).await,
+        Err(UserManagementError::Validation(_))
+    ));
+    let user_id = service
+        .register_general_user("member", USER_CREDENTIAL)
+        .await
+        .expect("register a clean name");
+    assert!(matches!(
+        service.update_general_user(user_id, Some(" member")).await,
+        Err(UserManagementError::Validation(_))
+    ));
+    assert_eq!(service.get_user(user_id).await.expect("get user").name, "member");
+}

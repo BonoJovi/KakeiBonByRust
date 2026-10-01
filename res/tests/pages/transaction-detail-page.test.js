@@ -99,6 +99,7 @@ const { invoke } = mockPageModules(jest, {
             case 'get_transaction_details':
                 return [PRODUCT_LINKED_DETAIL, LEGACY_ZERO_INCL_DETAIL];
             case 'get_category_tree_with_lang':
+            case 'get_category_tree_all_with_lang':
                 return CATEGORY_TREE;
             case 'search_products_by_name':
                 return [];

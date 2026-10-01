@@ -76,7 +76,7 @@ impl From<AuthError> for crate::api_error::ApiError {
 /// Validate a username for registration with the same rule user
 /// management applies (latent-audit L25).
 fn validate_registration_username(username: &str) -> Result<(), AuthError> {
-    crate::validation::validate_master_name(
+    crate::validation::validate_username(
         crate::services::user_management::USERNAME_LABEL,
         username,
     )
@@ -133,10 +133,21 @@ impl AuthService {
     /// * `Ok(None)` - Authentication failed (invalid credentials)
     /// * `Err(AuthError)` - Database or security error
     pub async fn authenticate_user(&self, username: &str, password: &str) -> Result<Option<User>, AuthError> {
-        let result = sqlx::query(sql_queries::AUTH_GET_USER_BY_NAME)
+        let mut result = sqlx::query(sql_queries::AUTH_GET_USER_BY_NAME)
             .bind(username)
             .fetch_optional(&self.pool)
             .await?;
+        // Usernames are stored without surrounding whitespace (latent-scan2
+        // C1), so a stray space typed at login falls back to the trimmed
+        // name. The exact lookup comes first so an account stored with
+        // whitespace by an older build can still log in.
+        let trimmed = username.trim();
+        if result.is_none() && trimmed != username {
+            result = sqlx::query(sql_queries::AUTH_GET_USER_BY_NAME)
+                .bind(trimmed)
+                .fetch_optional(&self.pool)
+                .await?;
+        }
         
         if let Some(row) = result {
             let user_id: i64 = row.get(0);

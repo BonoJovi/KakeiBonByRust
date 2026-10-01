@@ -200,7 +200,6 @@ async fn latent_l26_register_user_seed_failure_rolls_back_user() {
 /// Expected: the setup paths either reject surrounding whitespace or store
 /// the trimmed name, so logging in with the visible name works.
 #[tokio::test]
-#[ignore = "latent-audit scan2-C1"]
 async fn latent_scan2_c1_register_does_not_keep_surrounding_whitespace() {
     let pool = setup_test_db().await;
     let auth = AuthService::new(pool.clone());
@@ -233,4 +232,46 @@ async fn latent_scan2_c1_register_does_not_keep_surrounding_whitespace() {
         let login = auth.authenticate_user(visible, &credential).await.unwrap();
         assert!(login.is_some(), "login with the visible name {:?} must succeed", visible);
     }
+}
+
+/// C1 — both setup paths reject a username with surrounding whitespace
+/// (the frontend trims before sending, so this is the backend guard).
+#[tokio::test]
+async fn latent_scan2_c1_register_rejects_surrounding_whitespace() {
+    let pool = setup_test_db().await;
+    let auth = AuthService::new(pool.clone());
+    let credential = test_credential();
+
+    assert!(matches!(
+        auth.register_admin_user("bono ", &credential).await,
+        Err(AuthError::Validation(_))
+    ));
+    auth.register_admin_user("bono", &credential).await.unwrap();
+    assert!(matches!(
+        auth.register_user("\u{3000}member", &credential).await,
+        Err(AuthError::Validation(_))
+    ));
+    assert_eq!(count_users(&pool).await, 1);
+}
+
+/// C1 — login with a stray surrounding space falls back to the trimmed
+/// name, and an account stored with whitespace by an older build can still
+/// log in with its exact name.
+#[tokio::test]
+async fn latent_scan2_c1_login_falls_back_to_trimmed_name() {
+    let pool = setup_test_db().await;
+    let auth = AuthService::new(pool.clone());
+    let credential = test_credential();
+    auth.register_admin_user("bono", &credential).await.unwrap();
+    auth.register_user("legacy", &credential).await.unwrap();
+    sqlx::query("UPDATE USERS SET NAME = 'legacy ' WHERE NAME = 'legacy'")
+        .execute(&pool)
+        .await
+        .expect("simulate a pre-fix name");
+
+    let typed_with_space = auth.authenticate_user(" bono ", &credential).await.unwrap();
+    assert_eq!(typed_with_space.map(|u| u.name).as_deref(), Some("bono"));
+    let legacy_exact = auth.authenticate_user("legacy ", &credential).await.unwrap();
+    assert_eq!(legacy_exact.map(|u| u.name).as_deref(), Some("legacy "));
+    assert!(auth.authenticate_user("bono ", "wrong-password-0000").await.unwrap().is_none());
 }

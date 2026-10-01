@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-10-01 JST  
-**Total Tests**: 468 (delta-tracked; the full authoritative count from `cargo test --lib` is 706, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 472 (delta-tracked; the full authoritative count from `cargo test --lib` is 710, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -301,8 +301,11 @@ Authentication service tests (user registration, login).
 | `latent_l26_admin_category_seed_failure_rolls_back_user` | A failed category seed on admin registration removes the admin again so setup can be retried (latent-audit L26) | src/services/latent_audit/auth.rs | 120 |
 | `latent_l26_admin_none_account_failure_rolls_back_user_and_categories` | A failed NONE-account seed removes the admin and the categories already written (latent-audit L26) | src/services/latent_audit/auth.rs | 148 |
 | `latent_l26_register_user_seed_failure_rolls_back_user` | A failed seed on general-user registration removes the user again (latent-audit L26) | src/services/latent_audit/auth.rs | 171 |
+| `latent_scan2_c1_register_does_not_keep_surrounding_whitespace` | Setup never stores a username with surrounding whitespace, and the visible name logs in (latent-audit scan2-C1) | src/services/latent_audit/auth.rs | 203 |
+| `latent_scan2_c1_register_rejects_surrounding_whitespace` | `register_admin_user` / `register_user` reject a username with leading or trailing whitespace (latent-audit scan2-C1) | src/services/latent_audit/auth.rs | 240 |
+| `latent_scan2_c1_login_falls_back_to_trimmed_name` | Login with a stray surrounding space falls back to the trimmed name; a name stored with whitespace by an older build still logs in exactly (latent-audit scan2-C1) | src/services/latent_audit/auth.rs | 261 |
 
-**Total**: 22 tests
+**Total**: 25 tests
 
 ### services/user_management.rs
 
@@ -333,8 +336,9 @@ User management service tests (CRUD operations).
 | `latent_m3_reused_user_id_gets_default_categories` | A new user reusing a deleted USER_ID gets the default categories, not the deleted user's (latent-audit M3) | src/services/latent_audit/user_management.rs | 92 |
 | `latent_m13_create_rejects_blank_username` | Creating a user with an empty / whitespace-only name is rejected (latent-audit M13) | src/services/latent_audit/user_management.rs | 135 |
 | `latent_m13_update_rejects_blank_username` | Renaming a user (general / admin, with or without password) to a blank name is rejected (latent-audit M13) | src/services/latent_audit/user_management.rs | 158 |
+| `latent_scan2_c1_user_management_rejects_surrounding_whitespace` | Registering or renaming a general user with surrounding whitespace is rejected (latent-audit scan2-C1) | src/services/latent_audit/user_management.rs | 213 |
 
-**Total**: 23 tests
+**Total**: 24 tests
 
 ### services/encryption.rs
 
@@ -726,7 +730,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **442** |
+| **Inline Tests** | **446** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -735,8 +739,8 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | api_error.rs | 10 |
 | services/master_data.rs | 4 |
 | services/like_escape.rs | 7 |
-| services/auth.rs | 22 |
-| services/user_management.rs | 23 |
+| services/auth.rs | 25 |
+| services/user_management.rs | 24 |
 | services/encryption.rs | 11 |
 | services/account.rs | 19 |
 | services/category.rs | 38 |
@@ -750,7 +754,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/i18n.rs | 8 |
 | services/recurring.rs | 22 |
 | lib.rs | 6 |
-| **Total** | **468** |
+| **Total** | **472** |
 
 ---
 
