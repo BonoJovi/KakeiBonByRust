@@ -576,6 +576,12 @@ function setupFormSubmit() {
                 return;
             }
 
+            if (err && typeof err === 'object'
+                && err.code === API_ERROR_CODES.RECURRING_HOLIDAY_SHIFT_TOO_LONG) {
+                showResult('error', i18n.t('recurring_rule.holiday_shift_too_long'));
+                return;
+            }
+
             const prefix = i18n.t('recurring_rule.create_failed') || 'Failed to create rule:';
             showResult('error', `${prefix} ${formatApiError(err)}`);
         }

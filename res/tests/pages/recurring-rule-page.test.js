@@ -137,4 +137,18 @@ describe('recurring rule form — regression (latent audit 2026-09)', () => {
         expect(box.textContent).toBe('transaction_mgmt.transfer_same_account');
         expect(box.textContent).not.toContain('recurring_rule.create_failed');
     });
+
+    test('a backend recurring_holiday_shift_too_long rejection shows the localized message', async () => {
+        await fillTransferForm('CASH', 'BANK');
+        createRejection = {
+            code: 'recurring_holiday_shift_too_long',
+            message: 'Non-business days continue for more than 14 days around 2026-02-01',
+        };
+
+        await submitForm();
+
+        const box = document.getElementById('result-box');
+        expect(box.classList.contains('error')).toBe(true);
+        expect(box.textContent).toBe('recurring_rule.holiday_shift_too_long');
+    });
 });

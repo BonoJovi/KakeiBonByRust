@@ -69,6 +69,10 @@ impl ApiError {
     // Latent-audit M15 / M18 — a recurring rule's period falls outside the
     // years with seeded holiday data.
     pub const CODE_RECURRING_PERIOD_OUT_OF_RANGE: &'static str = "recurring_period_out_of_range";
+    // A recurring rule's holiday shift would move an occurrence more than
+    // 14 days (more consecutive non-business days than the generator covers).
+    pub const CODE_RECURRING_HOLIDAY_SHIFT_TOO_LONG: &'static str =
+        "recurring_holiday_shift_too_long";
     // Latent-audit M2 — a header's category1 (income / expense / transfer)
     // cannot change while it has details, whose category2/3 belong to the
     // old category1.
@@ -214,6 +218,16 @@ impl ApiError {
         Self {
             code: Self::CODE_RECURRING_PERIOD_OUT_OF_RANGE.to_string(),
             message: format!("The rule period must be between {} and {}", first, last),
+            entity: None,
+        }
+    }
+
+    /// Recurring rule refused because a holiday shift would move the
+    /// occurrence on `date` by more than 14 days (CodeRabbit on #171).
+    pub fn recurring_holiday_shift_too_long(date: &str) -> Self {
+        Self {
+            code: Self::CODE_RECURRING_HOLIDAY_SHIFT_TOO_LONG.to_string(),
+            message: format!("Non-business days continue for more than 14 days around {}", date),
             entity: None,
         }
     }

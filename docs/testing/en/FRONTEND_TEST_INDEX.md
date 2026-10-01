@@ -3,7 +3,7 @@
 This document provides a complete index of all frontend tests implemented in JavaScript.
 
 **Last Updated**: 2026-10-01 JST  
-**Total Tests**: 851 (jest suites; 60 test files, per `npm test`)
+**Total Tests**: 852 (jest suites; 60 test files, per `npm test`)
 
 ---
 
@@ -30,7 +30,7 @@ and are **not** added again to the grand total.
 - **login.test.js** - Login tests (58)
 - **user-deletion.test.js** - User deletion tests (46)
 
-### Feature-Specific Tests (428 tests)
+### Feature-Specific Tests (429 tests)
 
 - **transaction-edit.test.js** - Transaction edit tests (112)
 - **transaction-detail-management.test.js** - Transaction detail management tests (51)
@@ -54,7 +54,7 @@ and are **not** added again to the grand total.
 - **pages/transaction-detail-unreachable-included-price.test.js** - Boots the real detail page: a tax-included price with no exact tax-excluded split (1000 at 10 % floor) is kept as typed and saved as 909 + 91 (latent-audit scan2-T2) (1)
 - **pages/transaction-management-page.test.js** - Boots the real transaction page against `transaction-management.html`: saving a header without details shows no ¥0 recalc prompt and completes the save flow (latent-audit H4); a blank transaction date is rejected with `validation.required` before sending (latent-audit L8); deleting the only row on the last page moves back to the last page, and a late older page response does not overwrite a newer one (latent-audit L5) (4)
 - **pages/user-management-page.test.js** - Boots the real user management page (admin session): a whitespace-only username is rejected with the required-field message before `create_general_user`, while a normal name still reaches it (latent-audit M13) (2)
-- **pages/recurring-rule-page.test.js** - Boots the real recurring rule page: a TRANSFER template from an account to itself is rejected with `transaction_mgmt.transfer_same_account` before `create_recurring_rule`, while two different accounts still go through, and a backend `transfer_same_account` rejection shows the same message (latent-audit M16) (3)
+- **pages/recurring-rule-page.test.js** - Boots the real recurring rule page: a TRANSFER template from an account to itself is rejected with `transaction_mgmt.transfer_same_account` before `create_recurring_rule`, while two different accounts still go through, and a backend `transfer_same_account` rejection shows the same message (latent-audit M16) ; a backend `recurring_holiday_shift_too_long` rejection shows `recurring_rule.holiday_shift_too_long` (4)
 - **pages/recurring-rule-double-submit.test.js** - Boots the real recurring rule page: a double submit while `create_recurring_rule` is in flight invokes it only once (latent-audit M19) (1)
 - **pages/recurring-rule-period-range.test.js** - Boots the real recurring rule page: the start / end date pickers are bounded to the seeded holiday years, an out-of-range period is stopped before `create_recurring_rule` with `recurring_rule.period_out_of_range`, a backend `recurring_period_out_of_range` rejection shows the same message, and bounds that changed since the page loaded are applied to the pickers on submit (latent-audit M15 / M18) (5)
 - **pages/recurring-rule-anchor-follows-start.test.js** - Boots the real recurring rule page: the daily anchor starts as the start date and follows it until the user edits the anchor, and follows again after Reset (latent-audit scan2-R2) (2)
@@ -114,7 +114,7 @@ and are **not** added again to the grand total.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **Feature-Specific Tests** | **428** |
+| **Feature-Specific Tests** | **429** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 30 |
@@ -137,7 +137,7 @@ and are **not** added again to the grand total.
 | pages/transaction-detail-unreachable-included-price.test.js | 1 |
 | pages/transaction-management-page.test.js | 4 |
 | pages/user-management-page.test.js | 2 |
-| pages/recurring-rule-page.test.js | 3 |
+| pages/recurring-rule-page.test.js | 4 |
 | pages/recurring-rule-double-submit.test.js | 1 |
 | pages/recurring-rule-period-range.test.js | 5 |
 | pages/recurring-rule-anchor-follows-start.test.js | 2 |
@@ -170,7 +170,7 @@ and are **not** added again to the grand total.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **Total (jest)** | **851** |
+| **Total (jest)** | **852** |
 
 Grand total is Screen + Feature + Aggregation (Common Test Suites are helper
 libraries invoked from Screen-Specific files and their assertions are already

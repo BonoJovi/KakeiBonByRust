@@ -7,7 +7,7 @@ use sqlx::SqlitePool;
 use std::collections::HashSet;
 
 use crate::api_error::ApiError;
-use crate::services::holiday::{shift_for_holidays, HolidayShift};
+use crate::services::holiday::{is_non_business_day, shift_for_holidays, HolidayShift};
 use crate::services::period::end_of_month;
 use crate::{sql_queries, consts, validation};
 
@@ -87,8 +87,34 @@ pub fn generate_dates(
     end: NaiveDate,
     holidays: &HashSet<NaiveDate>,
 ) -> Vec<NaiveDate> {
+    generate_dates_inner(spec, start, end, holidays).0
+}
+
+/// [`generate_dates`], refused when a holiday shift moves some date further
+/// than [`SHIFT_WINDOW_DAYS`]: candidates are generated only that far
+/// outside the period and holidays are loaded only that far, so a longer
+/// run of non-business days could silently drop or misplace an occurrence
+/// (CodeRabbit on #171). Returns the first such calendar date as the error.
+pub fn generate_dates_within_shift_window(
+    spec: &CyclicSpec,
+    start: NaiveDate,
+    end: NaiveDate,
+    holidays: &HashSet<NaiveDate>,
+) -> Result<Vec<NaiveDate>, NaiveDate> {
+    match generate_dates_inner(spec, start, end, holidays) {
+        (_, Some(too_far)) => Err(too_far),
+        (dates, None) => Ok(dates),
+    }
+}
+
+fn generate_dates_inner(
+    spec: &CyclicSpec,
+    start: NaiveDate,
+    end: NaiveDate,
+    holidays: &HashSet<NaiveDate>,
+) -> (Vec<NaiveDate>, Option<NaiveDate>) {
     if start > end {
-        return Vec::new();
+        return (Vec::new(), None);
     }
 
     let shifting = !matches!(spec.holiday_shift, HolidayShift::None);
@@ -123,18 +149,36 @@ pub fn generate_dates(
     };
 
     if !shifting {
-        return base;
+        return (base, None);
     }
     let in_period = |d: NaiveDate| d >= start && d <= end;
+    // A run of non-business days covering the whole window on the side the
+    // shift comes from means a candidate beyond the window could shift into
+    // the period unseen; report the window edge.
+    let all_off = |from: Option<NaiveDate>, to: Option<NaiveDate>| match (from, to) {
+        (Some(from), Some(to)) if from <= to => from
+            .iter_days()
+            .take_while(|x| *x <= to)
+            .all(|x| is_non_business_day(x, holidays)),
+        _ => false,
+    };
+    let mut too_far = match spec.holiday_shift {
+        HolidayShift::Prev if all_off(end.succ_opt(), Some(hi)) => Some(hi),
+        HolidayShift::Next if all_off(Some(lo), start.pred_opt()) => Some(lo),
+        _ => None,
+    };
     let mut shifted: Vec<NaiveDate> = base
         .into_iter()
         .filter_map(|d| {
             let s = shift_for_holidays(d, spec.holiday_shift, holidays);
+            if (s - d).num_days().unsigned_abs() > SHIFT_WINDOW_DAYS && too_far.is_none() {
+                too_far = Some(d);
+            }
             (in_period(d) || in_period(s)).then_some(s)
         })
         .collect();
     shifted.sort();
-    shifted
+    (shifted, too_far)
 }
 
 /// How far outside the rule's period a calendar date is still generated so
@@ -622,6 +666,9 @@ pub enum RecurringError {
     /// The rule's start / end date is outside the years with seeded holiday
     /// data, `first..=last` (latent-audit M15 / M18).
     PeriodOutOfRange { first: NaiveDate, last: NaiveDate },
+    /// A holiday shift would move an occurrence further than the 14 days
+    /// the generator and the holiday lookup cover (CodeRabbit on #171).
+    HolidayShiftTooLong { date: NaiveDate },
 }
 
 /// The first and last date a recurring rule may cover: the years whose
@@ -649,6 +696,9 @@ impl std::fmt::Display for RecurringError {
             }
             RecurringError::PeriodOutOfRange { first, last } => {
                 write!(f, "The rule period must be between {} and {}", first, last)
+            }
+            RecurringError::HolidayShiftTooLong { date } => {
+                write!(f, "Non-business days continue for more than 14 days around {}", date)
             }
         }
     }
@@ -686,6 +736,9 @@ impl From<RecurringError> for ApiError {
                     &first.format("%Y-%m-%d").to_string(),
                     &last.format("%Y-%m-%d").to_string(),
                 )
+            }
+            RecurringError::HolidayShiftTooLong { date } => {
+                ApiError::recurring_holiday_shift_too_long(&date.format("%Y-%m-%d").to_string())
             }
             RecurringError::Database(e) => ApiError::database(e.to_string()),
         }
@@ -963,7 +1016,8 @@ impl RecurringService {
             self.fetch_holidays_for(user_id, start, end).await?
         };
 
-        let dates = generate_dates(&spec, start, end, &holidays);
+        let dates = generate_dates_within_shift_window(&spec, start, end, &holidays)
+            .map_err(|date| RecurringError::HolidayShiftTooLong { date })?;
 
         // ----- Persist rule + instances atomically -----
         let mut tx = self.pool.begin().await?;
@@ -1741,6 +1795,32 @@ mod tests {
         // 1/1 → 12/31（範囲外でも採用）。2/1(日) は暦日では範囲外だが、Prev で
         // 1/30(金) と範囲内に入るので採用する (latent-scan2 R1)。
         assert_eq!(result, vec![d(2025, 12, 31), d(2026, 1, 30)]);
+    }
+
+    /// More than 14 consecutive non-business days: day 1 / Prev with
+    /// 2026-01-17..=02-01 all holidays shifts Feb 1 back to Jan 16, beyond
+    /// the generation window, so creation is refused instead of silently
+    /// dropping it (CodeRabbit on #171). Exactly 14 days is still fine.
+    #[test]
+    fn shift_beyond_window_is_refused() {
+        let spec = spec_monthly_dom_with_shift(1, 1, HolidayShift::Prev);
+        let run = |from: NaiveDate, to: NaiveDate| -> HashSet<NaiveDate> {
+            from.iter_days().take_while(|x| *x <= to).collect()
+        };
+
+        let long = run(d(2026, 1, 17), d(2026, 2, 1));
+        assert!(
+            generate_dates_within_shift_window(&spec, d(2026, 1, 16), d(2026, 1, 16), &long)
+                .is_err()
+        );
+
+        // With Jan 20..=Feb 1 as holidays, Feb 1 shifts back 13 days to
+        // Mon Jan 19: within the window, so it is generated.
+        let short = run(d(2026, 1, 20), d(2026, 2, 1));
+        assert_eq!(
+            generate_dates_within_shift_window(&spec, d(2026, 1, 1), d(2026, 1, 31), &short),
+            Ok(vec![d(2026, 1, 1), d(2026, 1, 19)])
+        );
     }
 
     /// 入力境界：start > end は空。
