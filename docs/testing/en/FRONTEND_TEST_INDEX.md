@@ -3,7 +3,7 @@
 This document provides a complete index of all frontend tests implemented in JavaScript.
 
 **Last Updated**: 2026-10-01 JST  
-**Total Tests**: 857 (jest suites; 62 test files, per `npm test`)
+**Total Tests**: 862 (jest suites; 64 test files, per `npm test`)
 
 ---
 
@@ -30,7 +30,7 @@ and are **not** added again to the grand total.
 - **login.test.js** - Login tests (58)
 - **user-deletion.test.js** - User deletion tests (46)
 
-### Feature-Specific Tests (434 tests)
+### Feature-Specific Tests (439 tests)
 
 - **transaction-edit.test.js** - Transaction edit tests (112)
 - **transaction-detail-management.test.js** - Transaction detail management tests (51)
@@ -68,11 +68,13 @@ and are **not** added again to the grand total.
 - **pages/shop-management-disabled.test.js** - Boots the real shop master page: "show disabled" lists disabled shops with the disabled label, a late response from a quick double toggle does not overwrite the newer list, and the add / edit form's "disabled" checkbox is shown and sent as `isDisabled` (latent-audit M7) (4)
 - **pages/transaction-management-disabled-shop.test.js** - Boots the real transaction page: editing a transaction whose shop is disabled keeps that shop selected (shown with the disabled label) and saves it, while a new transaction is not offered the disabled shop (latent-audit M7) (2)
 - **pages/account-management-disabled.test.js** - Boots the real account master page: "show disabled" lists disabled accounts with the disabled label (NONE never listed), a late response from a quick double toggle does not overwrite the newer list, and the add / edit form's "disabled" checkbox is shown and sent as `isDisabled` (latent-audit M7) (4)
+- **pages/account-management-save-error-keeps-form.test.js** - Boots the real account master page: a save rejected by the backend (`duplicate_code`) or stopped by the form checks (whitespace-only name) keeps the modal open with the typed input (latent-audit scan2-M4) (2)
 - **pages/transaction-management-disabled-account.test.js** - Boots the real transaction page: editing a transaction whose account is disabled keeps that account selected (shown with the disabled label) and saves it, while a new transaction is not offered the disabled account (latent-audit M7) (2)
 - **pages/transaction-management-category1-has-details.test.js** - Boots the real transaction page: when the backend refuses to change the category1 of a transaction with details (`category1_has_details`), the screen shows `transaction_mgmt.category1_has_details` and keeps the modal open (latent-audit M2) (1)
 - **modal-open-awaits-onopen.test.js** - `Modal.open()` returns a promise that settles only after an async `onOpen` has finished (and at once for a synchronous one), so callers can fill the form in afterwards (latent-audit L6) (2)
 - **pages/transaction-management-restore-draft.test.js** - Boots the real transaction page with a saved new-transaction draft: the restored date, shop and memo survive the modal's own initialisation (latent-audit L6) (1)
 - **pages/transaction-management-shop-roundtrip-draft.test.js** - Boots the real transaction page through the Manage-shops round trip: a new transaction keeps its scheduled flag, an edited one keeps its rounding, account and cleared memo, and a category1 cleared in edit mode stays cleared (latent-audit scan2-T4) (3)
+- **pages/transaction-management-rejected-save-keeps-form.test.js** - Boots the real transaction page: a TRANSFER between two "Unspecified" accounts, a total rejected by `parseAmountStrict` (`1e3`) and a generic backend error each keep the modal open with the date, total and memo (latent-audit scan2-T5) (3)
 - **pages/transaction-management-restore-disabled-shop.test.js** - Boots the real transaction page with a saved draft whose shop was disabled since: the restored new transaction falls back to "Unspecified" (latent-audit M7, reachable since L6) (1)
 - **pages/transaction-management-restore-reopened.test.js** - Boots the real transaction page with a saved draft, then closes and reopens the modal while the restore is still waiting: the draft is not written into the reopened form (latent-audit L6) (1)
 - **pages/aggregation-monthly-page.test.js** - Boots the real monthly aggregation page: an empty `group_name` renders as `common.unspecified` (latent-audit M12); the total row shows "—" for count / average on the account and category2 axes, and still sums the count on category1 (latent-audit M11); negative amounts render as "-¥1,234" (latent-audit L12) (5)
@@ -116,7 +118,7 @@ and are **not** added again to the grand total.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **Feature-Specific Tests** | **434** |
+| **Feature-Specific Tests** | **439** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 30 |
@@ -153,11 +155,13 @@ and are **not** added again to the grand total.
 | pages/shop-management-disabled.test.js | 4 |
 | pages/transaction-management-disabled-shop.test.js | 2 |
 | pages/account-management-disabled.test.js | 4 |
+| pages/account-management-save-error-keeps-form.test.js | 2 |
 | pages/transaction-management-disabled-account.test.js | 2 |
 | pages/transaction-management-category1-has-details.test.js | 1 |
 | modal-open-awaits-onopen.test.js | 2 |
 | pages/transaction-management-restore-draft.test.js | 1 |
 | pages/transaction-management-shop-roundtrip-draft.test.js | 3 |
+| pages/transaction-management-rejected-save-keeps-form.test.js | 3 |
 | pages/transaction-management-restore-disabled-shop.test.js | 1 |
 | pages/transaction-management-restore-reopened.test.js | 1 |
 | pages/aggregation-monthly-page.test.js | 5 |
@@ -174,7 +178,7 @@ and are **not** added again to the grand total.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **Total (jest)** | **857** |
+| **Total (jest)** | **862** |
 
 Grand total is Screen + Feature + Aggregation (Common Test Suites are helper
 libraries invoked from Screen-Specific files and their assertions are already

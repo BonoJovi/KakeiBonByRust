@@ -1,4 +1,4 @@
-// latent-audit scan2-T5: a save rejected in the frontend, or failing with a generic backend error, closes the header modal and wipes the input
+// A rejected or failed transaction save keeps the form open with the input (latent-audit scan2-T5)
 /**
  * T5  Modal treats a resolved onSave as success and calls close(), which
  *     also form.reset()s. handleTransactionSubmit resolves (instead of
@@ -16,7 +16,7 @@
 import { jest } from '@jest/globals';
 import {
     mockPageModules, loadPageBody, bootPage, flush, callsOf,
-} from '../pages/_page-harness.js';
+} from './_page-harness.js';
 
 let saveError = null;
 

@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-10-01 JST  
-**総テスト数**: 857件 (jest suite 62 ファイル、`npm test` 実測)
+**総テスト数**: 862件 (jest suite 64 ファイル、`npm test` 実測)
 
 ---
 
@@ -58,11 +58,13 @@
   - [pages/shop-management-disabled.test.js](#pagesshop-management-disabledtestjs)
   - [pages/transaction-management-disabled-shop.test.js](#pagestransaction-management-disabled-shoptestjs)
   - [pages/account-management-disabled.test.js](#pagesaccount-management-disabledtestjs)
+  - [pages/account-management-save-error-keeps-form.test.js](#pagesaccount-management-save-error-keeps-formtestjs)
   - [pages/transaction-management-disabled-account.test.js](#pagestransaction-management-disabled-accounttestjs)
   - [pages/transaction-management-category1-has-details.test.js](#pagestransaction-management-category1-has-detailstestjs)
   - [modal-open-awaits-onopen.test.js](#modal-open-awaits-onopentestjs)
   - [pages/transaction-management-restore-draft.test.js](#pagestransaction-management-restore-drafttestjs)
   - [pages/transaction-management-shop-roundtrip-draft.test.js](#pagestransaction-management-shop-roundtrip-drafttestjs)
+  - [pages/transaction-management-rejected-save-keeps-form.test.js](#pagestransaction-management-rejected-save-keeps-formtestjs)
   - [pages/transaction-management-restore-disabled-shop.test.js](#pagestransaction-management-restore-disabled-shoptestjs)
   - [pages/transaction-management-restore-reopened.test.js](#pagestransaction-management-restore-reopenedtestjs)
   - [pages/aggregation-monthly-page.test.js](#pagesaggregation-monthly-pagetestjs)
@@ -988,6 +990,19 @@
 
 **ファイル**: res/tests/pages/account-management-disabled.test.js
 
+### pages/account-management-save-error-keeps-form.test.js
+
+口座マスタの保存失敗時の回帰テスト (潜在スキャン scan2-M4)。以前は保存に失敗しても入力画面が閉じ、入力内容が消えていた。
+
+**テスト数**: 2件
+
+| テスト | 説明 |
+|--------|------|
+| `keeps the modal open and the typed input when add_account fails with duplicate_code` | 口座コードの重複でバックエンドが拒否しても、画面が開いたまま入力が残る |
+| `keeps the modal open when a whitespace-only name is stopped before add_account` | 空白だけの名前を入力チェックで止めたときも、画面が開いたまま残る |
+
+**ファイル**: res/tests/pages/account-management-save-error-keeps-form.test.js
+
 ---
 
 ### pages/transaction-management-disabled-account.test.js
@@ -1059,6 +1074,20 @@
 | `[T4c] a category1 cleared in edit mode stays cleared after the round trip` | 編集中に空にした大分類が、往復後も DB の値に戻らず空のまま残る (#170 の CodeRabbit 指摘) |
 
 **ファイル**: res/tests/pages/transaction-management-shop-roundtrip-draft.test.js
+
+### pages/transaction-management-rejected-save-keeps-form.test.js
+
+入出金の保存が止められた・失敗したときの回帰テスト (潜在スキャン scan2-T5)。以前は入力画面が閉じ、入力内容が消えていた。
+
+**テスト数**: 3件
+
+| テスト | 説明 |
+|--------|------|
+| `[T5] TRANSFER with both accounts "Unspecified" keeps the form open` | 出金元・入金先とも「指定なし」の振替を止めても、画面が開いたまま入力が残る |
+| `[T5] a total rejected by parseAmountStrict ("1e3") keeps the form open` | 金額 `1e3` を入力チェックで止めても、画面が開いたまま残る |
+| `[T5] a generic backend error keeps the form open` | バックエンドの一般的なエラーでも、画面が開いたまま残る |
+
+**ファイル**: res/tests/pages/transaction-management-rejected-save-keeps-form.test.js
 
 ---
 
@@ -1374,7 +1403,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **434件** |
+| **機能別テスト** | **439件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 30 |
@@ -1411,11 +1440,13 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | pages/shop-management-disabled.test.js | 4 |
 | pages/transaction-management-disabled-shop.test.js | 2 |
 | pages/account-management-disabled.test.js | 4 |
+| pages/account-management-save-error-keeps-form.test.js | 2 |
 | pages/transaction-management-disabled-account.test.js | 2 |
 | pages/transaction-management-category1-has-details.test.js | 1 |
 | modal-open-awaits-onopen.test.js | 2 |
 | pages/transaction-management-restore-draft.test.js | 1 |
 | pages/transaction-management-shop-roundtrip-draft.test.js | 3 |
+| pages/transaction-management-rejected-save-keeps-form.test.js | 3 |
 | pages/transaction-management-restore-disabled-shop.test.js | 1 |
 | pages/transaction-management-restore-reopened.test.js | 1 |
 | pages/aggregation-monthly-page.test.js | 5 |
@@ -1432,7 +1463,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **857件** |
+| **総計 (jest)** | **862件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 
