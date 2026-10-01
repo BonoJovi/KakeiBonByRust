@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-10-01 JST  
-**Total Tests**: 476 (delta-tracked; the full authoritative count from `cargo test --lib` is 714, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 448 (delta-tracked; the full authoritative count from `cargo test --lib` is 714, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -734,7 +734,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **450** |
+| **Inline Tests** | **425** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -758,7 +758,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/i18n.rs | 8 |
 | services/recurring.rs | 26 |
 | lib.rs | 6 |
-| **Total** | **476** |
+| **Total** | **448** |
 
 ---
 
