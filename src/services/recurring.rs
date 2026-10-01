@@ -7,7 +7,7 @@ use sqlx::SqlitePool;
 use std::collections::HashSet;
 
 use crate::api_error::ApiError;
-use crate::services::holiday::{shift_for_holidays, HolidayShift};
+use crate::services::holiday::{is_non_business_day, shift_for_holidays, HolidayShift};
 use crate::services::period::end_of_month;
 use crate::{sql_queries, consts, validation};
 
@@ -73,49 +73,118 @@ pub struct CyclicSpec {
 /// 祝日は呼び出し側が用意し、純粋関数として保つ。
 ///
 /// holiday_shift が None 以外の場合、生成された日付に休日シフトを適用する。
-/// シフト先が start..end の範囲外（例：1/1 → 12/31）になっても採用する
-/// （カレンダー上の挙動を尊重）。シフト後にソートのみ行い、重複は除去しない
-/// （同日に複数発生は意味のある情報として保持）。
+/// 暦日かシフト後の日付のどちらかが start..=end に入れば採用する。シフト先が
+/// 範囲外（例：1/1 → 12/31）になっても採用する（カレンダー上の挙動を尊重）。
+/// 逆に暦日が範囲のすぐ外でシフト後が範囲内（例：開始日 10/26(月) に対する
+/// 10/25(日) の翌営業日シフト）も採用する。以前は暦日だけで範囲を判定して
+/// いたため、この発生日が黙って落ちていた (latent-scan2 R1)。そのため候補は
+/// 範囲の前後 [`SHIFT_WINDOW_DAYS`] 日まで広げて作る。
+/// シフト後にソートのみ行い、重複は除去しない（同日に複数発生は意味のある
+/// 情報として保持）。
 pub fn generate_dates(
     spec: &CyclicSpec,
     start: NaiveDate,
     end: NaiveDate,
     holidays: &HashSet<NaiveDate>,
 ) -> Vec<NaiveDate> {
-    if start > end {
-        return Vec::new();
+    generate_dates_inner(spec, start, end, holidays).0
+}
+
+/// [`generate_dates`], refused when a holiday shift moves some date further
+/// than [`SHIFT_WINDOW_DAYS`]: candidates are generated only that far
+/// outside the period and holidays are loaded only that far, so a longer
+/// run of non-business days could silently drop or misplace an occurrence
+/// (CodeRabbit on #171). Returns the first such calendar date as the error.
+pub fn generate_dates_within_shift_window(
+    spec: &CyclicSpec,
+    start: NaiveDate,
+    end: NaiveDate,
+    holidays: &HashSet<NaiveDate>,
+) -> Result<Vec<NaiveDate>, NaiveDate> {
+    match generate_dates_inner(spec, start, end, holidays) {
+        (_, Some(too_far)) => Err(too_far),
+        (dates, None) => Ok(dates),
     }
+}
+
+fn generate_dates_inner(
+    spec: &CyclicSpec,
+    start: NaiveDate,
+    end: NaiveDate,
+    holidays: &HashSet<NaiveDate>,
+) -> (Vec<NaiveDate>, Option<NaiveDate>) {
+    if start > end {
+        return (Vec::new(), None);
+    }
+
+    let shifting = !matches!(spec.holiday_shift, HolidayShift::None);
+    let (lo, hi) = if shifting {
+        let pad = Days::new(SHIFT_WINDOW_DAYS);
+        (
+            start.checked_sub_days(pad).unwrap_or(start),
+            end.checked_add_days(pad).unwrap_or(end),
+        )
+    } else {
+        (start, end)
+    };
 
     let base = match &spec.cycle {
         Cycle::Daily { interval, anchor } => {
             debug_assert!(*interval >= 1, "interval must be >= 1");
-            generate_daily(*interval, *anchor, start, end)
+            generate_daily(*interval, *anchor, lo, hi)
         }
         Cycle::Monthly { interval, day_rule } => {
             debug_assert!(*interval >= 1, "interval must be >= 1");
-            generate_monthly(*interval, day_rule, start, end)
+            generate_monthly(*interval, day_rule, start, lo, hi)
         }
         Cycle::Weekly { interval, weekday } => {
             debug_assert!(*interval >= 1, "interval must be >= 1");
-            generate_weekly(*interval, *weekday, start, end)
+            generate_weekly(*interval, *weekday, start, lo, hi)
         }
         Cycle::Yearly { interval, month, day_rule } => {
             debug_assert!(*interval >= 1, "interval must be >= 1");
             debug_assert!(*month >= 1 && *month <= 12, "month must be 1..=12");
-            generate_yearly(*interval, *month, day_rule, start, end)
+            generate_yearly(*interval, *month, day_rule, start, lo, hi)
         }
     };
 
-    if matches!(spec.holiday_shift, HolidayShift::None) {
-        return base;
+    if !shifting {
+        return (base, None);
     }
+    let in_period = |d: NaiveDate| d >= start && d <= end;
+    // A run of non-business days covering the whole window on the side the
+    // shift comes from means a candidate beyond the window could shift into
+    // the period unseen; report the window edge.
+    let all_off = |from: Option<NaiveDate>, to: Option<NaiveDate>| match (from, to) {
+        (Some(from), Some(to)) if from <= to => from
+            .iter_days()
+            .take_while(|x| *x <= to)
+            .all(|x| is_non_business_day(x, holidays)),
+        _ => false,
+    };
+    let mut too_far = match spec.holiday_shift {
+        HolidayShift::Prev if all_off(end.succ_opt(), Some(hi)) => Some(hi),
+        HolidayShift::Next if all_off(Some(lo), start.pred_opt()) => Some(lo),
+        _ => None,
+    };
     let mut shifted: Vec<NaiveDate> = base
         .into_iter()
-        .map(|d| shift_for_holidays(d, spec.holiday_shift, holidays))
+        .filter_map(|d| {
+            let s = shift_for_holidays(d, spec.holiday_shift, holidays);
+            if (s - d).num_days().unsigned_abs() > SHIFT_WINDOW_DAYS && too_far.is_none() {
+                too_far = Some(d);
+            }
+            (in_period(d) || in_period(s)).then_some(s)
+        })
         .collect();
     shifted.sort();
-    shifted
+    (shifted, too_far)
 }
+
+/// How far outside the rule's period a calendar date is still generated so
+/// that a holiday shift can bring it inside (latent-scan2 R1). Matches the
+/// ±14-day window `holiday::fetch_holidays` loads.
+const SHIFT_WINDOW_DAYS: u64 = 14;
 
 fn generate_daily(
     interval: u32,
@@ -123,6 +192,8 @@ fn generate_daily(
     start: NaiveDate,
     end: NaiveDate,
 ) -> Vec<NaiveDate> {
+    // `start..=end` here is the generation window (the period, widened when a
+    // holiday shift applies); the series is phased by `anchor`.
     let step = Days::new(interval as u64);
     let mut out = Vec::new();
     let mut d = anchor;
@@ -153,17 +224,27 @@ fn derive_weekly_anchor(start: NaiveDate, weekday: Weekday) -> NaiveDate {
     start + Days::new(diff as u64)
 }
 
+/// The series is phased by the first `weekday` on or after `start` (the
+/// period start); `lo..=hi` is the generation window, which may reach a
+/// little before `start` when a holiday shift applies (latent-scan2 R1).
 fn generate_weekly(
     interval: u32,
     weekday: Weekday,
     start: NaiveDate,
-    end: NaiveDate,
+    lo: NaiveDate,
+    hi: NaiveDate,
 ) -> Vec<NaiveDate> {
     let anchor = derive_weekly_anchor(start, weekday);
     let step = Days::new(interval as u64 * 7);
     let mut out = Vec::new();
     let mut d = anchor;
-    while d <= end {
+    while let Some(prev) = d.checked_sub_days(step) {
+        if prev < lo {
+            break;
+        }
+        d = prev;
+    }
+    while d <= hi {
         out.push(d);
         match d.checked_add_days(step) {
             Some(next) => d = next,
@@ -204,15 +285,31 @@ fn nth_weekday_of_month(
     }
 }
 
+/// The series is phased by the month of `start` (the period start); `lo..=hi`
+/// is the generation window. When a holiday shift widens the window the walk
+/// starts one interval earlier, so a date in the previous cycle that shifts
+/// into the period (e.g. a Saturday month end moved to the 1st) is generated
+/// too (latent-scan2 R1).
 fn generate_monthly(
     interval: u32,
     rule: &MonthlyDayRule,
     start: NaiveDate,
-    end: NaiveDate,
+    lo: NaiveDate,
+    hi: NaiveDate,
 ) -> Vec<NaiveDate> {
     let mut out = Vec::new();
     let mut year = start.year();
     let mut month = start.month();
+    if lo < start {
+        let m_zero = month as i32 - 1 - interval as i32;
+        let (prev_year, prev_month) = (year + m_zero.div_euclid(12), (m_zero.rem_euclid(12) + 1) as u32);
+        // Only step back when that month is representable; otherwise the
+        // loop below would stop before reaching the period (CodeRabbit).
+        if NaiveDate::from_ymd_opt(prev_year, prev_month, 1).is_some() {
+            (year, month) = (prev_year, prev_month);
+        }
+    }
+    let (start, end) = (lo, hi);
 
     loop {
         let candidate = match *rule {
@@ -249,15 +346,23 @@ fn generate_monthly(
     out
 }
 
+/// Phased by the year of `start` (the period start); `lo..=hi` is the
+/// generation window, walked from one interval earlier when a holiday shift
+/// widens it (latent-scan2 R1, see `generate_monthly`).
 fn generate_yearly(
     interval: u32,
     month: u32,
     rule: &MonthlyDayRule,
     start: NaiveDate,
-    end: NaiveDate,
+    lo: NaiveDate,
+    hi: NaiveDate,
 ) -> Vec<NaiveDate> {
     let mut out = Vec::new();
     let mut year = start.year();
+    if lo < start && NaiveDate::from_ymd_opt(year - interval as i32, month, 1).is_some() {
+        year -= interval as i32;
+    }
+    let (start, end) = (lo, hi);
 
     loop {
         let candidate = match *rule {
@@ -439,6 +544,13 @@ pub fn columns_to_cyclic_spec(cols: &CycleColumns) -> Result<CyclicSpec, String>
             cols.period_interval
         ));
     }
+    if cols.period_interval > crate::consts::MAX_PERIOD_INTERVAL {
+        return Err(format!(
+            "PERIOD_INTERVAL must be <= {}, got {}",
+            crate::consts::MAX_PERIOD_INTERVAL,
+            cols.period_interval
+        ));
+    }
 
     let cycle = match cols.period_unit.as_str() {
         PERIOD_UNIT_DAY => {
@@ -554,6 +666,9 @@ pub enum RecurringError {
     /// The rule's start / end date is outside the years with seeded holiday
     /// data, `first..=last` (latent-audit M15 / M18).
     PeriodOutOfRange { first: NaiveDate, last: NaiveDate },
+    /// A holiday shift would move an occurrence further than the 14 days
+    /// the generator and the holiday lookup cover (CodeRabbit on #171).
+    HolidayShiftTooLong { date: NaiveDate },
 }
 
 /// The first and last date a recurring rule may cover: the years whose
@@ -581,6 +696,9 @@ impl std::fmt::Display for RecurringError {
             }
             RecurringError::PeriodOutOfRange { first, last } => {
                 write!(f, "The rule period must be between {} and {}", first, last)
+            }
+            RecurringError::HolidayShiftTooLong { date } => {
+                write!(f, "Non-business days continue for more than 14 days around {}", date)
             }
         }
     }
@@ -618,6 +736,9 @@ impl From<RecurringError> for ApiError {
                     &first.format("%Y-%m-%d").to_string(),
                     &last.format("%Y-%m-%d").to_string(),
                 )
+            }
+            RecurringError::HolidayShiftTooLong { date } => {
+                ApiError::recurring_holiday_shift_too_long(&date.format("%Y-%m-%d").to_string())
             }
             RecurringError::Database(e) => ApiError::database(e.to_string()),
         }
@@ -858,14 +979,23 @@ impl RecurringService {
             return Err(RecurringError::PeriodOutOfRange { first, last });
         }
 
-        let anchor_date = match &request.anchor_date {
-            Some(s) => Some(
-                NaiveDate::parse_from_str(s, "%Y-%m-%d").map_err(|_| {
-                    RecurringError::Validation(format!("Invalid anchor_date: {}", s))
-                })?,
-            ),
-            None => None,
+        // A daily rule's anchor defaults to the start date when blank, and
+        // must not lie after the end date: the series only walks forward
+        // from the anchor, so a late anchor silently created a rule with
+        // missing or zero occurrences (latent-scan2 R2).
+        let is_daily = request.period_unit == consts::PERIOD_UNIT_DAY;
+        let anchor_date = match request.anchor_date.as_deref().map(str::trim) {
+            Some("") | None if is_daily => Some(start),
+            Some("") | None => None,
+            Some(s) => Some(NaiveDate::parse_from_str(s, "%Y-%m-%d").map_err(|_| {
+                RecurringError::Validation(format!("Invalid anchor_date: {}", s))
+            })?),
         };
+        if is_daily && anchor_date.is_some_and(|a| a > end) {
+            return Err(RecurringError::Validation(
+                "anchor_date must be on or before end_date".to_string(),
+            ));
+        }
         let columns = CycleColumns {
             period_unit: request.period_unit.clone(),
             period_interval: request.period_interval,
@@ -886,7 +1016,8 @@ impl RecurringService {
             self.fetch_holidays_for(user_id, start, end).await?
         };
 
-        let dates = generate_dates(&spec, start, end, &holidays);
+        let dates = generate_dates_within_shift_window(&spec, start, end, &holidays)
+            .map_err(|date| RecurringError::HolidayShiftTooLong { date })?;
 
         // ----- Persist rule + instances atomically -----
         let mut tx = self.pool.begin().await?;
@@ -1661,8 +1792,35 @@ mod tests {
             d(2026, 1, 31),
             &holidays,
         );
-        // 2/1 は無いことに注意（end=2026-01-31）。1/1 → 12/31 の 1 件だけ
-        assert_eq!(result, vec![d(2025, 12, 31)]);
+        // 1/1 → 12/31（範囲外でも採用）。2/1(日) は暦日では範囲外だが、Prev で
+        // 1/30(金) と範囲内に入るので採用する (latent-scan2 R1)。
+        assert_eq!(result, vec![d(2025, 12, 31), d(2026, 1, 30)]);
+    }
+
+    /// More than 14 consecutive non-business days: day 1 / Prev with
+    /// 2026-01-17..=02-01 all holidays shifts Feb 1 back to Jan 16, beyond
+    /// the generation window, so creation is refused instead of silently
+    /// dropping it (CodeRabbit on #171). Exactly 14 days is still fine.
+    #[test]
+    fn shift_beyond_window_is_refused() {
+        let spec = spec_monthly_dom_with_shift(1, 1, HolidayShift::Prev);
+        let run = |from: NaiveDate, to: NaiveDate| -> HashSet<NaiveDate> {
+            from.iter_days().take_while(|x| *x <= to).collect()
+        };
+
+        let long = run(d(2026, 1, 17), d(2026, 2, 1));
+        assert!(
+            generate_dates_within_shift_window(&spec, d(2026, 1, 16), d(2026, 1, 16), &long)
+                .is_err()
+        );
+
+        // With Jan 20..=Feb 1 as holidays, Feb 1 shifts back 13 days to
+        // Mon Jan 19: within the window, so it is generated.
+        let short = run(d(2026, 1, 20), d(2026, 2, 1));
+        assert_eq!(
+            generate_dates_within_shift_window(&spec, d(2026, 1, 1), d(2026, 1, 31), &short),
+            Ok(vec![d(2026, 1, 1), d(2026, 1, 19)])
+        );
     }
 
     /// 入力境界：start > end は空。
@@ -1810,6 +1968,23 @@ mod tests {
         cols.day_of_week = Some(0);
         assert!(columns_to_cyclic_spec(&cols).is_err());
         cols.day_of_week = Some(8);
+        assert!(columns_to_cyclic_spec(&cols).is_err());
+    }
+
+    /// An interval above MAX_PERIOD_INTERVAL is rejected: the generators step
+    /// months / years with signed arithmetic, so a huge value turned into a
+    /// negative step (CodeRabbit on #171). The limit itself is accepted.
+    #[test]
+    fn err_interval_above_max() {
+        let mut cols = cyclic_spec_to_columns(&CyclicSpec {
+            cycle: Cycle::Monthly { interval: 1, day_rule: MonthlyDayRule::DayOfMonth { day: 15 } },
+            holiday_shift: HolidayShift::Prev,
+        });
+        cols.period_interval = crate::consts::MAX_PERIOD_INTERVAL;
+        assert!(columns_to_cyclic_spec(&cols).is_ok());
+        cols.period_interval = crate::consts::MAX_PERIOD_INTERVAL + 1;
+        assert!(columns_to_cyclic_spec(&cols).is_err());
+        cols.period_interval = u32::MAX;
         assert!(columns_to_cyclic_spec(&cols).is_err());
     }
 

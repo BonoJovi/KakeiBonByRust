@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-10-01 JST  
-**総テスト数**: 472件 (差分反映後。`cargo test --lib` の権威的総数は 710 で、既存の未反映分は別 PR でバックフィル予定)
+**総テスト数**: 476件 (差分反映後。`cargo test --lib` の権威的総数は 714 で、既存の未反映分は別 PR でバックフィル予定)
 
 ---
 
@@ -703,8 +703,12 @@ AES-256-GCM暗号化・復号化のテスト。
 | `transfer_same_account_maps_to_transfer_same_account_code` | `RecurringError::TransferSameAccount` が `transfer_same_account` コードに変換される (潜在監査 M16) | src/services/recurring.rs | 1881 |
 | `latent_l2_recurring_rejects_foreign_shop_and_product` | 繰り返しルール作成で自分の店舗・商品は受理し、他ユーザーのものは拒否 (潜在監査 L2) | src/services/latent_audit/recurring.rs | 688 |
 | `latent_l10_generation_terminates_at_the_end_of_the_date_range` | chrono の表現範囲の終わり付近でも月次・年次の日付生成が無限ループせず終了する (潜在監査 L10) | src/services/latent_audit/recurring.rs | 747 |
+| `latent_scan2_r1_shifted_date_inside_period_is_kept` | 暦日は期間のすぐ外でも、休日シフト後に期間内に入る発生日を生成する (開始側・終了側とも) (潜在スキャン scan2-R1) | src/services/latent_audit/recurring.rs | 800 |
+| `latent_scan2_r2_daily_anchor_is_checked_against_the_period` | 毎日の予定の起点日が空なら開始日として扱い、終了日より後なら拒否する (潜在スキャン scan2-R2) | src/services/latent_audit/recurring.rs | 844 |
+| `err_interval_above_max` | `MAX_PERIOD_INTERVAL` (999、画面の上限) を超える間隔を拒否し、上限ちょうどは受理 (#171 の CodeRabbit 指摘) | src/services/recurring.rs | 1898 |
+| `shift_beyond_window_is_refused` | 休日シフトが 14 日の範囲を超える場合 (Prev で期間後の 14 日がすべて休日) は作成を拒否し、13 日のシフトは生成する (#171 の CodeRabbit 指摘) | src/services/recurring.rs | 1805 |
 
-**合計**: 22件
+**合計**: 26件
 
 ### lib.rs
 
@@ -730,7 +734,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **446件** |
+| **インラインテスト** | **450件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -752,9 +756,9 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/period.rs | 3 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
-| services/recurring.rs | 22 |
+| services/recurring.rs | 26 |
 | lib.rs | 6 |
-| **総計** | **472件** |
+| **総計** | **476件** |
 
 ---
 
