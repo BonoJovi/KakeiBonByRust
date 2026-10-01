@@ -1,4 +1,4 @@
-// latent-audit scan2-M2: product EDIT -> manufacturer master -> back reopens the modal in ADD mode
+// Product EDIT -> manufacturer master -> back reopens the same product in edit mode (latent-audit scan2-M2)
 /**
  * Product master screen (res/js/product-management.js).
  *
@@ -23,7 +23,7 @@
 import { jest } from '@jest/globals';
 import {
     mockPageModules, loadPageBody, bootPage, flush, callsOf, isHiddenOrAbsent,
-} from '../pages/_page-harness.js';
+} from './_page-harness.js';
 
 const MANUFACTURER = { manufacturer_id: 1, manufacturer_name: 'DairyCo', is_disabled: 0 };
 const MILK = {

@@ -101,7 +101,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const draft = consumeProductDraft();
             if (draft) {
                 returnToTransactionId = draft.return_to_transaction_id || null;
-                openModal('add');
+                await reopenProductModalForDraft(draft);
                 document.getElementById('product-name').value = draft.product_name || '';
                 document.getElementById('product-manufacturer').value = draft.manufacturer_id || '';
                 document.getElementById('product-memo').value = draft.memo || '';
@@ -505,8 +505,35 @@ async function saveProduct() {
 // manufacturer-management and come back to a pre-filled product modal. We
 // carry return_to_transaction_id forward so the eventual "Back to detail
 // entry" path still works two hops down.
+// Reopen the modal the draft came from: an edit goes back to editing the
+// same product. It used to always reopen as "Add", so saving re-added the
+// edited product (a duplicate-name error, or a second master row when it had
+// been renamed) (latent-scan2 M2). A disabled product is not in the list
+// cache unless disabled items are shown, so it is fetched again.
+async function reopenProductModalForDraft(draft) {
+    const id = draft.editing_product_id;
+    if (id == null) {
+        openModal('add');
+        return;
+    }
+    let product = products.find(p => p.product_id === id);
+    if (!product) {
+        const all = await invoke('get_products', { includeDisabled: true });
+        product = (all || []).find(p => p.product_id === id);
+        if (product) products.push(product);
+    }
+    if (product) {
+        openModal('edit', product);
+    } else {
+        // Deleted meanwhile: keep the user's input as a new product.
+        showToast(i18n.t('product_mgmt.not_found'), { variant: 'error' });
+        openModal('add');
+    }
+}
+
 function buildProductDraftFromForm() {
     return {
+        editing_product_id: editingProductId,
         product_name: document.getElementById('product-name')?.value || '',
         manufacturer_id: document.getElementById('product-manufacturer')?.value || '',
         memo: document.getElementById('product-memo')?.value || '',

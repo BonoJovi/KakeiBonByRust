@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-10-01 JST  
-**Total Tests**: 468 (delta-tracked; the full authoritative count from `cargo test --lib` is 706, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 470 (delta-tracked; the full authoritative count from `cargo test --lib` is 708, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -699,8 +699,10 @@ Recurring transaction rule service tests.
 | `transfer_same_account_maps_to_transfer_same_account_code` | `RecurringError::TransferSameAccount` maps to the `transfer_same_account` wire code (latent-audit M16) | src/services/recurring.rs | 1881 |
 | `latent_l2_recurring_rejects_foreign_shop_and_product` | Recurring rule creation accepts own shop / product and rejects another user's (latent-audit L2) | src/services/latent_audit/recurring.rs | 688 |
 | `latent_l10_generation_terminates_at_the_end_of_the_date_range` | Monthly / yearly generation near the end of chrono's range terminates instead of looping forever (latent-audit L10) | src/services/latent_audit/recurring.rs | 747 |
+| `latent_scan2_r1_shifted_date_inside_period_is_kept` | A calendar date just outside the period whose holiday shift lands inside it is generated, at both ends (latent-audit scan2-R1) | src/services/latent_audit/recurring.rs | 800 |
+| `latent_scan2_r2_daily_anchor_is_checked_against_the_period` | A blank daily anchor falls back to the start date; an anchor after the end date is rejected (latent-audit scan2-R2) | src/services/latent_audit/recurring.rs | 844 |
 
-**Total**: 22 tests
+**Total**: 24 tests
 
 ### lib.rs
 
@@ -726,7 +728,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **442** |
+| **Inline Tests** | **444** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -748,9 +750,9 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/period.rs | 3 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
-| services/recurring.rs | 22 |
+| services/recurring.rs | 24 |
 | lib.rs | 6 |
-| **Total** | **468** |
+| **Total** | **470** |
 
 ---
 

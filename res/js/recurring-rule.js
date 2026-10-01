@@ -55,6 +55,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         await loadShops();
 
         setupCycleKindToggle();
+        setupAnchorFollowsStart();
         setupCategoryChainHandlers();
         setupDetailTaxCalculation();
         setupDerivedTotal();
@@ -79,7 +80,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // A rule may only span the years with holiday data (latent-audit
         // M15 / M18); the date pickers stop at the bounds the backend enforces.
         applyPeriodLimits(await loadPeriodLimits());
-        document.getElementById('anchor-date').value = formatLocalDate(today);
+        document.getElementById('anchor-date').value = document.getElementById('start-date').value;
 
         await fitWindowToScreen();
         // Form is taller than the window; ensure the user starts at the top
@@ -166,6 +167,26 @@ async function loadShops() {
         opt.textContent = s.shop_name;
         shopSel.appendChild(opt);
     });
+}
+
+// ----- Daily anchor follows the start date -----
+
+// The anchor (起点日) of a daily rule starts out as the start date and keeps
+// following it until the user edits the anchor. It used to default to today
+// on its own, so moving the start date back silently skipped the days before
+// today, and a past period produced no occurrences (latent-scan2 R2).
+let anchorEditedByUser = false;
+
+function setupAnchorFollowsStart() {
+    const start = document.getElementById('start-date');
+    const anchor = document.getElementById('anchor-date');
+    if (!start || !anchor) return;
+    const follow = () => {
+        if (!anchorEditedByUser) anchor.value = start.value;
+    };
+    start.addEventListener('input', follow);
+    start.addEventListener('change', follow);
+    anchor.addEventListener('input', () => { anchorEditedByUser = true; });
 }
 
 // ----- Cycle kind: show/hide anchor vs day-of-month -----
@@ -603,6 +624,7 @@ function periodOutOfRangeMessage(min, max) {
 function setupResetButton() {
     document.getElementById('reset-btn').addEventListener('click', () => {
         document.getElementById('recurring-rule-form').reset();
+        anchorEditedByUser = false;
         hideResult();
         updateDerivedTotal();
         // form.reset() does not fire 'input', so refresh counters manually.

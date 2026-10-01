@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-10-01 JST  
-**総テスト数**: 848件 (jest suite 58 ファイル、`npm test` 実測)
+**総テスト数**: 851件 (jest suite 60 ファイル、`npm test` 実測)
 
 ---
 
@@ -47,6 +47,8 @@
   - [pages/recurring-rule-page.test.js](#pagesrecurring-rule-pagetestjs)
   - [pages/recurring-rule-double-submit.test.js](#pagesrecurring-rule-double-submittestjs)
   - [pages/recurring-rule-period-range.test.js](#pagesrecurring-rule-period-rangetestjs)
+  - [pages/recurring-rule-anchor-follows-start.test.js](#pagesrecurring-rule-anchor-follows-starttestjs)
+  - [pages/product-management-edit-manufacturer-roundtrip.test.js](#pagesproduct-management-edit-manufacturer-roundtriptestjs)
   - [pages/recurring-rule-derived-total.test.js](#pagesrecurring-rule-derived-totaltestjs)
   - [pages/recurring-rule-cycle-options.test.js](#pagesrecurring-rule-cycle-optionstestjs)
   - [single-flight.test.js](#single-flighttestjs)
@@ -819,6 +821,31 @@
 
 **ファイル**: res/tests/pages/recurring-rule-period-range.test.js
 
+### pages/recurring-rule-anchor-follows-start.test.js
+
+毎日の予定の起点日の回帰テスト (潜在スキャン scan2-R2)。以前は起点日の初期値が今日で開始日に追従せず、開始日を前に動かすと今日より前の日が黙って抜けていた。
+
+**テスト数**: 2件
+
+| テスト | 説明 |
+|--------|------|
+| `starts as the start date and follows it until the anchor is edited` | 起点日の初期値は開始日。起点日を手で変えるまでは開始日に追従する |
+| `follows the start date again after Reset` | リセット後は再び開始日に追従する |
+
+**ファイル**: res/tests/pages/recurring-rule-anchor-follows-start.test.js
+
+### pages/product-management-edit-manufacturer-roundtrip.test.js
+
+商品の編集中にメーカーマスタへ移動して戻る往復の回帰テスト (潜在スキャン scan2-M2)。以前は戻ると「追加」画面になり、保存で同じ商品を追加しようとしていた。
+
+**テスト数**: 1件
+
+| テスト | 説明 |
+|--------|------|
+| `comes back in edit mode for the same product (or the jump is not offered in edit mode)` | 戻ると同じ商品の「編集」画面で開き、保存で `update_product` を呼ぶ (`add_product` は呼ばない) |
+
+**ファイル**: res/tests/pages/product-management-edit-manufacturer-roundtrip.test.js
+
 ---
 
 ### pages/recurring-rule-derived-total.test.js
@@ -1317,7 +1344,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **425件** |
+| **機能別テスト** | **428件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 30 |
@@ -1343,6 +1370,8 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | pages/recurring-rule-page.test.js | 3 |
 | pages/recurring-rule-double-submit.test.js | 1 |
 | pages/recurring-rule-period-range.test.js | 5 |
+| pages/recurring-rule-anchor-follows-start.test.js | 2 |
+| pages/product-management-edit-manufacturer-roundtrip.test.js | 1 |
 | pages/recurring-rule-derived-total.test.js | 2 |
 | pages/recurring-rule-cycle-options.test.js | 3 |
 | single-flight.test.js | 4 |
@@ -1371,7 +1400,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **848件** |
+| **総計 (jest)** | **851件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 

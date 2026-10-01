@@ -485,6 +485,9 @@ async fn latent_m15_m18_period_limits_are_inclusive() {
         let mut request = valid_request();
         request.start_date = day(start);
         request.end_date = day(end);
+        // The fixture's daily anchor (2026-01-01) must not lie after the end
+        // date (latent-scan2 R2).
+        request.anchor_date = Some(day(start));
         let result = service.create_rule_with_instances(USER_ID, request).await;
         assert!(result.is_ok(), "{}..{} must be accepted: {:?}", start, end, result.err());
     }
@@ -751,9 +754,9 @@ fn latent_l10_generation_terminates_at_the_end_of_the_date_range() {
     let end = NaiveDate::MAX;
 
     for rule in [MonthlyDayRule::EndOfMonth, MonthlyDayRule::DayOfMonth { day: 15 }] {
-        let monthly = finishes_within(5, move || generate_monthly(1, &rule, start, end));
+        let monthly = finishes_within(5, move || generate_monthly(1, &rule, start, start, end));
         assert!(monthly.is_some(), "monthly generation with {:?} must terminate", rule);
-        let yearly = finishes_within(5, move || generate_yearly(1, 12, &rule, start, end));
+        let yearly = finishes_within(5, move || generate_yearly(1, 12, &rule, start, start, end));
         assert!(yearly.is_some(), "yearly generation with {:?} must terminate", rule);
     }
 }
@@ -794,7 +797,6 @@ fn monthly_day_request(day: u32, shift: i32, start: &str, end: &str) -> SaveRecu
 /// (Sun 10-25 → Mon 10-26) is generated; Monthly day 25 / Prev, end
 /// 2027-04-24 → the April payday (Sun 04-25 → Fri 04-23) is generated.
 #[tokio::test]
-#[ignore = "latent-audit scan2-R1"]
 async fn latent_scan2_r1_shifted_date_inside_period_is_kept() {
     let pool = setup_recurring_db().await;
     let service = RecurringService::new(pool.clone());
@@ -839,7 +841,6 @@ async fn latent_scan2_r1_shifted_date_inside_period_is_kept() {
 /// Expected (bug-list fix direction): a blank anchor falls back to the start
 /// date, and an anchor after the end date is rejected as a validation error.
 #[tokio::test]
-#[ignore = "latent-audit scan2-R2"]
 async fn latent_scan2_r2_daily_anchor_is_checked_against_the_period() {
     let pool = setup_recurring_db().await;
     let service = RecurringService::new(pool.clone());
