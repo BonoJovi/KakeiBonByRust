@@ -30,14 +30,29 @@ const CATEGORY_TREE = [
     },
 ];
 
-const year = new Date().getFullYear();
+// The page reads the current date at boot and again on Reset, so freeze the
+// clock (at noon today, away from midnight) for the expected dates to stay
+// valid. Only Date is faked; flush() still needs the real setTimeout.
+const realNow = new Date();
+const now = new Date(realNow.getFullYear(), realNow.getMonth(), realNow.getDate(), 12);
+jest.useFakeTimers({
+    now,
+    doNotFake: [
+        'hrtime', 'nextTick', 'performance', 'queueMicrotask',
+        'requestAnimationFrame', 'cancelAnimationFrame',
+        'requestIdleCallback', 'cancelIdleCallback',
+        'setImmediate', 'clearImmediate', 'setInterval', 'clearInterval',
+        'setTimeout', 'clearTimeout',
+    ],
+});
+
+const year = now.getFullYear();
 
 const ymd = (d) => [
     d.getFullYear(),
     String(d.getMonth() + 1).padStart(2, '0'),
     String(d.getDate()).padStart(2, '0'),
 ].join('-');
-const now = new Date();
 const today = ymd(now);
 const oneYearLater = ymd(new Date(now.getFullYear() + 1, now.getMonth(), now.getDate()));
 
@@ -71,6 +86,8 @@ function isVisible(id) {
 }
 
 describe('scan2-R4 recurring rule form — Reset', () => {
+    afterAll(() => jest.useRealTimers());
+
     test('should bring the cycle UI and the default dates back in line after Reset', async () => {
         // Choose Monthly: Monthly fields shown, anchor hidden.
         const monthly = document.querySelector('input[name="cycle-kind"][value="MONTH"]');
