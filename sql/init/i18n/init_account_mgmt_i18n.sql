@@ -51,4 +51,6 @@ INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESO
 (2311, 'account_mgmt.add_success', 'en', 'Account added successfully', 'account_mgmt', 'Add success message', datetime('now')),
 (2312, 'account_mgmt.add_success', 'ja', '口座を追加しました', 'account_mgmt', '追加成功メッセージ', datetime('now')),
 (2313, 'account_mgmt.delete_success', 'en', 'Account deleted successfully', 'account_mgmt', 'Delete success message', datetime('now')),
-(2314, 'account_mgmt.delete_success', 'ja', '口座を削除しました', 'account_mgmt', '削除成功メッセージ', datetime('now'));
+(2314, 'account_mgmt.delete_success', 'ja', '口座を削除しました', 'account_mgmt', '削除成功メッセージ', datetime('now')),
+(2481, 'account_mgmt.failed_to_load', 'en', 'Failed to load accounts', 'account_mgmt', 'Account list load error', datetime('now')),
+(2482, 'account_mgmt.failed_to_load', 'ja', '口座の読み込みに失敗しました', 'account_mgmt', '口座一覧の読み込みエラー', datetime('now'));

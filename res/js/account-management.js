@@ -241,7 +241,7 @@ async function loadAccounts() {
     } catch (error) {
         if (token !== loadAccountsToken) return;
         console.error('Failed to load accounts:', error);
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #dc3545;">Error loading accounts: ${escapeHtml(formatApiError(error))}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #dc3545;">${escapeHtml(i18n.t('account_mgmt.failed_to_load'))}: ${escapeHtml(formatApiError(error))}</td></tr>`;
     } finally {
         if (token === loadAccountsToken) {
             loading.style.display = 'none';
@@ -324,12 +324,12 @@ async function saveAccount() {
     // resolved onSave closes it and resets the input (latent-scan2 M4), as
     // the other masters already do. Modal's handlers catch the error.
     if (!accountCode) {
-        showError('account-code-error', 'Account code is required');
+        showValidationError(document.getElementById('account-code'), i18n.t('validation.required'));
         throw new Error('Validation error: account code required');
     }
 
     if (!accountName) {
-        showValidationError(accountNameInput, 'Account name is required');
+        showValidationError(accountNameInput, i18n.t('validation.required'));
         throw new Error('Validation error: account name required');
     }
 
@@ -340,12 +340,12 @@ async function saveAccount() {
     }
 
     if (!templateCode) {
-        showError('template-code-error', 'Template is required');
+        showValidationError(document.getElementById('template-code'), i18n.t('validation.required'));
         throw new Error('Validation error: template required');
     }
 
     if (isNaN(initialBalance)) {
-        showError('initial-balance-error', 'Initial balance must be a number');
+        showValidationError(document.getElementById('initial-balance'), i18n.t('common.error_amount_not_integer'));
         throw new Error('Validation error: initial balance is not a number');
     }
 
@@ -452,16 +452,11 @@ async function deleteAccount(accountCode, accountName) {
     }
 }
 
-function showError(elementId, message) {
-    const errorElement = document.getElementById(elementId);
-    if (errorElement) {
-        errorElement.textContent = message;
-    }
-}
-
+// Clear the inline messages of every checked input (the account name is
+// also cleared by its own input listener).
 function clearErrors() {
-    document.querySelectorAll('.error-message').forEach(el => {
-        el.textContent = '';
+    ['account-code', 'account-name', 'template-code', 'initial-balance'].forEach((id) => {
+        clearValidationError(document.getElementById(id));
     });
 }
 
