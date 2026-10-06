@@ -422,12 +422,29 @@ function setupFormSubmit() {
             return;
         }
 
+        // The Rust side rejects a missing date, start > end and a daily
+        // anchor after the end date with English-only messages; check them
+        // here so the user sees a localized one (latent-scan2 R8).
+        const startDate = document.getElementById('start-date').value;
+        const endDate = document.getElementById('end-date').value;
+        const anchorDate = document.getElementById('anchor-date').value;
+        if (!startDate || !endDate) {
+            showResult('error', i18n.t('recurring_rule.err_dates_required'));
+            return;
+        }
+        if (startDate > endDate) {
+            showResult('error', i18n.t('recurring_rule.err_start_after_end'));
+            return;
+        }
+        if (cycleKind === 'DAY' && anchorDate && anchorDate > endDate) {
+            showResult('error', i18n.t('recurring_rule.err_anchor_after_end'));
+            return;
+        }
+
         // Latent-audit M15 / M18 — the period must stay within the years
         // with holiday data; the Rust side enforces the same bounds.
         const limits = await loadPeriodLimits();
         applyPeriodLimits(limits);
-        const startDate = document.getElementById('start-date').value;
-        const endDate = document.getElementById('end-date').value;
         if (startDate < limits.min || endDate > limits.max) {
             showResult('error', periodOutOfRangeMessage(limits.min, limits.max));
             return;
@@ -437,7 +454,7 @@ function setupFormSubmit() {
             rule_name: stringOrNull(document.getElementById('rule-name').value),
             period_unit: cycleKind,
             period_interval: periodInterval,
-            anchor_date: cycleKind === 'DAY' ? document.getElementById('anchor-date').value : null,
+            anchor_date: cycleKind === 'DAY' ? anchorDate : null,
             day_of_week: dayOfWeek,
             month_day_rule_type: monthDayRuleType,
             day_of_month: dayOfMonth,
@@ -445,8 +462,8 @@ function setupFormSubmit() {
             month_of_year: null,
             holiday_shift_type: parseInt(document.getElementById('holiday-shift-type').value, 10),
 
-            start_date: document.getElementById('start-date').value,
-            end_date: document.getElementById('end-date').value,
+            start_date: startDate,
+            end_date: endDate,
 
             shop_id: intOrNull(document.getElementById('shop').value),
             category1_code: document.getElementById('category1').value,
