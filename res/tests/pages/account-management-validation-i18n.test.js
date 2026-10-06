@@ -90,12 +90,13 @@ describe('account master input checks use i18n', () => {
 });
 
 describe('account list load error uses i18n', () => {
-    test('shows the localized prefix, not "Error loading accounts"', async () => {
+    test('shows only the localized message, not the backend detail', async () => {
         failLoad = true;
         document.getElementById('toggle-disabled-btn').click();
         await flush(10);
         const text = document.getElementById('accounts-tbody').textContent;
         expect(text).not.toContain('Error loading accounts');
-        expect(text).toContain('account_mgmt.failed_to_load');
+        expect(text).not.toContain('disk I/O error');
+        expect(text.trim()).toBe('account_mgmt.failed_to_load');
     });
 });

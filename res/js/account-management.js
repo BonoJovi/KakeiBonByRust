@@ -241,7 +241,7 @@ async function loadAccounts() {
     } catch (error) {
         if (token !== loadAccountsToken) return;
         console.error('Failed to load accounts:', error);
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #dc3545;">${escapeHtml(i18n.t('account_mgmt.failed_to_load'))}: ${escapeHtml(formatApiError(error))}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #dc3545;">${escapeHtml(i18n.t('account_mgmt.failed_to_load'))}</td></tr>`;
     } finally {
         if (token === loadAccountsToken) {
             loading.style.display = 'none';

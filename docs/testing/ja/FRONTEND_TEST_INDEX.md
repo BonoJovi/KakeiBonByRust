@@ -1037,7 +1037,7 @@
 | `empty account name` | 口座名が空白だけなら `validation.required` を出す |
 | `no template selected` | テンプレート未選択なら `validation.required` を出す |
 | `empty initial balance` | 初期残高が空なら `common.error_amount_not_integer` を出す |
-| `shows the localized prefix, not "Error loading accounts"` | 一覧の読み込み失敗時に `account_mgmt.failed_to_load` を出す |
+| `shows only the localized message, not the backend detail` | 一覧の読み込み失敗時は `account_mgmt.failed_to_load` だけを出し、バックエンドの英語の詳細は出さない |
 
 **ファイル**: res/tests/pages/account-management-validation-i18n.test.js
 
