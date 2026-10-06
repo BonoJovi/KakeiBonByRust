@@ -1,10 +1,15 @@
-// latent-audit scan2-C2: `menu.back_to_transactions` is not seeded in dbaccess.sql, so the detail screen's File menu shows the raw key
+// Every menu bar label is seeded for ja and en (latent-audit scan2-C2)
 /**
- * menu.js renders `data-i18n="menu.back_to_transactions"` in the File menu of
- * the transaction detail screen, and i18n.updateUI() overwrites the English
- * fallback text with t(key). The key is defined only in the legacy
- * sql/add_detail_mgmt_i18n.sql, so a DB initialised from res/sql/dbaccess.sql
- * has no row for it and the menu item shows "menu.back_to_transactions".
+ * Menu bar (res/js/menu.js).
+ *
+ * scan2-C2  menu.js renders `data-i18n="menu.back_to_transactions"` in the
+ *           File menu of the transaction detail screen, and
+ *           i18n.updateUI() overwrites the English fallback text with
+ *           t(key). The key was defined only in the legacy
+ *           sql/add_detail_mgmt_i18n.sql, so a DB initialised from
+ *           res/sql/dbaccess.sql had no row for it and the menu item showed
+ *           "menu.back_to_transactions".
+ *
  * Expected: every data-i18n key rendered by createMenuBar() is seeded in
  * dbaccess.sql for both ja and en.
  */
@@ -30,7 +35,7 @@ function seededLanguages() {
     return map;
 }
 
-describe('scan2-C2 — menu i18n keys are seeded', () => {
+describe('menu bar i18n keys are seeded (scan2-C2)', () => {
     test('menu.back_to_transactions is seeded for ja and en', () => {
         const seeded = seededLanguages();
         expect([...(seeded.get('menu.back_to_transactions') ?? [])].sort()).toEqual(['en', 'ja']);

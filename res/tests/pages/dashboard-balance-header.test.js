@@ -1,11 +1,15 @@
-// latent-audit scan2-C3: `dashboard.balance` is seeded twice with different meanings; the Account Balances header shows 「収支」
+// The Account Balances column header reads 残高 / Balance (latent-audit scan2-C3)
 /**
- * res/sql/dbaccess.sql seeds `dashboard.balance` first as 収支 (income/expense
- * balance, used as the dashboard chart label) and later as 残高 (the Account
- * Balances column header). INSERT OR IGNORE on UNIQUE(RESOURCE_KEY, LANG_CODE)
- * keeps the first row, so the column header in res/dashboard.html reads 収支.
+ * Dashboard (res/dashboard.html).
+ *
+ * scan2-C3  res/sql/dbaccess.sql seeded `dashboard.balance` first as 収支
+ *           (income minus expense, the dashboard chart label) and later as
+ *           残高 (the Account Balances column header). INSERT OR IGNORE on
+ *           UNIQUE(RESOURCE_KEY, LANG_CODE) kept the first row, so the
+ *           column header read 収支.
+ *
  * Expected: the key used by the Account Balances column header resolves to
- * 残高 in a DB initialised from dbaccess.sql.
+ * 残高 / Balance in a DB initialised from dbaccess.sql.
  */
 
 import fs from 'fs';
@@ -33,7 +37,7 @@ function effectiveTranslations() {
     return values;
 }
 
-describe('scan2-C3 — Account Balances column header', () => {
+describe('Account Balances column header (scan2-C3)', () => {
     test('the balance column header resolves to 残高 (ja) / Balance (en)', () => {
         loadPageBody('dashboard.html');
         const th = document.querySelector('.account-balances-table th.balance-col');
