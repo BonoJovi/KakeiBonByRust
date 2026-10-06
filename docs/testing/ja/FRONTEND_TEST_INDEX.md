@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-10-07 JST  
-**総テスト数**: 873件 (jest suite 67 ファイル、`npm test` 実測)
+**総テスト数**: 876件 (jest suite 69 ファイル、`npm test` 実測)
 
 ---
 
@@ -54,6 +54,8 @@
   - [pages/recurring-rule-cycle-options.test.js](#pagesrecurring-rule-cycle-optionstestjs)
   - [pages/recurring-rule-date-order.test.js](#pagesrecurring-rule-date-ordertestjs)
   - [pages/recurring-rule-reset.test.js](#pagesrecurring-rule-resettestjs)
+  - [pages/menu-i18n-seed.test.js](#pagesmenu-i18n-seedtestjs)
+  - [pages/dashboard-balance-header.test.js](#pagesdashboard-balance-headertestjs)
   - [single-flight.test.js](#single-flighttestjs)
   - [pages/product-management-page.test.js](#pagesproduct-management-pagetestjs)
   - [pages/product-management-link-draft.test.js](#pagesproduct-management-link-drafttestjs)
@@ -932,6 +934,35 @@
 
 ---
 
+### pages/menu-i18n-seed.test.js
+
+メニューバーの翻訳登録の回帰テスト (潜在スキャン scan2-C2)。以前は `menu.back_to_transactions` が旧スクリプト `sql/add_detail_mgmt_i18n.sql` にしかなく、`res/sql/dbaccess.sql` から作った DB では明細画面の「ファイル」メニューにキー文字列がそのまま表示されていた。
+
+**テスト数**: 2件
+
+| テスト | 説明 |
+|--------|------|
+| `menu.back_to_transactions is seeded for ja and en` | `dbaccess.sql` に `menu.back_to_transactions` の ja / en 両方の行がある |
+| `every data-i18n key in the menu bar is seeded for ja and en` | 明細画面のメニューバーが描画する `data-i18n` キーがすべて ja / en 両方とも `dbaccess.sql` に登録されている |
+
+**ファイル**: res/tests/pages/menu-i18n-seed.test.js
+
+---
+
+### pages/dashboard-balance-header.test.js
+
+ダッシュボードの口座別残高の列見出しの回帰テスト (潜在スキャン scan2-C3)。以前は `dashboard.balance` が「収支」(グラフの凡例) と「残高」(列見出し) の 2 回登録されていて、後の行が INSERT OR IGNORE で捨てられ、列見出しが「収支」になっていた。
+
+**テスト数**: 1件
+
+| テスト | 説明 |
+|--------|------|
+| `the balance column header resolves to 残高 (ja) / Balance (en)` | `dbaccess.sql` を上から適用した結果で、列見出しのキーが ja「残高」/ en「Balance」になる |
+
+**ファイル**: res/tests/pages/dashboard-balance-header.test.js
+
+---
+
 ### single-flight.test.js
 
 送信ハンドラの二重実行防止 `singleFlight` (`res/js/single-flight.js`) のテスト (潜在監査 M19)。
@@ -1456,7 +1487,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **450件** |
+| **機能別テスト** | **453件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 30 |
@@ -1489,6 +1520,8 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | pages/recurring-rule-cycle-options.test.js | 3 |
 | pages/recurring-rule-date-order.test.js | 5 |
 | pages/recurring-rule-reset.test.js | 1 |
+| pages/menu-i18n-seed.test.js | 2 |
+| pages/dashboard-balance-header.test.js | 1 |
 | single-flight.test.js | 4 |
 | pages/product-management-page.test.js | 1 |
 | pages/product-management-link-draft.test.js | 2 |
@@ -1519,7 +1552,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **873件** |
+| **総計 (jest)** | **876件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 
