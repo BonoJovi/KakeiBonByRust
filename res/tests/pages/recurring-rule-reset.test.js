@@ -1,24 +1,27 @@
-// latent-audit scan2-R4: Reset leaves the cycle UI out of sync and clears the anchor/period dates; the next submit sends anchor_date ""
+// Reset brings the recurring rule form back to its defaults (latent-audit scan2-R4)
 /**
- * R4  recurring-rule.js setupResetButton only calls form.reset() and
- *     updateDerivedTotal(). form.reset() fires no `change`, so
- *     updateCycleVisibility() does not run: after choosing Monthly and
- *     pressing Reset, the Daily radio is checked again but the Monthly
- *     fields stay visible, the 起点日 (anchor) field stays hidden, and the
- *     holiday-shift select stays enabled. The start / end / anchor dates were
- *     set from JS (no value attribute), so reset empties them; the next
- *     submit sends a DAY rule with anchor_date "" (backend: raw
- *     `Invalid anchor_date: `).
- *     Expected: after Reset the cycle UI matches the checked radio (Daily:
- *     anchor visible, Monthly fields hidden, holiday shift '0' + disabled)
- *     and the default dates are re-applied (anchor, start and end not empty).
+ * Recurring rule screen (res/js/recurring-rule.js).
+ *
+ * scan2-R4  setupResetButton only called form.reset() and
+ *           updateDerivedTotal(). form.reset() fires no `change`, so
+ *           updateCycleVisibility() did not run: after choosing Monthly and
+ *           pressing Reset, the Daily radio was checked again but the Monthly
+ *           fields stayed visible, the 起点日 (anchor) field stayed hidden,
+ *           and the holiday-shift select stayed enabled. The start / end /
+ *           anchor dates are set from JS (no value attribute), so reset
+ *           emptied them.
+ *
+ * Expected: after Reset the cycle UI matches the checked radio (Daily:
+ * anchor visible, Monthly fields hidden, holiday shift '0' + disabled) and
+ * the default dates are re-applied (anchor = start = today, end = one year
+ * later).
  *
  * Real page module (recurring-rule.js) booted against res/recurring-rule.html.
  */
 import { jest } from '@jest/globals';
 import {
-    mockPageModules, loadPageBody, bootPage, flush, callsOf,
-} from '../pages/_page-harness.js';
+    mockPageModules, loadPageBody, bootPage, flush,
+} from './_page-harness.js';
 
 const CATEGORY_TREE = [
     {
@@ -29,7 +32,16 @@ const CATEGORY_TREE = [
 
 const year = new Date().getFullYear();
 
-const { invoke } = mockPageModules(jest, {
+const ymd = (d) => [
+    d.getFullYear(),
+    String(d.getMonth() + 1).padStart(2, '0'),
+    String(d.getDate()).padStart(2, '0'),
+].join('-');
+const now = new Date();
+const today = ymd(now);
+const oneYearLater = ymd(new Date(now.getFullYear() + 1, now.getMonth(), now.getDate()));
+
+mockPageModules(jest, {
     invoke: (cmd) => {
         switch (cmd) {
             case 'get_category_tree_with_lang':
@@ -86,9 +98,9 @@ describe('scan2-R4 recurring rule form — Reset', () => {
             anchorVisible: true,
             monthlyModeVisible: false,
             holidayShiftDisabled: true,
-            anchor: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
-            start: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
-            end: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+            anchor: today,
+            start: today,
+            end: oneYearLater,
         });
     });
 });

@@ -65,22 +65,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         setupDeleteModal();
         await loadRules();
 
-        // Default start_date to today, end_date to one year out.
-        // Fable-5 review #13 — the pre-fix defaults used
-        // `new Date().toISOString().slice(0, 10)` which yields the UTC
-        // date. A JST user opening the modal before 09:00 JST saw
-        // yesterday in all three fields (Daily-interval-1 then wrote
-        // a spurious occurrence, Monthly-day-of-month could skip a
-        // cycle). `formatLocalDate` uses the browser's local getters
-        // so the default matches the user's wall clock.
-        const today = new Date();
-        const oneYearLater = new Date(today.getFullYear() + 1, today.getMonth(), today.getDate());
-        document.getElementById('start-date').value = formatLocalDate(today);
-        document.getElementById('end-date').value = formatLocalDate(oneYearLater);
+        applyDefaultDates();
         // A rule may only span the years with holiday data (latent-audit
         // M15 / M18); the date pickers stop at the bounds the backend enforces.
         applyPeriodLimits(await loadPeriodLimits());
-        document.getElementById('anchor-date').value = document.getElementById('start-date').value;
 
         await fitWindowToScreen();
         // Form is taller than the window; ensure the user starts at the top
@@ -627,10 +615,30 @@ function periodOutOfRangeMessage(min, max) {
     return i18n.t('recurring_rule.period_out_of_range', { start: min, end: max });
 }
 
+// Default start_date to today, end_date to one year out, and the daily
+// anchor to the start date. Fable-5 review #13 — the pre-fix defaults used
+// `new Date().toISOString().slice(0, 10)` which yields the UTC date. A JST
+// user opening the modal before 09:00 JST saw yesterday in all three fields
+// (Daily-interval-1 then wrote a spurious occurrence, Monthly-day-of-month
+// could skip a cycle). `formatLocalDate` uses the browser's local getters so
+// the default matches the user's wall clock.
+function applyDefaultDates() {
+    const today = new Date();
+    const oneYearLater = new Date(today.getFullYear() + 1, today.getMonth(), today.getDate());
+    document.getElementById('start-date').value = formatLocalDate(today);
+    document.getElementById('end-date').value = formatLocalDate(oneYearLater);
+    document.getElementById('anchor-date').value = document.getElementById('start-date').value;
+}
+
 function setupResetButton() {
     document.getElementById('reset-btn').addEventListener('click', () => {
         document.getElementById('recurring-rule-form').reset();
         anchorEditedByUser = false;
+        // form.reset() empties the dates set from JS and fires no 'change',
+        // so re-apply the defaults and bring the cycle fields back in line
+        // with the checked radio (latent-scan2 R4).
+        applyDefaultDates();
+        updateCycleVisibility();
         hideResult();
         updateDerivedTotal();
         // form.reset() does not fire 'input', so refresh counters manually.

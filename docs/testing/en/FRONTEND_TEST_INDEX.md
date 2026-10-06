@@ -2,8 +2,8 @@
 
 This document provides a complete index of all frontend tests implemented in JavaScript.
 
-**Last Updated**: 2026-10-01 JST  
-**Total Tests**: 862 (jest suites; 64 test files, per `npm test`)
+**Last Updated**: 2026-10-07 JST  
+**Total Tests**: 863 (jest suites; 65 test files, per `npm test`)
 
 ---
 
@@ -30,7 +30,7 @@ and are **not** added again to the grand total.
 - **login.test.js** - Login tests (58)
 - **user-deletion.test.js** - User deletion tests (46)
 
-### Feature-Specific Tests (439 tests)
+### Feature-Specific Tests (440 tests)
 
 - **transaction-edit.test.js** - Transaction edit tests (112)
 - **transaction-detail-management.test.js** - Transaction detail management tests (51)
@@ -62,6 +62,7 @@ and are **not** added again to the grand total.
 - **pages/product-management-edit-manufacturer-roundtrip.test.js** - Boots the real product page: editing a product, jumping to the manufacturer master and coming back reopens the same product in edit mode, and saving calls `update_product` for it, never `add_product` (latent-audit scan2-M2) (1)
 - **pages/recurring-rule-derived-total.test.js** - Boots the real recurring rule page: the total field is read-only and follows the detail and the header's rounding / tax-included settings, and `create_recurring_rule` receives no typed total (latent-audit M17) (2)
 - **pages/recurring-rule-cycle-options.test.js** - Boots the real recurring rule page: the day-of-month mode sends `DAY_OR_END` and the new end-of-month mode sends `END` (latent-audit M14); choosing "daily" resets the holiday shift to "no shift" and disables it (latent-audit L13) (3)
+- **pages/recurring-rule-reset.test.js** - Boots the real recurring rule page: after choosing Monthly and pressing Reset, the cycle fields match the checked Daily radio again (anchor shown, Monthly fields hidden, holiday shift "no shift" and disabled) and the default dates (today / one year later) are re-applied (latent-audit scan2-R4) (1)
 - **single-flight.test.js** - `singleFlight` submit guard (latent-audit M19): ignores re-entrant calls, calls `preventDefault` on every submit, releases after resolve and after throw (4)
 - **pages/product-management-page.test.js** - Boots the real product master page: editing a product whose manufacturer is disabled keeps `manufacturer_id` on save (latent-audit M5) (1)
 - **pages/product-management-link-draft.test.js** - Boots the real product master page from the detail → product-master jump (`?return_to=`): after adding a product, the detail draft is linked only to the product whose name matches exactly, never to another search candidate (latent-audit L17) (2)
@@ -118,7 +119,7 @@ and are **not** added again to the grand total.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **Feature-Specific Tests** | **439** |
+| **Feature-Specific Tests** | **440** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 30 |
@@ -149,6 +150,7 @@ and are **not** added again to the grand total.
 | pages/product-management-edit-manufacturer-roundtrip.test.js | 1 |
 | pages/recurring-rule-derived-total.test.js | 2 |
 | pages/recurring-rule-cycle-options.test.js | 3 |
+| pages/recurring-rule-reset.test.js | 1 |
 | single-flight.test.js | 4 |
 | pages/product-management-page.test.js | 1 |
 | pages/product-management-link-draft.test.js | 2 |
@@ -178,7 +180,7 @@ and are **not** added again to the grand total.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **Total (jest)** | **862** |
+| **Total (jest)** | **863** |
 
 Grand total is Screen + Feature + Aggregation (Common Test Suites are helper
 libraries invoked from Screen-Specific files and their assertions are already
