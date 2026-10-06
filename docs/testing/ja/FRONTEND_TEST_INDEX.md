@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-10-07 JST  
-**総テスト数**: 863件 (jest suite 65 ファイル、`npm test` 実測)
+**総テスト数**: 873件 (jest suite 67 ファイル、`npm test` 実測)
 
 ---
 
@@ -52,6 +52,7 @@
   - [pages/product-management-edit-manufacturer-roundtrip.test.js](#pagesproduct-management-edit-manufacturer-roundtriptestjs)
   - [pages/recurring-rule-derived-total.test.js](#pagesrecurring-rule-derived-totaltestjs)
   - [pages/recurring-rule-cycle-options.test.js](#pagesrecurring-rule-cycle-optionstestjs)
+  - [pages/recurring-rule-date-order.test.js](#pagesrecurring-rule-date-ordertestjs)
   - [pages/recurring-rule-reset.test.js](#pagesrecurring-rule-resettestjs)
   - [single-flight.test.js](#single-flighttestjs)
   - [pages/product-management-page.test.js](#pagesproduct-management-pagetestjs)
@@ -60,6 +61,7 @@
   - [pages/transaction-management-disabled-shop.test.js](#pagestransaction-management-disabled-shoptestjs)
   - [pages/account-management-disabled.test.js](#pagesaccount-management-disabledtestjs)
   - [pages/account-management-save-error-keeps-form.test.js](#pagesaccount-management-save-error-keeps-formtestjs)
+  - [pages/account-management-validation-i18n.test.js](#pagesaccount-management-validation-i18ntestjs)
   - [pages/transaction-management-disabled-account.test.js](#pagestransaction-management-disabled-accounttestjs)
   - [pages/transaction-management-category1-has-details.test.js](#pagestransaction-management-category1-has-detailstestjs)
   - [modal-open-awaits-onopen.test.js](#modal-open-awaits-onopentestjs)
@@ -898,6 +900,24 @@
 
 ---
 
+### pages/recurring-rule-date-order.test.js
+
+繰り返し予定の日付チェックの回帰テスト (潜在スキャン scan2-R8)。以前は開始日 > 終了日などを画面でチェックせず、バックエンドの英語メッセージ (`start_date must be on or before end_date` など) がそのまま表示されていた。
+
+**テスト数**: 5件
+
+| テスト | 説明 |
+|--------|------|
+| `should reject start > end with a localized message, not the backend English text` | 開始日が終了日より後なら i18n メッセージを出し、`create_recurring_rule` を呼ばない |
+| `should reject a daily anchor after the end date with a localized message` | 毎日の起点日が終了日より後なら i18n メッセージを出す |
+| `should reject an empty end date with a localized message` | 終了日が空なら i18n メッセージを出す |
+| `should reject an empty start date with the same message` | 開始日が空でも同じメッセージを出す (期間範囲外のメッセージにしない) |
+| `should still create a rule when the dates are in order` | 日付の順序が正しければ従来どおり作成する |
+
+**ファイル**: res/tests/pages/recurring-rule-date-order.test.js
+
+---
+
 ### pages/recurring-rule-reset.test.js
 
 繰り返し予定のリセットボタンの回帰テスト (潜在スキャン scan2-R4)。以前は「毎月」を選んでからリセットすると、ラジオボタンは「毎日」に戻るのに毎月用の欄が表示されたまま、起点日の欄は隠れたまま、休日シフトも選べるままで、開始日・終了日・起点日は空になっていた。
@@ -1017,6 +1037,24 @@
 | `keeps the modal open when a whitespace-only name is stopped before add_account` | 空白だけの名前を入力チェックで止めたときも、画面が開いたまま残る |
 
 **ファイル**: res/tests/pages/account-management-save-error-keeps-form.test.js
+
+---
+
+### pages/account-management-validation-i18n.test.js
+
+口座マスタの入力チェックと一覧読み込みエラーの i18n 回帰テスト (潜在スキャン scan2-R8 の続き)。以前は `Account name is required` などの英語が直書きで、口座コード・テンプレート・初期残高のメッセージは存在しない要素を指していたため表示もされなかった。
+
+**テスト数**: 5件
+
+| テスト | 説明 |
+|--------|------|
+| `empty account code` | 口座コードが空なら入力欄の下に `validation.required` を出す |
+| `empty account name` | 口座名が空白だけなら `validation.required` を出す |
+| `no template selected` | テンプレート未選択なら `validation.required` を出す |
+| `empty initial balance` | 初期残高が空なら `common.error_amount_not_integer` を出す |
+| `shows only the localized message, not the backend detail` | 一覧の読み込み失敗時は `account_mgmt.failed_to_load` だけを出し、バックエンドの英語の詳細は出さない |
+
+**ファイル**: res/tests/pages/account-management-validation-i18n.test.js
 
 ---
 
@@ -1418,7 +1456,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **440件** |
+| **機能別テスト** | **450件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 30 |
@@ -1449,6 +1487,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | pages/product-management-edit-manufacturer-roundtrip.test.js | 1 |
 | pages/recurring-rule-derived-total.test.js | 2 |
 | pages/recurring-rule-cycle-options.test.js | 3 |
+| pages/recurring-rule-date-order.test.js | 5 |
 | pages/recurring-rule-reset.test.js | 1 |
 | single-flight.test.js | 4 |
 | pages/product-management-page.test.js | 1 |
@@ -1457,6 +1496,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | pages/transaction-management-disabled-shop.test.js | 2 |
 | pages/account-management-disabled.test.js | 4 |
 | pages/account-management-save-error-keeps-form.test.js | 2 |
+| pages/account-management-validation-i18n.test.js | 5 |
 | pages/transaction-management-disabled-account.test.js | 2 |
 | pages/transaction-management-category1-has-details.test.js | 1 |
 | modal-open-awaits-onopen.test.js | 2 |
@@ -1479,7 +1519,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **863件** |
+| **総計 (jest)** | **873件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 

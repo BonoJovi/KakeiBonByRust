@@ -3,7 +3,7 @@
 This document provides a complete index of all frontend tests implemented in JavaScript.
 
 **Last Updated**: 2026-10-07 JST  
-**Total Tests**: 863 (jest suites; 65 test files, per `npm test`)
+**Total Tests**: 873 (jest suites; 67 test files, per `npm test`)
 
 ---
 
@@ -30,7 +30,7 @@ and are **not** added again to the grand total.
 - **login.test.js** - Login tests (58)
 - **user-deletion.test.js** - User deletion tests (46)
 
-### Feature-Specific Tests (440 tests)
+### Feature-Specific Tests (450 tests)
 
 - **transaction-edit.test.js** - Transaction edit tests (112)
 - **transaction-detail-management.test.js** - Transaction detail management tests (51)
@@ -62,6 +62,7 @@ and are **not** added again to the grand total.
 - **pages/product-management-edit-manufacturer-roundtrip.test.js** - Boots the real product page: editing a product, jumping to the manufacturer master and coming back reopens the same product in edit mode, and saving calls `update_product` for it, never `add_product` (latent-audit scan2-M2) (1)
 - **pages/recurring-rule-derived-total.test.js** - Boots the real recurring rule page: the total field is read-only and follows the detail and the header's rounding / tax-included settings, and `create_recurring_rule` receives no typed total (latent-audit M17) (2)
 - **pages/recurring-rule-cycle-options.test.js** - Boots the real recurring rule page: the day-of-month mode sends `DAY_OR_END` and the new end-of-month mode sends `END` (latent-audit M14); choosing "daily" resets the holiday shift to "no shift" and disables it (latent-audit L13) (3)
+- **pages/recurring-rule-date-order.test.js** - Boots the real recurring rule page: an empty start / end date, a start date after the end date and a daily anchor after the end date are each stopped by the form with a localized message instead of the backend's English text, and `create_recurring_rule` is not called; dates in order still create the rule (latent-audit scan2-R8) (5)
 - **pages/recurring-rule-reset.test.js** - Boots the real recurring rule page: after choosing Monthly and pressing Reset, the cycle fields match the checked Daily radio again (anchor shown, Monthly fields hidden, holiday shift "no shift" and disabled) and the default dates (today / one year later) are re-applied (latent-audit scan2-R4) (1)
 - **single-flight.test.js** - `singleFlight` submit guard (latent-audit M19): ignores re-entrant calls, calls `preventDefault` on every submit, releases after resolve and after throw (4)
 - **pages/product-management-page.test.js** - Boots the real product master page: editing a product whose manufacturer is disabled keeps `manufacturer_id` on save (latent-audit M5) (1)
@@ -70,6 +71,7 @@ and are **not** added again to the grand total.
 - **pages/transaction-management-disabled-shop.test.js** - Boots the real transaction page: editing a transaction whose shop is disabled keeps that shop selected (shown with the disabled label) and saves it, while a new transaction is not offered the disabled shop (latent-audit M7) (2)
 - **pages/account-management-disabled.test.js** - Boots the real account master page: "show disabled" lists disabled accounts with the disabled label (NONE never listed), a late response from a quick double toggle does not overwrite the newer list, and the add / edit form's "disabled" checkbox is shown and sent as `isDisabled` (latent-audit M7) (4)
 - **pages/account-management-save-error-keeps-form.test.js** - Boots the real account master page: a save rejected by the backend (`duplicate_code`) or stopped by the form checks (whitespace-only name) keeps the modal open with the typed input (latent-audit scan2-M4) (2)
+- **pages/account-management-validation-i18n.test.js** - Boots the real account master page: the input checks (empty code / name / template / initial balance) show localized messages next to their inputs, and a failed account list load shows only `account_mgmt.failed_to_load`, without "Error loading accounts" or the backend's English detail (latent-audit scan2-R8 follow-up) (5)
 - **pages/transaction-management-disabled-account.test.js** - Boots the real transaction page: editing a transaction whose account is disabled keeps that account selected (shown with the disabled label) and saves it, while a new transaction is not offered the disabled account (latent-audit M7) (2)
 - **pages/transaction-management-category1-has-details.test.js** - Boots the real transaction page: when the backend refuses to change the category1 of a transaction with details (`category1_has_details`), the screen shows `transaction_mgmt.category1_has_details` and keeps the modal open (latent-audit M2) (1)
 - **modal-open-awaits-onopen.test.js** - `Modal.open()` returns a promise that settles only after an async `onOpen` has finished (and at once for a synchronous one), so callers can fill the form in afterwards (latent-audit L6) (2)
@@ -119,7 +121,7 @@ and are **not** added again to the grand total.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **Feature-Specific Tests** | **440** |
+| **Feature-Specific Tests** | **450** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 30 |
@@ -150,6 +152,7 @@ and are **not** added again to the grand total.
 | pages/product-management-edit-manufacturer-roundtrip.test.js | 1 |
 | pages/recurring-rule-derived-total.test.js | 2 |
 | pages/recurring-rule-cycle-options.test.js | 3 |
+| pages/recurring-rule-date-order.test.js | 5 |
 | pages/recurring-rule-reset.test.js | 1 |
 | single-flight.test.js | 4 |
 | pages/product-management-page.test.js | 1 |
@@ -158,6 +161,7 @@ and are **not** added again to the grand total.
 | pages/transaction-management-disabled-shop.test.js | 2 |
 | pages/account-management-disabled.test.js | 4 |
 | pages/account-management-save-error-keeps-form.test.js | 2 |
+| pages/account-management-validation-i18n.test.js | 5 |
 | pages/transaction-management-disabled-account.test.js | 2 |
 | pages/transaction-management-category1-has-details.test.js | 1 |
 | modal-open-awaits-onopen.test.js | 2 |
@@ -180,7 +184,7 @@ and are **not** added again to the grand total.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **Total (jest)** | **863** |
+| **Total (jest)** | **873** |
 
 Grand total is Screen + Feature + Aggregation (Common Test Suites are helper
 libraries invoked from Screen-Specific files and their assertions are already
