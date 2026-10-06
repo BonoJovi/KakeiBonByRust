@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-10-07 JST  
-**総テスト数**: 872件 (jest suite 66 ファイル、`npm test` 実測)
+**総テスト数**: 873件 (jest suite 67 ファイル、`npm test` 実測)
 
 ---
 
@@ -53,6 +53,7 @@
   - [pages/recurring-rule-derived-total.test.js](#pagesrecurring-rule-derived-totaltestjs)
   - [pages/recurring-rule-cycle-options.test.js](#pagesrecurring-rule-cycle-optionstestjs)
   - [pages/recurring-rule-date-order.test.js](#pagesrecurring-rule-date-ordertestjs)
+  - [pages/recurring-rule-reset.test.js](#pagesrecurring-rule-resettestjs)
   - [single-flight.test.js](#single-flighttestjs)
   - [pages/product-management-page.test.js](#pagesproduct-management-pagetestjs)
   - [pages/product-management-link-draft.test.js](#pagesproduct-management-link-drafttestjs)
@@ -917,6 +918,20 @@
 
 ---
 
+### pages/recurring-rule-reset.test.js
+
+繰り返し予定のリセットボタンの回帰テスト (潜在スキャン scan2-R4)。以前は「毎月」を選んでからリセットすると、ラジオボタンは「毎日」に戻るのに毎月用の欄が表示されたまま、起点日の欄は隠れたまま、休日シフトも選べるままで、開始日・終了日・起点日は空になっていた。
+
+**テスト数**: 1件
+
+| テスト | 説明 |
+|--------|------|
+| `should bring the cycle UI and the default dates back in line after Reset` | リセット後は「毎日」の表示 (起点日あり・毎月用の欄なし・休日シフトは「なし」で無効) に戻り、既定の日付 (今日 / 1 年後 / 起点日 = 開始日) が入り直す |
+
+**ファイル**: res/tests/pages/recurring-rule-reset.test.js
+
+---
+
 ### single-flight.test.js
 
 送信ハンドラの二重実行防止 `singleFlight` (`res/js/single-flight.js`) のテスト (潜在監査 M19)。
@@ -1441,7 +1456,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **449件** |
+| **機能別テスト** | **450件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 30 |
@@ -1473,6 +1488,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | pages/recurring-rule-derived-total.test.js | 2 |
 | pages/recurring-rule-cycle-options.test.js | 3 |
 | pages/recurring-rule-date-order.test.js | 5 |
+| pages/recurring-rule-reset.test.js | 1 |
 | single-flight.test.js | 4 |
 | pages/product-management-page.test.js | 1 |
 | pages/product-management-link-draft.test.js | 2 |
@@ -1503,7 +1519,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **872件** |
+| **総計 (jest)** | **873件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 
