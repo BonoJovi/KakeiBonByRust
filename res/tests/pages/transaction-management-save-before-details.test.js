@@ -3,8 +3,10 @@
  *     neither saves the header nor stores a draft (unlike Manage shops), so
  *     edited date / total / memo / scheduled are silently dropped.
  *     Expected (owner decision 2026-10-07): with unsaved changes the screen
- *     asks, then saves the header through the normal save and moves on;
- *     "cancel" stays in the modal. Without changes it moves on at once.
+ *     asks in an in-app dialog (#save-before-details-modal; native confirm()
+ *     breaks the flow under Tauri + WebKitGTK), then saves the header through
+ *     the normal save and moves on; "cancel" (or Esc) closes only the dialog
+ *     and keeps the edit modal open. Without changes it moves on at once.
  *
  * Real page module booted against res/transaction-management.html.
  */
@@ -62,10 +64,8 @@ const { invoke } = mockPageModules(jest, {
     },
 });
 
-// Answers to the "save before Manage details?" confirm (and the total
-// recalculation prompt after a save, which these tests never trigger).
-let confirmAnswer = true;
-const confirmSpy = jest.fn(() => confirmAnswer);
+// The flow must not use a native dialog.
+const confirmSpy = jest.fn(() => true);
 window.confirm = confirmSpy;
 window.alert = () => {};
 
@@ -78,6 +78,10 @@ const navigated = () => consoleError.mock.calls.some((args) =>
 loadPageBody('transaction-management.html');
 await import('../../js/transaction-management.js');
 await bootPage();
+
+const isOpen = (id) => !document.getElementById(id).classList.contains('hidden');
+const dialogOpen = () => isOpen('save-before-details-modal');
+const editModalOpen = () => isOpen('transaction-modal');
 
 async function openEdit() {
     document.getElementById('cancel-transaction-btn')?.click();
@@ -92,9 +96,17 @@ async function openEdit() {
     consoleError.mockClear();
 }
 
+async function clickManageDetails() {
+    document.getElementById('manage-details-btn').click();
+    await flush(5);
+}
+
 describe('Manage details from the header edit modal (scan2-T6)', () => {
+    afterEach(() => {
+        expect(confirmSpy).not.toHaveBeenCalled();
+    });
+
     test('[T6] edited header values are saved before leaving', async () => {
-        confirmAnswer = true;
         await openEdit();
 
         document.getElementById('transaction-date').value = '2026-09-20T18:00';
@@ -102,34 +114,36 @@ describe('Manage details from the header edit modal (scan2-T6)', () => {
         document.getElementById('transaction-memo').value = 'new memo';
         document.getElementById('is-scheduled').checked = true;
 
-        document.getElementById('manage-details-btn').click();
+        await clickManageDetails();
+        expect(dialogOpen()).toBe(true);
+        expect(callsOf(invoke, 'update_transaction_header')).toHaveLength(0);
+        expect(navigated()).toBe(false);
+
+        document.getElementById('confirm-save-before-details').click();
         await flush(10);
 
-        const updates = callsOf(invoke, 'update_transaction_header');
-
-        const savedHeader = updates.some((u) => u.totalAmount === 6400
+        const savedHeader = callsOf(invoke, 'update_transaction_header').some((u) => u.totalAmount === 6400
             && u.transactionDate === '2026-09-20 18:00:00'
             && u.memo === 'new memo'
             && u.isScheduled === 1);
         expect(savedHeader).toBe(true);
-        expect(confirmSpy).toHaveBeenCalledWith('transaction_mgmt.save_before_details_confirm');
+        expect(dialogOpen()).toBe(false);
         expect(navigated()).toBe(true);
     });
 
     test('[T6] a second click while saving does not save twice', async () => {
-        confirmAnswer = true;
         await openEdit();
         document.getElementById('total-amount').value = '6400';
 
         const saved = deferred();
         updateResult = saved.promise;
         try {
-            document.getElementById('manage-details-btn').click();
+            await clickManageDetails();
+            document.getElementById('confirm-save-before-details').click();
             await flush(5);
-            document.getElementById('manage-details-btn').click();
+            document.getElementById('confirm-save-before-details').click();
             await flush(5);
             expect(callsOf(invoke, 'update_transaction_header')).toHaveLength(1);
-            expect(confirmSpy).toHaveBeenCalledTimes(1);
             expect(navigated()).toBe(false); // not before the save has finished
 
             saved.resolve(null);
@@ -140,28 +154,43 @@ describe('Manage details from the header edit modal (scan2-T6)', () => {
         }
     });
 
-    test('[T6] cancelling the confirm stays in the modal without saving', async () => {
-        confirmAnswer = false;
+    test('[T6] cancelling the dialog stays in the edit modal without saving', async () => {
         await openEdit();
         document.getElementById('total-amount').value = '6400';
 
-        document.getElementById('manage-details-btn').click();
-        await flush(10);
+        await clickManageDetails();
+        document.getElementById('cancel-save-before-details').click();
+        await flush(5);
 
-        expect(confirmSpy).toHaveBeenCalledTimes(1);
+        expect(dialogOpen()).toBe(false);
+        expect(editModalOpen()).toBe(true);
         expect(callsOf(invoke, 'update_transaction_header')).toHaveLength(0);
         expect(navigated()).toBe(false);
         expect(document.getElementById('total-amount').value).toBe('6400');
     });
 
+    test('[T6] Esc closes only the dialog, not the edit modal behind it', async () => {
+        await openEdit();
+        document.getElementById('total-amount').value = '6400';
+
+        await clickManageDetails();
+        document.activeElement.dispatchEvent(
+            new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
+        );
+        await flush(5);
+
+        expect(dialogOpen()).toBe(false);
+        expect(editModalOpen()).toBe(true);
+        expect(document.getElementById('total-amount').value).toBe('6400');
+        expect(navigated()).toBe(false);
+    });
+
     test('[T6] without changes it moves on at once, without asking or saving', async () => {
-        confirmAnswer = true;
         await openEdit();
 
-        document.getElementById('manage-details-btn').click();
-        await flush(10);
+        await clickManageDetails();
 
-        expect(confirmSpy).not.toHaveBeenCalled();
+        expect(dialogOpen()).toBe(false);
         expect(callsOf(invoke, 'update_transaction_header')).toHaveLength(0);
         expect(navigated()).toBe(true);
     });

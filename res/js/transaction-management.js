@@ -640,6 +640,7 @@ let disabledShopsById = new Map();
 // Same for disabled accounts, by account code.
 let disabledAccountsByCode = new Map();
 let transactionModal = null;
+let saveBeforeDetailsModal = null;
 
 function initializeTransactionModal() {
     const category1Select = document.getElementById('category1');
@@ -759,35 +760,61 @@ function initializeTransactionModal() {
     // Manage details button handler
     const manageDetailsBtn = document.getElementById('manage-details-btn');
     if (manageDetailsBtn) {
-        manageDetailsBtn.addEventListener('click', async () => {
+        manageDetailsBtn.addEventListener('click', () => {
             if (!editingTransactionId) {
                 // New transaction - need to save first
                 showToast(i18n.t('transaction_mgmt.save_before_details'), { variant: 'warning' });
                 return;
             }
-            // Saving closes the modal, which clears editingTransactionId.
-            const transactionId = editingTransactionId;
             // Leaving used to drop unsaved header edits, and the detail
             // screen then worked against the old date and total (scan2-T6).
             if (JSON.stringify(collectModalFields()) !== loadedModalFields) {
-                if (!confirm(i18n.t('transaction_mgmt.save_before_details_confirm'))) return;
-                // Block this button and the modal's Save button until the
-                // save finishes, so neither can send it twice.
-                manageDetailsBtn.disabled = true;
-                transactionModal.showLoading();
-                try {
-                    await handleTransactionSubmit(new Event('submit'));
-                } catch {
-                    // The save already showed why; the modal stays open.
-                    return;
-                } finally {
-                    manageDetailsBtn.disabled = false;
-                    transactionModal.hideLoading();
-                }
+                saveBeforeDetailsModal.open('confirm', { transactionId: editingTransactionId });
+                return;
             }
-            window.location.href = `${HTML_FILES.TRANSACTION_DETAIL_MANAGEMENT}?transaction_id=${transactionId}`;
+            openDetailScreen(editingTransactionId);
         });
     }
+
+    initializeSaveBeforeDetailsModal();
+}
+
+function openDetailScreen(transactionId) {
+    window.location.href = `${HTML_FILES.TRANSACTION_DETAIL_MANAGEMENT}?transaction_id=${transactionId}`;
+}
+
+// "Save the header changes before Manage details?" (scan2-T6). An in-app
+// modal, not confirm(): native dialogs break the flow under Tauri +
+// WebKitGTK. Its Save button runs the normal header save; the Modal's own
+// guard and loading state keep it from being sent twice, and the
+// transaction modal behind it cannot be clicked meanwhile.
+function initializeSaveBeforeDetailsModal() {
+    if (!document.getElementById('save-before-details-modal')) return;
+    saveBeforeDetailsModal = new Modal('save-before-details-modal', {
+        closeButtonId: 'close-save-before-details',
+        cancelButtonId: 'cancel-save-before-details',
+        saveButtonId: 'confirm-save-before-details',
+        // Both modals listen for Escape on document; handled below so one
+        // press closes only this dialog, not the edit modal behind it.
+        closeOnEscape: false,
+        onSave: async (data) => {
+            try {
+                await handleTransactionSubmit(new Event('submit'));
+            } catch {
+                // The save already showed why. This dialog closes and the
+                // edit modal stays open with the typed values.
+                return;
+            }
+            openDetailScreen(data.transactionId);
+        }
+    });
+    document.addEventListener('keydown', (e) => {
+        const dialog = document.getElementById('save-before-details-modal');
+        if (e.key === 'Escape' && !dialog.classList.contains('hidden')) {
+            e.stopPropagation();
+            saveBeforeDetailsModal.close();
+        }
+    }, true);
 }
 
 async function openTransactionModal(transactionId = null) {
