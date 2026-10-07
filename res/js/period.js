@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import { formatLocalDate } from './format-local-date.js';
 
 let cachedSettings = null;
 
@@ -28,6 +29,50 @@ export async function fetchMonthlyPeriodBounds(year, month) {
         start: new Date(b.start + 'T00:00:00'),
         end: new Date(b.end + 'T00:00:00'),
     };
+}
+
+/// (year, month) of the user's monthly period that contains `date`. A period
+/// is named by its start month, so with a custom start day or a holiday
+/// shift the calendar month can name a period that starts after `date`
+/// (start day 25, 09-10 -> the "September" period is 09-25..10-24) or ended
+/// before it (start day 1 shifted back to 11-30 -> on 11-30 the period is
+/// "December"). It can even be two months away: start day 31 with the next
+/// business day, 2026-01-31 and 02-28 are Saturdays, so "January" runs
+/// 02-02..03-01 and 03-01 belongs to it. So step one month at a time until
+/// the bounds contain `date` (periods are contiguous, so this converges);
+/// MAX_PERIOD_STEPS only guards against a backend that never answers with
+/// a matching period (latent-scan2 A3). Falls back to the calendar month
+/// when the backend cannot answer.
+const MAX_PERIOD_STEPS = 6;
+
+export async function findMonthlyPeriodContaining(date) {
+    const day = formatLocalDate(date);
+    const calendar = { year: date.getFullYear(), month: date.getMonth() + 1 };
+    let { year, month } = calendar;
+    try {
+        for (let step = 0; step < MAX_PERIOD_STEPS; step++) {
+            const b = await invoke('get_monthly_period_bounds', { year, month });
+            if (day < b.start) {
+                month -= 1;
+                if (month === 0) {
+                    month = 12;
+                    year -= 1;
+                }
+            } else if (day > b.end) {
+                month += 1;
+                if (month === 13) {
+                    month = 1;
+                    year += 1;
+                }
+            } else {
+                return { year, month };
+            }
+        }
+        console.warn('No monthly period contains', day, '- using the calendar month');
+    } catch (e) {
+        console.warn('Failed to load period bounds, using the calendar month:', e);
+    }
+    return calendar;
 }
 
 /// Last day (YYYY-MM-DD) of the user's monthly period for (year, month),

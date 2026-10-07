@@ -3,7 +3,7 @@
 This document provides a complete index of all frontend tests implemented in JavaScript.
 
 **Last Updated**: 2026-10-07 JST  
-**Total Tests**: 878 (jest suites; 71 test files, per `npm test`)
+**Total Tests**: 889 (jest suites; 75 test files, per `npm test`)
 
 ---
 
@@ -30,7 +30,7 @@ and are **not** added again to the grand total.
 - **login.test.js** - Login tests (58)
 - **user-deletion.test.js** - User deletion tests (46)
 
-### Feature-Specific Tests (455 tests)
+### Feature-Specific Tests (466 tests)
 
 - **transaction-edit.test.js** - Transaction edit tests (112)
 - **transaction-detail-management.test.js** - Transaction detail management tests (51)
@@ -48,6 +48,7 @@ and are **not** added again to the grand total.
 - **parse-amount-strict.test.js** - `parseAmountStrict` money-field strict integer parser (Fable-5 #10): replaces `parseInt(el.value) || 0` across the detail / transaction / recurring-rule submit paths, rejecting decimals, locale commas, scientific notation, sign prefixes, full-width digits, trailing garbage, and precision-losing integers past `Number.MAX_SAFE_INTEGER` (24)
 - **format-local-date.test.js** - `formatLocalDate` timezone-safe `YYYY-MM-DD` formatter (Fable-5 #13): replaces `new Date().toISOString().slice(0, 10)` in the recurring-rule modal so JST users opening the form before 09:00 no longer see yesterday's date in start-date / end-date / anchor-date defaults; test file pins `TZ=Asia/Tokyo` so a UTC regression is actually caught (16)
 - **period-end-date.test.js** - `fetchMonthlyPeriodEndDate` (period.js): the dashboard account balances are taken as of the last day of the user's monthly period (custom start day / holiday shift from `get_monthly_period_bounds`), falling back to the calendar month end if the backend fails (latent-audit L14) (2)
+- **period-containing.test.js** - `findMonthlyPeriodContaining` (period.js): returns the calendar month when its period contains the date, the previous month when that period starts later (start day 25), the next month when it ended earlier (holiday shift back over the month end), keeps stepping when the period is two months away (start day 31 + next business day), wraps the year both ways, and falls back to the calendar month when the backend fails or no period ever matches (latent-audit scan2-A3) (6)
 - **aggregation-render-unspecified.test.js** - `renderResults` unspecified-group i18n swap (Fable-5 #22): backend now returns an empty `group_name` string when the SHOP / PRODUCT / ACCOUNT reference is unspecified, and the renderer swaps it for `i18n.t('common.unspecified')` so English users don't see Japanese "指定なし" leaking through (5)
 - **pages/transaction-detail-page.test.js** - Boots the real detail page against `transaction-detail-management.html`: opening a product-linked detail and saving without changes keeps its `productId` (latent-audit H3), a double submit adds the detail only once (latent-audit M19), and a legacy row with `amount_including_tax = 0` shows AMOUNT + TAX_AMOUNT instead of ¥0 (latent-audit L7) (3)
 - **pages/transaction-detail-included-typing.test.js** - Boots the real detail page: typing a tax-included amount digit by digit keeps every digit (the field is no longer rewritten mid-typing) and saves the typed price (latent-audit scan2-T1) (1)
@@ -68,6 +69,9 @@ and are **not** added again to the grand total.
 - **pages/dashboard-balance-header.test.js** - The dashboard's Account Balances column header uses its own key that resolves to 残高 / Balance after `dbaccess.sql` is applied, instead of `dashboard.balance` (収支, the chart label) (latent-audit scan2-C3) (1)
 - **pages/transaction-list-none-account-label.test.js** - Boots the real transaction list: a row whose account is NONE shows `common.unspecified` instead of the stored name 指定なし (latent-audit scan2-M8) (1)
 - **pages/transaction-detail-none-account-label.test.js** - Boots the real transaction detail screen: the header's account shows `common.unspecified` for the NONE account instead of the stored name 指定なし (latent-audit scan2-M8) (1)
+- **pages/dashboard-balance-sign.test.js** - Boots the real dashboard: the trend chart's Balance tooltip keeps the minus sign ("-¥30,000"), the axis ticks show the full signed amount without K / M abbreviations, and the account balances read "-¥1,234" (latent-audit scan2-A2) (3)
+- **pages/dashboard-default-period.test.js** - Boots the real dashboard with start day 25 on 2026-09-10: it opens on the August period that contains today, not the future September period, and loads that month (latent-audit scan2-A3) (1)
+- **pages/dashboard-stale-reload.test.js** - Boots the real dashboard: when a slow September load finishes after a newer March load, the charts and titles stay on March (latent-audit scan2-A4) (1)
 - **single-flight.test.js** - `singleFlight` submit guard (latent-audit M19): ignores re-entrant calls, calls `preventDefault` on every submit, releases after resolve and after throw (4)
 - **pages/product-management-page.test.js** - Boots the real product master page: editing a product whose manufacturer is disabled keeps `manufacturer_id` on save (latent-audit M5) (1)
 - **pages/product-management-link-draft.test.js** - Boots the real product master page from the detail → product-master jump (`?return_to=`): after adding a product, the detail draft is linked only to the product whose name matches exactly, never to another search candidate (latent-audit L17) (2)
@@ -125,7 +129,7 @@ and are **not** added again to the grand total.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **Feature-Specific Tests** | **455** |
+| **Feature-Specific Tests** | **466** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 30 |
@@ -142,6 +146,7 @@ and are **not** added again to the grand total.
 | parse-amount-strict.test.js | 24 |
 | format-local-date.test.js | 16 |
 | period-end-date.test.js | 2 |
+| period-containing.test.js | 6 |
 | aggregation-render-unspecified.test.js | 5 |
 | pages/transaction-detail-page.test.js | 3 |
 | pages/transaction-detail-included-typing.test.js | 1 |
@@ -162,6 +167,9 @@ and are **not** added again to the grand total.
 | pages/dashboard-balance-header.test.js | 1 |
 | pages/transaction-list-none-account-label.test.js | 1 |
 | pages/transaction-detail-none-account-label.test.js | 1 |
+| pages/dashboard-balance-sign.test.js | 3 |
+| pages/dashboard-default-period.test.js | 1 |
+| pages/dashboard-stale-reload.test.js | 1 |
 | single-flight.test.js | 4 |
 | pages/product-management-page.test.js | 1 |
 | pages/product-management-link-draft.test.js | 2 |
@@ -192,7 +200,7 @@ and are **not** added again to the grand total.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **Total (jest)** | **878** |
+| **Total (jest)** | **889** |
 
 Grand total is Screen + Feature + Aggregation (Common Test Suites are helper
 libraries invoked from Screen-Specific files and their assertions are already

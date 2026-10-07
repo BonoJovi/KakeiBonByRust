@@ -6,8 +6,9 @@ import { fitWindowToScreen } from './window-fit.js';
 import { HTML_FILES } from './html-files.js';
 import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
 import { createMenuBar } from './menu.js';
-import { getPeriodSettings, formatMonthlyPeriodLabel, formatMonthlyPeriodBaseLabel, fetchMonthlyPeriodBounds, fetchMonthlyPeriodEndDate } from './period.js';
+import { getPeriodSettings, formatMonthlyPeriodLabel, formatMonthlyPeriodBaseLabel, fetchMonthlyPeriodBounds, fetchMonthlyPeriodEndDate, findMonthlyPeriodContaining } from './period.js';
 import { showToast } from './toast.js';
+import { escapeHtml } from './escape-html.js';
 
 console.log('dashboard.js loaded');
 
@@ -79,7 +80,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     await applyFontSize();
 
     // Initialize filter defaults
-    initializeFilterDefaults();
+    await initializeFilterDefaults();
 
     // Setup event handlers
     setupEventHandlers();
@@ -94,16 +95,16 @@ document.addEventListener('DOMContentLoaded', async function() {
     console.log('[DOMContentLoaded] Initialization complete');
 });
 
-function initializeFilterDefaults() {
-    const now = new Date();
+async function initializeFilterDefaults() {
     const yearInput = document.getElementById('year');
     const monthSelect = document.getElementById('month');
 
-    // Set current year
-    yearInput.value = now.getFullYear();
-
-    // Set current month
-    monthSelect.value = now.getMonth() + 1;
+    // Open on the monthly period that contains today, not the calendar
+    // month: with a custom start day the calendar month can name a future
+    // period (latent-scan2 A3).
+    const { year, month } = await findMonthlyPeriodContaining(new Date());
+    yearInput.value = year;
+    monthSelect.value = month;
 }
 
 function setupEventHandlers() {
@@ -157,7 +158,14 @@ function setupEventHandlers() {
     });
 }
 
+// Bumped per loadDashboardData() call: when the user switches months
+// quickly, a slower, older load must not redraw the charts and titles over
+// the newer month (latent-scan2 A4; the account balances have their own
+// token, accountBalancesToken).
+let dashboardLoadToken = 0;
+
 async function loadDashboardData() {
+    const token = ++dashboardLoadToken;
     const user = await getCurrentSessionUser();
     if (!user) {
         showMessage('error', 'User not authenticated');
@@ -236,6 +244,8 @@ async function loadDashboardData() {
             }
         }
 
+        if (token !== dashboardLoadToken) return;
+
         // Update chart titles with period
         updateChartTitles(monthPeriod, trendPeriod);
 
@@ -250,6 +260,7 @@ async function loadDashboardData() {
 
     } catch (error) {
         console.error('Failed to load dashboard data:', error);
+        if (token !== dashboardLoadToken) return;
         showMessage('error', error.toString());
     }
 }
@@ -439,7 +450,7 @@ function updateCategoryBarChart(data, colorMap) {
                     beginAtZero: true,
                     ticks: {
                         callback: function(value) {
-                            return formatAmountShort(value);
+                            return formatAmount(value);
                         }
                     }
                 },
@@ -539,7 +550,7 @@ function updateMonthlyTrendChart(monthlyData) {
                     beginAtZero: true,
                     ticks: {
                         callback: function(value) {
-                            return formatAmountShort(value);
+                            return formatAmount(value);
                         }
                     }
                 }
@@ -596,17 +607,14 @@ function darkenColor(hex) {
     return `#${newR.toString(16).padStart(2, '0')}${newG.toString(16).padStart(2, '0')}${newB.toString(16).padStart(2, '0')}`;
 }
 
+// Sign before the currency symbol ("-¥30,000"), as on the aggregation
+// screens (latent-audit L12). The expense charts pass absolute values, but
+// the trend chart's Balance series and the account balances can be negative
+// (latent-scan2 A2). Axis ticks use the same full form rather than K / M
+// abbreviations, which read poorly aloud and are unclear to many users.
 function formatAmount(amount) {
-    return '¥' + Math.abs(amount).toLocaleString('ja-JP');
-}
-
-function formatAmountShort(amount) {
-    if (amount >= 1000000) {
-        return '¥' + (amount / 1000000).toFixed(1) + 'M';
-    } else if (amount >= 1000) {
-        return '¥' + (amount / 1000).toFixed(0) + 'K';
-    }
-    return '¥' + amount.toLocaleString('ja-JP');
+    const formatted = '¥' + Math.abs(amount).toLocaleString('ja-JP');
+    return amount < 0 ? `-${formatted}` : formatted;
 }
 
 function truncateLabel(label, maxLength) {
@@ -1098,7 +1106,7 @@ async function loadAccountBalancesAsOf(year, month) {
         if (token !== accountBalancesToken) return;
         tbody.innerHTML = `<tr><td colspan="2" class="account-balances-empty">${
             i18n.t('dashboard.balances_error') || 'Failed to load balances'
-        }: ${error.message || error}</td></tr>`;
+        }: ${escapeHtml(error.message || error)}</td></tr>`;
         return;
     }
     if (token !== accountBalancesToken) return;
@@ -1124,16 +1132,8 @@ async function loadAccountBalancesAsOf(year, month) {
                 : '';
             return `<tr>
                 <td>${escapeHtml(b.account_name)}${disabledLabel}</td>
-                <td class="balance-col ${cls}">¥${b.balance.toLocaleString()}</td>
+                <td class="balance-col ${cls}">${escapeHtml(formatAmount(b.balance))}</td>
             </tr>`;
         })
         .join('');
-}
-
-// Tiny HTML escaper used by the balances table. Names come from user-typed
-// account labels, so we render them safely instead of inserting raw HTML.
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text == null ? '' : String(text);
-    return div.innerHTML;
 }
