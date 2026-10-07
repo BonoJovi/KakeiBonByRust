@@ -620,6 +620,9 @@ impl CategoryService {
     /// the mirror of `disable_category2`, which hides both. Without the
     /// child step the CATEGORY2 came back with an empty CATEGORY3 dropdown
     /// (latent-audit M8).
+    /// Every child comes back, including a CATEGORY3 that was hidden on its
+    /// own before the CATEGORY2 was hidden: accepted as the specification
+    /// and documented in the user manual (scan2-M6).
     pub async fn enable_category2(
         &self,
         user_id: i64,

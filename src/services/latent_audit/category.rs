@@ -128,6 +128,29 @@ async fn latent_m8_enable_already_enabled_category2_keeps_hidden_children() {
     );
 }
 
+/// scan2-M6 (accepted specification, documented in the user manual): a
+/// CATEGORY3 hidden on its own before its CATEGORY2 was hidden comes back
+/// when the CATEGORY2 is shown again, because the hidden state does not
+/// record why a child was hidden (CodeRabbit on #188).
+#[tokio::test]
+async fn latent_scan2_m6_enable_category2_restores_individually_hidden_category3() {
+    let (_pool, service, user_id) = setup().await;
+    let food = service.add_category2(user_id, "EXPENSE", "食費", "Food").await.unwrap();
+    let rice = service.add_category3(user_id, "EXPENSE", &food, "米", "Rice").await.unwrap();
+
+    service.disable_category3(user_id, "EXPENSE", &food, &rice).await.unwrap();
+    service.disable_category2(user_id, "EXPENSE", &food).await.unwrap();
+    service.enable_category2(user_id, "EXPENSE", &food).await.unwrap();
+
+    let tree = service.get_category_tree_all(user_id, "ja").await.unwrap();
+    assert_eq!(
+        cat3_is_disabled(&tree, "EXPENSE", &food, &rice),
+        Some(0),
+        "showing the CATEGORY2 again shows every child, including one hidden on its own (tree: {})",
+        tree
+    );
+}
+
 // ---------------------------------------------------------------------------
 // L18
 // ---------------------------------------------------------------------------

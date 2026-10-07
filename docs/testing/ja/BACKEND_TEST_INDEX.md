@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-10-07 JST  
-**総テスト数**: 460件 (差分反映後。`cargo test --lib` の権威的総数は 726 で、既存の未反映分は別 PR でバックフィル予定)
+**総テスト数**: 461件 (差分反映後。`cargo test --lib` の権威的総数は 727 で、既存の未反映分は別 PR でバックフィル予定)
 
 ---
 
@@ -423,26 +423,27 @@ AES-256-GCM暗号化・復号化のテスト。
 | `test_get_category_tree_preserves_display_order` | move_category2_up で並び替えた cat2 の DISPLAY_ORDER が flat-query grouping 後も維持されること (PR11, Fable-5 #31) | src/services/category.rs | 2196 |
 | `test_get_category_tree_all_includes_disabled_flags` | `get_category_tree_all` は disabled 行を含め `is_disabled` フィールド付きで返す (PR11, Fable-5 #31)。反面 `get_category_tree` は disabled 行を除外する対比も同時にチェック | src/services/category.rs | 2225 |
 | `latent_m8_enable_category2_restores_cascaded_category3` | 非表示にした中分類を表示に戻すと、一緒に非表示になった小分類も戻る (潜在監査 M8) | src/services/latent_audit/category.rs | 83 |
-| `latent_l19_enable_missing_category2_returns_not_found` | 存在しない中分類の表示復帰は not_found (潜在監査 L19、中分類の表示復帰のみ) | src/services/latent_audit/category.rs | 223 |
+| `latent_l19_enable_missing_category2_returns_not_found` | 存在しない中分類の表示復帰は not_found (潜在監査 L19、中分類の表示復帰のみ) | src/services/latent_audit/category.rs | 266 |
 | `latent_m8_enable_already_enabled_category2_keeps_hidden_children` | 表示中の中分類への表示復帰は何もせず、個別に非表示にした小分類は非表示のまま (潜在監査 M8) | src/services/latent_audit/category.rs | 110 |
-| `latent_l18_update_missing_category2_returns_not_found` | 存在しない中分類の名前変更は成功扱いにせず not_found (潜在監査 L18) | src/services/latent_audit/category.rs | 140 |
-| `latent_l18_update_missing_category3_returns_not_found` | 存在しない小分類の名前変更は not_found (潜在監査 L18) | src/services/latent_audit/category.rs | 153 |
-| `latent_l18_add_category2_is_atomic_on_i18n_failure` | i18n の追加失敗で中途半端な中分類が残らない (追加を単一トランザクションで実行、潜在監査 L18) | src/services/latent_audit/category.rs | 172 |
-| `latent_l19_move_missing_category2_returns_not_found` | 存在しない中分類の移動は生の RowNotFound ではなく not_found (潜在監査 L19) | src/services/latent_audit/category.rs | 217 |
-| `latent_l19_move_missing_category3_returns_not_found` | 存在しない小分類の移動は not_found (潜在監査 L19) | src/services/latent_audit/category.rs | 228 |
-| `latent_l19_enable_missing_category3_returns_not_found` | 存在しない小分類の再表示は not_found (潜在監査 L19) | src/services/latent_audit/category.rs | 254 |
-| `latent_l20_category3_code_unique_across_category2_parents` | C2_E_1 と C2_E_11 の配下で小分類コードが衝突しない (親コード全体から生成しユーザー内で一意、潜在監査 L20) | src/services/latent_audit/category.rs | 276 |
-| `latent_l20_add_category2_empty_category1_code_does_not_panic` | 空の費目1コードはパニックせず拒否 (潜在監査 L20) | src/services/latent_audit/category.rs | 312 |
-| `latent_l20_add_category2_multibyte_category1_code_does_not_panic` | 存在しないマルチバイトの費目1コードはパニックせず拒否 (潜在監査 L20) | src/services/latent_audit/category.rs | 323 |
-| `latent_l20_add_category3_multibyte_category1_code_does_not_panic` | 存在しないマルチバイトの費目1配下への小分類追加はパニックせず拒否 (潜在監査 L20) | src/services/latent_audit/category.rs | 333 |
-| `latent_scan2_m5_move_up_skips_hidden_sibling` | A・非表示の B・C の並びで、C の「↑」1 回で非表示の B を飛ばして A の上に移る (潜在スキャン scan2-M5) | src/services/latent_audit/category.rs | 367 |
-| `latent_scan2_m5_move_down_skips_hidden_sibling` | A・非表示の B・C の並びで、A の「↓」1 回で非表示の B を飛ばして C の下に移る (潜在スキャン scan2-M5) | src/services/latent_audit/category.rs | 390 |
-| `latent_scan2_m5_move_down_past_only_hidden_siblings_is_noop` | 表示中で最後の中分類 (後ろは非表示だけ) の「↓」では何も変わらず、順番の数字も変わらない (潜在スキャン scan2-M5) | src/services/latent_audit/category.rs | 411 |
-| `latent_scan2_m5_category3_moves_skip_hidden_sibling` | 小分類の「↑」「↓」も同じく非表示の兄弟を飛ばす (潜在スキャン scan2-M5) | src/services/latent_audit/category.rs | 451 |
-| `latent_scan2_m3_detail_list_shows_renamed_category_names` | 入出金の明細一覧に、大分類の名前と、変更後の中分類・小分類の名前が表示言語 (日本語・英語) で出る。言語別の名前が無い言語では基本名になる (潜在スキャン scan2-M3) | src/services/latent_audit/category.rs | 549 |
-| `latent_scan2_m8_transaction_list_category1_follows_language` | 入出金一覧の大分類が表示言語の名前 (支出 / Expense) になり、その言語の行が無いときは基本名になる (潜在スキャン scan2-M8) | src/services/latent_audit/category.rs | 655 |
+| `latent_scan2_m6_enable_category2_restores_individually_hidden_category3` | 仕様として受容: 中分類を非表示にする前に個別に非表示にしていた小分類も、中分類を再表示すると表示に戻る。ユーザーマニュアルに記載 (潜在スキャン scan2-M6) | src/services/latent_audit/category.rs | 136 |
+| `latent_l18_update_missing_category2_returns_not_found` | 存在しない中分類の名前変更は成功扱いにせず not_found (潜在監査 L18) | src/services/latent_audit/category.rs | 163 |
+| `latent_l18_update_missing_category3_returns_not_found` | 存在しない小分類の名前変更は not_found (潜在監査 L18) | src/services/latent_audit/category.rs | 176 |
+| `latent_l18_add_category2_is_atomic_on_i18n_failure` | i18n の追加失敗で中途半端な中分類が残らない (追加を単一トランザクションで実行、潜在監査 L18) | src/services/latent_audit/category.rs | 195 |
+| `latent_l19_move_missing_category2_returns_not_found` | 存在しない中分類の移動は生の RowNotFound ではなく not_found (潜在監査 L19) | src/services/latent_audit/category.rs | 240 |
+| `latent_l19_move_missing_category3_returns_not_found` | 存在しない小分類の移動は not_found (潜在監査 L19) | src/services/latent_audit/category.rs | 251 |
+| `latent_l19_enable_missing_category3_returns_not_found` | 存在しない小分類の再表示は not_found (潜在監査 L19) | src/services/latent_audit/category.rs | 277 |
+| `latent_l20_category3_code_unique_across_category2_parents` | C2_E_1 と C2_E_11 の配下で小分類コードが衝突しない (親コード全体から生成しユーザー内で一意、潜在監査 L20) | src/services/latent_audit/category.rs | 299 |
+| `latent_l20_add_category2_empty_category1_code_does_not_panic` | 空の費目1コードはパニックせず拒否 (潜在監査 L20) | src/services/latent_audit/category.rs | 335 |
+| `latent_l20_add_category2_multibyte_category1_code_does_not_panic` | 存在しないマルチバイトの費目1コードはパニックせず拒否 (潜在監査 L20) | src/services/latent_audit/category.rs | 346 |
+| `latent_l20_add_category3_multibyte_category1_code_does_not_panic` | 存在しないマルチバイトの費目1配下への小分類追加はパニックせず拒否 (潜在監査 L20) | src/services/latent_audit/category.rs | 356 |
+| `latent_scan2_m5_move_up_skips_hidden_sibling` | A・非表示の B・C の並びで、C の「↑」1 回で非表示の B を飛ばして A の上に移る (潜在スキャン scan2-M5) | src/services/latent_audit/category.rs | 390 |
+| `latent_scan2_m5_move_down_skips_hidden_sibling` | A・非表示の B・C の並びで、A の「↓」1 回で非表示の B を飛ばして C の下に移る (潜在スキャン scan2-M5) | src/services/latent_audit/category.rs | 413 |
+| `latent_scan2_m5_move_down_past_only_hidden_siblings_is_noop` | 表示中で最後の中分類 (後ろは非表示だけ) の「↓」では何も変わらず、順番の数字も変わらない (潜在スキャン scan2-M5) | src/services/latent_audit/category.rs | 434 |
+| `latent_scan2_m5_category3_moves_skip_hidden_sibling` | 小分類の「↑」「↓」も同じく非表示の兄弟を飛ばす (潜在スキャン scan2-M5) | src/services/latent_audit/category.rs | 474 |
+| `latent_scan2_m3_detail_list_shows_renamed_category_names` | 入出金の明細一覧に、大分類の名前と、変更後の中分類・小分類の名前が表示言語 (日本語・英語) で出る。言語別の名前が無い言語では基本名になる (潜在スキャン scan2-M3) | src/services/latent_audit/category.rs | 572 |
+| `latent_scan2_m8_transaction_list_category1_follows_language` | 入出金一覧の大分類が表示言語の名前 (支出 / Expense) になり、その言語の行が無いときは基本名になる (潜在スキャン scan2-M8) | src/services/latent_audit/category.rs | 678 |
 
-**合計**: 44件
+**合計**: 45件
 
 ### services/manufacturer.rs
 
@@ -746,7 +747,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **437件** |
+| **インラインテスト** | **438件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -759,7 +760,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/user_management.rs | 25 |
 | services/encryption.rs | 11 |
 | services/account.rs | 19 |
-| services/category.rs | 44 |
+| services/category.rs | 45 |
 | services/manufacturer.rs | 17 |
 | services/product.rs | 20 |
 | services/shop.rs | 19 |
@@ -770,7 +771,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/i18n.rs | 8 |
 | services/recurring.rs | 28 |
 | lib.rs | 6 |
-| **総計** | **460件** |
+| **総計** | **461件** |
 
 ---
 
