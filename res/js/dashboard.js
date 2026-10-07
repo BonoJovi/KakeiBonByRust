@@ -8,6 +8,7 @@ import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
 import { createMenuBar } from './menu.js';
 import { getPeriodSettings, formatMonthlyPeriodLabel, formatMonthlyPeriodBaseLabel, fetchMonthlyPeriodBounds, fetchMonthlyPeriodEndDate, findMonthlyPeriodContaining } from './period.js';
 import { showToast } from './toast.js';
+import { escapeHtml } from './escape-html.js';
 
 console.log('dashboard.js loaded');
 
@@ -1105,7 +1106,7 @@ async function loadAccountBalancesAsOf(year, month) {
         if (token !== accountBalancesToken) return;
         tbody.innerHTML = `<tr><td colspan="2" class="account-balances-empty">${
             i18n.t('dashboard.balances_error') || 'Failed to load balances'
-        }: ${error.message || error}</td></tr>`;
+        }: ${escapeHtml(error.message || error)}</td></tr>`;
         return;
     }
     if (token !== accountBalancesToken) return;
@@ -1131,16 +1132,8 @@ async function loadAccountBalancesAsOf(year, month) {
                 : '';
             return `<tr>
                 <td>${escapeHtml(b.account_name)}${disabledLabel}</td>
-                <td class="balance-col ${cls}">${formatAmount(b.balance)}</td>
+                <td class="balance-col ${cls}">${escapeHtml(formatAmount(b.balance))}</td>
             </tr>`;
         })
         .join('');
-}
-
-// Tiny HTML escaper used by the balances table. Names come from user-typed
-// account labels, so we render them safely instead of inserting raw HTML.
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text == null ? '' : String(text);
-    return div.innerHTML;
 }
