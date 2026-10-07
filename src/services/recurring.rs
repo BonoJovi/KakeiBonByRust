@@ -818,13 +818,6 @@ impl RecurringService {
         Self { pool }
     }
 
-    /// Save a recurring rule and generate the matching IS_SCHEDULED=1 occurrences
-    /// in a single transaction. Each generated TRANSACTIONS_HEADER row carries
-    /// the new RULE_ID — that is the only marker tying occurrences back to the
-    /// rule, so confirming or deleting individual rows leaves the rest untouched.
-    /// Returns the new RULE_ID, the number of occurrences generated, and the
-    /// first generated TRANSACTION_ID (if any) for callers that want to surface
-    /// it in a result message.
     /// The first and last date a recurring rule may cover right now:
     /// `recurring_period_limits` for today, clamped to the years actually
     /// seeded in HOLIDAYS_STANDARD (holidays are seeded at startup, so an app
@@ -851,6 +844,13 @@ impl RecurringService {
         Ok((first, last))
     }
 
+    /// Save a recurring rule and generate the matching IS_SCHEDULED=1 occurrences
+    /// in a single transaction. Each generated TRANSACTIONS_HEADER row carries
+    /// the new RULE_ID — that is the only marker tying occurrences back to the
+    /// rule, so confirming or deleting individual rows leaves the rest untouched.
+    /// Returns the new RULE_ID, the number of occurrences generated, and the
+    /// first generated TRANSACTION_ID (if any) for callers that want to surface
+    /// it in a result message.
     pub async fn create_rule_with_instances(
         &self,
         user_id: i64,
@@ -894,6 +894,15 @@ impl RecurringService {
             && request.from_account_code == request.to_account_code
         {
             return Err(RecurringError::TransferSameAccount);
+        }
+        // scan2-R6 — the detail carries its header's category1, as
+        // TransactionService::ensure_detail_category1_matches requires for a
+        // normal transaction (latent-audit M2); a mismatch would put every
+        // occurrence in the wrong aggregation group.
+        if request.detail.category1_code != request.category1_code {
+            return Err(RecurringError::Validation(
+                "Detail category must match the transaction's category".to_string(),
+            ));
         }
         if ![consts::TAX_ROUND_DOWN, consts::TAX_ROUND_HALF_UP, consts::TAX_ROUND_UP]
             .contains(&request.tax_rounding_type)
