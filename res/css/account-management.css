@@ -136,6 +136,30 @@ body {
     background-color: #f9f9f9;
 }
 
+/* Account code column - fixed share of the table width; a long code with
+   no spaces wraps inside it instead of widening the column and pushing
+   the other columns and the buttons out of view */
+#accounts-table th:nth-child(1),
+#accounts-table td:nth-child(1) {
+    width: 25%;
+    overflow-wrap: anywhere;
+}
+
+/* Template and initial balance columns - short values, keep on one line */
+#accounts-table th:nth-child(3),
+#accounts-table td:nth-child(3),
+#accounts-table th:nth-child(4),
+#accounts-table td:nth-child(4) {
+    white-space: nowrap;
+}
+
+/* Actions column - auto width, buttons stay on one line */
+#accounts-table th:nth-child(5),
+#accounts-table td:nth-child(5) {
+    width: 1%;
+    white-space: nowrap;
+}
+
 .action-buttons {
     display: flex;
     gap: 8px;
