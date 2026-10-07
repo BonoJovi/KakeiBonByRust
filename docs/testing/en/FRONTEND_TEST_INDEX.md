@@ -3,7 +3,7 @@
 This document provides a complete index of all frontend tests implemented in JavaScript.
 
 **Last Updated**: 2026-10-07 JST  
-**Total Tests**: 889 (jest suites; 75 test files, per `npm test`)
+**Total Tests**: 918 (jest suites; 83 test files, per `npm test`)
 
 ---
 
@@ -30,7 +30,7 @@ and are **not** added again to the grand total.
 - **login.test.js** - Login tests (58)
 - **user-deletion.test.js** - User deletion tests (46)
 
-### Feature-Specific Tests (466 tests)
+### Feature-Specific Tests (495 tests)
 
 - **transaction-edit.test.js** - Transaction edit tests (112)
 - **transaction-detail-management.test.js** - Transaction detail management tests (51)
@@ -45,10 +45,11 @@ and are **not** added again to the grand total.
 - **master-crud.test.js** - Shared `saveMasterEntry` + `mapMasterErrorCode` + `formatApiError` (Fable-5 #D3/#D4/#23) tests (30)
 - **attach-char-counter-ime.test.js** - `attachCharCounter` baseline + IME composition guard (Fable-5 #D1) tests (8)
 - **aggregation-error-translate.test.js** - `translateAggregationError` shape-guard tests (Fable-5 #9): coerces `Err(String)` / `ApiError { code, message }` / `Error` to a substring-matchable string before routing to i18n keys, and swaps unusable coerced values (`"[object Object]"`, `"null"`, `"undefined"`, `""`) for the localised generic banner, so the aggregation banner never renders those literals (13)
+- **aggregation-latest-request.test.js** - `createLatestRequestGuard` (aggregation-common.js): only the most recent request is latest, and each guard counts its own requests (latent-audit scan2-A4) (2)
 - **parse-amount-strict.test.js** - `parseAmountStrict` money-field strict integer parser (Fable-5 #10): replaces `parseInt(el.value) || 0` across the detail / transaction / recurring-rule submit paths, rejecting decimals, locale commas, scientific notation, sign prefixes, full-width digits, trailing garbage, and precision-losing integers past `Number.MAX_SAFE_INTEGER` (24)
 - **format-local-date.test.js** - `formatLocalDate` timezone-safe `YYYY-MM-DD` formatter (Fable-5 #13): replaces `new Date().toISOString().slice(0, 10)` in the recurring-rule modal so JST users opening the form before 09:00 no longer see yesterday's date in start-date / end-date / anchor-date defaults; test file pins `TZ=Asia/Tokyo` so a UTC regression is actually caught (16)
 - **period-end-date.test.js** - `fetchMonthlyPeriodEndDate` (period.js): the dashboard account balances are taken as of the last day of the user's monthly period (custom start day / holiday shift from `get_monthly_period_bounds`), falling back to the calendar month end if the backend fails (latent-audit L14) (2)
-- **period-containing.test.js** - `findMonthlyPeriodContaining` (period.js): returns the calendar month when its period contains the date, the previous month when that period starts later (start day 25), the next month when it ended earlier (holiday shift back over the month end), keeps stepping when the period is two months away (start day 31 + next business day), wraps the year both ways, and falls back to the calendar month when the backend fails or no period ever matches (latent-audit scan2-A3) (6)
+- **period-containing.test.js** - `findMonthlyPeriodContaining` / `findYearlyPeriodContaining` (period.js). Yearly: the year containing a date for starts 01-01, 04-01, 12-31 and 02-31 (month end), on both sides of the start. Monthly: returns the calendar month when its period contains the date, the previous month when that period starts later (start day 25), the next month when it ended earlier (holiday shift back over the month end), keeps stepping when the period is two months away (start day 31 + next business day), wraps the year both ways, and falls back to the calendar month when the backend fails or no period ever matches (latent-audit scan2-A3) (16)
 - **aggregation-render-unspecified.test.js** - `renderResults` unspecified-group i18n swap (Fable-5 #22): backend now returns an empty `group_name` string when the SHOP / PRODUCT / ACCOUNT reference is unspecified, and the renderer swaps it for `i18n.t('common.unspecified')` so English users don't see Japanese "指定なし" leaking through (5)
 - **pages/transaction-detail-page.test.js** - Boots the real detail page against `transaction-detail-management.html`: opening a product-linked detail and saving without changes keeps its `productId` (latent-audit H3), a double submit adds the detail only once (latent-audit M19), and a legacy row with `amount_including_tax = 0` shows AMOUNT + TAX_AMOUNT instead of ¥0 (latent-audit L7) (3)
 - **pages/transaction-detail-included-typing.test.js** - Boots the real detail page: typing a tax-included amount digit by digit keeps every digit (the field is no longer rewritten mid-typing) and saves the typed price (latent-audit scan2-T1) (1)
@@ -90,6 +91,13 @@ and are **not** added again to the grand total.
 - **pages/transaction-management-restore-reopened.test.js** - Boots the real transaction page with a saved draft, then closes and reopens the modal while the restore is still waiting: the draft is not written into the reopened form (latent-audit L6) (1)
 - **pages/aggregation-monthly-page.test.js** - Boots the real monthly aggregation page: an empty `group_name` renders as `common.unspecified` (latent-audit M12); the total row shows "—" for count / average on the account and category2 axes, and still sums the count on category1 (latent-audit M11); negative amounts render as "-¥1,234" (latent-audit L12) (5)
 - **pages/aggregation-yearly-total-count.test.js** - Boots the real yearly aggregation page: the shared renderer's total row shows "—" for count / average on the account axis (latent-audit M11) (1)
+- **pages/aggregation-default-period-monthly.test.js** - Boots the real monthly aggregation page with start day 25 on 2026-09-10: it opens on the August period that contains today, not the future September period (latent-audit scan2-A3) (1)
+- **pages/aggregation-default-period-yearly.test.js** - Boots the real yearly aggregation page with the year starting 04-01 on 2026-02-10: it opens on 2025, the period that contains today, not the future 2026 period (latent-audit scan2-A3) (1)
+- **pages/aggregation-monthly-stale.test.js** - Boots the real monthly aggregation page (shared scenario in `pages/_aggregation-stale.js`): a slower, older Execute neither overwrites the newer table nor shows its error, and the loading state stays until the latest request finishes (latent-audit scan2-A4) (3)
+- **pages/aggregation-daily-stale.test.js** - Boots the real daily aggregation page (shared scenario in `pages/_aggregation-stale.js`): a slower, older Execute neither overwrites the newer table nor shows its error, and the loading state stays until the latest request finishes (latent-audit scan2-A4) (3)
+- **pages/aggregation-weekly-stale.test.js** - Boots the real weekly aggregation page (shared scenario in `pages/_aggregation-stale.js`): a slower, older Execute neither overwrites the newer table nor shows its error, and the loading state stays until the latest request finishes (latent-audit scan2-A4) (3)
+- **pages/aggregation-period-stale.test.js** - Boots the real period aggregation page (shared scenario in `pages/_aggregation-stale.js`): a slower, older Execute neither overwrites the newer table nor shows its error, and the loading state stays until the latest request finishes (latent-audit scan2-A4) (3)
+- **pages/aggregation-yearly-stale.test.js** - Boots the real yearly aggregation page (shared scenario in `pages/_aggregation-stale.js`): a slower, older Execute neither overwrites the newer table nor shows its error, and the loading state stays until the latest request finishes (latent-audit scan2-A4) (3)
 - **pages/dashboard-bar-top10.test.js** - Boots the real dashboard: the category bar chart lists the largest expenses first (by magnitude, since expense totals are negative) and its top 10 keeps the largest one (latent-audit scan2-A1) (1)
 - **pages/index-setup-page.test.js** - Boots the real setup forms (menu.js on index.html): a blank username is stopped before `register_admin`, a backend "Username cannot be empty" is reported as the username error (not the password one), and `duplicate_name` shows `error.username_duplicate` (latent-audit L25) (3)
 - **pages/category-management-page.test.js** - Boots the real category management page: moving or showing a category that no longer exists shows `category_mgmt.not_found` and reloads the tree (latent-audit L19) (2)
@@ -129,7 +137,7 @@ and are **not** added again to the grand total.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **Feature-Specific Tests** | **466** |
+| **Feature-Specific Tests** | **495** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 30 |
@@ -143,10 +151,11 @@ and are **not** added again to the grand total.
 | master-crud.test.js | 30 |
 | attach-char-counter-ime.test.js | 8 |
 | aggregation-error-translate.test.js | 13 |
+| aggregation-latest-request.test.js | 2 |
 | parse-amount-strict.test.js | 24 |
 | format-local-date.test.js | 16 |
 | period-end-date.test.js | 2 |
-| period-containing.test.js | 6 |
+| period-containing.test.js | 16 |
 | aggregation-render-unspecified.test.js | 5 |
 | pages/transaction-detail-page.test.js | 3 |
 | pages/transaction-detail-included-typing.test.js | 1 |
@@ -188,6 +197,13 @@ and are **not** added again to the grand total.
 | pages/transaction-management-restore-reopened.test.js | 1 |
 | pages/aggregation-monthly-page.test.js | 5 |
 | pages/aggregation-yearly-total-count.test.js | 1 |
+| pages/aggregation-default-period-monthly.test.js | 1 |
+| pages/aggregation-default-period-yearly.test.js | 1 |
+| pages/aggregation-monthly-stale.test.js | 3 |
+| pages/aggregation-daily-stale.test.js | 3 |
+| pages/aggregation-weekly-stale.test.js | 3 |
+| pages/aggregation-period-stale.test.js | 3 |
+| pages/aggregation-yearly-stale.test.js | 3 |
 | pages/dashboard-bar-top10.test.js | 1 |
 | pages/index-setup-page.test.js | 3 |
 | pages/category-management-page.test.js | 2 |
@@ -200,7 +216,7 @@ and are **not** added again to the grand total.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **Total (jest)** | **889** |
+| **Total (jest)** | **918** |
 
 Grand total is Screen + Feature + Aggregation (Common Test Suites are helper
 libraries invoked from Screen-Specific files and their assertions are already

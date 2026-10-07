@@ -119,6 +119,29 @@ export function yearlyPeriodBounds(year, startMonth, startDay) {
     return { start: startDate, end: endDate };
 }
 
+/// Year of the user's yearly period that contains `date`. A yearly period is
+/// named by its start year, so with a start other than 01-01 the calendar
+/// year can name a period that starts after `date` (start 04-01, 2026-02-10
+/// -> the "2026" period is 2026-04-01..2027-03-31; the date is in "2025").
+/// Yearly periods have no holiday shift today, so the answer is the calendar
+/// year or the one before; the loop does not rely on that, so a future shift
+/// keeps working (latent-scan2 A3). MAX_PERIOD_STEPS only guards the loop.
+export function findYearlyPeriodContaining(date, startMonth, startDay) {
+    const day = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    let year = date.getFullYear();
+    for (let step = 0; step < MAX_PERIOD_STEPS; step++) {
+        const { start, end } = yearlyPeriodBounds(year, startMonth, startDay);
+        if (day < start) {
+            year -= 1;
+        } else if (day > end) {
+            year += 1;
+        } else {
+            return year;
+        }
+    }
+    return date.getFullYear();
+}
+
 function fmtMonthDay(date, lang) {
     const m = date.getMonth() + 1;
     const d = date.getDate();

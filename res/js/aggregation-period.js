@@ -99,7 +99,12 @@ function setupMenuHandlers() {
     setupFileMenuHandlers();
 }
 
+// Latest-request guard: a slower, older Execute must not overwrite the
+// newer result, message or loading state (latent-scan2 A4).
+const nextAggregationRequest = AggCommon.createLatestRequestGuard();
+
 async function executeAggregation() {
+    const isLatest = nextAggregationRequest();
     const user = await getCurrentSessionUser();
     if (!user) {
         showMessage('error', i18n.t('common.not_authenticated') || 'Not authenticated');
@@ -143,6 +148,7 @@ async function executeAggregation() {
             groupBy: groupBy,
             includeScheduled: includeScheduled
         });
+        if (!isLatest()) return;
 
         console.log('Aggregation results:', results);
         
@@ -154,11 +160,14 @@ async function executeAggregation() {
         resultCount.textContent = `(${results.length} ${i18n.t('aggregation.items') || 'items'})`;
 
     } catch (error) {
+        if (!isLatest()) return;
         console.error('Aggregation error:', error);
         showMessage('error', AggCommon.translateAggregationError(error));
         clearResults();
     } finally {
-        resultsContainer.classList.remove('loading');
+        if (isLatest()) {
+            resultsContainer.classList.remove('loading');
+        }
     }
 }
 

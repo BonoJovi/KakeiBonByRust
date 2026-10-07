@@ -8,6 +8,7 @@ import { HTML_FILES } from './html-files.js';
 import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
 import { createMenuBar } from './menu.js';
 import * as AggCommon from './aggregation-common.js';
+import { getPeriodSettings, findYearlyPeriodContaining } from './period.js';
 
 console.log('aggregation-yearly.js loaded');
 
@@ -43,16 +44,20 @@ document.addEventListener('DOMContentLoaded', async function() {
     await applyFontSize();
     setupIndicators();
 
-    initializeFilterDefaults();
+    await initializeFilterDefaults();
     setupEventHandlers();
     await fitWindowToScreen();
 
     console.log('[DOMContentLoaded] Initialization complete');
 });
 
-function initializeFilterDefaults() {
+async function initializeFilterDefaults() {
     const yearInput = document.getElementById('year');
-    yearInput.value = AggCommon.getCurrentYear();
+    // Open on the yearly period that contains today, not the calendar year:
+    // with a start other than 01-01 the calendar year can name a future
+    // period (latent-scan2 A3).
+    const { yearStartMonth, yearStartDay } = await getPeriodSettings();
+    yearInput.value = findYearlyPeriodContaining(new Date(), yearStartMonth, yearStartDay);
 }
 
 function setupEventHandlers() {
@@ -104,7 +109,12 @@ function setupMenuHandlers() {
     setupFileMenuHandlers();
 }
 
+// Latest-request guard: a slower, older Execute must not overwrite the
+// newer result, message or loading state (latent-scan2 A4).
+const nextAggregationRequest = AggCommon.createLatestRequestGuard();
+
 async function executeAggregation() {
+    const isLatest = nextAggregationRequest();
     const user = await getCurrentSessionUser();
     if (!user) {
         showMessage('error', i18n.t('common.not_authenticated') || 'Not authenticated');
@@ -137,6 +147,7 @@ async function executeAggregation() {
             groupBy: groupBy,
             includeScheduled: includeScheduled
         });
+        if (!isLatest()) return;
 
         console.log('Aggregation results:', results);
         
@@ -148,11 +159,14 @@ async function executeAggregation() {
         resultCount.textContent = `(${results.length} ${i18n.t('aggregation.items') || 'items'})`;
 
     } catch (error) {
+        if (!isLatest()) return;
         console.error('Aggregation error:', error);
         showMessage('error', AggCommon.translateAggregationError(error));
         clearResults();
     } finally {
-        resultsContainer.classList.remove('loading');
+        if (isLatest()) {
+            resultsContainer.classList.remove('loading');
+        }
     }
 }
 

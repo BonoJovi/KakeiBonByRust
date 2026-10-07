@@ -170,6 +170,27 @@ export function clearMessage(messageElement) {
  * Get current year
  * @returns {number} Current year
  */
+/**
+ * Latest-request guard for a screen's Execute (latent-scan2 A4). Each call of
+ * the returned function starts a request and returns `isLatest()`, which
+ * stays true only until the next request starts, so a slower, older request
+ * can drop its result, its error and its loading-state change.
+ *
+ *     const nextRequest = createLatestRequestGuard();
+ *     const isLatest = nextRequest();
+ *     const results = await invoke(...);
+ *     if (!isLatest()) return;
+ *
+ * @returns {() => () => boolean}
+ */
+export function createLatestRequestGuard() {
+    let latest = 0;
+    return () => {
+        const id = ++latest;
+        return () => id === latest;
+    };
+}
+
 export function getCurrentYear() {
     return new Date().getFullYear();
 }
