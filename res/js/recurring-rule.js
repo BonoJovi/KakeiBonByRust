@@ -277,13 +277,18 @@ function setupDetailTaxCalculation() {
     if (!taxRate || !amountExcludingTax || !amountIncludingTax || !taxAmount) {
         return;
     }
-    setupTaxCalculationListeners(
+    const { recalculate } = setupTaxCalculationListeners(
         { taxRate, amountExcludingTax, amountIncludingTax, taxAmount },
         {
             getRoundingType: () =>
                 parseInt(document.getElementById('tax-rounding-type').value, 10) || 0,
         }
     );
+    // The detail's tax fields depend on the rounding too: without this they
+    // kept the values of the old rounding while the derived total followed
+    // the new one, and every occurrence stored both (scan2-R5). Registered
+    // before setupDerivedTotal(), so the total sees the recomputed fields.
+    document.getElementById('tax-rounding-type')?.addEventListener('change', recalculate);
 }
 
 // ----- Total derived from the detail (latent-audit M17) -----
