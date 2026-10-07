@@ -631,7 +631,6 @@ async fn latent_scan2_a6_category3_missing_code_keeps_category1_in_key() {
 /// Expected: no panic; an `Err` (e.g. `InvalidYear`) for a week that cannot
 /// be represented.
 #[test]
-#[ignore = "latent-audit scan2-A5"]
 fn latent_scan2_a5_weekly_by_date_edge_dates_return_err_not_panic() {
     let parsed = NaiveDate::parse_from_str("+262142-12-31", "%Y-%m-%d")
         .expect("sanity: chrono parses a signed year");

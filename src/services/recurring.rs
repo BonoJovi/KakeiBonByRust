@@ -895,6 +895,15 @@ impl RecurringService {
         {
             return Err(RecurringError::TransferSameAccount);
         }
+        // scan2-R6 — the detail carries its header's category1, as
+        // TransactionService::ensure_detail_category1_matches requires for a
+        // normal transaction (latent-audit M2); a mismatch would put every
+        // occurrence in the wrong aggregation group.
+        if request.detail.category1_code != request.category1_code {
+            return Err(RecurringError::Validation(
+                "Detail category must match the transaction's category".to_string(),
+            ));
+        }
         if ![consts::TAX_ROUND_DOWN, consts::TAX_ROUND_HALF_UP, consts::TAX_ROUND_UP]
             .contains(&request.tax_rounding_type)
         {

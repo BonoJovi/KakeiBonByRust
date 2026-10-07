@@ -902,7 +902,6 @@ async fn latent_scan2_r2_daily_anchor_is_checked_against_the_period() {
 /// Expected: rejected as a validation error, or the detail is stored with
 /// the header's CATEGORY1.
 #[tokio::test]
-#[ignore = "latent-audit scan2-R6"]
 async fn latent_scan2_r6_detail_category1_must_match_header() {
     let pool = setup_recurring_db().await;
     let service = RecurringService::new(pool.clone());

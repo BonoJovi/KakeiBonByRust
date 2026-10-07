@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-10-07 JST  
-**Total Tests**: 458 (delta-tracked; the full authoritative count from `cargo test --lib` is 724, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 460 (delta-tracked; the full authoritative count from `cargo test --lib` is 726, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -634,8 +634,9 @@ Aggregation service tests.
 | `latent_l9_category2_rounding_drift_is_bounded` | Accepted spec: Category2 groups of one split transaction may differ from Category1 by up to (groups − 1) yen per tax rate (latent-audit L9) | src/services/latent_audit/aggregation.rs | 374 |
 | `latent_scan2_a6_category2_missing_code_keeps_category1_in_key` | Category2 details with no CATEGORY2_CODE keep their category1 in the group key (`EXPENSE/`, `INCOME/`), so expense and income are not netted into one group (latent-audit scan2-A6) | src/services/latent_audit/aggregation.rs | 598 |
 | `latent_scan2_a6_category3_missing_code_keeps_category1_in_key` | Same on the Category3 axis: a missing CATEGORY2/3 code keeps the key's category1 prefix (latent-audit scan2-A6) | src/services/latent_audit/aggregation.rs | 615 |
+| `latent_scan2_a5_weekly_by_date_edge_dates_return_err_not_panic` | `weekly_aggregation_by_date` returns `Err` instead of panicking when the week runs past chrono's date range (`NaiveDate::MAX` with a Monday start, `NaiveDate::MIN` with a Sunday start; reachable by direct invoke with a signed year such as `+262142-12-31`) (latent-audit scan2-A5) | src/services/latent_audit/aggregation.rs | 634 |
 
-**Total**: 28 tests
+**Total**: 29 tests
 
 ### services/period.rs
 
@@ -709,16 +710,17 @@ Recurring transaction rule service tests.
 | `latent_l13_daily_rule_rejects_holiday_shift` | A daily rule with a holiday shift is rejected; daily without shift and monthly with shift are accepted (latent-audit L13) | src/services/latent_audit/recurring.rs | 673 |
 | `latent_m16_detail_amount_out_of_range_rejected` | Out-of-range detail amount is rejected on rule creation (latent-audit M16) | src/services/latent_audit/recurring.rs | 401 |
 | `latent_m16_detail_tax_rate_out_of_range_rejected` | Out-of-range detail tax rate is rejected on rule creation (latent-audit M16) | src/services/latent_audit/recurring.rs | 422 |
-| `transfer_same_account_maps_to_transfer_same_account_code` | `RecurringError::TransferSameAccount` maps to the `transfer_same_account` wire code (latent-audit M16) | src/services/recurring.rs | 2161 |
+| `transfer_same_account_maps_to_transfer_same_account_code` | `RecurringError::TransferSameAccount` maps to the `transfer_same_account` wire code (latent-audit M16) | src/services/recurring.rs | 2170 |
 | `latent_l2_recurring_rejects_foreign_shop_and_product` | Recurring rule creation accepts own shop / product and rejects another user's (latent-audit L2) | src/services/latent_audit/recurring.rs | 714 |
 | `latent_l10_generation_terminates_at_the_end_of_the_date_range` | Monthly / yearly generation near the end of chrono's range terminates instead of looping forever (latent-audit L10) | src/services/latent_audit/recurring.rs | 773 |
 | `latent_scan2_r1_shifted_date_inside_period_is_kept` | A calendar date just outside the period whose holiday shift lands inside it is generated, at both ends (latent-audit scan2-R1) | src/services/latent_audit/recurring.rs | 823 |
 | `latent_scan2_r2_daily_anchor_is_checked_against_the_period` | A blank daily anchor falls back to the start date; an anchor after the end date is rejected (latent-audit scan2-R2) | src/services/latent_audit/recurring.rs | 867 |
-| `latent_scan2_r7_next_shift_past_the_last_seeded_year` | With holidays seeded through 2028 only, a month-end rule ending 2028-12-31 with a "next business day" shift is rejected (`PeriodOutOfRange`) instead of landing on 元日 2029-01-01 (latent-audit scan2-R7) | src/services/latent_audit/recurring.rs | 958 |
-| `err_interval_above_max` | An interval above `MAX_PERIOD_INTERVAL` (999, the form's max) is rejected; the limit itself is accepted (CodeRabbit on #171) | src/services/recurring.rs | 1982 |
-| `shift_beyond_window_is_refused` | A holiday shift beyond the 14-day window (non-business days through the whole window after the period, for Prev) refuses creation; a 13-day shift is still generated (CodeRabbit on #171) | src/services/recurring.rs | 1809 |
+| `latent_scan2_r6_detail_category1_must_match_header` | A recurring rule whose detail category1 differs from the header's (header INCOME, detail EXPENSE) is rejected as a validation error, as for a normal transaction (latent-audit M2) (latent-audit scan2-R6) | src/services/latent_audit/recurring.rs | 905 |
+| `latent_scan2_r7_next_shift_past_the_last_seeded_year` | With holidays seeded through 2028 only, a month-end rule ending 2028-12-31 with a "next business day" shift is rejected (`PeriodOutOfRange`) instead of landing on 元日 2029-01-01 (latent-audit scan2-R7) | src/services/latent_audit/recurring.rs | 957 |
+| `err_interval_above_max` | An interval above `MAX_PERIOD_INTERVAL` (999, the form's max) is rejected; the limit itself is accepted (CodeRabbit on #171) | src/services/recurring.rs | 1991 |
+| `shift_beyond_window_is_refused` | A holiday shift beyond the 14-day window (non-business days through the whole window after the period, for Prev) refuses creation; a 13-day shift is still generated (CodeRabbit on #171) | src/services/recurring.rs | 1818 |
 
-**Total**: 27 tests
+**Total**: 28 tests
 
 ### lib.rs
 
@@ -744,7 +746,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **435** |
+| **Inline Tests** | **437** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -762,13 +764,13 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/product.rs | 20 |
 | services/shop.rs | 19 |
 | services/transaction.rs | 64 |
-| services/aggregation.rs | 28 |
+| services/aggregation.rs | 29 |
 | services/period.rs | 3 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
-| services/recurring.rs | 27 |
+| services/recurring.rs | 28 |
 | lib.rs | 6 |
-| **Total** | **458** |
+| **Total** | **460** |
 
 ---
 

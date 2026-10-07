@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-10-07 JST  
-**総テスト数**: 458件 (差分反映後。`cargo test --lib` の権威的総数は 724 で、既存の未反映分は別 PR でバックフィル予定)
+**総テスト数**: 460件 (差分反映後。`cargo test --lib` の権威的総数は 726 で、既存の未反映分は別 PR でバックフィル予定)
 
 ---
 
@@ -634,8 +634,9 @@ AES-256-GCM暗号化・復号化のテスト。
 | `latent_l9_category2_rounding_drift_is_bounded` | 仕様として受容: 1 取引を複数の中分類に分けると、大分類との差は税率ごとに (グループ数 − 1) 円以内 (潜在監査 L9) | src/services/latent_audit/aggregation.rs | 374 |
 | `latent_scan2_a6_category2_missing_code_keeps_category1_in_key` | 中分類コードのない明細も集計キーに大分類 (`EXPENSE/` / `INCOME/`) を残し、支出と収入が 1 行に相殺されない (潜在スキャン scan2-A6) | src/services/latent_audit/aggregation.rs | 598 |
 | `latent_scan2_a6_category3_missing_code_keeps_category1_in_key` | 小分類軸でも同様に、中分類・小分類コードがなくてもキーの大分類を残す (潜在スキャン scan2-A6) | src/services/latent_audit/aggregation.rs | 615 |
+| `latent_scan2_a5_weekly_by_date_edge_dates_return_err_not_panic` | 週が chrono の日付範囲を超える場合 (`NaiveDate::MAX` で月曜始まり、`NaiveDate::MIN` で日曜始まり。`+262142-12-31` のような符号付きの年を直接 invoke で渡すと起きる)、`weekly_aggregation_by_date` はパニックせず `Err` を返す (潜在スキャン scan2-A5) | src/services/latent_audit/aggregation.rs | 634 |
 
-**合計**: 28件
+**合計**: 29件
 
 ### services/period.rs
 
@@ -709,16 +710,17 @@ AES-256-GCM暗号化・復号化のテスト。
 | `latent_l13_daily_rule_rejects_holiday_shift` | 毎日のルールに祝日シフトは指定できない。シフトなしの毎日・シフトありの毎月は受け付ける (潜在監査 L13) | src/services/latent_audit/recurring.rs | 673 |
 | `latent_m16_detail_amount_out_of_range_rejected` | 範囲外の明細金額でのルール作成を拒否 (潜在監査 M16) | src/services/latent_audit/recurring.rs | 401 |
 | `latent_m16_detail_tax_rate_out_of_range_rejected` | 範囲外の税率でのルール作成を拒否 (潜在監査 M16) | src/services/latent_audit/recurring.rs | 422 |
-| `transfer_same_account_maps_to_transfer_same_account_code` | `RecurringError::TransferSameAccount` が `transfer_same_account` コードに変換される (潜在監査 M16) | src/services/recurring.rs | 2161 |
+| `transfer_same_account_maps_to_transfer_same_account_code` | `RecurringError::TransferSameAccount` が `transfer_same_account` コードに変換される (潜在監査 M16) | src/services/recurring.rs | 2170 |
 | `latent_l2_recurring_rejects_foreign_shop_and_product` | 繰り返しルール作成で自分の店舗・商品は受理し、他ユーザーのものは拒否 (潜在監査 L2) | src/services/latent_audit/recurring.rs | 714 |
 | `latent_l10_generation_terminates_at_the_end_of_the_date_range` | chrono の表現範囲の終わり付近でも月次・年次の日付生成が無限ループせず終了する (潜在監査 L10) | src/services/latent_audit/recurring.rs | 773 |
 | `latent_scan2_r1_shifted_date_inside_period_is_kept` | 暦日は期間のすぐ外でも、休日シフト後に期間内に入る発生日を生成する (開始側・終了側とも) (潜在スキャン scan2-R1) | src/services/latent_audit/recurring.rs | 823 |
 | `latent_scan2_r2_daily_anchor_is_checked_against_the_period` | 毎日の予定の起点日が空なら開始日として扱い、終了日より後なら拒否する (潜在スキャン scan2-R2) | src/services/latent_audit/recurring.rs | 867 |
-| `latent_scan2_r7_next_shift_past_the_last_seeded_year` | 祝日が 2028 年までしか入っていないとき、2028-12-31 で終わる月末・「翌営業日」の予定は元日 2029-01-01 に置かれず `PeriodOutOfRange` で拒否される (潜在スキャン scan2-R7) | src/services/latent_audit/recurring.rs | 958 |
-| `err_interval_above_max` | `MAX_PERIOD_INTERVAL` (999、画面の上限) を超える間隔を拒否し、上限ちょうどは受理 (#171 の CodeRabbit 指摘) | src/services/recurring.rs | 1982 |
-| `shift_beyond_window_is_refused` | 休日シフトが 14 日の範囲を超える場合 (Prev で期間後の 14 日がすべて休日) は作成を拒否し、13 日のシフトは生成する (#171 の CodeRabbit 指摘) | src/services/recurring.rs | 1809 |
+| `latent_scan2_r6_detail_category1_must_match_header` | 明細の大分類がヘッダーと異なる繰り返しルール (ヘッダー収入・明細支出) は、通常の入出金 (潜在監査 M2) と同じく検証エラーで拒否される (潜在スキャン scan2-R6) | src/services/latent_audit/recurring.rs | 905 |
+| `latent_scan2_r7_next_shift_past_the_last_seeded_year` | 祝日が 2028 年までしか入っていないとき、2028-12-31 で終わる月末・「翌営業日」の予定は元日 2029-01-01 に置かれず `PeriodOutOfRange` で拒否される (潜在スキャン scan2-R7) | src/services/latent_audit/recurring.rs | 957 |
+| `err_interval_above_max` | `MAX_PERIOD_INTERVAL` (999、画面の上限) を超える間隔を拒否し、上限ちょうどは受理 (#171 の CodeRabbit 指摘) | src/services/recurring.rs | 1991 |
+| `shift_beyond_window_is_refused` | 休日シフトが 14 日の範囲を超える場合 (Prev で期間後の 14 日がすべて休日) は作成を拒否し、13 日のシフトは生成する (#171 の CodeRabbit 指摘) | src/services/recurring.rs | 1818 |
 
-**合計**: 27件
+**合計**: 28件
 
 ### lib.rs
 
@@ -744,7 +746,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **435件** |
+| **インラインテスト** | **437件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -762,13 +764,13 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/product.rs | 20 |
 | services/shop.rs | 19 |
 | services/transaction.rs | 64 |
-| services/aggregation.rs | 28 |
+| services/aggregation.rs | 29 |
 | services/period.rs | 3 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
-| services/recurring.rs | 27 |
+| services/recurring.rs | 28 |
 | lib.rs | 6 |
-| **総計** | **458件** |
+| **総計** | **460件** |
 
 ---
 

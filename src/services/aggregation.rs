@@ -1565,8 +1565,16 @@ pub fn weekly_aggregation_by_date(
     let days_from_start = (7 + current_weekday.num_days_from_monday() as i32
         - target_weekday.num_days_from_monday() as i32) % 7;
     
-    let start_date = reference_date - chrono::Duration::days(days_from_start as i64);
-    let end_date = start_date + chrono::Duration::days(6);
+    // checked_* (not `-` / `+`, which panic past chrono's date range): a
+    // direct invoke can send a signed year such as "+262142-12-31"
+    // (scan2-A5), as calculate_week_range already guards.
+    let invalid_year = || AggregationError::InvalidYear(reference_date.year());
+    let start_date = reference_date
+        .checked_sub_days(chrono::Days::new(days_from_start as u64))
+        .ok_or_else(invalid_year)?;
+    let end_date = start_date
+        .checked_add_days(chrono::Days::new(6))
+        .ok_or_else(invalid_year)?;
     
     // Create filter for week range
     let filter = AggregationFilter::new(DateFilter::Between(start_date, end_date));
