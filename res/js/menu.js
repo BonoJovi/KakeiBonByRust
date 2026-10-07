@@ -55,6 +55,9 @@ let isLoggedIn = false;
 // Timer that switches the index page from the login form to the next
 // screen 1 s after login; a logout cancels it (scan2-C6).
 let pendingLoginSwitch = null;
+// Bumped by every login and logout, so a login whose setup check answers
+// after a logout does not switch screens any more (scan2-C6).
+let loginGeneration = 0;
 
 console.log('menu.js loaded');
 
@@ -676,10 +679,12 @@ async function handleLoginSubmit(e) {
         messageDiv.className = 'message success';
         
         isLoggedIn = true;
+        const generation = ++loginGeneration;
         
         // Check if user setup is needed
         const needsUserSetup = await invoke('check_needs_user_setup');
         console.log('Needs user setup:', needsUserSetup);
+        if (generation !== loginGeneration) return; // logged out meanwhile
         
         if (needsUserSetup) {
             // Show user registration form
@@ -723,6 +728,7 @@ async function handleLogout() {
     
     isLoggedIn = false;
     // A login that has not switched screens yet must not switch them now.
+    loginGeneration++;
     clearTimeout(pendingLoginSwitch);
     pendingLoginSwitch = null;
     

@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-10-07 JST  
-**総テスト数**: 936件 (jest suite 88 ファイル、`npm test` 実測)
+**総テスト数**: 937件 (jest suite 88 ファイル、`npm test` 実測)
 
 ---
 
@@ -869,12 +869,13 @@
 
 実際のログイン画面 (index.html + menu.js) で、ログアウト後にログインフォームだけが残ることを確かめる (潜在スキャン scan2-C6)。
 
-**テスト数**: 2件
+**テスト数**: 3件
 
 | テスト | 説明 |
 |--------|------|
 | `[scan2-C6] logout hides the user-setup form and shows only the login form` | ユーザー登録フォームが出ている状態でログアウトすると、登録フォーム (`#user-setup`、`#admin-setup`) とメイン画面が隠れ、ログインフォームだけになる |
 | `[scan2-C6] logging out before the login timer runs keeps only the login form` | ログイン後 1 秒の画面切り替えより前にログアウトしても、切り替えは取り消され、ログインフォームだけが残る |
+| `[scan2-C6] a setup check answering after the logout does not switch screens` | ログイン後の「ユーザー登録が必要か」の確認がログアウト後に返ってきても、画面を切り替えない |
 
 **ファイル**: res/tests/pages/index-logout-hides-user-setup.test.js
 
@@ -1787,7 +1788,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **513件** |
+| **機能別テスト** | **514件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 30 |
@@ -1814,7 +1815,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | pages/transaction-management-page.test.js | 4 |
 | pages/user-management-page.test.js | 2 |
 | pages/user-management-delete-last-user.test.js | 1 |
-| pages/index-logout-hides-user-setup.test.js | 2 |
+| pages/index-logout-hides-user-setup.test.js | 3 |
 | pages/recurring-rule-page.test.js | 4 |
 | pages/recurring-rule-double-submit.test.js | 1 |
 | pages/recurring-rule-period-range.test.js | 5 |
@@ -1871,7 +1872,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **936件** |
+| **総計 (jest)** | **937件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 
