@@ -1,11 +1,10 @@
-// latent-audit scan2-T6: "Manage details" in the header edit modal discards unsaved header edits without warning
 /**
  * T6  The Manage-details button navigates to the detail screen at once. It
  *     neither saves the header nor stores a draft (unlike Manage shops), so
  *     edited date / total / memo / scheduled are silently dropped.
- *     Expected: before leaving, the edits are kept — either the header is
- *     saved with them (possibly after a confirm, answered "yes" here) or a
- *     draft holding them is stored for the return trip.
+ *     Expected (owner decision 2026-10-07): with unsaved changes the screen
+ *     asks, then saves the header through the normal save and moves on;
+ *     "cancel" stays in the modal. Without changes it moves on at once.
  *
  * Real page module booted against res/transaction-management.html.
  */
@@ -13,7 +12,7 @@
 import { jest } from '@jest/globals';
 import {
     mockPageModules, loadPageBody, bootPage, flush, callsOf,
-} from '../pages/_page-harness.js';
+} from './_page-harness.js';
 
 const HEADER = {
     transaction_id: 1,
@@ -60,28 +59,46 @@ const { invoke } = mockPageModules(jest, {
 
 const session = await import('../../js/session.js');
 
-// If the fix asks before leaving, the user agrees to keep the edits.
-window.confirm = () => true;
+// Answers to the "save before Manage details?" confirm (and the total
+// recalculation prompt after a save, which these tests never trigger).
+let confirmAnswer = true;
+const confirmSpy = jest.fn(() => confirmAnswer);
+window.confirm = confirmSpy;
 window.alert = () => {};
+
+// jsdom cannot navigate; it reports each location.href assignment as a
+// "Not implemented: navigation" error, which tells us the page tried to move.
+const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+const navigated = () => consoleError.mock.calls.some((args) =>
+    args.some((a) => String(a?.message ?? a).includes('navigation')));
 
 loadPageBody('transaction-management.html');
 await import('../../js/transaction-management.js');
 await bootPage();
 
-describe('latent-audit scan2 T6 — Manage details from the header edit modal', () => {
-    test('[T6] edited header values are saved or kept as a draft before leaving', async () => {
-        const editBtn = Array.from(document.querySelectorAll('#transaction-list .transaction-item button'))
-            .find((b) => b.getAttribute('data-i18n') === 'common.edit');
-        editBtn.click();
-        await flush(10);
-        expect(document.getElementById('total-amount').value).toBe('5000');
+async function openEdit() {
+    document.getElementById('cancel-transaction-btn')?.click();
+    await flush();
+    const editBtn = Array.from(document.querySelectorAll('#transaction-list .transaction-item button'))
+        .find((b) => b.getAttribute('data-i18n') === 'common.edit');
+    editBtn.click();
+    await flush(10);
+    expect(document.getElementById('total-amount').value).toBe('5000');
+    invoke.mockClear();
+    confirmSpy.mockClear();
+    consoleError.mockClear();
+}
+
+describe('Manage details from the header edit modal (scan2-T6)', () => {
+    test('[T6] edited header values are saved before leaving', async () => {
+        confirmAnswer = true;
+        await openEdit();
 
         document.getElementById('transaction-date').value = '2026-09-20T18:00';
         document.getElementById('total-amount').value = '6400';
         document.getElementById('transaction-memo').value = 'new memo';
         document.getElementById('is-scheduled').checked = true;
 
-        invoke.mockClear();
         session.setSessionModalState.mockClear();
         document.getElementById('manage-details-btn').click();
         await flush(10);
@@ -98,7 +115,35 @@ describe('latent-audit scan2 T6 — Manage details from the header edit modal', 
             && d.memo === 'new memo'
             && (d.is_scheduled === true || d.is_scheduled === 1 || d.is_scheduled === '1'));
 
-        // Either route is an acceptable fix; today neither happens.
+        // Either route keeps the edits; the fix saves them.
         expect(savedHeader || keptDraft).toBe(true);
+        expect(confirmSpy).toHaveBeenCalledWith('transaction_mgmt.save_before_details_confirm');
+        expect(navigated()).toBe(true);
+    });
+
+    test('[T6] cancelling the confirm stays in the modal without saving', async () => {
+        confirmAnswer = false;
+        await openEdit();
+        document.getElementById('total-amount').value = '6400';
+
+        document.getElementById('manage-details-btn').click();
+        await flush(10);
+
+        expect(confirmSpy).toHaveBeenCalledTimes(1);
+        expect(callsOf(invoke, 'update_transaction_header')).toHaveLength(0);
+        expect(navigated()).toBe(false);
+        expect(document.getElementById('total-amount').value).toBe('6400');
+    });
+
+    test('[T6] without changes it moves on at once, without asking or saving', async () => {
+        confirmAnswer = true;
+        await openEdit();
+
+        document.getElementById('manage-details-btn').click();
+        await flush(10);
+
+        expect(confirmSpy).not.toHaveBeenCalled();
+        expect(callsOf(invoke, 'update_transaction_header')).toHaveLength(0);
+        expect(navigated()).toBe(true);
     });
 });
