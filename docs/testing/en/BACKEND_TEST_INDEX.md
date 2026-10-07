@@ -2,8 +2,8 @@
 
 This document provides a complete index of all backend tests implemented in Rust.
 
-**Last Updated**: 2026-10-07 JST  
-**Total Tests**: 461 (delta-tracked; the full authoritative count from `cargo test --lib` is 727, and a follow-up pass will backfill the remaining pre-existing gap)
+**Last Updated**: 2026-10-08 JST  
+**Total Tests**: 458 (delta-tracked; the full authoritative count from `cargo test --lib` is 727, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -53,11 +53,11 @@ Reusable test suite for password validation.
 | `test_short_passwords` | Reject passwords shorter than 16 characters | src/validation_tests.rs | 46 |
 | `test_password_length_boundaries` | Boundary value test: 15 (reject), 16 (accept), 17 (accept) | src/validation_tests.rs | 63 |
 | `test_valid_password_variations` | Accept valid passwords with special chars, Unicode, spaces | src/validation_tests.rs | 85 |
-| `test_password_confirmation_logic` | Test password confirmation match/mismatch/case sensitivity | src/validation_tests.rs | 111 |
-| `test_full_validation` | Full validation combining password and confirmation | src/validation_tests.rs | 132 |
-| `test_validation_error_priority` | Test error priority when multiple errors exist | src/validation_tests.rs | 160 |
-| `test_passwords_with_spaces` | Handle passwords with leading/trailing/internal spaces | src/validation_tests.rs | 176 |
-| `test_boundary_cases` | Test very long passwords and special strings | src/validation_tests.rs | 191 |
+| `test_password_confirmation_logic` | Test password confirmation match/mismatch/case sensitivity | src/validation_tests.rs | 115 |
+| `test_full_validation` | Full validation combining password and confirmation | src/validation_tests.rs | 136 |
+| `test_validation_error_priority` | Test error priority when multiple errors exist | src/validation_tests.rs | 164 |
+| `test_passwords_with_spaces` | Handle passwords with leading/trailing/internal spaces | src/validation_tests.rs | 180 |
+| `test_boundary_cases` | Test very long passwords and special strings | src/validation_tests.rs | 195 |
 
 **Total**: 10 tests
 
@@ -99,31 +99,31 @@ Password validation logic tests.
 
 | Test Function | Description | File | Line |
 |---------------|-------------|------|------|
-| `test_all_password_validations` | Run all password validation tests | src/validation.rs | 66 |
-| `test_empty_password` | Reject empty password | src/validation.rs | 76 |
-| `test_whitespace_only_password` | Reject whitespace-only password | src/validation.rs | 85 |
-| `test_password_too_short` | Reject password that's too short (5 chars) | src/validation.rs | 94 |
-| `test_single_character_password` | Reject single character password | src/validation.rs | 103 |
-| `test_password_exactly_15_characters` | Reject exactly 15 character password | src/validation.rs | 112 |
-| `test_password_exactly_16_characters` | Accept exactly 16 character password | src/validation.rs | 123 |
-| `test_password_more_than_16_characters` | Accept 16+ character password | src/validation.rs | 130 |
-| `test_password_with_spaces` | Accept password with spaces | src/validation.rs | 137 |
-| `test_password_with_special_characters` | Accept password with special characters | src/validation.rs | 144 |
-| `test_password_with_unicode` | Accept password with Unicode characters (16 BMP JA chars) | src/validation.rs | 236 |
-| `test_multibyte_password_below_min_length_rejected` | Reject 15-char JA password despite byte count >= 16 (Fable-5 #9 regression guard) | src/validation.rs | 249 |
-| `test_multibyte_password_at_min_length_accepted` | Accept 16-char JA password at Unicode-scalar boundary | src/validation.rs | 262 |
-| `test_very_long_password` | Accept very long password (128 chars) | src/validation.rs | 158 |
-| `test_password_confirmation_matching` | Test password confirmation match | src/validation.rs | 164 |
-| `test_password_confirmation_not_matching` | Test password confirmation mismatch | src/validation.rs | 173 |
-| `test_password_confirmation_case_sensitive` | Test case sensitivity in confirmation | src/validation.rs | 184 |
-| `test_full_validation_with_valid_passwords` | Full validation (valid) | src/validation.rs | 191 |
-| `test_full_validation_with_empty_password` | Full validation (empty password) | src/validation.rs | 197 |
-| `test_full_validation_with_short_password` | Full validation (short password) | src/validation.rs | 204 |
-| `test_full_validation_with_non_matching_passwords` | Full validation (mismatch) | src/validation.rs | 215 |
-| `test_full_validation_error_priority` | Test error priority | src/validation.rs | 224 |
-| `test_password_with_leading_trailing_spaces` | Password with leading/trailing spaces | src/validation.rs | 233 |
-| `test_numeric_password` | Numeric-only password | src/validation.rs | 242 |
-| `test_password_boundary_cases` | Boundary cases (15, 16, 17 chars) | src/validation.rs | 248 |
+| `test_all_password_validations` | Run all password validation tests | src/validation.rs | 163 |
+| `test_empty_password` | Reject empty password | src/validation.rs | 173 |
+| `test_whitespace_only_password` | Reject whitespace-only password | src/validation.rs | 182 |
+| `test_password_too_short` | Reject password that's too short (5 chars) | src/validation.rs | 191 |
+| `test_single_character_password` | Reject single character password | src/validation.rs | 200 |
+| `test_password_exactly_15_characters` | Reject exactly 15 character password | src/validation.rs | 209 |
+| `test_password_exactly_16_characters` | Accept exactly 16 character password | src/validation.rs | 220 |
+| `test_password_more_than_16_characters` | Accept 16+ character password | src/validation.rs | 227 |
+| `test_password_with_spaces` | Accept password with spaces | src/validation.rs | 234 |
+| `test_password_with_special_characters` | Accept password with special characters | src/validation.rs | 241 |
+| `test_password_with_unicode` | Accept password with Unicode characters (16 BMP JA chars) | src/validation.rs | 248 |
+| `test_multibyte_password_below_min_length_rejected` | Reject 15-char JA password despite byte count >= 16 (Fable-5 #9 regression guard) | src/validation.rs | 261 |
+| `test_multibyte_password_at_min_length_accepted` | Accept 16-char JA password at Unicode-scalar boundary | src/validation.rs | 274 |
+| `test_very_long_password` | Accept very long password (128 chars) | src/validation.rs | 281 |
+| `test_password_confirmation_matching` | Test password confirmation match | src/validation.rs | 287 |
+| `test_password_confirmation_not_matching` | Test password confirmation mismatch | src/validation.rs | 296 |
+| `test_password_confirmation_case_sensitive` | Test case sensitivity in confirmation | src/validation.rs | 307 |
+| `test_full_validation_with_valid_passwords` | Full validation (valid) | src/validation.rs | 314 |
+| `test_full_validation_with_empty_password` | Full validation (empty password) | src/validation.rs | 320 |
+| `test_full_validation_with_short_password` | Full validation (short password) | src/validation.rs | 327 |
+| `test_full_validation_with_non_matching_passwords` | Full validation (mismatch) | src/validation.rs | 338 |
+| `test_full_validation_error_priority` | Test error priority | src/validation.rs | 347 |
+| `test_password_with_leading_trailing_spaces` | Password with leading/trailing spaces | src/validation.rs | 356 |
+| `test_numeric_password` | Numeric-only password | src/validation.rs | 365 |
+| `test_password_boundary_cases` | Boundary cases (15, 16, 17 chars) | src/validation.rs | 371 |
 
 **Total**: 25 tests
 
@@ -133,19 +133,19 @@ Security functionality tests (password hashing, encryption key derivation).
 
 | Test Function | Description | File | Line |
 |---------------|-------------|------|------|
-| `test_hash_password` | Test password hashing | src/security.rs | 99 |
-| `test_verify_password_success` | Test successful password verification | src/security.rs | 108 |
-| `test_verify_password_failure` | Test failed password verification | src/security.rs | 117 |
-| `test_hash_uniqueness` | Test hash uniqueness (same password, different hash) | src/security.rs | 127 |
-| `test_derive_encryption_key` | Test encryption key derivation | src/security.rs | 141 |
-| `test_derive_encryption_key_deterministic` | Test key derivation determinism (same input, same key) | src/security.rs | 151 |
-| `test_derive_encryption_key_different_passwords` | Generate different keys for different passwords | src/security.rs | 163 |
-| `test_derive_encryption_key_different_salts` | Generate different keys for different salts | src/security.rs | 174 |
-| `test_derive_encryption_key_short_salt` | Error handling for short salt | src/security.rs | 187 |
-| `test_empty_password_hash` | Hash empty password | src/security.rs | 197 |
-| `test_long_password` | Hash long password | src/security.rs | 203 |
-| `test_unicode_password` | Hash Unicode password | src/security.rs | 211 |
-| `test_special_characters_password` | Hash password with special characters | src/security.rs | 219 |
+| `test_hash_password` | Test password hashing | src/security.rs | 128 |
+| `test_verify_password_success` | Test successful password verification | src/security.rs | 137 |
+| `test_verify_password_failure` | Test failed password verification | src/security.rs | 146 |
+| `test_hash_uniqueness` | Test hash uniqueness (same password, different hash) | src/security.rs | 172 |
+| `test_derive_encryption_key` | Test encryption key derivation | src/security.rs | 186 |
+| `test_derive_encryption_key_deterministic` | Test key derivation determinism (same input, same key) | src/security.rs | 196 |
+| `test_derive_encryption_key_different_passwords` | Generate different keys for different passwords | src/security.rs | 208 |
+| `test_derive_encryption_key_different_salts` | Generate different keys for different salts | src/security.rs | 219 |
+| `test_derive_encryption_key_short_salt` | Error handling for short salt | src/security.rs | 232 |
+| `test_empty_password_hash` | Hash empty password | src/security.rs | 242 |
+| `test_long_password` | Hash long password | src/security.rs | 248 |
+| `test_unicode_password` | Hash Unicode password | src/security.rs | 256 |
+| `test_special_characters_password` | Hash password with special characters | src/security.rs | 264 |
 
 **Total**: 13 tests
 
@@ -155,21 +155,21 @@ AES-256-GCM encryption/decryption tests.
 
 | Test Function | Description | File | Line |
 |---------------|-------------|------|------|
-| `test_encrypt_decrypt_basic` | Basic encryption/decryption | src/crypto.rs | 120 |
-| `test_encrypt_produces_different_outputs` | Same plaintext produces different ciphertexts | src/crypto.rs | 131 |
-| `test_empty_string` | Encrypt empty string | src/crypto.rs | 147 |
-| `test_long_string` | Encrypt long string | src/crypto.rs | 158 |
-| `test_unicode_text` | Encrypt Unicode string | src/crypto.rs | 169 |
-| `test_special_characters` | Encrypt special characters | src/crypto.rs | 180 |
-| `test_newlines_and_whitespace` | Encrypt string with newlines and whitespace | src/crypto.rs | 191 |
-| `test_different_keys_produce_different_results` | Different keys produce different ciphertexts | src/crypto.rs | 202 |
-| `test_wrong_key_fails_decryption` | Decryption fails with wrong key | src/crypto.rs | 216 |
-| `test_corrupted_ciphertext` | Decryption fails with corrupted ciphertext | src/crypto.rs | 230 |
-| `test_invalid_base64` | Decryption fails with invalid Base64 | src/crypto.rs | 246 |
-| `test_too_short_ciphertext` | Decryption fails with too short ciphertext | src/crypto.rs | 255 |
-| `test_numeric_strings` | Encrypt numeric strings | src/crypto.rs | 265 |
-| `test_json_like_string` | Encrypt JSON-like string | src/crypto.rs | 276 |
-| `test_sql_like_string` | Encrypt SQL-like string | src/crypto.rs | 287 |
+| `test_encrypt_decrypt_basic` | Basic encryption/decryption | src/crypto.rs | 119 |
+| `test_encrypt_produces_different_outputs` | Same plaintext produces different ciphertexts | src/crypto.rs | 130 |
+| `test_empty_string` | Encrypt empty string | src/crypto.rs | 146 |
+| `test_long_string` | Encrypt long string | src/crypto.rs | 157 |
+| `test_unicode_text` | Encrypt Unicode string | src/crypto.rs | 168 |
+| `test_special_characters` | Encrypt special characters | src/crypto.rs | 179 |
+| `test_newlines_and_whitespace` | Encrypt string with newlines and whitespace | src/crypto.rs | 190 |
+| `test_different_keys_produce_different_results` | Different keys produce different ciphertexts | src/crypto.rs | 201 |
+| `test_wrong_key_fails_decryption` | Decryption fails with wrong key | src/crypto.rs | 215 |
+| `test_corrupted_ciphertext` | Decryption fails with corrupted ciphertext | src/crypto.rs | 229 |
+| `test_invalid_base64` | Decryption fails with invalid Base64 | src/crypto.rs | 245 |
+| `test_too_short_ciphertext` | Decryption fails with too short ciphertext | src/crypto.rs | 254 |
+| `test_numeric_strings` | Encrypt numeric strings | src/crypto.rs | 264 |
+| `test_json_like_string` | Encrypt JSON-like string | src/crypto.rs | 275 |
+| `test_sql_like_string` | Encrypt SQL-like string | src/crypto.rs | 286 |
 
 **Total**: 15 tests
 
@@ -205,18 +205,18 @@ Settings management functionality tests.
 
 | Test Function | Description | File | Line |
 |---------------|-------------|------|------|
-| `test_settings_manager_creation` | Test SettingsManager creation | src/settings.rs | 188 |
-| `test_get_and_set_string` | Get and set string values | src/settings.rs | 198 |
-| `test_get_and_set_int` | Get and set integer values | src/settings.rs | 214 |
-| `test_get_and_set_bool` | Get and set boolean values | src/settings.rs | 227 |
-| `test_save_and_reload` | Save and reload settings | src/settings.rs | 240 |
-| `test_remove_entry` | Remove entry | src/settings.rs | 258 |
-| `test_entry_not_found` | Error handling for non-existent entry | src/settings.rs | 273 |
-| `test_complex_type` | Save and retrieve complex types (JSON) | src/settings.rs | 289 |
-| `test_keys_list` | Retrieve keys list | src/settings.rs | 315 |
-| `test_save_leaves_no_tmp_sibling_and_target_is_parseable` | Successful save renames tmp away and leaves target valid (Fable-5 #10) | src/settings.rs | 345 |
-| `test_repeated_saves_do_not_accumulate_tmp_files` | Repeated saves keep the filesystem clean (Fable-5 #10) | src/settings.rs | 378 |
-| `test_stale_tmp_file_is_not_loaded` | A leftover `.tmp` from a crashed save is inert; real target still loads (Fable-5 #10) | src/settings.rs | 404 |
+| `test_settings_manager_creation` | Test SettingsManager creation | src/settings.rs | 284 |
+| `test_get_and_set_string` | Get and set string values | src/settings.rs | 291 |
+| `test_get_and_set_int` | Get and set integer values | src/settings.rs | 301 |
+| `test_get_and_set_bool` | Get and set boolean values | src/settings.rs | 311 |
+| `test_save_and_reload` | Save and reload settings | src/settings.rs | 321 |
+| `test_remove_entry` | Remove entry | src/settings.rs | 337 |
+| `test_entry_not_found` | Error handling for non-existent entry | src/settings.rs | 349 |
+| `test_complex_type` | Save and retrieve complex types (JSON) | src/settings.rs | 362 |
+| `test_keys_list` | Retrieve keys list | src/settings.rs | 385 |
+| `test_save_leaves_no_tmp_sibling_and_target_is_parseable` | Successful save renames tmp away and leaves target valid (Fable-5 #10) | src/settings.rs | 404 |
+| `test_repeated_saves_do_not_accumulate_tmp_files` | Repeated saves keep the filesystem clean (Fable-5 #10) | src/settings.rs | 437 |
+| `test_stale_tmp_file_is_not_loaded` | A leftover `.tmp` from a crashed save is inert; real target still loads (Fable-5 #10) | src/settings.rs | 463 |
 | `latent_l28_null_settings_file_falls_back_to_defaults` | A `null` settings file falls back to defaults instead of failing startup (latent-audit L28) | src/latent_audit/settings.rs | 45 |
 | `latent_l28_array_settings_file_falls_back_to_defaults` | A `[]` settings file falls back to defaults (latent-audit L28) | src/latent_audit/settings.rs | 53 |
 | `latent_l28_truncated_settings_file_falls_back_to_defaults` | A truncated JSON settings file falls back to defaults (latent-audit L28) | src/latent_audit/settings.rs | 61 |
@@ -252,10 +252,10 @@ Pure-Rust tests for the shared master-CRUD helpers (`MasterCrudSpec` + `ensure_u
 
 | Test Function | Description | File | Line |
 |---------------|-------------|------|------|
-| `ensure_update_affected_one_maps_zero_to_not_found` | `rows_affected == 0` on an UPDATE maps to `ApiError::not_found(entity)` from the spec | src/services/master_data.rs | 228 |
-| `ensure_update_affected_one_passes_positive_count` | Positive rows_affected returns Ok (boundary: 1, 42) | src/services/master_data.rs | 235 |
-| `reject_if_in_use_maps_positive_flag_to_in_use` | Positive in-use flag maps to `ApiError::in_use(entity)` (master delete-lock guard) | src/services/master_data.rs | 256 |
-| `reject_if_in_use_passes_when_flag_is_zero` | Zero in-use flag returns Ok (master delete-lock guard) | src/services/master_data.rs | 263 |
+| `ensure_update_affected_one_maps_zero_to_not_found` | `rows_affected == 0` on an UPDATE maps to `ApiError::not_found(entity)` from the spec | src/services/master_data.rs | 279 |
+| `ensure_update_affected_one_passes_positive_count` | Positive rows_affected returns Ok (boundary: 1, 42) | src/services/master_data.rs | 286 |
+| `reject_if_in_use_maps_positive_flag_to_in_use` | Positive in-use flag maps to `ApiError::in_use(entity)` (master delete-lock guard) | src/services/master_data.rs | 292 |
+| `reject_if_in_use_passes_when_flag_is_zero` | Zero in-use flag returns Ok (master delete-lock guard) | src/services/master_data.rs | 299 |
 
 **Total**: 4 tests
 
@@ -269,9 +269,9 @@ Pure-function tests for `escape_like_pattern`, the shared LIKE-metacharacter esc
 | `percent_is_escaped` | `%` → `\%` | src/services/like_escape.rs | 39 |
 | `underscore_is_escaped` | `_` → `\_` | src/services/like_escape.rs | 44 |
 | `backslash_is_escaped_first_then_metacharacters` | `\` is escaped before `%` / `_` so escapes are not re-escaped | src/services/like_escape.rs | 49 |
-| `multiple_metacharacters_all_escaped` | `50%_off` → `50\%\_off` | src/services/like_escape.rs | 57 |
-| `empty_input_yields_empty_output` | Empty input returns empty output | src/services/like_escape.rs | 62 |
-| `japanese_text_with_percent_escapes_only_the_metacharacter` | 果汁100%ジュース → 果汁100\%ジュース (the Fable-5 #23 pin scenario) | src/services/like_escape.rs | 67 |
+| `multiple_metacharacters_all_escaped` | `50%_off` → `50\%\_off` | src/services/like_escape.rs | 58 |
+| `empty_input_yields_empty_output` | Empty input returns empty output | src/services/like_escape.rs | 63 |
+| `japanese_text_with_percent_escapes_only_the_metacharacter` | 果汁100%ジュース → 果汁100\%ジュース (the Fable-5 #23 pin scenario) | src/services/like_escape.rs | 68 |
 
 **Total**: 7 tests
 
@@ -281,22 +281,22 @@ Authentication service tests (user registration, login).
 
 | Test Function | Description | File | Line |
 |---------------|-------------|------|------|
-| `test_register_admin_user` | Test admin user registration | src/services/auth.rs | 246 |
-| `test_authenticate_user_success` | Test successful authentication | src/services/auth.rs | 264 |
-| `test_authenticate_user_wrong_password` | Test authentication failure with wrong password | src/services/auth.rs | 284 |
-| `test_authenticate_user_nonexistent` | Test authentication failure with non-existent user | src/services/auth.rs | 300 |
-| `test_has_users_empty` | Check user existence on empty DB | src/services/auth.rs | 312 |
-| `test_has_users_with_user` | Check user existence with users | src/services/auth.rs | 322 |
-| `test_password_is_hashed` | Verify password is hashed | src/services/auth.rs | 334 |
-| `test_admin_role_assigned` | Verify admin role assignment | src/services/auth.rs | 355 |
-| `test_multiple_authentication_attempts` | Test multiple authentication attempts | src/services/auth.rs | 372 |
-| `test_special_characters_in_credentials` | Test special characters in credentials | src/services/auth.rs | 387 |
-| `test_unicode_credentials` | Test Unicode in credentials | src/services/auth.rs | 402 |
-| `test_role_constants_values` | Verify role constant values | src/services/auth.rs | 417 |
-| `test_role_constants_uniqueness` | Verify role constant uniqueness | src/services/auth.rs | 425 |
-| `invalid_credentials_maps_to_auth_invalid_credentials_code` | `AuthError::InvalidCredentials` → `ApiError { code: "auth_invalid_credentials" }` (PR14, Fable-5 #21) | src/services/auth.rs | 577 |
-| `database_error_maps_to_database_code` | `AuthError::DatabaseError` → `ApiError { code: "database" }` (PR14, Fable-5 #21) | src/services/auth.rs | 585 |
-| `security_error_maps_to_validation_code_with_message` | `AuthError::SecurityError` → `ApiError { code: "validation" }` with message preserved (PR14, Fable-5 #21) | src/services/auth.rs | 593 |
+| `test_register_admin_user` | Test admin user registration | src/services/auth.rs | 335 |
+| `test_authenticate_user_success` | Test successful authentication | src/services/auth.rs | 353 |
+| `test_authenticate_user_wrong_password` | Test authentication failure with wrong password | src/services/auth.rs | 373 |
+| `test_authenticate_user_nonexistent` | Test authentication failure with non-existent user | src/services/auth.rs | 389 |
+| `test_has_users_empty` | Check user existence on empty DB | src/services/auth.rs | 401 |
+| `test_has_users_with_user` | Check user existence with users | src/services/auth.rs | 411 |
+| `test_password_is_hashed` | Verify password is hashed | src/services/auth.rs | 423 |
+| `test_admin_role_assigned` | Verify admin role assignment | src/services/auth.rs | 444 |
+| `test_multiple_authentication_attempts` | Test multiple authentication attempts | src/services/auth.rs | 461 |
+| `test_special_characters_in_credentials` | Test special characters in credentials | src/services/auth.rs | 476 |
+| `test_unicode_credentials` | Test Unicode in credentials | src/services/auth.rs | 491 |
+| `test_role_constants_values` | Verify role constant values | src/services/auth.rs | 600 |
+| `test_role_constants_uniqueness` | Verify role constant uniqueness | src/services/auth.rs | 608 |
+| `invalid_credentials_maps_to_auth_invalid_credentials_code` | `AuthError::InvalidCredentials` → `ApiError { code: "auth_invalid_credentials" }` (PR14, Fable-5 #21) | src/services/auth.rs | 623 |
+| `database_error_maps_to_database_code` | `AuthError::DatabaseError` → `ApiError { code: "database" }` (PR14, Fable-5 #21) | src/services/auth.rs | 631 |
+| `security_error_maps_to_validation_code_with_message` | `AuthError::SecurityError` → `ApiError { code: "validation" }` with message preserved (PR14, Fable-5 #21) | src/services/auth.rs | 639 |
 | `latent_l25_register_rejects_blank_username` | Setup registration rejects an empty / whitespace-only username (latent-audit L25) | src/services/latent_audit/auth.rs | 41 |
 | `latent_l25_register_rejects_overlong_username` | Setup registration rejects an over-long username (latent-audit L25) | src/services/latent_audit/auth.rs | 62 |
 | `latent_l25_register_duplicate_name_maps_to_duplicate_code` | A duplicate username on registration maps to `duplicate_name`, not a raw UNIQUE error (latent-audit L25) | src/services/latent_audit/auth.rs | 82 |
@@ -349,14 +349,14 @@ Encryption service tests (field encryption, re-encryption).
 
 | Test Function | Description | File | Line |
 |---------------|-------------|------|------|
-| `test_register_encrypted_field` | Test encrypted field registration | src/services/encryption.rs | 285 |
-| `test_encrypt_decrypt_field` | Test field encryption/decryption | src/services/encryption.rs | 304 |
-| `test_re_encrypt_user_data` | Test user data re-encryption | src/services/encryption.rs | 326 |
-| `test_decrypt_with_wrong_password_fails` | Decryption fails with wrong password | src/services/encryption.rs | 380 |
-| `test_re_encrypt_user_data_preserves_per_row_plaintext` | Multi-row re-encryption keeps each row's own plaintext (Fable-5 #14) | src/services/encryption.rs | 473 |
-| `test_encrypt_uses_per_user_salt_not_user_id` | Same password/plaintext produces distinct ciphertext across users (Fable-5 #15) | src/services/encryption.rs | 657 |
-| `test_encrypt_decrypt_salt_survives_service_reconstruction` | Salt is refetched from DB so a new service instance round-trips ciphertext (Fable-5 #15) | src/services/encryption.rs | 703 |
-| `test_encrypt_errors_when_user_missing` | Missing USERS row errors loudly instead of falling back to user_id salt (Fable-5 #15) | src/services/encryption.rs | 722 |
+| `test_register_encrypted_field` | Test encrypted field registration | src/services/encryption.rs | 543 |
+| `test_encrypt_decrypt_field` | Test field encryption/decryption | src/services/encryption.rs | 638 |
+| `test_re_encrypt_user_data` | Test user data re-encryption | src/services/encryption.rs | 660 |
+| `test_decrypt_with_wrong_password_fails` | Decryption fails with wrong password | src/services/encryption.rs | 822 |
+| `test_re_encrypt_user_data_preserves_per_row_plaintext` | Multi-row re-encryption keeps each row's own plaintext (Fable-5 #14) | src/services/encryption.rs | 725 |
+| `test_encrypt_uses_per_user_salt_not_user_id` | Same password/plaintext produces distinct ciphertext across users (Fable-5 #15) | src/services/encryption.rs | 847 |
+| `test_encrypt_decrypt_salt_survives_service_reconstruction` | Salt is refetched from DB so a new service instance round-trips ciphertext (Fable-5 #15) | src/services/encryption.rs | 893 |
+| `test_encrypt_errors_when_user_missing` | Missing USERS row errors loudly instead of falling back to user_id salt (Fable-5 #15) | src/services/encryption.rs | 912 |
 | `test_register_encrypted_field_rejects_ineligible_fields` | Registration rejects USERS, non-per-user tables, non-TEXT/missing columns, views, WITHOUT ROWID tables, tables declaring a ROWID column, and columns already holding plaintext; column names match case-insensitively (latent-audit L27) | src/services/encryption.rs | 589 |
 | `latent_l27_password_change_survives_plaintext_column_registration` | Password change still succeeds after an attempt to register USERS.NAME (latent-audit L27) | src/services/latent_audit/encryption.rs | 47 |
 | `latent_l27_password_change_survives_non_text_column_registration` | Password change still succeeds after an attempt to register an INTEGER column (latent-audit L27) | src/services/latent_audit/encryption.rs | 68 |
@@ -369,17 +369,17 @@ Account management service tests. Assertions on empty-name and duplicate-code pa
 
 | Test Function | Description | File | Line |
 |---------------|-------------|------|------|
-| `test_add_account_rejects_empty_name` | Empty account name returns `ApiError { code: "validation" }` (Fable-5 #16, #23) | src/services/account.rs | 597 |
-| `test_add_account_rejects_whitespace_only_name` | Whitespace-only account name returns `ApiError { code: "validation" }` (Fable-5 #16, #23) | src/services/account.rs | 612 |
-| `test_update_account_rejects_empty_name` | Empty account name via update returns `ApiError { code: "validation" }` (Fable-5 #16, #23) | src/services/account.rs | 627 |
-| `test_update_account_not_found_has_stable_code_and_entity` | Updating a missing account returns `ApiError { code: "not_found", entity: "account" }` (Fable-5 #23) | src/services/account.rs | 815 |
-| `test_delete_account_not_found_has_stable_code_and_entity` | Deleting a missing account returns `ApiError { code: "not_found" }` (Fable-5 #23) | src/services/account.rs | 837 |
-| `test_delete_account_rejected_when_referenced_as_from_account` | Delete rejected with `ApiError { code: "in_use" }` when a TRANSACTIONS_HEADER row names the account as FROM (master delete-lock) | src/services/account.rs | 827 |
-| `test_delete_account_rejected_when_referenced_as_to_account` | Delete rejected with `ApiError { code: "in_use" }` when a TRANSACTIONS_HEADER row names the account as TO (master delete-lock) | src/services/account.rs | 847 |
-| `test_delete_account_rejected_when_referenced_by_recurring_rule` | Delete rejected with `ApiError { code: "in_use" }` when any RECURRING_RULES row names the account (master delete-lock) | src/services/account.rs | 864 |
-| `test_delete_account_ignores_other_users_references` | Cross-user references to the same ACCOUNT_CODE do NOT block delete — codes are user-scoped (master delete-lock) | src/services/account.rs | 881 |
-| `test_delete_account_normalizes_input_before_in_use_check` | Delete input (`"  cash  "`) is uppercased/trimmed before the CHECK_IN_USE query so the guard fires (master delete-lock) | src/services/account.rs | 899 |
-| `test_get_account_balances_as_of_self_transfer_nets_to_zero` | Stale TRANSFER row with FROM == TO nets to zero on the dashboard instead of inflating the balance (Fable-5 #20) | src/services/account.rs | 991 |
+| `test_add_account_rejects_empty_name` | Empty account name returns `ApiError { code: "validation" }` (Fable-5 #16, #23) | src/services/account.rs | 732 |
+| `test_add_account_rejects_whitespace_only_name` | Whitespace-only account name returns `ApiError { code: "validation" }` (Fable-5 #16, #23) | src/services/account.rs | 748 |
+| `test_update_account_rejects_empty_name` | Empty account name via update returns `ApiError { code: "validation" }` (Fable-5 #16, #23) | src/services/account.rs | 764 |
+| `test_update_account_not_found_has_stable_code_and_entity` | Updating a missing account returns `ApiError { code: "not_found", entity: "account" }` (Fable-5 #23) | src/services/account.rs | 997 |
+| `test_delete_account_not_found_has_stable_code_and_entity` | Deleting a missing account returns `ApiError { code: "not_found" }` (Fable-5 #23) | src/services/account.rs | 1020 |
+| `test_delete_account_rejected_when_referenced_as_from_account` | Delete rejected with `ApiError { code: "in_use" }` when a TRANSACTIONS_HEADER row names the account as FROM (master delete-lock) | src/services/account.rs | 1028 |
+| `test_delete_account_rejected_when_referenced_as_to_account` | Delete rejected with `ApiError { code: "in_use" }` when a TRANSACTIONS_HEADER row names the account as TO (master delete-lock) | src/services/account.rs | 1048 |
+| `test_delete_account_rejected_when_referenced_by_recurring_rule` | Delete rejected with `ApiError { code: "in_use" }` when any RECURRING_RULES row names the account (master delete-lock) | src/services/account.rs | 1065 |
+| `test_delete_account_ignores_other_users_references` | Cross-user references to the same ACCOUNT_CODE do NOT block delete — codes are user-scoped (master delete-lock) | src/services/account.rs | 1082 |
+| `test_delete_account_normalizes_input_before_in_use_check` | Delete input (`"  cash  "`) is uppercased/trimmed before the CHECK_IN_USE query so the guard fires (master delete-lock) | src/services/account.rs | 1100 |
+| `test_get_account_balances_as_of_self_transfer_nets_to_zero` | Stale TRANSFER row with FROM == TO nets to zero on the dashboard instead of inflating the balance (Fable-5 #20) | src/services/account.rs | 1192 |
 | `test_get_accounts_lists_only_own_accounts` | Every user, the admin included, lists only their own accounts (latent-audit M4) | src/services/account.rs | 860 |
 | `test_get_accounts_include_disabled` | Disabled accounts are listed only with `include_disabled` (latent-audit M7) | src/services/account.rs | 887 |
 | `test_delete_disabled_account_removes_row` | A disabled account that nothing uses can still be deleted, removing the row (latent-audit M7) | src/services/account.rs | 519 |
@@ -397,31 +397,31 @@ Category management service tests (3-tier category CRUD). Internal `CategoryErro
 
 | Test Function | Description | File | Line |
 |---------------|-------------|------|------|
-| `test_populate_default_categories` | Register default categories | src/services/category.rs | 1333 |
-| `test_get_category1_list` | Get major category list | src/services/category.rs | 1401 |
-| `test_add_category2` | Add medium category | src/services/category.rs | 1444 |
-| `test_add_category2_duplicate_name` | Medium category duplicate name error | src/services/category.rs | 1480 |
-| `test_add_category3` | Add minor category | src/services/category.rs | 1513 |
-| `test_add_category3_duplicate_name` | Minor category duplicate name error | src/services/category.rs | 1547 |
-| `test_move_category2_order` | Change medium category display order | src/services/category.rs | 1588 |
-| `test_move_category3_order` | Change minor category display order | src/services/category.rs | 1672 |
-| `test_update_category2` | Update medium category | src/services/category.rs | 1749 |
-| `test_update_category3` | Update minor category | src/services/category.rs | 1773 |
-| `test_update_category2_duplicate_name` | Medium category duplicate name update error | src/services/category.rs | 1798 |
-| `test_move_category2_boundary` | Medium category boundary value move test | src/services/category.rs | 1817 |
-| `test_get_category_for_edit` | Get category info for editing | src/services/category.rs | 1869 |
-| `test_get_category2_for_edit_returns_not_found_for_missing` | Missing CATEGORY2 edit fetch returns NotFound (Fable-5 #6) | src/services/category.rs | 1903 |
-| `test_get_category3_for_edit_returns_not_found_for_missing` | Missing CATEGORY3 edit fetch returns NotFound (Fable-5 #6) | src/services/category.rs | 1914 |
-| `test_disable_category2_returns_not_found_for_missing` | Missing CATEGORY2 disable returns NotFound (Fable-5 #7) | src/services/category.rs | 1929 |
-| `test_disable_category3_returns_not_found_for_missing` | Missing CATEGORY3 disable returns NotFound (Fable-5 #7) | src/services/category.rs | 1940 |
-| `test_disable_category2_succeeds_with_no_children` | Leaf CATEGORY2 disable succeeds (child sweep tolerates 0 rows) | src/services/category.rs | 1956 |
-| `not_found_maps_to_not_found_code_with_category_entity` | `CategoryError::NotFound` → `ApiError { code: "not_found", entity: "category" }` (Fable-5 #23) | src/services/category.rs | 2104 |
-| `duplicate_name_maps_to_duplicate_name_code_with_category_entity` | `CategoryError::DuplicateName(_)` → `ApiError { code: "duplicate_name", entity: "category" }` (Fable-5 #23) | src/services/category.rs | 2111 |
-| `validation_preserves_message_and_omits_entity` | `CategoryError::Validation(msg)` → `ApiError { code: "validation" }` with message preserved (Fable-5 #23) | src/services/category.rs | 2118 |
-| `database_error_maps_to_database_code` | `CategoryError::DatabaseError(_)` → `ApiError { code: "database" }` (Fable-5 #23) | src/services/category.rs | 2128 |
-| `test_get_category_tree_groups_children_under_parent` | Regression pin for the 3-flat-queries + HashMap grouping shape: cat1 → cat2 → cat3 parent/child pairing is preserved (PR11, Fable-5 #31) | src/services/category.rs | 2141 |
-| `test_get_category_tree_preserves_display_order` | Confirms that a `move_category2_up` reorder survives the flat-query regrouping (PR11, Fable-5 #31) | src/services/category.rs | 2196 |
-| `test_get_category_tree_all_includes_disabled_flags` | `get_category_tree_all` still includes disabled rows and their `is_disabled` fields; the visible-only `get_category_tree` filters them out (PR11, Fable-5 #31) | src/services/category.rs | 2225 |
+| `test_populate_default_categories` | Register default categories | src/services/category.rs | 1336 |
+| `test_get_category1_list` | Get major category list | src/services/category.rs | 1404 |
+| `test_add_category2` | Add medium category | src/services/category.rs | 1447 |
+| `test_add_category2_duplicate_name` | Medium category duplicate name error | src/services/category.rs | 1483 |
+| `test_add_category3` | Add minor category | src/services/category.rs | 1516 |
+| `test_add_category3_duplicate_name` | Minor category duplicate name error | src/services/category.rs | 1550 |
+| `test_move_category2_order` | Change medium category display order | src/services/category.rs | 1591 |
+| `test_move_category3_order` | Change minor category display order | src/services/category.rs | 1675 |
+| `test_update_category2` | Update medium category | src/services/category.rs | 1752 |
+| `test_update_category3` | Update minor category | src/services/category.rs | 1776 |
+| `test_update_category2_duplicate_name` | Medium category duplicate name update error | src/services/category.rs | 1801 |
+| `test_move_category2_boundary` | Medium category boundary value move test | src/services/category.rs | 1820 |
+| `test_get_category_for_edit` | Get category info for editing | src/services/category.rs | 1872 |
+| `test_get_category2_for_edit_returns_not_found_for_missing` | Missing CATEGORY2 edit fetch returns NotFound (Fable-5 #6) | src/services/category.rs | 1906 |
+| `test_get_category3_for_edit_returns_not_found_for_missing` | Missing CATEGORY3 edit fetch returns NotFound (Fable-5 #6) | src/services/category.rs | 1917 |
+| `test_disable_category2_returns_not_found_for_missing` | Missing CATEGORY2 disable returns NotFound (Fable-5 #7) | src/services/category.rs | 1932 |
+| `test_disable_category3_returns_not_found_for_missing` | Missing CATEGORY3 disable returns NotFound (Fable-5 #7) | src/services/category.rs | 1943 |
+| `test_disable_category2_succeeds_with_no_children` | Leaf CATEGORY2 disable succeeds (child sweep tolerates 0 rows) | src/services/category.rs | 1959 |
+| `not_found_maps_to_not_found_code_with_category_entity` | `CategoryError::NotFound` → `ApiError { code: "not_found", entity: "category" }` (Fable-5 #23) | src/services/category.rs | 2107 |
+| `duplicate_name_maps_to_duplicate_name_code_with_category_entity` | `CategoryError::DuplicateName(_)` → `ApiError { code: "duplicate_name", entity: "category" }` (Fable-5 #23) | src/services/category.rs | 2114 |
+| `validation_preserves_message_and_omits_entity` | `CategoryError::Validation(msg)` → `ApiError { code: "validation" }` with message preserved (Fable-5 #23) | src/services/category.rs | 2121 |
+| `database_error_maps_to_database_code` | `CategoryError::DatabaseError(_)` → `ApiError { code: "database" }` (Fable-5 #23) | src/services/category.rs | 2131 |
+| `test_get_category_tree_groups_children_under_parent` | Regression pin for the 3-flat-queries + HashMap grouping shape: cat1 → cat2 → cat3 parent/child pairing is preserved (PR11, Fable-5 #31) | src/services/category.rs | 2144 |
+| `test_get_category_tree_preserves_display_order` | Confirms that a `move_category2_up` reorder survives the flat-query regrouping (PR11, Fable-5 #31) | src/services/category.rs | 2199 |
+| `test_get_category_tree_all_includes_disabled_flags` | `get_category_tree_all` still includes disabled rows and their `is_disabled` fields; the visible-only `get_category_tree` filters them out (PR11, Fable-5 #31) | src/services/category.rs | 2228 |
 | `latent_m8_enable_category2_restores_cascaded_category3` | Showing a hidden CATEGORY2 again also re-enables the CATEGORY3 rows hiding it disabled (latent-audit M8) | src/services/latent_audit/category.rs | 83 |
 | `latent_l19_enable_missing_category2_returns_not_found` | Enabling a non-existent CATEGORY2 returns not_found (latent-audit L19, CATEGORY2 enable only) | src/services/latent_audit/category.rs | 266 |
 | `latent_m8_enable_already_enabled_category2_keeps_hidden_children` | Enabling an already enabled CATEGORY2 is a no-op that keeps a separately hidden CATEGORY3 hidden (latent-audit M8) | src/services/latent_audit/category.rs | 110 |
@@ -451,20 +451,20 @@ Manufacturer management service tests. Empty/duplicate assertion tests renamed t
 
 | Test Function | Description | File | Line |
 |---------------|-------------|------|------|
-| `test_add_manufacturer` | Test manufacturer addition | src/services/manufacturer.rs | 243 |
-| `test_update_manufacturer` | Test manufacturer update | src/services/manufacturer.rs | 261 |
-| `test_delete_manufacturer` | An unused manufacturer is removed, not just hidden (latent-audit M7) | src/services/manufacturer.rs | 283 |
-| `test_delete_disabled_manufacturer_removes_row` | A disabled manufacturer that nothing uses can still be deleted, removing the row (latent-audit M7) | src/services/manufacturer.rs | 309 |
-| `test_disable_manufacturer_allowed_while_referenced` | A manufacturer used by a product can be disabled (not deleted); the product still shows its name (latent-audit M7) | src/services/manufacturer.rs | 329 |
-| `test_empty_manufacturer_name_returns_validation_code` | Empty manufacturer name returns `ApiError { code: "validation" }` (Fable-5 #23) | src/services/manufacturer.rs | 316 |
-| `test_add_duplicate_manufacturer_returns_duplicate_name_code` | Duplicate returns `ApiError { code: "duplicate_name", entity: "manufacturer" }` (Fable-5 #23) | src/services/manufacturer.rs | 331 |
-| `test_update_to_duplicate_manufacturer_name_returns_duplicate_name_code` | Update to duplicate returns `ApiError { code: "duplicate_name" }` (Fable-5 #23) | src/services/manufacturer.rs | 355 |
-| `test_update_missing_manufacturer_returns_not_found_code` | Updating a missing manufacturer returns `ApiError { code: "not_found", entity: "manufacturer" }` (Fable-5 #23) | src/services/manufacturer.rs | 383 |
-| `test_delete_missing_manufacturer_returns_not_found_code` | Deleting a missing manufacturer returns `ApiError { code: "not_found" }` (Fable-5 #23) | src/services/manufacturer.rs | 398 |
-| `test_update_same_manufacturer_name` | Same name update (allowed) | src/services/manufacturer.rs | 405 |
-| `test_delete_manufacturer_rejected_when_referenced_by_product` | Delete rejected with `ApiError { code: "in_use", entity: "manufacturer" }` when any PRODUCTS row names the manufacturer (master delete-lock) | src/services/manufacturer.rs | 374 |
-| `test_delete_manufacturer_rejected_when_only_disabled_products_reference` | Even IS_DISABLED products count as a reference — the FK link exists and the products screen still surfaces them (master delete-lock) | src/services/manufacturer.rs | 402 |
-| `test_delete_manufacturer_ignores_other_users_references` | Cross-user products with the same MANUFACTURER_ID do NOT block delete — scoping is by USER_ID (master delete-lock) | src/services/manufacturer.rs | 429 |
+| `test_add_manufacturer` | Test manufacturer addition | src/services/manufacturer.rs | 236 |
+| `test_update_manufacturer` | Test manufacturer update | src/services/manufacturer.rs | 254 |
+| `test_delete_manufacturer` | An unused manufacturer is removed, not just hidden (latent-audit M7) | src/services/manufacturer.rs | 285 |
+| `test_delete_disabled_manufacturer_removes_row` | A disabled manufacturer that nothing uses can still be deleted, removing the row (latent-audit M7) | src/services/manufacturer.rs | 311 |
+| `test_disable_manufacturer_allowed_while_referenced` | A manufacturer used by a product can be disabled (not deleted); the product still shows its name (latent-audit M7) | src/services/manufacturer.rs | 331 |
+| `test_empty_manufacturer_name_returns_validation_code` | Empty manufacturer name returns `ApiError { code: "validation" }` (Fable-5 #23) | src/services/manufacturer.rs | 369 |
+| `test_add_duplicate_manufacturer_returns_duplicate_name_code` | Duplicate returns `ApiError { code: "duplicate_name", entity: "manufacturer" }` (Fable-5 #23) | src/services/manufacturer.rs | 384 |
+| `test_update_to_duplicate_manufacturer_name_returns_duplicate_name_code` | Update to duplicate returns `ApiError { code: "duplicate_name" }` (Fable-5 #23) | src/services/manufacturer.rs | 406 |
+| `test_update_missing_manufacturer_returns_not_found_code` | Updating a missing manufacturer returns `ApiError { code: "not_found", entity: "manufacturer" }` (Fable-5 #23) | src/services/manufacturer.rs | 437 |
+| `test_delete_missing_manufacturer_returns_not_found_code` | Deleting a missing manufacturer returns `ApiError { code: "not_found" }` (Fable-5 #23) | src/services/manufacturer.rs | 452 |
+| `test_update_same_manufacturer_name` | Same name update (allowed) | src/services/manufacturer.rs | 540 |
+| `test_delete_manufacturer_rejected_when_referenced_by_product` | Delete rejected with `ApiError { code: "in_use", entity: "manufacturer" }` when any PRODUCTS row names the manufacturer (master delete-lock) | src/services/manufacturer.rs | 459 |
+| `test_delete_manufacturer_rejected_when_only_disabled_products_reference` | Even IS_DISABLED products count as a reference — the FK link exists and the products screen still surfaces them (master delete-lock) | src/services/manufacturer.rs | 487 |
+| `test_delete_manufacturer_ignores_other_users_references` | Cross-user products with the same MANUFACTURER_ID do NOT block delete — scoping is by USER_ID (master delete-lock) | src/services/manufacturer.rs | 514 |
 | `latent_m6_readd_deleted_manufacturer_name_is_not_database_error` | Re-adding a deleted manufacturer name never surfaces a generic database error (latent-audit M6) | src/services/latent_audit/manufacturer.rs | 26 |
 | `latent_m6_readd_disabled_manufacturer_name_revives_original_row` | Re-adding a disabled manufacturer name reuses the original row, enabled, with the new memo (latent-audit M6) | src/services/latent_audit/manufacturer.rs | 108 |
 | `latent_m6_rename_onto_disabled_manufacturer_name_is_duplicate_name` | Renaming onto a disabled manufacturer name is rejected with duplicate_name (latent-audit M6) | src/services/latent_audit/manufacturer.rs | 131 |
@@ -477,28 +477,27 @@ Product management service tests.
 
 | Test Function | Description | File | Line |
 |---------------|-------------|------|------|
-| `test_add_product_without_manufacturer` | Add product without manufacturer | src/services/product.rs | 256 |
-| `test_add_product_with_manufacturer` | Add product with manufacturer | src/services/product.rs | 276 |
-| `test_update_product` | Test product update | src/services/product.rs | 309 |
-| `test_delete_product` | An unused product is removed, not just hidden (latent-audit M7) | src/services/product.rs | 410 |
-| `test_delete_disabled_product_removes_row` | A disabled product that nothing uses can still be deleted, removing the row (latent-audit M7) | src/services/product.rs | 437 |
-| `test_disable_product_allowed_while_referenced` | A product named by a transaction detail can be disabled (not deleted) (latent-audit M7) | src/services/product.rs | 458 |
-| `test_empty_product_name` | Empty product name error | src/services/product.rs | 367 |
-| `test_add_duplicate_product` | Duplicate product name error | src/services/product.rs | 383 |
-| `test_manufacturer_deletion_rejected_while_product_references_it` | Manufacturer delete rejected with `ApiError { code: "in_use", entity: "manufacturer" }` while any product still references it — renamed from `test_manufacturer_deletion_sets_product_manufacturer_to_null` when the master delete-lock landed (was: fallback ON DELETE SET NULL) | src/services/product.rs | 512 |
-| `test_add_product_rejects_foreign_manufacturer_id` | Cross-owner manufacturer_id on add returns "Manufacturer not found" (Fable-5 #13) | src/services/product.rs | 716 |
-| `test_add_product_rejects_nonexistent_manufacturer_id` | Nonexistent manufacturer_id on add returns "Manufacturer not found" (Fable-5 #13) | src/services/product.rs | 767 |
-| `test_update_product_rejects_foreign_manufacturer_id` | Cross-owner manufacturer_id on update returns "Manufacturer not found" (Fable-5 #13) | src/services/product.rs | 792 |
-| `test_product_join_scopes_manufacturer_by_user_id` | PRODUCT_GET_* JOIN must not leak another user's manufacturer name (Fable-5 #13) | src/services/product.rs | 871 |
-| `test_delete_product_rejected_when_referenced_by_transaction_detail` | Delete rejected with `ApiError { code: "in_use", entity: "product" }` when any TRANSACTIONS_DETAIL row (scoped via TRANSACTIONS_HEADER.USER_ID) names the product (master delete-lock) | src/services/product.rs | 444 |
-| `test_delete_product_ignores_other_users_transaction_details` | Cross-user detail rows do NOT block delete — scoping runs through TRANSACTIONS_HEADER.USER_ID (master delete-lock) | src/services/product.rs | 481 |
-| `test_search_products_escapes_percent_metacharacter` | Autocomplete search of `"100%ジ"` matches only "果汁100%ジュース", not "果汁100リンゴジュース" — `%` is escaped and paired with `LIKE ? ESCAPE '\'` (Fable-5 #23) | src/services/product.rs | 785 |
-| `test_search_products_escapes_underscore_metacharacter` | Autocomplete search of `"A_1"` matches only literal "A_1", not "AB1" — `_` is escaped (Fable-5 #23) | src/services/product.rs | 812 |
+| `test_add_product_without_manufacturer` | Add product without manufacturer | src/services/product.rs | 326 |
+| `test_add_product_with_manufacturer` | Add product with manufacturer | src/services/product.rs | 346 |
+| `test_update_product` | Test product update | src/services/product.rs | 379 |
+| `test_delete_product` | An unused product is removed, not just hidden (latent-audit M7) | src/services/product.rs | 412 |
+| `test_delete_disabled_product_removes_row` | A disabled product that nothing uses can still be deleted, removing the row (latent-audit M7) | src/services/product.rs | 439 |
+| `test_disable_product_allowed_while_referenced` | A product named by a transaction detail can be disabled (not deleted) (latent-audit M7) | src/services/product.rs | 460 |
+| `test_empty_product_name` | Empty product name error | src/services/product.rs | 502 |
+| `test_manufacturer_deletion_rejected_while_product_references_it` | Manufacturer delete rejected with `ApiError { code: "in_use", entity: "manufacturer" }` while any product still references it — renamed from `test_manufacturer_deletion_sets_product_manufacturer_to_null` when the master delete-lock landed (was: fallback ON DELETE SET NULL) | src/services/product.rs | 612 |
+| `test_add_product_rejects_foreign_manufacturer_id` | Cross-owner manufacturer_id on add returns "Manufacturer not found" (Fable-5 #13) | src/services/product.rs | 943 |
+| `test_add_product_rejects_nonexistent_manufacturer_id` | Nonexistent manufacturer_id on add returns "Manufacturer not found" (Fable-5 #13) | src/services/product.rs | 994 |
+| `test_update_product_rejects_foreign_manufacturer_id` | Cross-owner manufacturer_id on update returns "Manufacturer not found" (Fable-5 #13) | src/services/product.rs | 1019 |
+| `test_product_join_scopes_manufacturer_by_user_id` | PRODUCT_GET_* JOIN must not leak another user's manufacturer name (Fable-5 #13) | src/services/product.rs | 1098 |
+| `test_delete_product_rejected_when_referenced_by_transaction_detail` | Delete rejected with `ApiError { code: "in_use", entity: "product" }` when any TRANSACTIONS_DETAIL row (scoped via TRANSACTIONS_HEADER.USER_ID) names the product (master delete-lock) | src/services/product.rs | 544 |
+| `test_delete_product_ignores_other_users_transaction_details` | Cross-user detail rows do NOT block delete — scoping runs through TRANSACTIONS_HEADER.USER_ID (master delete-lock) | src/services/product.rs | 581 |
+| `test_search_products_escapes_percent_metacharacter` | Autocomplete search of `"100%ジ"` matches only "果汁100%ジュース", not "果汁100リンゴジュース" — `%` is escaped and paired with `LIKE ? ESCAPE '\'` (Fable-5 #23) | src/services/product.rs | 870 |
+| `test_search_products_escapes_underscore_metacharacter` | Autocomplete search of `"A_1"` matches only literal "A_1", not "AB1" — `_` is escaped (Fable-5 #23) | src/services/product.rs | 897 |
 | `latent_m6_readd_deleted_product_name_is_not_database_error` | Re-adding a deleted product name never surfaces a generic database error (latent-audit M6) | src/services/latent_audit/product.rs | 27 |
 | `latent_m6_readd_disabled_product_name_revives_original_row` | Re-adding a disabled product name reuses the original row (same PRODUCT_ID), enabled, with the new memo (latent-audit M6) | src/services/latent_audit/product.rs | 113 |
 | `latent_m6_rename_onto_disabled_product_name_is_duplicate_name` | Renaming onto a disabled product name is rejected with duplicate_name (latent-audit M6) | src/services/latent_audit/product.rs | 136 |
 
-**Total**: 20 tests
+**Total**: 19 tests
 
 ### services/shop.rs
 
@@ -506,25 +505,25 @@ Shop management service tests. Empty/duplicate assertion tests renamed to `_retu
 
 | Test Function | Description | File | Line |
 |---------------|-------------|------|------|
-| `test_add_shop` | Test shop addition | src/services/shop.rs | 232 |
-| `test_update_shop` | Test shop update | src/services/shop.rs | 249 |
-| `test_delete_shop` | An unused shop is removed, not just hidden (latent-audit M7) | src/services/shop.rs | 294 |
+| `test_add_shop` | Test shop addition | src/services/shop.rs | 249 |
+| `test_update_shop` | Test shop update | src/services/shop.rs | 267 |
+| `test_delete_shop` | An unused shop is removed, not just hidden (latent-audit M7) | src/services/shop.rs | 296 |
 | `test_delete_disabled_shop_removes_row` | A disabled shop that nothing uses can still be deleted, removing the row (latent-audit M7) | src/services/shop.rs | 320 |
 | `test_shop_is_disabled_must_be_zero_or_one` | The disabled flag only accepts 0 or 1, on add and update (validation error otherwise) (latent-audit M7) | src/services/shop.rs | 340 |
 | `test_disable_shop_allowed_while_referenced` | A shop named by a transaction can be disabled (not deleted) and enabled again (latent-audit M7) | src/services/shop.rs | 376 |
-| `test_empty_shop_name_returns_validation_code` | Empty shop name returns `ApiError { code: "validation" }` (Fable-5 #23) | src/services/shop.rs | 301 |
-| `test_add_duplicate_shop_returns_duplicate_name_code` | Duplicate returns `ApiError { code: "duplicate_name", entity: "shop" }` (Fable-5 #23) | src/services/shop.rs | 315 |
-| `test_update_to_duplicate_shop_name_returns_duplicate_name_code` | Update to duplicate returns `ApiError { code: "duplicate_name" }` (Fable-5 #23) | src/services/shop.rs | 337 |
-| `test_update_missing_shop_returns_not_found_code` | Updating a missing shop returns `ApiError { code: "not_found", entity: "shop" }` (Fable-5 #23) | src/services/shop.rs | 363 |
-| `test_delete_missing_shop_returns_not_found_code` | Deleting a missing shop returns `ApiError { code: "not_found" }` (Fable-5 #23) | src/services/shop.rs | 375 |
-| `test_update_same_shop_name` | Same name update (allowed) | src/services/shop.rs | 382 |
-| `test_delete_shop_rejected_when_referenced_by_transaction` | Delete rejected with `ApiError { code: "in_use", entity: "shop" }` when any TRANSACTIONS_HEADER row names the shop (master delete-lock) | src/services/shop.rs | 346 |
-| `test_delete_shop_rejected_when_referenced_by_recurring_rule` | Delete rejected with `ApiError { code: "in_use" }` when any RECURRING_RULES row names the shop (master delete-lock) | src/services/shop.rs | 372 |
-| `test_delete_shop_ignores_other_users_references` | Cross-user references to the same SHOP_ID do NOT block delete — scoping is by USER_ID (master delete-lock) | src/services/shop.rs | 394 |
+| `test_empty_shop_name_returns_validation_code` | Empty shop name returns `ApiError { code: "validation" }` (Fable-5 #23) | src/services/shop.rs | 411 |
+| `test_add_duplicate_shop_returns_duplicate_name_code` | Duplicate returns `ApiError { code: "duplicate_name", entity: "shop" }` (Fable-5 #23) | src/services/shop.rs | 426 |
+| `test_update_to_duplicate_shop_name_returns_duplicate_name_code` | Update to duplicate returns `ApiError { code: "duplicate_name" }` (Fable-5 #23) | src/services/shop.rs | 447 |
+| `test_update_missing_shop_returns_not_found_code` | Updating a missing shop returns `ApiError { code: "not_found", entity: "shop" }` (Fable-5 #23) | src/services/shop.rs | 478 |
+| `test_delete_missing_shop_returns_not_found_code` | Deleting a missing shop returns `ApiError { code: "not_found" }` (Fable-5 #23) | src/services/shop.rs | 493 |
+| `test_update_same_shop_name` | Same name update (allowed) | src/services/shop.rs | 574 |
+| `test_delete_shop_rejected_when_referenced_by_transaction` | Delete rejected with `ApiError { code: "in_use", entity: "shop" }` when any TRANSACTIONS_HEADER row names the shop (master delete-lock) | src/services/shop.rs | 500 |
+| `test_delete_shop_rejected_when_referenced_by_recurring_rule` | Delete rejected with `ApiError { code: "in_use" }` when any RECURRING_RULES row names the shop (master delete-lock) | src/services/shop.rs | 527 |
+| `test_delete_shop_ignores_other_users_references` | Cross-user references to the same SHOP_ID do NOT block delete — scoping is by USER_ID (master delete-lock) | src/services/shop.rs | 550 |
 | `latent_h6_readd_deleted_shop_name_is_not_database_error` | Re-adding a deleted shop name never surfaces a generic database error (latent-audit H6) | src/services/latent_audit/shop.rs | 24 |
 | `latent_h6_readd_disabled_shop_name_revives_original_row` | Re-adding a disabled shop name revives the original row (same SHOP_ID, new memo) (latent-audit H6) | src/services/latent_audit/shop.rs | 82 |
 | `latent_h6_rename_onto_disabled_shop_name_is_duplicate_name` | Renaming onto a disabled shop name is rejected with duplicate_name (latent-audit H6) | src/services/latent_audit/shop.rs | 113 |
-| `latent_h6_insert_unique_violation_maps_to_duplicate_name` | An add_shop INSERT that races past the duplicate pre-check maps the UNIQUE violation to duplicate_name (latent-audit H6) | src/services/latent_audit/shop.rs | 124 |
+| `latent_h6_insert_unique_violation_maps_to_duplicate_name` | An add_shop INSERT that races past the duplicate pre-check maps the UNIQUE violation to duplicate_name (latent-audit H6) | src/services/latent_audit/shop.rs | 142 |
 
 **Total**: 19 tests
 
@@ -534,70 +533,70 @@ Transaction management service tests.
 
 | Test Function | Description | File | Line |
 |---------------|-------------|------|------|
-| `test_save_transaction_header_with_tax_excluded` | Save tax-excluded transaction header | src/services/transaction.rs | 1246 |
-| `test_save_transaction_header_with_tax_included` | Save tax-included transaction header | src/services/transaction.rs | 1278 |
-| `test_update_transaction_header_tax_type` | Update transaction header tax type | src/services/transaction.rs | 1309 |
-| `test_default_tax_type_is_excluded` | Verify default tax type is excluded | src/services/transaction.rs | 1351 |
-| `test_tax_type_validation_values` | Verify valid tax type values | src/services/transaction.rs | 1375 |
-| `test_get_transactions_end_date_includes_boundary_day` | End-date filter must include same-day timestamps (bare 'YYYY-MM-DD' anchored to 23:59:59) | src/services/transaction.rs | 3293 |
-| `test_get_transactions_keyword_matches_header_and_detail_memo` | Keyword must substring-match memo text on both header and detail rows | src/services/transaction.rs | 3364 |
-| `test_update_detail_memo_does_not_corrupt_shared_header_memo` | Detail memo edit must not clobber header memo sharing MEMO_ID | src/services/transaction.rs | 3584 |
-| `test_delete_detail_preserves_memo_still_referenced_by_header` | Detail delete must keep memo row when header still references it | src/services/transaction.rs | 3618 |
-| `test_update_detail_memo_updates_in_place_when_not_shared` | Solo-referenced memo still updates in place | src/services/transaction.rs | 3644 |
-| `test_delete_detail_removes_orphaned_memo` | Solo-referenced memo is deleted when detail removed | src/services/transaction.rs | 3674 |
-| `test_clear_detail_memo_does_not_delete_memo_still_used_by_header` | Clearing shared detail memo must not delete memo row used by header | src/services/transaction.rs | 3706 |
-| `test_update_detail_memo_does_not_corrupt_recurring_rule_memo` | Detail memo edit must not overwrite memo shared with a recurring rule | src/services/transaction.rs | 3760 |
-| `test_delete_detail_preserves_memo_still_referenced_by_recurring_rule` | Detail delete must keep memo row still referenced by a recurring rule | src/services/transaction.rs | 3805 |
-| `test_clear_detail_memo_succeeds_under_foreign_keys_on` | Clearing a detail memo must not violate the MEMOS foreign key | src/services/transaction.rs | 3843 |
-| `test_add_detail_rejects_foreign_transaction_id` | Adding a detail against another user's transaction_id must return NotFound (Fable-5 #12) | src/services/transaction.rs | 4109 |
-| `test_add_detail_rejects_nonexistent_transaction_id` | Adding a detail against a missing transaction_id must return NotFound (Fable-5 #12) | src/services/transaction.rs | 4142 |
-| `not_found_maps_to_not_found_code_with_transaction_entity` | TransactionError::NotFound maps to ApiError::not_found("transaction") (PR2b) | src/services/transaction.rs | 4199 |
-| `validation_preserves_message_and_omits_entity` | TransactionError::ValidationError maps to ApiError::CODE_VALIDATION with the message preserved (PR2b) | src/services/transaction.rs | 4206 |
-| `database_error_maps_to_database_code` | TransactionError::DatabaseError maps to ApiError::CODE_DATABASE (PR2b) | src/services/transaction.rs | 4217 |
-| `field_needle_message_survives_conversion_for_frontend_routing` | Two field needles (`"Item name must be"` / `"Memo must be"`) survive at the head of the wire message so the frontend `startsWith` routing keeps working (PR2b) | src/services/transaction.rs | 4224 |
-| `test_find_matching_pattern_preserves_user_half_up_when_settings_match` | `HALF_UP + EXCLUDED` stored on a round-cent receipt (500円 × 10% = 550円) survives bulk recalc instead of being silently downgraded to FLOOR (Fable-5 #2) | src/services/transaction.rs | 1802 |
-| `test_find_matching_pattern_preserves_user_ceil_when_settings_match` | Same guarantee for `UP + EXCLUDED` (Fable-5 #2) | src/services/transaction.rs | 1819 |
-| `test_find_matching_pattern_falls_back_to_priority_when_preferred_mismatches` | When the stored settings do not reproduce the total, fall back to the priority-ordered PATTERNS scan (Fable-5 #2) | src/services/transaction.rs | 1968 |
-| `test_find_matching_pattern_returns_none_when_no_pattern_fits` | No combination reproduces the target → `None`, caller overwrites TOTAL_AMOUNT instead of the setting columns (Fable-5 #2) | src/services/transaction.rs | 1859 |
-| `test_save_header_rejects_invalid_tax_included_type` | `save_transaction_header` rejects `tax_included_type` outside `{TAX_INCLUDED, TAX_EXCLUDED}` so a bogus value cannot survive `find_matching_pattern`'s preferred-first check (CodeRabbit on #125) | src/services/transaction.rs | 3230 |
-| `test_update_header_rejects_invalid_tax_included_type` | Same guard on the update entry point (CodeRabbit on #125) | src/services/transaction.rs | 3257 |
-| `test_save_header_rejects_transfer_from_equals_to` | `save_transaction_header` rejects TRANSFER with FROM == TO so a self-transfer cannot inflate the dashboard balance (Fable-5 #20) | src/services/transaction.rs | 3288 |
-| `test_update_header_rejects_transfer_from_equals_to` | Same guard on the update entry point (Fable-5 #20) | src/services/transaction.rs | 3316 |
-| `test_save_header_failure_rolls_back_memo_insert_in_same_tx` | HEADER insert failure inside the tx (via a local `RAISE(FAIL)` trigger) rolls the MEMO insert back too — MEMOS stays empty (Fable-5 #6) | src/services/transaction.rs | 3357 |
-| `test_save_header_dedupes_memo_text_across_multiple_saves` | Two saves with the same memo body land on one MEMOS row and share the MEMO_ID (dedup side effect of the tx-based helper reuse, Fable-5 #6) | src/services/transaction.rs | 3427 |
-| `test_add_detail_dedupes_memo_text_across_multiple_adds` | `add_transaction_detail` reuses the existing MEMOS row when the memo text already exists for the user — no duplicate row, and both details share one MEMO_ID (Fable-5 #7) | src/services/transaction.rs | 4475 |
-| `test_add_detail_reuses_memo_shared_with_header` | An add whose memo text matches the parent header's MEMO_ID reuses that MEMO_ID so the "shared memo" update path is reachable from adds too (Fable-5 #7) | src/services/transaction.rs | 4519 |
-| `test_add_detail_failure_rolls_back_memo_insert_in_same_tx` | An FK failure inside the DETAIL_INSERT (missing `(USER_ID, CATEGORY1_CODE) → CATEGORY1`) rolls the MEMO insert back too — MEMOS stays empty (Fable-5 #7) | src/services/transaction.rs | 4585 |
-| `transfer_same_account_maps_to_stable_wire_code_and_omits_entity` | `TransactionError::TransferSameAccount` maps to `ApiError { code: "transfer_same_account", entity: None }` — pins the wire contract so a future refactor cannot silently downgrade to the generic `validation` fallback (CodeRabbit on #127) | src/services/transaction.rs | 4664 |
-| `latent_h5_included_header_total_sums_amount_including_tax` | Tax-included header total = SUM(AMOUNT_INCLUDING_TAX) (latent-audit H5) | src/services/latent_audit/transaction.rs | 199 |
-| `latent_h5_compute_recommended_total_honours_included_header` | `compute_recommended_total` honours the header TAX_INCLUDED_TYPE (latent-audit H5) | src/services/latent_audit/transaction.rs | 211 |
-| `latent_h5_bulk_recalc_keeps_consistent_included_header` | Bulk recalc leaves a consistent tax-included header untouched (latent-audit H5) | src/services/latent_audit/transaction.rs | 232 |
-| `latent_l1_small_detail_with_zero_tax_is_still_grossed_up` | Small rows whose tax rounds to 0 are still grossed up per rate (latent-audit L1) | src/services/latent_audit/transaction.rs | 259 |
-| `test_calculate_recommended_total_uses_amount_not_amount_including_tax` | Tax-excluded total grosses up AMOUNT regardless of AMOUNT_INCLUDING_TAX (AMOUNT is always tax-excluded) | src/services/transaction.rs | 1837 |
-| `test_calculate_recommended_total_with_settings_included_derives_missing_rows` | Tax-included total derives NULL / 0-sentinel rows from AMOUNT + TAX_RATE | src/services/transaction.rs | 1890 |
-| `latent_h4_bulk_recalc_keeps_total_without_details` | Bulk recalc leaves a header without details untouched (latent-audit H4) | src/services/latent_audit/transaction.rs | 177 |
-| `latent_h4_compute_recommended_total_is_none_without_details` | `compute_recommended_total` returns None for a header without details (latent-audit H4) | src/services/latent_audit/transaction.rs | 666 |
-| `latent_m1_update_header_persists_is_scheduled` | Header update persists the IS_SCHEDULED checkbox (latent-audit M1) | src/services/latent_audit/transaction.rs | 273 |
-| `latent_m1_update_header_without_flag_keeps_is_scheduled` | Header update with `is_scheduled: None` keeps the stored flag (latent-audit M1) | src/services/latent_audit/transaction.rs | 679 |
-| `latent_m1_invalid_is_scheduled_is_rejected` | Save and update reject an IS_SCHEDULED value other than 0/1 (latent-audit M1) | src/services/latent_audit/transaction.rs | 698 |
-| `latent_m9_restore_reverts_tax_settings_changed_by_recalc` | Rollback restores the tax settings the recalc changed, not only TOTAL_AMOUNT (latent-audit M9) | src/services/latent_audit/transaction.rs | 341 |
-| `latent_m9_restore_keeps_edits_made_after_recalc` | Rollback leaves a header the recalc did not change (and the user edited afterwards) alone (latent-audit M9) | src/services/latent_audit/transaction.rs | 380 |
-| `latent_m9_restore_keeps_edit_on_a_header_the_recalc_changed` | A header the recalc changed and the user then edited keeps the edit (latent-audit M9) | src/services/latent_audit/transaction.rs | 414 |
-| `latent_m2_header_category1_change_keeps_details_consistent` | Changing the category1 of a header with details is refused (`Category1HasDetails`); header and details stay consistent (latent-audit M2) | src/services/latent_audit/transaction.rs | 297 |
-| `latent_m2_header_without_details_can_change_category1` | A header without details can still change its category1 (latent-audit M2) | src/services/latent_audit/transaction.rs | 339 |
-| `latent_m2_detail_category1_must_match_header` | A detail cannot be added or edited with a category1 other than its header's (latent-audit M2) | src/services/latent_audit/transaction.rs | 363 |
-| `latent_m9_restore_without_journal_is_rejected` | Rollback without the change journal next to the backup is rejected and changes nothing (latent-audit M9) | src/services/latent_audit/transaction.rs | 451 |
-| `latent_l4_restore_detaches_backup_when_update_fails` | A failed rollback leaves no `recalc_backup` attached (resolved by M9: rollback no longer ATTACHes the backup) (latent-audit L4) | src/services/latent_audit/transaction.rs | 657 |
-| `latent_m9_back_to_back_recalcs_keep_separate_journals` | Two recalc runs in quick succession get separate backups / journals, so the first stays restorable (latent-audit M9) | src/services/latent_audit/transaction.rs | 452 |
-| `latent_l2_save_header_rejects_foreign_shop_id` | Saving a header with another user's SHOP_ID is rejected (latent-audit L2) | src/services/latent_audit/transaction.rs | 512 |
-| `latent_l2_update_header_rejects_foreign_shop_id` | Updating a header to another user's SHOP_ID is rejected (latent-audit L2) | src/services/latent_audit/transaction.rs | 531 |
-| `latent_l2_add_detail_rejects_foreign_product_id` | Adding a detail with another user's PRODUCT_ID is rejected (latent-audit L2) | src/services/latent_audit/transaction.rs | 554 |
-| `latent_l2_update_detail_rejects_foreign_product_id` | Updating a detail to another user's PRODUCT_ID is rejected (latent-audit L2) | src/services/latent_audit/transaction.rs | 583 |
-| `latent_l2_header_with_info_does_not_leak_foreign_shop_name` | Header-with-info does not expose another user's shop name (SHOPS JOIN scoped to USER_ID) (latent-audit L2) | src/services/latent_audit/transaction.rs | 616 |
-| `latent_l8_save_header_rejects_malformed_datetime` | Saving a header with a malformed / impossible datetime is rejected (latent-audit L8) | src/services/latent_audit/transaction.rs | 752 |
-| `latent_l8_update_header_rejects_malformed_datetime` | Updating a header with a malformed / impossible datetime is rejected (latent-audit L8) | src/services/latent_audit/transaction.rs | 766 |
-| `latent_l3_failed_detail_update_rolls_back_memo_change` | A detail update that fails rolls back its memo change too (memo handling runs in the same transaction) (latent-audit L3) | src/services/latent_audit/transaction.rs | 674 |
-| `latent_l3_in_place_memo_update_is_trimmed` | An in-place memo update stores the trimmed text, matching memo dedup (latent-audit L3) | src/services/latent_audit/transaction.rs | 702 |
+| `test_save_transaction_header_with_tax_excluded` | Save tax-excluded transaction header | src/services/transaction.rs | 2436 |
+| `test_save_transaction_header_with_tax_included` | Save tax-included transaction header | src/services/transaction.rs | 2469 |
+| `test_update_transaction_header_tax_type` | Update transaction header tax type | src/services/transaction.rs | 2501 |
+| `test_default_tax_type_is_excluded` | Verify default tax type is excluded | src/services/transaction.rs | 2545 |
+| `test_tax_type_validation_values` | Verify valid tax type values | src/services/transaction.rs | 2570 |
+| `test_get_transactions_end_date_includes_boundary_day` | End-date filter must include same-day timestamps (bare 'YYYY-MM-DD' anchored to 23:59:59) | src/services/transaction.rs | 3957 |
+| `test_get_transactions_keyword_matches_header_and_detail_memo` | Keyword must substring-match memo text on both header and detail rows | src/services/transaction.rs | 4031 |
+| `test_update_detail_memo_does_not_corrupt_shared_header_memo` | Detail memo edit must not clobber header memo sharing MEMO_ID | src/services/transaction.rs | 4409 |
+| `test_delete_detail_preserves_memo_still_referenced_by_header` | Detail delete must keep memo row when header still references it | src/services/transaction.rs | 4443 |
+| `test_update_detail_memo_updates_in_place_when_not_shared` | Solo-referenced memo still updates in place | src/services/transaction.rs | 4469 |
+| `test_delete_detail_removes_orphaned_memo` | Solo-referenced memo is deleted when detail removed | src/services/transaction.rs | 4499 |
+| `test_clear_detail_memo_does_not_delete_memo_still_used_by_header` | Clearing shared detail memo must not delete memo row used by header | src/services/transaction.rs | 4531 |
+| `test_update_detail_memo_does_not_corrupt_recurring_rule_memo` | Detail memo edit must not overwrite memo shared with a recurring rule | src/services/transaction.rs | 4585 |
+| `test_delete_detail_preserves_memo_still_referenced_by_recurring_rule` | Detail delete must keep memo row still referenced by a recurring rule | src/services/transaction.rs | 4630 |
+| `test_clear_detail_memo_succeeds_under_foreign_keys_on` | Clearing a detail memo must not violate the MEMOS foreign key | src/services/transaction.rs | 4668 |
+| `test_add_detail_rejects_foreign_transaction_id` | Adding a detail against another user's transaction_id must return NotFound (Fable-5 #12) | src/services/transaction.rs | 4707 |
+| `test_add_detail_rejects_nonexistent_transaction_id` | Adding a detail against a missing transaction_id must return NotFound (Fable-5 #12) | src/services/transaction.rs | 4740 |
+| `not_found_maps_to_not_found_code_with_transaction_entity` | TransactionError::NotFound maps to ApiError::not_found("transaction") (PR2b) | src/services/transaction.rs | 4923 |
+| `validation_preserves_message_and_omits_entity` | TransactionError::ValidationError maps to ApiError::CODE_VALIDATION with the message preserved (PR2b) | src/services/transaction.rs | 4930 |
+| `database_error_maps_to_database_code` | TransactionError::DatabaseError maps to ApiError::CODE_DATABASE (PR2b) | src/services/transaction.rs | 4941 |
+| `field_needle_message_survives_conversion_for_frontend_routing` | Two field needles (`"Item name must be"` / `"Memo must be"`) survive at the head of the wire message so the frontend `startsWith` routing keeps working (PR2b) | src/services/transaction.rs | 4962 |
+| `test_find_matching_pattern_preserves_user_half_up_when_settings_match` | `HALF_UP + EXCLUDED` stored on a round-cent receipt (500円 × 10% = 550円) survives bulk recalc instead of being silently downgraded to FLOOR (Fable-5 #2) | src/services/transaction.rs | 2185 |
+| `test_find_matching_pattern_preserves_user_ceil_when_settings_match` | Same guarantee for `UP + EXCLUDED` (Fable-5 #2) | src/services/transaction.rs | 2202 |
+| `test_find_matching_pattern_falls_back_to_priority_when_preferred_mismatches` | When the stored settings do not reproduce the total, fall back to the priority-ordered PATTERNS scan (Fable-5 #2) | src/services/transaction.rs | 2219 |
+| `test_find_matching_pattern_returns_none_when_no_pattern_fits` | No combination reproduces the target → `None`, caller overwrites TOTAL_AMOUNT instead of the setting columns (Fable-5 #2) | src/services/transaction.rs | 2245 |
+| `test_save_header_rejects_invalid_tax_included_type` | `save_transaction_header` rejects `tax_included_type` outside `{TAX_INCLUDED, TAX_EXCLUDED}` so a bogus value cannot survive `find_matching_pattern`'s preferred-first check (CodeRabbit on #125) | src/services/transaction.rs | 3524 |
+| `test_update_header_rejects_invalid_tax_included_type` | Same guard on the update entry point (CodeRabbit on #125) | src/services/transaction.rs | 3551 |
+| `test_save_header_rejects_transfer_from_equals_to` | `save_transaction_header` rejects TRANSFER with FROM == TO so a self-transfer cannot inflate the dashboard balance (Fable-5 #20) | src/services/transaction.rs | 3582 |
+| `test_update_header_rejects_transfer_from_equals_to` | Same guard on the update entry point (Fable-5 #20) | src/services/transaction.rs | 3610 |
+| `test_save_header_failure_rolls_back_memo_insert_in_same_tx` | HEADER insert failure inside the tx (via a local `RAISE(FAIL)` trigger) rolls the MEMO insert back too — MEMOS stays empty (Fable-5 #6) | src/services/transaction.rs | 3645 |
+| `test_save_header_dedupes_memo_text_across_multiple_saves` | Two saves with the same memo body land on one MEMOS row and share the MEMO_ID (dedup side effect of the tx-based helper reuse, Fable-5 #6) | src/services/transaction.rs | 3709 |
+| `test_add_detail_dedupes_memo_text_across_multiple_adds` | `add_transaction_detail` reuses the existing MEMOS row when the memo text already exists for the user — no duplicate row, and both details share one MEMO_ID (Fable-5 #7) | src/services/transaction.rs | 4765 |
+| `test_add_detail_reuses_memo_shared_with_header` | An add whose memo text matches the parent header's MEMO_ID reuses that MEMO_ID so the "shared memo" update path is reachable from adds too (Fable-5 #7) | src/services/transaction.rs | 4809 |
+| `test_add_detail_failure_rolls_back_memo_insert_in_same_tx` | An FK failure inside the DETAIL_INSERT (missing `(USER_ID, CATEGORY1_CODE) → CATEGORY1`) rolls the MEMO insert back too — MEMOS stays empty (Fable-5 #7) | src/services/transaction.rs | 4875 |
+| `transfer_same_account_maps_to_stable_wire_code_and_omits_entity` | `TransactionError::TransferSameAccount` maps to `ApiError { code: "transfer_same_account", entity: None }` — pins the wire contract so a future refactor cannot silently downgrade to the generic `validation` fallback (CodeRabbit on #127) | src/services/transaction.rs | 4954 |
+| `latent_h5_included_header_total_sums_amount_including_tax` | Tax-included header total = SUM(AMOUNT_INCLUDING_TAX) (latent-audit H5) | src/services/latent_audit/transaction.rs | 201 |
+| `latent_h5_compute_recommended_total_honours_included_header` | `compute_recommended_total` honours the header TAX_INCLUDED_TYPE (latent-audit H5) | src/services/latent_audit/transaction.rs | 213 |
+| `latent_h5_bulk_recalc_keeps_consistent_included_header` | Bulk recalc leaves a consistent tax-included header untouched (latent-audit H5) | src/services/latent_audit/transaction.rs | 234 |
+| `latent_l1_small_detail_with_zero_tax_is_still_grossed_up` | Small rows whose tax rounds to 0 are still grossed up per rate (latent-audit L1) | src/services/latent_audit/transaction.rs | 261 |
+| `test_calculate_recommended_total_uses_amount_not_amount_including_tax` | Tax-excluded total grosses up AMOUNT regardless of AMOUNT_INCLUDING_TAX (AMOUNT is always tax-excluded) | src/services/transaction.rs | 2088 |
+| `test_calculate_recommended_total_with_settings_included_derives_missing_rows` | Tax-included total derives NULL / 0-sentinel rows from AMOUNT + TAX_RATE | src/services/transaction.rs | 2141 |
+| `latent_h4_bulk_recalc_keeps_total_without_details` | Bulk recalc leaves a header without details untouched (latent-audit H4) | src/services/latent_audit/transaction.rs | 180 |
+| `latent_h4_compute_recommended_total_is_none_without_details` | `compute_recommended_total` returns None for a header without details (latent-audit H4) | src/services/latent_audit/transaction.rs | 870 |
+| `latent_m1_update_header_persists_is_scheduled` | Header update persists the IS_SCHEDULED checkbox (latent-audit M1) | src/services/latent_audit/transaction.rs | 276 |
+| `latent_m1_update_header_without_flag_keeps_is_scheduled` | Header update with `is_scheduled: None` keeps the stored flag (latent-audit M1) | src/services/latent_audit/transaction.rs | 884 |
+| `latent_m1_invalid_is_scheduled_is_rejected` | Save and update reject an IS_SCHEDULED value other than 0/1 (latent-audit M1) | src/services/latent_audit/transaction.rs | 903 |
+| `latent_m9_restore_reverts_tax_settings_changed_by_recalc` | Rollback restores the tax settings the recalc changed, not only TOTAL_AMOUNT (latent-audit M9) | src/services/latent_audit/transaction.rs | 414 |
+| `latent_m9_restore_keeps_edits_made_after_recalc` | Rollback leaves a header the recalc did not change (and the user edited afterwards) alone (latent-audit M9) | src/services/latent_audit/transaction.rs | 453 |
+| `latent_m9_restore_keeps_edit_on_a_header_the_recalc_changed` | A header the recalc changed and the user then edited keeps the edit (latent-audit M9) | src/services/latent_audit/transaction.rs | 487 |
+| `latent_m2_header_category1_change_keeps_details_consistent` | Changing the category1 of a header with details is refused (`Category1HasDetails`); header and details stay consistent (latent-audit M2) | src/services/latent_audit/transaction.rs | 300 |
+| `latent_m2_header_without_details_can_change_category1` | A header without details can still change its category1 (latent-audit M2) | src/services/latent_audit/transaction.rs | 342 |
+| `latent_m2_detail_category1_must_match_header` | A detail cannot be added or edited with a category1 other than its header's (latent-audit M2) | src/services/latent_audit/transaction.rs | 366 |
+| `latent_m9_restore_without_journal_is_rejected` | Rollback without the change journal next to the backup is rejected and changes nothing (latent-audit M9) | src/services/latent_audit/transaction.rs | 556 |
+| `latent_l4_restore_detaches_backup_when_update_fails` | A failed rollback leaves no `recalc_backup` attached (resolved by M9: rollback no longer ATTACHes the backup) (latent-audit L4) | src/services/latent_audit/transaction.rs | 805 |
+| `latent_m9_back_to_back_recalcs_keep_separate_journals` | Two recalc runs in quick succession get separate backups / journals, so the first stays restorable (latent-audit M9) | src/services/latent_audit/transaction.rs | 525 |
+| `latent_l2_save_header_rejects_foreign_shop_id` | Saving a header with another user's SHOP_ID is rejected (latent-audit L2) | src/services/latent_audit/transaction.rs | 585 |
+| `latent_l2_update_header_rejects_foreign_shop_id` | Updating a header to another user's SHOP_ID is rejected (latent-audit L2) | src/services/latent_audit/transaction.rs | 604 |
+| `latent_l2_add_detail_rejects_foreign_product_id` | Adding a detail with another user's PRODUCT_ID is rejected (latent-audit L2) | src/services/latent_audit/transaction.rs | 627 |
+| `latent_l2_update_detail_rejects_foreign_product_id` | Updating a detail to another user's PRODUCT_ID is rejected (latent-audit L2) | src/services/latent_audit/transaction.rs | 656 |
+| `latent_l2_header_with_info_does_not_leak_foreign_shop_name` | Header-with-info does not expose another user's shop name (SHOPS JOIN scoped to USER_ID) (latent-audit L2) | src/services/latent_audit/transaction.rs | 705 |
+| `latent_l8_save_header_rejects_malformed_datetime` | Saving a header with a malformed / impossible datetime is rejected (latent-audit L8) | src/services/latent_audit/transaction.rs | 839 |
+| `latent_l8_update_header_rejects_malformed_datetime` | Updating a header with a malformed / impossible datetime is rejected (latent-audit L8) | src/services/latent_audit/transaction.rs | 853 |
+| `latent_l3_failed_detail_update_rolls_back_memo_change` | A detail update that fails rolls back its memo change too (memo handling runs in the same transaction) (latent-audit L3) | src/services/latent_audit/transaction.rs | 747 |
+| `latent_l3_in_place_memo_update_is_trimmed` | An in-place memo update stores the trimmed text, matching memo dedup (latent-audit L3) | src/services/latent_audit/transaction.rs | 775 |
 
 **Total**: 64 tests
 
@@ -607,29 +606,27 @@ Aggregation service tests.
 
 | Test Function | Description | File | Line |
 |---------------|-------------|------|------|
-| `test_monthly_aggregation_current_month` | Monthly aggregation for current month | src/services/aggregation.rs | 1554 |
-| `test_monthly_aggregation_next_month` | Monthly aggregation for next month | src/services/aggregation.rs | 1563 |
-| `test_detail_query_grosses_up_null_tax_included_row` | NULL AMOUNT_INCLUDING_TAX at TAX_RATE>0 is grossed up, not dropped (Fable-5 #3) | src/services/aggregation.rs | 2581 |
-| `test_detail_query_grosses_up_zero_tax_included_row` | AMOUNT_INCLUDING_TAX=0 (frontend empty-input sentinel) is treated as pre-tax (Fable-5 #3) | src/services/aggregation.rs | 2610 |
-| `test_detail_query_included_header_derives_null_tax_included_row` | Tax-included header + legacy `AMOUNT_INCLUDING_TAX = NULL` row derives the tax-included price from the tax-excluded AMOUNT (supersedes Fable-5 #3 reading; latent-audit H5) | src/services/aggregation.rs | 2741 |
-| `test_detail_query_included_header_derives_zero_tax_included_row` | Same fallback for the `AMOUNT_INCLUDING_TAX = 0` empty-input sentinel under a tax-included header (latent-audit H5) | src/services/aggregation.rs | 2770 |
-| `test_detail_query_matches_header_query_for_included_ledger` | Header-dim vs detail-dim aggregation agree on the same tax-included transaction (Fable-5 #4) | src/services/aggregation.rs | 2805 |
-| `test_detail_query_avg_matches_total_over_count_with_mixed_rates` | avg × count == total holds for a mixed-rate transaction (Fable-5 #4) | src/services/aggregation.rs | 2774 |
-| `test_detail_query_avg_multi_transaction_arithmetic` | avg = total / txn_count over 2 transactions (Fable-5 #4) | src/services/aggregation.rs | 2811 |
-| `test_detail_query_binds_category_filter_no_injection` | End-to-end proof that a category filter's value is bound, not inlined: an `EXPENSE' OR '1'='1` payload returns 0 rows (PR5, Fable-5 #25) | src/services/aggregation.rs | 2846 |
-| `test_category_filter_category2_targets_detail_column` | Category2 filter now targets the existent `td.CATEGORY2_CODE` (detail scope) instead of the non-existent `th.CATEGORY2_CODE` (PR6, Fable-5 #17) | src/services/aggregation.rs | 2902 |
-| `test_category_filter_category3_targets_detail_column` | Category3 filter targets `td.CATEGORY2/3_CODE` (PR6, Fable-5 #17) | src/services/aggregation.rs | 2918 |
-| `test_account_query_applies_category_filter_to_all_union_branches` | Account UNION ALL query now applies the category filter to all 4 branches and binds the value 4x — regression pin for the silent drop (PR6, Fable-5 #18) | src/services/aggregation.rs | 2943 |
-| `test_build_query_shop_uses_empty_string_fallback_no_hardcoded_ja` | Shop grouping returns `COALESCE(s.SHOP_NAME, '')` sentinel, no hardcoded Japanese `'指定なし'` (Fable-5 #22) | src/services/aggregation.rs | 2024 |
-| `test_build_query_product_uses_empty_string_fallback_no_hardcoded_ja` | Product grouping returns `COALESCE(p.PRODUCT_NAME, '')` sentinel, no hardcoded Japanese `'指定なし'` (Fable-5 #22) | src/services/aggregation.rs | 2044 |
-| `test_build_query_account_uses_empty_string_for_none_no_hardcoded_ja` | Account grouping maps `account_code = 'NONE'` to empty string and returns `COALESCE(a.ACCOUNT_NAME, '')` for missing rows — no hardcoded Japanese `'指定なし'` (Fable-5 #22) | src/services/aggregation.rs | 2064 |
-| `latent_h1_category2_null_code_goes_to_unspecified_group` | Category2 grouping with a NULL CATEGORY2_CODE detail succeeds and lands in the unspecified ('') group (latent-audit H1 regression guard) | src/services/latent_audit/aggregation.rs | 240 |
-| `latent_h1_category3_null_code_goes_to_unspecified_group` | Category3 grouping with NULL CATEGORY2/3 codes succeeds and lands in the unspecified group (latent-audit H1 regression guard) | src/services/latent_audit/aggregation.rs | 256 |
-| `latent_h1_category3_only_code3_null_does_not_fail` | Category3 grouping with only CATEGORY3_CODE NULL does not fail (latent-audit H1 regression guard) | src/services/latent_audit/aggregation.rs | 271 |
-| `latent_h5_included_header_category2_uses_amount_including_tax` | Category2 aggregation of a tax-included header uses AMOUNT_INCLUDING_TAX (latent-audit H5) | src/services/latent_audit/aggregation.rs | 438 |
-| `latent_l11_weekly_week1_covers_jan1_and_matches_iso` | Week 1 covers January 1st and every week number matches ISO 8601 (the frontend's getWeekNumber) (latent-audit L11) | src/services/latent_audit/aggregation.rs | 369 |
-| `latent_l11_weekly_every_day_of_year_is_covered` | Every day of the year falls in some week 1..=53, for Monday and Sunday starts (latent-audit L11) | src/services/latent_audit/aggregation.rs | 404 |
-| `latent_l11_week_53_and_sunday_start_follow_iso_weeks` | Week 53 is rejected in a 52-week year; a Sunday-start week begins the day before the ISO week (latent-audit L11) | src/services/latent_audit/aggregation.rs | 425 |
+| `test_detail_query_grosses_up_null_tax_included_row` | NULL AMOUNT_INCLUDING_TAX at TAX_RATE>0 is grossed up, not dropped (Fable-5 #3) | src/services/aggregation.rs | 2752 |
+| `test_detail_query_grosses_up_zero_tax_included_row` | AMOUNT_INCLUDING_TAX=0 (frontend empty-input sentinel) is treated as pre-tax (Fable-5 #3) | src/services/aggregation.rs | 2781 |
+| `test_detail_query_included_header_derives_null_tax_included_row` | Tax-included header + legacy `AMOUNT_INCLUDING_TAX = NULL` row derives the tax-included price from the tax-excluded AMOUNT (supersedes Fable-5 #3 reading; latent-audit H5) | src/services/aggregation.rs | 2813 |
+| `test_detail_query_included_header_derives_zero_tax_included_row` | Same fallback for the `AMOUNT_INCLUDING_TAX = 0` empty-input sentinel under a tax-included header (latent-audit H5) | src/services/aggregation.rs | 2842 |
+| `test_detail_query_matches_header_query_for_included_ledger` | Header-dim vs detail-dim aggregation agree on the same tax-included transaction (Fable-5 #4) | src/services/aggregation.rs | 2877 |
+| `test_detail_query_avg_matches_total_over_count_with_mixed_rates` | avg × count == total holds for a mixed-rate transaction (Fable-5 #4) | src/services/aggregation.rs | 2925 |
+| `test_detail_query_avg_multi_transaction_arithmetic` | avg = total / txn_count over 2 transactions (Fable-5 #4) | src/services/aggregation.rs | 2962 |
+| `test_detail_query_binds_category_filter_no_injection` | End-to-end proof that a category filter's value is bound, not inlined: an `EXPENSE' OR '1'='1` payload returns 0 rows (PR5, Fable-5 #25) | src/services/aggregation.rs | 2997 |
+| `test_category_filter_category2_targets_detail_column` | Category2 filter now targets the existent `td.CATEGORY2_CODE` (detail scope) instead of the non-existent `th.CATEGORY2_CODE` (PR6, Fable-5 #17) | src/services/aggregation.rs | 3053 |
+| `test_category_filter_category3_targets_detail_column` | Category3 filter targets `td.CATEGORY2/3_CODE` (PR6, Fable-5 #17) | src/services/aggregation.rs | 3069 |
+| `test_account_query_applies_category_filter_to_all_union_branches` | Account UNION ALL query now applies the category filter to all 4 branches and binds the value 4x — regression pin for the silent drop (PR6, Fable-5 #18) | src/services/aggregation.rs | 3094 |
+| `test_build_query_shop_uses_empty_string_fallback_no_hardcoded_ja` | Shop grouping returns `COALESCE(s.SHOP_NAME, '')` sentinel, no hardcoded Japanese `'指定なし'` (Fable-5 #22) | src/services/aggregation.rs | 2093 |
+| `test_build_query_product_uses_empty_string_fallback_no_hardcoded_ja` | Product grouping returns `COALESCE(p.PRODUCT_NAME, '')` sentinel, no hardcoded Japanese `'指定なし'` (Fable-5 #22) | src/services/aggregation.rs | 2113 |
+| `test_build_query_account_uses_empty_string_for_none_no_hardcoded_ja` | Account grouping maps `account_code = 'NONE'` to empty string and returns `COALESCE(a.ACCOUNT_NAME, '')` for missing rows — no hardcoded Japanese `'指定なし'` (Fable-5 #22) | src/services/aggregation.rs | 2133 |
+| `latent_h1_category2_null_code_goes_to_unspecified_group` | Category2 grouping with a NULL CATEGORY2_CODE detail succeeds and lands in the unspecified ('') group (latent-audit H1 regression guard) | src/services/latent_audit/aggregation.rs | 246 |
+| `latent_h1_category3_null_code_goes_to_unspecified_group` | Category3 grouping with NULL CATEGORY2/3 codes succeeds and lands in the unspecified group (latent-audit H1 regression guard) | src/services/latent_audit/aggregation.rs | 262 |
+| `latent_h1_category3_only_code3_null_does_not_fail` | Category3 grouping with only CATEGORY3_CODE NULL does not fail (latent-audit H1 regression guard) | src/services/latent_audit/aggregation.rs | 277 |
+| `latent_h5_included_header_category2_uses_amount_including_tax` | Category2 aggregation of a tax-included header uses AMOUNT_INCLUDING_TAX (latent-audit H5) | src/services/latent_audit/aggregation.rs | 495 |
+| `latent_l11_weekly_week1_covers_jan1_and_matches_iso` | Week 1 covers January 1st and every week number matches ISO 8601 (the frontend's getWeekNumber) (latent-audit L11) | src/services/latent_audit/aggregation.rs | 408 |
+| `latent_l11_weekly_every_day_of_year_is_covered` | Every day of the year falls in some week 1..=53, for Monday and Sunday starts (latent-audit L11) | src/services/latent_audit/aggregation.rs | 443 |
+| `latent_l11_week_53_and_sunday_start_follow_iso_weeks` | Week 53 is rejected in a 52-week year; a Sunday-start week begins the day before the ISO week (latent-audit L11) | src/services/latent_audit/aggregation.rs | 464 |
 | `latent_m10_detailless_header_counted_in_detail_groupings` | A header without details is counted in Category2 / Category3 / Product, so each sums to the Category1 total (latent-audit M10) | src/services/latent_audit/aggregation.rs | 300 |
 | `latent_m10_detailless_group_key_and_name` | The detail-less group is keyed `<category1>/__NO_DETAILS__` (Product: `__NO_DETAILS__`) and named by `aggregation.no_details` (latent-audit M10) | src/services/latent_audit/aggregation.rs | 330 |
 | `latent_l9_category2_rounding_drift_is_bounded` | Accepted spec: Category2 groups of one split transaction may differ from Category1 by up to (groups − 1) yen per tax rate (latent-audit L9) | src/services/latent_audit/aggregation.rs | 374 |
@@ -637,7 +634,7 @@ Aggregation service tests.
 | `latent_scan2_a6_category3_missing_code_keeps_category1_in_key` | Same on the Category3 axis: a missing CATEGORY2/3 code keeps the key's category1 prefix (latent-audit scan2-A6) | src/services/latent_audit/aggregation.rs | 615 |
 | `latent_scan2_a5_weekly_by_date_edge_dates_return_err_not_panic` | `weekly_aggregation_by_date` returns `Err` instead of panicking when the week runs past chrono's date range (`NaiveDate::MAX` with a Monday start, `NaiveDate::MIN` with a Sunday start; reachable by direct invoke with a signed year such as `+262142-12-31`) (latent-audit scan2-A5) | src/services/latent_audit/aggregation.rs | 634 |
 
-**Total**: 29 tests
+**Total**: 27 tests
 
 ### services/period.rs
 
@@ -657,15 +654,15 @@ Session management service tests.
 
 | Test Function | Description | File | Line |
 |---------------|-------------|------|------|
-| `test_session_state_initialization` | Session state initialization | src/services/session.rs | 92 |
-| `test_set_and_get_user` | Set and get user info | src/services/session.rs | 101 |
-| `test_clear_user` | Clear user info | src/services/session.rs | 119 |
-| `test_set_and_get_source_screen` | Set and get source screen | src/services/session.rs | 136 |
-| `test_clear_source_screen` | Clear source screen | src/services/session.rs | 144 |
-| `test_set_and_get_category1_code` | Set and get category1 code | src/services/session.rs | 155 |
-| `test_clear_category1_code` | Clear category1 code | src/services/session.rs | 163 |
-| `test_clear_all` | Clear all session info | src/services/session.rs | 174 |
-| `test_multiple_session_operations` | Multiple session operations | src/services/session.rs | 199 |
+| `test_session_state_initialization` | Session state initialization | src/services/session.rs | 98 |
+| `test_set_and_get_user` | Set and get user info | src/services/session.rs | 107 |
+| `test_clear_user` | Clear user info | src/services/session.rs | 125 |
+| `test_set_and_get_source_screen` | Set and get source screen | src/services/session.rs | 142 |
+| `test_clear_source_screen` | Clear source screen | src/services/session.rs | 150 |
+| `test_set_and_get_category1_code` | Set and get category1 code | src/services/session.rs | 161 |
+| `test_clear_category1_code` | Clear category1 code | src/services/session.rs | 169 |
+| `test_clear_all` | Clear all session info | src/services/session.rs | 180 |
+| `test_multiple_session_operations` | Multiple session operations | src/services/session.rs | 205 |
 
 **Total**: 9 tests
 
@@ -675,14 +672,14 @@ Internationalization (i18n) service tests.
 
 | Test Function | Description | File | Line |
 |---------------|-------------|------|------|
-| `test_get_resource` | Test resource retrieval | src/services/i18n.rs | 220 |
-| `test_get_with_params` | Retrieve resource with parameters | src/services/i18n.rs | 232 |
-| `test_fallback_to_default` | Fallback to default language | src/services/i18n.rs | 241 |
-| `test_get_by_category` | Retrieve resource by category | src/services/i18n.rs | 251 |
-| `test_error_messages_exist` | Verify error messages exist | src/services/i18n.rs | 261 |
-| `test_language_and_font_error_messages_exist` | Verify language/font error messages exist | src/services/i18n.rs | 285 |
-| `test_validation_messages_exist` | Verify validation messages exist | src/services/i18n.rs | 307 |
-| `test_all_error_messages_have_both_languages` | Verify all error messages exist in both languages | src/services/i18n.rs | 322 |
+| `test_get_resource` | Test resource retrieval | src/services/i18n.rs | 210 |
+| `test_get_with_params` | Retrieve resource with parameters | src/services/i18n.rs | 222 |
+| `test_fallback_to_default` | Fallback to default language | src/services/i18n.rs | 231 |
+| `test_get_by_category` | Retrieve resource by category | src/services/i18n.rs | 241 |
+| `test_error_messages_exist` | Verify error messages exist | src/services/i18n.rs | 251 |
+| `test_language_and_font_error_messages_exist` | Verify language/font error messages exist | src/services/i18n.rs | 275 |
+| `test_validation_messages_exist` | Verify validation messages exist | src/services/i18n.rs | 297 |
+| `test_all_error_messages_have_both_languages` | Verify all error messages exist in both languages | src/services/i18n.rs | 312 |
 
 **Total**: 8 tests
 
@@ -692,11 +689,11 @@ Recurring transaction rule service tests.
 
 | Test Function | Description | File | Line |
 |---------------|-------------|------|------|
-| `test_delete_rule_returns_not_found_for_missing` | Delete of a missing rule returns NotFound instead of empty-commit fake success (Fable-5 #8) | src/services/recurring.rs | 2139 |
-| `not_found_maps_to_not_found_code_with_recurring_rule_entity` | RecurringError::NotFound maps to ApiError::not_found("recurring rule") (PR2a) | src/services/recurring.rs | 2169 |
-| `validation_preserves_message_and_omits_entity` | RecurringError::Validation maps to ApiError::CODE_VALIDATION with the message preserved (PR2a) | src/services/recurring.rs | 2176 |
-| `database_error_maps_to_database_code` | RecurringError::Database maps to ApiError::CODE_DATABASE (PR2a) | src/services/recurring.rs | 2187 |
-| `field_needle_message_survives_conversion_for_frontend_routing` | Four field needles (`"Rule name must be"` etc.) survive at the head of the wire message so the frontend `startsWith` routing keeps working (PR2a) | src/services/recurring.rs | 2194 |
+| `test_delete_rule_returns_not_found_for_missing` | Delete of a missing rule returns NotFound instead of empty-commit fake success (Fable-5 #8) | src/services/recurring.rs | 2148 |
+| `not_found_maps_to_not_found_code_with_recurring_rule_entity` | RecurringError::NotFound maps to ApiError::not_found("recurring rule") (PR2a) | src/services/recurring.rs | 2178 |
+| `validation_preserves_message_and_omits_entity` | RecurringError::Validation maps to ApiError::CODE_VALIDATION with the message preserved (PR2a) | src/services/recurring.rs | 2185 |
+| `database_error_maps_to_database_code` | RecurringError::Database maps to ApiError::CODE_DATABASE (PR2a) | src/services/recurring.rs | 2196 |
+| `field_needle_message_survives_conversion_for_frontend_routing` | Four field needles (`"Rule name must be"` etc.) survive at the head of the wire message so the frontend `startsWith` routing keeps working (PR2a) | src/services/recurring.rs | 2203 |
 | `latent_h2_cascade_delete_keeps_confirmed_headers` | Cascade rule delete removes only still-scheduled occurrences; confirmed (IS_SCHEDULED = 0) headers survive, detached (latent-audit H2) | src/services/latent_audit/recurring.rs | 195 |
 | `latent_m16_transfer_same_account_rejected` | Creating a TRANSFER rule with from == to account is rejected (latent-audit M16) | src/services/latent_audit/recurring.rs | 337 |
 | `latent_m16_tax_rounding_type_out_of_range_rejected` | Out-of-range tax rounding type is rejected on rule creation (latent-audit M16) | src/services/latent_audit/recurring.rs | 359 |
@@ -729,12 +726,12 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 
 | Test Function | Description | File | Line |
 |---------------|-------------|------|------|
-| `normalize_language_accepts_names_and_codes` | Accept language names and codes (en/English/ja/日本語/Japanese) | src/lib.rs | 2733 |
-| `normalize_language_rejects_unknown_values` | Reject unknown language values | src/lib.rs | 2742 |
-| `normalize_font_size_accepts_keywords_and_percentages` | Accept size keywords and percentages in 50-200 | src/lib.rs | 2748 |
-| `normalize_font_size_rejects_out_of_range_and_garbage` | Reject out-of-range percentages and invalid strings | src/lib.rs | 2757 |
-| `monthly_bounds_with_shift_rejects_out_of_range_month` | month=0/13/100 short-circuits to Err before reaching `services::period::end_of_month` — prevents the backend thread crash (PR6, Fable-5 #22) | src/lib.rs | 2695 |
-| `monthly_bounds_with_shift_accepts_boundary_months` | month=1/12 boundaries still accepted (PR6, Fable-5 #22) | src/lib.rs | 2722 |
+| `normalize_language_accepts_names_and_codes` | Accept language names and codes (en/English/ja/日本語/Japanese) | src/lib.rs | 2554 |
+| `normalize_language_rejects_unknown_values` | Reject unknown language values | src/lib.rs | 2563 |
+| `normalize_font_size_accepts_keywords_and_percentages` | Accept size keywords and percentages in 50-200 | src/lib.rs | 2569 |
+| `normalize_font_size_rejects_out_of_range_and_garbage` | Reject out-of-range percentages and invalid strings | src/lib.rs | 2578 |
+| `monthly_bounds_with_shift_rejects_out_of_range_month` | month=0/13/100 short-circuits to Err before reaching `services::period::end_of_month` — prevents the backend thread crash (PR6, Fable-5 #22) | src/lib.rs | 2592 |
+| `monthly_bounds_with_shift_accepts_boundary_months` | month=1/12 boundaries still accepted (PR6, Fable-5 #22) | src/lib.rs | 2619 |
 
 **Total**: 6 tests
 
@@ -747,7 +744,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **438** |
+| **Inline Tests** | **435** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -762,16 +759,16 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/account.rs | 19 |
 | services/category.rs | 45 |
 | services/manufacturer.rs | 17 |
-| services/product.rs | 20 |
+| services/product.rs | 19 |
 | services/shop.rs | 19 |
 | services/transaction.rs | 64 |
-| services/aggregation.rs | 29 |
+| services/aggregation.rs | 27 |
 | services/period.rs | 3 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 28 |
 | lib.rs | 6 |
-| **Total** | **461** |
+| **Total** | **458** |
 
 ---
 
