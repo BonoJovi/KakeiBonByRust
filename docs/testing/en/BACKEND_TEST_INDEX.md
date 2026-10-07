@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-10-07 JST  
-**Total Tests**: 450 (delta-tracked; the full authoritative count from `cargo test --lib` is 716, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 454 (delta-tracked; the full authoritative count from `cargo test --lib` is 720, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -394,31 +394,31 @@ Category management service tests (3-tier category CRUD). Internal `CategoryErro
 
 | Test Function | Description | File | Line |
 |---------------|-------------|------|------|
-| `test_populate_default_categories` | Register default categories | src/services/category.rs | 1087 |
-| `test_get_category1_list` | Get major category list | src/services/category.rs | 1155 |
-| `test_add_category2` | Add medium category | src/services/category.rs | 1198 |
-| `test_add_category2_duplicate_name` | Medium category duplicate name error | src/services/category.rs | 1234 |
-| `test_add_category3` | Add minor category | src/services/category.rs | 1267 |
-| `test_add_category3_duplicate_name` | Minor category duplicate name error | src/services/category.rs | 1301 |
-| `test_move_category2_order` | Change medium category display order | src/services/category.rs | 1342 |
-| `test_move_category3_order` | Change minor category display order | src/services/category.rs | 1426 |
-| `test_update_category2` | Update medium category | src/services/category.rs | 1503 |
-| `test_update_category3` | Update minor category | src/services/category.rs | 1527 |
-| `test_update_category2_duplicate_name` | Medium category duplicate name update error | src/services/category.rs | 1552 |
-| `test_move_category2_boundary` | Medium category boundary value move test | src/services/category.rs | 1571 |
-| `test_get_category_for_edit` | Get category info for editing | src/services/category.rs | 1623 |
-| `test_get_category2_for_edit_returns_not_found_for_missing` | Missing CATEGORY2 edit fetch returns NotFound (Fable-5 #6) | src/services/category.rs | 1873 |
-| `test_get_category3_for_edit_returns_not_found_for_missing` | Missing CATEGORY3 edit fetch returns NotFound (Fable-5 #6) | src/services/category.rs | 1884 |
-| `test_disable_category2_returns_not_found_for_missing` | Missing CATEGORY2 disable returns NotFound (Fable-5 #7) | src/services/category.rs | 1899 |
-| `test_disable_category3_returns_not_found_for_missing` | Missing CATEGORY3 disable returns NotFound (Fable-5 #7) | src/services/category.rs | 1910 |
-| `test_disable_category2_succeeds_with_no_children` | Leaf CATEGORY2 disable succeeds (child sweep tolerates 0 rows) | src/services/category.rs | 1926 |
-| `not_found_maps_to_not_found_code_with_category_entity` | `CategoryError::NotFound` → `ApiError { code: "not_found", entity: "category" }` (Fable-5 #23) | src/services/category.rs | 2101 |
-| `duplicate_name_maps_to_duplicate_name_code_with_category_entity` | `CategoryError::DuplicateName(_)` → `ApiError { code: "duplicate_name", entity: "category" }` (Fable-5 #23) | src/services/category.rs | 2108 |
-| `validation_preserves_message_and_omits_entity` | `CategoryError::Validation(msg)` → `ApiError { code: "validation" }` with message preserved (Fable-5 #23) | src/services/category.rs | 2115 |
-| `database_error_maps_to_database_code` | `CategoryError::DatabaseError(_)` → `ApiError { code: "database" }` (Fable-5 #23) | src/services/category.rs | 2125 |
-| `test_get_category_tree_groups_children_under_parent` | Regression pin for the 3-flat-queries + HashMap grouping shape: cat1 → cat2 → cat3 parent/child pairing is preserved (PR11, Fable-5 #31) | src/services/category.rs | 2022 |
-| `test_get_category_tree_preserves_display_order` | Confirms that a `move_category2_up` reorder survives the flat-query regrouping (PR11, Fable-5 #31) | src/services/category.rs | 2077 |
-| `test_get_category_tree_all_includes_disabled_flags` | `get_category_tree_all` still includes disabled rows and their `is_disabled` fields; the visible-only `get_category_tree` filters them out (PR11, Fable-5 #31) | src/services/category.rs | 2106 |
+| `test_populate_default_categories` | Register default categories | src/services/category.rs | 1333 |
+| `test_get_category1_list` | Get major category list | src/services/category.rs | 1401 |
+| `test_add_category2` | Add medium category | src/services/category.rs | 1444 |
+| `test_add_category2_duplicate_name` | Medium category duplicate name error | src/services/category.rs | 1480 |
+| `test_add_category3` | Add minor category | src/services/category.rs | 1513 |
+| `test_add_category3_duplicate_name` | Minor category duplicate name error | src/services/category.rs | 1547 |
+| `test_move_category2_order` | Change medium category display order | src/services/category.rs | 1588 |
+| `test_move_category3_order` | Change minor category display order | src/services/category.rs | 1672 |
+| `test_update_category2` | Update medium category | src/services/category.rs | 1749 |
+| `test_update_category3` | Update minor category | src/services/category.rs | 1773 |
+| `test_update_category2_duplicate_name` | Medium category duplicate name update error | src/services/category.rs | 1798 |
+| `test_move_category2_boundary` | Medium category boundary value move test | src/services/category.rs | 1817 |
+| `test_get_category_for_edit` | Get category info for editing | src/services/category.rs | 1869 |
+| `test_get_category2_for_edit_returns_not_found_for_missing` | Missing CATEGORY2 edit fetch returns NotFound (Fable-5 #6) | src/services/category.rs | 1903 |
+| `test_get_category3_for_edit_returns_not_found_for_missing` | Missing CATEGORY3 edit fetch returns NotFound (Fable-5 #6) | src/services/category.rs | 1914 |
+| `test_disable_category2_returns_not_found_for_missing` | Missing CATEGORY2 disable returns NotFound (Fable-5 #7) | src/services/category.rs | 1929 |
+| `test_disable_category3_returns_not_found_for_missing` | Missing CATEGORY3 disable returns NotFound (Fable-5 #7) | src/services/category.rs | 1940 |
+| `test_disable_category2_succeeds_with_no_children` | Leaf CATEGORY2 disable succeeds (child sweep tolerates 0 rows) | src/services/category.rs | 1956 |
+| `not_found_maps_to_not_found_code_with_category_entity` | `CategoryError::NotFound` → `ApiError { code: "not_found", entity: "category" }` (Fable-5 #23) | src/services/category.rs | 2104 |
+| `duplicate_name_maps_to_duplicate_name_code_with_category_entity` | `CategoryError::DuplicateName(_)` → `ApiError { code: "duplicate_name", entity: "category" }` (Fable-5 #23) | src/services/category.rs | 2111 |
+| `validation_preserves_message_and_omits_entity` | `CategoryError::Validation(msg)` → `ApiError { code: "validation" }` with message preserved (Fable-5 #23) | src/services/category.rs | 2118 |
+| `database_error_maps_to_database_code` | `CategoryError::DatabaseError(_)` → `ApiError { code: "database" }` (Fable-5 #23) | src/services/category.rs | 2128 |
+| `test_get_category_tree_groups_children_under_parent` | Regression pin for the 3-flat-queries + HashMap grouping shape: cat1 → cat2 → cat3 parent/child pairing is preserved (PR11, Fable-5 #31) | src/services/category.rs | 2141 |
+| `test_get_category_tree_preserves_display_order` | Confirms that a `move_category2_up` reorder survives the flat-query regrouping (PR11, Fable-5 #31) | src/services/category.rs | 2196 |
+| `test_get_category_tree_all_includes_disabled_flags` | `get_category_tree_all` still includes disabled rows and their `is_disabled` fields; the visible-only `get_category_tree` filters them out (PR11, Fable-5 #31) | src/services/category.rs | 2225 |
 | `latent_m8_enable_category2_restores_cascaded_category3` | Showing a hidden CATEGORY2 again also re-enables the CATEGORY3 rows hiding it disabled (latent-audit M8) | src/services/latent_audit/category.rs | 83 |
 | `latent_l19_enable_missing_category2_returns_not_found` | Enabling a non-existent CATEGORY2 returns not_found (latent-audit L19, CATEGORY2 enable only) | src/services/latent_audit/category.rs | 223 |
 | `latent_m8_enable_already_enabled_category2_keeps_hidden_children` | Enabling an already enabled CATEGORY2 is a no-op that keeps a separately hidden CATEGORY3 hidden (latent-audit M8) | src/services/latent_audit/category.rs | 110 |
@@ -432,10 +432,14 @@ Category management service tests (3-tier category CRUD). Internal `CategoryErro
 | `latent_l20_add_category2_empty_category1_code_does_not_panic` | An empty CATEGORY1 code is rejected instead of panicking (latent-audit L20) | src/services/latent_audit/category.rs | 312 |
 | `latent_l20_add_category2_multibyte_category1_code_does_not_panic` | An unknown multibyte CATEGORY1 code is rejected instead of panicking (latent-audit L20) | src/services/latent_audit/category.rs | 323 |
 | `latent_l20_add_category3_multibyte_category1_code_does_not_panic` | Adding a CATEGORY3 under an unknown multibyte CATEGORY1 is rejected instead of panicking (latent-audit L20) | src/services/latent_audit/category.rs | 333 |
-| `latent_scan2_m3_detail_list_shows_renamed_category_names` | The transaction detail list shows the CATEGORY1 name and the renamed CATEGORY2 / CATEGORY3 names in the display language (ja and en), and the base names for a language with no i18n row (latent-audit scan2-M3) | src/services/latent_audit/category.rs | 456 |
-| `latent_scan2_m8_transaction_list_category1_follows_language` | The transaction list shows the CATEGORY1 name of the display language (支出 / Expense), and the base name for a language with no row (latent-audit scan2-M8) | src/services/latent_audit/category.rs | 562 |
+| `latent_scan2_m5_move_up_skips_hidden_sibling` | With A, hidden B and C, one "up" click on C moves it above A, skipping the hidden B (latent-audit scan2-M5) | src/services/latent_audit/category.rs | 367 |
+| `latent_scan2_m5_move_down_skips_hidden_sibling` | With A, hidden B and C, one "down" click on A moves it below C, skipping the hidden B (latent-audit scan2-M5) | src/services/latent_audit/category.rs | 390 |
+| `latent_scan2_m5_move_down_past_only_hidden_siblings_is_noop` | "Down" on the last visible CATEGORY2 (only hidden rows follow) changes nothing, not even its order number (latent-audit scan2-M5) | src/services/latent_audit/category.rs | 411 |
+| `latent_scan2_m5_category3_moves_skip_hidden_sibling` | CATEGORY3 "up" and "down" skip a hidden sibling the same way (latent-audit scan2-M5) | src/services/latent_audit/category.rs | 451 |
+| `latent_scan2_m3_detail_list_shows_renamed_category_names` | The transaction detail list shows the CATEGORY1 name and the renamed CATEGORY2 / CATEGORY3 names in the display language (ja and en), and the base names for a language with no i18n row (latent-audit scan2-M3) | src/services/latent_audit/category.rs | 549 |
+| `latent_scan2_m8_transaction_list_category1_follows_language` | The transaction list shows the CATEGORY1 name of the display language (支出 / Expense), and the base name for a language with no row (latent-audit scan2-M8) | src/services/latent_audit/category.rs | 655 |
 
-**Total**: 40 tests
+**Total**: 44 tests
 
 ### services/manufacturer.rs
 
@@ -736,7 +740,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **427** |
+| **Inline Tests** | **431** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -749,7 +753,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/user_management.rs | 24 |
 | services/encryption.rs | 11 |
 | services/account.rs | 19 |
-| services/category.rs | 40 |
+| services/category.rs | 44 |
 | services/manufacturer.rs | 17 |
 | services/product.rs | 20 |
 | services/shop.rs | 19 |
@@ -760,7 +764,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/i18n.rs | 8 |
 | services/recurring.rs | 26 |
 | lib.rs | 6 |
-| **Total** | **450** |
+| **Total** | **454** |
 
 ---
 
