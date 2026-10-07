@@ -404,6 +404,30 @@ Cmd+Shift+R (Mac)
 
 ---
 
+### Linux (Fcitx5): The username field on the login screen starts in Japanese input
+
+**Symptoms:**
+- The username field on the login screen or the first-time registration screen starts with Japanese input (IME on)
+- The text being typed is not shown before conversion, so it looks as if nothing can be typed
+
+**Cause:**
+- When the cursor enters a username field, the app turns the Fcitx5 input method off (`fcitx5-remote -c`)
+- When turned off, Fcitx5 switches to the **first** entry of its input method list. If the first entry is a Japanese input method (such as Mozc), the field stays in Japanese input
+
+**Solution:**
+
+1. Open `fcitx5-configtool` (the Fcitx5 settings)
+2. In the input method list, select your keyboard layout (for example, "Keyboard - English (US)" or "Keyboard - Japanese")
+   - If it is not in the list, add it from the list of available input methods
+3. Move that entry to the top of the list
+4. Apply the settings
+
+Username fields then start with Latin input, and the usual switch key (such as Ctrl+Space) turns Japanese input on when needed.
+
+**Note:** In the app's input fields, the text before conversion and the conversion candidates may not be shown. This is a known issue on the IME side on Linux and cannot be fixed by an app setting.
+
+---
+
 ## Build-Related Issues
 
 ### Build Fails
