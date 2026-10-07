@@ -14,7 +14,6 @@ await runStaleAggregationScenario(jest, {
     html: 'aggregation-daily.html',
     script: '../../js/aggregation-daily.js',
     command: 'get_daily_aggregation',
-    isOld: (args) => args.date === '2026-09-10',
     fillOld: () => set('date', '2026-09-10'),
     fillNew: () => set('date', '2026-03-10'),
 });

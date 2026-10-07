@@ -18,7 +18,6 @@
  *       html: 'aggregation.html',
  *       script: '../../js/aggregation.js',
  *       command: 'get_monthly_aggregation',
- *       isOld: (args) => args.month === 9,
  *       fillOld: () => { ... },   // set the form to the older request
  *       fillNew: () => { ... },   // set the form to the newer request
  *   });
@@ -31,12 +30,13 @@ const row = (name, amount) => ({
 });
 
 export async function runStaleAggregationScenario(jest, cfg) {
-    let pendingOld = null;
+    // Responses to hold, in request order; once empty, requests answer at once.
+    let held = [];
 
     mockPageModules(jest, {
-        invoke: (cmd, args) => {
+        invoke: (cmd) => {
             if (cmd === cfg.command) {
-                if (cfg.isOld(args) && pendingOld) return pendingOld.promise;
+                if (held.length > 0) return held.shift().promise;
                 return [row('NewerGroup', -3000)];
             }
             switch (cmd) {
@@ -60,24 +60,32 @@ export async function runStaleAggregationScenario(jest, cfg) {
             .map((tr) => tr.querySelector('td')?.textContent.trim());
     const message = () => document.getElementById('results-message')?.textContent ?? '';
 
-    async function runOldThenNew() {
-        pendingOld = deferred();
-        cfg.fillOld();
+    const execute = async (fill, ticks) => {
+        fill();
         document.getElementById('execute-btn').click();
-        await flush(10);
+        await flush(ticks);
+    };
 
-        cfg.fillNew();
-        document.getElementById('execute-btn').click();
-        await flush(20);
+    // The older request is held; the newer one answers at once.
+    async function runOldThenNew() {
+        const older = deferred();
+        held = [older];
+        await execute(cfg.fillOld, 10);
+        await execute(cfg.fillNew, 20);
         expect(firstCells()).toContain('NewerGroup'); // sanity: the newer table is drawn
+        return older;
     }
 
     describe(`${cfg.screen} aggregation: an older Execute does not overwrite a newer one (scan2-A4)`, () => {
+        afterEach(() => {
+            held = [];
+        });
+
         test('[scan2-A4] a slower, older result arriving later is dropped', async () => {
-            await runOldThenNew();
+            const older = await runOldThenNew();
             expect(container().classList.contains('loading')).toBe(false);
 
-            pendingOld.resolve([row('OlderGroup', -9000)]);
+            older.resolve([row('OlderGroup', -9000)]);
             await flush(20);
 
             expect(firstCells()).toContain('NewerGroup');
@@ -85,9 +93,9 @@ export async function runStaleAggregationScenario(jest, cfg) {
         });
 
         test('[scan2-A4] an older request failing later neither shows its error nor clears the table', async () => {
-            await runOldThenNew();
+            const older = await runOldThenNew();
 
-            pendingOld.reject(new Error('older request failed'));
+            older.reject(new Error('older request failed'));
             await flush(20);
 
             expect(message()).not.toContain('older request failed');
@@ -95,32 +103,23 @@ export async function runStaleAggregationScenario(jest, cfg) {
         });
 
         test('[scan2-A4] the loading state stays until the latest request finishes', async () => {
-            const pendingNew = deferred();
-            pendingOld = deferred();
-            const realIsOld = cfg.isOld;
-            // Hold the newer request too: the older one finishing first must
-            // not clear the loading state of the newer one.
-            cfg.isOld = () => true;
-            cfg.fillOld();
-            document.getElementById('execute-btn').click();
-            await flush(10);
-            const olderPending = pendingOld;
-            pendingOld = pendingNew;
-            cfg.fillNew();
-            document.getElementById('execute-btn').click();
-            await flush(10);
-            cfg.isOld = realIsOld;
+            // Hold both: the older one finishing first must not clear the
+            // loading state of the newer one.
+            const older = deferred();
+            const newer = deferred();
+            held = [older, newer];
+            await execute(cfg.fillOld, 10);
+            await execute(cfg.fillNew, 10);
 
-            olderPending.resolve([row('OlderGroup', -9000)]);
+            older.resolve([row('OlderGroup', -9000)]);
             await flush(20);
             expect(container().classList.contains('loading')).toBe(true);
             expect(firstCells()).not.toContain('OlderGroup');
 
-            pendingNew.resolve([row('NewerGroup', -3000)]);
+            newer.resolve([row('NewerGroup', -3000)]);
             await flush(20);
             expect(container().classList.contains('loading')).toBe(false);
             expect(firstCells()).toContain('NewerGroup');
-            pendingOld = null;
         });
     });
 }

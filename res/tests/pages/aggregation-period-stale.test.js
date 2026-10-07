@@ -14,7 +14,6 @@ await runStaleAggregationScenario(jest, {
     html: 'aggregation-period.html',
     script: '../../js/aggregation-period.js',
     command: 'get_period_aggregation',
-    isOld: (args) => args.startDate === '2026-09-01',
     fillOld: () => { set('start-date', '2026-09-01'); set('end-date', '2026-09-30'); },
     fillNew: () => { set('start-date', '2026-03-01'); set('end-date', '2026-03-31'); },
 });

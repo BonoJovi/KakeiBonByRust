@@ -14,7 +14,6 @@ await runStaleAggregationScenario(jest, {
     html: 'aggregation.html',
     script: '../../js/aggregation.js',
     command: 'get_monthly_aggregation',
-    isOld: (args) => args.month === 9,
     fillOld: () => { set('year', '2026'); set('month', '9'); },
     fillNew: () => { set('year', '2026'); set('month', '3'); },
 });
