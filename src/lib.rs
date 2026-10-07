@@ -1347,6 +1347,8 @@ async fn get_transactions(
     state: tauri::State<'_, AppState>
 ) -> Result<services::transaction::TransactionListResponse, api_error::ApiError> {
     let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
+    let lang = state.settings.lock().await.get_string("language")
+        .unwrap_or_else(|_| LANG_DEFAULT.to_string());
     let transaction = state.transaction.lock().await;
     Ok(transaction.get_transactions(
         user_id,
@@ -1361,6 +1363,7 @@ async fn get_transactions(
         include_scheduled.unwrap_or(false),
         page,
         per_page,
+        &lang,
     )
     .await?)
 }
@@ -1835,10 +1838,12 @@ async fn get_transaction_details(
     transaction_id: i64,
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::transaction::TransactionDetailWithInfo>, api_error::ApiError> {
-    let transaction = state.transaction.lock().await;
     let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
+    let lang = state.settings.lock().await.get_string("language")
+        .unwrap_or_else(|_| LANG_DEFAULT.to_string());
+    let transaction = state.transaction.lock().await;
 
-    Ok(transaction.get_transaction_details(user_id, transaction_id).await?)
+    Ok(transaction.get_transaction_details(user_id, transaction_id, &lang).await?)
 }
 
 #[tauri::command]

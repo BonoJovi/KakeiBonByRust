@@ -435,11 +435,15 @@ function createTransactionItem(transaction) {
     categoryDiv.textContent = transaction.category1_name || transaction.category1_code;
     contentWrapper.appendChild(categoryDiv);
     
-    // Accounts (FROM -> TO) - Display account names, fallback to codes if names not available
+    // Accounts (FROM -> TO) - Display account names, fallback to codes if names not available.
+    // The NONE account is stored as 指定なし, so it gets the localized label
+    // like the form's NONE option (latent-scan2 M8).
     const accountDiv = document.createElement('div');
     accountDiv.className = 'transaction-account';
-    const fromAccountDisplay = transaction.from_account_name || transaction.from_account_code;
-    const toAccountDisplay = transaction.to_account_name || transaction.to_account_code;
+    const accountDisplay = (code, name) =>
+        code === 'NONE' ? i18n.t('common.unspecified') : (name || code);
+    const fromAccountDisplay = accountDisplay(transaction.from_account_code, transaction.from_account_name);
+    const toAccountDisplay = accountDisplay(transaction.to_account_code, transaction.to_account_name);
     accountDiv.textContent = `${fromAccountDisplay} → ${toAccountDisplay}`;
     contentWrapper.appendChild(accountDiv);
     

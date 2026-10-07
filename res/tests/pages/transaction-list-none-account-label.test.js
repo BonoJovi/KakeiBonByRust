@@ -1,27 +1,23 @@
-// latent-audit scan2-M8: the transaction list shows the stored NONE account name ("指定なし") instead of the i18n "unspecified" label
+// The transaction list shows the NONE account with the localized label (latent-audit scan2-M8)
 /**
  * Transaction list screen (res/js/transaction-management.js).
  *
  * scan2-M8  `TRANSACTION_LIST_BASE` returns ACCOUNT_NAME for the NONE account,
  *           which is stored as '指定なし' (or the JA template name). The row
- *           renderer prints `from_account_name` / `to_account_name` as is, so
- *           the English UI shows "Bank → 指定なし". The transaction form labels
- *           NONE with `common.unspecified`.
+ *           renderer printed `from_account_name` / `to_account_name` as is,
+ *           so the English UI showed "Main Bank → 指定なし". The transaction
+ *           form labels NONE with `common.unspecified`.
  *
  * Expected: a NONE side is rendered with i18n `common.unspecified`, never the
- * stored account name.
- *
- * Scope: this pins the JS half of M8 only (fix direction: map
- * `account_code === 'NONE'` in the JS). The category1 half (base
- * CATEGORY1_NAME '支出' without a CATEGORY1_I18N join) is a backend query issue
- * that `TransactionService::get_transactions` cannot express yet: it takes
- * no language, so a Rust test for it needs the fixed signature.
+ * stored account name. The category1 half of M8 (CATEGORY1_I18N join) is
+ * covered by the Rust test
+ * latent_scan2_m8_transaction_list_category1_follows_language.
  */
 
 import { jest } from '@jest/globals';
 import {
     mockPageModules, loadPageBody, bootPage,
-} from '../pages/_page-harness.js';
+} from './_page-harness.js';
 
 const TRANSACTION = {
     transaction_id: 1,
@@ -75,7 +71,7 @@ loadPageBody('transaction-management.html');
 await import('../../js/transaction-management.js');
 await bootPage();
 
-describe('scan2-M8 transaction list NONE account label', () => {
+describe('transaction list NONE account label (scan2-M8)', () => {
     test('renders the NONE side with common.unspecified, not the stored name', () => {
         // The list header row uses the same class; take the data rows only.
         const cells = Array.from(

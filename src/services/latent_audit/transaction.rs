@@ -34,6 +34,9 @@ async fn init_schema(pool: &SqlitePool) {
         sql_queries::TEST_TRANSACTION_INSERT_CATEGORY2,
         sql_queries::TEST_TRANSACTION_CREATE_CATEGORY3_TABLE,
         sql_queries::TEST_TRANSACTION_INSERT_CATEGORY3,
+        sql_queries::TEST_TRANSACTION_CREATE_CATEGORY1_I18N_TABLE,
+        sql_queries::TEST_TRANSACTION_CREATE_CATEGORY2_I18N_TABLE,
+        sql_queries::TEST_TRANSACTION_CREATE_CATEGORY3_I18N_TABLE,
         sql_queries::TEST_MANUFACTURER_CREATE_TABLE,
         sql_queries::TEST_PRODUCT_CREATE_TABLE,
         sql_queries::TEST_TRANSACTION_CREATE_DETAIL_TABLE,
@@ -674,7 +677,7 @@ async fn latent_l2_update_detail_rejects_foreign_product_id() {
         .await
         .unwrap();
 
-    let before = service.get_transaction_details(USER, txn_id).await.unwrap();
+    let before = service.get_transaction_details(USER, txn_id, "ja").await.unwrap();
 
     // A changed amount alongside the foreign product: a rejected update must
     // leave every column untouched, not just the product link.
@@ -687,7 +690,7 @@ async fn latent_l2_update_detail_rejects_foreign_product_id() {
         result
     );
 
-    let after = service.get_transaction_details(USER, txn_id).await.unwrap();
+    let after = service.get_transaction_details(USER, txn_id, "ja").await.unwrap();
     assert_eq!(after.len(), 1);
     assert_eq!(
         (after[0].amount, after[0].product_id),
