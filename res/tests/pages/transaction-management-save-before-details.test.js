@@ -11,8 +11,11 @@
 
 import { jest } from '@jest/globals';
 import {
-    mockPageModules, loadPageBody, bootPage, flush, callsOf,
+    mockPageModules, loadPageBody, bootPage, flush, callsOf, deferred,
 } from './_page-harness.js';
+
+// When set, update_transaction_header answers through this promise.
+let updateResult = null;
 
 const HEADER = {
     transaction_id: 1,
@@ -51,13 +54,13 @@ const { invoke } = mockPageModules(jest, {
                 return HEADER;
             case 'get_transaction_details':
                 return [];
+            case 'update_transaction_header':
+                return updateResult;
             default:
                 return null;
         }
     },
 });
-
-const session = await import('../../js/session.js');
 
 // Answers to the "save before Manage details?" confirm (and the total
 // recalculation prompt after a save, which these tests never trigger).
@@ -99,26 +102,41 @@ describe('Manage details from the header edit modal (scan2-T6)', () => {
         document.getElementById('transaction-memo').value = 'new memo';
         document.getElementById('is-scheduled').checked = true;
 
-        session.setSessionModalState.mockClear();
         document.getElementById('manage-details-btn').click();
         await flush(10);
 
         const updates = callsOf(invoke, 'update_transaction_header');
-        const drafts = session.setSessionModalState.mock.calls.map(([json]) => JSON.parse(json));
 
         const savedHeader = updates.some((u) => u.totalAmount === 6400
             && u.transactionDate === '2026-09-20 18:00:00'
             && u.memo === 'new memo'
             && u.isScheduled === 1);
-        const keptDraft = drafts.some((d) => String(d.total_amount) === '6400'
-            && d.transaction_date === '2026-09-20T18:00'
-            && d.memo === 'new memo'
-            && (d.is_scheduled === true || d.is_scheduled === 1 || d.is_scheduled === '1'));
-
-        // Either route keeps the edits; the fix saves them.
-        expect(savedHeader || keptDraft).toBe(true);
+        expect(savedHeader).toBe(true);
         expect(confirmSpy).toHaveBeenCalledWith('transaction_mgmt.save_before_details_confirm');
         expect(navigated()).toBe(true);
+    });
+
+    test('[T6] a second click while saving does not save twice', async () => {
+        confirmAnswer = true;
+        await openEdit();
+        document.getElementById('total-amount').value = '6400';
+
+        const saved = deferred();
+        updateResult = saved.promise;
+        try {
+            document.getElementById('manage-details-btn').click();
+            await flush(5);
+            document.getElementById('manage-details-btn').click();
+            await flush(5);
+            expect(callsOf(invoke, 'update_transaction_header')).toHaveLength(1);
+            expect(confirmSpy).toHaveBeenCalledTimes(1);
+
+            saved.resolve(null);
+            await flush(10);
+            expect(navigated()).toBe(true);
+        } finally {
+            updateResult = null;
+        }
     });
 
     test('[T6] cancelling the confirm stays in the modal without saving', async () => {

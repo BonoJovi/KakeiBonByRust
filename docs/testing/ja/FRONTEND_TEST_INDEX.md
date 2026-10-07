@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-10-07 JST  
-**総テスト数**: 942件 (jest suite 90 ファイル、`npm test` 実測)
+**総テスト数**: 943件 (jest suite 90 ファイル、`npm test` 実測)
 
 ---
 
@@ -1600,11 +1600,12 @@
 
 実際の入出金一覧の編集ウィンドウで、「明細管理」を押したときに保存していないヘッダーの変更が消えないことを確かめる (潜在スキャン scan2-T6)。
 
-**テスト数**: 3件
+**テスト数**: 4件
 
 | テスト | 説明 |
 |--------|------|
 | `[T6] edited header values are saved before leaving` | 日付・合計・メモ・予定フラグを変えて「明細管理」を押すと確認 (`transaction_mgmt.save_before_details_confirm`) が出て、OK なら通常の保存でヘッダーを保存してから移動する |
+| `[T6] a second click while saving does not save twice` | 保存中は「明細管理」とウィンドウの保存ボタンが押せず、2 回目のクリックで保存が重ならない |
 | `[T6] cancelling the confirm stays in the modal without saving` | 確認でキャンセルすると保存も移動もせず、入力した値がウィンドウに残る |
 | `[T6] without changes it moves on at once, without asking or saving` | 変更がなければ確認も保存もせずにすぐ移動する |
 
@@ -1821,7 +1822,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **519件** |
+| **機能別テスト** | **520件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 30 |
@@ -1897,7 +1898,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | pages/category-management-page.test.js | 2 |
 | pages/category-management-move-buttons.test.js | 2 |
 | pages/transaction-management-filter-hidden-category.test.js | 1 |
-| pages/transaction-management-save-before-details.test.js | 3 |
+| pages/transaction-management-save-before-details.test.js | 4 |
 | pages/user-management-password-page.test.js | 2 |
 | pages/user-management-nonadmin-page.test.js | 2 |
 | pages/index-setup-password-length.test.js | 2 |
@@ -1907,7 +1908,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **942件** |
+| **総計 (jest)** | **943件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 

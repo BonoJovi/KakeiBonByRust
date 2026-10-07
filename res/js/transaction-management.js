@@ -771,11 +771,18 @@ function initializeTransactionModal() {
             // screen then worked against the old date and total (scan2-T6).
             if (JSON.stringify(collectModalFields()) !== loadedModalFields) {
                 if (!confirm(i18n.t('transaction_mgmt.save_before_details_confirm'))) return;
+                // Block this button and the modal's Save button until the
+                // save finishes, so neither can send it twice.
+                manageDetailsBtn.disabled = true;
+                transactionModal.showLoading();
                 try {
                     await handleTransactionSubmit(new Event('submit'));
                 } catch {
                     // The save already showed why; the modal stays open.
                     return;
+                } finally {
+                    manageDetailsBtn.disabled = false;
+                    transactionModal.hideLoading();
                 }
             }
             window.location.href = `${HTML_FILES.TRANSACTION_DETAIL_MANAGEMENT}?transaction_id=${transactionId}`;
