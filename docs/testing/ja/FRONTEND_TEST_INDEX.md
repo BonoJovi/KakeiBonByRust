@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-10-07 JST  
-**総テスト数**: 926件 (jest suite 85 ファイル、`npm test` 実測)
+**総テスト数**: 933件 (jest suite 86 ファイル、`npm test` 実測)
 
 ---
 
@@ -57,6 +57,7 @@
   - [pages/recurring-rule-date-order.test.js](#pagesrecurring-rule-date-ordertestjs)
   - [pages/recurring-rule-reset.test.js](#pagesrecurring-rule-resettestjs)
   - [pages/menu-i18n-seed.test.js](#pagesmenu-i18n-seedtestjs)
+  - [pages/i18n-literal-user-text.test.js](#pagesi18n-literal-user-texttestjs)
   - [pages/dashboard-balance-header.test.js](#pagesdashboard-balance-headertestjs)
   - [pages/transaction-list-none-account-label.test.js](#pagestransaction-list-none-account-labeltestjs)
   - [pages/transaction-detail-none-account-label.test.js](#pagestransaction-detail-none-account-labeltestjs)
@@ -1000,6 +1001,23 @@
 
 ---
 
+### pages/i18n-literal-user-text.test.js
+
+ユーザーが入力した文字が、メッセージにそのまま差し込まれることを確かめる (潜在スキャン scan2-C4)。
+
+**テスト数**: 7件
+
+| テスト | 説明 |
+|--------|------|
+| `[scan2-C4] i18n.t() keeps the user name %s literally` (4 件) | ユーザー名の `$&` `$'` `` $` `` `$$` が置き換えの記号として解釈されず、そのまま出る |
+| `[scan2-C4] a value containing another placeholder is not substituted again` | 差し込んだ値に `{b}` が含まれていても、もう一度置き換えない (1 回でまとめて置き換える) |
+| `[scan2-C4] a placeholder with no param is left as it is` | 値を渡していない `{b}` はそのまま残る |
+| `[scan2-C4] recurring-rule delete confirmation keeps the rule name literally` | 繰り返しルールの削除確認で、`$'` や `{1}` を含むルール名がそのまま出て、件数も正しい位置に入る |
+
+**ファイル**: res/tests/pages/i18n-literal-user-text.test.js
+
+---
+
 ### pages/dashboard-balance-header.test.js
 
 ダッシュボードの口座別残高の列見出しの回帰テスト (潜在スキャン scan2-C3)。以前は `dashboard.balance` が「収支」(グラフの凡例) と「残高」(列見出し) の 2 回登録されていて、後の行が INSERT OR IGNORE で捨てられ、列見出しが「収支」になっていた。
@@ -1738,7 +1756,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **503件** |
+| **機能別テスト** | **510件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 30 |
@@ -1774,6 +1792,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | pages/recurring-rule-date-order.test.js | 5 |
 | pages/recurring-rule-reset.test.js | 1 |
 | pages/menu-i18n-seed.test.js | 2 |
+| pages/i18n-literal-user-text.test.js | 7 |
 | pages/dashboard-balance-header.test.js | 1 |
 | pages/transaction-list-none-account-label.test.js | 1 |
 | pages/transaction-detail-none-account-label.test.js | 1 |
@@ -1819,7 +1838,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **926件** |
+| **総計 (jest)** | **933件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 

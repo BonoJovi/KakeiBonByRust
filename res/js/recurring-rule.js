@@ -782,12 +782,12 @@ function setupDeleteModal() {
 
 function openDeleteModal(rule) {
     pendingDeleteRule = rule;
-    const tmpl = i18n.t('recurring_rule.delete_confirm_message')
-        || 'Delete rule "{0}"? It currently has {1} generated occurrence(s).';
     const name = rule.rule_name || `#${rule.rule_id}`;
-    document.getElementById('delete-modal-message').textContent = tmpl
-        .replace('{0}', name)
-        .replace('{1}', rule.occurrence_count);
+    // i18n.t() inserts the rule name literally ($&, {1} ... included) (scan2-C4).
+    document.getElementById('delete-modal-message').textContent = i18n.t(
+        'recurring_rule.delete_confirm_message',
+        { 0: name, 1: rule.occurrence_count }
+    );
     document.getElementById('delete-rule-modal').classList.remove('hidden');
 }
 
