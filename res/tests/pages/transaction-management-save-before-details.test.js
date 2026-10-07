@@ -130,6 +130,7 @@ describe('Manage details from the header edit modal (scan2-T6)', () => {
             await flush(5);
             expect(callsOf(invoke, 'update_transaction_header')).toHaveLength(1);
             expect(confirmSpy).toHaveBeenCalledTimes(1);
+            expect(navigated()).toBe(false); // not before the save has finished
 
             saved.resolve(null);
             await flush(10);
