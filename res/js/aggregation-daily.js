@@ -110,6 +110,10 @@ function setupMenuHandlers() {
     setupFileMenuHandlers();
 }
 
+// Latest-request guard: a slower, older Execute must not overwrite the
+// newer result, message or loading state (latent-scan2 A4).
+const nextAggregationRequest = AggCommon.createLatestRequestGuard();
+
 async function executeAggregation() {
     // Get current user
     const user = await getCurrentSessionUser();
@@ -129,6 +133,10 @@ async function executeAggregation() {
 
     // Show loading state
     const resultsContainer = document.getElementById('results-container');
+    // Taken only once the request really starts: an Execute stopped by
+    // the input checks above must not make the running one stale, or its
+    // loading state would never be cleared.
+    const isLatest = nextAggregationRequest();
     resultsContainer.classList.add('loading');
     clearMessage();
     
@@ -147,6 +155,7 @@ async function executeAggregation() {
             groupBy: groupBy,
             includeScheduled: includeScheduled
         });
+        if (!isLatest()) return;
 
         console.log('Aggregation results:', results);
         
@@ -160,11 +169,14 @@ async function executeAggregation() {
         resultCount.textContent = `(${results.length} ${i18n.t('aggregation.items') || 'items'})`;
 
     } catch (error) {
+        if (!isLatest()) return;
         console.error('Aggregation error:', error);
         showMessage('error', AggCommon.translateAggregationError(error));
         clearResults();
     } finally {
-        resultsContainer.classList.remove('loading');
+        if (isLatest()) {
+            resultsContainer.classList.remove('loading');
+        }
     }
 }
 

@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-10-07 JST  
-**総テスト数**: 889件 (jest suite 75 ファイル、`npm test` 実測)
+**総テスト数**: 923件 (jest suite 83 ファイル、`npm test` 実測)
 
 ---
 
@@ -35,6 +35,7 @@
   - [master-crud.test.js](#master-crudtestjs)
   - [attach-char-counter-ime.test.js](#attach-char-counter-imetestjs)
   - [aggregation-error-translate.test.js](#aggregation-error-translatetestjs)
+  - [aggregation-latest-request.test.js](#aggregation-latest-requesttestjs)
   - [parse-amount-strict.test.js](#parse-amount-stricttestjs)
   - [format-local-date.test.js](#format-local-datetestjs)
   - [period-end-date.test.js](#period-end-datetestjs)
@@ -80,6 +81,13 @@
   - [pages/transaction-management-restore-reopened.test.js](#pagestransaction-management-restore-reopenedtestjs)
   - [pages/aggregation-monthly-page.test.js](#pagesaggregation-monthly-pagetestjs)
   - [pages/aggregation-yearly-total-count.test.js](#pagesaggregation-yearly-total-counttestjs)
+  - [pages/aggregation-default-period-monthly.test.js](#pagesaggregation-default-period-monthlytestjs)
+  - [pages/aggregation-default-period-yearly.test.js](#pagesaggregation-default-period-yearlytestjs)
+  - [pages/aggregation-monthly-stale.test.js](#pagesaggregation-monthly-staletestjs)
+  - [pages/aggregation-daily-stale.test.js](#pagesaggregation-daily-staletestjs)
+  - [pages/aggregation-weekly-stale.test.js](#pagesaggregation-weekly-staletestjs)
+  - [pages/aggregation-period-stale.test.js](#pagesaggregation-period-staletestjs)
+  - [pages/aggregation-yearly-stale.test.js](#pagesaggregation-yearly-staletestjs)
   - [pages/dashboard-bar-top10.test.js](#pagesdashboard-bar-top10testjs)
   - [pages/index-setup-page.test.js](#pagesindex-setup-pagetestjs)
   - [pages/category-management-page.test.js](#pagescategory-management-pagetestjs)
@@ -654,6 +662,21 @@
 
 ---
 
+### aggregation-latest-request.test.js
+
+集計画面の「最後の要求かどうか」を判定する共通部品 `createLatestRequestGuard` (aggregation-common.js) のテスト (潜在スキャン scan2-A4)。画面ごとの動作は `pages/aggregation-*-stale.test.js` で確かめる。
+
+**テスト数**: 2件
+
+| テスト | 説明 |
+|--------|------|
+| `[scan2-A4] only the most recent request is latest` | 最後に始めた要求だけが「最後」と判定され、次の要求が始まると前の要求は「最後」でなくなる |
+| `[scan2-A4] each guard counts its own requests` | 部品ごとに独立して数える (別画面の要求に影響されない) |
+
+**ファイル**: res/tests/aggregation-latest-request.test.js
+
+---
+
 ### parse-amount-strict.test.js
 
 `res/js/parse-amount-strict.js` の `parseAmountStrict` 金額パーサの accept/reject テーブル (Fable-5 レビュー #10)。旧実装 `parseInt(el.value) || 0` は `"1099.5"` → 1099 (0.5 円損失)、`"1,099"` → 1 (99% ずれ) を無警告で通していた。新パーサは trim 後に `/^\d+$/` を要求し、空文字と null/undefined は既存の `|| 0` 挙動を保つため 0 を返す。呼び出し側は明細フォーム / 入出金フォーム / 繰り返しルールフォームの 3 経路。
@@ -705,9 +728,9 @@
 
 ### period-containing.test.js
 
-`findMonthlyPeriodContaining` (period.js) のテスト (潜在スキャン scan2-A3)。月次の期間は開始日の月で名前が付くので、暦の月の期間が今日を含まないことがある。ダッシュボードはこの関数で、今日を含む期間を開いたときの対象月にする。
+`findMonthlyPeriodContaining` / `findYearlyPeriodContaining` (period.js) のテスト (潜在スキャン scan2-A3)。年度も開始日の年で名前が付くので、暦の年の年度が今日を含まないことがある。月次の期間は開始日の月で名前が付くので、暦の月の期間が今日を含まないことがある。ダッシュボードはこの関数で、今日を含む期間を開いたときの対象月にする。
 
-**テスト数**: 6件
+**テスト数**: 16件
 
 | テスト | 説明 |
 |--------|------|
@@ -717,6 +740,7 @@
 | `should keep stepping when the neighbouring month does not contain the date either` | 隣の月の期間も日付を含まないときは、含む月まで進む (起算日 31 日・翌営業日。2026 年 1/31 と 2/28 が土曜なので「1 月」は 2/2〜3/1 になり、3/1 は 2 か月前の「1 月」) |
 | `should give up on the calendar month when no period ever matches` | どの月の期間も日付を含まない答えが続いたら、上限回数で打ち切って暦の月を返す |
 | `should fall back to the calendar month when the backend fails` | バックエンドが答えられないときは暦の月を返す |
+| `[scan2-A3] start %i/%i, date %p -> %i` (10 ケース) | 年度の開始が 1/1・4/1・12/31・2/31 (月末に寄せる) のそれぞれで、開始日の前後の日付がどの年度に入るか |
 
 **ファイル**: res/tests/period-containing.test.js
 
@@ -1330,6 +1354,105 @@
 
 **ファイル**: res/tests/pages/aggregation-yearly-total-count.test.js
 
+### pages/aggregation-default-period-monthly.test.js
+
+月次集計を開いたときの対象月の回帰テスト (潜在スキャン scan2-A3)。以前は暦の月で決めていたので、起算日 25 日・今日 9 月 10 日だと、まるごと未来の「9 月」が開いていた (ダッシュボードと同じ問題、#178 で修正済み)。
+
+**テスト数**: 1件
+
+| テスト | 説明 |
+|--------|------|
+| `[scan2-A3] start day 25, today 2026-09-10 -> opens on the August period that contains today` | 今日を含む「8 月」の期間で開く |
+
+**ファイル**: res/tests/pages/aggregation-default-period-monthly.test.js
+
+### pages/aggregation-default-period-yearly.test.js
+
+年次集計を開いたときの対象年の回帰テスト (潜在スキャン scan2-A3)。以前は暦の年で決めていたので、年度の開始が 4/1・今日 2026 年 2 月 10 日だと、まるごと未来の「2026 年度」(2026/4/1〜2027/3/31) が開いていた。
+
+**テスト数**: 1件
+
+| テスト | 説明 |
+|--------|------|
+| `[scan2-A3] year starting 04-01, today 2026-02-10 -> opens on the 2025 period that contains today` | 今日を含む「2025 年度」で開く |
+
+**ファイル**: res/tests/pages/aggregation-default-period-yearly.test.js
+
+### pages/aggregation-monthly-stale.test.js
+
+月次集計の再実行の回帰テスト (潜在スキャン scan2-A4)。以前は古い要求の結果を捨てる仕組みが無く、遅れて届いた古い結果が新しい表を上書きしたり、古い要求のエラーが新しい表を消したりしていた。シナリオは 5 画面共通で `pages/_aggregation-stale.js` にある。
+
+**テスト数**: 4件
+
+| テスト | 説明 |
+|--------|------|
+| `[scan2-A4] a slower, older result arriving later is dropped` | 遅れて届いた古い結果は捨てられ、新しい表のまま |
+| `[scan2-A4] an older request failing later neither shows its error nor clears the table` | 遅れて失敗した古い要求のエラーは出ず、新しい表も消えない |
+| `[scan2-A4] the loading state stays until the latest request finishes` | 古い要求が先に終わっても読み込み中の表示は消えず、最後の要求が終わったときに消える |
+| `[scan2-A4] an Execute stopped by the input checks does not strand the running request` | 入力チェックで止まった実行は要求を始めないので、実行中の要求は「最後」のままで、終わると読み込み中の表示が消える (CodeRabbit on #179) |
+
+**ファイル**: res/tests/pages/aggregation-monthly-stale.test.js
+
+### pages/aggregation-daily-stale.test.js
+
+日次集計の再実行の回帰テスト (潜在スキャン scan2-A4)。以前は古い要求の結果を捨てる仕組みが無く、遅れて届いた古い結果が新しい表を上書きしたり、古い要求のエラーが新しい表を消したりしていた。シナリオは 5 画面共通で `pages/_aggregation-stale.js` にある。
+
+**テスト数**: 4件
+
+| テスト | 説明 |
+|--------|------|
+| `[scan2-A4] a slower, older result arriving later is dropped` | 遅れて届いた古い結果は捨てられ、新しい表のまま |
+| `[scan2-A4] an older request failing later neither shows its error nor clears the table` | 遅れて失敗した古い要求のエラーは出ず、新しい表も消えない |
+| `[scan2-A4] the loading state stays until the latest request finishes` | 古い要求が先に終わっても読み込み中の表示は消えず、最後の要求が終わったときに消える |
+| `[scan2-A4] an Execute stopped by the input checks does not strand the running request` | 入力チェックで止まった実行は要求を始めないので、実行中の要求は「最後」のままで、終わると読み込み中の表示が消える (CodeRabbit on #179) |
+
+**ファイル**: res/tests/pages/aggregation-daily-stale.test.js
+
+### pages/aggregation-weekly-stale.test.js
+
+週次集計の再実行の回帰テスト (潜在スキャン scan2-A4)。以前は古い要求の結果を捨てる仕組みが無く、遅れて届いた古い結果が新しい表を上書きしたり、古い要求のエラーが新しい表を消したりしていた。シナリオは 5 画面共通で `pages/_aggregation-stale.js` にある。
+
+**テスト数**: 4件
+
+| テスト | 説明 |
+|--------|------|
+| `[scan2-A4] a slower, older result arriving later is dropped` | 遅れて届いた古い結果は捨てられ、新しい表のまま |
+| `[scan2-A4] an older request failing later neither shows its error nor clears the table` | 遅れて失敗した古い要求のエラーは出ず、新しい表も消えない |
+| `[scan2-A4] the loading state stays until the latest request finishes` | 古い要求が先に終わっても読み込み中の表示は消えず、最後の要求が終わったときに消える |
+| `[scan2-A4] an Execute stopped by the input checks does not strand the running request` | 入力チェックで止まった実行は要求を始めないので、実行中の要求は「最後」のままで、終わると読み込み中の表示が消える (CodeRabbit on #179) |
+
+**ファイル**: res/tests/pages/aggregation-weekly-stale.test.js
+
+### pages/aggregation-period-stale.test.js
+
+期間指定集計の再実行の回帰テスト (潜在スキャン scan2-A4)。以前は古い要求の結果を捨てる仕組みが無く、遅れて届いた古い結果が新しい表を上書きしたり、古い要求のエラーが新しい表を消したりしていた。シナリオは 5 画面共通で `pages/_aggregation-stale.js` にある。
+
+**テスト数**: 4件
+
+| テスト | 説明 |
+|--------|------|
+| `[scan2-A4] a slower, older result arriving later is dropped` | 遅れて届いた古い結果は捨てられ、新しい表のまま |
+| `[scan2-A4] an older request failing later neither shows its error nor clears the table` | 遅れて失敗した古い要求のエラーは出ず、新しい表も消えない |
+| `[scan2-A4] the loading state stays until the latest request finishes` | 古い要求が先に終わっても読み込み中の表示は消えず、最後の要求が終わったときに消える |
+| `[scan2-A4] an Execute stopped by the input checks does not strand the running request` | 入力チェックで止まった実行は要求を始めないので、実行中の要求は「最後」のままで、終わると読み込み中の表示が消える (CodeRabbit on #179) |
+
+**ファイル**: res/tests/pages/aggregation-period-stale.test.js
+
+### pages/aggregation-yearly-stale.test.js
+
+年次集計の再実行の回帰テスト (潜在スキャン scan2-A4)。以前は古い要求の結果を捨てる仕組みが無く、遅れて届いた古い結果が新しい表を上書きしたり、古い要求のエラーが新しい表を消したりしていた。シナリオは 5 画面共通で `pages/_aggregation-stale.js` にある。
+
+**テスト数**: 4件
+
+| テスト | 説明 |
+|--------|------|
+| `[scan2-A4] a slower, older result arriving later is dropped` | 遅れて届いた古い結果は捨てられ、新しい表のまま |
+| `[scan2-A4] an older request failing later neither shows its error nor clears the table` | 遅れて失敗した古い要求のエラーは出ず、新しい表も消えない |
+| `[scan2-A4] the loading state stays until the latest request finishes` | 古い要求が先に終わっても読み込み中の表示は消えず、最後の要求が終わったときに消える |
+| `[scan2-A4] an Execute stopped by the input checks does not strand the running request` | 入力チェックで止まった実行は要求を始めないので、実行中の要求は「最後」のままで、終わると読み込み中の表示が消える (CodeRabbit on #179) |
+
+**ファイル**: res/tests/pages/aggregation-yearly-stale.test.js
+
 ### pages/dashboard-bar-top10.test.js
 
 実際のダッシュボードを起動する回帰テスト (潜在スキャン scan2-A1)。支出の合計は負の値なのに符号付きで降順に並べていたため、棒グラフには小さい支出から並び、上位 10 件から最大の支出 (家賃など) が落ちていた。
@@ -1584,7 +1707,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **466件** |
+| **機能別テスト** | **500件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 30 |
@@ -1598,10 +1721,11 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | master-crud.test.js | 30 |
 | attach-char-counter-ime.test.js | 8 |
 | aggregation-error-translate.test.js | 13 |
+| aggregation-latest-request.test.js | 2 |
 | parse-amount-strict.test.js | 24 |
 | format-local-date.test.js | 16 |
 | period-end-date.test.js | 2 |
-| period-containing.test.js | 6 |
+| period-containing.test.js | 16 |
 | aggregation-render-unspecified.test.js | 5 |
 | pages/transaction-detail-page.test.js | 3 |
 | pages/transaction-detail-included-typing.test.js | 1 |
@@ -1643,6 +1767,13 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | pages/transaction-management-restore-reopened.test.js | 1 |
 | pages/aggregation-monthly-page.test.js | 5 |
 | pages/aggregation-yearly-total-count.test.js | 1 |
+| pages/aggregation-default-period-monthly.test.js | 1 |
+| pages/aggregation-default-period-yearly.test.js | 1 |
+| pages/aggregation-monthly-stale.test.js | 4 |
+| pages/aggregation-daily-stale.test.js | 4 |
+| pages/aggregation-weekly-stale.test.js | 4 |
+| pages/aggregation-period-stale.test.js | 4 |
+| pages/aggregation-yearly-stale.test.js | 4 |
 | pages/dashboard-bar-top10.test.js | 1 |
 | pages/index-setup-page.test.js | 3 |
 | pages/category-management-page.test.js | 2 |
@@ -1655,7 +1786,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **889件** |
+| **総計 (jest)** | **923件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 

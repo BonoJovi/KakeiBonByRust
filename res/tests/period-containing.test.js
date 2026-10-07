@@ -1,5 +1,6 @@
 /**
- * period.js — findMonthlyPeriodContaining (latent-audit scan2-A3)
+ * period.js — findMonthlyPeriodContaining / findYearlyPeriodContaining
+ * (latent-audit scan2-A3)
  *
  * A monthly period is named by its start month, so the calendar month can
  * name a period that does not contain today. The dashboard opens on the
@@ -15,7 +16,7 @@ import { jest } from '@jest/globals';
 const invoke = jest.fn();
 jest.unstable_mockModule('@tauri-apps/api/core', () => ({ invoke }));
 
-const { findMonthlyPeriodContaining } = await import('../js/period.js');
+const { findMonthlyPeriodContaining, findYearlyPeriodContaining } = await import('../js/period.js');
 
 describe('findMonthlyPeriodContaining (latent scan2-A3)', () => {
     beforeEach(() => {
@@ -95,5 +96,26 @@ describe('findMonthlyPeriodContaining (latent scan2-A3)', () => {
             .resolves.toEqual({ year: 2026, month: 9 });
 
         warn.mockRestore();
+    });
+});
+
+describe('findYearlyPeriodContaining (latent scan2-A3)', () => {
+    // A yearly period is named by its start year and has no holiday shift,
+    // so the year containing a date is its calendar year or the one before.
+    test.each([
+        // [start month, start day, date, expected year]
+        [1, 1, new Date(2026, 0, 1), 2026],
+        [1, 1, new Date(2026, 11, 31), 2026],
+        [4, 1, new Date(2026, 1, 10), 2025],
+        [4, 1, new Date(2026, 2, 31), 2025],
+        [4, 1, new Date(2026, 3, 1), 2026],
+        [12, 31, new Date(2026, 0, 5), 2025],
+        [12, 31, new Date(2026, 11, 30), 2025],
+        [12, 31, new Date(2026, 11, 31), 2026],
+        // Start 02-31 resolves to the month end: 2026-02-28 / 2027-02-28.
+        [2, 31, new Date(2026, 1, 27), 2025],
+        [2, 31, new Date(2026, 1, 28), 2026],
+    ])('[scan2-A3] start %i/%i, date %p -> %i', (startMonth, startDay, date, expected) => {
+        expect(findYearlyPeriodContaining(date, startMonth, startDay)).toBe(expected);
     });
 });

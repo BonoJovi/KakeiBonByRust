@@ -6,6 +6,7 @@ import { HTML_FILES } from './html-files.js';
 import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
 import { createMenuBar, setupFileMenuHandlers } from './menu.js';
 import * as AggCommon from './aggregation-common.js';
+import { findMonthlyPeriodContaining } from './period.js';
 
 console.log('aggregation.js loaded');
 
@@ -49,7 +50,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     await applyFontSize();
 
     // Initialize filter defaults
-    initializeFilterDefaults();
+    await initializeFilterDefaults();
 
     // Setup event handlers
     setupEventHandlers();
@@ -60,16 +61,16 @@ document.addEventListener('DOMContentLoaded', async function() {
     console.log('[DOMContentLoaded] Initialization complete');
 });
 
-function initializeFilterDefaults() {
-    const now = new Date();
+async function initializeFilterDefaults() {
     const yearInput = document.getElementById('year');
     const monthSelect = document.getElementById('month');
 
-    // Set current year
-    yearInput.value = now.getFullYear();
-
-    // Set current month
-    monthSelect.value = now.getMonth() + 1;
+    // Open on the monthly period that contains today, not the calendar
+    // month: with a custom start day the calendar month can name a future
+    // period (latent-scan2 A3).
+    const { year, month } = await findMonthlyPeriodContaining(new Date());
+    yearInput.value = year;
+    monthSelect.value = month;
 }
 
 function setupEventHandlers() {
@@ -125,6 +126,10 @@ function setupEventHandlers() {
     });
 }
 
+// Latest-request guard: a slower, older Execute must not overwrite the
+// newer result, message or loading state (latent-scan2 A4).
+const nextAggregationRequest = AggCommon.createLatestRequestGuard();
+
 async function executeAggregation() {
     const user = await getCurrentSessionUser();
     if (!user) {
@@ -153,6 +158,10 @@ async function executeAggregation() {
 
     // Show loading state
     const resultsContainer = document.getElementById('results-container');
+    // Taken only once the request really starts: an Execute stopped by
+    // the input checks above must not make the running one stale, or its
+    // loading state would never be cleared.
+    const isLatest = nextAggregationRequest();
     resultsContainer.classList.add('loading');
     clearMessage();
     
@@ -172,6 +181,7 @@ async function executeAggregation() {
             groupBy: groupBy,
             includeScheduled: includeScheduled
         });
+        if (!isLatest()) return;
 
         console.log('Aggregation results:', results);
         displayResults(results, groupBy);
@@ -181,11 +191,14 @@ async function executeAggregation() {
         resultCount.textContent = `(${results.length} ${i18n.t('aggregation.items') || 'items'})`;
 
     } catch (error) {
+        if (!isLatest()) return;
         console.error('Aggregation error:', error);
         showMessage('error', AggCommon.translateAggregationError(error));
         clearResults();
     } finally {
-        resultsContainer.classList.remove('loading');
+        if (isLatest()) {
+            resultsContainer.classList.remove('loading');
+        }
     }
 }
 
