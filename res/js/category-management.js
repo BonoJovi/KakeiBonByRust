@@ -404,8 +404,9 @@ function renderCategory1(categoryTree, index, total) {
         childrenDiv.className = `category-children ${isExpanded ? '' : 'collapsed'}`;
         childrenDiv.id = `cat1-${category.category1_code}-children`;
         
-        categoryTree.children.forEach((cat2Tree, idx) => {
-            const childElement = renderCategory2(cat2Tree, category.category1_code, idx, categoryTree.children.length);
+        const visible = visibleSiblings(categoryTree.children, (c) => c.category2);
+        categoryTree.children.forEach((cat2Tree) => {
+            const childElement = renderCategory2(cat2Tree, category.category1_code, visible.indexOf(cat2Tree), visible.length);
             childrenDiv.appendChild(childElement);
         });
         
@@ -413,6 +414,12 @@ function renderCategory1(categoryTree, index, total) {
     }
     
     return div;
+}
+
+// ↑/↓ only move among visible siblings (the backend skips hidden ones), so
+// the first / last visible row gets its button disabled (scan2-M5).
+function visibleSiblings(children, categoryOf) {
+    return children.filter((c) => categoryOf(c).is_disabled !== 1);
 }
 
 function renderCategory2(cat2Tree, parent1Code, index, total) {
@@ -489,8 +496,9 @@ function renderCategory2(cat2Tree, parent1Code, index, total) {
         childrenDiv.className = `category-children ${isExpanded ? '' : 'collapsed'}`;
         childrenDiv.id = `cat2-${category.category2_code}-children`;
 
-        cat2Tree.children.forEach((cat3, idx) => {
-            const childElement = renderCategory3(cat3, parent1Code, category.category2_code, idx, cat2Tree.children.length);
+        const visible = visibleSiblings(cat2Tree.children, (c) => c);
+        cat2Tree.children.forEach((cat3) => {
+            const childElement = renderCategory3(cat3, parent1Code, category.category2_code, visible.indexOf(cat3), visible.length);
             childrenDiv.appendChild(childElement);
         });
 

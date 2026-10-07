@@ -3,7 +3,7 @@
 This document provides a complete index of all frontend tests implemented in JavaScript.
 
 **Last Updated**: 2026-10-07 JST  
-**Total Tests**: 923 (jest suites; 83 test files, per `npm test`)
+**Total Tests**: 926 (jest suites; 85 test files, per `npm test`)
 
 ---
 
@@ -30,7 +30,7 @@ and are **not** added again to the grand total.
 - **login.test.js** - Login tests (58)
 - **user-deletion.test.js** - User deletion tests (46)
 
-### Feature-Specific Tests (500 tests)
+### Feature-Specific Tests (503 tests)
 
 - **transaction-edit.test.js** - Transaction edit tests (112)
 - **transaction-detail-management.test.js** - Transaction detail management tests (51)
@@ -101,6 +101,8 @@ and are **not** added again to the grand total.
 - **pages/dashboard-bar-top10.test.js** - Boots the real dashboard: the category bar chart lists the largest expenses first (by magnitude, since expense totals are negative) and its top 10 keeps the largest one (latent-audit scan2-A1) (1)
 - **pages/index-setup-page.test.js** - Boots the real setup forms (menu.js on index.html): a blank username is stopped before `register_admin`, a backend "Username cannot be empty" is reported as the username error (not the password one), and `duplicate_name` shows `error.username_duplicate` (latent-audit L25) (3)
 - **pages/category-management-page.test.js** - Boots the real category management page: moving or showing a category that no longer exists shows `category_mgmt.not_found` and reloads the tree (latent-audit L19) (2)
+- **pages/category-management-move-buttons.test.js** - Boots the real category management page: the first / last *visible* CATEGORY2 and CATEGORY3 have their ↑ / ↓ disabled, ignoring hidden siblings listed after them; hidden rows have no ↑/↓ (latent-audit scan2-M5) (2)
+- **pages/transaction-management-filter-hidden-category.test.js** - Boots the real transaction list: the category filter also offers a hidden CATEGORY2 and its CATEGORY3, labelled with `common.disabled_label`, so their past transactions can still be searched (latent-audit scan2-M7) (1)
 - **pages/user-management-password-page.test.js** - Admin session: a 16-space password is reported as the password error, not as the raw `user_mgmt.empty_name` key on the username (latent-audit L24); 8 emoji (16 UTF-16 units, 8 characters) are rejected by the frontend length check (latent-audit L31) (2)
 - **pages/user-management-nonadmin-page.test.js** - General-user session: no Add User button and no delete button on the user's own row (latent-audit L30) (2)
 - **pages/index-setup-password-length.test.js** - Setup forms count password characters, not UTF-16 units: 8 emoji are rejected for admin and user setup (latent-audit L31) (2)
@@ -137,7 +139,7 @@ and are **not** added again to the grand total.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **Feature-Specific Tests** | **500** |
+| **Feature-Specific Tests** | **503** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 30 |
@@ -207,6 +209,8 @@ and are **not** added again to the grand total.
 | pages/dashboard-bar-top10.test.js | 1 |
 | pages/index-setup-page.test.js | 3 |
 | pages/category-management-page.test.js | 2 |
+| pages/category-management-move-buttons.test.js | 2 |
+| pages/transaction-management-filter-hidden-category.test.js | 1 |
 | pages/user-management-password-page.test.js | 2 |
 | pages/user-management-nonadmin-page.test.js | 2 |
 | pages/index-setup-password-length.test.js | 2 |
@@ -216,7 +220,7 @@ and are **not** added again to the grand total.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **Total (jest)** | **923** |
+| **Total (jest)** | **926** |
 
 Grand total is Screen + Feature + Aggregation (Common Test Suites are helper
 libraries invoked from Screen-Specific files and their assertions are already

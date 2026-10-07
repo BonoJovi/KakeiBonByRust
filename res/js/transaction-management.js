@@ -254,10 +254,14 @@ function setupAmountSpinners() {
 
 async function loadCategoriesForFilter() {
     try {
-        // Get category tree
-        const categoryTree = await invoke('get_category_tree_with_lang', {
+        // Hidden categories are offered too, labelled, so their past
+        // transactions can still be searched; hiding only removes a
+        // category from the entry pickers (scan2-M7).
+        const categoryTree = await invoke('get_category_tree_all_with_lang', {
             langCode: i18n.currentLanguage
         });
+        const filterLabel = (name, isDisabled) =>
+            isDisabled === 1 ? `${name} ${i18n.t('common.disabled_label')}` : name;
         
         // Populate Category1 dropdown
         const category1Select = document.getElementById('filter-category1');
@@ -291,7 +295,7 @@ async function loadCategoriesForFilter() {
                     cat1Data.children.forEach(cat2 => {
                         const option = document.createElement('option');
                         option.value = cat2.category2.category2_code;
-                        option.textContent = cat2.category2.category2_name_i18n;
+                        option.textContent = filterLabel(cat2.category2.category2_name_i18n, cat2.category2.is_disabled);
                         category2Select.appendChild(option);
                     });
                 }
@@ -316,7 +320,7 @@ async function loadCategoriesForFilter() {
                         cat2Data.children.forEach(cat3 => {
                             const option = document.createElement('option');
                             option.value = cat3.category3_code;
-                            option.textContent = cat3.category3_name_i18n;
+                            option.textContent = filterLabel(cat3.category3_name_i18n, cat3.is_disabled);
                             category3Select.appendChild(option);
                         });
                     }

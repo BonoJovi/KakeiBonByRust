@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-10-07 JST  
-**総テスト数**: 923件 (jest suite 83 ファイル、`npm test` 実測)
+**総テスト数**: 926件 (jest suite 85 ファイル、`npm test` 実測)
 
 ---
 
@@ -91,6 +91,8 @@
   - [pages/dashboard-bar-top10.test.js](#pagesdashboard-bar-top10testjs)
   - [pages/index-setup-page.test.js](#pagesindex-setup-pagetestjs)
   - [pages/category-management-page.test.js](#pagescategory-management-pagetestjs)
+  - [pages/category-management-move-buttons.test.js](#pagescategory-management-move-buttonstestjs)
+  - [pages/transaction-management-filter-hidden-category.test.js](#pagestransaction-management-filter-hidden-categorytestjs)
   - [pages/user-management-password-page.test.js](#pagesuser-management-password-pagetestjs)
   - [pages/user-management-nonadmin-page.test.js](#pagesuser-management-nonadmin-pagetestjs)
   - [pages/index-setup-password-length.test.js](#pagesindex-setup-password-lengthtestjs)
@@ -1498,6 +1500,35 @@
 
 ---
 
+### pages/category-management-move-buttons.test.js
+
+実際の費目管理画面で、↑/↓ ボタンが非表示の費目を数えないことを確かめる (潜在スキャン scan2-M5)。非表示の費目は表示中の費目の後ろに並ぶ。
+
+**テスト数**: 2件
+
+| テスト | 説明 |
+|--------|------|
+| `[scan2-M5] the last visible CATEGORY2 cannot move down past hidden ones` | 表示中の最初の中分類は「↑」、最後の中分類は「↓」が押せない (後ろに非表示があっても)。非表示の行には ↑/↓ が無い |
+| `[scan2-M5] the last visible CATEGORY3 cannot move down past hidden ones` | 小分類でも同じ |
+
+**ファイル**: res/tests/pages/category-management-move-buttons.test.js
+
+---
+
+### pages/transaction-management-filter-hidden-category.test.js
+
+実際の入出金一覧で、費目フィルタに非表示の費目も出ることを確かめる (潜在スキャン scan2-M7)。入力用の選択肢からは外したまま。
+
+**テスト数**: 1件
+
+| テスト | 説明 |
+|--------|------|
+| `[scan2-M7] offers a hidden CATEGORY2 and its CATEGORY3, labelled as hidden` | 非表示の中分類「外食」とその小分類が `common.disabled_label` 付きで選べる。表示中の「食費」はラベル無しのまま |
+
+**ファイル**: res/tests/pages/transaction-management-filter-hidden-category.test.js
+
+---
+
 ### pages/user-management-password-page.test.js
 
 ユーザー管理画面 (管理者セッション) のパスワード検証の回帰テスト (潜在監査 L24 / L31)。
@@ -1707,7 +1738,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **500件** |
+| **機能別テスト** | **503件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 30 |
@@ -1777,6 +1808,8 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | pages/dashboard-bar-top10.test.js | 1 |
 | pages/index-setup-page.test.js | 3 |
 | pages/category-management-page.test.js | 2 |
+| pages/category-management-move-buttons.test.js | 2 |
+| pages/transaction-management-filter-hidden-category.test.js | 1 |
 | pages/user-management-password-page.test.js | 2 |
 | pages/user-management-nonadmin-page.test.js | 2 |
 | pages/index-setup-password-length.test.js | 2 |
@@ -1786,7 +1819,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **923件** |
+| **総計 (jest)** | **926件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 

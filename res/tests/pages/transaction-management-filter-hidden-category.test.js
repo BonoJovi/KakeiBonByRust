@@ -1,4 +1,3 @@
-// latent-audit scan2-M7: the transaction-list category filter drops hidden categories, so their history cannot be searched
 /**
  * Transaction list screen (res/js/transaction-management.js).
  *
@@ -16,7 +15,7 @@
 import { jest } from '@jest/globals';
 import {
     mockPageModules, loadPageBody, bootPage, flush,
-} from '../pages/_page-harness.js';
+} from './_page-harness.js';
 
 const cat3 = (code, name, isDisabled) => ({
     category3_code: code, category3_name_i18n: name, display_order: 1, is_disabled: isDisabled,
@@ -82,8 +81,8 @@ function choose(selectId, value) {
 const optionFor = (selectId, value) =>
     Array.from(document.getElementById(selectId).options).find((o) => o.value === value);
 
-describe('scan2-M7 transaction-list filter and hidden categories', () => {
-    test('offers a hidden CATEGORY2 and its CATEGORY3, labelled as hidden', async () => {
+describe('transaction-list filter and hidden categories (scan2-M7)', () => {
+    test('[scan2-M7] offers a hidden CATEGORY2 and its CATEGORY3, labelled as hidden', async () => {
         choose('filter-category1', 'EXPENSE');
         await flush(3);
 

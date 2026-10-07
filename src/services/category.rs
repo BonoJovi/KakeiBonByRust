@@ -205,7 +205,9 @@ impl CategoryService {
     // returns None, which the `if let Some(...)` arm already
     // treats as a no-op. Two internal helpers below (one per level)
     // consume `delta = ±1`, and the 4 publics each collapse to a
-    // one-line wrapper.
+    // one-line wrapper. Since scan2-M5 the sign of `delta` only picks
+    // the direction: the sibling is the nearest visible one, whose
+    // order number need not be adjacent.
 
     async fn swap_category2_with_sibling(
         &self,
@@ -224,20 +226,24 @@ impl CategoryService {
             .await?
             .ok_or(CategoryError::NotFound)?;
 
-        let target_order = current_order + delta;
+        // Swap with the nearest *visible* sibling: hidden ones are listed
+        // after the visible ones, so swapping with one moves nothing on
+        // screen (scan2-M5). A missing sibling means there is nothing to
+        // swap with (no-op). Any other database error must reach the
+        // caller instead of being reported as success.
+        let sibling_query = if delta < 0 {
+            sql_queries::CATEGORY2_GET_PREV_VISIBLE_SIBLING
+        } else {
+            sql_queries::CATEGORY2_GET_NEXT_VISIBLE_SIBLING
+        };
+        let sibling: Option<(String, i64)> = sqlx::query_as(sibling_query)
+            .bind(user_id)
+            .bind(category1_code)
+            .bind(current_order)
+            .fetch_optional(&self.pool)
+            .await?;
 
-        // A missing sibling means there is nothing to swap with
-        // (no-op). Any other database error must reach the caller
-        // instead of being reported as success.
-        let sibling_code: Option<String> =
-            sqlx::query_scalar(sql_queries::CATEGORY2_GET_SIBLING_BY_ORDER)
-                .bind(user_id)
-                .bind(category1_code)
-                .bind(target_order)
-                .fetch_optional(&self.pool)
-                .await?;
-
-        if let Some(sibling_code) = sibling_code {
+        if let Some((sibling_code, target_order)) = sibling {
             let mut tx = self.pool.begin().await?;
             // Move current to target.
             sqlx::query(sql_queries::CATEGORY2_UPDATE_ORDER)
@@ -280,18 +286,21 @@ impl CategoryService {
             .await?
             .ok_or(CategoryError::NotFound)?;
 
-        let target_order = current_order + delta;
+        // Nearest visible sibling, as for CATEGORY2 (scan2-M5).
+        let sibling_query = if delta < 0 {
+            sql_queries::CATEGORY3_GET_PREV_VISIBLE_SIBLING
+        } else {
+            sql_queries::CATEGORY3_GET_NEXT_VISIBLE_SIBLING
+        };
+        let sibling: Option<(String, i64)> = sqlx::query_as(sibling_query)
+            .bind(user_id)
+            .bind(category1_code)
+            .bind(category2_code)
+            .bind(current_order)
+            .fetch_optional(&self.pool)
+            .await?;
 
-        let sibling_code: Option<String> =
-            sqlx::query_scalar(sql_queries::CATEGORY3_GET_SIBLING_BY_ORDER)
-                .bind(user_id)
-                .bind(category1_code)
-                .bind(category2_code)
-                .bind(target_order)
-                .fetch_optional(&self.pool)
-                .await?;
-
-        if let Some(sibling_code) = sibling_code {
+        if let Some((sibling_code, target_order)) = sibling {
             let mut tx = self.pool.begin().await?;
             sqlx::query(sql_queries::CATEGORY3_UPDATE_ORDER)
                 .bind(target_order)
@@ -1033,7 +1042,7 @@ impl CategoryService {
     /// Move a CATEGORY2 up in the display order. PR9 (Fable-5 #27):
     /// one-line wrapper over the shared swap helper. The old
     /// `current_order <= 1` early-return was redundant because the
-    /// sibling lookup at `target_order = 0` returns None and the
+    /// sibling lookup finds nothing before the first row and the
     /// helper's `if let Some(...)` arm already treats that as a no-op.
     pub async fn move_category2_up(
         &self,

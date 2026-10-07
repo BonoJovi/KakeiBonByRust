@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-10-07 JST  
-**総テスト数**: 450件 (差分反映後。`cargo test --lib` の権威的総数は 716 で、既存の未反映分は別 PR でバックフィル予定)
+**総テスト数**: 454件 (差分反映後。`cargo test --lib` の権威的総数は 720 で、既存の未反映分は別 PR でバックフィル予定)
 
 ---
 
@@ -394,31 +394,31 @@ AES-256-GCM暗号化・復号化のテスト。
 
 | テスト関数 | 説明 | ファイル | 行 |
 |-----------|------|---------|-----|
-| `test_populate_default_categories` | デフォルトカテゴリの登録 | src/services/category.rs | 1087 |
-| `test_get_category1_list` | 大カテゴリ一覧取得 | src/services/category.rs | 1155 |
-| `test_add_category2` | 中カテゴリ追加 | src/services/category.rs | 1198 |
-| `test_add_category2_duplicate_name` | 中カテゴリの重複名エラー | src/services/category.rs | 1234 |
-| `test_add_category3` | 小カテゴリ追加 | src/services/category.rs | 1267 |
-| `test_add_category3_duplicate_name` | 小カテゴリの重複名エラー | src/services/category.rs | 1301 |
-| `test_move_category2_order` | 中カテゴリの表示順変更 | src/services/category.rs | 1342 |
-| `test_move_category3_order` | 小カテゴリの表示順変更 | src/services/category.rs | 1426 |
-| `test_update_category2` | 中カテゴリ更新 | src/services/category.rs | 1503 |
-| `test_update_category3` | 小カテゴリ更新 | src/services/category.rs | 1527 |
-| `test_update_category2_duplicate_name` | 中カテゴリの重複名更新エラー | src/services/category.rs | 1552 |
-| `test_move_category2_boundary` | 中カテゴリの境界値移動テスト | src/services/category.rs | 1571 |
-| `test_get_category_for_edit` | 編集用カテゴリ情報取得 | src/services/category.rs | 1623 |
-| `test_get_category2_for_edit_returns_not_found_for_missing` | 消失した中カテゴリ編集取得は NotFound を返す (Fable-5 #6) | src/services/category.rs | 1873 |
-| `test_get_category3_for_edit_returns_not_found_for_missing` | 消失した小カテゴリ編集取得は NotFound を返す (Fable-5 #6) | src/services/category.rs | 1884 |
-| `test_disable_category2_returns_not_found_for_missing` | 消失した中カテゴリ論理削除は NotFound を返す (Fable-5 #7) | src/services/category.rs | 1899 |
-| `test_disable_category3_returns_not_found_for_missing` | 消失した小カテゴリ論理削除は NotFound を返す (Fable-5 #7) | src/services/category.rs | 1910 |
-| `test_disable_category2_succeeds_with_no_children` | 子カテゴリなしの中カテゴリ論理削除は成功する（子スイープは0件許容） | src/services/category.rs | 1926 |
-| `not_found_maps_to_not_found_code_with_category_entity` | `CategoryError::NotFound` → `ApiError { code: "not_found", entity: "category" }` (Fable-5 #23) | src/services/category.rs | 2101 |
-| `duplicate_name_maps_to_duplicate_name_code_with_category_entity` | `CategoryError::DuplicateName(_)` → `ApiError { code: "duplicate_name", entity: "category" }` (Fable-5 #23) | src/services/category.rs | 2108 |
-| `validation_preserves_message_and_omits_entity` | `CategoryError::Validation(msg)` → `ApiError { code: "validation" }` で message を保持 (Fable-5 #23) | src/services/category.rs | 2115 |
-| `database_error_maps_to_database_code` | `CategoryError::DatabaseError(_)` → `ApiError { code: "database" }` (Fable-5 #23) | src/services/category.rs | 2125 |
-| `test_get_category_tree_groups_children_under_parent` | 3-flat-queries + HashMap grouping で cat1→cat2→cat3 の親子関係が正しく組み上がる regression pin (PR11, Fable-5 #31) | src/services/category.rs | 2022 |
-| `test_get_category_tree_preserves_display_order` | move_category2_up で並び替えた cat2 の DISPLAY_ORDER が flat-query grouping 後も維持されること (PR11, Fable-5 #31) | src/services/category.rs | 2077 |
-| `test_get_category_tree_all_includes_disabled_flags` | `get_category_tree_all` は disabled 行を含め `is_disabled` フィールド付きで返す (PR11, Fable-5 #31)。反面 `get_category_tree` は disabled 行を除外する対比も同時にチェック | src/services/category.rs | 2106 |
+| `test_populate_default_categories` | デフォルトカテゴリの登録 | src/services/category.rs | 1333 |
+| `test_get_category1_list` | 大カテゴリ一覧取得 | src/services/category.rs | 1401 |
+| `test_add_category2` | 中カテゴリ追加 | src/services/category.rs | 1444 |
+| `test_add_category2_duplicate_name` | 中カテゴリの重複名エラー | src/services/category.rs | 1480 |
+| `test_add_category3` | 小カテゴリ追加 | src/services/category.rs | 1513 |
+| `test_add_category3_duplicate_name` | 小カテゴリの重複名エラー | src/services/category.rs | 1547 |
+| `test_move_category2_order` | 中カテゴリの表示順変更 | src/services/category.rs | 1588 |
+| `test_move_category3_order` | 小カテゴリの表示順変更 | src/services/category.rs | 1672 |
+| `test_update_category2` | 中カテゴリ更新 | src/services/category.rs | 1749 |
+| `test_update_category3` | 小カテゴリ更新 | src/services/category.rs | 1773 |
+| `test_update_category2_duplicate_name` | 中カテゴリの重複名更新エラー | src/services/category.rs | 1798 |
+| `test_move_category2_boundary` | 中カテゴリの境界値移動テスト | src/services/category.rs | 1817 |
+| `test_get_category_for_edit` | 編集用カテゴリ情報取得 | src/services/category.rs | 1869 |
+| `test_get_category2_for_edit_returns_not_found_for_missing` | 消失した中カテゴリ編集取得は NotFound を返す (Fable-5 #6) | src/services/category.rs | 1903 |
+| `test_get_category3_for_edit_returns_not_found_for_missing` | 消失した小カテゴリ編集取得は NotFound を返す (Fable-5 #6) | src/services/category.rs | 1914 |
+| `test_disable_category2_returns_not_found_for_missing` | 消失した中カテゴリ論理削除は NotFound を返す (Fable-5 #7) | src/services/category.rs | 1929 |
+| `test_disable_category3_returns_not_found_for_missing` | 消失した小カテゴリ論理削除は NotFound を返す (Fable-5 #7) | src/services/category.rs | 1940 |
+| `test_disable_category2_succeeds_with_no_children` | 子カテゴリなしの中カテゴリ論理削除は成功する（子スイープは0件許容） | src/services/category.rs | 1956 |
+| `not_found_maps_to_not_found_code_with_category_entity` | `CategoryError::NotFound` → `ApiError { code: "not_found", entity: "category" }` (Fable-5 #23) | src/services/category.rs | 2104 |
+| `duplicate_name_maps_to_duplicate_name_code_with_category_entity` | `CategoryError::DuplicateName(_)` → `ApiError { code: "duplicate_name", entity: "category" }` (Fable-5 #23) | src/services/category.rs | 2111 |
+| `validation_preserves_message_and_omits_entity` | `CategoryError::Validation(msg)` → `ApiError { code: "validation" }` で message を保持 (Fable-5 #23) | src/services/category.rs | 2118 |
+| `database_error_maps_to_database_code` | `CategoryError::DatabaseError(_)` → `ApiError { code: "database" }` (Fable-5 #23) | src/services/category.rs | 2128 |
+| `test_get_category_tree_groups_children_under_parent` | 3-flat-queries + HashMap grouping で cat1→cat2→cat3 の親子関係が正しく組み上がる regression pin (PR11, Fable-5 #31) | src/services/category.rs | 2141 |
+| `test_get_category_tree_preserves_display_order` | move_category2_up で並び替えた cat2 の DISPLAY_ORDER が flat-query grouping 後も維持されること (PR11, Fable-5 #31) | src/services/category.rs | 2196 |
+| `test_get_category_tree_all_includes_disabled_flags` | `get_category_tree_all` は disabled 行を含め `is_disabled` フィールド付きで返す (PR11, Fable-5 #31)。反面 `get_category_tree` は disabled 行を除外する対比も同時にチェック | src/services/category.rs | 2225 |
 | `latent_m8_enable_category2_restores_cascaded_category3` | 非表示にした中分類を表示に戻すと、一緒に非表示になった小分類も戻る (潜在監査 M8) | src/services/latent_audit/category.rs | 83 |
 | `latent_l19_enable_missing_category2_returns_not_found` | 存在しない中分類の表示復帰は not_found (潜在監査 L19、中分類の表示復帰のみ) | src/services/latent_audit/category.rs | 223 |
 | `latent_m8_enable_already_enabled_category2_keeps_hidden_children` | 表示中の中分類への表示復帰は何もせず、個別に非表示にした小分類は非表示のまま (潜在監査 M8) | src/services/latent_audit/category.rs | 110 |
@@ -432,10 +432,14 @@ AES-256-GCM暗号化・復号化のテスト。
 | `latent_l20_add_category2_empty_category1_code_does_not_panic` | 空の費目1コードはパニックせず拒否 (潜在監査 L20) | src/services/latent_audit/category.rs | 312 |
 | `latent_l20_add_category2_multibyte_category1_code_does_not_panic` | 存在しないマルチバイトの費目1コードはパニックせず拒否 (潜在監査 L20) | src/services/latent_audit/category.rs | 323 |
 | `latent_l20_add_category3_multibyte_category1_code_does_not_panic` | 存在しないマルチバイトの費目1配下への小分類追加はパニックせず拒否 (潜在監査 L20) | src/services/latent_audit/category.rs | 333 |
-| `latent_scan2_m3_detail_list_shows_renamed_category_names` | 入出金の明細一覧に、大分類の名前と、変更後の中分類・小分類の名前が表示言語 (日本語・英語) で出る。言語別の名前が無い言語では基本名になる (潜在スキャン scan2-M3) | src/services/latent_audit/category.rs | 456 |
-| `latent_scan2_m8_transaction_list_category1_follows_language` | 入出金一覧の大分類が表示言語の名前 (支出 / Expense) になり、その言語の行が無いときは基本名になる (潜在スキャン scan2-M8) | src/services/latent_audit/category.rs | 562 |
+| `latent_scan2_m5_move_up_skips_hidden_sibling` | A・非表示の B・C の並びで、C の「↑」1 回で非表示の B を飛ばして A の上に移る (潜在スキャン scan2-M5) | src/services/latent_audit/category.rs | 367 |
+| `latent_scan2_m5_move_down_skips_hidden_sibling` | A・非表示の B・C の並びで、A の「↓」1 回で非表示の B を飛ばして C の下に移る (潜在スキャン scan2-M5) | src/services/latent_audit/category.rs | 390 |
+| `latent_scan2_m5_move_down_past_only_hidden_siblings_is_noop` | 表示中で最後の中分類 (後ろは非表示だけ) の「↓」では何も変わらず、順番の数字も変わらない (潜在スキャン scan2-M5) | src/services/latent_audit/category.rs | 411 |
+| `latent_scan2_m5_category3_moves_skip_hidden_sibling` | 小分類の「↑」「↓」も同じく非表示の兄弟を飛ばす (潜在スキャン scan2-M5) | src/services/latent_audit/category.rs | 451 |
+| `latent_scan2_m3_detail_list_shows_renamed_category_names` | 入出金の明細一覧に、大分類の名前と、変更後の中分類・小分類の名前が表示言語 (日本語・英語) で出る。言語別の名前が無い言語では基本名になる (潜在スキャン scan2-M3) | src/services/latent_audit/category.rs | 549 |
+| `latent_scan2_m8_transaction_list_category1_follows_language` | 入出金一覧の大分類が表示言語の名前 (支出 / Expense) になり、その言語の行が無いときは基本名になる (潜在スキャン scan2-M8) | src/services/latent_audit/category.rs | 655 |
 
-**合計**: 40件
+**合計**: 44件
 
 ### services/manufacturer.rs
 
@@ -736,7 +740,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **427件** |
+| **インラインテスト** | **431件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -749,7 +753,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/user_management.rs | 24 |
 | services/encryption.rs | 11 |
 | services/account.rs | 19 |
-| services/category.rs | 40 |
+| services/category.rs | 44 |
 | services/manufacturer.rs | 17 |
 | services/product.rs | 20 |
 | services/shop.rs | 19 |
@@ -760,7 +764,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/i18n.rs | 8 |
 | services/recurring.rs | 26 |
 | lib.rs | 6 |
-| **総計** | **450件** |
+| **総計** | **454件** |
 
 ---
 

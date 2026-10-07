@@ -364,7 +364,6 @@ fn cat2_codes_in_tree(tree: &serde_json::Value, cat1: &str) -> Vec<String> {
 /// Expected: "↑" moves C above the nearest *enabled* sibling, so the
 /// enabled tree lists C before A after one click.
 #[tokio::test]
-#[ignore = "latent-audit scan2-M5"]
 async fn latent_scan2_m5_move_up_skips_hidden_sibling() {
     let (_pool, service, user_id) = setup().await;
     let a = service.add_category2(user_id, "EXPENSE", "食費", "Food").await.unwrap();
@@ -382,6 +381,100 @@ async fn latent_scan2_m5_move_up_skips_hidden_sibling() {
         after,
         vec![c.clone(), a.clone()],
         "one \"up\" click on C must move it above the enabled sibling A, skipping the hidden B"
+    );
+}
+
+/// scan2-M5, "↓" side: with A(1), B(2, hidden), C(3), "↓" on A must move it
+/// below C in one click instead of swapping with the hidden B.
+#[tokio::test]
+async fn latent_scan2_m5_move_down_skips_hidden_sibling() {
+    let (_pool, service, user_id) = setup().await;
+    let a = service.add_category2(user_id, "EXPENSE", "食費", "Food").await.unwrap();
+    let b = service.add_category2(user_id, "EXPENSE", "外食", "Dining").await.unwrap();
+    let c = service.add_category2(user_id, "EXPENSE", "日用品", "Daily goods").await.unwrap();
+    service.disable_category2(user_id, "EXPENSE", &b).await.unwrap();
+
+    service.move_category2_down(user_id, "EXPENSE", &a).await.unwrap();
+
+    let after = cat2_codes_in_tree(&service.get_category_tree(user_id, "ja").await.unwrap(), "EXPENSE");
+    assert_eq!(
+        after,
+        vec![c.clone(), a.clone()],
+        "one \"down\" click on A must move it below the enabled sibling C, skipping the hidden B"
+    );
+}
+
+/// scan2-M5: moving the last enabled sibling down (only hidden rows follow)
+/// must be a no-op. Before the fix it swapped with the hidden row, so only
+/// the "Order" number shown on the screen changed.
+#[tokio::test]
+async fn latent_scan2_m5_move_down_past_only_hidden_siblings_is_noop() {
+    let (_pool, service, user_id) = setup().await;
+    let a = service.add_category2(user_id, "EXPENSE", "食費", "Food").await.unwrap();
+    let c = service.add_category2(user_id, "EXPENSE", "日用品", "Daily goods").await.unwrap();
+    let b = service.add_category2(user_id, "EXPENSE", "外食", "Dining").await.unwrap();
+    service.disable_category2(user_id, "EXPENSE", &b).await.unwrap();
+
+    service.move_category2_down(user_id, "EXPENSE", &c).await.unwrap();
+
+    let tree = service.get_category_tree_all(user_id, "ja").await.unwrap();
+    assert_eq!(cat2_codes_in_tree(&tree, "EXPENSE"), vec![a, c.clone(), b]);
+    let c_order = tree[0]["children"]
+        .as_array()
+        .and_then(|ch| ch.iter().find(|n| n["category2"]["category2_code"] == c.as_str()))
+        .map(|n| n["category2"]["display_order"].clone());
+    assert_eq!(
+        c_order,
+        Some(serde_json::json!(2)),
+        "nothing visible follows C, so its order number must not change"
+    );
+}
+
+/// CATEGORY3 codes under `cat1` / `cat2`, in the order the tree lists them.
+fn cat3_codes_in_tree(tree: &serde_json::Value, cat1: &str, cat2: &str) -> Vec<String> {
+    tree.as_array()
+        .and_then(|a| a.iter().find(|n| n["category1"]["category1_code"] == cat1))
+        .and_then(|n| n["children"].as_array())
+        .and_then(|c| c.iter().find(|n| n["category2"]["category2_code"] == cat2))
+        .and_then(|n| n["children"].as_array())
+        .map(|children| {
+            children
+                .iter()
+                .filter_map(|c| c["category3_code"].as_str().map(str::to_string))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// scan2-M5 on CATEGORY3: "↑" and "↓" skip a hidden sibling the same way.
+#[tokio::test]
+async fn latent_scan2_m5_category3_moves_skip_hidden_sibling() {
+    let (_pool, service, user_id) = setup().await;
+    let parent = service.add_category2(user_id, "EXPENSE", "食費", "Food").await.unwrap();
+    let a = service.add_category3(user_id, "EXPENSE", &parent, "米", "Rice").await.unwrap();
+    let b = service.add_category3(user_id, "EXPENSE", &parent, "パン", "Bread").await.unwrap();
+    let c = service.add_category3(user_id, "EXPENSE", &parent, "麺", "Noodles").await.unwrap();
+    service.disable_category3(user_id, "EXPENSE", &parent, &b).await.unwrap();
+
+    let visible = |tree: serde_json::Value| cat3_codes_in_tree(&tree, "EXPENSE", &parent);
+    assert_eq!(
+        visible(service.get_category_tree(user_id, "ja").await.unwrap()),
+        vec![a.clone(), c.clone()],
+        "precondition: visible order is A, C"
+    );
+
+    service.move_category3_up(user_id, "EXPENSE", &parent, &c).await.unwrap();
+    assert_eq!(
+        visible(service.get_category_tree(user_id, "ja").await.unwrap()),
+        vec![c.clone(), a.clone()],
+        "one \"up\" click on C must move it above A, skipping the hidden B"
+    );
+
+    service.move_category3_down(user_id, "EXPENSE", &parent, &c).await.unwrap();
+    assert_eq!(
+        visible(service.get_category_tree(user_id, "ja").await.unwrap()),
+        vec![a.clone(), c.clone()],
+        "one \"down\" click on C must move it back below A, skipping the hidden B"
     );
 }
 
