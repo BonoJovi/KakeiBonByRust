@@ -366,32 +366,53 @@ impl Database {
         Ok(())
     }
 
-    /// Populate HOLIDAYS_STANDARD with Japanese holidays for [today-5y, today+10y].
-    /// Idempotent via INSERT OR IGNORE on the (LOCALE, HOLIDAY_DATE) UNIQUE
-    /// index — running on every startup just patches in any newly-passing year.
-    /// Replaces the hand-maintained 2026–2028 hard-coded list that earlier
-    /// commits shipped in dbaccess.sql.
+    /// Populate HOLIDAYS_STANDARD with Japanese holidays for
+    /// [today-5y, today+10y+1]. The extra year keeps the January after the
+    /// last year a recurring rule may cover seeded, so a "next business day"
+    /// shift from Dec 31 sees 元日 (scan2-R7; `period_limits` stops one year
+    /// before the last seeded one).
+    ///
+    /// The seeded years are written again on every startup, in one
+    /// transaction: rows an older build stored with a wrong date are
+    /// replaced, such as the 2021 Olympic holiday moves that jpholiday 0.1.4
+    /// did not know (scan2-R3). Years before the window that an earlier
+    /// startup seeded are corrected too. User holidays live in
+    /// HOLIDAYS_USER_CUSTOM and are not touched.
     async fn seed_japanese_holidays(&self) -> Result<(), sqlx::Error> {
         use chrono::{Datelike, Local};
-        use jpholiday::jpholiday::JPHoliday;
+        use jpholiday::JPHoliday;
 
         let jp = JPHoliday::new();
         let current_year = Local::now().year();
-        let start_year = current_year - crate::consts::HOLIDAY_SEED_YEARS_BACK;
-        let end_year = current_year + crate::consts::HOLIDAY_SEED_YEARS_AHEAD;
+        let window_start = current_year - crate::consts::HOLIDAY_SEED_YEARS_BACK;
+        let end_year = current_year + crate::consts::HOLIDAY_SEED_YEARS_AHEAD + 1;
 
-        for year in start_year..=end_year {
-            for (date, name) in jp.year_holidays(year) {
-                sqlx::query(
-                    "INSERT OR IGNORE INTO HOLIDAYS_STANDARD \
-                     (LOCALE, HOLIDAY_DATE, HOLIDAY_NAME) VALUES ('JP', ?, ?)"
-                )
-                .bind(date.format("%Y-%m-%d").to_string())
-                .bind(name)
-                .execute(&self.pool)
+        let (seeded_first, _): (Option<String>, Option<String>) =
+            sqlx::query_as(crate::sql_queries::HOLIDAYS_STANDARD_JP_DATE_RANGE)
+                .fetch_one(&self.pool)
                 .await?;
+        let start_year = seeded_first
+            .as_deref()
+            .and_then(|d| d.get(..4))
+            .and_then(|y| y.parse::<i32>().ok())
+            .map_or(window_start, |y| y.min(window_start));
+
+        let mut tx = self.pool.begin().await?;
+        sqlx::query(crate::sql_queries::HOLIDAYS_STANDARD_JP_DELETE_RANGE)
+            .bind(format!("{:04}-01-01", start_year))
+            .bind(format!("{:04}-12-31", end_year))
+            .execute(&mut *tx)
+            .await?;
+        for year in start_year..=end_year {
+            for holiday in jp.year_holidays(year) {
+                sqlx::query(crate::sql_queries::HOLIDAYS_STANDARD_JP_INSERT)
+                    .bind(holiday.date.to_string())
+                    .bind(holiday.name)
+                    .execute(&mut *tx)
+                    .await?;
             }
         }
+        tx.commit().await?;
         Ok(())
     }
 

@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-10-07 JST  
-**総テスト数**: 456件 (差分反映後。`cargo test --lib` の権威的総数は 722 で、既存の未反映分は別 PR でバックフィル予定)
+**総テスト数**: 458件 (差分反映後。`cargo test --lib` の権威的総数は 724 で、既存の未反映分は別 PR でバックフィル予定)
 
 ---
 
@@ -179,24 +179,25 @@ AES-256-GCM暗号化・復号化のテスト。
 
 | テスト関数 | 説明 | ファイル | 行 |
 |-----------|------|---------|-----|
-| `test_wal_mode_enabled` | WALモード有効化の確認 | src/db.rs | 187 |
-| `test_transactions_detail_migration` | transactions_detailテーブルのマイグレーション | src/db.rs | 217 |
-| `test_migrate_survives_orphaned_memo_reference` | 旧DBの孤児MEMO_ID参照でも migration が成功 (Fable-5 #11) | src/db.rs | 1032 |
-| `test_migrate_leaves_foreign_keys_on` | migration 後に PRAGMA foreign_keys が ON に復元されている (Fable-5 #11) | src/db.rs | 1137 |
-| `migrate_shops_unique_dedupes_and_repoints_references` | SHOPS の重複行を smallest SHOP_ID に集約、TRANSACTIONS_HEADER + RECURRING_RULES の参照も repoint、unique index 作成、追加 INSERT が拒否されることを end-to-end で確認 (PR15, Fable-5 #20) | src/db.rs | 1373 |
-| `migrate_shops_unique_is_idempotent` | 一度成功した migration の 2 回目実行が no-op で行数を変えない (PR15, Fable-5 #20) | src/db.rs | 1424 |
-| `migrate_shops_unique_scopes_per_user` | user A と user B が同じ SHOP_NAME を持つケースは重複扱いしない (constraint は per-user scope) (PR15, Fable-5 #20) | src/db.rs | 1437 |
-| `migrate_shops_unique_keeps_active_row_over_soft_deleted_older_id` | 論理削除された古い店舗 (小さい SHOP_ID) と再作成された有効な同名店舗 (大きい SHOP_ID) が並存するとき、有効な行が survivor に選ばれ、旧 transaction 参照も active row に repoint される (PR15, Devin #118 review) | src/db.rs | 1459 |
-| `pool_connections_all_enforce_foreign_keys` | プールが返すすべての接続で `PRAGMA foreign_keys = ON` が有効。修正前は起動時に 1 回だけ実行された接続のみ FK が有効で、それ以外の借り手が取った接続では SHOPS user-cascade マイグレーションが無効化されていた (#128 CodeRabbit 外側指摘) | src/db.rs | 1630 |
-| `migrate_shops_user_id_cascade_adds_cascade_fk_and_preserves_rows` | テーブルを再作成して SHOPS.USER_ID FK に `ON DELETE CASCADE` を追加、SHOP_ID と各列の値はそのまま保持されること (Fable-5 #11) | src/db.rs | 1711 |
-| `migrate_shops_user_id_cascade_is_idempotent` | SHOPS CASCADE マイグレーションの 2 回目は既に CASCADE FK があるため早期に戻る。マイグレーション済み DB では DROP/RENAME は走らない (Fable-5 #11) | src/db.rs | 1799 |
-| `user_delete_cascades_to_shops_after_migration` | CASCADE マイグレーション後、SHOPS 行を持つユーザーの削除が成功し、SHOPS 行も同時に削除される。修正前は `FOREIGN KEY constraint failed` でロールバックしていた (Fable-5 #11) | src/db.rs | 1823 |
-| `latent_h5_migration_backfills_null_amount_including_tax` | 起動時マイグレーションが NULL の AMOUNT_INCLUDING_TAX を AMOUNT + TAX_AMOUNT で補完 (潜在監査 H5) | src/latent_audit/db.rs | 33 |
+| `test_wal_mode_enabled` | WALモード有効化の確認 | src/db.rs | 882 |
+| `test_transactions_detail_migration` | transactions_detailテーブルのマイグレーション | src/db.rs | 912 |
+| `test_migrate_survives_orphaned_memo_reference` | 旧DBの孤児MEMO_ID参照でも migration が成功 (Fable-5 #11) | src/db.rs | 1375 |
+| `test_migrate_leaves_foreign_keys_on` | migration 後に PRAGMA foreign_keys が ON に復元されている (Fable-5 #11) | src/db.rs | 1480 |
+| `migrate_shops_unique_dedupes_and_repoints_references` | SHOPS の重複行を smallest SHOP_ID に集約、TRANSACTIONS_HEADER + RECURRING_RULES の参照も repoint、unique index 作成、追加 INSERT が拒否されることを end-to-end で確認 (PR15, Fable-5 #20) | src/db.rs | 1607 |
+| `migrate_shops_unique_is_idempotent` | 一度成功した migration の 2 回目実行が no-op で行数を変えない (PR15, Fable-5 #20) | src/db.rs | 1658 |
+| `migrate_shops_unique_scopes_per_user` | user A と user B が同じ SHOP_NAME を持つケースは重複扱いしない (constraint は per-user scope) (PR15, Fable-5 #20) | src/db.rs | 1671 |
+| `migrate_shops_unique_keeps_active_row_over_soft_deleted_older_id` | 論理削除された古い店舗 (小さい SHOP_ID) と再作成された有効な同名店舗 (大きい SHOP_ID) が並存するとき、有効な行が survivor に選ばれ、旧 transaction 参照も active row に repoint される (PR15, Devin #118 review) | src/db.rs | 1693 |
+| `pool_connections_all_enforce_foreign_keys` | プールが返すすべての接続で `PRAGMA foreign_keys = ON` が有効。修正前は起動時に 1 回だけ実行された接続のみ FK が有効で、それ以外の借り手が取った接続では SHOPS user-cascade マイグレーションが無効化されていた (#128 CodeRabbit 外側指摘) | src/db.rs | 1747 |
+| `migrate_shops_user_id_cascade_adds_cascade_fk_and_preserves_rows` | テーブルを再作成して SHOPS.USER_ID FK に `ON DELETE CASCADE` を追加、SHOP_ID と各列の値はそのまま保持されること (Fable-5 #11) | src/db.rs | 1828 |
+| `migrate_shops_user_id_cascade_is_idempotent` | SHOPS CASCADE マイグレーションの 2 回目は既に CASCADE FK があるため早期に戻る。マイグレーション済み DB では DROP/RENAME は走らない (Fable-5 #11) | src/db.rs | 1916 |
+| `user_delete_cascades_to_shops_after_migration` | CASCADE マイグレーション後、SHOPS 行を持つユーザーの削除が成功し、SHOPS 行も同時に削除される。修正前は `FOREIGN KEY constraint failed` でロールバックしていた (Fable-5 #11) | src/db.rs | 1940 |
+| `latent_h5_migration_backfills_null_amount_including_tax` | 起動時マイグレーションが NULL の AMOUNT_INCLUDING_TAX を AMOUNT + TAX_AMOUNT で補完 (潜在監査 H5) | src/latent_audit/db.rs | 34 |
 | `latent_m3_startup_removes_orphan_user_categories` | 起動時の掃除で削除済みユーザーの費目を消し、存在するユーザーの費目は残す (潜在監査 M3) | src/latent_audit/db.rs | 106 |
-| `latent_m2_startup_repairs_header_category1_mismatch` | 明細と大分類が食い違うヘッダーを起動時に明細側の大分類へ戻し、口座も対応する側へ移す。明細が混在するヘッダーと整合しているヘッダーは変えない (潜在監査 M2) | src/latent_audit/db.rs | 142 |
-| `latent_m2_accounts_follow_category1_side` | 口座は新しい大分類が使う側へ移る (支出: FROM、収入: TO) (潜在監査 M2) | src/latent_audit/db.rs | 226 |
+| `latent_m2_startup_repairs_header_category1_mismatch` | 明細と大分類が食い違うヘッダーを起動時に明細側の大分類へ戻し、口座も対応する側へ移す。明細が混在するヘッダーと整合しているヘッダーは変えない (潜在監査 M2) | src/latent_audit/db.rs | 143 |
+| `latent_m2_accounts_follow_category1_side` | 口座は新しい大分類が使う側へ移る (支出: FROM、収入: TO) (潜在監査 M2) | src/latent_audit/db.rs | 238 |
+| `latent_scan2_r3_2021_holidays_are_correct_and_repaired` | 新しい DB に 2021 年の正しい祝日 (07-22、07-23、08-08、08-09。07-19・08-11・10-11 ではない) が入り、古い版が誤った行を入れた DB も起動時の登録で直る (潜在スキャン scan2-R3) | src/latent_audit/db.rs | 272 |
 
-**合計**: 16件
+**合計**: 17件
 
 ### settings.rs
 
@@ -689,34 +690,35 @@ AES-256-GCM暗号化・復号化のテスト。
 
 | テスト関数 | 説明 | ファイル | 行 |
 |-----------|------|---------|-----|
-| `test_delete_rule_returns_not_found_for_missing` | 消失したルールの削除は空コミット偽成功でなく NotFound を返す (Fable-5 #8) | src/services/recurring.rs | 1811 |
-| `not_found_maps_to_not_found_code_with_recurring_rule_entity` | RecurringError::NotFound が ApiError::not_found("recurring rule") にマッピングされること (PR2a) | src/services/recurring.rs | 1833 |
-| `validation_preserves_message_and_omits_entity` | RecurringError::Validation が ApiError::CODE_VALIDATION に変換され、メッセージが保持されること (PR2a) | src/services/recurring.rs | 1840 |
-| `database_error_maps_to_database_code` | RecurringError::Database が ApiError::CODE_DATABASE に変換されること (PR2a) | src/services/recurring.rs | 1851 |
-| `field_needle_message_survives_conversion_for_frontend_routing` | 4 つのフィールド needle (`"Rule name must be"` 等) が変換後もそのまま先頭に残り、フロントの `startsWith` ルーティングを維持できること (PR2a) | src/services/recurring.rs | 1858 |
+| `test_delete_rule_returns_not_found_for_missing` | 消失したルールの削除は空コミット偽成功でなく NotFound を返す (Fable-5 #8) | src/services/recurring.rs | 2139 |
+| `not_found_maps_to_not_found_code_with_recurring_rule_entity` | RecurringError::NotFound が ApiError::not_found("recurring rule") にマッピングされること (PR2a) | src/services/recurring.rs | 2169 |
+| `validation_preserves_message_and_omits_entity` | RecurringError::Validation が ApiError::CODE_VALIDATION に変換され、メッセージが保持されること (PR2a) | src/services/recurring.rs | 2176 |
+| `database_error_maps_to_database_code` | RecurringError::Database が ApiError::CODE_DATABASE に変換されること (PR2a) | src/services/recurring.rs | 2187 |
+| `field_needle_message_survives_conversion_for_frontend_routing` | 4 つのフィールド needle (`"Rule name must be"` 等) が変換後もそのまま先頭に残り、フロントの `startsWith` ルーティングを維持できること (PR2a) | src/services/recurring.rs | 2194 |
 | `latent_h2_cascade_delete_keeps_confirmed_headers` | ルールのカスケード削除は未確定の予定取引だけを消し、確定済み (IS_SCHEDULED = 0) は残して紐付けを外す (潜在監査 H2) | src/services/latent_audit/recurring.rs | 195 |
-| `latent_m16_transfer_same_account_rejected` | 出金元と入金先が同じ振替ルールの作成を拒否 (潜在監査 M16) | src/services/latent_audit/recurring.rs | 334 |
-| `latent_m16_tax_rounding_type_out_of_range_rejected` | 範囲外の端数処理種別でのルール作成を拒否 (潜在監査 M16) | src/services/latent_audit/recurring.rs | 356 |
-| `latent_m16_tax_included_type_out_of_range_rejected` | 範囲外の内税/外税種別でのルール作成を拒否 (潜在監査 M16) | src/services/latent_audit/recurring.rs | 377 |
+| `latent_m16_transfer_same_account_rejected` | 出金元と入金先が同じ振替ルールの作成を拒否 (潜在監査 M16) | src/services/latent_audit/recurring.rs | 337 |
+| `latent_m16_tax_rounding_type_out_of_range_rejected` | 範囲外の端数処理種別でのルール作成を拒否 (潜在監査 M16) | src/services/latent_audit/recurring.rs | 359 |
+| `latent_m16_tax_included_type_out_of_range_rejected` | 範囲外の内税/外税種別でのルール作成を拒否 (潜在監査 M16) | src/services/latent_audit/recurring.rs | 380 |
 | `latent_m15_holiday_shift_applies_beyond_seeded_range` | 祝日データの範囲外の年にかかるルールは、休日シフトを黙って飛ばさずに拒否される (`PeriodOutOfRange`) (潜在監査 M15) | src/services/latent_audit/recurring.rs | 251 |
-| `latent_m18_huge_generation_rejected` | 9999-12-31 までの毎日ルールは数百万件を生成せずに拒否される (`PeriodOutOfRange`) (潜在監査 M18) | src/services/latent_audit/recurring.rs | 448 |
-| `latent_m15_m18_period_limits_are_inclusive` | 許可範囲の初日・最終日は受け付け、1 日外れると拒否 (潜在監査 M15 / M18) | src/services/latent_audit/recurring.rs | 478 |
-| `latent_m15_period_limit_follows_seeded_holidays` | 祝日が日付基準の上限の前年までしか入っていない場合 (起動したまま年をまたいだ場合)、最後の 1 年は拒否される (潜在監査 M15) | src/services/latent_audit/recurring.rs | 513 |
-| `latent_m15_m18_period_limits_service_clamps_to_seeded_years` | `RecurringService::period_limits` (`get_recurring_period_limits` で画面に渡し、作成時にも適用) は日付基準の範囲を祝日シード済みの年で絞ったもの (潜在監査 M15 / M18) | src/services/latent_audit/recurring.rs | 548 |
-| `latent_m15_m18_period_limits_follow_seeded_years` | 上下限は (今年 − 5) 年 1/1 〜 (今年 + 10) 年 12/31 で、祝日シードの範囲と一致 (潜在監査 M15 / M18) | src/services/latent_audit/recurring.rs | 575 |
-| `latent_m17_total_is_derived_from_the_detail` | ルールと各予定の合計は、1 件の明細からヘッダーの丸め・内税/外税設定で計算される (潜在監査 M17) | src/services/latent_audit/recurring.rs | 591 |
-| `latent_l13_daily_rule_rejects_holiday_shift` | 毎日のルールに祝日シフトは指定できない。シフトなしの毎日・シフトありの毎月は受け付ける (潜在監査 L13) | src/services/latent_audit/recurring.rs | 647 |
-| `latent_m16_detail_amount_out_of_range_rejected` | 範囲外の明細金額でのルール作成を拒否 (潜在監査 M16) | src/services/latent_audit/recurring.rs | 398 |
-| `latent_m16_detail_tax_rate_out_of_range_rejected` | 範囲外の税率でのルール作成を拒否 (潜在監査 M16) | src/services/latent_audit/recurring.rs | 419 |
-| `transfer_same_account_maps_to_transfer_same_account_code` | `RecurringError::TransferSameAccount` が `transfer_same_account` コードに変換される (潜在監査 M16) | src/services/recurring.rs | 1881 |
-| `latent_l2_recurring_rejects_foreign_shop_and_product` | 繰り返しルール作成で自分の店舗・商品は受理し、他ユーザーのものは拒否 (潜在監査 L2) | src/services/latent_audit/recurring.rs | 688 |
-| `latent_l10_generation_terminates_at_the_end_of_the_date_range` | chrono の表現範囲の終わり付近でも月次・年次の日付生成が無限ループせず終了する (潜在監査 L10) | src/services/latent_audit/recurring.rs | 747 |
-| `latent_scan2_r1_shifted_date_inside_period_is_kept` | 暦日は期間のすぐ外でも、休日シフト後に期間内に入る発生日を生成する (開始側・終了側とも) (潜在スキャン scan2-R1) | src/services/latent_audit/recurring.rs | 800 |
-| `latent_scan2_r2_daily_anchor_is_checked_against_the_period` | 毎日の予定の起点日が空なら開始日として扱い、終了日より後なら拒否する (潜在スキャン scan2-R2) | src/services/latent_audit/recurring.rs | 844 |
-| `err_interval_above_max` | `MAX_PERIOD_INTERVAL` (999、画面の上限) を超える間隔を拒否し、上限ちょうどは受理 (#171 の CodeRabbit 指摘) | src/services/recurring.rs | 1898 |
-| `shift_beyond_window_is_refused` | 休日シフトが 14 日の範囲を超える場合 (Prev で期間後の 14 日がすべて休日) は作成を拒否し、13 日のシフトは生成する (#171 の CodeRabbit 指摘) | src/services/recurring.rs | 1805 |
+| `latent_m18_huge_generation_rejected` | 9999-12-31 までの毎日ルールは数百万件を生成せずに拒否される (`PeriodOutOfRange`) (潜在監査 M18) | src/services/latent_audit/recurring.rs | 451 |
+| `latent_m15_m18_period_limits_are_inclusive` | 許可範囲の初日・最終日は受け付け、1 日外れると拒否 (潜在監査 M15 / M18) | src/services/latent_audit/recurring.rs | 481 |
+| `latent_m15_period_limit_follows_seeded_holidays` | 祝日が日付基準の上限の前年までしか入っていない場合 (起動したまま年をまたいだ場合)、その最後の 1 年と、祝日が入っている最後の年は拒否され、その前年は許可される (潜在監査 M15、潜在スキャン scan2-R7) | src/services/latent_audit/recurring.rs | 521 |
+| `latent_m15_m18_period_limits_service_clamps_to_seeded_years` | `RecurringService::period_limits` (`get_recurring_period_limits` で画面に渡し、作成時にも適用) は日付基準の範囲を祝日シード済みの年で絞ったもので、祝日が入っている最後の年の前年末で終わる (潜在監査 M15 / M18、潜在スキャン scan2-R7) | src/services/latent_audit/recurring.rs | 574 |
+| `latent_m15_m18_period_limits_follow_seeded_years` | 上下限は (今年 − 5) 年 1/1 〜 (今年 + 10) 年 12/31 で、祝日シードの範囲と一致 (潜在監査 M15 / M18) | src/services/latent_audit/recurring.rs | 601 |
+| `latent_m17_total_is_derived_from_the_detail` | ルールと各予定の合計は、1 件の明細からヘッダーの丸め・内税/外税設定で計算される (潜在監査 M17) | src/services/latent_audit/recurring.rs | 617 |
+| `latent_l13_daily_rule_rejects_holiday_shift` | 毎日のルールに祝日シフトは指定できない。シフトなしの毎日・シフトありの毎月は受け付ける (潜在監査 L13) | src/services/latent_audit/recurring.rs | 673 |
+| `latent_m16_detail_amount_out_of_range_rejected` | 範囲外の明細金額でのルール作成を拒否 (潜在監査 M16) | src/services/latent_audit/recurring.rs | 401 |
+| `latent_m16_detail_tax_rate_out_of_range_rejected` | 範囲外の税率でのルール作成を拒否 (潜在監査 M16) | src/services/latent_audit/recurring.rs | 422 |
+| `transfer_same_account_maps_to_transfer_same_account_code` | `RecurringError::TransferSameAccount` が `transfer_same_account` コードに変換される (潜在監査 M16) | src/services/recurring.rs | 2161 |
+| `latent_l2_recurring_rejects_foreign_shop_and_product` | 繰り返しルール作成で自分の店舗・商品は受理し、他ユーザーのものは拒否 (潜在監査 L2) | src/services/latent_audit/recurring.rs | 714 |
+| `latent_l10_generation_terminates_at_the_end_of_the_date_range` | chrono の表現範囲の終わり付近でも月次・年次の日付生成が無限ループせず終了する (潜在監査 L10) | src/services/latent_audit/recurring.rs | 773 |
+| `latent_scan2_r1_shifted_date_inside_period_is_kept` | 暦日は期間のすぐ外でも、休日シフト後に期間内に入る発生日を生成する (開始側・終了側とも) (潜在スキャン scan2-R1) | src/services/latent_audit/recurring.rs | 823 |
+| `latent_scan2_r2_daily_anchor_is_checked_against_the_period` | 毎日の予定の起点日が空なら開始日として扱い、終了日より後なら拒否する (潜在スキャン scan2-R2) | src/services/latent_audit/recurring.rs | 867 |
+| `latent_scan2_r7_next_shift_past_the_last_seeded_year` | 祝日が 2028 年までしか入っていないとき、2028-12-31 で終わる月末・「翌営業日」の予定は元日 2029-01-01 に置かれず `PeriodOutOfRange` で拒否される (潜在スキャン scan2-R7) | src/services/latent_audit/recurring.rs | 958 |
+| `err_interval_above_max` | `MAX_PERIOD_INTERVAL` (999、画面の上限) を超える間隔を拒否し、上限ちょうどは受理 (#171 の CodeRabbit 指摘) | src/services/recurring.rs | 1982 |
+| `shift_beyond_window_is_refused` | 休日シフトが 14 日の範囲を超える場合 (Prev で期間後の 14 日がすべて休日) は作成を拒否し、13 日のシフトは生成する (#171 の CodeRabbit 指摘) | src/services/recurring.rs | 1809 |
 
-**合計**: 26件
+**合計**: 27件
 
 ### lib.rs
 
@@ -742,11 +744,11 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **433件** |
+| **インラインテスト** | **435件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
-| db.rs | 16 |
+| db.rs | 17 |
 | settings.rs | 18 |
 | api_error.rs | 11 |
 | services/master_data.rs | 4 |
@@ -764,9 +766,9 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/period.rs | 3 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
-| services/recurring.rs | 26 |
+| services/recurring.rs | 27 |
 | lib.rs | 6 |
-| **総計** | **456件** |
+| **総計** | **458件** |
 
 ---
 

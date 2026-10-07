@@ -37,12 +37,12 @@ KakeiBonByRust は、Tauri v2 で構築された家計簿（household budget）�
 | 日時 | `chrono` | 0.4 (serde) |
 | 暗号 | `argon2`, `aes-gcm`, `base64`, `rand` | — |
 | ロケール補助 | `glib` | 0.20 |
-| 祝日 | `jpholiday` | 0.1.4 |
+| 祝日 | `jpholiday` | 0.2.0 |
 
 > **注意**: 本番 DB アクセスは `rusqlite` ベースの自作レイヤ（`src/db.rs` + `src/sql_queries.rs`）を使用。`sqlx` は `src/test_helpers.rs` のテストインフラ専用です。
 
 - Rust edition: 2021
-- 最低 Rust バージョン: 1.77.2
+- 最低 Rust バージョン: 1.96 (jpholiday 0.2.0 の要件)
 
 ### 2.2 フロントエンド
 
@@ -114,7 +114,7 @@ KakeiBonByRust/
 要点だけ:
 - Linux 上では `apt`/`pacman` 等で WebKitGTK と関連パッケージが必要
 - node は **nvm 管理**を推奨（非対話シェル PATH に注意）
-- Rust は `rustup` で edition 2021 + 1.77.2 以上
+- Rust は `rustup` で edition 2021 + 1.96 以上
 
 ---
 

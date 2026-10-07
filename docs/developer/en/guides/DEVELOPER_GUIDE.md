@@ -21,7 +21,7 @@
 
 ### Technology Stack
 - **Frontend**: Vanilla JavaScript (ES6 Modules), HTML5, CSS3
-- **Backend**: Rust 1.77.2+, Tauri v2.8.5
+- **Backend**: Rust 1.96+, Tauri v2.8.5
 - **Database**: SQLite 3
 - **Key Libraries**:
   - `rusqlite`: SQLite database operations

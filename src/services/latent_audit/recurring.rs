@@ -249,21 +249,22 @@ async fn latent_h2_cascade_delete_keeps_confirmed_headers() {
 /// the alternative outcome (no occurrence on a known holiday).
 #[tokio::test]
 async fn latent_m15_holiday_shift_applies_beyond_seeded_range() {
-    use jpholiday::jpholiday::JPHoliday;
+    use jpholiday::JPHoliday;
 
     let pool = setup_recurring_db().await;
 
-    // Mirror production seeding (db.rs::seed_japanese_holidays).
+    // Mirror production seeding (db.rs::seed_japanese_holidays), which
+    // covers one year more than a rule may (scan2-R7).
     let jp = JPHoliday::new();
     let current_year = Local::now().year();
-    for year in (current_year - 5)..=(current_year + 10) {
-        for (date, name) in jp.year_holidays(year) {
+    for year in (current_year - 5)..=(current_year + 11) {
+        for holiday in jp.year_holidays(year) {
             sqlx::query(
                 "INSERT OR IGNORE INTO HOLIDAYS_STANDARD (LOCALE, HOLIDAY_DATE, HOLIDAY_NAME) \
                  VALUES ('JP', ?, ?)",
             )
-            .bind(date.format("%Y-%m-%d").to_string())
-            .bind(name)
+            .bind(holiday.date.to_string())
+            .bind(holiday.name)
             .execute(&pool)
             .await
             .unwrap();
@@ -272,7 +273,7 @@ async fn latent_m15_holiday_shift_applies_beyond_seeded_range() {
 
     // First year outside the seeded range whose Jan 1 falls on a weekday, so
     // only the holiday table (not the weekend rule) can trigger the shift.
-    let mut target_year = current_year + 11;
+    let mut target_year = current_year + 12;
     while matches!(
         NaiveDate::from_ymd_opt(target_year, 1, 1).unwrap().weekday(),
         Weekday::Sat | Weekday::Sun
@@ -281,7 +282,9 @@ async fn latent_m15_holiday_shift_applies_beyond_seeded_range() {
     }
     let new_year = NaiveDate::from_ymd_opt(target_year, 1, 1).unwrap();
     assert!(
-        jp.year_holidays(target_year).iter().any(|(d, _)| *d == new_year),
+        jp.year_holidays(target_year)
+            .iter()
+            .any(|h| h.date.to_string() == new_year.format("%Y-%m-%d").to_string()),
         "precondition: {} must be a Japanese holiday",
         new_year
     );
@@ -511,21 +514,26 @@ async fn latent_m15_m18_period_limits_are_inclusive() {
 
 /// M15: an app left running across New Year has one seeded year less ahead
 /// than the date-based limits assume; the rule must stay within the years
-/// actually seeded.
+/// actually seeded. Since scan2-R7 it also stops one year before the last
+/// seeded year, so a "next business day" shift from Dec 31 still finds the
+/// January holidays.
 #[tokio::test]
 async fn latent_m15_period_limit_follows_seeded_holidays() {
     let pool = setup_recurring_db().await;
     let service = RecurringService::new(pool.clone());
     let (_, last) = recurring_period_limits(Local::now().date_naive());
-    // Seeded only up to the year before the date-based last year.
+    // Seeded only up to the year before the date-based last year (and the
+    // year before that, so the window is not empty).
     let seeded_last_year = last.year() - 1;
-    sqlx::query(
-        "INSERT INTO HOLIDAYS_STANDARD (LOCALE, HOLIDAY_DATE, HOLIDAY_NAME) VALUES ('JP', ?, '元日')",
-    )
-    .bind(format!("{}-01-01", seeded_last_year))
-    .execute(&pool)
-    .await
-    .unwrap();
+    for y in [seeded_last_year - 1, seeded_last_year] {
+        sqlx::query(
+            "INSERT INTO HOLIDAYS_STANDARD (LOCALE, HOLIDAY_DATE, HOLIDAY_NAME) VALUES ('JP', ?, '元日')",
+        )
+        .bind(format!("{}-01-01", y))
+        .execute(&pool)
+        .await
+        .unwrap();
+    }
 
     let mut request = valid_request();
     request.start_date = format!("{}-01-01", last.year());
@@ -541,12 +549,27 @@ async fn latent_m15_period_limit_follows_seeded_holidays() {
     request.start_date = format!("{}-12-29", seeded_last_year);
     request.end_date = format!("{}-12-31", seeded_last_year);
     let result = service.create_rule_with_instances(USER_ID, request).await;
-    assert!(result.is_ok(), "the last seeded year is allowed: {:?}", result.err());
+    assert!(
+        matches!(result, Err(RecurringError::PeriodOutOfRange { .. })),
+        "the last seeded year is rejected: the January after it is not seeded (scan2-R7): {:?}",
+        result.map(|r| r.generated_count)
+    );
+
+    let mut request = valid_request();
+    request.start_date = format!("{}-12-29", seeded_last_year - 1);
+    request.end_date = format!("{}-12-31", seeded_last_year - 1);
+    let result = service.create_rule_with_instances(USER_ID, request).await;
+    assert!(
+        result.is_ok(),
+        "the year before the last seeded one is allowed: {:?}",
+        result.err()
+    );
 }
 
 /// M15 / M18: `period_limits` (what the screen shows and create enforces)
-/// is the date-based window clamped to the seeded years, and is the plain
-/// date-based window when no holidays are seeded.
+/// is the date-based window clamped to the seeded years (ending one year
+/// before the last seeded year, scan2-R7), and is the plain date-based
+/// window when no holidays are seeded.
 #[tokio::test]
 async fn latent_m15_m18_period_limits_service_clamps_to_seeded_years() {
     let pool = setup_recurring_db().await;
@@ -568,7 +591,7 @@ async fn latent_m15_m18_period_limits_service_clamps_to_seeded_years() {
         service.period_limits().await.unwrap(),
         (
             NaiveDate::from_ymd_opt(year - 2, 1, 1).unwrap(),
-            NaiveDate::from_ymd_opt(year + 3, 12, 31).unwrap(),
+            NaiveDate::from_ymd_opt(year + 2, 12, 31).unwrap(),
         )
     );
 }
@@ -932,21 +955,20 @@ async fn latent_scan2_r6_detail_category1_must_match_header() {
 /// Expected: either the period is rejected (the limit leaves room for the
 /// shift) or the occurrence does not land on a holiday / weekend.
 #[tokio::test]
-#[ignore = "latent-audit scan2-R7"]
 async fn latent_scan2_r7_next_shift_past_the_last_seeded_year() {
-    use jpholiday::jpholiday::JPHoliday;
+    use jpholiday::JPHoliday;
 
     let pool = setup_recurring_db().await;
     let jp = JPHoliday::new();
     let last_seeded = 2028;
     for year in (Local::now().year() - consts::HOLIDAY_SEED_YEARS_BACK)..=last_seeded {
-        for (date, name) in jp.year_holidays(year) {
+        for holiday in jp.year_holidays(year) {
             sqlx::query(
                 "INSERT OR IGNORE INTO HOLIDAYS_STANDARD (LOCALE, HOLIDAY_DATE, HOLIDAY_NAME) \
                  VALUES ('JP', ?, ?)",
             )
-            .bind(date.format("%Y-%m-%d").to_string())
-            .bind(name)
+            .bind(holiday.date.to_string())
+            .bind(holiday.name)
             .execute(&pool)
             .await
             .unwrap();
@@ -975,7 +997,7 @@ async fn latent_scan2_r7_next_shift_past_the_last_seeded_year() {
             let holidays: Vec<String> = jp
                 .year_holidays(2029)
                 .iter()
-                .map(|(d, _)| d.format("%Y-%m-%d").to_string())
+                .map(|h| h.date.to_string())
                 .collect();
             for d in &dates {
                 let date = NaiveDate::parse_from_str(d, "%Y-%m-%d").unwrap();

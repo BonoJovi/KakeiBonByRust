@@ -829,7 +829,11 @@ impl RecurringService {
     /// `recurring_period_limits` for today, clamped to the years actually
     /// seeded in HOLIDAYS_STANDARD (holidays are seeded at startup, so an app
     /// left running across New Year has one seeded year less ahead). The
-    /// recurring screen asks for these so its date pickers, pre-check and
+    /// last date stops one year before the last seeded year: a "next
+    /// business day" shift from Dec 31 walks into January, whose holidays
+    /// must be seeded too (scan2-R7; the startup seeding covers one year
+    /// more than `recurring_period_limits`, so this costs nothing normally).
+    /// The recurring screen asks for these so its date pickers, pre-check and
     /// error message use the same bounds (latent-audit M15 / M18).
     pub async fn period_limits(&self) -> Result<(NaiveDate, NaiveDate), RecurringError> {
         let (mut first, mut last) = recurring_period_limits(chrono::Local::now().date_naive());
@@ -842,7 +846,7 @@ impl RecurringService {
             first = first.max(NaiveDate::from_ymd_opt(y, 1, 1).unwrap_or(first));
         }
         if let Some(y) = seeded_last.as_deref().and_then(year_of) {
-            last = last.min(NaiveDate::from_ymd_opt(y, 12, 31).unwrap_or(last));
+            last = last.min(NaiveDate::from_ymd_opt(y - 1, 12, 31).unwrap_or(last));
         }
         Ok((first, last))
     }

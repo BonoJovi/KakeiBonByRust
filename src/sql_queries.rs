@@ -1055,6 +1055,16 @@ CREATE TABLE IF NOT EXISTS TRANSACTIONS_HEADER (
 pub const HOLIDAYS_STANDARD_JP_DATE_RANGE: &str =
     "SELECT MIN(HOLIDAY_DATE), MAX(HOLIDAY_DATE) FROM HOLIDAYS_STANDARD WHERE LOCALE = 'JP'";
 
+/// Remove the seeded Japanese holidays in a date range, so the startup
+/// seeding can write them again from the holiday library and correct rows
+/// an older build stored (scan2-R3). Binds: (first_date, last_date).
+pub const HOLIDAYS_STANDARD_JP_DELETE_RANGE: &str =
+    "DELETE FROM HOLIDAYS_STANDARD WHERE LOCALE = 'JP' AND HOLIDAY_DATE BETWEEN ? AND ?";
+
+/// Seed one Japanese holiday. Binds: (holiday_date, holiday_name).
+pub const HOLIDAYS_STANDARD_JP_INSERT: &str =
+    "INSERT OR IGNORE INTO HOLIDAYS_STANDARD (LOCALE, HOLIDAY_DATE, HOLIDAY_NAME) VALUES ('JP', ?, ?)";
+
 /// Does the transaction have any detail? Binds: (transaction_id).
 pub const TRANSACTION_HAS_DETAILS: &str =
     "SELECT EXISTS (SELECT 1 FROM TRANSACTIONS_DETAIL WHERE TRANSACTION_ID = ?)";

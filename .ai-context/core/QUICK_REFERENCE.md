@@ -8,7 +8,7 @@
 | Layer | Technology |
 |-------|-----------|
 | Framework | Tauri v2.11.1 |
-| Backend | Rust 1.77.2+ |
+| Backend | Rust 1.96+ |
 | Frontend | Vanilla JS/HTML/CSS (ES6+) |
 | Database | SQLite (sqlx 0.8.6) |
 | Security | Argon2, AES-256-GCM |
