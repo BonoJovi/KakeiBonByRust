@@ -629,6 +629,9 @@ async function deleteTransaction(transactionId) {
 // ============================================================================
 
 let editingTransactionId = null;
+// The edit modal's fields as loaded (JSON of collectModalFields()), or null
+// in add mode (scan2-T6).
+let loadedModalFields = null;
 let categories = [];
 let accounts = [];
 // Disabled shops by id: not offered for new entries, but a transaction that
@@ -637,6 +640,7 @@ let disabledShopsById = new Map();
 // Same for disabled accounts, by account code.
 let disabledAccountsByCode = new Map();
 let transactionModal = null;
+let saveBeforeDetailsModal = null;
 
 function initializeTransactionModal() {
     const category1Select = document.getElementById('category1');
@@ -699,6 +703,11 @@ function initializeTransactionModal() {
             const memoInput = document.getElementById('transaction-memo');
             clearValidationError(memoInput);
             memoInput?.dispatchEvent(new Event('input'));
+
+            // The saved values, to tell whether the header was changed
+            // before "Manage details" (scan2-T6). A restored draft is
+            // applied after this, so its values count as changes.
+            loadedModalFields = mode === 'edit' ? JSON.stringify(collectModalFields()) : null;
         },
         onSave: async (formData) => {
             await handleTransactionSubmit(new Event('submit'));
@@ -752,16 +761,60 @@ function initializeTransactionModal() {
     const manageDetailsBtn = document.getElementById('manage-details-btn');
     if (manageDetailsBtn) {
         manageDetailsBtn.addEventListener('click', () => {
-            // Get transaction_id from the modal (when editing)
-            if (editingTransactionId) {
-                // Navigate to detail management screen with transaction_id
-                window.location.href = `${HTML_FILES.TRANSACTION_DETAIL_MANAGEMENT}?transaction_id=${editingTransactionId}`;
-            } else {
+            if (!editingTransactionId) {
                 // New transaction - need to save first
                 showToast(i18n.t('transaction_mgmt.save_before_details'), { variant: 'warning' });
+                return;
             }
+            // Leaving used to drop unsaved header edits, and the detail
+            // screen then worked against the old date and total (scan2-T6).
+            if (JSON.stringify(collectModalFields()) !== loadedModalFields) {
+                saveBeforeDetailsModal.open('confirm', { transactionId: editingTransactionId });
+                return;
+            }
+            openDetailScreen(editingTransactionId);
         });
     }
+
+    initializeSaveBeforeDetailsModal();
+}
+
+function openDetailScreen(transactionId) {
+    window.location.href = `${HTML_FILES.TRANSACTION_DETAIL_MANAGEMENT}?transaction_id=${transactionId}`;
+}
+
+// "Save the header changes before Manage details?" (scan2-T6). An in-app
+// modal, not confirm(): native dialogs break the flow under Tauri +
+// WebKitGTK. Its Save button runs the normal header save; the Modal's own
+// guard and loading state keep it from being sent twice, and the
+// transaction modal behind it cannot be clicked meanwhile.
+function initializeSaveBeforeDetailsModal() {
+    if (!document.getElementById('save-before-details-modal')) return;
+    saveBeforeDetailsModal = new Modal('save-before-details-modal', {
+        closeButtonId: 'close-save-before-details',
+        cancelButtonId: 'cancel-save-before-details',
+        saveButtonId: 'confirm-save-before-details',
+        // Both modals listen for Escape on document; handled below so one
+        // press closes only this dialog, not the edit modal behind it.
+        closeOnEscape: false,
+        onSave: async (data) => {
+            try {
+                await handleTransactionSubmit(new Event('submit'));
+            } catch {
+                // The save already showed why. This dialog closes and the
+                // edit modal stays open with the typed values.
+                return;
+            }
+            openDetailScreen(data.transactionId);
+        }
+    });
+    document.addEventListener('keydown', (e) => {
+        const dialog = document.getElementById('save-before-details-modal');
+        if (e.key === 'Escape' && !dialog.classList.contains('hidden')) {
+            e.stopPropagation();
+            saveBeforeDetailsModal.close();
+        }
+    }, true);
 }
 
 async function openTransactionModal(transactionId = null) {
@@ -1259,10 +1312,9 @@ async function updateDetailCount(transactionId) {
 }
 
 // Modal state management functions
-async function saveModalState() {
-    const modalData = {
-        modal_open: true,
-        editing_transaction_id: editingTransactionId,
+// The header fields of the transaction modal, as the draft stores them.
+function collectModalFields() {
+    return {
         transaction_date: document.getElementById('transaction-date')?.value,
         category1: document.getElementById('category1')?.value,
         shop_id: document.getElementById('shop')?.value,
@@ -1273,6 +1325,14 @@ async function saveModalState() {
         tax_included_type: document.getElementById('tax-included-type')?.value,
         memo: document.getElementById('transaction-memo')?.value,
         is_scheduled: document.getElementById('is-scheduled')?.checked
+    };
+}
+
+async function saveModalState() {
+    const modalData = {
+        modal_open: true,
+        editing_transaction_id: editingTransactionId,
+        ...collectModalFields()
     };
     
     await setSessionModalState(JSON.stringify(modalData));

@@ -279,6 +279,22 @@
             </div>
         </div>
 
+        <!-- "Save before Manage details?" confirmation (scan2-T6). Placed
+             after the transaction modal so it shows on top of it. -->
+        <div id="save-before-details-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 data-i18n="transaction_mgmt.manage_details">Manage Details</h2>
+                    <button class="close-btn" id="close-save-before-details">&times;</button>
+                </div>
+                <p data-i18n="transaction_mgmt.save_before_details_confirm">The header changes will be saved before moving to Manage Details. Continue?</p>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" id="cancel-save-before-details" data-i18n="common.cancel">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="confirm-save-before-details" data-i18n="common.save">Save</button>
+                </div>
+            </div>
+        </div>
+
         <script type="module" src="js/transaction-management.js"></script>
     </body>
 </html>

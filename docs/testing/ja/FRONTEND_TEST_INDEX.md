@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-10-07 JST  
-**総テスト数**: 939件 (jest suite 89 ファイル、`npm test` 実測)
+**総テスト数**: 944件 (jest suite 90 ファイル、`npm test` 実測)
 
 ---
 
@@ -97,6 +97,7 @@
   - [pages/category-management-page.test.js](#pagescategory-management-pagetestjs)
   - [pages/category-management-move-buttons.test.js](#pagescategory-management-move-buttonstestjs)
   - [pages/transaction-management-filter-hidden-category.test.js](#pagestransaction-management-filter-hidden-categorytestjs)
+  - [pages/transaction-management-save-before-details.test.js](#pagestransaction-management-save-before-detailstestjs)
   - [pages/user-management-password-page.test.js](#pagesuser-management-password-pagetestjs)
   - [pages/user-management-nonadmin-page.test.js](#pagesuser-management-nonadmin-pagetestjs)
   - [pages/index-setup-password-length.test.js](#pagesindex-setup-password-lengthtestjs)
@@ -1595,6 +1596,24 @@
 
 ---
 
+### pages/transaction-management-save-before-details.test.js
+
+実際の入出金一覧の編集ウィンドウで、「明細管理」を押したときに保存していないヘッダーの変更が消えないことを確かめる (潜在スキャン scan2-T6)。確認はアプリ内のダイアログ (`#save-before-details-modal`) で出し、ブラウザ標準の `confirm()` は使わない (全テストで呼ばれないことを確認)。
+
+**テスト数**: 5件
+
+| テスト | 説明 |
+|--------|------|
+| `[T6] edited header values are saved before leaving` | 日付・合計・メモ・予定フラグを変えて「明細管理」を押すと確認ダイアログ (`transaction_mgmt.save_before_details_confirm`) が出て、「保存」で通常の保存によりヘッダーを保存してから移動する |
+| `[T6] a second click while saving does not save twice` | 保存中にダイアログの「保存」をもう一度押しても、保存は 1 回だけで、保存が終わるまで移動しない |
+| `[T6] cancelling the dialog stays in the edit modal without saving` | ダイアログで「キャンセル」を押すと、保存も移動もせず、編集ウィンドウが入力した値のまま残る |
+| `[T6] Esc closes only the dialog, not the edit modal behind it` | Esc キーはダイアログだけを閉じ、後ろの編集ウィンドウは入力した値のまま残る |
+| `[T6] without changes it moves on at once, without asking or saving` | 変更がなければ確認も保存もせずにすぐ移動する |
+
+**ファイル**: res/tests/pages/transaction-management-save-before-details.test.js
+
+---
+
 ### pages/user-management-password-page.test.js
 
 ユーザー管理画面 (管理者セッション) のパスワード検証の回帰テスト (潜在監査 L24 / L31)。
@@ -1804,7 +1823,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **516件** |
+| **機能別テスト** | **521件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 30 |
@@ -1880,6 +1899,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | pages/category-management-page.test.js | 2 |
 | pages/category-management-move-buttons.test.js | 2 |
 | pages/transaction-management-filter-hidden-category.test.js | 1 |
+| pages/transaction-management-save-before-details.test.js | 5 |
 | pages/user-management-password-page.test.js | 2 |
 | pages/user-management-nonadmin-page.test.js | 2 |
 | pages/index-setup-password-length.test.js | 2 |
@@ -1889,7 +1909,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **939件** |
+| **総計 (jest)** | **944件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 
