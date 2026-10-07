@@ -5,8 +5,9 @@
  * name a period that does not contain today. The dashboard opens on the
  * period that does. Pinned: the calendar month when it contains the date,
  * the previous month when the period starts later, the next month when it
- * ended earlier (holiday shift back over the month end), year wrap-around
- * both ways, and the calendar month as the fallback when the backend fails.
+ * ended earlier (holiday shift back over the month end), a period two months
+ * away (CodeRabbit on #178), year wrap-around both ways, and the calendar
+ * month as the fallback when the backend fails or never matches.
  */
 
 import { jest } from '@jest/globals';
@@ -29,26 +30,61 @@ describe('findMonthlyPeriodContaining (latent scan2-A3)', () => {
         expect(invoke).toHaveBeenCalledWith('get_monthly_period_bounds', { year: 2026, month: 9 });
     });
 
+    // Answer get_monthly_period_bounds from a { 'year-month': bounds } table.
+    const answerFrom = (bounds) =>
+        invoke.mockImplementation(async (cmd, { year, month }) => bounds[`${year}-${month}`]);
+
     test('[scan2-A3] should step back when the calendar month\'s period starts after the date', async () => {
         // Start day 25: "September" is 9/25 .. 10/24, so 9/10 is in "August".
-        invoke.mockResolvedValue({ start: '2026-09-25', end: '2026-10-24' });
+        answerFrom({
+            '2026-9': { start: '2026-09-25', end: '2026-10-24' },
+            '2026-8': { start: '2026-08-25', end: '2026-09-24' },
+            '2027-1': { start: '2027-01-25', end: '2027-02-24' },
+            '2026-12': { start: '2026-12-25', end: '2027-01-24' },
+        });
         await expect(findMonthlyPeriodContaining(new Date(2026, 8, 10)))
             .resolves.toEqual({ year: 2026, month: 8 });
-
-        invoke.mockResolvedValue({ start: '2027-01-25', end: '2027-02-24' });
         await expect(findMonthlyPeriodContaining(new Date(2027, 0, 10)))
             .resolves.toEqual({ year: 2026, month: 12 });
     });
 
     test('[scan2-A3] should step forward when the calendar month\'s period ended before the date', async () => {
         // Start day 1, shifted back: "December" starts 11/30, "November" ends 11/29.
-        invoke.mockResolvedValue({ start: '2026-11-01', end: '2026-11-29' });
+        answerFrom({
+            '2026-11': { start: '2026-11-01', end: '2026-11-29' },
+            '2026-12': { start: '2026-11-30', end: '2026-12-30' },
+            '2027-1': { start: '2026-12-31', end: '2027-01-31' },
+        });
         await expect(findMonthlyPeriodContaining(new Date(2026, 10, 30)))
             .resolves.toEqual({ year: 2026, month: 12 });
-
-        invoke.mockResolvedValue({ start: '2026-12-01', end: '2026-12-30' });
         await expect(findMonthlyPeriodContaining(new Date(2026, 11, 31)))
             .resolves.toEqual({ year: 2027, month: 1 });
+    });
+
+    test('[scan2-A3] should keep stepping when the neighbouring month does not contain the date either', async () => {
+        // Start day 31, next business day: 2026-01-31 and 02-28 are Saturdays,
+        // so "January" is 02-02..03-01 and "February" starts on 03-02.
+        answerFrom({
+            '2026-3': { start: '2026-03-31', end: '2026-04-29' },
+            '2026-2': { start: '2026-03-02', end: '2026-03-30' },
+            '2026-1': { start: '2026-02-02', end: '2026-03-01' },
+        });
+
+        await expect(findMonthlyPeriodContaining(new Date(2026, 2, 1)))
+            .resolves.toEqual({ year: 2026, month: 1 });
+        expect(invoke).toHaveBeenCalledTimes(3);
+    });
+
+    test('[scan2-A3] should give up on the calendar month when no period ever matches', async () => {
+        // A backend answering the same future period for every month.
+        invoke.mockResolvedValue({ start: '2099-01-01', end: '2099-01-31' });
+        const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+        await expect(findMonthlyPeriodContaining(new Date(2026, 8, 10)))
+            .resolves.toEqual({ year: 2026, month: 9 });
+        expect(invoke.mock.calls.length).toBeLessThanOrEqual(6);
+
+        warn.mockRestore();
     });
 
     test('[scan2-A3] should fall back to the calendar month when the backend fails', async () => {
