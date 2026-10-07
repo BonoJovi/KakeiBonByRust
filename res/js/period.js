@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import { formatLocalDate } from './format-local-date.js';
 
 let cachedSettings = null;
 
@@ -28,6 +29,39 @@ export async function fetchMonthlyPeriodBounds(year, month) {
         start: new Date(b.start + 'T00:00:00'),
         end: new Date(b.end + 'T00:00:00'),
     };
+}
+
+/// (year, month) of the user's monthly period that contains `date`. A period
+/// is named by its start month, so with a custom start day or a holiday
+/// shift the calendar month can name a period that starts after `date`
+/// (start day 25, 09-10 -> the "September" period is 09-25..10-24) or ended
+/// before it (start day 1 shifted back to 11-30 -> on 11-30 the period is
+/// "December"). The holiday shift stays within 14 days, so the period is
+/// always the calendar month or one of its neighbours (latent-scan2 A3).
+/// Falls back to the calendar month when the backend cannot answer.
+export async function findMonthlyPeriodContaining(date) {
+    const day = formatLocalDate(date);
+    let year = date.getFullYear();
+    let month = date.getMonth() + 1;
+    try {
+        const b = await invoke('get_monthly_period_bounds', { year, month });
+        if (day < b.start) {
+            month -= 1;
+            if (month === 0) {
+                month = 12;
+                year -= 1;
+            }
+        } else if (day > b.end) {
+            month += 1;
+            if (month === 13) {
+                month = 1;
+                year += 1;
+            }
+        }
+    } catch (e) {
+        console.warn('Failed to load period bounds, using the calendar month:', e);
+    }
+    return { year, month };
 }
 
 /// Last day (YYYY-MM-DD) of the user's monthly period for (year, month),

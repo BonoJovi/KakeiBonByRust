@@ -1,6 +1,8 @@
-// latent-audit scan2-A3: dashboard defaults to the calendar month, which under a custom start day (25) is a future period that does not contain today
+// The dashboard opens on the monthly period that contains today (latent-audit scan2-A3)
 /**
- * initializeFilterDefaults() sets year/month to now.getFullYear() /
+ * Dashboard (res/js/dashboard.js).
+ *
+ * scan2-A3  initializeFilterDefaults() set year/month to now.getFullYear() /
  * now.getMonth()+1, but a monthly period is named by its START month
  * (period.rs monthly_period_bounds). With MONTH_PERIOD_START_DAY = 25 and
  * today = 2026-09-10, the "September" period is 2026-09-25..2026-10-24,
@@ -14,7 +16,7 @@
  */
 
 import { jest } from '@jest/globals';
-import { mockPageModules, loadPageBody, bootPage } from '../pages/_page-harness.js';
+import { mockPageModules, loadPageBody, bootPage } from './_page-harness.js';
 
 const charts = [];
 class FakeChart {

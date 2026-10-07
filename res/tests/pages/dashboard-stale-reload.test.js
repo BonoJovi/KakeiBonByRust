@@ -1,6 +1,8 @@
-// latent-audit scan2-A4: dashboard chart reload has no staleness guard, so an older, slower load overwrites the newer month's charts and titles
+// An older, slower dashboard load does not overwrite the newer month (latent-audit scan2-A4)
 /**
- * loadDashboardData() has a request token only for the account balances
+ * Dashboard (res/js/dashboard.js).
+ *
+ * scan2-A4  loadDashboardData() had a request token only for the account balances
  * panel; the charts and their titles are drawn by whichever load finishes
  * last. Execute for 2026-09 (slow), then switch to 2026-03 and Execute
  * again: March is drawn first, then the September load finishes and
@@ -14,7 +16,7 @@
  */
 
 import { jest } from '@jest/globals';
-import { mockPageModules, loadPageBody, bootPage, flush, deferred } from '../pages/_page-harness.js';
+import { mockPageModules, loadPageBody, bootPage, flush, deferred } from './_page-harness.js';
 
 const charts = [];
 class FakeChart {

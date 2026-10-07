@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-10-07 JST  
-**総テスト数**: 878件 (jest suite 71 ファイル、`npm test` 実測)
+**総テスト数**: 887件 (jest suite 75 ファイル、`npm test` 実測)
 
 ---
 
@@ -38,6 +38,7 @@
   - [parse-amount-strict.test.js](#parse-amount-stricttestjs)
   - [format-local-date.test.js](#format-local-datetestjs)
   - [period-end-date.test.js](#period-end-datetestjs)
+  - [period-containing.test.js](#period-containingtestjs)
   - [aggregation-render-unspecified.test.js](#aggregation-render-unspecifiedtestjs)
   - [pages/transaction-detail-page.test.js](#pagestransaction-detail-pagetestjs)
   - [pages/transaction-detail-included-typing.test.js](#pagestransaction-detail-included-typingtestjs)
@@ -58,6 +59,9 @@
   - [pages/dashboard-balance-header.test.js](#pagesdashboard-balance-headertestjs)
   - [pages/transaction-list-none-account-label.test.js](#pagestransaction-list-none-account-labeltestjs)
   - [pages/transaction-detail-none-account-label.test.js](#pagestransaction-detail-none-account-labeltestjs)
+  - [pages/dashboard-balance-sign.test.js](#pagesdashboard-balance-signtestjs)
+  - [pages/dashboard-default-period.test.js](#pagesdashboard-default-periodtestjs)
+  - [pages/dashboard-stale-reload.test.js](#pagesdashboard-stale-reloadtestjs)
   - [single-flight.test.js](#single-flighttestjs)
   - [pages/product-management-page.test.js](#pagesproduct-management-pagetestjs)
   - [pages/product-management-link-draft.test.js](#pagesproduct-management-link-drafttestjs)
@@ -699,6 +703,23 @@
 
 ---
 
+### period-containing.test.js
+
+`findMonthlyPeriodContaining` (period.js) のテスト (潜在スキャン scan2-A3)。月次の期間は開始日の月で名前が付くので、暦の月の期間が今日を含まないことがある。ダッシュボードはこの関数で、今日を含む期間を開いたときの対象月にする。
+
+**テスト数**: 4件
+
+| テスト | 説明 |
+|--------|------|
+| `should keep the calendar month when its period contains the date` | 暦の月の期間が日付を含むなら、その月を返す |
+| `should step back when the calendar month's period starts after the date` | 暦の月の期間が日付より後に始まるなら前月を返す (起算日 25 日。1 月 → 前年 12 月の年またぎも) |
+| `should step forward when the calendar month's period ended before the date` | 休日シフトで暦の月の期間が日付より前に終わっているなら翌月を返す (12 月 → 翌年 1 月の年またぎも) |
+| `should fall back to the calendar month when the backend fails` | バックエンドが答えられないときは暦の月を返す |
+
+**ファイル**: res/tests/period-containing.test.js
+
+---
+
 ### aggregation-render-unspecified.test.js
 
 `res/js/aggregation-common.js` の `renderResults` における unspecified グループの i18n スワップテスト (Fable-5 レビュー #22)。バックエンド (`aggregation.rs`) は SHOP_ID / PRODUCT_ID が NULL のケース、および `account_code === 'NONE'` のケースで空文字を返すよう修正済み。renderResults 側で空文字を `i18n.t('common.unspecified')` に置換することで、英語 UI で「指定なし」のハードコード漏れが banner に出るのを防ぐ。
@@ -990,6 +1011,50 @@
 | `renders a NONE account with common.unspecified, not the stored name` | 口座コードが NONE の口座は `common.unspecified` で表示し、保存された「指定なし」は出さない |
 
 **ファイル**: res/tests/pages/transaction-detail-none-account-label.test.js
+
+---
+
+### pages/dashboard-balance-sign.test.js
+
+ダッシュボードの金額表示の回帰テスト (潜在スキャン scan2-A2)。以前は推移グラフの収支の吹き出しが絶対値で、赤字 3 万円が「¥30,000」と黒字に見えていた。縦軸の目盛りはマイナスが「¥-30,000」、プラスが「¥30K」「¥1.5M」の略記、口座別残高は「¥-1,234」だった。集計画面と同じ「-¥30,000」の形にそろえ、略記はやめて金額をそのまま出す (読み上げや、K・M に慣れていない人への配慮。2026-10-07 ボノさん判断)。
+
+**テスト数**: 3件
+
+| テスト | 説明 |
+|--------|------|
+| `[scan2-A2] a -30,000 deficit is shown with its minus sign` | 収支 -30,000 の吹き出しが「-¥30,000」になる |
+| `[scan2-A2] axis ticks show the full signed amount, without K / M` | 推移グラフと棒グラフの目盛りが「-¥30,000」「¥1,500,000」「¥0」のように略さず符号付きで出る |
+| `[scan2-A2] account balances put the minus sign before ¥` | 口座別残高が「¥1,500,000」「-¥1,234」になる |
+
+**ファイル**: res/tests/pages/dashboard-balance-sign.test.js
+
+---
+
+### pages/dashboard-default-period.test.js
+
+ダッシュボードを開いたときの対象月の回帰テスト (潜在スキャン scan2-A3)。以前は暦の月で決めていたので、起算日 25 日・今日 9 月 10 日だと、まるごと未来の「9 月」(9/25〜10/24) が開いていた。
+
+**テスト数**: 1件
+
+| テスト | 説明 |
+|--------|------|
+| `[scan2-A3] start day 25, today 2026-09-10 -> defaults to the August period that contains today` | 今日を含む「8 月」の期間で開き、その月のデータを読み込む |
+
+**ファイル**: res/tests/pages/dashboard-default-period.test.js
+
+---
+
+### pages/dashboard-stale-reload.test.js
+
+ダッシュボードの再読み込みの回帰テスト (潜在スキャン scan2-A4)。以前は 9 月から 3 月へ素早く切り替えると、遅れて届いた 9 月の結果でグラフと見出しが 9 月に戻っていた。
+
+**テスト数**: 1件
+
+| テスト | 説明 |
+|--------|------|
+| `[scan2-A4] a slower, older September load does not overwrite the newer March charts` | 古い 9 月の結果は捨てられ、グラフと見出しは 3 月のまま |
+
+**ファイル**: res/tests/pages/dashboard-stale-reload.test.js
 
 ---
 
@@ -1517,7 +1582,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **455件** |
+| **機能別テスト** | **464件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 30 |
@@ -1534,6 +1599,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | parse-amount-strict.test.js | 24 |
 | format-local-date.test.js | 16 |
 | period-end-date.test.js | 2 |
+| period-containing.test.js | 4 |
 | aggregation-render-unspecified.test.js | 5 |
 | pages/transaction-detail-page.test.js | 3 |
 | pages/transaction-detail-included-typing.test.js | 1 |
@@ -1554,6 +1620,9 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | pages/dashboard-balance-header.test.js | 1 |
 | pages/transaction-list-none-account-label.test.js | 1 |
 | pages/transaction-detail-none-account-label.test.js | 1 |
+| pages/dashboard-balance-sign.test.js | 3 |
+| pages/dashboard-default-period.test.js | 1 |
+| pages/dashboard-stale-reload.test.js | 1 |
 | single-flight.test.js | 4 |
 | pages/product-management-page.test.js | 1 |
 | pages/product-management-link-draft.test.js | 2 |
@@ -1584,7 +1653,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **878件** |
+| **総計 (jest)** | **887件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 
