@@ -2,8 +2,8 @@
 
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
-**最終更新**: 2026-10-01 JST  
-**総テスト数**: 448件 (差分反映後。`cargo test --lib` の権威的総数は 714 で、既存の未反映分は別 PR でバックフィル予定)
+**最終更新**: 2026-10-07 JST  
+**総テスト数**: 450件 (差分反映後。`cargo test --lib` の権威的総数は 716 で、既存の未反映分は別 PR でバックフィル予定)
 
 ---
 
@@ -432,8 +432,10 @@ AES-256-GCM暗号化・復号化のテスト。
 | `latent_l20_add_category2_empty_category1_code_does_not_panic` | 空の費目1コードはパニックせず拒否 (潜在監査 L20) | src/services/latent_audit/category.rs | 312 |
 | `latent_l20_add_category2_multibyte_category1_code_does_not_panic` | 存在しないマルチバイトの費目1コードはパニックせず拒否 (潜在監査 L20) | src/services/latent_audit/category.rs | 323 |
 | `latent_l20_add_category3_multibyte_category1_code_does_not_panic` | 存在しないマルチバイトの費目1配下への小分類追加はパニックせず拒否 (潜在監査 L20) | src/services/latent_audit/category.rs | 333 |
+| `latent_scan2_m3_detail_list_shows_renamed_category_names` | 中分類・小分類の名前を変更すると、入出金の明細一覧に表示言語 (日本語・英語) の新しい名前が出る。基本名のままにならない (潜在スキャン scan2-M3) | src/services/latent_audit/category.rs | 454 |
+| `latent_scan2_m8_transaction_list_category1_follows_language` | 入出金一覧の大分類が表示言語の名前 (支出 / Expense) になり、その言語の行が無いときは基本名になる (潜在スキャン scan2-M8) | src/services/latent_audit/category.rs | 536 |
 
-**合計**: 38件
+**合計**: 40件
 
 ### services/manufacturer.rs
 
@@ -734,7 +736,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **425件** |
+| **インラインテスト** | **427件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -747,7 +749,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/user_management.rs | 24 |
 | services/encryption.rs | 11 |
 | services/account.rs | 19 |
-| services/category.rs | 38 |
+| services/category.rs | 40 |
 | services/manufacturer.rs | 17 |
 | services/product.rs | 20 |
 | services/shop.rs | 19 |
@@ -758,7 +760,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/i18n.rs | 8 |
 | services/recurring.rs | 26 |
 | lib.rs | 6 |
-| **総計** | **448件** |
+| **総計** | **450件** |
 
 ---
 

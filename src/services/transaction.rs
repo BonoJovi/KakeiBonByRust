@@ -770,7 +770,8 @@ impl TransactionService {
         }
     }
 
-    /// Get transactions with filters and pagination
+    /// Get transactions with filters and pagination. `lang_code` picks the
+    /// CATEGORY1 display name (latent-scan2 M8).
     pub async fn get_transactions(
         &self,
         user_id: i64,
@@ -785,6 +786,7 @@ impl TransactionService {
         include_scheduled: bool,
         page: i64,
         per_page: i64,
+        lang_code: &str,
     ) -> Result<TransactionListResponse, TransactionError> {
         // Clamp pagination input: per_page = 0 would divide by zero below and
         // negative values would produce a negative OFFSET.
@@ -908,7 +910,7 @@ impl TransactionService {
             sql_queries::TRANSACTION_LIST_ORDER
         );
         
-        let mut stmt = sqlx::query_as::<_, Transaction>(&query);
+        let mut stmt = sqlx::query_as::<_, Transaction>(&query).bind(lang_code);
         for param in &params {
             stmt = stmt.bind(param);
         }
@@ -1270,13 +1272,18 @@ impl TransactionService {
         }
     }
 
-    /// Get transaction details by transaction ID
+    /// Get transaction details by transaction ID. Category names follow
+    /// `lang_code` and renames (latent-scan2 M3).
     pub async fn get_transaction_details(
         &self,
         user_id: i64,
         transaction_id: i64,
+        lang_code: &str,
     ) -> Result<Vec<TransactionDetailWithInfo>, TransactionError> {
         let rows = sqlx::query(sql_queries::TRANSACTION_DETAIL_GET_WITH_INFO)
+            .bind(lang_code)
+            .bind(lang_code)
+            .bind(lang_code)
             .bind(transaction_id)
             .bind(user_id)
             .fetch_all(&self.pool)
@@ -2334,6 +2341,15 @@ mod tests {
             .await
             .unwrap();
 
+        // Category name tables joined by the list / detail queries
+        for stmt in [
+            sql_queries::TEST_TRANSACTION_CREATE_CATEGORY1_I18N_TABLE,
+            sql_queries::TEST_TRANSACTION_CREATE_CATEGORY2_I18N_TABLE,
+            sql_queries::TEST_TRANSACTION_CREATE_CATEGORY3_I18N_TABLE,
+        ] {
+            sqlx::query(stmt).execute(&pool).await.unwrap();
+        }
+
         // Create MANUFACTURERS and PRODUCTS tables (v2.6.0: needed for the
         // LEFT JOIN in TRANSACTION_DETAIL_GET_WITH_INFO; tests don't populate
         // master rows by default, so the JOIN just yields NULLs for the
@@ -2597,7 +2613,7 @@ mod tests {
         let detail_id = service.add_transaction_detail(2, transaction_id, request).await.unwrap();
 
         // Verify via get_transaction_details
-        let details = service.get_transaction_details(2, transaction_id).await.unwrap();
+        let details = service.get_transaction_details(2, transaction_id, "ja").await.unwrap();
         assert_eq!(details.len(), 1);
         assert_eq!(details[0].detail_id, detail_id);
         assert_eq!(details[0].item_name, "Bread");
@@ -2629,7 +2645,7 @@ mod tests {
         };
         let detail_id = service.add_transaction_detail(2, transaction_id, request).await.unwrap();
 
-        let details = service.get_transaction_details(2, transaction_id).await.unwrap();
+        let details = service.get_transaction_details(2, transaction_id, "ja").await.unwrap();
         assert_eq!(details.len(), 1);
         assert_eq!(details[0].detail_id, detail_id);
         assert_eq!(details[0].amount_including_tax, None);
@@ -2656,7 +2672,7 @@ mod tests {
         service.add_transaction_detail(2, transaction_id, request1).await.unwrap();
         service.add_transaction_detail(2, transaction_id, request2).await.unwrap();
 
-        let details = service.get_transaction_details(2, transaction_id).await.unwrap();
+        let details = service.get_transaction_details(2, transaction_id, "ja").await.unwrap();
         assert_eq!(details.len(), 2);
         assert_eq!(details[0].item_name, "Item A");
         assert_eq!(details[1].item_name, "Item B");
@@ -2689,7 +2705,7 @@ mod tests {
         assert!(result.is_ok(), "update_transaction_detail failed: {:?}", result.err());
 
         // Verify updated values
-        let details = service.get_transaction_details(2, transaction_id).await.unwrap();
+        let details = service.get_transaction_details(2, transaction_id, "ja").await.unwrap();
         assert_eq!(details.len(), 1);
         assert_eq!(details[0].item_name, "Updated Rice");
         assert_eq!(details[0].amount, 600);
@@ -2709,7 +2725,7 @@ mod tests {
         let detail_id = service.add_transaction_detail(2, transaction_id, request).await.unwrap();
 
         // Verify it exists
-        let details = service.get_transaction_details(2, transaction_id).await.unwrap();
+        let details = service.get_transaction_details(2, transaction_id, "ja").await.unwrap();
         assert_eq!(details.len(), 1);
 
         // Delete
@@ -2717,7 +2733,7 @@ mod tests {
         assert!(result.is_ok(), "delete_transaction_detail failed: {:?}", result.err());
 
         // Verify it's gone
-        let details = service.get_transaction_details(2, transaction_id).await.unwrap();
+        let details = service.get_transaction_details(2, transaction_id, "ja").await.unwrap();
         assert_eq!(details.len(), 0);
     }
 
@@ -2736,7 +2752,7 @@ mod tests {
         // Delete (should also delete the memo)
         service.delete_transaction_detail(2, detail_id).await.unwrap();
 
-        let details = service.get_transaction_details(2, transaction_id).await.unwrap();
+        let details = service.get_transaction_details(2, transaction_id, "ja").await.unwrap();
         assert_eq!(details.len(), 0);
     }
 
@@ -2849,7 +2865,7 @@ mod tests {
         let service = TransactionService::new(pool);
         let transaction_id = create_test_header(&service).await;
 
-        let details = service.get_transaction_details(2, transaction_id).await.unwrap();
+        let details = service.get_transaction_details(2, transaction_id, "ja").await.unwrap();
         assert_eq!(details.len(), 0);
     }
 
@@ -2863,7 +2879,7 @@ mod tests {
         let detail_id = service.add_transaction_detail(2, transaction_id, request).await.unwrap();
 
         // Different user (user_id=999) should not see the detail
-        let details = service.get_transaction_details(999, transaction_id).await.unwrap();
+        let details = service.get_transaction_details(999, transaction_id, "ja").await.unwrap();
         assert_eq!(details.len(), 0);
 
         // Different user should not be able to update
@@ -2980,7 +2996,7 @@ mod tests {
         };
         let detail_id = service.add_transaction_detail(2, transaction_id, request).await.unwrap();
 
-        let details = service.get_transaction_details(2, transaction_id).await.unwrap();
+        let details = service.get_transaction_details(2, transaction_id, "ja").await.unwrap();
         assert_eq!(details.len(), 1);
         assert_eq!(details[0].detail_id, detail_id);
         assert_eq!(details[0].category1_code, "EXPENSE");
@@ -3011,7 +3027,7 @@ mod tests {
         };
         let detail_id = service.add_transaction_detail(2, transaction_id, request).await.unwrap();
 
-        let details = service.get_transaction_details(2, transaction_id).await.unwrap();
+        let details = service.get_transaction_details(2, transaction_id, "ja").await.unwrap();
         assert_eq!(details.len(), 1);
         assert_eq!(details[0].detail_id, detail_id);
         assert_eq!(details[0].category2_code, Some("FOOD".to_string()));
@@ -3058,7 +3074,7 @@ mod tests {
         };
         let detail_id = service.add_transaction_detail(2, transaction_id, request).await.unwrap();
 
-        let details = service.get_transaction_details(2, transaction_id).await.unwrap();
+        let details = service.get_transaction_details(2, transaction_id, "ja").await.unwrap();
         assert_eq!(details.len(), 1);
         assert_eq!(details[0].detail_id, detail_id);
         assert_eq!(details[0].memo_text, None, "empty string memo should result in no memo");
@@ -3100,7 +3116,7 @@ mod tests {
         };
         service.update_transaction_detail(2, detail_id, update).await.unwrap();
 
-        let details = service.get_transaction_details(2, transaction_id).await.unwrap();
+        let details = service.get_transaction_details(2, transaction_id, "ja").await.unwrap();
         assert_eq!(details[0].memo_text, Some("New memo".to_string()));
     }
 
@@ -3125,7 +3141,7 @@ mod tests {
         };
         service.update_transaction_detail(2, detail_id, update).await.unwrap();
 
-        let details = service.get_transaction_details(2, transaction_id).await.unwrap();
+        let details = service.get_transaction_details(2, transaction_id, "ja").await.unwrap();
         assert_eq!(details[0].memo_text, Some("Changed".to_string()));
     }
 
@@ -3150,7 +3166,7 @@ mod tests {
         };
         service.update_transaction_detail(2, detail_id, update).await.unwrap();
 
-        let details = service.get_transaction_details(2, transaction_id).await.unwrap();
+        let details = service.get_transaction_details(2, transaction_id, "ja").await.unwrap();
         assert_eq!(details[0].memo_text, None);
     }
 
@@ -3176,7 +3192,7 @@ mod tests {
         };
         service.update_transaction_detail(2, detail_id, update).await.unwrap();
 
-        let details = service.get_transaction_details(2, transaction_id).await.unwrap();
+        let details = service.get_transaction_details(2, transaction_id, "ja").await.unwrap();
         assert_eq!(details[0].item_name, "Updated name");
         assert_eq!(details[0].memo_text, Some("Keep this".to_string()));
     }
@@ -3883,14 +3899,14 @@ mod tests {
 
         // No filter: both transactions returned.
         let all = service
-            .get_transactions(2, None, None, None, None, None, None, None, None, false, 1, 50)
+            .get_transactions(2, None, None, None, None, None, None, None, None, false, 1, 50, "ja")
             .await
             .unwrap();
         assert_eq!(all.total_count, 2);
 
         // CATEGORY2 = FOOD: only header A.
         let food = service
-            .get_transactions(2, None, None, Some("EXPENSE"), Some("FOOD"), None, None, None, None, false, 1, 50)
+            .get_transactions(2, None, None, Some("EXPENSE"), Some("FOOD"), None, None, None, None, false, 1, 50, "ja")
             .await
             .unwrap();
         assert_eq!(food.total_count, 1);
@@ -3898,7 +3914,7 @@ mod tests {
 
         // CATEGORY2 = OTHER: only header B.
         let other = service
-            .get_transactions(2, None, None, Some("EXPENSE"), Some("OTHER"), None, None, None, None, false, 1, 50)
+            .get_transactions(2, None, None, Some("EXPENSE"), Some("OTHER"), None, None, None, None, false, 1, 50, "ja")
             .await
             .unwrap();
         assert_eq!(other.total_count, 1);
@@ -3919,6 +3935,7 @@ mod tests {
                 false,
                 1,
                 50,
+                "ja",
             )
             .await
             .unwrap();
@@ -3927,7 +3944,7 @@ mod tests {
 
         // Empty-string filter must be treated as "no filter".
         let empty = service
-            .get_transactions(2, None, None, Some(""), Some(""), Some(""), None, None, None, false, 1, 50)
+            .get_transactions(2, None, None, Some(""), Some(""), Some(""), None, None, None, false, 1, 50, "ja")
             .await
             .unwrap();
         assert_eq!(empty.total_count, 2);
@@ -3972,6 +3989,7 @@ mod tests {
                 Some("2024-05-15"),
                 None, None, None, None, None, None,
                 false, 1, 50,
+                "ja",
             )
             .await
             .unwrap();
@@ -3985,6 +4003,7 @@ mod tests {
                 Some("2024-05-15"),
                 None, None, None, None, None, None,
                 false, 1, 50,
+                "ja",
             )
             .await
             .unwrap();
@@ -3998,6 +4017,7 @@ mod tests {
                 Some("2024-05-15 12:00:00"),
                 None, None, None, None, None, None,
                 false, 1, 50,
+                "ja",
             )
             .await
             .unwrap();
@@ -4065,6 +4085,7 @@ mod tests {
             .get_transactions(
                 2, None, None, None, None, None, None, None,
                 Some("牛乳"), false, 1, 50,
+                "ja",
             )
             .await
             .unwrap();
@@ -4076,6 +4097,7 @@ mod tests {
             .get_transactions(
                 2, None, None, None, None, None, None, None,
                 Some("特売"), false, 1, 50,
+                "ja",
             )
             .await
             .unwrap();
@@ -4087,6 +4109,7 @@ mod tests {
             .get_transactions(
                 2, None, None, None, None, None, None, None,
                 Some("ダミー"), false, 1, 50,
+                "ja",
             )
             .await
             .unwrap();
@@ -4097,6 +4120,7 @@ mod tests {
             .get_transactions(
                 2, None, None, None, None, None, None, None,
                 Some("   "), false, 1, 50,
+                "ja",
             )
             .await
             .unwrap();
@@ -4108,6 +4132,7 @@ mod tests {
             .get_transactions(
                 2, None, None, None, None, None, None, None,
                 Some("%"), false, 1, 50,
+                "ja",
             )
             .await
             .unwrap();
@@ -4151,13 +4176,13 @@ mod tests {
 
         // Default: exclude scheduled
         let result = service.get_transactions(
-            2, None, None, None, None, None, None, None, None, false, 1, 50
+            2, None, None, None, None, None, None, None, None, false, 1, 50, "ja"
         ).await.unwrap();
         assert_eq!(result.total_count, 1);
 
         // Include scheduled
         let result = service.get_transactions(
-            2, None, None, None, None, None, None, None, None, true, 1, 50
+            2, None, None, None, None, None, None, None, None, true, 1, 50, "ja"
         ).await.unwrap();
         assert_eq!(result.total_count, 2);
     }
@@ -4277,7 +4302,7 @@ mod tests {
         request.product_id = Some(product_id);
         let detail_id = service.add_transaction_detail(2, transaction_id, request).await.unwrap();
 
-        let details = service.get_transaction_details(2, transaction_id).await.unwrap();
+        let details = service.get_transaction_details(2, transaction_id, "ja").await.unwrap();
         assert_eq!(details.len(), 1);
         assert_eq!(details[0].detail_id, detail_id);
         assert_eq!(details[0].product_id, Some(product_id));
@@ -4295,7 +4320,7 @@ mod tests {
         let request = basic_detail_request();
         service.add_transaction_detail(2, transaction_id, request).await.unwrap();
 
-        let details = service.get_transaction_details(2, transaction_id).await.unwrap();
+        let details = service.get_transaction_details(2, transaction_id, "ja").await.unwrap();
         assert_eq!(details.len(), 1);
         assert_eq!(details[0].product_id, None);
         assert_eq!(details[0].product_name, None);
@@ -4316,14 +4341,14 @@ mod tests {
         let mut linked = basic_detail_request();
         linked.product_id = Some(product_id);
         service.update_transaction_detail(2, detail_id, linked).await.unwrap();
-        let after_link = service.get_transaction_details(2, transaction_id).await.unwrap();
+        let after_link = service.get_transaction_details(2, transaction_id, "ja").await.unwrap();
         assert_eq!(after_link[0].product_id, Some(product_id));
 
         // Demote back to free text (user typed over the master link)
         let mut unlinked = basic_detail_request();
         unlinked.product_id = None;
         service.update_transaction_detail(2, detail_id, unlinked).await.unwrap();
-        let after_unlink = service.get_transaction_details(2, transaction_id).await.unwrap();
+        let after_unlink = service.get_transaction_details(2, transaction_id, "ja").await.unwrap();
         assert_eq!(after_unlink[0].product_id, None);
     }
 
@@ -4343,7 +4368,7 @@ mod tests {
             .await
             .unwrap();
         let shared_memo_id = service
-            .get_transaction_details(2, header_a_id)
+            .get_transaction_details(2, header_a_id, "ja")
             .await
             .unwrap()[0]
             .memo_id
@@ -4404,7 +4429,7 @@ mod tests {
 
         // Detail A's memo must have been redirected to a fresh row.
         let details_a_after = service
-            .get_transaction_details(2, header_a_id)
+            .get_transaction_details(2, header_a_id, "ja")
             .await
             .unwrap();
         assert_eq!(details_a_after[0].memo_text.as_deref(), Some("changed_by_detail"));
@@ -4453,7 +4478,7 @@ mod tests {
             .await
             .unwrap();
         let original_memo_id = service
-            .get_transaction_details(2, header_id)
+            .get_transaction_details(2, header_id, "ja")
             .await
             .unwrap()[0]
             .memo_id
@@ -4463,7 +4488,7 @@ mod tests {
         edit.memo = Some("second".to_string());
         service.update_transaction_detail(2, detail_id, edit).await.unwrap();
 
-        let after = service.get_transaction_details(2, header_id).await.unwrap();
+        let after = service.get_transaction_details(2, header_id, "ja").await.unwrap();
         assert_eq!(after[0].memo_text.as_deref(), Some("second"));
         assert_eq!(after[0].memo_id, Some(original_memo_id));
     }
@@ -4483,7 +4508,7 @@ mod tests {
             .await
             .unwrap();
         let memo_id = service
-            .get_transaction_details(2, header_id)
+            .get_transaction_details(2, header_id, "ja")
             .await
             .unwrap()[0]
             .memo_id
@@ -4569,7 +4594,7 @@ mod tests {
             .await
             .unwrap();
         let shared_memo_id = service
-            .get_transaction_details(2, header_id)
+            .get_transaction_details(2, header_id, "ja")
             .await
             .unwrap()[0]
             .memo_id
@@ -4592,7 +4617,7 @@ mod tests {
         assert_eq!(rule_memo.as_deref(), Some("shared_with_recurring"));
 
         // Detail has been redirected to a fresh memo.
-        let after = service.get_transaction_details(2, header_id).await.unwrap();
+        let after = service.get_transaction_details(2, header_id, "ja").await.unwrap();
         assert_eq!(after[0].memo_text.as_deref(), Some("edited_via_detail"));
         assert_ne!(after[0].memo_id.unwrap(), shared_memo_id);
     }
@@ -4614,7 +4639,7 @@ mod tests {
             .await
             .unwrap();
         let shared_memo_id = service
-            .get_transaction_details(2, header_id)
+            .get_transaction_details(2, header_id, "ja")
             .await
             .unwrap()[0]
             .memo_id
@@ -4659,7 +4684,7 @@ mod tests {
             .await
             .expect("clearing memo must not violate the MEMOS foreign key");
 
-        let after = service.get_transaction_details(2, header_id).await.unwrap();
+        let after = service.get_transaction_details(2, header_id, "ja").await.unwrap();
         assert!(after[0].memo_id.is_none());
         assert!(after[0].memo_text.is_none());
     }

@@ -409,28 +409,9 @@ async fn setup_transaction_db() -> SqlitePool {
         sql_queries::TEST_TRANSACTION_CREATE_DETAIL_TABLE,
         sql_queries::CREATE_RECURRING_RULES_TABLE,
         sql_queries::CREATE_RECURRING_RULE_DETAILS_TABLE,
-        // Same DDL as res/sql/dbaccess.sql (SQL_10000011 / SQL_10000012).
-        "CREATE TABLE CATEGORY2_I18N (
-            USER_ID INTEGER NOT NULL,
-            CATEGORY1_CODE VARCHAR(64) NOT NULL,
-            CATEGORY2_CODE VARCHAR(64) NOT NULL,
-            LANG_CODE VARCHAR(10) NOT NULL,
-            CATEGORY2_NAME_I18N VARCHAR(256) NOT NULL,
-            ENTRY_DT DATETIME NOT NULL,
-            UPDATE_DT DATETIME,
-            PRIMARY KEY(USER_ID, CATEGORY1_CODE, CATEGORY2_CODE, LANG_CODE)
-        )",
-        "CREATE TABLE CATEGORY3_I18N (
-            USER_ID INTEGER NOT NULL,
-            CATEGORY1_CODE VARCHAR(64) NOT NULL,
-            CATEGORY2_CODE VARCHAR(64) NOT NULL,
-            CATEGORY3_CODE VARCHAR(64) NOT NULL,
-            LANG_CODE VARCHAR(10) NOT NULL,
-            CATEGORY3_NAME_I18N VARCHAR(256) NOT NULL,
-            ENTRY_DT DATETIME NOT NULL,
-            UPDATE_DT DATETIME,
-            PRIMARY KEY(USER_ID, CATEGORY1_CODE, CATEGORY2_CODE, CATEGORY3_CODE, LANG_CODE)
-        )",
+        sql_queries::TEST_TRANSACTION_CREATE_CATEGORY1_I18N_TABLE,
+        sql_queries::TEST_TRANSACTION_CREATE_CATEGORY2_I18N_TABLE,
+        sql_queries::TEST_TRANSACTION_CREATE_CATEGORY3_I18N_TABLE,
     ] {
         sqlx::query(stmt).execute(&pool).await.unwrap();
     }
@@ -467,11 +448,9 @@ async fn setup_transaction_db() -> SqlitePool {
 /// 食費 (and base names are EN for user-added categories / JA for seeded
 /// ones regardless of the UI language).
 ///
-/// Expected: the detail list shows the renamed (i18n) names. The assertion
-/// accepts either language so it does not depend on how the session
-/// language reaches the query.
+/// Expected: the detail list shows the renamed (i18n) names in the display
+/// language passed to `get_transaction_details`.
 #[tokio::test]
-#[ignore = "latent-audit scan2-M3"]
 async fn latent_scan2_m3_detail_list_shows_renamed_category_names() {
     use crate::services::transaction::{
         SaveTransactionDetailRequest, SaveTransactionRequest, TransactionService,
@@ -529,18 +508,81 @@ async fn latent_scan2_m3_detail_list_shows_renamed_category_names() {
         .await
         .unwrap();
 
-    let details = transaction.get_transaction_details(user_id, txn_id).await.unwrap();
-    assert_eq!(details.len(), 1, "precondition: one detail");
-    let cat2 = details[0].category2_name.clone().unwrap_or_default();
-    let cat3 = details[0].category3_name.clone().unwrap_or_default();
-    assert!(
-        cat2 == "食材" || cat2 == "Ingredients",
-        "detail list must show the renamed CATEGORY2 name, got {:?}",
-        cat2
-    );
-    assert!(
-        cat3 == "生鮮食品" || cat3 == "Fresh food",
-        "detail list must show the renamed CATEGORY3 name, got {:?}",
-        cat3
-    );
+    for (lang, cat2, cat3) in [("ja", "食材", "生鮮食品"), ("en", "Ingredients", "Fresh food")] {
+        let details = transaction.get_transaction_details(user_id, txn_id, lang).await.unwrap();
+        assert_eq!(details.len(), 1, "precondition: one detail");
+        assert_eq!(
+            details[0].category2_name.as_deref(),
+            Some(cat2),
+            "detail list must show the renamed CATEGORY2 name in {}",
+            lang
+        );
+        assert_eq!(
+            details[0].category3_name.as_deref(),
+            Some(cat3),
+            "detail list must show the renamed CATEGORY3 name in {}",
+            lang
+        );
+    }
+}
+
+/// scan2-M8: `TRANSACTION_LIST_BASE` selected the base CATEGORY1_NAME (支出)
+/// with no CATEGORY1_I18N join, so the English transaction list showed 支出
+/// on every row.
+///
+/// Expected: the list shows the CATEGORY1 name of the display language, and
+/// falls back to the base name when that language has no row.
+#[tokio::test]
+async fn latent_scan2_m8_transaction_list_category1_follows_language() {
+    use crate::services::transaction::{SaveTransactionRequest, TransactionService};
+    let user_id = 2;
+    let pool = setup_transaction_db().await;
+    let transaction = TransactionService::new(pool.clone());
+
+    for (lang, name) in [("ja", "支出"), ("en", "Expense")] {
+        sqlx::query(sql_queries::CATEGORY_INSERT_CATEGORY1_I18N)
+            .bind(user_id)
+            .bind("EXPENSE")
+            .bind(lang)
+            .bind(name)
+            .bind("2024-01-01 00:00:00")
+            .execute(&pool)
+            .await
+            .unwrap();
+    }
+    transaction
+        .save_transaction_header(
+            user_id,
+            SaveTransactionRequest {
+                shop_id: None,
+                category1_code: "EXPENSE".to_string(),
+                from_account_code: "CASH".to_string(),
+                to_account_code: "BANK".to_string(),
+                transaction_date: "2024-01-01 10:00:00".to_string(),
+                total_amount: 1000,
+                tax_rounding_type: 0,
+                tax_included_type: 0,
+                memo: None,
+                is_scheduled: None,
+            },
+        )
+        .await
+        .unwrap();
+
+    // "fr" has no CATEGORY1_I18N row: the base name (支出) is shown.
+    for (lang, expected) in [("ja", "支出"), ("en", "Expense"), ("fr", "支出")] {
+        let list = transaction
+            .get_transactions(
+                user_id, None, None, None, None, None, None, None, None, false, 1, 50, lang,
+            )
+            .await
+            .unwrap();
+        assert_eq!(list.transactions.len(), 1, "precondition: one transaction");
+        assert_eq!(
+            list.transactions[0].category1_name.as_deref(),
+            Some(expected),
+            "CATEGORY1 name in {}",
+            lang
+        );
+    }
 }

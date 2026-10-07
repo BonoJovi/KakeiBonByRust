@@ -521,16 +521,20 @@ async function loadTransactionHeader() {
 
         // Display account based on category1_code
         // EXPENSE: from_account (出金元), INCOME: to_account (入金先), TRANSFER: from → to
+        // The NONE account is stored as 指定なし, so it gets the localized
+        // label like the transaction form (latent-scan2 M8).
+        const accountName = (code, name) =>
+            code === 'NONE' ? i18n.t('common.unspecified') : (name || code || '-');
         let accountDisplay = '-';
         if (header.category1_code === 'TRANSFER') {
-            const from = header.from_account_name || header.from_account_code || '-';
-            const to = header.to_account_name || header.to_account_code || '-';
+            const from = accountName(header.from_account_code, header.from_account_name);
+            const to = accountName(header.to_account_code, header.to_account_name);
             accountDisplay = `${from} → ${to}`;
         } else if (header.category1_code === 'INCOME') {
-            accountDisplay = header.to_account_name || header.to_account_code || '-';
+            accountDisplay = accountName(header.to_account_code, header.to_account_name);
         } else {
             // EXPENSE or other
-            accountDisplay = header.from_account_name || header.from_account_code || '-';
+            accountDisplay = accountName(header.from_account_code, header.from_account_name);
         }
         document.getElementById('header-account').textContent = accountDisplay;
 

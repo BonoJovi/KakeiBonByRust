@@ -2,8 +2,8 @@
 
 This document provides a complete index of all backend tests implemented in Rust.
 
-**Last Updated**: 2026-10-01 JST  
-**Total Tests**: 448 (delta-tracked; the full authoritative count from `cargo test --lib` is 714, and a follow-up pass will backfill the remaining pre-existing gap)
+**Last Updated**: 2026-10-07 JST  
+**Total Tests**: 450 (delta-tracked; the full authoritative count from `cargo test --lib` is 716, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -432,8 +432,10 @@ Category management service tests (3-tier category CRUD). Internal `CategoryErro
 | `latent_l20_add_category2_empty_category1_code_does_not_panic` | An empty CATEGORY1 code is rejected instead of panicking (latent-audit L20) | src/services/latent_audit/category.rs | 312 |
 | `latent_l20_add_category2_multibyte_category1_code_does_not_panic` | An unknown multibyte CATEGORY1 code is rejected instead of panicking (latent-audit L20) | src/services/latent_audit/category.rs | 323 |
 | `latent_l20_add_category3_multibyte_category1_code_does_not_panic` | Adding a CATEGORY3 under an unknown multibyte CATEGORY1 is rejected instead of panicking (latent-audit L20) | src/services/latent_audit/category.rs | 333 |
+| `latent_scan2_m3_detail_list_shows_renamed_category_names` | After renaming a CATEGORY2 / CATEGORY3, the transaction detail list shows the new names in the display language (ja and en) instead of the base names (latent-audit scan2-M3) | src/services/latent_audit/category.rs | 454 |
+| `latent_scan2_m8_transaction_list_category1_follows_language` | The transaction list shows the CATEGORY1 name of the display language (支出 / Expense), and the base name for a language with no row (latent-audit scan2-M8) | src/services/latent_audit/category.rs | 536 |
 
-**Total**: 38 tests
+**Total**: 40 tests
 
 ### services/manufacturer.rs
 
@@ -734,7 +736,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **425** |
+| **Inline Tests** | **427** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -747,7 +749,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/user_management.rs | 24 |
 | services/encryption.rs | 11 |
 | services/account.rs | 19 |
-| services/category.rs | 38 |
+| services/category.rs | 40 |
 | services/manufacturer.rs | 17 |
 | services/product.rs | 20 |
 | services/shop.rs | 19 |
@@ -758,7 +760,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/i18n.rs | 8 |
 | services/recurring.rs | 26 |
 | lib.rs | 6 |
-| **Total** | **448** |
+| **Total** | **450** |
 
 ---
 
