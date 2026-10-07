@@ -3,7 +3,7 @@
 This document provides a complete index of all frontend tests implemented in JavaScript.
 
 **Last Updated**: 2026-10-07 JST  
-**Total Tests**: 926 (jest suites; 85 test files, per `npm test`)
+**Total Tests**: 933 (jest suites; 86 test files, per `npm test`)
 
 ---
 
@@ -30,7 +30,7 @@ and are **not** added again to the grand total.
 - **login.test.js** - Login tests (58)
 - **user-deletion.test.js** - User deletion tests (46)
 
-### Feature-Specific Tests (503 tests)
+### Feature-Specific Tests (510 tests)
 
 - **transaction-edit.test.js** - Transaction edit tests (112)
 - **transaction-detail-management.test.js** - Transaction detail management tests (51)
@@ -67,6 +67,7 @@ and are **not** added again to the grand total.
 - **pages/recurring-rule-date-order.test.js** - Boots the real recurring rule page: an empty start / end date, a start date after the end date and a daily anchor after the end date are each stopped by the form with a localized message instead of the backend's English text, and `create_recurring_rule` is not called; dates in order still create the rule (latent-audit scan2-R8) (5)
 - **pages/recurring-rule-reset.test.js** - Boots the real recurring rule page: after choosing Monthly and pressing Reset, the cycle fields match the checked Daily radio again (anchor shown, Monthly fields hidden, holiday shift "no shift" and disabled) and the default dates (today / one year later) are re-applied (latent-audit scan2-R4) (1)
 - **pages/menu-i18n-seed.test.js** - `menu.back_to_transactions` and every other `data-i18n` key rendered by the menu bar are seeded in `res/sql/dbaccess.sql` for ja and en, so the detail screen's File menu no longer shows the raw key (latent-audit scan2-C2) (2)
+- **pages/i18n-literal-user-text.test.js** - User text is inserted literally: `i18n.t()` keeps `$&`, `$'`, `` $` `` and `$$` in a user name, fills every placeholder in one pass (a value containing `{b}` is not filled again), leaves a placeholder with no param as it is, and the recurring-rule delete confirmation keeps a rule name containing `$'` and `{1}` (latent-audit scan2-C4) (7)
 - **pages/dashboard-balance-header.test.js** - The dashboard's Account Balances column header uses its own key that resolves to 残高 / Balance after `dbaccess.sql` is applied, instead of `dashboard.balance` (収支, the chart label) (latent-audit scan2-C3) (1)
 - **pages/transaction-list-none-account-label.test.js** - Boots the real transaction list: a row whose account is NONE shows `common.unspecified` instead of the stored name 指定なし (latent-audit scan2-M8) (1)
 - **pages/transaction-detail-none-account-label.test.js** - Boots the real transaction detail screen: the header's account shows `common.unspecified` for the NONE account instead of the stored name 指定なし (latent-audit scan2-M8) (1)
@@ -139,7 +140,7 @@ and are **not** added again to the grand total.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **Feature-Specific Tests** | **503** |
+| **Feature-Specific Tests** | **510** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 30 |
@@ -175,6 +176,7 @@ and are **not** added again to the grand total.
 | pages/recurring-rule-date-order.test.js | 5 |
 | pages/recurring-rule-reset.test.js | 1 |
 | pages/menu-i18n-seed.test.js | 2 |
+| pages/i18n-literal-user-text.test.js | 7 |
 | pages/dashboard-balance-header.test.js | 1 |
 | pages/transaction-list-none-account-label.test.js | 1 |
 | pages/transaction-detail-none-account-label.test.js | 1 |
@@ -220,7 +222,7 @@ and are **not** added again to the grand total.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **Total (jest)** | **926** |
+| **Total (jest)** | **933** |
 
 Grand total is Screen + Feature + Aggregation (Common Test Suites are helper
 libraries invoked from Screen-Specific files and their assertions are already

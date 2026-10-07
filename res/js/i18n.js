@@ -43,14 +43,15 @@ class I18n {
     }
 
     t(key, params = {}) {
-        let text = this.translations[key] || key;
+        const text = this.translations[key] || key;
         
-        // Replace parameters
-        Object.keys(params).forEach(paramKey => {
-            text = text.replace(new RegExp(`{${paramKey}}`, 'g'), params[paramKey]);
-        });
-        
-        return text;
+        // Fill every {param} in one pass. The value comes from a function so
+        // `$&`, `$'` ... in user text stay literal, and a value containing
+        // "{other}" is not filled again. A placeholder with no param stays
+        // as it is (scan2-C4).
+        return text.replace(/\{(\w+)\}/g, (placeholder, paramKey) =>
+            Object.hasOwn(params, paramKey) ? String(params[paramKey]) : placeholder
+        );
     }
 
     async setLanguage(language) {

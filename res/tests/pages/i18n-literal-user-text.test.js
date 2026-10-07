@@ -1,4 +1,3 @@
-// latent-audit scan2-C4: i18n.t() and the recurring-rule delete confirmation use user text as a replacement string ($&, $1, {1} are interpreted)
 /**
  * i18n.t() substitutes params with String.prototype.replace(regex, value), so
  * `$&`, `$'`, `$1` ... in a user name are interpreted as replacement patterns
@@ -6,13 +5,15 @@
  * the delete confirmation with chained tmpl.replace('{0}', name)
  * .replace('{1}', count): a rule name with `$'` or `{1}` garbles the message
  * (the count lands inside the name and the real `{1}` stays literal).
- * Expected: user text is inserted literally.
+ * Expected: user text is inserted literally, every placeholder is filled in
+ * one pass (a value containing "{b}" is not filled again), and a placeholder
+ * with no param is left as it is.
  */
 
 import { jest } from '@jest/globals';
 import {
     mockPageModules, loadPageBody, bootPage, flush,
-} from '../pages/_page-harness.js';
+} from './_page-harness.js';
 
 // The real I18n instance, loaded before the page harness mocks i18n.js.
 const { default: realI18n } = await import('../../js/i18n.js');
@@ -21,6 +22,7 @@ const TEMPLATES = {
     'login.welcome': 'Welcome, {name}!',
     'recurring_rule.delete_confirm_message':
         'Delete rule "{0}"? It currently has {1} generated occurrence(s).',
+    'test.two_params': '{a} and {b}',
 };
 
 const RULE = {
@@ -52,19 +54,27 @@ const { i18n: pageI18n } = mockPageModules(jest, {
 // The page sees the real t() with the seeded English templates.
 pageI18n.t = (key, params) => realI18n.t(key, params);
 
-describe('scan2-C4 — user text is inserted literally', () => {
+describe('user text is inserted literally (scan2-C4)', () => {
     beforeAll(() => {
         realI18n.translations = { ...TEMPLATES };
     });
 
     test.each(['A$&B', "A$'B", 'A$`B', 'A$$B'])(
-        'i18n.t() keeps the user name %s literally',
+        '[scan2-C4] i18n.t() keeps the user name %s literally',
         (name) => {
             expect(realI18n.t('login.welcome', { name })).toBe(`Welcome, ${name}!`);
         }
     );
 
-    test('recurring-rule delete confirmation keeps the rule name literally', async () => {
+    test('[scan2-C4] a value containing another placeholder is not substituted again', () => {
+        expect(realI18n.t('test.two_params', { a: '{b}', b: 'B' })).toBe('{b} and B');
+    });
+
+    test('[scan2-C4] a placeholder with no param is left as it is', () => {
+        expect(realI18n.t('test.two_params', { a: 'A' })).toBe('A and {b}');
+    });
+
+    test('[scan2-C4] recurring-rule delete confirmation keeps the rule name literally', async () => {
         loadPageBody('recurring-rule.html');
         await import('../../js/recurring-rule.js');
         await bootPage();
