@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-10-07 JST  
-**総テスト数**: 887件 (jest suite 75 ファイル、`npm test` 実測)
+**総テスト数**: 889件 (jest suite 75 ファイル、`npm test` 実測)
 
 ---
 
@@ -707,13 +707,15 @@
 
 `findMonthlyPeriodContaining` (period.js) のテスト (潜在スキャン scan2-A3)。月次の期間は開始日の月で名前が付くので、暦の月の期間が今日を含まないことがある。ダッシュボードはこの関数で、今日を含む期間を開いたときの対象月にする。
 
-**テスト数**: 4件
+**テスト数**: 6件
 
 | テスト | 説明 |
 |--------|------|
 | `should keep the calendar month when its period contains the date` | 暦の月の期間が日付を含むなら、その月を返す |
 | `should step back when the calendar month's period starts after the date` | 暦の月の期間が日付より後に始まるなら前月を返す (起算日 25 日。1 月 → 前年 12 月の年またぎも) |
 | `should step forward when the calendar month's period ended before the date` | 休日シフトで暦の月の期間が日付より前に終わっているなら翌月を返す (12 月 → 翌年 1 月の年またぎも) |
+| `should keep stepping when the neighbouring month does not contain the date either` | 隣の月の期間も日付を含まないときは、含む月まで進む (起算日 31 日・翌営業日。2026 年 1/31 と 2/28 が土曜なので「1 月」は 2/2〜3/1 になり、3/1 は 2 か月前の「1 月」) |
+| `should give up on the calendar month when no period ever matches` | どの月の期間も日付を含まない答えが続いたら、上限回数で打ち切って暦の月を返す |
 | `should fall back to the calendar month when the backend fails` | バックエンドが答えられないときは暦の月を返す |
 
 **ファイル**: res/tests/period-containing.test.js
@@ -1582,7 +1584,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **464件** |
+| **機能別テスト** | **466件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 30 |
@@ -1599,7 +1601,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | parse-amount-strict.test.js | 24 |
 | format-local-date.test.js | 16 |
 | period-end-date.test.js | 2 |
-| period-containing.test.js | 4 |
+| period-containing.test.js | 6 |
 | aggregation-render-unspecified.test.js | 5 |
 | pages/transaction-detail-page.test.js | 3 |
 | pages/transaction-detail-included-typing.test.js | 1 |
@@ -1653,7 +1655,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **887件** |
+| **総計 (jest)** | **889件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 
