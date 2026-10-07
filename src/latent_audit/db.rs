@@ -269,7 +269,6 @@ fn latent_m2_accounts_follow_category1_side() {
 /// Expected: a fresh DB has the real 2021 holidays, and re-running the
 /// startup seeding on an existing DB that holds the wrong rows repairs them.
 #[tokio::test]
-#[ignore = "latent-audit scan2-R3"]
 async fn latent_scan2_r3_2021_holidays_are_correct_and_repaired() {
     use chrono::{Datelike, Local};
 

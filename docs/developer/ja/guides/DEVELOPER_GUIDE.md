@@ -37,7 +37,7 @@ KakeiBonByRust は、Tauri v2 で構築された家計簿（household budget）�
 | 日時 | `chrono` | 0.4 (serde) |
 | 暗号 | `argon2`, `aes-gcm`, `base64`, `rand` | — |
 | ロケール補助 | `glib` | 0.20 |
-| 祝日 | `jpholiday` | 0.1.4 |
+| 祝日 | `jpholiday` | 0.2.0 |
 
 > **注意**: 本番 DB アクセスは `rusqlite` ベースの自作レイヤ（`src/db.rs` + `src/sql_queries.rs`）を使用。`sqlx` は `src/test_helpers.rs` のテストインフラ専用です。
 

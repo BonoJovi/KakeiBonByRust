@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-10-07 JST  
-**Total Tests**: 456 (delta-tracked; the full authoritative count from `cargo test --lib` is 722, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 458 (delta-tracked; the full authoritative count from `cargo test --lib` is 724, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -179,24 +179,25 @@ Database initialization and migration tests.
 
 | Test Function | Description | File | Line |
 |---------------|-------------|------|------|
-| `test_wal_mode_enabled` | Verify WAL mode is enabled | src/db.rs | 187 |
-| `test_transactions_detail_migration` | Test transactions_detail table migration | src/db.rs | 217 |
-| `test_migrate_survives_orphaned_memo_reference` | Migration cope with FK-orphaned MEMO_ID from legacy DBs (Fable-5 #11) | src/db.rs | 1032 |
-| `test_migrate_leaves_foreign_keys_on` | PRAGMA foreign_keys is restored to ON on the acquired connection after migration (Fable-5 #11) | src/db.rs | 1137 |
-| `migrate_shops_unique_dedupes_and_repoints_references` | End-to-end proof that duplicate SHOPS rows collapse onto the smallest SHOP_ID, TRANSACTIONS_HEADER + RECURRING_RULES references are repointed, the unique index is created, and further duplicate inserts are rejected (PR15, Fable-5 #20) | src/db.rs | 1373 |
-| `migrate_shops_unique_is_idempotent` | A second run of a successful migration is a no-op and leaves the data untouched (PR15, Fable-5 #20) | src/db.rs | 1424 |
-| `migrate_shops_unique_scopes_per_user` | User A and User B may each own a shop with the same SHOP_NAME — the uniqueness scope is per-user (PR15, Fable-5 #20) | src/db.rs | 1437 |
-| `migrate_shops_unique_keeps_active_row_over_soft_deleted_older_id` | When a soft-deleted old shop (smaller SHOP_ID, `IS_DISABLED=1`) coexists with a re-created active shop of the same name (larger SHOP_ID, `IS_DISABLED=0`), the migration keeps the active row as survivor and repoints legacy transaction references onto it (PR15, Devin #118 review) | src/db.rs | 1459 |
-| `pool_connections_all_enforce_foreign_keys` | Every connection the pool hands out enforces `PRAGMA foreign_keys = ON`, not just the first one. Pre-fix, only the connection that ran the one-shot `execute()` at startup had FKs enabled; the SHOPS user-cascade migration was toothless on any borrower that got a later connection (CodeRabbit outside-diff on #128) | src/db.rs | 1630 |
-| `migrate_shops_user_id_cascade_adds_cascade_fk_and_preserves_rows` | Table recreate swaps the SHOPS.USER_ID FK to `ON DELETE CASCADE` while keeping every SHOP_ID and column value verbatim (Fable-5 #11) | src/db.rs | 1711 |
-| `migrate_shops_user_id_cascade_is_idempotent` | Second run of the SHOPS cascade migration finds the CASCADE FK already present and returns early — no DROP/RENAME on already-migrated DBs (Fable-5 #11) | src/db.rs | 1799 |
-| `user_delete_cascades_to_shops_after_migration` | End-to-end guarantee: after the cascade migration, deleting a user with SHOPS rows succeeds and takes those rows with it — the pre-fix DELETE aborted with `FOREIGN KEY constraint failed` (Fable-5 #11) | src/db.rs | 1823 |
-| `latent_h5_migration_backfills_null_amount_including_tax` | Startup migration backfills NULL AMOUNT_INCLUDING_TAX from AMOUNT + TAX_AMOUNT (latent-audit H5) | src/latent_audit/db.rs | 33 |
+| `test_wal_mode_enabled` | Verify WAL mode is enabled | src/db.rs | 882 |
+| `test_transactions_detail_migration` | Test transactions_detail table migration | src/db.rs | 912 |
+| `test_migrate_survives_orphaned_memo_reference` | Migration cope with FK-orphaned MEMO_ID from legacy DBs (Fable-5 #11) | src/db.rs | 1375 |
+| `test_migrate_leaves_foreign_keys_on` | PRAGMA foreign_keys is restored to ON on the acquired connection after migration (Fable-5 #11) | src/db.rs | 1480 |
+| `migrate_shops_unique_dedupes_and_repoints_references` | End-to-end proof that duplicate SHOPS rows collapse onto the smallest SHOP_ID, TRANSACTIONS_HEADER + RECURRING_RULES references are repointed, the unique index is created, and further duplicate inserts are rejected (PR15, Fable-5 #20) | src/db.rs | 1607 |
+| `migrate_shops_unique_is_idempotent` | A second run of a successful migration is a no-op and leaves the data untouched (PR15, Fable-5 #20) | src/db.rs | 1658 |
+| `migrate_shops_unique_scopes_per_user` | User A and User B may each own a shop with the same SHOP_NAME — the uniqueness scope is per-user (PR15, Fable-5 #20) | src/db.rs | 1671 |
+| `migrate_shops_unique_keeps_active_row_over_soft_deleted_older_id` | When a soft-deleted old shop (smaller SHOP_ID, `IS_DISABLED=1`) coexists with a re-created active shop of the same name (larger SHOP_ID, `IS_DISABLED=0`), the migration keeps the active row as survivor and repoints legacy transaction references onto it (PR15, Devin #118 review) | src/db.rs | 1693 |
+| `pool_connections_all_enforce_foreign_keys` | Every connection the pool hands out enforces `PRAGMA foreign_keys = ON`, not just the first one. Pre-fix, only the connection that ran the one-shot `execute()` at startup had FKs enabled; the SHOPS user-cascade migration was toothless on any borrower that got a later connection (CodeRabbit outside-diff on #128) | src/db.rs | 1747 |
+| `migrate_shops_user_id_cascade_adds_cascade_fk_and_preserves_rows` | Table recreate swaps the SHOPS.USER_ID FK to `ON DELETE CASCADE` while keeping every SHOP_ID and column value verbatim (Fable-5 #11) | src/db.rs | 1828 |
+| `migrate_shops_user_id_cascade_is_idempotent` | Second run of the SHOPS cascade migration finds the CASCADE FK already present and returns early — no DROP/RENAME on already-migrated DBs (Fable-5 #11) | src/db.rs | 1916 |
+| `user_delete_cascades_to_shops_after_migration` | End-to-end guarantee: after the cascade migration, deleting a user with SHOPS rows succeeds and takes those rows with it — the pre-fix DELETE aborted with `FOREIGN KEY constraint failed` (Fable-5 #11) | src/db.rs | 1940 |
+| `latent_h5_migration_backfills_null_amount_including_tax` | Startup migration backfills NULL AMOUNT_INCLUDING_TAX from AMOUNT + TAX_AMOUNT (latent-audit H5) | src/latent_audit/db.rs | 34 |
 | `latent_m3_startup_removes_orphan_user_categories` | Startup cleanup removes category rows of deleted users and keeps live users' (latent-audit M3) | src/latent_audit/db.rs | 106 |
-| `latent_m2_startup_repairs_header_category1_mismatch` | Startup sets a header whose category1 disagrees with its details back to the details' category1 and moves its account to that side; mixed-detail and consistent headers are left alone (latent-audit M2) | src/latent_audit/db.rs | 142 |
-| `latent_m2_accounts_follow_category1_side` | The account moves to the side the new category1 uses (expense: FROM, income: TO) (latent-audit M2) | src/latent_audit/db.rs | 226 |
+| `latent_m2_startup_repairs_header_category1_mismatch` | Startup sets a header whose category1 disagrees with its details back to the details' category1 and moves its account to that side; mixed-detail and consistent headers are left alone (latent-audit M2) | src/latent_audit/db.rs | 143 |
+| `latent_m2_accounts_follow_category1_side` | The account moves to the side the new category1 uses (expense: FROM, income: TO) (latent-audit M2) | src/latent_audit/db.rs | 238 |
+| `latent_scan2_r3_2021_holidays_are_correct_and_repaired` | A fresh DB has the real 2021 holidays (07-22, 07-23, 08-08, 08-09, not 07-19 / 08-11 / 10-11), and the startup seeding repairs a DB that an older build seeded with the wrong rows (latent-audit scan2-R3) | src/latent_audit/db.rs | 272 |
 
-**Total**: 16 tests
+**Total**: 17 tests
 
 ### settings.rs
 
@@ -689,34 +690,35 @@ Recurring transaction rule service tests.
 
 | Test Function | Description | File | Line |
 |---------------|-------------|------|------|
-| `test_delete_rule_returns_not_found_for_missing` | Delete of a missing rule returns NotFound instead of empty-commit fake success (Fable-5 #8) | src/services/recurring.rs | 1811 |
-| `not_found_maps_to_not_found_code_with_recurring_rule_entity` | RecurringError::NotFound maps to ApiError::not_found("recurring rule") (PR2a) | src/services/recurring.rs | 1833 |
-| `validation_preserves_message_and_omits_entity` | RecurringError::Validation maps to ApiError::CODE_VALIDATION with the message preserved (PR2a) | src/services/recurring.rs | 1840 |
-| `database_error_maps_to_database_code` | RecurringError::Database maps to ApiError::CODE_DATABASE (PR2a) | src/services/recurring.rs | 1851 |
-| `field_needle_message_survives_conversion_for_frontend_routing` | Four field needles (`"Rule name must be"` etc.) survive at the head of the wire message so the frontend `startsWith` routing keeps working (PR2a) | src/services/recurring.rs | 1858 |
+| `test_delete_rule_returns_not_found_for_missing` | Delete of a missing rule returns NotFound instead of empty-commit fake success (Fable-5 #8) | src/services/recurring.rs | 2139 |
+| `not_found_maps_to_not_found_code_with_recurring_rule_entity` | RecurringError::NotFound maps to ApiError::not_found("recurring rule") (PR2a) | src/services/recurring.rs | 2169 |
+| `validation_preserves_message_and_omits_entity` | RecurringError::Validation maps to ApiError::CODE_VALIDATION with the message preserved (PR2a) | src/services/recurring.rs | 2176 |
+| `database_error_maps_to_database_code` | RecurringError::Database maps to ApiError::CODE_DATABASE (PR2a) | src/services/recurring.rs | 2187 |
+| `field_needle_message_survives_conversion_for_frontend_routing` | Four field needles (`"Rule name must be"` etc.) survive at the head of the wire message so the frontend `startsWith` routing keeps working (PR2a) | src/services/recurring.rs | 2194 |
 | `latent_h2_cascade_delete_keeps_confirmed_headers` | Cascade rule delete removes only still-scheduled occurrences; confirmed (IS_SCHEDULED = 0) headers survive, detached (latent-audit H2) | src/services/latent_audit/recurring.rs | 195 |
-| `latent_m16_transfer_same_account_rejected` | Creating a TRANSFER rule with from == to account is rejected (latent-audit M16) | src/services/latent_audit/recurring.rs | 334 |
-| `latent_m16_tax_rounding_type_out_of_range_rejected` | Out-of-range tax rounding type is rejected on rule creation (latent-audit M16) | src/services/latent_audit/recurring.rs | 356 |
-| `latent_m16_tax_included_type_out_of_range_rejected` | Out-of-range tax included type is rejected on rule creation (latent-audit M16) | src/services/latent_audit/recurring.rs | 377 |
+| `latent_m16_transfer_same_account_rejected` | Creating a TRANSFER rule with from == to account is rejected (latent-audit M16) | src/services/latent_audit/recurring.rs | 337 |
+| `latent_m16_tax_rounding_type_out_of_range_rejected` | Out-of-range tax rounding type is rejected on rule creation (latent-audit M16) | src/services/latent_audit/recurring.rs | 359 |
+| `latent_m16_tax_included_type_out_of_range_rejected` | Out-of-range tax included type is rejected on rule creation (latent-audit M16) | src/services/latent_audit/recurring.rs | 380 |
 | `latent_m15_holiday_shift_applies_beyond_seeded_range` | A rule beyond the seeded holiday years is rejected (`PeriodOutOfRange`) instead of silently skipping the holiday shift (latent-audit M15) | src/services/latent_audit/recurring.rs | 251 |
-| `latent_m18_huge_generation_rejected` | A daily rule ending 9999-12-31 is rejected (`PeriodOutOfRange`) instead of generating millions of rows (latent-audit M18) | src/services/latent_audit/recurring.rs | 448 |
-| `latent_m15_m18_period_limits_are_inclusive` | The first and last allowed day are accepted; one day outside is rejected (latent-audit M15 / M18) | src/services/latent_audit/recurring.rs | 478 |
-| `latent_m15_period_limit_follows_seeded_holidays` | With holidays seeded only up to the year before the date-based limit (app left running across New Year), that last year is rejected (latent-audit M15) | src/services/latent_audit/recurring.rs | 513 |
-| `latent_m15_m18_period_limits_service_clamps_to_seeded_years` | `RecurringService::period_limits` (served to the screen by `get_recurring_period_limits` and enforced on create) is the date-based window clamped to the seeded holiday years (latent-audit M15 / M18) | src/services/latent_audit/recurring.rs | 548 |
-| `latent_m15_m18_period_limits_follow_seeded_years` | The limits are Jan 1 of (year − 5) .. Dec 31 of (year + 10), the holiday seeding window (latent-audit M15 / M18) | src/services/latent_audit/recurring.rs | 575 |
-| `latent_m17_total_is_derived_from_the_detail` | A rule's total (and every occurrence's) is derived from its single detail under the header's rounding / tax-included settings (latent-audit M17) | src/services/latent_audit/recurring.rs | 591 |
-| `latent_l13_daily_rule_rejects_holiday_shift` | A daily rule with a holiday shift is rejected; daily without shift and monthly with shift are accepted (latent-audit L13) | src/services/latent_audit/recurring.rs | 647 |
-| `latent_m16_detail_amount_out_of_range_rejected` | Out-of-range detail amount is rejected on rule creation (latent-audit M16) | src/services/latent_audit/recurring.rs | 398 |
-| `latent_m16_detail_tax_rate_out_of_range_rejected` | Out-of-range detail tax rate is rejected on rule creation (latent-audit M16) | src/services/latent_audit/recurring.rs | 419 |
-| `transfer_same_account_maps_to_transfer_same_account_code` | `RecurringError::TransferSameAccount` maps to the `transfer_same_account` wire code (latent-audit M16) | src/services/recurring.rs | 1881 |
-| `latent_l2_recurring_rejects_foreign_shop_and_product` | Recurring rule creation accepts own shop / product and rejects another user's (latent-audit L2) | src/services/latent_audit/recurring.rs | 688 |
-| `latent_l10_generation_terminates_at_the_end_of_the_date_range` | Monthly / yearly generation near the end of chrono's range terminates instead of looping forever (latent-audit L10) | src/services/latent_audit/recurring.rs | 747 |
-| `latent_scan2_r1_shifted_date_inside_period_is_kept` | A calendar date just outside the period whose holiday shift lands inside it is generated, at both ends (latent-audit scan2-R1) | src/services/latent_audit/recurring.rs | 800 |
-| `latent_scan2_r2_daily_anchor_is_checked_against_the_period` | A blank daily anchor falls back to the start date; an anchor after the end date is rejected (latent-audit scan2-R2) | src/services/latent_audit/recurring.rs | 844 |
-| `err_interval_above_max` | An interval above `MAX_PERIOD_INTERVAL` (999, the form's max) is rejected; the limit itself is accepted (CodeRabbit on #171) | src/services/recurring.rs | 1898 |
-| `shift_beyond_window_is_refused` | A holiday shift beyond the 14-day window (non-business days through the whole window after the period, for Prev) refuses creation; a 13-day shift is still generated (CodeRabbit on #171) | src/services/recurring.rs | 1805 |
+| `latent_m18_huge_generation_rejected` | A daily rule ending 9999-12-31 is rejected (`PeriodOutOfRange`) instead of generating millions of rows (latent-audit M18) | src/services/latent_audit/recurring.rs | 451 |
+| `latent_m15_m18_period_limits_are_inclusive` | The first and last allowed day are accepted; one day outside is rejected (latent-audit M15 / M18) | src/services/latent_audit/recurring.rs | 481 |
+| `latent_m15_period_limit_follows_seeded_holidays` | With holidays seeded only up to the year before the date-based limit (app left running across New Year), that last year and the last seeded year are rejected, and the year before the last seeded one is allowed (latent-audit M15, scan2-R7) | src/services/latent_audit/recurring.rs | 521 |
+| `latent_m15_m18_period_limits_service_clamps_to_seeded_years` | `RecurringService::period_limits` (served to the screen by `get_recurring_period_limits` and enforced on create) is the date-based window clamped to the seeded holiday years, ending one year before the last seeded year (latent-audit M15 / M18, scan2-R7) | src/services/latent_audit/recurring.rs | 574 |
+| `latent_m15_m18_period_limits_follow_seeded_years` | The limits are Jan 1 of (year − 5) .. Dec 31 of (year + 10), the holiday seeding window (latent-audit M15 / M18) | src/services/latent_audit/recurring.rs | 601 |
+| `latent_m17_total_is_derived_from_the_detail` | A rule's total (and every occurrence's) is derived from its single detail under the header's rounding / tax-included settings (latent-audit M17) | src/services/latent_audit/recurring.rs | 617 |
+| `latent_l13_daily_rule_rejects_holiday_shift` | A daily rule with a holiday shift is rejected; daily without shift and monthly with shift are accepted (latent-audit L13) | src/services/latent_audit/recurring.rs | 673 |
+| `latent_m16_detail_amount_out_of_range_rejected` | Out-of-range detail amount is rejected on rule creation (latent-audit M16) | src/services/latent_audit/recurring.rs | 401 |
+| `latent_m16_detail_tax_rate_out_of_range_rejected` | Out-of-range detail tax rate is rejected on rule creation (latent-audit M16) | src/services/latent_audit/recurring.rs | 422 |
+| `transfer_same_account_maps_to_transfer_same_account_code` | `RecurringError::TransferSameAccount` maps to the `transfer_same_account` wire code (latent-audit M16) | src/services/recurring.rs | 2161 |
+| `latent_l2_recurring_rejects_foreign_shop_and_product` | Recurring rule creation accepts own shop / product and rejects another user's (latent-audit L2) | src/services/latent_audit/recurring.rs | 714 |
+| `latent_l10_generation_terminates_at_the_end_of_the_date_range` | Monthly / yearly generation near the end of chrono's range terminates instead of looping forever (latent-audit L10) | src/services/latent_audit/recurring.rs | 773 |
+| `latent_scan2_r1_shifted_date_inside_period_is_kept` | A calendar date just outside the period whose holiday shift lands inside it is generated, at both ends (latent-audit scan2-R1) | src/services/latent_audit/recurring.rs | 823 |
+| `latent_scan2_r2_daily_anchor_is_checked_against_the_period` | A blank daily anchor falls back to the start date; an anchor after the end date is rejected (latent-audit scan2-R2) | src/services/latent_audit/recurring.rs | 867 |
+| `latent_scan2_r7_next_shift_past_the_last_seeded_year` | With holidays seeded through 2028 only, a month-end rule ending 2028-12-31 with a "next business day" shift is rejected (`PeriodOutOfRange`) instead of landing on 元日 2029-01-01 (latent-audit scan2-R7) | src/services/latent_audit/recurring.rs | 958 |
+| `err_interval_above_max` | An interval above `MAX_PERIOD_INTERVAL` (999, the form's max) is rejected; the limit itself is accepted (CodeRabbit on #171) | src/services/recurring.rs | 1982 |
+| `shift_beyond_window_is_refused` | A holiday shift beyond the 14-day window (non-business days through the whole window after the period, for Prev) refuses creation; a 13-day shift is still generated (CodeRabbit on #171) | src/services/recurring.rs | 1809 |
 
-**Total**: 26 tests
+**Total**: 27 tests
 
 ### lib.rs
 
@@ -742,11 +744,11 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **433** |
+| **Inline Tests** | **435** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
-| db.rs | 16 |
+| db.rs | 17 |
 | settings.rs | 18 |
 | api_error.rs | 11 |
 | services/master_data.rs | 4 |
@@ -764,9 +766,9 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/period.rs | 3 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
-| services/recurring.rs | 26 |
+| services/recurring.rs | 27 |
 | lib.rs | 6 |
-| **Total** | **456** |
+| **Total** | **458** |
 
 ---
 
