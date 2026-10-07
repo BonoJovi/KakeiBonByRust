@@ -50,7 +50,7 @@ class I18n {
         // "{other}" is not filled again. A placeholder with no param stays
         // as it is (scan2-C4).
         return text.replace(/\{(\w+)\}/g, (placeholder, paramKey) =>
-            Object.hasOwn(params, paramKey) ? String(params[paramKey]) : placeholder
+            Object.prototype.hasOwnProperty.call(params, paramKey) ? String(params[paramKey]) : placeholder
         );
     }
 
