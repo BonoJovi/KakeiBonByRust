@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-10-07 JST  
-**総テスト数**: 937件 (jest suite 88 ファイル、`npm test` 実測)
+**総テスト数**: 939件 (jest suite 89 ファイル、`npm test` 実測)
 
 ---
 
@@ -58,6 +58,7 @@
   - [pages/recurring-rule-cycle-options.test.js](#pagesrecurring-rule-cycle-optionstestjs)
   - [pages/recurring-rule-date-order.test.js](#pagesrecurring-rule-date-ordertestjs)
   - [pages/recurring-rule-reset.test.js](#pagesrecurring-rule-resettestjs)
+  - [pages/recurring-rule-rounding-recalc.test.js](#pagesrecurring-rule-rounding-recalctestjs)
   - [pages/menu-i18n-seed.test.js](#pagesmenu-i18n-seedtestjs)
   - [pages/i18n-literal-user-text.test.js](#pagesi18n-literal-user-texttestjs)
   - [pages/dashboard-balance-header.test.js](#pagesdashboard-balance-headertestjs)
@@ -1018,6 +1019,21 @@
 
 ---
 
+### pages/recurring-rule-rounding-recalc.test.js
+
+実際の繰り返しルール画面で、金額を入れた後に端数処理を変えると明細の税額が計算し直されることを確かめる (潜在スキャン scan2-R5)。
+
+**テスト数**: 2件
+
+| テスト | 説明 |
+|--------|------|
+| `[scan2-R5] recomputes the detail tax fields when the rounding changes (tax excluded)` | 外税・税率 10%・105 円で、切り捨てから切り上げに変えると税額・税込額が 11 / 116 になり、登録の要求にもその値が載る |
+| `[scan2-R5] keeps the typed tax-included price and recomputes the rest (tax included)` | 内税で税込 116 円と入力した後に切り上げへ変えると、税込額はそのままで税抜額・税額が 105 / 11 になり、登録の要求にもその値が載る |
+
+**ファイル**: res/tests/pages/recurring-rule-rounding-recalc.test.js
+
+---
+
 ### pages/menu-i18n-seed.test.js
 
 メニューバーの翻訳登録の回帰テスト (潜在スキャン scan2-C2)。以前は `menu.back_to_transactions` が旧スクリプト `sql/add_detail_mgmt_i18n.sql` にしかなく、`res/sql/dbaccess.sql` から作った DB では明細画面の「ファイル」メニューにキー文字列がそのまま表示されていた。
@@ -1788,7 +1804,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **514件** |
+| **機能別テスト** | **516件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 30 |
@@ -1825,6 +1841,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | pages/recurring-rule-cycle-options.test.js | 3 |
 | pages/recurring-rule-date-order.test.js | 5 |
 | pages/recurring-rule-reset.test.js | 1 |
+| pages/recurring-rule-rounding-recalc.test.js | 2 |
 | pages/menu-i18n-seed.test.js | 2 |
 | pages/i18n-literal-user-text.test.js | 7 |
 | pages/dashboard-balance-header.test.js | 1 |
@@ -1872,7 +1889,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **937件** |
+| **総計 (jest)** | **939件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 
