@@ -432,8 +432,8 @@ Category management service tests (3-tier category CRUD). Internal `CategoryErro
 | `latent_l20_add_category2_empty_category1_code_does_not_panic` | An empty CATEGORY1 code is rejected instead of panicking (latent-audit L20) | src/services/latent_audit/category.rs | 312 |
 | `latent_l20_add_category2_multibyte_category1_code_does_not_panic` | An unknown multibyte CATEGORY1 code is rejected instead of panicking (latent-audit L20) | src/services/latent_audit/category.rs | 323 |
 | `latent_l20_add_category3_multibyte_category1_code_does_not_panic` | Adding a CATEGORY3 under an unknown multibyte CATEGORY1 is rejected instead of panicking (latent-audit L20) | src/services/latent_audit/category.rs | 333 |
-| `latent_scan2_m3_detail_list_shows_renamed_category_names` | After renaming a CATEGORY2 / CATEGORY3, the transaction detail list shows the new names in the display language (ja and en) instead of the base names (latent-audit scan2-M3) | src/services/latent_audit/category.rs | 454 |
-| `latent_scan2_m8_transaction_list_category1_follows_language` | The transaction list shows the CATEGORY1 name of the display language (支出 / Expense), and the base name for a language with no row (latent-audit scan2-M8) | src/services/latent_audit/category.rs | 536 |
+| `latent_scan2_m3_detail_list_shows_renamed_category_names` | The transaction detail list shows the CATEGORY1 name and the renamed CATEGORY2 / CATEGORY3 names in the display language (ja and en), and the base names for a language with no i18n row (latent-audit scan2-M3) | src/services/latent_audit/category.rs | 456 |
+| `latent_scan2_m8_transaction_list_category1_follows_language` | The transaction list shows the CATEGORY1 name of the display language (支出 / Expense), and the base name for a language with no row (latent-audit scan2-M8) | src/services/latent_audit/category.rs | 562 |
 
 **Total**: 40 tests
 

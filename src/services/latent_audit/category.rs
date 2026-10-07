@@ -448,8 +448,10 @@ async fn setup_transaction_db() -> SqlitePool {
 /// 食費 (and base names are EN for user-added categories / JA for seeded
 /// ones regardless of the UI language).
 ///
-/// Expected: the detail list shows the renamed (i18n) names in the display
-/// language passed to `get_transaction_details`.
+/// Expected: the detail list shows the CATEGORY1 name and the renamed
+/// CATEGORY2 / CATEGORY3 names in the display language passed to
+/// `get_transaction_details`, and the base names for a language with no
+/// i18n row.
 #[tokio::test]
 async fn latent_scan2_m3_detail_list_shows_renamed_category_names() {
     use crate::services::transaction::{
@@ -508,19 +510,43 @@ async fn latent_scan2_m3_detail_list_shows_renamed_category_names() {
         .await
         .unwrap();
 
-    for (lang, cat2, cat3) in [("ja", "食材", "生鮮食品"), ("en", "Ingredients", "Fresh food")] {
+    for (lang, name) in [("ja", "支出"), ("en", "Expense")] {
+        sqlx::query(sql_queries::CATEGORY_INSERT_CATEGORY1_I18N)
+            .bind(user_id)
+            .bind("EXPENSE")
+            .bind(lang)
+            .bind(name)
+            .bind("2024-01-01 00:00:00")
+            .execute(&pool)
+            .await
+            .unwrap();
+    }
+
+    // "fr" has no i18n rows: the base names (支出 / 食費 / 食料品) are shown;
+    // a rename only touches the i18n rows.
+    for (lang, cat1, cat2, cat3) in [
+        ("ja", "支出", "食材", "生鮮食品"),
+        ("en", "Expense", "Ingredients", "Fresh food"),
+        ("fr", "支出", "食費", "食料品"),
+    ] {
         let details = transaction.get_transaction_details(user_id, txn_id, lang).await.unwrap();
         assert_eq!(details.len(), 1, "precondition: one detail");
         assert_eq!(
+            details[0].category1_name.as_deref(),
+            Some(cat1),
+            "detail list must show the CATEGORY1 name in {}",
+            lang
+        );
+        assert_eq!(
             details[0].category2_name.as_deref(),
             Some(cat2),
-            "detail list must show the renamed CATEGORY2 name in {}",
+            "detail list must show the CATEGORY2 name in {}",
             lang
         );
         assert_eq!(
             details[0].category3_name.as_deref(),
             Some(cat3),
-            "detail list must show the renamed CATEGORY3 name in {}",
+            "detail list must show the CATEGORY3 name in {}",
             lang
         );
     }

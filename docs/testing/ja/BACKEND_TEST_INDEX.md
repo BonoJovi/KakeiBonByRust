@@ -432,8 +432,8 @@ AES-256-GCM暗号化・復号化のテスト。
 | `latent_l20_add_category2_empty_category1_code_does_not_panic` | 空の費目1コードはパニックせず拒否 (潜在監査 L20) | src/services/latent_audit/category.rs | 312 |
 | `latent_l20_add_category2_multibyte_category1_code_does_not_panic` | 存在しないマルチバイトの費目1コードはパニックせず拒否 (潜在監査 L20) | src/services/latent_audit/category.rs | 323 |
 | `latent_l20_add_category3_multibyte_category1_code_does_not_panic` | 存在しないマルチバイトの費目1配下への小分類追加はパニックせず拒否 (潜在監査 L20) | src/services/latent_audit/category.rs | 333 |
-| `latent_scan2_m3_detail_list_shows_renamed_category_names` | 中分類・小分類の名前を変更すると、入出金の明細一覧に表示言語 (日本語・英語) の新しい名前が出る。基本名のままにならない (潜在スキャン scan2-M3) | src/services/latent_audit/category.rs | 454 |
-| `latent_scan2_m8_transaction_list_category1_follows_language` | 入出金一覧の大分類が表示言語の名前 (支出 / Expense) になり、その言語の行が無いときは基本名になる (潜在スキャン scan2-M8) | src/services/latent_audit/category.rs | 536 |
+| `latent_scan2_m3_detail_list_shows_renamed_category_names` | 入出金の明細一覧に、大分類の名前と、変更後の中分類・小分類の名前が表示言語 (日本語・英語) で出る。言語別の名前が無い言語では基本名になる (潜在スキャン scan2-M3) | src/services/latent_audit/category.rs | 456 |
+| `latent_scan2_m8_transaction_list_category1_follows_language` | 入出金一覧の大分類が表示言語の名前 (支出 / Expense) になり、その言語の行が無いときは基本名になる (潜在スキャン scan2-M8) | src/services/latent_audit/category.rs | 562 |
 
 **合計**: 40件
 
