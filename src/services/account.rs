@@ -1,10 +1,12 @@
 use serde::{Deserialize, Serialize};
 use sqlx::{SqlitePool, FromRow};
 use crate::api_error::ApiError;
+use crate::consts;
 use crate::services::master_data;
 use crate::sql_queries;
 use crate::validation;
 
+const CODE_LABEL: &str = "Account code";
 const NAME_LABEL: &str = "Account name";
 const ENTITY_LABEL: &str = "Account";
 /// The per-user "unspecified" account. Transactions and recurring rules
@@ -187,6 +189,11 @@ pub async fn add_account(
     if request.account_code.is_empty() {
         return Err(ApiError::validation("Account code cannot be empty"));
     }
+    // Checked on add only: the code cannot be changed after it is saved,
+    // and update_account uses it just to find the row, so a code saved
+    // before this limit existed stays editable.
+    validation::validate_max_chars(CODE_LABEL, &request.account_code, consts::MAX_ACCOUNT_CODE_LEN)
+        .map_err(ApiError::validation)?;
     reject_none_account(&request.account_code)?;
     let is_disabled = request.is_disabled.unwrap_or(0);
     master_data::validate_is_disabled(is_disabled)?;
@@ -667,6 +674,100 @@ mod tests {
         assert_eq!(err.code, ApiError::CODE_VALIDATION);
         assert!(err.message.contains(&consts::MAX_NAME_LEN.to_string()),
             "error should reference the limit: {}", err.message);
+    }
+
+    // The account code is limited to MAX_ACCOUNT_CODE_LEN characters on add
+    // (ACCOUNTS.ACCOUNT_CODE is VARCHAR(50), which SQLite does not enforce).
+    // The code cannot be changed after it is saved, so update_account does
+    // not check it, and an existing longer code stays editable.
+
+    fn add_request_with_code(code: String) -> AddAccountRequest {
+        AddAccountRequest {
+            account_code: code,
+            account_name: "Test".to_string(),
+            template_code: "BANK".to_string(),
+            initial_balance: 0,
+            is_disabled: None,
+        }
+    }
+
+    #[tokio::test]
+    async fn test_add_account_accepts_max_chars_code() {
+        let pool = setup_test_db().await;
+
+        let code = "A".repeat(consts::MAX_ACCOUNT_CODE_LEN);
+        let result = add_account(&pool, 2, add_request_with_code(code.clone())).await;
+        assert!(result.is_ok(), "expected a MAX_ACCOUNT_CODE_LEN code to be accepted: {:?}", result.err());
+        assert!(get_account_by_code(&pool, 2, &code).await.unwrap().is_some());
+    }
+
+    #[tokio::test]
+    async fn test_add_account_rejects_over_max_chars_code() {
+        let pool = setup_test_db().await;
+
+        let code = "A".repeat(consts::MAX_ACCOUNT_CODE_LEN + 1);
+        let err = add_account(&pool, 2, add_request_with_code(code.clone())).await.unwrap_err();
+        assert_eq!(err.code, ApiError::CODE_VALIDATION);
+        assert!(err.message.contains(&consts::MAX_ACCOUNT_CODE_LEN.to_string()),
+            "error should reference the limit: {}", err.message);
+        assert!(get_account_by_code(&pool, 2, &code).await.unwrap().is_none(),
+            "a rejected code must not be saved");
+    }
+
+    #[tokio::test]
+    async fn test_add_account_code_limit_counts_chars_not_bytes() {
+        let pool = setup_test_db().await;
+
+        // 50 multibyte characters are 150 bytes in UTF-8.
+        let result = add_account(&pool, 2, add_request_with_code("あ".repeat(consts::MAX_ACCOUNT_CODE_LEN))).await;
+        assert!(result.is_ok(), "expected MAX_ACCOUNT_CODE_LEN multibyte chars to be accepted: {:?}", result.err());
+
+        let err = add_account(&pool, 2, add_request_with_code("い".repeat(consts::MAX_ACCOUNT_CODE_LEN + 1)))
+            .await
+            .unwrap_err();
+        assert_eq!(err.code, ApiError::CODE_VALIDATION);
+    }
+
+    #[tokio::test]
+    async fn test_add_account_code_limit_applies_after_trim() {
+        let pool = setup_test_db().await;
+
+        // Surrounding spaces are trimmed before the count, as before saving.
+        let code = format!("  {}  ", "A".repeat(consts::MAX_ACCOUNT_CODE_LEN));
+        let result = add_account(&pool, 2, add_request_with_code(code)).await;
+        assert!(result.is_ok(), "expected the trimmed code to be counted: {:?}", result.err());
+    }
+
+    #[tokio::test]
+    async fn test_update_account_keeps_existing_over_limit_code() {
+        let pool = setup_test_db().await;
+
+        // A code saved before the limit existed.
+        let long_code = "A".repeat(300);
+        sqlx::query(sql_queries::ACCOUNT_UPSERT)
+            .bind(2_i64)
+            .bind(&long_code)
+            .bind("Old")
+            .bind("BANK")
+            .bind(0_i64)
+            .bind(1_i64)
+            .bind(0_i64)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let update_request = UpdateAccountRequest {
+            account_code: long_code.clone(),
+            account_name: "Renamed".to_string(),
+            template_code: "BANK".to_string(),
+            initial_balance: 0,
+            display_order: 1,
+            is_disabled: 0,
+        };
+        let result = update_account(&pool, 2, update_request).await;
+        assert!(result.is_ok(), "an existing over-limit code must stay editable: {:?}", result.err());
+        let saved = get_account_by_code(&pool, 2, &long_code).await.unwrap().unwrap();
+        assert_eq!(saved.account_name, "Renamed");
     }
 
     #[tokio::test]

@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-10-08 JST  
-**Total Tests**: 458 (delta-tracked; the full authoritative count from `cargo test --lib` is 727, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 463 (delta-tracked; the full authoritative count from `cargo test --lib` is 732, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -369,27 +369,32 @@ Account management service tests. Assertions on empty-name and duplicate-code pa
 
 | Test Function | Description | File | Line |
 |---------------|-------------|------|------|
-| `test_add_account_rejects_empty_name` | Empty account name returns `ApiError { code: "validation" }` (Fable-5 #16, #23) | src/services/account.rs | 732 |
-| `test_add_account_rejects_whitespace_only_name` | Whitespace-only account name returns `ApiError { code: "validation" }` (Fable-5 #16, #23) | src/services/account.rs | 748 |
-| `test_update_account_rejects_empty_name` | Empty account name via update returns `ApiError { code: "validation" }` (Fable-5 #16, #23) | src/services/account.rs | 764 |
-| `test_update_account_not_found_has_stable_code_and_entity` | Updating a missing account returns `ApiError { code: "not_found", entity: "account" }` (Fable-5 #23) | src/services/account.rs | 997 |
-| `test_delete_account_not_found_has_stable_code_and_entity` | Deleting a missing account returns `ApiError { code: "not_found" }` (Fable-5 #23) | src/services/account.rs | 1020 |
-| `test_delete_account_rejected_when_referenced_as_from_account` | Delete rejected with `ApiError { code: "in_use" }` when a TRANSACTIONS_HEADER row names the account as FROM (master delete-lock) | src/services/account.rs | 1028 |
-| `test_delete_account_rejected_when_referenced_as_to_account` | Delete rejected with `ApiError { code: "in_use" }` when a TRANSACTIONS_HEADER row names the account as TO (master delete-lock) | src/services/account.rs | 1048 |
-| `test_delete_account_rejected_when_referenced_by_recurring_rule` | Delete rejected with `ApiError { code: "in_use" }` when any RECURRING_RULES row names the account (master delete-lock) | src/services/account.rs | 1065 |
-| `test_delete_account_ignores_other_users_references` | Cross-user references to the same ACCOUNT_CODE do NOT block delete — codes are user-scoped (master delete-lock) | src/services/account.rs | 1082 |
-| `test_delete_account_normalizes_input_before_in_use_check` | Delete input (`"  cash  "`) is uppercased/trimmed before the CHECK_IN_USE query so the guard fires (master delete-lock) | src/services/account.rs | 1100 |
-| `test_get_account_balances_as_of_self_transfer_nets_to_zero` | Stale TRANSFER row with FROM == TO nets to zero on the dashboard instead of inflating the balance (Fable-5 #20) | src/services/account.rs | 1192 |
-| `test_get_accounts_lists_only_own_accounts` | Every user, the admin included, lists only their own accounts (latent-audit M4) | src/services/account.rs | 860 |
-| `test_get_accounts_include_disabled` | Disabled accounts are listed only with `include_disabled` (latent-audit M7) | src/services/account.rs | 887 |
-| `test_delete_disabled_account_removes_row` | A disabled account that nothing uses can still be deleted, removing the row (latent-audit M7) | src/services/account.rs | 519 |
-| `test_disable_account_allowed_while_referenced` | An account used by a transaction can be disabled (not deleted) and enabled again (latent-audit M7) | src/services/account.rs | 532 |
-| `test_account_is_disabled_must_be_zero_or_one` | The disabled flag only accepts 0 or 1, on add and update (latent-audit M7) | src/services/account.rs | 553 |
-| `test_none_account_cannot_be_changed` | The NONE (unspecified) account cannot be added, edited, disabled or deleted (latent-audit M7) | src/services/account.rs | 586 |
-| `test_get_account_balances_as_of_keeps_disabled_accounts_with_balance` | A disabled account that still holds money stays on the dashboard, marked `is_disabled` (latent-audit M7) | src/services/account.rs | 1235 |
+| `test_add_account_rejects_empty_name` | Empty account name returns `ApiError { code: "validation" }` (Fable-5 #16, #23) | src/services/account.rs | 833 |
+| `test_add_account_rejects_whitespace_only_name` | Whitespace-only account name returns `ApiError { code: "validation" }` (Fable-5 #16, #23) | src/services/account.rs | 849 |
+| `test_update_account_rejects_empty_name` | Empty account name via update returns `ApiError { code: "validation" }` (Fable-5 #16, #23) | src/services/account.rs | 865 |
+| `test_update_account_not_found_has_stable_code_and_entity` | Updating a missing account returns `ApiError { code: "not_found", entity: "account" }` (Fable-5 #23) | src/services/account.rs | 1098 |
+| `test_delete_account_not_found_has_stable_code_and_entity` | Deleting a missing account returns `ApiError { code: "not_found" }` (Fable-5 #23) | src/services/account.rs | 1121 |
+| `test_delete_account_rejected_when_referenced_as_from_account` | Delete rejected with `ApiError { code: "in_use" }` when a TRANSACTIONS_HEADER row names the account as FROM (master delete-lock) | src/services/account.rs | 1129 |
+| `test_delete_account_rejected_when_referenced_as_to_account` | Delete rejected with `ApiError { code: "in_use" }` when a TRANSACTIONS_HEADER row names the account as TO (master delete-lock) | src/services/account.rs | 1149 |
+| `test_delete_account_rejected_when_referenced_by_recurring_rule` | Delete rejected with `ApiError { code: "in_use" }` when any RECURRING_RULES row names the account (master delete-lock) | src/services/account.rs | 1166 |
+| `test_delete_account_ignores_other_users_references` | Cross-user references to the same ACCOUNT_CODE do NOT block delete — codes are user-scoped (master delete-lock) | src/services/account.rs | 1183 |
+| `test_delete_account_normalizes_input_before_in_use_check` | Delete input (`"  cash  "`) is uppercased/trimmed before the CHECK_IN_USE query so the guard fires (master delete-lock) | src/services/account.rs | 1201 |
+| `test_get_account_balances_as_of_self_transfer_nets_to_zero` | Stale TRANSFER row with FROM == TO nets to zero on the dashboard instead of inflating the balance (Fable-5 #20) | src/services/account.rs | 1293 |
+| `test_get_accounts_lists_only_own_accounts` | Every user, the admin included, lists only their own accounts (latent-audit M4) | src/services/account.rs | 961 |
+| `test_get_accounts_include_disabled` | Disabled accounts are listed only with `include_disabled` (latent-audit M7) | src/services/account.rs | 988 |
+| `test_delete_disabled_account_removes_row` | A disabled account that nothing uses can still be deleted, removing the row (latent-audit M7) | src/services/account.rs | 526 |
+| `test_disable_account_allowed_while_referenced` | An account used by a transaction can be disabled (not deleted) and enabled again (latent-audit M7) | src/services/account.rs | 539 |
+| `test_account_is_disabled_must_be_zero_or_one` | The disabled flag only accepts 0 or 1, on add and update (latent-audit M7) | src/services/account.rs | 560 |
+| `test_none_account_cannot_be_changed` | The NONE (unspecified) account cannot be added, edited, disabled or deleted (latent-audit M7) | src/services/account.rs | 593 |
+| `test_get_account_balances_as_of_keeps_disabled_accounts_with_balance` | A disabled account that still holds money stays on the dashboard, marked `is_disabled` (latent-audit M7) | src/services/account.rs | 1336 |
 | `latent_m4_admin_account_list_excludes_other_users_and_deleted` | The account list served to the admin holds only the admin's own active accounts (latent-audit M4) | src/services/latent_audit/account.rs | 40 |
+| `test_add_account_accepts_max_chars_code` | A 50-character account code (`MAX_ACCOUNT_CODE_LEN`) is accepted and saved | src/services/account.rs | 695 |
+| `test_add_account_rejects_over_max_chars_code` | A 51-character account code is rejected with `ApiError { code: "validation" }` naming the limit, and nothing is saved | src/services/account.rs | 705 |
+| `test_add_account_code_limit_counts_chars_not_bytes` | The code limit counts characters, not bytes: 50 Japanese characters are accepted, 51 are rejected | src/services/account.rs | 718 |
+| `test_add_account_code_limit_applies_after_trim` | Surrounding spaces are trimmed before the code is counted | src/services/account.rs | 732 |
+| `test_update_account_keeps_existing_over_limit_code` | An existing code longer than 50 characters (saved before the limit) stays editable through `update_account` | src/services/account.rs | 742 |
 
-**Total**: 19 tests
+**Total**: 24 tests
 
 ### services/category.rs
 
@@ -744,7 +749,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **435** |
+| **Inline Tests** | **440** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -756,7 +761,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/auth.rs | 25 |
 | services/user_management.rs | 25 |
 | services/encryption.rs | 11 |
-| services/account.rs | 19 |
+| services/account.rs | 24 |
 | services/category.rs | 45 |
 | services/manufacturer.rs | 17 |
 | services/product.rs | 19 |
@@ -768,7 +773,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/i18n.rs | 8 |
 | services/recurring.rs | 28 |
 | lib.rs | 6 |
-| **Total** | **458** |
+| **Total** | **463** |
 
 ---
 

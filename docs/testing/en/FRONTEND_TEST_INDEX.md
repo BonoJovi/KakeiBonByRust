@@ -2,8 +2,8 @@
 
 This document provides a complete index of all frontend tests implemented in JavaScript.
 
-**Last Updated**: 2026-10-07 JST  
-**Total Tests**: 944 (jest suites; 90 test files, per `npm test`)
+**Last Updated**: 2026-10-08 JST  
+**Total Tests**: 948 (jest suites; 91 test files, per `npm test`)
 
 ---
 
@@ -85,6 +85,7 @@ and are **not** added again to the grand total.
 - **pages/account-management-disabled.test.js** - Boots the real account master page: "show disabled" lists disabled accounts with the disabled label (NONE never listed), a late response from a quick double toggle does not overwrite the newer list, and the add / edit form's "disabled" checkbox is shown and sent as `isDisabled` (latent-audit M7) (4)
 - **pages/account-management-save-error-keeps-form.test.js** - Boots the real account master page: a save rejected by the backend (`duplicate_code`) or stopped by the form checks (whitespace-only name) keeps the modal open with the typed input (latent-audit scan2-M4) (2)
 - **pages/account-management-validation-i18n.test.js** - Boots the real account master page: the input checks (empty code / name / template / initial balance) show localized messages next to their inputs, and a failed account list load shows only `account_mgmt.failed_to_load`, without "Error loading accounts" or the backend's English detail (latent-audit scan2-R8 follow-up) (5)
+- **pages/account-management-code-max-length.test.js** - Boots the real account master page: on add, the account code shows a "n / 50" counter and is cut at 50 characters, a 51-character code is stopped before `add_account` with `validation.max_length`, and a 50-character code is sent; on edit, the read-only code has no counter and an existing code longer than 50 characters is sent to `update_account` unchanged (4)
 - **pages/transaction-management-disabled-account.test.js** - Boots the real transaction page: editing a transaction whose account is disabled keeps that account selected (shown with the disabled label) and saves it, while a new transaction is not offered the disabled account (latent-audit M7) (2)
 - **pages/transaction-management-category1-has-details.test.js** - Boots the real transaction page: when the backend refuses to change the category1 of a transaction with details (`category1_has_details`), the screen shows `transaction_mgmt.category1_has_details` and keeps the modal open (latent-audit M2) (1)
 - **modal-open-awaits-onopen.test.js** - `Modal.open()` returns a promise that settles only after an async `onOpen` has finished (and at once for a synchronous one), so callers can fill the form in afterwards (latent-audit L6) (2)
@@ -144,7 +145,7 @@ and are **not** added again to the grand total.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **Feature-Specific Tests** | **521** |
+| **Feature-Specific Tests** | **525** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 30 |
@@ -198,6 +199,7 @@ and are **not** added again to the grand total.
 | pages/account-management-disabled.test.js | 4 |
 | pages/account-management-save-error-keeps-form.test.js | 2 |
 | pages/account-management-validation-i18n.test.js | 5 |
+| pages/account-management-code-max-length.test.js | 4 |
 | pages/transaction-management-disabled-account.test.js | 2 |
 | pages/transaction-management-category1-has-details.test.js | 1 |
 | modal-open-awaits-onopen.test.js | 2 |
@@ -230,7 +232,7 @@ and are **not** added again to the grand total.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **Total (jest)** | **944** |
+| **Total (jest)** | **948** |
 
 Grand total is Screen + Feature + Aggregation (Common Test Suites are helper
 libraries invoked from Screen-Specific files and their assertions are already
