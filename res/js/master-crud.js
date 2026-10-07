@@ -54,6 +54,8 @@ export const API_ERROR_CODES = Object.freeze({
     // Latent-audit M2 — header update rejected because it changes the
     // category1 of a transaction that has details.
     CATEGORY1_HAS_DETAILS: 'category1_has_details',
+    // scan2-C5 — user delete rejected because it is the only general user.
+    LAST_GENERAL_USER: 'last_general_user',
 });
 
 /**

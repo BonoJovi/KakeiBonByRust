@@ -77,6 +77,9 @@ impl ApiError {
     // cannot change while it has details, whose category2/3 belong to the
     // old category1.
     pub const CODE_CATEGORY1_HAS_DETAILS: &'static str = "category1_has_details";
+    // scan2-C5 — delete refused because the user is the only general user
+    // left (the admin would otherwise be sent to user setup on every login).
+    pub const CODE_LAST_GENERAL_USER: &'static str = "last_general_user";
 
     // ---- Constructors --------------------------------------------------
 
@@ -242,6 +245,16 @@ impl ApiError {
         }
     }
 
+    /// Delete refused because the user is the only general user left
+    /// (scan2-C5).
+    pub fn last_general_user() -> Self {
+        Self {
+            code: Self::CODE_LAST_GENERAL_USER.to_string(),
+            message: "The last general user cannot be deleted".to_string(),
+            entity: None,
+        }
+    }
+
     /// Registration refused because the initial-setup path is one-shot:
     /// admin setup runs once at first launch, and general-user setup
     /// runs once per admin. PR14 (Fable-5 #21): the frontend maps this
@@ -311,6 +324,14 @@ mod tests {
         assert_eq!(err.code, "in_use");
         assert_eq!(err.entity.as_deref(), Some("shop"));
         assert!(err.message.contains("still in use"));
+    }
+
+    #[test]
+    fn last_general_user_has_its_own_code_and_no_entity() {
+        let err: ApiError = crate::services::user_management::UserManagementError::LastGeneralUser.into();
+        assert_eq!(err.code, ApiError::CODE_LAST_GENERAL_USER);
+        assert_eq!(err.code, "last_general_user");
+        assert!(err.entity.is_none());
     }
 
     #[test]

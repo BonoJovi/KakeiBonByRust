@@ -790,10 +790,12 @@ async function handleUserDelete(userId) {
         showToast(i18n.t('user_mgmt.user_deleted'), { variant: 'success' });
         await loadUsers();
     } catch (error) {
-        // admin_protected → dedicated wording; anything else → generic
-        // failure message with a properly-unwrapped body.
+        // admin_protected / last_general_user → dedicated wording; anything
+        // else → generic failure message with a properly-unwrapped body.
         if (error && typeof error === 'object' && error.code === API_ERROR_CODES.ADMIN_PROTECTED) {
             showToast(i18n.t('user_mgmt.admin_protected'), { variant: 'error' });
+        } else if (error && typeof error === 'object' && error.code === API_ERROR_CODES.LAST_GENERAL_USER) {
+            showToast(i18n.t('user_mgmt.last_general_user'), { variant: 'error' });
         } else {
             showToast(i18n.t('error.delete_user_failed') + ': ' + formatApiError(error), { variant: 'error' });
         }

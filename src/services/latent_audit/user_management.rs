@@ -64,6 +64,8 @@ async fn count_category2_named(pool: &SqlitePool, user_id: i64, name: &str) -> i
 async fn latent_m3_delete_user_removes_categories() {
     let pool = setup_test_db().await;
     create_test_admin(&pool, "admin", ADMIN_CREDENTIAL).await;
+    // The last general user cannot be deleted (scan2-C5), so keep another.
+    create_general_user_like_command(&pool, "keeper").await;
     let user_id = create_general_user_like_command(&pool, "alice").await;
 
     // Precondition: the user really had category rows.
@@ -93,6 +95,10 @@ async fn latent_m3_reused_user_id_gets_default_categories() {
     let pool = setup_test_db().await;
     create_test_admin(&pool, "admin", ADMIN_CREDENTIAL).await;
     let category = CategoryService::new(pool.clone());
+
+    // The last general user cannot be deleted (scan2-C5), so keep another.
+    // It is created first so that alice stays the newest (MAX) USER_ID.
+    create_general_user_like_command(&pool, "keeper").await;
 
     // Old user customises their categories.
     let old_id = create_general_user_like_command(&pool, "alice").await;
@@ -186,7 +192,6 @@ async fn latent_m13_update_rejects_blank_username() {
 /// delete the last general user and keeps the row; deleting one of two is
 /// still allowed.
 #[tokio::test]
-#[ignore = "latent-audit scan2-C5"]
 async fn latent_scan2_c5_delete_last_general_user_is_refused() {
     let pool = setup_test_db().await;
     create_test_admin(&pool, "admin", ADMIN_CREDENTIAL).await;
@@ -200,7 +205,11 @@ async fn latent_scan2_c5_delete_last_general_user_is_refused() {
         .expect("deleting one of two general users must be allowed");
 
     let r = service.delete_general_user(bob).await;
-    assert!(r.is_err(), "deleting the last general user must be refused, got {:?}", r);
+    assert!(
+        matches!(r, Err(UserManagementError::LastGeneralUser)),
+        "deleting the last general user must be refused, got {:?}",
+        r
+    );
     assert_eq!(
         service.get_user(bob).await.expect("last general user must remain").name,
         "bob"

@@ -1,18 +1,20 @@
-// latent-audit scan2-C6: logging out from the index page while the user-setup form is shown leaves that form visible next to the login form
 /**
  * First run: the admin logs in, check_needs_user_setup is true, so menu.js
  * hides the login form and shows #user-setup. File > Logout (handleLogout)
  * only toggles #login-form / #app-content, so #user-setup stays on screen
  * next to the login form; submitting it then fails with "User not
  * authenticated".
+ * Logging out within 1 s of logging in had the same result: the pending
+ * timer showed #user-setup after the logout.
+ *
  * Expected: after logout only the login form is shown (#user-setup and
- * #admin-setup are hidden).
+ * #admin-setup are hidden), also once the login's pending timer has run.
  */
 
 import { jest } from '@jest/globals';
 import {
     mockPageModules, loadPageBody, bootPage, flush, isHiddenOrAbsent,
-} from '../pages/_page-harness.js';
+} from './_page-harness.js';
 
 mockPageModules(jest, {
     keepMenu: true,
@@ -41,19 +43,27 @@ await bootPage();
 
 const visible = (id) => !isHiddenOrAbsent(document.getElementById(id));
 
-describe('scan2-C6 — logout from the user-setup step', () => {
-    test('logout hides the user-setup form and shows only the login form', async () => {
+async function submitLogin() {
+    document.getElementById('username').value = 'admin';
+    document.getElementById('password').value = 'admin_password123456';
+    document.getElementById('login-form-element').dispatchEvent(
+        new Event('submit', { cancelable: true, bubbles: true })
+    );
+    await flush(10);
+}
+
+const waitForLoginTimer = async () => {
+    await new Promise((r) => setTimeout(r, 1100));
+    await flush();
+};
+
+describe('logout from the user-setup step (scan2-C6)', () => {
+    test('[scan2-C6] logout hides the user-setup form and shows only the login form', async () => {
         expect(visible('login-form')).toBe(true);
 
-        document.getElementById('username').value = 'admin';
-        document.getElementById('password').value = 'admin_password123456';
-        document.getElementById('login-form-element').dispatchEvent(
-            new Event('submit', { cancelable: true, bubbles: true })
-        );
-        await flush(10);
+        await submitLogin();
         // menu.js switches to the user-setup step after a 1 s delay.
-        await new Promise((r) => setTimeout(r, 1100));
-        await flush();
+        await waitForLoginTimer();
         // Precondition: the user-setup step is on screen.
         expect(visible('user-setup')).toBe(true);
         expect(visible('login-form')).toBe(false);
@@ -64,6 +74,18 @@ describe('scan2-C6 — logout from the user-setup step', () => {
         expect(visible('login-form')).toBe(true);
         expect(visible('user-setup')).toBe(false);
         expect(visible('admin-setup')).toBe(false);
+        expect(visible('app-content')).toBe(false);
+    });
+
+    test('[scan2-C6] logging out before the login timer runs keeps only the login form', async () => {
+        await submitLogin();
+        await handleLogout();
+        await flush();
+
+        await waitForLoginTimer();
+
+        expect(visible('login-form')).toBe(true);
+        expect(visible('user-setup')).toBe(false);
         expect(visible('app-content')).toBe(false);
     });
 });
