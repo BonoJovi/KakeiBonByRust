@@ -16,4 +16,5 @@ await runStaleAggregationScenario(jest, {
     command: 'get_weekly_aggregation_by_date',
     fillOld: () => set('reference-date', '2026-09-10'),
     fillNew: () => set('reference-date', '2026-03-10'),
+    fillInvalid: () => set('reference-date', ''),
 });

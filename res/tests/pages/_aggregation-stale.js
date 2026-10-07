@@ -9,7 +9,9 @@
  * whichever request finished first.
  *
  * Expected: only the latest Execute updates the table, the message and the
- * loading state.
+ * loading state. An Execute stopped by the input checks starts no request,
+ * so it does not make the running one stale (CodeRabbit on #179: the
+ * running request then never cleared the loading state).
  *
  * Usage (one screen per test file, since each page module boots on import):
  *
@@ -20,6 +22,7 @@
  *       command: 'get_monthly_aggregation',
  *       fillOld: () => { ... },   // set the form to the older request
  *       fillNew: () => { ... },   // set the form to the newer request
+ *       fillInvalid: () => { ... }, // set the form so the input checks stop
  *   });
  */
 
@@ -120,6 +123,20 @@ export async function runStaleAggregationScenario(jest, cfg) {
             await flush(20);
             expect(container().classList.contains('loading')).toBe(false);
             expect(firstCells()).toContain('NewerGroup');
+        });
+
+        test('[scan2-A4] an Execute stopped by the input checks does not strand the running request', async () => {
+            const running = deferred();
+            held = [running];
+            await execute(cfg.fillOld, 10);
+            expect(container().classList.contains('loading')).toBe(true);
+
+            await execute(cfg.fillInvalid, 10);
+
+            running.resolve([row('RunningGroup', -5000)]);
+            await flush(20);
+            expect(container().classList.contains('loading')).toBe(false);
+            expect(firstCells()).toContain('RunningGroup');
         });
     });
 }

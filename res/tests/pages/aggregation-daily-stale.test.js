@@ -16,4 +16,5 @@ await runStaleAggregationScenario(jest, {
     command: 'get_daily_aggregation',
     fillOld: () => set('date', '2026-09-10'),
     fillNew: () => set('date', '2026-03-10'),
+    fillInvalid: () => set('date', ''),
 });

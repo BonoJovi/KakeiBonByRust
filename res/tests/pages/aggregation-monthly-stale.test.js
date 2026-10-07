@@ -16,4 +16,5 @@ await runStaleAggregationScenario(jest, {
     command: 'get_monthly_aggregation',
     fillOld: () => { set('year', '2026'); set('month', '9'); },
     fillNew: () => { set('year', '2026'); set('month', '3'); },
+    fillInvalid: () => { set('year', ''); },
 });

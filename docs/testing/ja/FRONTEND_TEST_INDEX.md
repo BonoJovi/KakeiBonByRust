@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-10-07 JST  
-**総テスト数**: 918件 (jest suite 83 ファイル、`npm test` 実測)
+**総テスト数**: 923件 (jest suite 83 ファイル、`npm test` 実測)
 
 ---
 
@@ -1382,13 +1382,14 @@
 
 月次集計の再実行の回帰テスト (潜在スキャン scan2-A4)。以前は古い要求の結果を捨てる仕組みが無く、遅れて届いた古い結果が新しい表を上書きしたり、古い要求のエラーが新しい表を消したりしていた。シナリオは 5 画面共通で `pages/_aggregation-stale.js` にある。
 
-**テスト数**: 3件
+**テスト数**: 4件
 
 | テスト | 説明 |
 |--------|------|
 | `[scan2-A4] a slower, older result arriving later is dropped` | 遅れて届いた古い結果は捨てられ、新しい表のまま |
 | `[scan2-A4] an older request failing later neither shows its error nor clears the table` | 遅れて失敗した古い要求のエラーは出ず、新しい表も消えない |
 | `[scan2-A4] the loading state stays until the latest request finishes` | 古い要求が先に終わっても読み込み中の表示は消えず、最後の要求が終わったときに消える |
+| `[scan2-A4] an Execute stopped by the input checks does not strand the running request` | 入力チェックで止まった実行は要求を始めないので、実行中の要求は「最後」のままで、終わると読み込み中の表示が消える (CodeRabbit on #179) |
 
 **ファイル**: res/tests/pages/aggregation-monthly-stale.test.js
 
@@ -1396,13 +1397,14 @@
 
 日次集計の再実行の回帰テスト (潜在スキャン scan2-A4)。以前は古い要求の結果を捨てる仕組みが無く、遅れて届いた古い結果が新しい表を上書きしたり、古い要求のエラーが新しい表を消したりしていた。シナリオは 5 画面共通で `pages/_aggregation-stale.js` にある。
 
-**テスト数**: 3件
+**テスト数**: 4件
 
 | テスト | 説明 |
 |--------|------|
 | `[scan2-A4] a slower, older result arriving later is dropped` | 遅れて届いた古い結果は捨てられ、新しい表のまま |
 | `[scan2-A4] an older request failing later neither shows its error nor clears the table` | 遅れて失敗した古い要求のエラーは出ず、新しい表も消えない |
 | `[scan2-A4] the loading state stays until the latest request finishes` | 古い要求が先に終わっても読み込み中の表示は消えず、最後の要求が終わったときに消える |
+| `[scan2-A4] an Execute stopped by the input checks does not strand the running request` | 入力チェックで止まった実行は要求を始めないので、実行中の要求は「最後」のままで、終わると読み込み中の表示が消える (CodeRabbit on #179) |
 
 **ファイル**: res/tests/pages/aggregation-daily-stale.test.js
 
@@ -1410,13 +1412,14 @@
 
 週次集計の再実行の回帰テスト (潜在スキャン scan2-A4)。以前は古い要求の結果を捨てる仕組みが無く、遅れて届いた古い結果が新しい表を上書きしたり、古い要求のエラーが新しい表を消したりしていた。シナリオは 5 画面共通で `pages/_aggregation-stale.js` にある。
 
-**テスト数**: 3件
+**テスト数**: 4件
 
 | テスト | 説明 |
 |--------|------|
 | `[scan2-A4] a slower, older result arriving later is dropped` | 遅れて届いた古い結果は捨てられ、新しい表のまま |
 | `[scan2-A4] an older request failing later neither shows its error nor clears the table` | 遅れて失敗した古い要求のエラーは出ず、新しい表も消えない |
 | `[scan2-A4] the loading state stays until the latest request finishes` | 古い要求が先に終わっても読み込み中の表示は消えず、最後の要求が終わったときに消える |
+| `[scan2-A4] an Execute stopped by the input checks does not strand the running request` | 入力チェックで止まった実行は要求を始めないので、実行中の要求は「最後」のままで、終わると読み込み中の表示が消える (CodeRabbit on #179) |
 
 **ファイル**: res/tests/pages/aggregation-weekly-stale.test.js
 
@@ -1424,13 +1427,14 @@
 
 期間指定集計の再実行の回帰テスト (潜在スキャン scan2-A4)。以前は古い要求の結果を捨てる仕組みが無く、遅れて届いた古い結果が新しい表を上書きしたり、古い要求のエラーが新しい表を消したりしていた。シナリオは 5 画面共通で `pages/_aggregation-stale.js` にある。
 
-**テスト数**: 3件
+**テスト数**: 4件
 
 | テスト | 説明 |
 |--------|------|
 | `[scan2-A4] a slower, older result arriving later is dropped` | 遅れて届いた古い結果は捨てられ、新しい表のまま |
 | `[scan2-A4] an older request failing later neither shows its error nor clears the table` | 遅れて失敗した古い要求のエラーは出ず、新しい表も消えない |
 | `[scan2-A4] the loading state stays until the latest request finishes` | 古い要求が先に終わっても読み込み中の表示は消えず、最後の要求が終わったときに消える |
+| `[scan2-A4] an Execute stopped by the input checks does not strand the running request` | 入力チェックで止まった実行は要求を始めないので、実行中の要求は「最後」のままで、終わると読み込み中の表示が消える (CodeRabbit on #179) |
 
 **ファイル**: res/tests/pages/aggregation-period-stale.test.js
 
@@ -1438,13 +1442,14 @@
 
 年次集計の再実行の回帰テスト (潜在スキャン scan2-A4)。以前は古い要求の結果を捨てる仕組みが無く、遅れて届いた古い結果が新しい表を上書きしたり、古い要求のエラーが新しい表を消したりしていた。シナリオは 5 画面共通で `pages/_aggregation-stale.js` にある。
 
-**テスト数**: 3件
+**テスト数**: 4件
 
 | テスト | 説明 |
 |--------|------|
 | `[scan2-A4] a slower, older result arriving later is dropped` | 遅れて届いた古い結果は捨てられ、新しい表のまま |
 | `[scan2-A4] an older request failing later neither shows its error nor clears the table` | 遅れて失敗した古い要求のエラーは出ず、新しい表も消えない |
 | `[scan2-A4] the loading state stays until the latest request finishes` | 古い要求が先に終わっても読み込み中の表示は消えず、最後の要求が終わったときに消える |
+| `[scan2-A4] an Execute stopped by the input checks does not strand the running request` | 入力チェックで止まった実行は要求を始めないので、実行中の要求は「最後」のままで、終わると読み込み中の表示が消える (CodeRabbit on #179) |
 
 **ファイル**: res/tests/pages/aggregation-yearly-stale.test.js
 
@@ -1702,7 +1707,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **495件** |
+| **機能別テスト** | **500件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 30 |
@@ -1764,11 +1769,11 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | pages/aggregation-yearly-total-count.test.js | 1 |
 | pages/aggregation-default-period-monthly.test.js | 1 |
 | pages/aggregation-default-period-yearly.test.js | 1 |
-| pages/aggregation-monthly-stale.test.js | 3 |
-| pages/aggregation-daily-stale.test.js | 3 |
-| pages/aggregation-weekly-stale.test.js | 3 |
-| pages/aggregation-period-stale.test.js | 3 |
-| pages/aggregation-yearly-stale.test.js | 3 |
+| pages/aggregation-monthly-stale.test.js | 4 |
+| pages/aggregation-daily-stale.test.js | 4 |
+| pages/aggregation-weekly-stale.test.js | 4 |
+| pages/aggregation-period-stale.test.js | 4 |
+| pages/aggregation-yearly-stale.test.js | 4 |
 | pages/dashboard-bar-top10.test.js | 1 |
 | pages/index-setup-page.test.js | 3 |
 | pages/category-management-page.test.js | 2 |
@@ -1781,7 +1786,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **918件** |
+| **総計 (jest)** | **923件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 

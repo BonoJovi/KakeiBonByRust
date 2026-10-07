@@ -3,7 +3,7 @@
 This document provides a complete index of all frontend tests implemented in JavaScript.
 
 **Last Updated**: 2026-10-07 JST  
-**Total Tests**: 918 (jest suites; 83 test files, per `npm test`)
+**Total Tests**: 923 (jest suites; 83 test files, per `npm test`)
 
 ---
 
@@ -30,7 +30,7 @@ and are **not** added again to the grand total.
 - **login.test.js** - Login tests (58)
 - **user-deletion.test.js** - User deletion tests (46)
 
-### Feature-Specific Tests (495 tests)
+### Feature-Specific Tests (500 tests)
 
 - **transaction-edit.test.js** - Transaction edit tests (112)
 - **transaction-detail-management.test.js** - Transaction detail management tests (51)
@@ -93,11 +93,11 @@ and are **not** added again to the grand total.
 - **pages/aggregation-yearly-total-count.test.js** - Boots the real yearly aggregation page: the shared renderer's total row shows "—" for count / average on the account axis (latent-audit M11) (1)
 - **pages/aggregation-default-period-monthly.test.js** - Boots the real monthly aggregation page with start day 25 on 2026-09-10: it opens on the August period that contains today, not the future September period (latent-audit scan2-A3) (1)
 - **pages/aggregation-default-period-yearly.test.js** - Boots the real yearly aggregation page with the year starting 04-01 on 2026-02-10: it opens on 2025, the period that contains today, not the future 2026 period (latent-audit scan2-A3) (1)
-- **pages/aggregation-monthly-stale.test.js** - Boots the real monthly aggregation page (shared scenario in `pages/_aggregation-stale.js`): a slower, older Execute neither overwrites the newer table nor shows its error, and the loading state stays until the latest request finishes (latent-audit scan2-A4) (3)
-- **pages/aggregation-daily-stale.test.js** - Boots the real daily aggregation page (shared scenario in `pages/_aggregation-stale.js`): a slower, older Execute neither overwrites the newer table nor shows its error, and the loading state stays until the latest request finishes (latent-audit scan2-A4) (3)
-- **pages/aggregation-weekly-stale.test.js** - Boots the real weekly aggregation page (shared scenario in `pages/_aggregation-stale.js`): a slower, older Execute neither overwrites the newer table nor shows its error, and the loading state stays until the latest request finishes (latent-audit scan2-A4) (3)
-- **pages/aggregation-period-stale.test.js** - Boots the real period aggregation page (shared scenario in `pages/_aggregation-stale.js`): a slower, older Execute neither overwrites the newer table nor shows its error, and the loading state stays until the latest request finishes (latent-audit scan2-A4) (3)
-- **pages/aggregation-yearly-stale.test.js** - Boots the real yearly aggregation page (shared scenario in `pages/_aggregation-stale.js`): a slower, older Execute neither overwrites the newer table nor shows its error, and the loading state stays until the latest request finishes (latent-audit scan2-A4) (3)
+- **pages/aggregation-monthly-stale.test.js** - Boots the real monthly aggregation page (shared scenario in `pages/_aggregation-stale.js`): a slower, older Execute neither overwrites the newer table nor shows its error, the loading state stays until the latest request finishes, and an Execute stopped by the input checks does not leave the running request's loading state on (latent-audit scan2-A4) (4)
+- **pages/aggregation-daily-stale.test.js** - Boots the real daily aggregation page (shared scenario in `pages/_aggregation-stale.js`): a slower, older Execute neither overwrites the newer table nor shows its error, the loading state stays until the latest request finishes, and an Execute stopped by the input checks does not leave the running request's loading state on (latent-audit scan2-A4) (4)
+- **pages/aggregation-weekly-stale.test.js** - Boots the real weekly aggregation page (shared scenario in `pages/_aggregation-stale.js`): a slower, older Execute neither overwrites the newer table nor shows its error, the loading state stays until the latest request finishes, and an Execute stopped by the input checks does not leave the running request's loading state on (latent-audit scan2-A4) (4)
+- **pages/aggregation-period-stale.test.js** - Boots the real period aggregation page (shared scenario in `pages/_aggregation-stale.js`): a slower, older Execute neither overwrites the newer table nor shows its error, the loading state stays until the latest request finishes, and an Execute stopped by the input checks does not leave the running request's loading state on (latent-audit scan2-A4) (4)
+- **pages/aggregation-yearly-stale.test.js** - Boots the real yearly aggregation page (shared scenario in `pages/_aggregation-stale.js`): a slower, older Execute neither overwrites the newer table nor shows its error, the loading state stays until the latest request finishes, and an Execute stopped by the input checks does not leave the running request's loading state on (latent-audit scan2-A4) (4)
 - **pages/dashboard-bar-top10.test.js** - Boots the real dashboard: the category bar chart lists the largest expenses first (by magnitude, since expense totals are negative) and its top 10 keeps the largest one (latent-audit scan2-A1) (1)
 - **pages/index-setup-page.test.js** - Boots the real setup forms (menu.js on index.html): a blank username is stopped before `register_admin`, a backend "Username cannot be empty" is reported as the username error (not the password one), and `duplicate_name` shows `error.username_duplicate` (latent-audit L25) (3)
 - **pages/category-management-page.test.js** - Boots the real category management page: moving or showing a category that no longer exists shows `category_mgmt.not_found` and reloads the tree (latent-audit L19) (2)
@@ -137,7 +137,7 @@ and are **not** added again to the grand total.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **Feature-Specific Tests** | **495** |
+| **Feature-Specific Tests** | **500** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 30 |
@@ -199,11 +199,11 @@ and are **not** added again to the grand total.
 | pages/aggregation-yearly-total-count.test.js | 1 |
 | pages/aggregation-default-period-monthly.test.js | 1 |
 | pages/aggregation-default-period-yearly.test.js | 1 |
-| pages/aggregation-monthly-stale.test.js | 3 |
-| pages/aggregation-daily-stale.test.js | 3 |
-| pages/aggregation-weekly-stale.test.js | 3 |
-| pages/aggregation-period-stale.test.js | 3 |
-| pages/aggregation-yearly-stale.test.js | 3 |
+| pages/aggregation-monthly-stale.test.js | 4 |
+| pages/aggregation-daily-stale.test.js | 4 |
+| pages/aggregation-weekly-stale.test.js | 4 |
+| pages/aggregation-period-stale.test.js | 4 |
+| pages/aggregation-yearly-stale.test.js | 4 |
 | pages/dashboard-bar-top10.test.js | 1 |
 | pages/index-setup-page.test.js | 3 |
 | pages/category-management-page.test.js | 2 |
@@ -216,7 +216,7 @@ and are **not** added again to the grand total.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **Total (jest)** | **918** |
+| **Total (jest)** | **923** |
 
 Grand total is Screen + Feature + Aggregation (Common Test Suites are helper
 libraries invoked from Screen-Specific files and their assertions are already

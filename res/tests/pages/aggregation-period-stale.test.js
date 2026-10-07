@@ -16,4 +16,5 @@ await runStaleAggregationScenario(jest, {
     command: 'get_period_aggregation',
     fillOld: () => { set('start-date', '2026-09-01'); set('end-date', '2026-09-30'); },
     fillNew: () => { set('start-date', '2026-03-01'); set('end-date', '2026-03-31'); },
+    fillInvalid: () => { set('start-date', ''); set('end-date', ''); },
 });

@@ -115,7 +115,6 @@ function setupMenuHandlers() {
 const nextAggregationRequest = AggCommon.createLatestRequestGuard();
 
 async function executeAggregation() {
-    const isLatest = nextAggregationRequest();
     // Get current user
     const user = await getCurrentSessionUser();
     if (!user) {
@@ -134,6 +133,10 @@ async function executeAggregation() {
 
     // Show loading state
     const resultsContainer = document.getElementById('results-container');
+    // Taken only once the request really starts: an Execute stopped by
+    // the input checks above must not make the running one stale, or its
+    // loading state would never be cleared.
+    const isLatest = nextAggregationRequest();
     resultsContainer.classList.add('loading');
     clearMessage();
     
