@@ -189,6 +189,25 @@ Food & Beverages
       └─ Vegetables
 ```
 
+### Hiding and Showing Categories
+
+A medium or small category that is no longer used can be hidden.
+
+1. Click the **"Hide"** button of the medium or small category
+2. Click **"OK"** in the confirmation dialog
+
+A hidden category:
+
+- No longer appears in the selection lists when entering a transaction
+- Stays in past transactions and in the aggregation
+- Can still be selected in the transaction list filter, with **"(Disabled)"** after its name
+- Is marked **"Hidden"** on the Category Management screen and comes back with the **"Show"** button
+
+**Small categories when a medium category is hidden or shown:**
+
+- Hiding a medium category also hides all of its small categories
+- Showing the medium category again shows all of its small categories again, including any that had been hidden one by one before the medium category was hidden. Hide those small categories again if needed
+
 ---
 
 ## Account Management
