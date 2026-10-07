@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-10-07 JST  
-**Total Tests**: 460 (delta-tracked; the full authoritative count from `cargo test --lib` is 726, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 461 (delta-tracked; the full authoritative count from `cargo test --lib` is 727, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -423,26 +423,27 @@ Category management service tests (3-tier category CRUD). Internal `CategoryErro
 | `test_get_category_tree_preserves_display_order` | Confirms that a `move_category2_up` reorder survives the flat-query regrouping (PR11, Fable-5 #31) | src/services/category.rs | 2196 |
 | `test_get_category_tree_all_includes_disabled_flags` | `get_category_tree_all` still includes disabled rows and their `is_disabled` fields; the visible-only `get_category_tree` filters them out (PR11, Fable-5 #31) | src/services/category.rs | 2225 |
 | `latent_m8_enable_category2_restores_cascaded_category3` | Showing a hidden CATEGORY2 again also re-enables the CATEGORY3 rows hiding it disabled (latent-audit M8) | src/services/latent_audit/category.rs | 83 |
-| `latent_l19_enable_missing_category2_returns_not_found` | Enabling a non-existent CATEGORY2 returns not_found (latent-audit L19, CATEGORY2 enable only) | src/services/latent_audit/category.rs | 223 |
+| `latent_l19_enable_missing_category2_returns_not_found` | Enabling a non-existent CATEGORY2 returns not_found (latent-audit L19, CATEGORY2 enable only) | src/services/latent_audit/category.rs | 266 |
 | `latent_m8_enable_already_enabled_category2_keeps_hidden_children` | Enabling an already enabled CATEGORY2 is a no-op that keeps a separately hidden CATEGORY3 hidden (latent-audit M8) | src/services/latent_audit/category.rs | 110 |
-| `latent_l18_update_missing_category2_returns_not_found` | Renaming a non-existent CATEGORY2 returns not_found instead of a silent success (latent-audit L18) | src/services/latent_audit/category.rs | 140 |
-| `latent_l18_update_missing_category3_returns_not_found` | Renaming a non-existent CATEGORY3 returns not_found (latent-audit L18) | src/services/latent_audit/category.rs | 153 |
-| `latent_l18_add_category2_is_atomic_on_i18n_failure` | A failed i18n insert leaves no half-created CATEGORY2 (add runs in one transaction) (latent-audit L18) | src/services/latent_audit/category.rs | 172 |
-| `latent_l19_move_missing_category2_returns_not_found` | Moving a non-existent CATEGORY2 returns not_found, not a raw RowNotFound (latent-audit L19) | src/services/latent_audit/category.rs | 217 |
-| `latent_l19_move_missing_category3_returns_not_found` | Moving a non-existent CATEGORY3 returns not_found (latent-audit L19) | src/services/latent_audit/category.rs | 228 |
-| `latent_l19_enable_missing_category3_returns_not_found` | Showing a non-existent CATEGORY3 returns not_found (latent-audit L19) | src/services/latent_audit/category.rs | 254 |
-| `latent_l20_category3_code_unique_across_category2_parents` | CATEGORY3 codes under C2_E_1 and C2_E_11 no longer collide (code built from the full parent code, unique per user) (latent-audit L20) | src/services/latent_audit/category.rs | 276 |
-| `latent_l20_add_category2_empty_category1_code_does_not_panic` | An empty CATEGORY1 code is rejected instead of panicking (latent-audit L20) | src/services/latent_audit/category.rs | 312 |
-| `latent_l20_add_category2_multibyte_category1_code_does_not_panic` | An unknown multibyte CATEGORY1 code is rejected instead of panicking (latent-audit L20) | src/services/latent_audit/category.rs | 323 |
-| `latent_l20_add_category3_multibyte_category1_code_does_not_panic` | Adding a CATEGORY3 under an unknown multibyte CATEGORY1 is rejected instead of panicking (latent-audit L20) | src/services/latent_audit/category.rs | 333 |
-| `latent_scan2_m5_move_up_skips_hidden_sibling` | With A, hidden B and C, one "up" click on C moves it above A, skipping the hidden B (latent-audit scan2-M5) | src/services/latent_audit/category.rs | 367 |
-| `latent_scan2_m5_move_down_skips_hidden_sibling` | With A, hidden B and C, one "down" click on A moves it below C, skipping the hidden B (latent-audit scan2-M5) | src/services/latent_audit/category.rs | 390 |
-| `latent_scan2_m5_move_down_past_only_hidden_siblings_is_noop` | "Down" on the last visible CATEGORY2 (only hidden rows follow) changes nothing, not even its order number (latent-audit scan2-M5) | src/services/latent_audit/category.rs | 411 |
-| `latent_scan2_m5_category3_moves_skip_hidden_sibling` | CATEGORY3 "up" and "down" skip a hidden sibling the same way (latent-audit scan2-M5) | src/services/latent_audit/category.rs | 451 |
-| `latent_scan2_m3_detail_list_shows_renamed_category_names` | The transaction detail list shows the CATEGORY1 name and the renamed CATEGORY2 / CATEGORY3 names in the display language (ja and en), and the base names for a language with no i18n row (latent-audit scan2-M3) | src/services/latent_audit/category.rs | 549 |
-| `latent_scan2_m8_transaction_list_category1_follows_language` | The transaction list shows the CATEGORY1 name of the display language (支出 / Expense), and the base name for a language with no row (latent-audit scan2-M8) | src/services/latent_audit/category.rs | 655 |
+| `latent_scan2_m6_enable_category2_restores_individually_hidden_category3` | Accepted specification: a CATEGORY3 hidden on its own before its CATEGORY2 was hidden comes back when the CATEGORY2 is shown again; documented in the user manual (latent-audit scan2-M6) | src/services/latent_audit/category.rs | 136 |
+| `latent_l18_update_missing_category2_returns_not_found` | Renaming a non-existent CATEGORY2 returns not_found instead of a silent success (latent-audit L18) | src/services/latent_audit/category.rs | 163 |
+| `latent_l18_update_missing_category3_returns_not_found` | Renaming a non-existent CATEGORY3 returns not_found (latent-audit L18) | src/services/latent_audit/category.rs | 176 |
+| `latent_l18_add_category2_is_atomic_on_i18n_failure` | A failed i18n insert leaves no half-created CATEGORY2 (add runs in one transaction) (latent-audit L18) | src/services/latent_audit/category.rs | 195 |
+| `latent_l19_move_missing_category2_returns_not_found` | Moving a non-existent CATEGORY2 returns not_found, not a raw RowNotFound (latent-audit L19) | src/services/latent_audit/category.rs | 240 |
+| `latent_l19_move_missing_category3_returns_not_found` | Moving a non-existent CATEGORY3 returns not_found (latent-audit L19) | src/services/latent_audit/category.rs | 251 |
+| `latent_l19_enable_missing_category3_returns_not_found` | Showing a non-existent CATEGORY3 returns not_found (latent-audit L19) | src/services/latent_audit/category.rs | 277 |
+| `latent_l20_category3_code_unique_across_category2_parents` | CATEGORY3 codes under C2_E_1 and C2_E_11 no longer collide (code built from the full parent code, unique per user) (latent-audit L20) | src/services/latent_audit/category.rs | 299 |
+| `latent_l20_add_category2_empty_category1_code_does_not_panic` | An empty CATEGORY1 code is rejected instead of panicking (latent-audit L20) | src/services/latent_audit/category.rs | 335 |
+| `latent_l20_add_category2_multibyte_category1_code_does_not_panic` | An unknown multibyte CATEGORY1 code is rejected instead of panicking (latent-audit L20) | src/services/latent_audit/category.rs | 346 |
+| `latent_l20_add_category3_multibyte_category1_code_does_not_panic` | Adding a CATEGORY3 under an unknown multibyte CATEGORY1 is rejected instead of panicking (latent-audit L20) | src/services/latent_audit/category.rs | 356 |
+| `latent_scan2_m5_move_up_skips_hidden_sibling` | With A, hidden B and C, one "up" click on C moves it above A, skipping the hidden B (latent-audit scan2-M5) | src/services/latent_audit/category.rs | 390 |
+| `latent_scan2_m5_move_down_skips_hidden_sibling` | With A, hidden B and C, one "down" click on A moves it below C, skipping the hidden B (latent-audit scan2-M5) | src/services/latent_audit/category.rs | 413 |
+| `latent_scan2_m5_move_down_past_only_hidden_siblings_is_noop` | "Down" on the last visible CATEGORY2 (only hidden rows follow) changes nothing, not even its order number (latent-audit scan2-M5) | src/services/latent_audit/category.rs | 434 |
+| `latent_scan2_m5_category3_moves_skip_hidden_sibling` | CATEGORY3 "up" and "down" skip a hidden sibling the same way (latent-audit scan2-M5) | src/services/latent_audit/category.rs | 474 |
+| `latent_scan2_m3_detail_list_shows_renamed_category_names` | The transaction detail list shows the CATEGORY1 name and the renamed CATEGORY2 / CATEGORY3 names in the display language (ja and en), and the base names for a language with no i18n row (latent-audit scan2-M3) | src/services/latent_audit/category.rs | 572 |
+| `latent_scan2_m8_transaction_list_category1_follows_language` | The transaction list shows the CATEGORY1 name of the display language (支出 / Expense), and the base name for a language with no row (latent-audit scan2-M8) | src/services/latent_audit/category.rs | 678 |
 
-**Total**: 44 tests
+**Total**: 45 tests
 
 ### services/manufacturer.rs
 
@@ -746,7 +747,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **437** |
+| **Inline Tests** | **438** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -759,7 +760,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/user_management.rs | 25 |
 | services/encryption.rs | 11 |
 | services/account.rs | 19 |
-| services/category.rs | 44 |
+| services/category.rs | 45 |
 | services/manufacturer.rs | 17 |
 | services/product.rs | 20 |
 | services/shop.rs | 19 |
@@ -770,7 +771,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/i18n.rs | 8 |
 | services/recurring.rs | 28 |
 | lib.rs | 6 |
-| **Total** | **460** |
+| **Total** | **461** |
 
 ---
 
