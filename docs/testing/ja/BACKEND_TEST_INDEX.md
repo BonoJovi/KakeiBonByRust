@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-10-07 JST  
-**総テスト数**: 454件 (差分反映後。`cargo test --lib` の権威的総数は 720 で、既存の未反映分は別 PR でバックフィル予定)
+**総テスト数**: 456件 (差分反映後。`cargo test --lib` の権威的総数は 722 で、既存の未反映分は別 PR でバックフィル予定)
 
 ---
 
@@ -231,18 +231,19 @@ AES-256-GCM暗号化・復号化のテスト。
 
 | テスト関数 | 説明 | ファイル | 行 |
 |-----------|------|---------|-----|
-| `duplicate_name_carries_lowercased_entity_and_stable_code` | `ApiError::duplicate_name("Shop")` で `code="duplicate_name"`、`entity="shop"` | src/api_error.rs | 128 |
-| `not_found_carries_lowercased_entity_and_stable_code` | `ApiError::not_found("Manufacturer")` で `code="not_found"`、`entity="manufacturer"` | src/api_error.rs | 136 |
-| `duplicate_code_carries_lowercased_entity_and_distinct_code` | `ApiError::duplicate_code("Account")` で `code="duplicate_code"` (`duplicate_name` とは区別) | src/api_error.rs | 145 |
-| `admin_protected_carries_lowercased_entity_and_stable_code` | `ApiError::admin_protected("User")` で `code="admin_protected"` (user-management delete 保護用) | src/api_error.rs | 154 |
-| `manufacturer_not_found_has_its_own_code` | `manufacturer_not_found` は汎用 `not_found` とは区別された専用 code | src/api_error.rs | 163 |
-| `validation_carries_message_through_and_omits_entity` | `ApiError::validation(msg)` で `code="validation"`、message 貫通、entity=None | src/api_error.rs | 150 |
-| `database_from_sqlx_row_not_found` | `sqlx::Error` → `ApiError::database` の `From` 変換 | src/api_error.rs | 158 |
-| `serialises_with_snake_case_code_and_optional_entity` | serialize 出力に snake_case `code` と entity フィールドが含まれる | src/api_error.rs | 165 |
-| `serialises_without_entity_key_when_none` | entity=None のときは JSON 出力から `entity` キー自体を省略 (`skip_serializing_if`) | src/api_error.rs | 174 |
-| `in_use_carries_lowercased_entity_and_stable_code` | `ApiError::in_use("Shop")` → `code="in_use"`, `entity="shop"`（マスタ削除ロックガード） | src/api_error.rs | 230 |
+| `duplicate_name_carries_lowercased_entity_and_stable_code` | `ApiError::duplicate_name("Shop")` で `code="duplicate_name"`、`entity="shop"` | src/api_error.rs | 290 |
+| `not_found_carries_lowercased_entity_and_stable_code` | `ApiError::not_found("Manufacturer")` で `code="not_found"`、`entity="manufacturer"` | src/api_error.rs | 298 |
+| `duplicate_code_carries_lowercased_entity_and_distinct_code` | `ApiError::duplicate_code("Account")` で `code="duplicate_code"` (`duplicate_name` とは区別) | src/api_error.rs | 305 |
+| `admin_protected_carries_lowercased_entity_and_stable_code` | `ApiError::admin_protected("User")` で `code="admin_protected"` (user-management delete 保護用) | src/api_error.rs | 314 |
+| `manufacturer_not_found_has_its_own_code` | `manufacturer_not_found` は汎用 `not_found` とは区別された専用 code | src/api_error.rs | 338 |
+| `validation_carries_message_through_and_omits_entity` | `ApiError::validation(msg)` で `code="validation"`、message 貫通、entity=None | src/api_error.rs | 345 |
+| `database_from_sqlx_row_not_found` | `sqlx::Error` → `ApiError::database` の `From` 変換 | src/api_error.rs | 353 |
+| `serialises_with_snake_case_code_and_optional_entity` | serialize 出力に snake_case `code` と entity フィールドが含まれる | src/api_error.rs | 361 |
+| `serialises_without_entity_key_when_none` | entity=None のときは JSON 出力から `entity` キー自体を省略 (`skip_serializing_if`) | src/api_error.rs | 370 |
+| `in_use_carries_lowercased_entity_and_stable_code` | `ApiError::in_use("Shop")` → `code="in_use"`, `entity="shop"`（マスタ削除ロックガード） | src/api_error.rs | 322 |
+| `last_general_user_has_its_own_code_and_no_entity` | `UserManagementError::LastGeneralUser` → `code="last_general_user"`、entity なし (潜在スキャン scan2-C5) | src/api_error.rs | 330 |
 
-**合計**: 10件
+**合計**: 11件
 
 ### services/master_data.rs
 
@@ -313,32 +314,33 @@ AES-256-GCM暗号化・復号化のテスト。
 
 | テスト関数 | 説明 | ファイル | 行 |
 |-----------|------|---------|-----|
-| `test_register_general_user` | 一般ユーザー登録テスト | src/services/user_management.rs | 502 |
-| `test_update_general_user` | 一般ユーザー更新テスト | src/services/user_management.rs | 519 |
-| `test_update_general_user_username_only` | ユーザー名のみ更新 | src/services/user_management.rs | 547 |
-| `test_update_general_user_password_only` | `_with_password` 経由でパスワードのみ更新 (Fable-5 #1/#5) | src/services/user_management.rs | 568 |
-| `test_update_general_user_username_and_password` | `_with_password` 経由でユーザー名とパスワードを 1 tx で更新 (Fable-5 #1/#5) | src/services/user_management.rs | 601 |
-| `test_update_admin_user` | 管理者ユーザー更新テスト | src/services/user_management.rs | 634 |
-| `test_update_admin_user_username_only` | 管理者のユーザー名のみ更新 | src/services/user_management.rs | 650 |
-| `test_update_admin_user_password_only` | `_with_password` 経由で管理者のパスワードのみ更新 (Fable-5 #1/#5) | src/services/user_management.rs | 668 |
-| `test_update_admin_user_username_and_password` | 管理者のユーザー名とパスワードを 1 tx で更新 (Fable-5 #1/#5) | src/services/user_management.rs | 698 |
-| `test_delete_general_user` | 一般ユーザー削除テスト | src/services/user_management.rs | 728 |
-| `test_cannot_delete_admin_user` | 管理者ユーザー削除の防止 | src/services/user_management.rs | 744 |
-| `test_duplicate_username` | 重複ユーザー名のエラー | src/services/user_management.rs | 755 |
-| `test_list_users` | ユーザー一覧取得テスト | src/services/user_management.rs | 769 |
-| `test_register_general_user_accepts_max_chars_of_multibyte_name` | USERS.NAME 長制約は文字数 (byte 数ではない) — MAX_NAME_LEN 分の多バイト文字を受理 (issue #37) | src/services/user_management.rs | 785 |
-| `test_register_general_user_rejects_over_max_chars_of_multibyte_name` | 登録時に MAX_NAME_LEN+1 の多バイト文字を拒否 (issue #37) | src/services/user_management.rs | 796 |
-| `test_update_general_user_with_password_rejects_wrong_old_password` | 現在パスワード誤り → `OldPasswordIncorrect`。ハッシュ・ユーザー名とも未変更 (Fable-5 #1/#5) | src/services/user_management.rs | 817 |
-| `test_update_general_user_with_password_rename_only_rejects_wrong_old_password` | 改名専用分岐でも `OldPasswordIncorrect` に統一 (CodeRabbit on #123) | src/services/user_management.rs | 864 |
-| `test_update_admin_user_with_password_rejects_wrong_old_password` | 管理者版: 現在パスワード誤り → `OldPasswordIncorrect`。ハッシュ未変更 (Fable-5 #1/#5) | src/services/user_management.rs | 891 |
-| `test_update_general_user_rejects_over_max_chars_of_multibyte_name` | 改名時に MAX_NAME_LEN+1 の多バイト文字を拒否 (issue #37) | src/services/user_management.rs | 920 |
+| `test_register_general_user` | 一般ユーザー登録テスト | src/services/user_management.rs | 560 |
+| `test_update_general_user` | 一般ユーザー更新テスト | src/services/user_management.rs | 577 |
+| `test_update_general_user_username_only` | ユーザー名のみ更新 | src/services/user_management.rs | 605 |
+| `test_update_general_user_password_only` | `_with_password` 経由でパスワードのみ更新 (Fable-5 #1/#5) | src/services/user_management.rs | 626 |
+| `test_update_general_user_username_and_password` | `_with_password` 経由でユーザー名とパスワードを 1 tx で更新 (Fable-5 #1/#5) | src/services/user_management.rs | 659 |
+| `test_update_admin_user` | 管理者ユーザー更新テスト | src/services/user_management.rs | 692 |
+| `test_update_admin_user_username_only` | 管理者のユーザー名のみ更新 | src/services/user_management.rs | 708 |
+| `test_update_admin_user_password_only` | `_with_password` 経由で管理者のパスワードのみ更新 (Fable-5 #1/#5) | src/services/user_management.rs | 726 |
+| `test_update_admin_user_username_and_password` | 管理者のユーザー名とパスワードを 1 tx で更新 (Fable-5 #1/#5) | src/services/user_management.rs | 756 |
+| `test_delete_general_user` | 一般ユーザー削除テスト | src/services/user_management.rs | 786 |
+| `test_cannot_delete_admin_user` | 管理者ユーザー削除の防止 | src/services/user_management.rs | 806 |
+| `test_duplicate_username` | 重複ユーザー名のエラー | src/services/user_management.rs | 817 |
+| `test_list_users` | ユーザー一覧取得テスト | src/services/user_management.rs | 831 |
+| `test_register_general_user_accepts_max_chars_of_multibyte_name` | USERS.NAME 長制約は文字数 (byte 数ではない) — MAX_NAME_LEN 分の多バイト文字を受理 (issue #37) | src/services/user_management.rs | 847 |
+| `test_register_general_user_rejects_over_max_chars_of_multibyte_name` | 登録時に MAX_NAME_LEN+1 の多バイト文字を拒否 (issue #37) | src/services/user_management.rs | 858 |
+| `test_update_general_user_with_password_rejects_wrong_old_password` | 現在パスワード誤り → `OldPasswordIncorrect`。ハッシュ・ユーザー名とも未変更 (Fable-5 #1/#5) | src/services/user_management.rs | 879 |
+| `test_update_general_user_with_password_rename_only_rejects_wrong_old_password` | 改名専用分岐でも `OldPasswordIncorrect` に統一 (CodeRabbit on #123) | src/services/user_management.rs | 926 |
+| `test_update_admin_user_with_password_rejects_wrong_old_password` | 管理者版: 現在パスワード誤り → `OldPasswordIncorrect`。ハッシュ未変更 (Fable-5 #1/#5) | src/services/user_management.rs | 953 |
+| `test_update_general_user_rejects_over_max_chars_of_multibyte_name` | 改名時に MAX_NAME_LEN+1 の多バイト文字を拒否 (issue #37) | src/services/user_management.rs | 982 |
 | `latent_m3_delete_user_removes_categories` | 一般ユーザー削除で CATEGORY1/2/3 と *_I18N も削除される (潜在監査 M3) | src/services/latent_audit/user_management.rs | 64 |
-| `latent_m3_reused_user_id_gets_default_categories` | 削除済み USER_ID を再利用した新ユーザーは既定の費目を持ち、旧ユーザーの費目を引き継がない (潜在監査 M3) | src/services/latent_audit/user_management.rs | 92 |
-| `latent_m13_create_rejects_blank_username` | 空 / 空白のみの名前でのユーザー作成を拒否 (潜在監査 M13) | src/services/latent_audit/user_management.rs | 135 |
-| `latent_m13_update_rejects_blank_username` | 一般 / 管理者ユーザーの空白名への変更を拒否 (潜在監査 M13) | src/services/latent_audit/user_management.rs | 158 |
-| `latent_scan2_c1_user_management_rejects_surrounding_whitespace` | 一般ユーザーの登録・改名で前後に空白のある名前を拒否 (潜在スキャン scan2-C1) | src/services/latent_audit/user_management.rs | 213 |
+| `latent_m3_reused_user_id_gets_default_categories` | 削除済み USER_ID を再利用した新ユーザーは既定の費目を持ち、旧ユーザーの費目を引き継がない (潜在監査 M3) | src/services/latent_audit/user_management.rs | 94 |
+| `latent_m13_create_rejects_blank_username` | 空 / 空白のみの名前でのユーザー作成を拒否 (潜在監査 M13) | src/services/latent_audit/user_management.rs | 141 |
+| `latent_m13_update_rejects_blank_username` | 一般 / 管理者ユーザーの空白名への変更を拒否 (潜在監査 M13) | src/services/latent_audit/user_management.rs | 164 |
+| `latent_scan2_c1_user_management_rejects_surrounding_whitespace` | 一般ユーザーの登録・改名で前後に空白のある名前を拒否 (潜在スキャン scan2-C1) | src/services/latent_audit/user_management.rs | 222 |
+| `latent_scan2_c5_delete_last_general_user_is_refused` | 一般ユーザー 2 人のうち 1 人は削除できる。最後の 1 人の削除は `LastGeneralUser` で拒否され、行は残る (潜在スキャン scan2-C5) | src/services/latent_audit/user_management.rs | 195 |
 
-**合計**: 24件
+**合計**: 25件
 
 ### services/encryption.rs
 
@@ -740,17 +742,17 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **431件** |
+| **インラインテスト** | **433件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
 | db.rs | 16 |
 | settings.rs | 18 |
-| api_error.rs | 10 |
+| api_error.rs | 11 |
 | services/master_data.rs | 4 |
 | services/like_escape.rs | 7 |
 | services/auth.rs | 25 |
-| services/user_management.rs | 24 |
+| services/user_management.rs | 25 |
 | services/encryption.rs | 11 |
 | services/account.rs | 19 |
 | services/category.rs | 44 |
@@ -764,7 +766,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/i18n.rs | 8 |
 | services/recurring.rs | 26 |
 | lib.rs | 6 |
-| **総計** | **454件** |
+| **総計** | **456件** |
 
 ---
 

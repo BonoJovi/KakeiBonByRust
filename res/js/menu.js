@@ -52,6 +52,12 @@ function mapAuthErrorCode(err) {
 }
 
 let isLoggedIn = false;
+// Timer that switches the index page from the login form to the next
+// screen 1 s after login; a logout cancels it (scan2-C6).
+let pendingLoginSwitch = null;
+// Bumped by every login and logout, so a login whose setup check answers
+// after a logout does not switch screens any more (scan2-C6).
+let loginGeneration = 0;
 
 console.log('menu.js loaded');
 
@@ -673,20 +679,24 @@ async function handleLoginSubmit(e) {
         messageDiv.className = 'message success';
         
         isLoggedIn = true;
+        const generation = ++loginGeneration;
         
         // Check if user setup is needed
         const needsUserSetup = await invoke('check_needs_user_setup');
         console.log('Needs user setup:', needsUserSetup);
+        if (generation !== loginGeneration) return; // logged out meanwhile
         
         if (needsUserSetup) {
             // Show user registration form
-            setTimeout(() => {
+            pendingLoginSwitch = setTimeout(() => {
+                pendingLoginSwitch = null;
                 document.getElementById('login-form').classList.add('hidden');
                 document.getElementById('user-setup').classList.remove('hidden');
             }, 1000);
         } else {
             // Show app content
-            setTimeout(() => {
+            pendingLoginSwitch = setTimeout(() => {
+                pendingLoginSwitch = null;
                 document.getElementById('login-form').classList.add('hidden');
                 document.getElementById('app-content').classList.remove('hidden');
             }, 1000);
@@ -717,6 +727,10 @@ async function handleLogout() {
     }
     
     isLoggedIn = false;
+    // A login that has not switched screens yet must not switch them now.
+    loginGeneration++;
+    clearTimeout(pendingLoginSwitch);
+    pendingLoginSwitch = null;
     
     // Check if we're on the index page
     const loginForm = document.getElementById('login-form');
@@ -729,6 +743,11 @@ async function handleLogout() {
         document.getElementById('login-message').textContent = '';
         loginForm.classList.remove('hidden');
         appContent.classList.add('hidden');
+        // The setup forms are for a logged-in admin; leaving one on screen
+        // next to the login form lets it be submitted without a session
+        // (scan2-C6).
+        document.getElementById('user-setup')?.classList.add('hidden');
+        document.getElementById('admin-setup')?.classList.add('hidden');
         document.getElementById('username').focus();
     } else {
         // Management page - redirect to index

@@ -23,6 +23,9 @@ pub enum UserManagementError {
     SecurityError(SecurityError),
     UserNotFound,
     AdminUserCannotBeDeleted,
+    /// scan2-C5 — the only general user cannot be deleted: with none left,
+    /// every admin login is sent to the "register user" setup form.
+    LastGeneralUser,
     InvalidRole,
     DuplicateUsername,
     /// Fable-5 #1/#5 — the caller-supplied current password did not
@@ -42,6 +45,7 @@ impl std::fmt::Display for UserManagementError {
             UserManagementError::SecurityError(e) => write!(f, "Security error: {}", e),
             UserManagementError::UserNotFound => write!(f, "User not found"),
             UserManagementError::AdminUserCannotBeDeleted => write!(f, "Admin user cannot be deleted"),
+            UserManagementError::LastGeneralUser => write!(f, "The last general user cannot be deleted"),
             UserManagementError::InvalidRole => write!(f, "Invalid role"),
             UserManagementError::DuplicateUsername => write!(f, "Username already exists"),
             UserManagementError::OldPasswordIncorrect => write!(f, "Current password is incorrect"),
@@ -90,6 +94,7 @@ impl From<SecurityError> for UserManagementError {
 /// Codes:
 ///   - `UserNotFound`               → `not_found` (entity="user")
 ///   - `AdminUserCannotBeDeleted`   → `admin_protected` (entity="user")
+///   - `LastGeneralUser`            → `last_general_user`
 ///   - `DuplicateUsername`          → `duplicate_name` (entity="user")
 ///   - `InvalidRole`, `SecurityError`, `Validation(...)` → `validation`
 ///     (with a message that keeps the original English text for logs)
@@ -99,6 +104,7 @@ impl From<UserManagementError> for ApiError {
         match err {
             UserManagementError::UserNotFound => ApiError::not_found(ENTITY_LABEL),
             UserManagementError::AdminUserCannotBeDeleted => ApiError::admin_protected(ENTITY_LABEL),
+            UserManagementError::LastGeneralUser => ApiError::last_general_user(),
             UserManagementError::DuplicateUsername => ApiError::duplicate_name(ENTITY_LABEL),
             UserManagementError::InvalidRole => ApiError::validation("Invalid role"),
             UserManagementError::OldPasswordIncorrect => ApiError::old_password_incorrect(),
@@ -495,6 +501,15 @@ impl UserManagementService {
         // (latent-audit M3). USERS goes first so the cascaded transactions
         // no longer reference CATEGORY1 when it is deleted.
         let mut tx = self.pool.begin().await?;
+        // Keep at least one general user (scan2-C5). Counted inside the
+        // transaction so the check and the delete see the same rows.
+        let general_users: i64 = sqlx::query_scalar(sql_queries::AUTH_COUNT_USERS_BY_ROLE)
+            .bind(ROLE_USER)
+            .fetch_one(&mut *tx)
+            .await?;
+        if general_users <= 1 {
+            return Err(UserManagementError::LastGeneralUser);
+        }
         sqlx::query(sql_queries::USER_DELETE)
             .bind(user_id)
             .execute(&mut *tx)
@@ -774,6 +789,10 @@ mod tests {
         
         let service = UserManagementService::new(pool.clone());
         let user_id = service.register_general_user("testuser", "password123")
+            .await
+            .unwrap();
+        // The last general user cannot be deleted (scan2-C5), so keep another.
+        service.register_general_user("otheruser", "password123")
             .await
             .unwrap();
         

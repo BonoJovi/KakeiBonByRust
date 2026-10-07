@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-10-07 JST  
-**Total Tests**: 454 (delta-tracked; the full authoritative count from `cargo test --lib` is 720, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 456 (delta-tracked; the full authoritative count from `cargo test --lib` is 722, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -231,18 +231,19 @@ Settings management functionality tests.
 
 | Test Function | Description | File | Line |
 |---------------|-------------|------|------|
-| `duplicate_name_carries_lowercased_entity_and_stable_code` | `ApiError::duplicate_name("Shop")` → `code="duplicate_name"`, `entity="shop"` | src/api_error.rs | 128 |
-| `not_found_carries_lowercased_entity_and_stable_code` | `ApiError::not_found("Manufacturer")` → `code="not_found"`, `entity="manufacturer"` | src/api_error.rs | 136 |
-| `duplicate_code_carries_lowercased_entity_and_distinct_code` | `ApiError::duplicate_code("Account")` → `code="duplicate_code"` (distinct from `duplicate_name`) | src/api_error.rs | 145 |
-| `admin_protected_carries_lowercased_entity_and_stable_code` | `ApiError::admin_protected("User")` → `code="admin_protected"` (for user-management delete guard) | src/api_error.rs | 154 |
-| `manufacturer_not_found_has_its_own_code` | `ApiError::manufacturer_not_found()` → `code="manufacturer_not_found"` (distinct from generic `not_found`) | src/api_error.rs | 163 |
-| `validation_carries_message_through_and_omits_entity` | `ApiError::validation(msg)` → `code="validation"`, message passed through, no entity | src/api_error.rs | 150 |
-| `database_from_sqlx_row_not_found` | `sqlx::Error → ApiError::database` via `From<sqlx::Error>` | src/api_error.rs | 158 |
-| `serialises_with_snake_case_code_and_optional_entity` | Serialised JSON has snake_case `code` and populated `entity` field | src/api_error.rs | 165 |
-| `serialises_without_entity_key_when_none` | Serialised JSON omits `entity` when None (via `skip_serializing_if`) | src/api_error.rs | 174 |
-| `in_use_carries_lowercased_entity_and_stable_code` | `ApiError::in_use("Shop")` → `code="in_use"`, `entity="shop"` (master delete-lock guard) | src/api_error.rs | 230 |
+| `duplicate_name_carries_lowercased_entity_and_stable_code` | `ApiError::duplicate_name("Shop")` → `code="duplicate_name"`, `entity="shop"` | src/api_error.rs | 290 |
+| `not_found_carries_lowercased_entity_and_stable_code` | `ApiError::not_found("Manufacturer")` → `code="not_found"`, `entity="manufacturer"` | src/api_error.rs | 298 |
+| `duplicate_code_carries_lowercased_entity_and_distinct_code` | `ApiError::duplicate_code("Account")` → `code="duplicate_code"` (distinct from `duplicate_name`) | src/api_error.rs | 305 |
+| `admin_protected_carries_lowercased_entity_and_stable_code` | `ApiError::admin_protected("User")` → `code="admin_protected"` (for user-management delete guard) | src/api_error.rs | 314 |
+| `manufacturer_not_found_has_its_own_code` | `ApiError::manufacturer_not_found()` → `code="manufacturer_not_found"` (distinct from generic `not_found`) | src/api_error.rs | 338 |
+| `validation_carries_message_through_and_omits_entity` | `ApiError::validation(msg)` → `code="validation"`, message passed through, no entity | src/api_error.rs | 345 |
+| `database_from_sqlx_row_not_found` | `sqlx::Error → ApiError::database` via `From<sqlx::Error>` | src/api_error.rs | 353 |
+| `serialises_with_snake_case_code_and_optional_entity` | Serialised JSON has snake_case `code` and populated `entity` field | src/api_error.rs | 361 |
+| `serialises_without_entity_key_when_none` | Serialised JSON omits `entity` when None (via `skip_serializing_if`) | src/api_error.rs | 370 |
+| `in_use_carries_lowercased_entity_and_stable_code` | `ApiError::in_use("Shop")` → `code="in_use"`, `entity="shop"` (master delete-lock guard) | src/api_error.rs | 322 |
+| `last_general_user_has_its_own_code_and_no_entity` | `UserManagementError::LastGeneralUser` → `code="last_general_user"`, no entity (latent-audit scan2-C5) | src/api_error.rs | 330 |
 
-**Total**: 10 tests
+**Total**: 11 tests
 
 ### services/master_data.rs
 
@@ -313,32 +314,33 @@ User management service tests (CRUD operations).
 
 | Test Function | Description | File | Line |
 |---------------|-------------|------|------|
-| `test_register_general_user` | Test general user registration | src/services/user_management.rs | 502 |
-| `test_update_general_user` | Test general user update | src/services/user_management.rs | 519 |
-| `test_update_general_user_username_only` | Update username only | src/services/user_management.rs | 547 |
-| `test_update_general_user_password_only` | Update password only via `_with_password` (Fable-5 #1/#5) | src/services/user_management.rs | 568 |
-| `test_update_general_user_username_and_password` | Update username + password atomically via `_with_password` (Fable-5 #1/#5) | src/services/user_management.rs | 601 |
-| `test_update_admin_user` | Test admin user update | src/services/user_management.rs | 634 |
-| `test_update_admin_user_username_only` | Update admin username only | src/services/user_management.rs | 650 |
-| `test_update_admin_user_password_only` | Update admin password only via `_with_password` (Fable-5 #1/#5) | src/services/user_management.rs | 668 |
-| `test_update_admin_user_username_and_password` | Update admin username + password atomically (Fable-5 #1/#5) | src/services/user_management.rs | 698 |
-| `test_delete_general_user` | Test general user deletion | src/services/user_management.rs | 728 |
-| `test_cannot_delete_admin_user` | Prevent admin user deletion | src/services/user_management.rs | 744 |
-| `test_duplicate_username` | Test duplicate username error | src/services/user_management.rs | 755 |
-| `test_list_users` | Test user list retrieval | src/services/user_management.rs | 769 |
-| `test_register_general_user_accepts_max_chars_of_multibyte_name` | USERS.NAME length guard counts characters, not bytes: accept MAX_NAME_LEN multibyte (issue #37) | src/services/user_management.rs | 785 |
-| `test_register_general_user_rejects_over_max_chars_of_multibyte_name` | Reject MAX_NAME_LEN+1 multibyte on registration (issue #37) | src/services/user_management.rs | 796 |
-| `test_update_general_user_with_password_rejects_wrong_old_password` | Wrong current password → `OldPasswordIncorrect`; hash + username unchanged (Fable-5 #1/#5) | src/services/user_management.rs | 817 |
-| `test_update_general_user_with_password_rename_only_rejects_wrong_old_password` | Rename-only branch also classifies as `OldPasswordIncorrect` (CodeRabbit on #123) | src/services/user_management.rs | 864 |
-| `test_update_admin_user_with_password_rejects_wrong_old_password` | Admin-side counterpart: wrong current password → `OldPasswordIncorrect`; hash unchanged (Fable-5 #1/#5) | src/services/user_management.rs | 891 |
-| `test_update_general_user_rejects_over_max_chars_of_multibyte_name` | Reject MAX_NAME_LEN+1 multibyte on rename (issue #37) | src/services/user_management.rs | 920 |
+| `test_register_general_user` | Test general user registration | src/services/user_management.rs | 560 |
+| `test_update_general_user` | Test general user update | src/services/user_management.rs | 577 |
+| `test_update_general_user_username_only` | Update username only | src/services/user_management.rs | 605 |
+| `test_update_general_user_password_only` | Update password only via `_with_password` (Fable-5 #1/#5) | src/services/user_management.rs | 626 |
+| `test_update_general_user_username_and_password` | Update username + password atomically via `_with_password` (Fable-5 #1/#5) | src/services/user_management.rs | 659 |
+| `test_update_admin_user` | Test admin user update | src/services/user_management.rs | 692 |
+| `test_update_admin_user_username_only` | Update admin username only | src/services/user_management.rs | 708 |
+| `test_update_admin_user_password_only` | Update admin password only via `_with_password` (Fable-5 #1/#5) | src/services/user_management.rs | 726 |
+| `test_update_admin_user_username_and_password` | Update admin username + password atomically (Fable-5 #1/#5) | src/services/user_management.rs | 756 |
+| `test_delete_general_user` | Test general user deletion | src/services/user_management.rs | 786 |
+| `test_cannot_delete_admin_user` | Prevent admin user deletion | src/services/user_management.rs | 806 |
+| `test_duplicate_username` | Test duplicate username error | src/services/user_management.rs | 817 |
+| `test_list_users` | Test user list retrieval | src/services/user_management.rs | 831 |
+| `test_register_general_user_accepts_max_chars_of_multibyte_name` | USERS.NAME length guard counts characters, not bytes: accept MAX_NAME_LEN multibyte (issue #37) | src/services/user_management.rs | 847 |
+| `test_register_general_user_rejects_over_max_chars_of_multibyte_name` | Reject MAX_NAME_LEN+1 multibyte on registration (issue #37) | src/services/user_management.rs | 858 |
+| `test_update_general_user_with_password_rejects_wrong_old_password` | Wrong current password → `OldPasswordIncorrect`; hash + username unchanged (Fable-5 #1/#5) | src/services/user_management.rs | 879 |
+| `test_update_general_user_with_password_rename_only_rejects_wrong_old_password` | Rename-only branch also classifies as `OldPasswordIncorrect` (CodeRabbit on #123) | src/services/user_management.rs | 926 |
+| `test_update_admin_user_with_password_rejects_wrong_old_password` | Admin-side counterpart: wrong current password → `OldPasswordIncorrect`; hash unchanged (Fable-5 #1/#5) | src/services/user_management.rs | 953 |
+| `test_update_general_user_rejects_over_max_chars_of_multibyte_name` | Reject MAX_NAME_LEN+1 multibyte on rename (issue #37) | src/services/user_management.rs | 982 |
 | `latent_m3_delete_user_removes_categories` | Deleting a general user removes their CATEGORY1/2/3 and *_I18N rows (latent-audit M3) | src/services/latent_audit/user_management.rs | 64 |
-| `latent_m3_reused_user_id_gets_default_categories` | A new user reusing a deleted USER_ID gets the default categories, not the deleted user's (latent-audit M3) | src/services/latent_audit/user_management.rs | 92 |
-| `latent_m13_create_rejects_blank_username` | Creating a user with an empty / whitespace-only name is rejected (latent-audit M13) | src/services/latent_audit/user_management.rs | 135 |
-| `latent_m13_update_rejects_blank_username` | Renaming a user (general / admin, with or without password) to a blank name is rejected (latent-audit M13) | src/services/latent_audit/user_management.rs | 158 |
-| `latent_scan2_c1_user_management_rejects_surrounding_whitespace` | Registering or renaming a general user with surrounding whitespace is rejected (latent-audit scan2-C1) | src/services/latent_audit/user_management.rs | 213 |
+| `latent_m3_reused_user_id_gets_default_categories` | A new user reusing a deleted USER_ID gets the default categories, not the deleted user's (latent-audit M3) | src/services/latent_audit/user_management.rs | 94 |
+| `latent_m13_create_rejects_blank_username` | Creating a user with an empty / whitespace-only name is rejected (latent-audit M13) | src/services/latent_audit/user_management.rs | 141 |
+| `latent_m13_update_rejects_blank_username` | Renaming a user (general / admin, with or without password) to a blank name is rejected (latent-audit M13) | src/services/latent_audit/user_management.rs | 164 |
+| `latent_scan2_c1_user_management_rejects_surrounding_whitespace` | Registering or renaming a general user with surrounding whitespace is rejected (latent-audit scan2-C1) | src/services/latent_audit/user_management.rs | 222 |
+| `latent_scan2_c5_delete_last_general_user_is_refused` | Deleting one of two general users is allowed; deleting the last one is refused with `LastGeneralUser` and the row stays (latent-audit scan2-C5) | src/services/latent_audit/user_management.rs | 195 |
 
-**Total**: 24 tests
+**Total**: 25 tests
 
 ### services/encryption.rs
 
@@ -740,17 +742,17 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **431** |
+| **Inline Tests** | **433** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
 | db.rs | 16 |
 | settings.rs | 18 |
-| api_error.rs | 10 |
+| api_error.rs | 11 |
 | services/master_data.rs | 4 |
 | services/like_escape.rs | 7 |
 | services/auth.rs | 25 |
-| services/user_management.rs | 24 |
+| services/user_management.rs | 25 |
 | services/encryption.rs | 11 |
 | services/account.rs | 19 |
 | services/category.rs | 44 |
@@ -764,7 +766,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/i18n.rs | 8 |
 | services/recurring.rs | 26 |
 | lib.rs | 6 |
-| **Total** | **454** |
+| **Total** | **456** |
 
 ---
 

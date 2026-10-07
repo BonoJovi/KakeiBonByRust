@@ -1982,3 +1982,6 @@ INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESO
 -- Latent-scan2 C3: Account Balances column header; dashboard.balance stays the chart's income-minus-expense label (収支).
 INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2485, 'dashboard.account_balance', 'en', 'Balance', 'dashboard', 'Balance column header', datetime('now'));
 INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2486, 'dashboard.account_balance', 'ja', '残高', 'dashboard', '残高カラム見出し', datetime('now'));
+-- Latent-scan2 C5: the only general user cannot be deleted (the admin would otherwise land on user setup at every login).
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2487, 'user_mgmt.last_general_user', 'en', 'The last general user cannot be deleted.', 'user_mgmt', 'Last general user delete refused', datetime('now'));
+INSERT OR IGNORE INTO I18N_RESOURCES (RESOURCE_ID, RESOURCE_KEY, LANG_CODE, RESOURCE_VALUE, CATEGORY, DESCRIPTION, ENTRY_DT) VALUES (2488, 'user_mgmt.last_general_user', 'ja', '最後の一般ユーザーは削除できません。', 'user_mgmt', '最後の一般ユーザー削除拒否', datetime('now'));
