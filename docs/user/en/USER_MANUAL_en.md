@@ -162,38 +162,59 @@ KakeiBon is a desktop application designed to support personal finance managemen
 
 **Available to**: Administrator and Regular User
 
-Manage expense categories in 3-level hierarchy.
+Manage the categories of income and expenses in a 3-level hierarchy.
 
-### Category Registration
+### Category Structure
 
-1. Click menu **"費目管理"/"Category Management"**
-2. Click **"新規費目登録"/"Add New Category"** button
-3. Enter category information:
-   - **Category Name**: Required
-   - **Level**: Large (1), Medium (2), Small (3)
-   - **Parent Category**: Required for Medium/Small levels
-4. Click **"登録"/"Register"** button
+Categories have 3 levels:
 
-### Hierarchical Structure
-
-```
-Large Category (Level 1)
-  └─ Medium Category (Level 2)
-      └─ Small Category (Level 3)
-```
+1. **Major category (CATEGORY1)**: Expense (EXPENSE) / Income (INCOME) / Transfer (TRANSFER)
+   - Fixed; cannot be changed
+2. **Medium category (CATEGORY2)**: for example, food and transportation (20 by default)
+   - Can be added, edited and reordered
+3. **Minor category (CATEGORY3)**: for example, eating out and home cooking (126 by default)
+   - Can be added, edited and reordered
 
 Example:
 ```
-Food & Beverages
-  └─ Groceries
-      └─ Vegetables
+Expense (major category)
+  └─ Food (medium category)
+      └─ Eating out (minor category)
 ```
+
+### Adding a Medium Category
+
+1. Select **"Admin"** → **"Master Data"** → **"Category Management"** from the menu
+2. Click the **"Add Subcategory"** button of a major category (Expense / Income / Transfer)
+3. Enter:
+   - **Name (Japanese)**: the Japanese name of the medium category
+   - **Name (English)**: the English name of the medium category
+4. Click the **"Save"** button
+
+### Adding a Minor Category
+
+1. Click the **"Add Subcategory"** button of a medium category
+2. Enter:
+   - **Name (Japanese)**: the Japanese name of the minor category
+   - **Name (English)**: the English name of the minor category
+3. Click the **"Save"** button
+
+### Editing a Category
+
+1. Click the **"Edit"** button of a medium or minor category
+2. Change the name
+3. Click the **"Save"** button
+
+### Reordering Categories
+
+1. Click the **"↑"** or **"↓"** button of a category to move it
+2. The change takes effect immediately
 
 ### Hiding and Showing Categories
 
-A medium or small category that is no longer used can be hidden.
+A medium or minor category that is no longer used can be hidden.
 
-1. Click the **"Hide"** button of the medium or small category
+1. Click the **"Hide"** button of the medium or minor category
 2. Click **"OK"** in the confirmation dialog
 
 A hidden category:
@@ -203,10 +224,12 @@ A hidden category:
 - Can still be selected in the transaction list filter, with **"(Disabled)"** after its name
 - Is marked **"Hidden"** on the Category Management screen and comes back with the **"Show"** button
 
-**Small categories when a medium category is hidden or shown:**
+**Minor categories when a medium category is hidden or shown:**
 
-- Hiding a medium category also hides all of its small categories
-- Showing the medium category again shows all of its small categories again, including any that had been hidden one by one before the medium category was hidden. Hide those small categories again if needed
+- Hiding a medium category also hides all of its minor categories
+- Showing the medium category again shows all of its minor categories again, including any that had been hidden one by one before the medium category was hidden. Hide those minor categories again if needed
+
+**Note**: Categories cannot be deleted. This keeps them consistent with the transaction data.
 
 ---
 
