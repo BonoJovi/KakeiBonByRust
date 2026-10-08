@@ -1532,10 +1532,10 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[scan2-A4] a slower, older result arriving later is dropped` | 遅れて届いた古い結果は捨てられ、新しい表のまま |
-| `[scan2-A4] an older request failing later neither shows its error nor clears the table` | 遅れて失敗した古い要求のエラーは出ず、新しい表も消えない |
-| `[scan2-A4] the loading state stays until the latest request finishes` | 古い要求が先に終わっても読み込み中の表示は消えず、最後の要求が終わったときに消える |
-| `[scan2-A4] an Execute stopped by the input checks does not strand the running request` | 入力チェックで止まった実行は要求を始めないので、実行中の要求は「最後」のままで、終わると読み込み中の表示が消える (CodeRabbit on #179) |
+| `should drop the older result when a slower, older request finishes later (scan2-A4)` | 遅れて届いた古い結果は捨てられ、新しい表のまま |
+| `should neither show the error nor clear the table when an older request fails later (scan2-A4)` | 遅れて失敗した古い要求のエラーは出ず、新しい表も消えない |
+| `should keep the loading state until the latest request finishes when an older request finishes first (scan2-A4)` | 古い要求が先に終わっても読み込み中の表示は消えず、最後の要求が終わったときに消える |
+| `should not strand the running request when an Execute is stopped by the input checks (scan2-A4)` | 入力チェックで止まった実行は要求を始めないので、実行中の要求は「最後」のままで、終わると読み込み中の表示が消える (CodeRabbit on #179) |
 
 **ファイル**: res/tests/pages/aggregation-monthly-stale.test.js
 
@@ -1547,10 +1547,10 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[scan2-A4] a slower, older result arriving later is dropped` | 遅れて届いた古い結果は捨てられ、新しい表のまま |
-| `[scan2-A4] an older request failing later neither shows its error nor clears the table` | 遅れて失敗した古い要求のエラーは出ず、新しい表も消えない |
-| `[scan2-A4] the loading state stays until the latest request finishes` | 古い要求が先に終わっても読み込み中の表示は消えず、最後の要求が終わったときに消える |
-| `[scan2-A4] an Execute stopped by the input checks does not strand the running request` | 入力チェックで止まった実行は要求を始めないので、実行中の要求は「最後」のままで、終わると読み込み中の表示が消える (CodeRabbit on #179) |
+| `should drop the older result when a slower, older request finishes later (scan2-A4)` | 遅れて届いた古い結果は捨てられ、新しい表のまま |
+| `should neither show the error nor clear the table when an older request fails later (scan2-A4)` | 遅れて失敗した古い要求のエラーは出ず、新しい表も消えない |
+| `should keep the loading state until the latest request finishes when an older request finishes first (scan2-A4)` | 古い要求が先に終わっても読み込み中の表示は消えず、最後の要求が終わったときに消える |
+| `should not strand the running request when an Execute is stopped by the input checks (scan2-A4)` | 入力チェックで止まった実行は要求を始めないので、実行中の要求は「最後」のままで、終わると読み込み中の表示が消える (CodeRabbit on #179) |
 
 **ファイル**: res/tests/pages/aggregation-daily-stale.test.js
 
@@ -1562,10 +1562,10 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[scan2-A4] a slower, older result arriving later is dropped` | 遅れて届いた古い結果は捨てられ、新しい表のまま |
-| `[scan2-A4] an older request failing later neither shows its error nor clears the table` | 遅れて失敗した古い要求のエラーは出ず、新しい表も消えない |
-| `[scan2-A4] the loading state stays until the latest request finishes` | 古い要求が先に終わっても読み込み中の表示は消えず、最後の要求が終わったときに消える |
-| `[scan2-A4] an Execute stopped by the input checks does not strand the running request` | 入力チェックで止まった実行は要求を始めないので、実行中の要求は「最後」のままで、終わると読み込み中の表示が消える (CodeRabbit on #179) |
+| `should drop the older result when a slower, older request finishes later (scan2-A4)` | 遅れて届いた古い結果は捨てられ、新しい表のまま |
+| `should neither show the error nor clear the table when an older request fails later (scan2-A4)` | 遅れて失敗した古い要求のエラーは出ず、新しい表も消えない |
+| `should keep the loading state until the latest request finishes when an older request finishes first (scan2-A4)` | 古い要求が先に終わっても読み込み中の表示は消えず、最後の要求が終わったときに消える |
+| `should not strand the running request when an Execute is stopped by the input checks (scan2-A4)` | 入力チェックで止まった実行は要求を始めないので、実行中の要求は「最後」のままで、終わると読み込み中の表示が消える (CodeRabbit on #179) |
 
 **ファイル**: res/tests/pages/aggregation-weekly-stale.test.js
 
@@ -1577,10 +1577,10 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[scan2-A4] a slower, older result arriving later is dropped` | 遅れて届いた古い結果は捨てられ、新しい表のまま |
-| `[scan2-A4] an older request failing later neither shows its error nor clears the table` | 遅れて失敗した古い要求のエラーは出ず、新しい表も消えない |
-| `[scan2-A4] the loading state stays until the latest request finishes` | 古い要求が先に終わっても読み込み中の表示は消えず、最後の要求が終わったときに消える |
-| `[scan2-A4] an Execute stopped by the input checks does not strand the running request` | 入力チェックで止まった実行は要求を始めないので、実行中の要求は「最後」のままで、終わると読み込み中の表示が消える (CodeRabbit on #179) |
+| `should drop the older result when a slower, older request finishes later (scan2-A4)` | 遅れて届いた古い結果は捨てられ、新しい表のまま |
+| `should neither show the error nor clear the table when an older request fails later (scan2-A4)` | 遅れて失敗した古い要求のエラーは出ず、新しい表も消えない |
+| `should keep the loading state until the latest request finishes when an older request finishes first (scan2-A4)` | 古い要求が先に終わっても読み込み中の表示は消えず、最後の要求が終わったときに消える |
+| `should not strand the running request when an Execute is stopped by the input checks (scan2-A4)` | 入力チェックで止まった実行は要求を始めないので、実行中の要求は「最後」のままで、終わると読み込み中の表示が消える (CodeRabbit on #179) |
 
 **ファイル**: res/tests/pages/aggregation-period-stale.test.js
 
@@ -1592,10 +1592,10 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[scan2-A4] a slower, older result arriving later is dropped` | 遅れて届いた古い結果は捨てられ、新しい表のまま |
-| `[scan2-A4] an older request failing later neither shows its error nor clears the table` | 遅れて失敗した古い要求のエラーは出ず、新しい表も消えない |
-| `[scan2-A4] the loading state stays until the latest request finishes` | 古い要求が先に終わっても読み込み中の表示は消えず、最後の要求が終わったときに消える |
-| `[scan2-A4] an Execute stopped by the input checks does not strand the running request` | 入力チェックで止まった実行は要求を始めないので、実行中の要求は「最後」のままで、終わると読み込み中の表示が消える (CodeRabbit on #179) |
+| `should drop the older result when a slower, older request finishes later (scan2-A4)` | 遅れて届いた古い結果は捨てられ、新しい表のまま |
+| `should neither show the error nor clear the table when an older request fails later (scan2-A4)` | 遅れて失敗した古い要求のエラーは出ず、新しい表も消えない |
+| `should keep the loading state until the latest request finishes when an older request finishes first (scan2-A4)` | 古い要求が先に終わっても読み込み中の表示は消えず、最後の要求が終わったときに消える |
+| `should not strand the running request when an Execute is stopped by the input checks (scan2-A4)` | 入力チェックで止まった実行は要求を始めないので、実行中の要求は「最後」のままで、終わると読み込み中の表示が消える (CodeRabbit on #179) |
 
 **ファイル**: res/tests/pages/aggregation-yearly-stale.test.js
 
