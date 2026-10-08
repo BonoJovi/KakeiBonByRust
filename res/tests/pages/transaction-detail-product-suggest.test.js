@@ -94,14 +94,14 @@ async function openAddDetail() {
 describe('detail item-name product suggestions', () => {
     beforeEach(() => invoke.mockClear());
 
-    test('the medium and minor categories come before the item name', () => {
+    test('should put the medium and minor categories before the item name when the detail window is shown', () => {
         const ids = [...document.querySelectorAll('#detail-form input, #detail-form select')]
             .map((el) => el.id);
         expect(ids.indexOf('category2-code')).toBeLessThan(ids.indexOf('category3-code'));
         expect(ids.indexOf('category3-code')).toBeLessThan(ids.indexOf('item-name'));
     });
 
-    test('the item name field has a defined placeholder and tooltip hint', () => {
+    test('should have a defined placeholder and tooltip hint when the item name field is shown', () => {
         // A short placeholder fits the field; the full hint is the tooltip.
         for (const attr of ['data-i18n-placeholder', 'data-i18n-title']) {
             const key = itemName().getAttribute(attr);
@@ -110,7 +110,7 @@ describe('detail item-name product suggestions', () => {
         }
     });
 
-    test('focusing the empty item name field lists suggestions with the chosen categories', async () => {
+    test('should list suggestions with the chosen categories when the empty item name field gets focus', async () => {
         await openAddDetail();
 
         const c2 = document.getElementById('category2-code');
@@ -138,7 +138,7 @@ describe('detail item-name product suggestions', () => {
         expect(dropdown().textContent).toContain('Dried mango');
     });
 
-    test('the list is not shown when focus has left the field before the answer', async () => {
+    test('should not show the list when focus has left the field before the answer', async () => {
         // Close the list from the previous test, then focus and leave at once.
         document.getElementById('category2-code').focus();
         await wait(150);
@@ -150,7 +150,7 @@ describe('detail item-name product suggestions', () => {
         await flush(10);
     });
 
-    test('typing while the focus search is pending does not show its stale answer', async () => {
+    test('should not show the stale answer of the focus search when the user types while it is pending', async () => {
         document.getElementById('category2-code').focus();
         await wait(150);
         itemName().value = '';
@@ -175,7 +175,7 @@ describe('detail item-name product suggestions', () => {
         expect(callsOf(invoke, 'search_products_by_name').at(-1).query).toBe('Ap');
     });
 
-    test('picking a suggestion closes the list and it stays closed', async () => {
+    test('should close the list and keep it closed when a suggestion is picked', async () => {
         document.getElementById('category2-code').focus();
         await wait(150);
         itemName().value = '';

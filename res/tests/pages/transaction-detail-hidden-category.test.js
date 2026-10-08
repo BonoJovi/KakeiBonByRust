@@ -138,13 +138,13 @@ describe('latent-audit scan2 T3 — editing a detail with a hidden category', ()
         invoke.mockClear();
     });
 
-    test('[T3] a hidden category2 (and its category3) survives a memo-only edit', async () => {
+    test('should keep a hidden category2 (and its category3) when only the memo is edited (T3)', async () => {
         const sent = await editAndSaveMemoOnly(1);
         expect(sent.category2Code).toBe('C2_E_HIDDEN');
         expect(sent.category3Code).toBe('C3_H_1');
     });
 
-    test('[T3] a hidden category3 under an enabled category2 survives a memo-only edit', async () => {
+    test('should keep a hidden category3 under an enabled category2 when only the memo is edited (T3)', async () => {
         const sent = await editAndSaveMemoOnly(2);
         expect(sent.category2Code).toBe('C2_E_1');
         expect(sent.category3Code).toBe('C3_HIDDEN');

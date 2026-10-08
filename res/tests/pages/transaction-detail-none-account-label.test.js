@@ -59,7 +59,7 @@ await import('../../js/transaction-detail-management.js');
 await bootPage();
 
 describe('transaction detail header NONE account label (scan2-M8)', () => {
-    test('renders a NONE account with common.unspecified, not the stored name', () => {
+    test('should render common.unspecified, not the stored name, when the account is NONE', () => {
         const text = document.getElementById('header-account').textContent;
         expect(text).not.toContain('指定なし');
         expect(text).toBe('common.unspecified');
