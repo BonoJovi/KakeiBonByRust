@@ -2,8 +2,8 @@
 
 This document provides a complete index of all frontend tests implemented in JavaScript.
 
-**Last Updated**: 2026-10-08 JST  
-**Total Tests**: 963 (jest suites; 92 test files, per `npm test`)
+**Last Updated**: 2026-10-09 JST  
+**Total Tests**: 962 (jest suites; 93 test files, per `npm test`)
 
 ---
 
@@ -30,16 +30,17 @@ and are **not** added again to the grand total.
 - **login.test.js** - Login tests (58)
 - **user-deletion.test.js** - User deletion tests (46)
 
-### Feature-Specific Tests (540 tests)
+### Feature-Specific Tests (539 tests)
 
 - **transaction-edit.test.js** - Transaction edit tests (112)
 - **transaction-detail-management.test.js** - Transaction detail management tests (51)
 - **transaction-detail-tax-calculation.test.js** - Tax calculation tests; a typed tax-included price is always kept, with the tax carved out of it when no exact tax-excluded split exists (latent-audit scan2-T2) (30)
 - **toast.test.js** - Toast notification tests (14)
 - **tax-calc.test.js** - Tax calculation utility tests (12)
-- **product-autocomplete.test.js** - Product autocomplete UI tests (10)
-- **product-draft.test.js** - Product draft-state tests (11)
-- **product-master-jump-draft.test.js** - Product master jump / draft handoff tests (11)
+- **pages/transaction-detail-draft-storage.test.js** - Imports the real detail page module and calls its exported `persistDraft` / `consumeDraft` / `clearDraft` (the detail draft kept in sessionStorage for the detail → product master round trip): a stored draft reads back unchanged, nothing stored reads as null, malformed JSON reads as null and is removed, clear removes the draft, a second persist overwrites the first, and an edit-mode draft keeps `detail_id` and `selected_product_id` (6)
+- **pages/transaction-detail-product-link.test.js** - Boots the real detail page: picking a product suggestion sets the hidden product id and picking another replaces it; typing after a pick drops the id, so the detail is saved with `productId` null; editing a product-linked detail restores its id, a free-text detail has none, and a row without a `product_id` field is saved with `productId` null; reopening the window clears the id and the list; the list shows the newest answer with no item active (Enter picks nothing); an answer that arrives after the window was reopened is not shown (9)
+- **pages/product-management-product-draft.test.js** - Boots the real product master page: "Open in manufacturer master" saves the window inputs as the product draft, with the transaction to return to from `?return_to=` (null when opened from the menu), and a second jump overwrites the draft; coming back with `?restore_product=1` restores the inputs, removes the draft and shows "Back to detail entry" only when the draft has a transaction to return to; a malformed draft is discarded and no draft opens no window (7)
+- **pages/manufacturer-management-product-draft.test.js** - Boots the real manufacturer master page with `?return_to_product=1`: after adding a manufacturer, its id from the reloaded list is written into the product draft as a string, replacing an earlier pick and keeping every other field; without a draft, or when the name is not in the reloaded list, the draft is left as it is; opened from the menu, the draft is not touched (6)
 - **modal-double-submit.test.js** - Shared `Modal._handleSave` re-entrancy guard + unhandled-rejection swallow tests (6)
 - **modal-stale-save-close.test.js** - Shared `Modal`: a save that finishes after the modal was closed and re-opened does not close or reset the re-opened session, and the re-opened modal can save while the earlier save is still pending (latent-audit L22) (2)
 - **master-crud.test.js** - Shared `saveMasterEntry` + `mapMasterErrorCode` + `formatApiError` (Fable-5 #D3/#D4/#23) tests (30)
@@ -80,7 +81,7 @@ and are **not** added again to the grand total.
 - **pages/dashboard-stale-reload.test.js** - Boots the real dashboard: when a slow September load finishes after a newer March load, the charts and titles stay on March (latent-audit scan2-A4) (1)
 - **single-flight.test.js** - `singleFlight` submit guard (latent-audit M19): ignores re-entrant calls, calls `preventDefault` on every submit, releases after resolve and after throw (4)
 - **pages/product-management-page.test.js** - Boots the real product master page: editing a product whose manufacturer is disabled keeps `manufacturer_id` on save (latent-audit M5) (1)
-- **pages/product-management-link-draft.test.js** - Boots the real product master page from the detail → product-master jump (`?return_to=`): after adding a product, the detail draft is linked only to the product whose name matches exactly, never to another search candidate (latent-audit L17) (2)
+- **pages/product-management-link-draft.test.js** - Boots the real product master page from the detail → product-master jump (`?return_to=`): after adding a product, the detail draft is linked only to the product whose name matches exactly, never to another search candidate (latent-audit L17); without a detail draft none is created, an empty search leaves the draft alone, and linking keeps every non-product field (5)
 - **pages/shop-management-disabled.test.js** - Boots the real shop master page: "show disabled" lists disabled shops with the disabled label, a late response from a quick double toggle does not overwrite the newer list, and the add / edit form's "disabled" checkbox is shown and sent as `isDisabled` (latent-audit M7) (4)
 - **pages/transaction-management-disabled-shop.test.js** - Boots the real transaction page: editing a transaction whose shop is disabled keeps that shop selected (shown with the disabled label) and saves it, while a new transaction is not offered the disabled shop (latent-audit M7) (2)
 - **pages/account-management-disabled.test.js** - Boots the real account master page: "show disabled" lists disabled accounts with the disabled label (NONE never listed), a late response from a quick double toggle does not overwrite the newer list, and the add / edit form's "disabled" checkbox is shown and sent as `isDisabled` (latent-audit M7) (4)
@@ -146,15 +147,16 @@ and are **not** added again to the grand total.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **Feature-Specific Tests** | **540** |
+| **Feature-Specific Tests** | **539** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 30 |
 | toast.test.js | 14 |
 | tax-calc.test.js | 12 |
-| product-autocomplete.test.js | 10 |
-| product-draft.test.js | 11 |
-| product-master-jump-draft.test.js | 11 |
+| pages/transaction-detail-draft-storage.test.js | 6 |
+| pages/transaction-detail-product-link.test.js | 9 |
+| pages/product-management-product-draft.test.js | 7 |
+| pages/manufacturer-management-product-draft.test.js | 6 |
 | modal-double-submit.test.js | 6 |
 | modal-stale-save-close.test.js | 2 |
 | master-crud.test.js | 30 |
@@ -195,7 +197,7 @@ and are **not** added again to the grand total.
 | pages/dashboard-stale-reload.test.js | 1 |
 | single-flight.test.js | 4 |
 | pages/product-management-page.test.js | 1 |
-| pages/product-management-link-draft.test.js | 2 |
+| pages/product-management-link-draft.test.js | 5 |
 | pages/shop-management-disabled.test.js | 4 |
 | pages/transaction-management-disabled-shop.test.js | 2 |
 | pages/account-management-disabled.test.js | 4 |
@@ -234,7 +236,7 @@ and are **not** added again to the grand total.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **Total (jest)** | **963** |
+| **Total (jest)** | **962** |
 
 Grand total is Screen + Feature + Aggregation (Common Test Suites are helper
 libraries invoked from Screen-Specific files and their assertions are already
