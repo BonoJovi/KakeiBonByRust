@@ -139,23 +139,27 @@ describe('formatLocalDate — boundary years', () => {
 // `YYYY-MM-DD HH:MM:SS`. The User Management list printed them as stored,
 // so a JST user saw times 9 hours behind. Runs under TZ=Asia/Tokyo.
 describe('formatUtcAsLocalDateTime — stored UTC shown in local time', () => {
-    test('UTC midnight is 09:00 in JST', () => {
+    test('should show 09:00 when the stored UTC time is midnight (JST)', () => {
         expect(formatUtcAsLocalDateTime('2026-01-01 00:00:00')).toBe('2026-01-01 09:00:00');
     });
 
-    test('an afternoon UTC time moves to the next local day', () => {
+    test('should move to the next local day when the stored UTC time is in the afternoon', () => {
         expect(formatUtcAsLocalDateTime('2026-04-22 16:43:45')).toBe('2026-04-23 01:43:45');
     });
 
-    test('the ISO "T" separator is accepted too', () => {
+    test('should convert the value when it uses the ISO "T" separator', () => {
         expect(formatUtcAsLocalDateTime('2026-05-26T19:28:14')).toBe('2026-05-27 04:28:14');
     });
 
-    test('a value that is not a timestamp is shown as it is', () => {
+    test('should show the value as it is when it is not a timestamp', () => {
         expect(formatUtcAsLocalDateTime('not a date')).toBe('not a date');
     });
 
-    test('an empty value gives an empty string', () => {
+    test('should show the value as it is when text follows the timestamp', () => {
+        expect(formatUtcAsLocalDateTime('2026-01-01 00:00:00oops')).toBe('2026-01-01 00:00:00oops');
+    });
+
+    test('should return an empty string when the value is empty', () => {
         expect(formatUtcAsLocalDateTime('')).toBe('');
         expect(formatUtcAsLocalDateTime(null)).toBe('');
     });

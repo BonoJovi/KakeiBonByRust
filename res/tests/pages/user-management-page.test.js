@@ -79,7 +79,7 @@ describe('user management (admin) — regression (latent audit 2026-09)', () => 
         expect(creates[0].username).toBe('bob');
     });
 
-    test('created and updated times are shown in local time, not as stored UTC', () => {
+    test('should show the created and updated times in local time when they are stored in UTC', () => {
         // Stored values are UTC; the tests run with TZ=Asia/Tokyo (UTC+9).
         const cells = (id) => {
             const btn = document.querySelector(`#user-list .btn-edit[data-user-id="${id}"]`);

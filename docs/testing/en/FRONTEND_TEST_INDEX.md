@@ -3,7 +3,7 @@
 This document provides a complete index of all frontend tests implemented in JavaScript.
 
 **Last Updated**: 2026-10-08 JST  
-**Total Tests**: 962 (jest suites; 92 test files, per `npm test`)
+**Total Tests**: 963 (jest suites; 92 test files, per `npm test`)
 
 ---
 
@@ -30,7 +30,7 @@ and are **not** added again to the grand total.
 - **login.test.js** - Login tests (58)
 - **user-deletion.test.js** - User deletion tests (46)
 
-### Feature-Specific Tests (539 tests)
+### Feature-Specific Tests (540 tests)
 
 - **transaction-edit.test.js** - Transaction edit tests (112)
 - **transaction-detail-management.test.js** - Transaction detail management tests (51)
@@ -47,7 +47,7 @@ and are **not** added again to the grand total.
 - **aggregation-error-translate.test.js** - `translateAggregationError` shape-guard tests (Fable-5 #9): coerces `Err(String)` / `ApiError { code, message }` / `Error` to a substring-matchable string before routing to i18n keys, and swaps unusable coerced values (`"[object Object]"`, `"null"`, `"undefined"`, `""`) for the localised generic banner, so the aggregation banner never renders those literals (13)
 - **aggregation-latest-request.test.js** - `createLatestRequestGuard` (aggregation-common.js): only the most recent request is latest, and each guard counts its own requests (latent-audit scan2-A4) (2)
 - **parse-amount-strict.test.js** - `parseAmountStrict` money-field strict integer parser (Fable-5 #10): replaces `parseInt(el.value) || 0` across the detail / transaction / recurring-rule submit paths, rejecting decimals, locale commas, scientific notation, sign prefixes, full-width digits, trailing garbage, and precision-losing integers past `Number.MAX_SAFE_INTEGER` (24)
-- **format-local-date.test.js** - `formatLocalDate` timezone-safe `YYYY-MM-DD` formatter (Fable-5 #13): replaces `new Date().toISOString().slice(0, 10)` in the recurring-rule modal so JST users opening the form before 09:00 no longer see yesterday's date in start-date / end-date / anchor-date defaults; test file pins `TZ=Asia/Tokyo` so a UTC regression is actually caught; `formatUtcAsLocalDateTime` shows a stored UTC timestamp (`YYYY-MM-DD HH:MM:SS`) in local time, with the `T` separator, non-timestamp and empty cases (21)
+- **format-local-date.test.js** - `formatLocalDate` timezone-safe `YYYY-MM-DD` formatter (Fable-5 #13): replaces `new Date().toISOString().slice(0, 10)` in the recurring-rule modal so JST users opening the form before 09:00 no longer see yesterday's date in start-date / end-date / anchor-date defaults; test file pins `TZ=Asia/Tokyo` so a UTC regression is actually caught; `formatUtcAsLocalDateTime` shows a stored UTC timestamp (`YYYY-MM-DD HH:MM:SS`) in local time, with the `T` separator, text after the timestamp, non-timestamp and empty cases (22)
 - **period-end-date.test.js** - `fetchMonthlyPeriodEndDate` (period.js): the dashboard account balances are taken as of the last day of the user's monthly period (custom start day / holiday shift from `get_monthly_period_bounds`), falling back to the calendar month end if the backend fails (latent-audit L14) (2)
 - **period-containing.test.js** - `findMonthlyPeriodContaining` / `findYearlyPeriodContaining` (period.js). Yearly: the year containing a date for starts 01-01, 04-01, 12-31 and 02-31 (month end), on both sides of the start. Monthly: returns the calendar month when its period contains the date, the previous month when that period starts later (start day 25), the next month when it ended earlier (holiday shift back over the month end), keeps stepping when the period is two months away (start day 31 + next business day), wraps the year both ways, and falls back to the calendar month when the backend fails or no period ever matches (latent-audit scan2-A3) (16)
 - **aggregation-render-unspecified.test.js** - `renderResults` unspecified-group i18n swap (Fable-5 #22): backend now returns an empty `group_name` string when the SHOP / PRODUCT / ACCOUNT reference is unspecified, and the renderer swaps it for `i18n.t('common.unspecified')` so English users don't see Japanese "指定なし" leaking through (5)
@@ -146,7 +146,7 @@ and are **not** added again to the grand total.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **Feature-Specific Tests** | **539** |
+| **Feature-Specific Tests** | **540** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 30 |
@@ -162,7 +162,7 @@ and are **not** added again to the grand total.
 | aggregation-error-translate.test.js | 13 |
 | aggregation-latest-request.test.js | 2 |
 | parse-amount-strict.test.js | 24 |
-| format-local-date.test.js | 21 |
+| format-local-date.test.js | 22 |
 | period-end-date.test.js | 2 |
 | period-containing.test.js | 16 |
 | aggregation-render-unspecified.test.js | 5 |
@@ -234,7 +234,7 @@ and are **not** added again to the grand total.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **Total (jest)** | **962** |
+| **Total (jest)** | **963** |
 
 Grand total is Screen + Feature + Aggregation (Common Test Suites are helper
 libraries invoked from Screen-Specific files and their assertions are already

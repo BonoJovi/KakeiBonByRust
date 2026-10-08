@@ -44,7 +44,7 @@ export function formatLocalDate(date) {
  */
 export function formatUtcAsLocalDateTime(utcText) {
     if (!utcText) return '';
-    const match = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/.exec(String(utcText).trim());
+    const match = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})$/.exec(String(utcText).trim());
     if (!match) return String(utcText);
     const [, y, mo, d, h, mi, s] = match.map(Number);
     const date = new Date(Date.UTC(y, mo - 1, d, h, mi, s));
