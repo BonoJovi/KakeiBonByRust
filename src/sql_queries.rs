@@ -1040,7 +1040,7 @@ CREATE TABLE IF NOT EXISTS TRANSACTIONS_HEADER (
     IS_DISABLED INTEGER DEFAULT 0,
     IS_SCHEDULED INTEGER DEFAULT 0,
     RULE_ID INTEGER,
-    ENTRY_DT DATETIME NOT NULL DEFAULT (datetime('now', 'localtime')),
+    ENTRY_DT DATETIME NOT NULL DEFAULT (datetime('now')),
     UPDATE_DT DATETIME,
     FOREIGN KEY (USER_ID) REFERENCES USERS(USER_ID) ON DELETE CASCADE,
     FOREIGN KEY (USER_ID, CATEGORY1_CODE) REFERENCES CATEGORY1(USER_ID, CATEGORY1_CODE),
@@ -1419,7 +1419,7 @@ CREATE TABLE IF NOT EXISTS RECURRING_RULES (
     TAX_INCLUDED_TYPE INTEGER DEFAULT 1 NOT NULL,
     MEMO_ID INTEGER,
     IS_DISABLED INTEGER DEFAULT 0,
-    ENTRY_DT DATETIME NOT NULL DEFAULT (datetime('now', 'localtime')),
+    ENTRY_DT DATETIME NOT NULL DEFAULT (datetime('now')),
     UPDATE_DT DATETIME,
     FOREIGN KEY (USER_ID) REFERENCES USERS(USER_ID) ON DELETE CASCADE,
     FOREIGN KEY (USER_ID, CATEGORY1_CODE) REFERENCES CATEGORY1(USER_ID, CATEGORY1_CODE),
@@ -1481,6 +1481,8 @@ CREATE TABLE IF NOT EXISTS HOLIDAYS_USER_CUSTOM (
 
 // Bind order matches the create_rule_with_instances() service. FIRST_TRANSACTION_ID
 // stays NULL on insert and is patched after the first instance is generated.
+// ENTRY_DT is set here (UTC) rather than left to the column default, which is
+// local time in databases created before the timestamps were unified.
 pub const RECURRING_RULES_INSERT: &str = r#"
 INSERT INTO RECURRING_RULES (
     USER_ID, RULE_NAME,
@@ -1490,8 +1492,9 @@ INSERT INTO RECURRING_RULES (
     HOLIDAY_SHIFT_TYPE,
     START_DATE, END_DATE,
     SHOP_ID, CATEGORY1_CODE, FROM_ACCOUNT_CODE, TO_ACCOUNT_CODE,
-    TOTAL_AMOUNT, TAX_ROUNDING_TYPE, TAX_INCLUDED_TYPE, MEMO_ID
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    TOTAL_AMOUNT, TAX_ROUNDING_TYPE, TAX_INCLUDED_TYPE, MEMO_ID,
+    ENTRY_DT
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
 "#;
 
 pub const RECURRING_RULE_DETAILS_INSERT: &str = r#"
@@ -1510,7 +1513,7 @@ INSERT INTO TRANSACTIONS_HEADER (
     FROM_ACCOUNT_CODE, TO_ACCOUNT_CODE,
     TOTAL_AMOUNT, TAX_ROUNDING_TYPE, TAX_INCLUDED_TYPE, MEMO_ID,
     IS_SCHEDULED, RULE_ID, ENTRY_DT
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, datetime('now', 'localtime'))
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, datetime('now'))
 "#;
 
 // Cascade-delete path for a recurring rule: drop the rule's still-scheduled
@@ -1791,7 +1794,7 @@ WHERE DETAIL_ID = ?
 
 pub const MEMO_INSERT: &str = r#"
 INSERT INTO MEMOS (USER_ID, MEMO_TEXT, ENTRY_DT)
-VALUES (?, ?, datetime('now', 'localtime'))
+VALUES (?, ?, datetime('now'))
 "#;
 
 pub const MEMO_GET_BY_ID: &str = r#"
@@ -1802,7 +1805,7 @@ WHERE MEMO_ID = ?
 
 pub const MEMO_UPDATE: &str = r#"
 UPDATE MEMOS
-SET MEMO_TEXT = ?, UPDATE_DT = datetime('now', 'localtime')
+SET MEMO_TEXT = ?, UPDATE_DT = datetime('now')
 WHERE MEMO_ID = ?
 "#;
 
@@ -2776,3 +2779,47 @@ pub const TEST_ACCOUNT_INSERT_NONE_TEMPLATE: &str = r#"
 INSERT INTO ACCOUNT_TEMPLATES (TEMPLATE_CODE, TEMPLATE_NAME_JA, TEMPLATE_NAME_EN, DISPLAY_ORDER)
 VALUES ('NONE', '指定なし', 'Unspecified', 0)
 "#;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Created/updated timestamps (ENTRY_DT / UPDATE_DT) are stored in UTC
+    // everywhere: `datetime('now')` in SQL and `chrono::Utc::now()` in Rust.
+    // A few places wrote local time instead, so the stored values did not
+    // agree with each other. The needle is built at run time so this test's
+    // own source does not match it.
+    fn local_time_modifier() -> String {
+        format!("'{}{}'", "local", "time")
+    }
+
+    #[test]
+    fn test_sql_queries_store_timestamps_in_utc() {
+        let source = include_str!("sql_queries.rs");
+        assert!(
+            !source.contains(&local_time_modifier()),
+            "sql_queries.rs must store ENTRY_DT / UPDATE_DT with datetime('now') (UTC), not local time"
+        );
+    }
+
+    #[test]
+    fn test_init_sql_stores_timestamps_in_utc() {
+        let init_sql = include_str!("../res/sql/dbaccess.sql");
+        assert!(
+            !init_sql.contains(&local_time_modifier()),
+            "dbaccess.sql must default ENTRY_DT / UPDATE_DT to datetime('now') (UTC), not local time"
+        );
+    }
+
+    #[test]
+    fn test_recurring_rules_insert_sets_entry_dt_explicitly() {
+        // An existing database keeps the old local-time column default
+        // (SQLite cannot change a default without rebuilding the table), so
+        // the insert must set ENTRY_DT itself.
+        assert!(
+            RECURRING_RULES_INSERT.contains("ENTRY_DT"),
+            "RECURRING_RULES_INSERT must set ENTRY_DT instead of relying on the column default"
+        );
+        assert!(RECURRING_RULES_INSERT.contains("datetime('now')"));
+    }
+}
