@@ -42,7 +42,7 @@ afterEach(() => {
 });
 
 describe('attachCharCounter — non-IME baseline behaviour still holds', () => {
-    test('renders "actual / max" counter next to the input', () => {
+    test('should render an "actual / max" counter next to the input when it is attached', () => {
         const input = makeInput('ab');
         attachCharCounter(input, 5);
         const counter = input.nextElementSibling;
@@ -50,7 +50,7 @@ describe('attachCharCounter — non-IME baseline behaviour still holds', () => {
         expect(counter.textContent).toBe('2 / 5');
     });
 
-    test('truncates plain typing beyond max on input event', () => {
+    test('should truncate the value on the input event when plain typing goes beyond max', () => {
         const input = makeInput('');
         attachCharCounter(input, 3);
         input.value = 'abcdef';
@@ -59,7 +59,7 @@ describe('attachCharCounter — non-IME baseline behaviour still holds', () => {
         expect(input.nextElementSibling.textContent).toBe('3 / 3');
     });
 
-    test('counts multibyte characters by code point, not UTF-16 unit', () => {
+    test('should count by code point, not UTF-16 unit, when the text has multibyte characters', () => {
         const input = makeInput('あいうえおか'); // 6 code points
         attachCharCounter(input, 4);
         // Initial call already runs update; oversize gets truncated even
@@ -70,7 +70,7 @@ describe('attachCharCounter — non-IME baseline behaviour still holds', () => {
 });
 
 describe('attachCharCounter — IME composition guard (Fable-5 #D1)', () => {
-    test('input events fired inside a composition do NOT truncate value', () => {
+    test('should not truncate the value when input events fire inside a composition', () => {
         const input = makeInput('');
         attachCharCounter(input, 5);
 
@@ -89,7 +89,7 @@ describe('attachCharCounter — IME composition guard (Fable-5 #D1)', () => {
         // — that is the write that corrupts the IME buffer.
     });
 
-    test('compositionend commits + applies truncation', () => {
+    test('should commit and truncate the value when compositionend fires', () => {
         const input = makeInput('');
         attachCharCounter(input, 5);
 
@@ -103,7 +103,7 @@ describe('attachCharCounter — IME composition guard (Fable-5 #D1)', () => {
         expect(input.nextElementSibling.textContent).toBe('5 / 5');
     });
 
-    test('a fresh composition after commit does not carry the composing flag', () => {
+    test('should not carry the composing flag when a fresh composition follows a commit', () => {
         const input = makeInput('');
         attachCharCounter(input, 5);
 
@@ -120,7 +120,7 @@ describe('attachCharCounter — IME composition guard (Fable-5 #D1)', () => {
         expect([...input.value].length).toBe(5);
     });
 
-    test('idempotent: a second attach detaches prior listeners so counting is not doubled', () => {
+    test('should detach the earlier listeners so counting is not doubled when it is attached a second time', () => {
         const input = makeInput('ab');
         attachCharCounter(input, 5);
         attachCharCounter(input, 5);
@@ -144,7 +144,7 @@ describe('attachCharCounter — IME composition guard (Fable-5 #D1)', () => {
         expect([...input.value].length).toBe(5);
     });
 
-    test('detach() removes all three listeners (input, compositionstart, compositionend)', () => {
+    test('should remove all three listeners (input, compositionstart, compositionend) when detach() is called', () => {
         const input = makeInput('');
         const detach = attachCharCounter(input, 3);
         detach();
