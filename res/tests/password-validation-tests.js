@@ -11,37 +11,37 @@ import { validatePassword } from './validation-helpers.js';
  */
 export function testEmptyPasswordValidation(validationFn) {
     describe('Empty Password Validation', () => {
-        test('should reject empty string password', () => {
+        test('should reject the password when it is an empty string', () => {
             const result = validationFn('', 'test123');
             expect(result.valid).toBe(false);
             expect(result.message).toBe('Password cannot be empty!');
         });
 
-        test('should reject password with only spaces', () => {
+        test('should reject the password when it has only spaces', () => {
             const result = validationFn('   ', 'test123');
             expect(result.valid).toBe(false);
             expect(result.message).toBe('Password cannot be empty!');
         });
 
-        test('should reject password with only tabs', () => {
+        test('should reject the password when it has only tabs', () => {
             const result = validationFn('\t\t', 'test123');
             expect(result.valid).toBe(false);
             expect(result.message).toBe('Password cannot be empty!');
         });
 
-        test('should reject password with mixed whitespace', () => {
+        test('should reject the password when it has only mixed whitespace', () => {
             const result = validationFn(' \t \n ', 'test123');
             expect(result.valid).toBe(false);
             expect(result.message).toBe('Password cannot be empty!');
         });
 
-        test('should reject null password', () => {
+        test('should reject the password when it is null', () => {
             const result = validationFn(null, 'test123');
             expect(result.valid).toBe(false);
             expect(result.message).toBe('Password cannot be empty!');
         });
 
-        test('should reject undefined password', () => {
+        test('should reject the password when it is undefined', () => {
             const result = validationFn(undefined, 'test123');
             expect(result.valid).toBe(false);
             expect(result.message).toBe('Password cannot be empty!');
@@ -54,37 +54,37 @@ export function testEmptyPasswordValidation(validationFn) {
  */
 export function testPasswordLengthValidation(validationFn) {
     describe('Password Length Validation', () => {
-        test('should reject password shorter than 16 characters', () => {
+        test('should reject the password when it is shorter than 16 characters', () => {
             const result = validationFn('short', 'short');
             expect(result.valid).toBe(false);
             expect(result.message).toBe('Password must be at least 16 characters long!');
         });
 
-        test('should reject single character password', () => {
+        test('should reject the password when it has a single character', () => {
             const result = validationFn('a', 'a');
             expect(result.valid).toBe(false);
             expect(result.message).toBe('Password must be at least 16 characters long!');
         });
 
-        test('should reject password with exactly 15 characters', () => {
+        test('should reject the password when it has exactly 15 characters', () => {
             const result = validationFn('123456789012345', '123456789012345');
             expect(result.valid).toBe(false);
             expect(result.message).toBe('Password must be at least 16 characters long!');
         });
 
-        test('should accept password with exactly 16 characters', () => {
+        test('should accept the password when it has exactly 16 characters', () => {
             const result = validationFn('1234567890123456', '1234567890123456');
             expect(result.valid).toBe(true);
             expect(result.message).toBe('');
         });
 
-        test('should accept password with more than 16 characters', () => {
+        test('should accept the password when it has more than 16 characters', () => {
             const result = validationFn('thisIsAVerySecurePassword', 'thisIsAVerySecurePassword');
             expect(result.valid).toBe(true);
             expect(result.message).toBe('');
         });
 
-        test('should accept very long password', () => {
+        test('should accept the password when it is very long (100 characters)', () => {
             const longPassword = 'a'.repeat(100);
             const result = validationFn(longPassword, longPassword);
             expect(result.valid).toBe(true);
@@ -98,7 +98,7 @@ export function testPasswordLengthValidation(validationFn) {
  */
 export function testPasswordMatchValidation(validationFn) {
     describe('Password Matching Validation', () => {
-        test('should reject non-matching passwords', () => {
+        test('should reject the passwords when they do not match', () => {
             const result = validationFn('passwordpassword', 'differentpassword');
             expect(result.valid).toBe(false);
             expect(result.message).toBe('Passwords do not match!');
@@ -116,7 +116,7 @@ export function testPasswordMatchValidation(validationFn) {
             expect(result.message).toBe('Passwords do not match!');
         });
 
-        test('should reject case-sensitive mismatch', () => {
+        test('should reject the passwords when they differ only in letter case', () => {
             const result = validationFn('Passwordpassword', 'passwordpassword');
             expect(result.valid).toBe(false);
             expect(result.message).toBe('Passwords do not match!');
@@ -141,7 +141,7 @@ export function testPasswordMatchValidation(validationFn) {
  */
 export function testValidPasswordScenarios(validationFn) {
     describe('Valid Password Scenarios', () => {
-        test('should accept valid matching passwords with 16 characters', () => {
+        test('should accept the passwords when they match and have 16 characters', () => {
             const result = validationFn('1234567890123456', '1234567890123456');
             expect(result.valid).toBe(true);
             expect(result.message).toBe('');
@@ -153,39 +153,39 @@ export function testValidPasswordScenarios(validationFn) {
             expect(result.message).toBe('');
         });
 
-        test('should accept password with special characters', () => {
+        test('should accept the password when it has special characters', () => {
             const result = validationFn('p@ss!w0rd#123456', 'p@ss!w0rd#123456');
             expect(result.valid).toBe(true);
             expect(result.message).toBe('');
         });
 
-        test('should accept password with unicode characters', () => {
+        test('should accept the password when it has unicode characters', () => {
             const password = 'パスワード12345678901234';
             const result = validationFn(password, password);
             expect(result.valid).toBe(true);
             expect(result.message).toBe('');
         });
 
-        test('should accept complex password with mixed characters', () => {
+        test('should accept the password when it mixes letters, digits and symbols', () => {
             const password = 'C0mpl3x!P@ssw0rd#2024$%^&*()';
             const result = validationFn(password, password);
             expect(result.valid).toBe(true);
             expect(result.message).toBe('');
         });
 
-        test('should accept password with all numeric characters', () => {
+        test('should accept the password when it has only digits', () => {
             const result = validationFn('1234567890123456', '1234567890123456');
             expect(result.valid).toBe(true);
             expect(result.message).toBe('');
         });
 
-        test('should accept password with all alphabetic characters', () => {
+        test('should accept the password when it has only letters', () => {
             const result = validationFn('abcdefghijklmnop', 'abcdefghijklmnop');
             expect(result.valid).toBe(true);
             expect(result.message).toBe('');
         });
 
-        test('should accept password with all special characters', () => {
+        test('should accept the password when it has only special characters', () => {
             const result = validationFn('!@#$%^&*()_+-={}', '!@#$%^&*()_+-={}');
             expect(result.valid).toBe(true);
             expect(result.message).toBe('');

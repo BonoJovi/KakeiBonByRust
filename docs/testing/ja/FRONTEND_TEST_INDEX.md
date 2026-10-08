@@ -139,32 +139,32 @@
 
 | テスト名 | 説明 | 期待結果 |
 |---------|------|---------|
-| `should reject empty string password` | 空文字列パスワードを拒否 | エラー: "Password cannot be empty!" |
-| `should reject password with only spaces` | スペースのみのパスワードを拒否 | エラー: "Password cannot be empty!" |
-| `should reject password with only tabs` | タブのみのパスワードを拒否 | エラー: "Password cannot be empty!" |
-| `should reject password with mixed whitespace` | 混合空白文字のみのパスワードを拒否 | エラー: "Password cannot be empty!" |
-| `should reject null password` | nullパスワードを拒否 | エラー: "Password cannot be empty!" |
-| `should reject undefined password` | undefinedパスワードを拒否 | エラー: "Password cannot be empty!" |
+| `should reject the password when it is an empty string` | 空文字列パスワードを拒否 | エラー: "Password cannot be empty!" |
+| `should reject the password when it has only spaces` | スペースのみのパスワードを拒否 | エラー: "Password cannot be empty!" |
+| `should reject the password when it has only tabs` | タブのみのパスワードを拒否 | エラー: "Password cannot be empty!" |
+| `should reject the password when it has only mixed whitespace` | 混合空白文字のみのパスワードを拒否 | エラー: "Password cannot be empty!" |
+| `should reject the password when it is null` | nullパスワードを拒否 | エラー: "Password cannot be empty!" |
+| `should reject the password when it is undefined` | undefinedパスワードを拒否 | エラー: "Password cannot be empty!" |
 
 **testPasswordLengthValidation (6件)**
 
 | テスト名 | 説明 | 期待結果 |
 |---------|------|---------|
-| `should reject password shorter than 16 characters` | 16文字未満のパスワードを拒否 | エラー: "Password must be at least 16 characters long!" |
+| `should reject the password when it is shorter than 16 characters` | 16文字未満のパスワードを拒否 | エラー: "Password must be at least 16 characters long!" |
 | `should reject password with exactly 1 character` | ちょうど1文字のパスワードを拒否 | エラー: "Password must be at least 16 characters long!" |
-| `should reject password with exactly 15 characters` | ちょうど15文字のパスワードを拒否 | エラー: "Password must be at least 16 characters long!" |
-| `should accept password with exactly 16 characters` | ちょうど16文字のパスワードを受け入れ | valid: true |
+| `should reject the password when it has exactly 15 characters` | ちょうど15文字のパスワードを拒否 | エラー: "Password must be at least 16 characters long!" |
+| `should accept the password when it has exactly 16 characters` | ちょうど16文字のパスワードを受け入れ | valid: true |
 | `should accept password longer than 16 characters` | 16文字以上のパスワードを受け入れ | valid: true |
-| `should accept very long password` | 非常に長いパスワード（1000文字）を受け入れ | valid: true |
+| `should accept the password when it is very long (100 characters)` | 非常に長いパスワード（1000文字）を受け入れ | valid: true |
 
 **testPasswordMatchValidation (6件)**
 
 | テスト名 | 説明 | 期待結果 |
 |---------|------|---------|
-| `should reject non-matching passwords` | 不一致のパスワードを拒否 | エラー: "Passwords do not match!" |
+| `should reject the passwords when they do not match` | 不一致のパスワードを拒否 | エラー: "Passwords do not match!" |
 | `should reject when password is valid but confirmation is empty` | パスワードが有効で確認が空の場合を拒否 | エラー: "Password cannot be empty!" or "Passwords do not match!" |
 | `should reject when password is valid but confirmation is null` | パスワードが有効で確認がnullの場合を拒否 | エラー: "Passwords do not match!" |
-| `should reject case-sensitive mismatch` | 大文字小文字の不一致を拒否 | エラー: "Passwords do not match!" |
+| `should reject the passwords when they differ only in letter case` | 大文字小文字の不一致を拒否 | エラー: "Passwords do not match!" |
 | `should accept matching passwords` | 一致するパスワードを受け入れ | valid: true |
 | `should accept matching passwords with special chars` | 特殊文字を含む一致するパスワードを受け入れ | valid: true |
 
@@ -173,10 +173,10 @@
 | テスト名 | 説明 | 期待結果 |
 |---------|------|---------|
 | `should accept password with spaces (if matching and >= 16 chars)` | スペースを含む有効なパスワードを受け入れ | valid: true |
-| `should accept password with special characters` | 特殊文字を含むパスワードを受け入れ | valid: true |
+| `should accept the password when it has special characters` | 特殊文字を含むパスワードを受け入れ | valid: true |
 | `should accept password with leading/trailing spaces (if matching and >= 16 chars)` | 前後にスペースがあるパスワードを受け入れ | valid: true |
-| `should accept very long password` | 非常に長いパスワードを受け入れ | valid: true |
-| `should accept password with unicode characters` | Unicode文字を含むパスワードを受け入れ | valid: true |
+| `should accept the password when it is very long (100 characters)` | 非常に長いパスワードを受け入れ | valid: true |
+| `should accept the password when it has unicode characters` | Unicode文字を含むパスワードを受け入れ | valid: true |
 | `should accept password with emoji` | 絵文字を含むパスワードを受け入れ | valid: true |
 | `should accept alphanumeric only password` | 英数字のみのパスワードを受け入れ | valid: true |
 | `should accept numeric only password (if >= 16 chars)` | 数字のみのパスワード（16文字以上）を受け入れ | valid: true |
@@ -200,12 +200,12 @@
 
 | テスト名 | 説明 | 期待結果 |
 |---------|------|---------|
-| `should reject empty username` | 空ユーザー名を拒否 | エラー: "Username cannot be empty!" |
-| `should reject username with only spaces` | スペースのみのユーザー名を拒否 | エラー: "Username cannot be empty!" |
-| `should reject username with only tabs` | タブのみのユーザー名を拒否 | エラー: "Username cannot be empty!" |
-| `should reject username with mixed whitespace` | 混合空白文字のみのユーザー名を拒否 | エラー: "Username cannot be empty!" |
-| `should reject null username` | nullユーザー名を拒否 | エラー: "Username cannot be empty!" |
-| `should reject undefined username` | undefinedユーザー名を拒否 | エラー: "Username cannot be empty!" |
+| `should reject the username when it is empty` | 空ユーザー名を拒否 | エラー: "Username cannot be empty!" |
+| `should reject the username when it has only spaces` | スペースのみのユーザー名を拒否 | エラー: "Username cannot be empty!" |
+| `should reject the username when it has only tabs` | タブのみのユーザー名を拒否 | エラー: "Username cannot be empty!" |
+| `should reject the username when it has only mixed whitespace` | 混合空白文字のみのユーザー名を拒否 | エラー: "Username cannot be empty!" |
+| `should reject the username when it is null` | nullユーザー名を拒否 | エラー: "Username cannot be empty!" |
+| `should reject the username when it is undefined` | undefinedユーザー名を拒否 | エラー: "Username cannot be empty!" |
 | `should accept valid username` | 有効なユーザー名を受け入れ | valid: true |
 | `should accept username with numbers` | 数字を含むユーザー名を受け入れ | valid: true |
 | `should accept username with underscores` | アンダースコアを含むユーザー名を受け入れ | valid: true |
@@ -250,7 +250,7 @@
 |---------|------|---------|
 | `should allow username change without password` | パスワードなしでユーザー名変更を許可 | valid: true |
 | `should reject empty username even when password is empty` | パスワードが空でも空ユーザー名を拒否 | エラー: "Username cannot be empty!" |
-| `should reject whitespace-only username` | 空白のみのユーザー名を拒否 | エラー: "Username cannot be empty!" |
+| `should reject the username when it has only whitespace` | 空白のみのユーザー名を拒否 | エラー: "Username cannot be empty!" |
 | `should accept valid username with empty password in edit mode` | 編集モードで有効なユーザー名と空パスワードを受け入れ | valid: true |
 | `should accept unicode username without password change` | パスワード変更なしでUnicodeユーザー名を受け入れ | valid: true |
 | `should accept special chars username without password change` | パスワード変更なしで特殊文字ユーザー名を受け入れ | valid: true |
@@ -264,8 +264,8 @@
 | `should reject password change if new password is too short` | 新パスワードが短すぎる場合を拒否 | エラー: "Password must be at least 16 characters long!" |
 | `should reject password change if passwords don't match` | パスワードが一致しない場合を拒否 | エラー: "Passwords do not match!" |
 | `should accept valid password change with same username` | 同じユーザー名で有効なパスワード変更を受け入れ | valid: true |
-| `should accept password with special characters` | 特殊文字を含むパスワードを受け入れ | valid: true |
-| `should accept password with unicode characters` | Unicode文字を含むパスワードを受け入れ | valid: true |
+| `should accept the password when it has special characters` | 特殊文字を含むパスワードを受け入れ | valid: true |
+| `should accept the password when it has unicode characters` | Unicode文字を含むパスワードを受け入れ | valid: true |
 | `should accept very long new password` | 非常に長い新パスワードを受け入れ | valid: true |
 
 **testCombinedEdit (4件)**
@@ -321,7 +321,7 @@
 | テスト名 | 説明 | 期待結果 |
 |---------|------|---------|
 | `should handle password with leading/trailing spaces if matching and long enough` | 前後にスペース付き、両者一致・16文字以上 | valid: true |
-| `should accept very long password` | 1000 文字パスワード | valid: true |
+| `should accept the password when it is very long (100 characters)` | 1000 文字パスワード | valid: true |
 | `should accept password with emojis` | 絵文字を含むパスワード (2 バイト以上文字含む) | valid: true |
 | `should handle password with newlines (not trimmed)` | 改行を含み、確認側で改行が落ちる | valid: false, "Passwords do not match!" |
 | `should handle zero-width space` | ゼロ幅スペース 1 文字 (可視 0 だが `.length` は 1) | valid: false, "at least 16 characters" |
