@@ -55,7 +55,7 @@ async fn setup_recurring_db() -> SqlitePool {
             TAX_INCLUDED_TYPE INTEGER DEFAULT 1 NOT NULL,
             MEMO_ID INTEGER,
             IS_DISABLED INTEGER DEFAULT 0,
-            ENTRY_DT DATETIME NOT NULL DEFAULT (datetime('now', 'localtime')),
+            ENTRY_DT DATETIME NOT NULL DEFAULT (datetime('now')),
             UPDATE_DT DATETIME
         )",
         "CREATE TABLE RECURRING_RULE_DETAILS (
