@@ -3,7 +3,7 @@
 This document provides a complete index of all frontend tests implemented in JavaScript.
 
 **Last Updated**: 2026-10-08 JST  
-**Total Tests**: 948 (jest suites; 91 test files, per `npm test`)
+**Total Tests**: 950 (jest suites; 91 test files, per `npm test`)
 
 ---
 
@@ -30,7 +30,7 @@ and are **not** added again to the grand total.
 - **login.test.js** - Login tests (58)
 - **user-deletion.test.js** - User deletion tests (46)
 
-### Feature-Specific Tests (521 tests)
+### Feature-Specific Tests (527 tests)
 
 - **transaction-edit.test.js** - Transaction edit tests (112)
 - **transaction-detail-management.test.js** - Transaction detail management tests (51)
@@ -56,7 +56,7 @@ and are **not** added again to the grand total.
 - **pages/transaction-detail-unreachable-included-price.test.js** - Boots the real detail page: a tax-included price with no exact tax-excluded split (1000 at 10 % floor) is kept as typed and saved as 909 + 91 (latent-audit scan2-T2) (1)
 - **pages/transaction-detail-hidden-category.test.js** - Boots the real detail page: editing a detail whose category2 (with its category3) or category3 alone is hidden keeps the category on a memo-only save, the hidden entry being offered with `common.disabled_label` (latent-audit scan2-T3) (2)
 - **pages/transaction-management-page.test.js** - Boots the real transaction page against `transaction-management.html`: saving a header without details shows no ¥0 recalc prompt and completes the save flow (latent-audit H4); a blank transaction date is rejected with `validation.required` before sending (latent-audit L8); deleting the only row on the last page moves back to the last page, and a late older page response does not overwrite a newer one (latent-audit L5) (4)
-- **pages/user-management-page.test.js** - Boots the real user management page (admin session): a whitespace-only username is rejected with the required-field message before `create_general_user`, while a normal name still reaches it (latent-audit M13) (2)
+- **pages/user-management-page.test.js** - Boots the real user management page (admin session): a whitespace-only username is rejected with the required-field message before `create_general_user`, while a normal name still reaches it (latent-audit M13); an admin sees the Add User button and its footer (latent-audit L30) (3)
 - **pages/user-management-delete-last-user.test.js** - Boots the real user management page (admin session): when the backend refuses to delete the last general user (`last_general_user`), the screen shows `user_mgmt.last_general_user` instead of the generic failure with the English backend text (latent-audit scan2-C5) (1)
 - **pages/index-logout-hides-user-setup.test.js** - Boots the real index page (menu.js): logging out while the user-setup form is shown, before the 1 s switch after login has run, or before the login's setup check has answered, leaves only the login form on screen (`#user-setup`, `#admin-setup` and `#app-content` hidden) (latent-audit scan2-C6) (3)
 - **pages/recurring-rule-page.test.js** - Boots the real recurring rule page: a TRANSFER template from an account to itself is rejected with `transaction_mgmt.transfer_same_account` before `create_recurring_rule`, while two different accounts still go through, and a backend `transfer_same_account` rejection shows the same message (latent-audit M16) ; a backend `recurring_holiday_shift_too_long` rejection shows `recurring_rule.holiday_shift_too_long` (4)
@@ -110,7 +110,7 @@ and are **not** added again to the grand total.
 - **pages/transaction-management-filter-hidden-category.test.js** - Boots the real transaction list: the category filter also offers a hidden CATEGORY2 and its CATEGORY3, labelled with `common.disabled_label`, so their past transactions can still be searched (latent-audit scan2-M7) (1)
 - **pages/transaction-management-save-before-details.test.js** - Boots the real transaction list: "Manage details" with unsaved header edits asks in an in-app dialog (`#save-before-details-modal`, `transaction_mgmt.save_before_details_confirm`, no native `confirm()`), saves the header through the normal save and moves on, and a second click while saving does not save twice; Cancel or Esc closes only the dialog and keeps the edit modal open without saving; without changes it moves on at once (latent-audit scan2-T6) (5)
 - **pages/user-management-password-page.test.js** - Admin session: a 16-space password is reported as the password error, not as the raw `user_mgmt.empty_name` key on the username (latent-audit L24); 8 emoji (16 UTF-16 units, 8 characters) are rejected by the frontend length check (latent-audit L31) (2)
-- **pages/user-management-nonadmin-page.test.js** - General-user session: no Add User button and no delete button on the user's own row (latent-audit L30) (2)
+- **pages/user-management-nonadmin-page.test.js** - General-user session: no Add User button, no empty footer line where the button was, and no delete button on the user's own row (latent-audit L30) (3)
 - **pages/index-setup-password-length.test.js** - Setup forms count password characters, not UTF-16 units: 8 emoji are rejected for admin and user setup (latent-audit L31) (2)
 
 ### Aggregation Tests (115 tests)
@@ -145,7 +145,7 @@ and are **not** added again to the grand total.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **Feature-Specific Tests** | **525** |
+| **Feature-Specific Tests** | **527** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 30 |
@@ -170,7 +170,7 @@ and are **not** added again to the grand total.
 | pages/transaction-detail-unreachable-included-price.test.js | 1 |
 | pages/transaction-detail-hidden-category.test.js | 2 |
 | pages/transaction-management-page.test.js | 4 |
-| pages/user-management-page.test.js | 2 |
+| pages/user-management-page.test.js | 3 |
 | pages/user-management-delete-last-user.test.js | 1 |
 | pages/index-logout-hides-user-setup.test.js | 3 |
 | pages/recurring-rule-page.test.js | 4 |
@@ -224,7 +224,7 @@ and are **not** added again to the grand total.
 | pages/transaction-management-filter-hidden-category.test.js | 1 |
 | pages/transaction-management-save-before-details.test.js | 5 |
 | pages/user-management-password-page.test.js | 2 |
-| pages/user-management-nonadmin-page.test.js | 2 |
+| pages/user-management-nonadmin-page.test.js | 3 |
 | pages/index-setup-password-length.test.js | 2 |
 | **Aggregation Tests** | **115** |
 | aggregation-daily.test.js | 16 |
@@ -232,7 +232,7 @@ and are **not** added again to the grand total.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **Total (jest)** | **948** |
+| **Total (jest)** | **950** |
 
 Grand total is Screen + Feature + Aggregation (Common Test Suites are helper
 libraries invoked from Screen-Specific files and their assertions are already

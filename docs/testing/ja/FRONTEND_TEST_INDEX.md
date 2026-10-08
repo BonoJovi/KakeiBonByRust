@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-10-08 JST  
-**総テスト数**: 948件 (jest suite 91 ファイル、`npm test` 実測)
+**総テスト数**: 950件 (jest suite 91 ファイル、`npm test` 実測)
 
 ---
 
@@ -841,14 +841,15 @@
 
 ### pages/user-management-page.test.js
 
-実際のユーザー管理画面モジュールを `user-management.html` に対して管理者セッションで起動する回帰テスト (潜在監査 M13)。
+実際のユーザー管理画面モジュールを `user-management.html` に対して管理者セッションで起動する回帰テスト (潜在監査 M13、L30)。
 
-**テスト数**: 2件
+**テスト数**: 3件
 
 | テスト | 説明 |
 |--------|------|
 | `[M13] a whitespace-only username is rejected before create_general_user` | 空白のみのユーザー名は `validation.required` をユーザー名欄に表示し、`create_general_user` を送らない |
 | `[M13] a normal username still reaches create_general_user` | 通常のユーザー名は `create_general_user` に送られる (比較用) |
+| `[L30] an admin sees the Add User button and its footer` | 管理者には「ユーザー追加」ボタンとその下部の区切り線 (フッター) が表示される (比較用) |
 
 **ファイル**: res/tests/pages/user-management-page.test.js
 
@@ -1651,11 +1652,12 @@
 
 ユーザー管理画面 (一般ユーザーセッション) の回帰テスト (潜在監査 L30)。
 
-**テスト数**: 2件
+**テスト数**: 3件
 
 | テスト | 説明 |
 |--------|------|
 | `[L30] a non-admin user is not offered the Add User button` | 一般ユーザーには「ユーザー追加」ボタンを出さない |
+| `[L30] a non-admin user does not see the empty footer line under the list` | ボタンを隠したあとに区切り線 (フッター) だけが残らないよう、フッターごと隠す |
 | `[L30] a non-admin user has no delete button on their own row` | 一般ユーザーの自分の行に削除ボタンを出さない |
 
 **ファイル**: res/tests/pages/user-management-nonadmin-page.test.js
@@ -1841,7 +1843,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **525件** |
+| **機能別テスト** | **527件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 30 |
@@ -1866,7 +1868,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | pages/transaction-detail-unreachable-included-price.test.js | 1 |
 | pages/transaction-detail-hidden-category.test.js | 2 |
 | pages/transaction-management-page.test.js | 4 |
-| pages/user-management-page.test.js | 2 |
+| pages/user-management-page.test.js | 3 |
 | pages/user-management-delete-last-user.test.js | 1 |
 | pages/index-logout-hides-user-setup.test.js | 3 |
 | pages/recurring-rule-page.test.js | 4 |
@@ -1920,7 +1922,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | pages/transaction-management-filter-hidden-category.test.js | 1 |
 | pages/transaction-management-save-before-details.test.js | 5 |
 | pages/user-management-password-page.test.js | 2 |
-| pages/user-management-nonadmin-page.test.js | 2 |
+| pages/user-management-nonadmin-page.test.js | 3 |
 | pages/index-setup-password-length.test.js | 2 |
 | **集計機能テスト** | **115件** |
 | aggregation-daily.test.js | 16 |
@@ -1928,7 +1930,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **948件** |
+| **総計 (jest)** | **950件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 
