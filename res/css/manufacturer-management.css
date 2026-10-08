@@ -133,6 +133,19 @@ body {
     background-color: #f9f9f9;
 }
 
+/* Name column - fixed share of the table width so a long name does not
+   squeeze the memo column; long text with no spaces wraps inside it */
+#manufacturers-table th:nth-child(1),
+#manufacturers-table td:nth-child(1) {
+    width: 40%;
+    overflow-wrap: anywhere;
+}
+
+/* Memo column - takes the rest of the width; long text wraps inside it */
+#manufacturers-table td:nth-child(2) {
+    overflow-wrap: anywhere;
+}
+
 /* Actions column - minimal width */
 #manufacturers-table th:nth-child(3),
 #manufacturers-table td:nth-child(3) {

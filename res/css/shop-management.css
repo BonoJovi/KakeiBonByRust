@@ -136,6 +136,19 @@ body {
     background-color: #f9f9f9;
 }
 
+/* Name column - fixed share of the table width so a long name does not
+   squeeze the memo column; long text with no spaces wraps inside it */
+#shops-table th:nth-child(1),
+#shops-table td:nth-child(1) {
+    width: 40%;
+    overflow-wrap: anywhere;
+}
+
+/* Memo column - takes the rest of the width; long text wraps inside it */
+#shops-table td:nth-child(2) {
+    overflow-wrap: anywhere;
+}
+
 /* Actions column - auto width */
 #shops-table th:nth-child(3),
 #shops-table td:nth-child(3) {

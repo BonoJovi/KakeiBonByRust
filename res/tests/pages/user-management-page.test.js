@@ -15,7 +15,7 @@
 
 import { jest } from '@jest/globals';
 import {
-    mockPageModules, loadPageBody, bootPage, flush, callsOf,
+    mockPageModules, loadPageBody, bootPage, flush, callsOf, isHiddenOrAbsent,
 } from './_page-harness.js';
 
 const ADMIN = { user_id: 1, name: 'admin', role: 0 };
@@ -74,5 +74,11 @@ describe('user management (admin) — regression (latent audit 2026-09)', () => 
         const creates = callsOf(invoke, 'create_general_user');
         expect(creates).toHaveLength(1);
         expect(creates[0].username).toBe('bob');
+    });
+
+    test('[L30] an admin sees the Add User button and its footer', () => {
+        const addBtn = document.getElementById('add-user-btn');
+        expect(isHiddenOrAbsent(addBtn)).toBe(false);
+        expect(isHiddenOrAbsent(addBtn.closest('.section-footer'))).toBe(false);
     });
 });

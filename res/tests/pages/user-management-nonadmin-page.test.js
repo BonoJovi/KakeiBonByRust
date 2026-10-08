@@ -43,6 +43,14 @@ describe('user management (general user) — regression (latent audit 2026-09)',
         expect(isHiddenOrAbsent(addBtn) || addBtn.disabled).toBe(true);
     });
 
+    test('[L30] a non-admin user does not see the empty footer line under the list', () => {
+        // The footer holds only the Add User button; with the button hidden,
+        // its divider line suggested that something should be shown there.
+        const footer = document.getElementById('add-user-btn').closest('.section-footer');
+        expect(footer).not.toBeNull(); // sanity: the button sits in the footer
+        expect(isHiddenOrAbsent(footer)).toBe(true);
+    });
+
     test('[L30] a non-admin user has no delete button on their own row', () => {
         const rows = Array.from(document.querySelectorAll('#user-list tr'));
         expect(rows).toHaveLength(1); // sanity: list rendered
