@@ -3,7 +3,7 @@
 This document provides a complete index of all frontend tests implemented in JavaScript.
 
 **Last Updated**: 2026-10-08 JST  
-**Total Tests**: 956 (jest suites; 92 test files, per `npm test`)
+**Total Tests**: 962 (jest suites; 92 test files, per `npm test`)
 
 ---
 
@@ -30,7 +30,7 @@ and are **not** added again to the grand total.
 - **login.test.js** - Login tests (58)
 - **user-deletion.test.js** - User deletion tests (46)
 
-### Feature-Specific Tests (533 tests)
+### Feature-Specific Tests (539 tests)
 
 - **transaction-edit.test.js** - Transaction edit tests (112)
 - **transaction-detail-management.test.js** - Transaction detail management tests (51)
@@ -47,7 +47,7 @@ and are **not** added again to the grand total.
 - **aggregation-error-translate.test.js** - `translateAggregationError` shape-guard tests (Fable-5 #9): coerces `Err(String)` / `ApiError { code, message }` / `Error` to a substring-matchable string before routing to i18n keys, and swaps unusable coerced values (`"[object Object]"`, `"null"`, `"undefined"`, `""`) for the localised generic banner, so the aggregation banner never renders those literals (13)
 - **aggregation-latest-request.test.js** - `createLatestRequestGuard` (aggregation-common.js): only the most recent request is latest, and each guard counts its own requests (latent-audit scan2-A4) (2)
 - **parse-amount-strict.test.js** - `parseAmountStrict` money-field strict integer parser (Fable-5 #10): replaces `parseInt(el.value) || 0` across the detail / transaction / recurring-rule submit paths, rejecting decimals, locale commas, scientific notation, sign prefixes, full-width digits, trailing garbage, and precision-losing integers past `Number.MAX_SAFE_INTEGER` (24)
-- **format-local-date.test.js** - `formatLocalDate` timezone-safe `YYYY-MM-DD` formatter (Fable-5 #13): replaces `new Date().toISOString().slice(0, 10)` in the recurring-rule modal so JST users opening the form before 09:00 no longer see yesterday's date in start-date / end-date / anchor-date defaults; test file pins `TZ=Asia/Tokyo` so a UTC regression is actually caught (16)
+- **format-local-date.test.js** - `formatLocalDate` timezone-safe `YYYY-MM-DD` formatter (Fable-5 #13): replaces `new Date().toISOString().slice(0, 10)` in the recurring-rule modal so JST users opening the form before 09:00 no longer see yesterday's date in start-date / end-date / anchor-date defaults; test file pins `TZ=Asia/Tokyo` so a UTC regression is actually caught; `formatUtcAsLocalDateTime` shows a stored UTC timestamp (`YYYY-MM-DD HH:MM:SS`) in local time, with the `T` separator, non-timestamp and empty cases (21)
 - **period-end-date.test.js** - `fetchMonthlyPeriodEndDate` (period.js): the dashboard account balances are taken as of the last day of the user's monthly period (custom start day / holiday shift from `get_monthly_period_bounds`), falling back to the calendar month end if the backend fails (latent-audit L14) (2)
 - **period-containing.test.js** - `findMonthlyPeriodContaining` / `findYearlyPeriodContaining` (period.js). Yearly: the year containing a date for starts 01-01, 04-01, 12-31 and 02-31 (month end), on both sides of the start. Monthly: returns the calendar month when its period contains the date, the previous month when that period starts later (start day 25), the next month when it ended earlier (holiday shift back over the month end), keeps stepping when the period is two months away (start day 31 + next business day), wraps the year both ways, and falls back to the calendar month when the backend fails or no period ever matches (latent-audit scan2-A3) (16)
 - **aggregation-render-unspecified.test.js** - `renderResults` unspecified-group i18n swap (Fable-5 #22): backend now returns an empty `group_name` string when the SHOP / PRODUCT / ACCOUNT reference is unspecified, and the renderer swaps it for `i18n.t('common.unspecified')` so English users don't see Japanese "指定なし" leaking through (5)
@@ -57,7 +57,7 @@ and are **not** added again to the grand total.
 - **pages/transaction-detail-hidden-category.test.js** - Boots the real detail page: editing a detail whose category2 (with its category3) or category3 alone is hidden keeps the category on a memo-only save, the hidden entry being offered with `common.disabled_label` (latent-audit scan2-T3) (2)
 - **pages/transaction-detail-product-suggest.test.js** - Boots the real detail page: the medium and minor categories come before the item name; the item name field has a short placeholder and a tooltip hint; focusing the empty field lists product suggestions with the detail's categories (`category1Code` / `category2Code` / `category3Code`); no list appears when focus has already left the field; typing while the focus search is pending does not show its stale answer; picking a suggestion closes the list for good (6)
 - **pages/transaction-management-page.test.js** - Boots the real transaction page against `transaction-management.html`: saving a header without details shows no ¥0 recalc prompt and completes the save flow (latent-audit H4); a blank transaction date is rejected with `validation.required` before sending (latent-audit L8); deleting the only row on the last page moves back to the last page, and a late older page response does not overwrite a newer one (latent-audit L5) (4)
-- **pages/user-management-page.test.js** - Boots the real user management page (admin session): a whitespace-only username is rejected with the required-field message before `create_general_user`, while a normal name still reaches it (latent-audit M13); an admin sees the Add User button and its footer (latent-audit L30) (3)
+- **pages/user-management-page.test.js** - Boots the real user management page (admin session): a whitespace-only username is rejected with the required-field message before `create_general_user`, while a normal name still reaches it (latent-audit M13); an admin sees the Add User button and its footer (latent-audit L30); created and updated times are shown in local time, not as stored UTC (4)
 - **pages/user-management-delete-last-user.test.js** - Boots the real user management page (admin session): when the backend refuses to delete the last general user (`last_general_user`), the screen shows `user_mgmt.last_general_user` instead of the generic failure with the English backend text (latent-audit scan2-C5) (1)
 - **pages/index-logout-hides-user-setup.test.js** - Boots the real index page (menu.js): logging out while the user-setup form is shown, before the 1 s switch after login has run, or before the login's setup check has answered, leaves only the login form on screen (`#user-setup`, `#admin-setup` and `#app-content` hidden) (latent-audit scan2-C6) (3)
 - **pages/recurring-rule-page.test.js** - Boots the real recurring rule page: a TRANSFER template from an account to itself is rejected with `transaction_mgmt.transfer_same_account` before `create_recurring_rule`, while two different accounts still go through, and a backend `transfer_same_account` rejection shows the same message (latent-audit M16) ; a backend `recurring_holiday_shift_too_long` rejection shows `recurring_rule.holiday_shift_too_long` (4)
@@ -146,7 +146,7 @@ and are **not** added again to the grand total.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **Feature-Specific Tests** | **533** |
+| **Feature-Specific Tests** | **539** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 30 |
@@ -162,7 +162,7 @@ and are **not** added again to the grand total.
 | aggregation-error-translate.test.js | 13 |
 | aggregation-latest-request.test.js | 2 |
 | parse-amount-strict.test.js | 24 |
-| format-local-date.test.js | 16 |
+| format-local-date.test.js | 21 |
 | period-end-date.test.js | 2 |
 | period-containing.test.js | 16 |
 | aggregation-render-unspecified.test.js | 5 |
@@ -172,7 +172,7 @@ and are **not** added again to the grand total.
 | pages/transaction-detail-hidden-category.test.js | 2 |
 | pages/transaction-detail-product-suggest.test.js | 6 |
 | pages/transaction-management-page.test.js | 4 |
-| pages/user-management-page.test.js | 3 |
+| pages/user-management-page.test.js | 4 |
 | pages/user-management-delete-last-user.test.js | 1 |
 | pages/index-logout-hides-user-setup.test.js | 3 |
 | pages/recurring-rule-page.test.js | 4 |
@@ -234,7 +234,7 @@ and are **not** added again to the grand total.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **Total (jest)** | **956** |
+| **Total (jest)** | **962** |
 
 Grand total is Screen + Feature + Aggregation (Common Test Suites are helper
 libraries invoked from Screen-Specific files and their assertions are already
