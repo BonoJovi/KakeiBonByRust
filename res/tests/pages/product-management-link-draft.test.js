@@ -79,7 +79,7 @@ describe('product master screen — detail draft link (regression, latent audit 
         sessionStorage.clear();
     });
 
-    test('[L17] should leave the detail draft alone when no product name matches exactly', async () => {
+    test('should leave the detail draft alone when no product name matches exactly (L17)', async () => {
         const originalDraft = {
             transaction_id: '10',
             detail_id: null,
@@ -103,7 +103,7 @@ describe('product master screen — detail draft link (regression, latent audit 
         expect(draft).toEqual(originalDraft);
     });
 
-    test('[L17] should link the detail draft to the product whose name matches exactly', async () => {
+    test('should link the detail draft to the product when its name matches exactly (L17)', async () => {
         sessionStorage.setItem(DETAIL_DRAFT_KEY, JSON.stringify({
             transaction_id: '10',
             detail_id: null,

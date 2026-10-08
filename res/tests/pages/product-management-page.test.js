@@ -76,7 +76,7 @@ describe('product master screen — regression (latent audit 2026-09)', () => {
         sessionStorage.clear();
     });
 
-    test('[M5] editing a product of a disabled manufacturer keeps manufacturer_id on save', async () => {
+    test('should keep manufacturer_id on save when the product\'s manufacturer is disabled (M5)', async () => {
         const editBtn = document.querySelector('#products-tbody .btn-edit');
         expect(editBtn).not.toBeNull();
         editBtn.click();
