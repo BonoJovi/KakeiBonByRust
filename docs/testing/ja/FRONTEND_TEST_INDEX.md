@@ -851,10 +851,10 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[H4] saving a header without details does not prompt to overwrite the total with ¥0` | 明細なしヘッダーの保存で ¥0 上書き確認が出ず、`update_transaction_header_total` も送られず、保存フローが一覧再読込まで完了する |
-| `[L8] should reject the save without calling update_transaction_header when the transaction date is blank` | 日時が空欄なら `validation.required` を表示して送信せず、モーダルを開いたままにする (潜在監査 L8) |
-| `[L5] should move back to the last page when its only row is deleted` | 最終ページの唯一の行を削除すると最後に存在するページへ戻る (潜在監査 L5) |
-| `[L5] should keep the newer page when an older page response resolves late` | 古いページ要求の応答が遅れて届いても新しいページの表示を上書きしない (潜在監査 L5) |
+| `should not prompt to overwrite the total with ¥0 when a header without details is saved (H4)` | 明細なしヘッダーの保存で ¥0 上書き確認が出ず、`update_transaction_header_total` も送られず、保存フローが一覧再読込まで完了する |
+| `should reject the save without calling update_transaction_header when the transaction date is blank (L8)` | 日時が空欄なら `validation.required` を表示して送信せず、モーダルを開いたままにする (潜在監査 L8) |
+| `should move back to the last page when its only row is deleted (L5)` | 最終ページの唯一の行を削除すると最後に存在するページへ戻る (潜在監査 L5) |
+| `should keep the newer page when an older page response resolves late (L5)` | 古いページ要求の応答が遅れて届いても新しいページの表示を上書きしない (潜在監査 L5) |
 
 **ファイル**: res/tests/pages/transaction-management-page.test.js
 
@@ -1248,8 +1248,8 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[M7] should keep a disabled shop selected when editing a transaction that names it` | 編集時は無効な店舗を非表示ラベル付きで選択したまま保存する |
-| `[M7] should not offer a disabled shop for a new transaction` | 新規取引では無効な店舗を選択肢に出さない |
+| `should keep a disabled shop selected when editing a transaction that names it (M7)` | 編集時は無効な店舗を非表示ラベル付きで選択したまま保存する |
+| `should not offer a disabled shop when the transaction is new (M7)` | 新規取引では無効な店舗を選択肢に出さない |
 
 **ファイル**: res/tests/pages/transaction-management-disabled-shop.test.js
 
@@ -1328,8 +1328,8 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[M7] should keep a disabled account selected when editing a transaction that names it` | 編集時は無効な口座を非表示ラベル付きで選択したまま保存する |
-| `[M7] should not offer a disabled account for a new transaction` | 新規取引では無効な口座を選択肢に出さない |
+| `should keep a disabled account selected when editing a transaction that names it (M7)` | 編集時は無効な口座を非表示ラベル付きで選択したまま保存する |
+| `should not offer a disabled account when the transaction is new (M7)` | 新規取引では無効な口座を選択肢に出さない |
 
 **ファイル**: res/tests/pages/transaction-management-disabled-account.test.js
 
@@ -1343,7 +1343,7 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[M2] should explain why the category cannot change and keep the modal open` | バックエンドの `category1_has_details` を受けて `transaction_mgmt.category1_has_details` を表示し、モーダルを開いたままにする |
+| `should explain why the category cannot change and keep the window open when the transaction has details (M2)` | バックエンドの `category1_has_details` を受けて `transaction_mgmt.category1_has_details` を表示し、モーダルを開いたままにする |
 
 **ファイル**: res/tests/pages/transaction-management-category1-has-details.test.js
 
@@ -1372,7 +1372,7 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[L6] should keep the restored draft instead of the modal's late defaults` | 復元した日付・店舗・メモが、モーダル自身の初期化 (フォームのリセット・現在日時) で上書きされない |
+| `should keep the restored draft instead of the window's late defaults when the defaults arrive after the restore (L6)` | 復元した日付・店舗・メモが、モーダル自身の初期化 (フォームのリセット・現在日時) で上書きされない |
 
 **ファイル**: res/tests/pages/transaction-management-restore-draft.test.js
 
@@ -1384,9 +1384,9 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[T4a] a new scheduled transaction is still scheduled after the round trip` | 新規で「予定」にチェックして往復しても、チェックが残り予定として保存される |
-| `[T4b] edit-mode edits to rounding, account and memo survive the round trip` | 編集中に変えた丸め・口座と、空にしたメモが往復後も残る |
-| `[T4c] a category1 cleared in edit mode stays cleared after the round trip` | 編集中に空にした大分類が、往復後も DB の値に戻らず空のまま残る (#170 の CodeRabbit 指摘) |
+| `should keep a new transaction scheduled when it makes the shop round trip (T4a)` | 新規で「予定」にチェックして往復しても、チェックが残り予定として保存される |
+| `should keep edit-mode changes to rounding, account and memo when the edit makes the shop round trip (T4b)` | 編集中に変えた丸め・口座と、空にしたメモが往復後も残る |
+| `should keep category1 cleared when it was cleared in edit mode before the shop round trip (T4c)` | 編集中に空にした大分類が、往復後も DB の値に戻らず空のまま残る (#170 の CodeRabbit 指摘) |
 
 **ファイル**: res/tests/pages/transaction-management-shop-roundtrip-draft.test.js
 
@@ -1398,9 +1398,9 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[T5] TRANSFER with both accounts "Unspecified" keeps the form open` | 出金元・入金先とも「指定なし」の振替を止めても、画面が開いたまま入力が残る |
-| `[T5] a total rejected by parseAmountStrict ("1e3") keeps the form open` | 金額 `1e3` を入力チェックで止めても、画面が開いたまま残る |
-| `[T5] a generic backend error keeps the form open` | バックエンドの一般的なエラーでも、画面が開いたまま残る |
+| `should keep the form open when a TRANSFER has both accounts "Unspecified" (T5)` | 出金元・入金先とも「指定なし」の振替を止めても、画面が開いたまま入力が残る |
+| `should keep the form open when parseAmountStrict rejects the total ("1e3") (T5)` | 金額 `1e3` を入力チェックで止めても、画面が開いたまま残る |
+| `should keep the form open when the backend returns a generic error (T5)` | バックエンドの一般的なエラーでも、画面が開いたまま残る |
 
 **ファイル**: res/tests/pages/transaction-management-rejected-save-keeps-form.test.js
 
@@ -1414,7 +1414,7 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[M7] should not give a restored new transaction a shop disabled since the draft was saved` | 新規取引の復元では無効化された店舗を選ばず「未指定」にする |
+| `should not give a restored new transaction a shop when the shop was disabled after the draft was saved (M7)` | 新規取引の復元では無効化された店舗を選ばず「未指定」にする |
 
 **ファイル**: res/tests/pages/transaction-management-restore-disabled-shop.test.js
 
@@ -1428,7 +1428,7 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[L6] should not write the draft into a modal reopened while the restore was waiting` | 復元が待っている間に閉じて開き直したモーダルには、古い下書きを書き込まない |
+| `should not write the draft into a window when it was reopened while the restore was waiting (L6)` | 復元が待っている間に閉じて開き直したモーダルには、古い下書きを書き込まない |
 
 **ファイル**: res/tests/pages/transaction-management-restore-reopened.test.js
 
@@ -1631,7 +1631,7 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[scan2-M7] offers a hidden CATEGORY2 and its CATEGORY3, labelled as hidden` | 非表示の中分類「外食」とその小分類が `common.disabled_label` 付きで選べる。表示中の「食費」はラベル無しのまま |
+| `should offer a hidden CATEGORY2 and its CATEGORY3, labelled as hidden, when the list filter is shown (scan2-M7)` | 非表示の中分類「外食」とその小分類が `common.disabled_label` 付きで選べる。表示中の「食費」はラベル無しのまま |
 
 **ファイル**: res/tests/pages/transaction-management-filter-hidden-category.test.js
 
@@ -1645,11 +1645,11 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[T6] edited header values are saved before leaving` | 日付・合計・メモ・予定フラグを変えて「明細管理」を押すと確認ダイアログ (`transaction_mgmt.save_before_details_confirm`) が出て、「保存」で通常の保存によりヘッダーを保存してから移動する |
-| `[T6] a second click while saving does not save twice` | 保存中にダイアログの「保存」をもう一度押しても、保存は 1 回だけで、保存が終わるまで移動しない |
-| `[T6] cancelling the dialog stays in the edit modal without saving` | ダイアログで「キャンセル」を押すと、保存も移動もせず、編集ウィンドウが入力した値のまま残る |
-| `[T6] Esc closes only the dialog, not the edit modal behind it` | Esc キーはダイアログだけを閉じ、後ろの編集ウィンドウは入力した値のまま残る |
-| `[T6] without changes it moves on at once, without asking or saving` | 変更がなければ確認も保存もせずにすぐ移動する |
+| `should save the edited header values when leaving for the details (T6)` | 日付・合計・メモ・予定フラグを変えて「明細管理」を押すと確認ダイアログ (`transaction_mgmt.save_before_details_confirm`) が出て、「保存」で通常の保存によりヘッダーを保存してから移動する |
+| `should not save twice when the button is clicked again while saving (T6)` | 保存中にダイアログの「保存」をもう一度押しても、保存は 1 回だけで、保存が終わるまで移動しない |
+| `should stay in the edit window without saving when the dialog is cancelled (T6)` | ダイアログで「キャンセル」を押すと、保存も移動もせず、編集ウィンドウが入力した値のまま残る |
+| `should close only the dialog, not the edit window behind it, when Esc is pressed (T6)` | Esc キーはダイアログだけを閉じ、後ろの編集ウィンドウは入力した値のまま残る |
+| `should move on at once, without asking or saving, when nothing was changed (T6)` | 変更がなければ確認も保存もせずにすぐ移動する |
 
 **ファイル**: res/tests/pages/transaction-management-save-before-details.test.js
 

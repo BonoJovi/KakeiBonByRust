@@ -90,7 +90,7 @@ describe('transaction management screen — disabled shop (regression, latent au
         invoke.mockClear();
     });
 
-    test('[M7] should keep a disabled shop selected when editing a transaction that names it', async () => {
+    test('should keep a disabled shop selected when editing a transaction that names it (M7)', async () => {
         editButton().click();
         await flush(10);
 
@@ -108,7 +108,7 @@ describe('transaction management screen — disabled shop (regression, latent au
         expect(headerUpdates[0].shopId).toBe(7);
     });
 
-    test('[M7] should not offer a disabled shop for a new transaction', async () => {
+    test('should not offer a disabled shop when the transaction is new (M7)', async () => {
         document.getElementById('add-transaction-btn').click();
         await flush(10);
 

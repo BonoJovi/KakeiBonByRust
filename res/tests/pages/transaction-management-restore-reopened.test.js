@@ -86,7 +86,7 @@ await flush(20);
 
 
 describe('transaction management screen — draft restore interrupted (regression, latent audit 2026-09)', () => {
-    test('[L6] should not write the draft into a modal reopened while the restore was waiting', () => {
+    test('should not write the draft into a window when it was reopened while the restore was waiting (L6)', () => {
         expect(document.getElementById('transaction-modal').classList.contains('hidden')).toBe(false);
         expect(document.getElementById('transaction-date').value).not.toBe('2026-09-01T10:00');
         expect(document.getElementById('transaction-memo').value).toBe('');

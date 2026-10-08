@@ -111,7 +111,7 @@ describe('latent-audit scan2 T4 — Manage shops round trip', () => {
         invoke.mockClear();
     });
 
-    test('[T4a] a new scheduled transaction is still scheduled after the round trip', async () => {
+    test('should keep a new transaction scheduled when it makes the shop round trip (T4a)', async () => {
         document.getElementById('add-transaction-btn').click();
         await flush(10);
 
@@ -134,7 +134,7 @@ describe('latent-audit scan2 T4 — Manage shops round trip', () => {
         expect(saves[0].isScheduled).toBe(1);
     });
 
-    test('[T4b] edit-mode edits to rounding, account and memo survive the round trip', async () => {
+    test('should keep edit-mode changes to rounding, account and memo when the edit makes the shop round trip (T4b)', async () => {
         document.getElementById('cancel-transaction-btn').click();
         await flush(5);
 
@@ -161,7 +161,7 @@ describe('latent-audit scan2 T4 — Manage shops round trip', () => {
         expect(document.getElementById('transaction-memo').value).toBe('');
     });
 
-    test('[T4c] a category1 cleared in edit mode stays cleared after the round trip', async () => {
+    test('should keep category1 cleared when it was cleared in edit mode before the shop round trip (T4c)', async () => {
         document.getElementById('cancel-transaction-btn').click();
         await flush(5);
 

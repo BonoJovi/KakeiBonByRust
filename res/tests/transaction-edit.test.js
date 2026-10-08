@@ -1252,7 +1252,7 @@ describe('Transaction Edit - Shop Selection Integration', () => {
 });
 
 describe('Transaction Edit - Test Summary', () => {
-    test('Test count summary', () => {
+    test('should pass when this test is only a test-summary placeholder', () => {
         // This test suite includes:
         // - 5 modal state tests
         // - 13 data loading validation tests

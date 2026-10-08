@@ -95,7 +95,7 @@ describe('transaction management screen — disabled account (regression, latent
         invoke.mockClear();
     });
 
-    test('[M7] should keep a disabled account selected when editing a transaction that names it', async () => {
+    test('should keep a disabled account selected when editing a transaction that names it (M7)', async () => {
         editButton().click();
         await flush(10);
 
@@ -113,7 +113,7 @@ describe('transaction management screen — disabled account (regression, latent
         expect(headerUpdates[0].fromAccountCode).toBe('OLDCARD');
     });
 
-    test('[M7] should not offer a disabled account for a new transaction', async () => {
+    test('should not offer a disabled account when the transaction is new (M7)', async () => {
         document.getElementById('add-transaction-btn').click();
         await flush(10);
 

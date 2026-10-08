@@ -60,7 +60,7 @@ await bootPage();
 await new Promise((r) => setTimeout(r, 300));
 
 describe('transaction management screen — draft restore with a disabled shop (regression, latent audit 2026-09)', () => {
-    test('[M7] should not give a restored new transaction a shop disabled since the draft was saved', () => {
+    test('should not give a restored new transaction a shop when the shop was disabled after the draft was saved (M7)', () => {
         expect(document.getElementById('transaction-date').value).toBe('2026-09-01T10:00');
         const shopSelect = document.getElementById('shop');
         expect(Array.from(shopSelect.options).map((o) => o.value)).toEqual(['', '1']);
