@@ -66,7 +66,7 @@ INSERT INTO MANUFACTURERS (
     DISPLAY_ORDER,
     IS_DISABLED,
     ENTRY_DT
-) VALUES (?, ?, ?, ?, ?, datetime('now', 'localtime'))
+) VALUES (?, ?, ?, ?, ?, datetime('now'))
 "#;
 ```
 
@@ -79,7 +79,7 @@ UPDATE MANUFACTURERS SET
     MEMO = ?,
     DISPLAY_ORDER = ?,
     IS_DISABLED = ?,
-    UPDATE_DT = datetime('now', 'localtime')
+    UPDATE_DT = datetime('now')
 WHERE USER_ID = ? AND MANUFACTURER_ID = ?
 "#;
 ```

@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-10-08 JST  
-**Total Tests**: 472 (delta-tracked; the full authoritative count from `cargo test --lib` is 740, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 475 (delta-tracked; the full authoritative count from `cargo test --lib` is 743, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -20,6 +20,7 @@ This document provides a complete index of all backend tests implemented in Rust
   - [db.rs](#dbrs)
   - [settings.rs](#settingsrs)
   - [api_error.rs](#api_errorrs)
+  - [sql_queries.rs](#sql_queriesrs)
   - [services/master_data.rs](#servicesmaster_datars)
   - [services/like_escape.rs](#serviceslike_escapers)
   - [services/auth.rs](#servicesauthrs)
@@ -245,6 +246,18 @@ Settings management functionality tests.
 | `last_general_user_has_its_own_code_and_no_entity` | `UserManagementError::LastGeneralUser` → `code="last_general_user"`, no entity (latent-audit scan2-C5) | src/api_error.rs | 330 |
 
 **Total**: 11 tests
+
+### sql_queries.rs
+
+SQL statement definitions. Created/updated timestamps (`ENTRY_DT` / `UPDATE_DT`) are stored in UTC everywhere (`datetime('now')`; `chrono::Utc::now()` on the Rust side).
+
+| Test Function | Description | File | Line |
+|---------------|-------------|------|------|
+| `test_sql_queries_store_timestamps_in_utc` | No statement in `sql_queries.rs` writes local time (memos, recurring-generated transactions and table defaults used to) | src/sql_queries.rs | 2857 |
+| `test_init_sql_stores_timestamps_in_utc` | `dbaccess.sql` defaults timestamps to UTC, not local time | src/sql_queries.rs | 2866 |
+| `test_recurring_rules_insert_sets_entry_dt_explicitly` | `RECURRING_RULES_INSERT` sets `ENTRY_DT` itself, because databases created before this change keep the local-time column default | src/sql_queries.rs | 2875 |
+
+**Total**: 3 tests
 
 ### services/master_data.rs
 
@@ -758,13 +771,14 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **449** |
+| **Inline Tests** | **452** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
 | db.rs | 17 |
 | settings.rs | 18 |
 | api_error.rs | 11 |
+| sql_queries.rs | 3 |
 | services/master_data.rs | 4 |
 | services/like_escape.rs | 7 |
 | services/auth.rs | 25 |
@@ -782,7 +796,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/i18n.rs | 8 |
 | services/recurring.rs | 28 |
 | lib.rs | 6 |
-| **Total** | **472** |
+| **Total** | **475** |
 
 ---
 

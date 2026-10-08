@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-10-08 JST  
-**総テスト数**: 472件 (差分反映後。`cargo test --lib` の権威的総数は 740 で、既存の未反映分は別 PR でバックフィル予定)
+**総テスト数**: 475件 (差分反映後。`cargo test --lib` の権威的総数は 743 で、既存の未反映分は別 PR でバックフィル予定)
 
 ---
 
@@ -25,6 +25,7 @@
   - [services/account.rs](#servicesaccountrs)
   - [services/category.rs](#servicescategoryrs)
   - [api_error.rs](#api_errorrs)
+  - [sql_queries.rs](#sql_queriesrs)
   - [services/master_data.rs](#servicesmaster_datars)
   - [services/like_escape.rs](#serviceslike_escapers)
   - [services/manufacturer.rs](#servicesmanufacturerrs)
@@ -245,6 +246,18 @@ AES-256-GCM暗号化・復号化のテスト。
 | `last_general_user_has_its_own_code_and_no_entity` | `UserManagementError::LastGeneralUser` → `code="last_general_user"`、entity なし (潜在スキャン scan2-C5) | src/api_error.rs | 330 |
 
 **合計**: 11件
+
+### sql_queries.rs
+
+SQL 文の定義。登録日時・更新日時 (`ENTRY_DT` / `UPDATE_DT`) はすべて UTC で保存する (`datetime('now')`、Rust 側は `chrono::Utc::now()`)。
+
+| テスト関数 | 説明 | ファイル | 行 |
+|-----------|------|---------|-----|
+| `test_sql_queries_store_timestamps_in_utc` | `sql_queries.rs` のどの SQL もローカル時刻を書き込まない (以前はメモ・繰り返し予定から作る入出金・テーブルの初期値がローカル時刻だった) | src/sql_queries.rs | 2857 |
+| `test_init_sql_stores_timestamps_in_utc` | `dbaccess.sql` の日時の初期値はローカル時刻ではなく UTC | src/sql_queries.rs | 2866 |
+| `test_recurring_rules_insert_sets_entry_dt_explicitly` | 既存 DB には列の初期値 (ローカル時刻) が残るため、`RECURRING_RULES_INSERT` は `ENTRY_DT` を自分で指定する | src/sql_queries.rs | 2875 |
+
+**合計**: 3件
 
 ### services/master_data.rs
 
@@ -758,13 +771,14 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **449件** |
+| **インラインテスト** | **452件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
 | db.rs | 17 |
 | settings.rs | 18 |
 | api_error.rs | 11 |
+| sql_queries.rs | 3 |
 | services/master_data.rs | 4 |
 | services/like_escape.rs | 7 |
 | services/auth.rs | 25 |
@@ -782,7 +796,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/i18n.rs | 8 |
 | services/recurring.rs | 28 |
 | lib.rs | 6 |
-| **総計** | **472件** |
+| **総計** | **475件** |
 
 ---
 
