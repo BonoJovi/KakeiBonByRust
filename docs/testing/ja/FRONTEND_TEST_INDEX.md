@@ -899,9 +899,9 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[scan2-C6] logout hides the user-setup form and shows only the login form` | ユーザー登録フォームが出ている状態でログアウトすると、登録フォーム (`#user-setup`、`#admin-setup`) とメイン画面が隠れ、ログインフォームだけになる |
-| `[scan2-C6] logging out before the login timer runs keeps only the login form` | ログイン後 1 秒の画面切り替えより前にログアウトしても、切り替えは取り消され、ログインフォームだけが残る |
-| `[scan2-C6] a setup check answering after the logout does not switch screens` | ログイン後の「ユーザー登録が必要か」の確認がログアウト後に返ってきても、画面を切り替えない |
+| `should hide the user-setup form and show only the login form when the user logs out (scan2-C6)` | ユーザー登録フォームが出ている状態でログアウトすると、登録フォーム (`#user-setup`、`#admin-setup`) とメイン画面が隠れ、ログインフォームだけになる |
+| `should keep only the login form when the user logs out before the login timer runs (scan2-C6)` | ログイン後 1 秒の画面切り替えより前にログアウトしても、切り替えは取り消され、ログインフォームだけが残る |
+| `should not switch screens when a setup check answers after the logout (scan2-C6)` | ログイン後の「ユーザー登録が必要か」の確認がログアウト後に返ってきても、画面を切り替えない |
 
 **ファイル**: res/tests/pages/index-logout-hides-user-setup.test.js
 
@@ -1067,8 +1067,8 @@
 
 | テスト | 説明 |
 |--------|------|
-| `menu.back_to_transactions is seeded for ja and en` | `dbaccess.sql` に `menu.back_to_transactions` の ja / en 両方の行がある |
-| `every data-i18n key in the menu bar is seeded for ja and en` | 明細画面のメニューバーが描画する `data-i18n` キーがすべて ja / en 両方とも `dbaccess.sql` に登録されている |
+| `should seed menu.back_to_transactions for ja and en when the i18n SQL is read` | `dbaccess.sql` に `menu.back_to_transactions` の ja / en 両方の行がある |
+| `should seed every data-i18n key in the menu bar for ja and en when the i18n SQL is read` | 明細画面のメニューバーが描画する `data-i18n` キーがすべて ja / en 両方とも `dbaccess.sql` に登録されている |
 
 **ファイル**: res/tests/pages/menu-i18n-seed.test.js
 
@@ -1082,10 +1082,10 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[scan2-C4] i18n.t() keeps the user name %s literally` (4 件) | ユーザー名の `$&` `$'` `` $` `` `$$` が置き換えの記号として解釈されず、そのまま出る |
-| `[scan2-C4] a value containing another placeholder is not substituted again` | 差し込んだ値に `{b}` が含まれていても、もう一度置き換えない (1 回でまとめて置き換える) |
-| `[scan2-C4] a placeholder with no param is left as it is` | 値を渡していない `{b}` はそのまま残る |
-| `[scan2-C4] recurring-rule delete confirmation keeps the rule name literally` | 繰り返しルールの削除確認で、`$'` や `{1}` を含むルール名がそのまま出て、件数も正しい位置に入る |
+| `should keep the user name %s literally when i18n.t() fills it in (scan2-C4)` (4 件) | ユーザー名の `$&` `$'` `` $` `` `$$` が置き換えの記号として解釈されず、そのまま出る |
+| `should not substitute again when a value contains another placeholder (scan2-C4)` | 差し込んだ値に `{b}` が含まれていても、もう一度置き換えない (1 回でまとめて置き換える) |
+| `should leave the placeholder as it is when it has no param (scan2-C4)` | 値を渡していない `{b}` はそのまま残る |
+| `should keep the rule name literally when the recurring-rule delete confirmation is shown (scan2-C4)` | 繰り返しルールの削除確認で、`$'` や `{1}` を含むルール名がそのまま出て、件数も正しい位置に入る |
 
 **ファイル**: res/tests/pages/i18n-literal-user-text.test.js
 
@@ -1099,7 +1099,7 @@
 
 | テスト | 説明 |
 |--------|------|
-| `the balance column header resolves to 残高 (ja) / Balance (en)` | `dbaccess.sql` を上から適用した結果で、列見出しのキーが ja「残高」/ en「Balance」になる |
+| `should show 残高 (ja) / Balance (en) when the balance column header is rendered` | `dbaccess.sql` を上から適用した結果で、列見出しのキーが ja「残高」/ en「Balance」になる |
 
 **ファイル**: res/tests/pages/dashboard-balance-header.test.js
 
@@ -1141,9 +1141,9 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[scan2-A2] a -30,000 deficit is shown with its minus sign` | 収支 -30,000 の吹き出しが「-¥30,000」になる |
-| `[scan2-A2] axis ticks show the full signed amount, without K / M` | 推移グラフと棒グラフの目盛りが「-¥30,000」「¥1,500,000」「¥0」のように略さず符号付きで出る |
-| `[scan2-A2] account balances put the minus sign before ¥` | 口座別残高が「¥1,500,000」「-¥1,234」になる |
+| `should show the minus sign when the balance is a -30,000 deficit (scan2-A2)` | 収支 -30,000 の吹き出しが「-¥30,000」になる |
+| `should show the full signed amount, without K / M, when the axis ticks are drawn (scan2-A2)` | 推移グラフと棒グラフの目盛りが「-¥30,000」「¥1,500,000」「¥0」のように略さず符号付きで出る |
+| `should put the minus sign before ¥ when an account balance is negative (scan2-A2)` | 口座別残高が「¥1,500,000」「-¥1,234」になる |
 
 **ファイル**: res/tests/pages/dashboard-balance-sign.test.js
 
@@ -1157,7 +1157,7 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[scan2-A3] start day 25, today 2026-09-10 -> defaults to the August period that contains today` | 今日を含む「8 月」の期間で開き、その月のデータを読み込む |
+| `should default to the August period that contains today when the start day is 25 and today is 2026-09-10 (scan2-A3)` | 今日を含む「8 月」の期間で開き、その月のデータを読み込む |
 
 **ファイル**: res/tests/pages/dashboard-default-period.test.js
 
@@ -1171,7 +1171,7 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[scan2-A4] a slower, older September load does not overwrite the newer March charts` | 古い 9 月の結果は捨てられ、グラフと見出しは 3 月のまま |
+| `should not overwrite the newer March charts when a slower, older September load finishes later (scan2-A4)` | 古い 9 月の結果は捨てられ、グラフと見出しは 3 月のまま |
 
 **ファイル**: res/tests/pages/dashboard-stale-reload.test.js
 
@@ -1571,7 +1571,7 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[scan2-A1] largest expense category is drawn first and kept in the top 10` | 支出を金額の大きさ順に並べ、最大の支出が先頭に来て上位 10 件に残る |
+| `should draw the largest expense category first and keep it in the top 10 when there are more than 10 categories (scan2-A1)` | 支出を金額の大きさ順に並べ、最大の支出が先頭に来て上位 10 件に残る |
 
 **ファイル**: res/tests/pages/dashboard-bar-top10.test.js
 
@@ -1585,9 +1585,9 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[L25] should reject the admin setup without calling register_admin when the username is blank` | 空白のみのユーザー名は `register_admin` を送らず `error.username_required` を表示 |
-| `[L25] should report the username, not the password, when the backend rejects a blank username` | バックエンドの「Username cannot be empty」をパスワードではなくユーザー名のエラーとして表示 |
-| `[L25] should show the duplicate-username message when the backend reports duplicate_name` | `duplicate_name` で `error.username_duplicate` を表示 |
+| `should reject the admin setup without calling register_admin when the username is blank (L25)` | 空白のみのユーザー名は `register_admin` を送らず `error.username_required` を表示 |
+| `should report the username, not the password, when the backend rejects a blank username (L25)` | バックエンドの「Username cannot be empty」をパスワードではなくユーザー名のエラーとして表示 |
+| `should show the duplicate-username message when the backend reports duplicate_name (L25)` | `duplicate_name` で `error.username_duplicate` を表示 |
 
 **ファイル**: res/tests/pages/index-setup-page.test.js
 
@@ -1694,8 +1694,8 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[L31] admin setup rejects 8 emoji (8 chars) on the frontend` | 管理者セットアップで絵文字8文字を拒否 |
-| `[L31] user setup rejects 8 emoji (8 chars) on the frontend` | 一般ユーザーセットアップでも同様 |
+| `should reject the password on the frontend when admin setup gets 8 emoji (8 chars) (L31)` | 管理者セットアップで絵文字8文字を拒否 |
+| `should reject the password on the frontend when user setup gets 8 emoji (8 chars) (L31)` | 一般ユーザーセットアップでも同様 |
 
 **ファイル**: res/tests/pages/index-setup-password-length.test.js
 

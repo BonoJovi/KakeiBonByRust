@@ -38,7 +38,7 @@ function effectiveTranslations() {
 }
 
 describe('Account Balances column header (scan2-C3)', () => {
-    test('the balance column header resolves to 残高 (ja) / Balance (en)', () => {
+    test('should show 残高 (ja) / Balance (en) when the balance column header is rendered', () => {
         loadPageBody('dashboard.html');
         const th = document.querySelector('.account-balances-table th.balance-col');
         expect(th).not.toBeNull();

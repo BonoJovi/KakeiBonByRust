@@ -74,7 +74,7 @@ await import('../../js/dashboard.js');
 await bootPage();
 
 describe('dashboard amount format (latent scan2-A2)', () => {
-    test('[scan2-A2] a -30,000 deficit is shown with its minus sign', () => {
+    test('should show the minus sign when the balance is a -30,000 deficit (scan2-A2)', () => {
         const line = charts.filter((c) => c.config.type === 'line').pop();
         expect(line).toBeDefined();
         const balance = line.config.data.datasets.find((ds) => ds.label === 'dashboard.balance');
@@ -87,7 +87,7 @@ describe('dashboard amount format (latent scan2-A2)', () => {
         expect(label).toMatch(/-¥30,000/);
     });
 
-    test('[scan2-A2] axis ticks show the full signed amount, without K / M', () => {
+    test('should show the full signed amount, without K / M, when the axis ticks are drawn (scan2-A2)', () => {
         const line = charts.filter((c) => c.config.type === 'line').pop();
         const bar = charts.filter((c) => c.config.type === 'bar').pop();
         expect(bar).toBeDefined();
@@ -100,7 +100,7 @@ describe('dashboard amount format (latent scan2-A2)', () => {
         expect(barTick(30000)).toBe('¥30,000');
     });
 
-    test('[scan2-A2] account balances put the minus sign before ¥', () => {
+    test('should put the minus sign before ¥ when an account balance is negative (scan2-A2)', () => {
         const cells = [...document.querySelectorAll('#account-balances-tbody .balance-col')]
             .map((td) => td.textContent);
         expect(cells).toEqual(['¥1,500,000', '-¥1,234']);
