@@ -1,7 +1,7 @@
 # コーディング規約
 
 **対象者**: 開発者・コントリビューター  
-**最終更新**: 2024-12-05 05:09 JST
+**最終更新**: 2026-10-08 17:40 JST
 
 ---
 
@@ -260,6 +260,11 @@ sqlite3 ~/.local/share/kakeibo/kakeibo.db "SELECT * FROM USERS;"
 ```
 "should [expected behavior] when [condition]"
 ```
+
+- JavaScript (Jest) のテスト名に適用する: `test('should ...')` / `it('should ...')`。
+- 新しく書くテストはこの形にする。
+- 既存テストの一部は `[ID] 説明` などの旧形式になっている。テストの中身は変えずに、数ファイルずつ PR に分けて順次この形へ改名する。
+- Rust のテストは関数名 (`fn test_...`) で名前を付けるので、この形式の対象外とする。
 
 ### 構造（AAA）
 1. **Arrange**: テストデータ準備

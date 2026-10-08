@@ -1,7 +1,7 @@
 # Coding Standards
 
 **Audience**: Developers & Contributors  
-**Last Updated**: 2024-12-05 05:14 JST
+**Last Updated**: 2026-10-08 17:40 JST
 
 ---
 
@@ -260,6 +260,11 @@ sqlite3 ~/.local/share/kakeibo/kakeibo.db "SELECT * FROM USERS;"
 ```
 "should [expected behavior] when [condition]"
 ```
+
+- Applies to the names of JavaScript (Jest) tests: `test('should ...')` / `it('should ...')`.
+- New tests use this form.
+- Some existing tests use an older form, such as `[ID] description`. They are renamed to this form step by step, a few test files per pull request, without changing what the tests check.
+- Rust tests are named by their function names (`fn test_...`), so this form does not apply to them.
 
 ### Structure (AAA)
 1. **Arrange**: Prepare test data
