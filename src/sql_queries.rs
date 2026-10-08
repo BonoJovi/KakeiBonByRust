@@ -2118,9 +2118,35 @@ WHERE USER_ID = ? AND PRODUCT_NAME = ? AND PRODUCT_ID != ?
 // Autocomplete lookup for transaction detail entry (v2.6.0 master integration).
 // Substring (LIKE %?%) match on PRODUCT_NAME, scoped to the user's enabled
 // products, joined with the manufacturer for the "商品名 (メーカー名)"
-// dropdown label. Capped at 20 rows so a typo doesn't paint the whole DB into
-// the suggestion list.
+// dropdown label. An empty query matches every product, so the list can be
+// shown as soon as the field gets focus. Ranking: products used in details of
+// the selected category (category1 from the header, category2, and category3
+// when given) first, then other used products, both by their latest
+// TRANSACTION_DATE; never-used products last, by name. Capped at 20 rows.
+// A detail is a use of a product when it is linked to it (PRODUCT_ID), or,
+// when it has no link, when its ITEM_NAME equals the product name exactly, so
+// details typed by hand before the product master was used count too.
+// Binds: (category1, category2, category3, category3, user_id, user_id, pattern).
 pub const PRODUCT_SEARCH_BY_NAME: &str = r#"
+WITH USAGE AS (
+    SELECT up.PRODUCT_ID,
+           MAX(h.TRANSACTION_DATE) AS LAST_USED,
+           MAX(CASE
+                   WHEN h.CATEGORY1_CODE = ?
+                    AND d.CATEGORY2_CODE = ?
+                    AND (? IS NULL OR d.CATEGORY3_CODE = ?)
+                   THEN h.TRANSACTION_DATE
+               END) AS LAST_USED_IN_CATEGORY
+    FROM PRODUCTS up
+    JOIN TRANSACTIONS_DETAIL d
+      ON d.PRODUCT_ID = up.PRODUCT_ID
+      OR (d.PRODUCT_ID IS NULL AND d.ITEM_NAME = up.PRODUCT_NAME)
+    JOIN TRANSACTIONS_HEADER h
+      ON h.TRANSACTION_ID = d.TRANSACTION_ID
+     AND h.USER_ID = up.USER_ID
+    WHERE up.USER_ID = ?
+    GROUP BY up.PRODUCT_ID
+)
 SELECT p.PRODUCT_ID, p.USER_ID, p.PRODUCT_NAME,
        p.MANUFACTURER_ID, m.MANUFACTURER_NAME,
        p.MEMO, p.DISPLAY_ORDER, p.IS_DISABLED, p.ENTRY_DT, p.UPDATE_DT
@@ -2128,8 +2154,15 @@ FROM PRODUCTS p
 LEFT JOIN MANUFACTURERS m
     ON p.MANUFACTURER_ID = m.MANUFACTURER_ID
    AND m.USER_ID = p.USER_ID
+LEFT JOIN USAGE u ON u.PRODUCT_ID = p.PRODUCT_ID
 WHERE p.USER_ID = ? AND p.IS_DISABLED = 0 AND p.PRODUCT_NAME LIKE ? ESCAPE '\'
-ORDER BY p.PRODUCT_NAME
+ORDER BY CASE
+             WHEN u.LAST_USED_IN_CATEGORY IS NOT NULL THEN 0
+             WHEN u.LAST_USED IS NOT NULL THEN 1
+             ELSE 2
+         END,
+         COALESCE(u.LAST_USED_IN_CATEGORY, u.LAST_USED) DESC,
+         p.PRODUCT_NAME
 LIMIT 20
 "#;
 
@@ -2290,6 +2323,33 @@ VALUES (?, 'EXPENSE', 'CASH', 'CASH', '2026-01-01', 0)
 pub const TEST_INSERT_TRANSACTIONS_DETAIL_PRODUCT_REF: &str = r#"
 INSERT INTO TRANSACTIONS_DETAIL (TRANSACTION_ID, PRODUCT_ID)
 VALUES (?, ?)
+"#;
+
+/// Product tests need the detail categories for the suggestion query, which
+/// TEST_CREATE_TRANSACTIONS_DETAIL_MINIMAL leaves out. Only the columns the
+/// product service reads are kept.
+pub const TEST_CREATE_TRANSACTIONS_DETAIL_WITH_CATEGORY: &str = r#"
+CREATE TABLE IF NOT EXISTS TRANSACTIONS_DETAIL (
+    DETAIL_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    TRANSACTION_ID INTEGER NOT NULL,
+    CATEGORY2_CODE VARCHAR(50),
+    CATEGORY3_CODE VARCHAR(50),
+    ITEM_NAME TEXT,
+    PRODUCT_ID INTEGER
+)
+"#;
+
+/// Binds `(user_id, category1_code, transaction_date)`.
+pub const TEST_INSERT_TRANSACTIONS_HEADER_DATED: &str = r#"
+INSERT INTO TRANSACTIONS_HEADER
+    (USER_ID, CATEGORY1_CODE, FROM_ACCOUNT_CODE, TO_ACCOUNT_CODE, TRANSACTION_DATE, TOTAL_AMOUNT)
+VALUES (?, ?, 'CASH', 'CASH', ?, 0)
+"#;
+
+/// Binds `(transaction_id, category2_code, category3_code, item_name, product_id)`.
+pub const TEST_INSERT_TRANSACTIONS_DETAIL_WITH_PRODUCT: &str = r#"
+INSERT INTO TRANSACTIONS_DETAIL (TRANSACTION_ID, CATEGORY2_CODE, CATEGORY3_CODE, ITEM_NAME, PRODUCT_ID)
+VALUES (?, ?, ?, ?, ?)
 "#;
 
 /// Insert one active PRODUCTS row that points at a manufacturer,

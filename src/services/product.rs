@@ -64,20 +64,36 @@ pub async fn get_products(pool: &SqlitePool, user_id: i64, include_disabled: boo
     Ok(products)
 }
 
-/// Search products by partial name match for autocomplete in transaction entry.
-/// Returns up to 20 enabled products matching the query (case-insensitive
-/// substring). Empty/whitespace-only queries return an empty list to avoid
-/// dumping the full master into the dropdown on focus.
+/// Product suggestions without a category. The Tauri command calls
+/// `suggest_products` directly; this shorthand is kept for the module tests.
+#[cfg(test)]
 pub async fn search_products_by_name(
     pool: &SqlitePool,
     user_id: i64,
     query: &str,
 ) -> Result<Vec<Product>, ApiError> {
-    let trimmed = query.trim();
-    if trimmed.is_empty() {
-        return Ok(Vec::new());
-    }
+    suggest_products(pool, user_id, query, &SuggestCategory::default()).await
+}
 
+/// Category of the detail being entered, used to rank product suggestions.
+#[derive(Debug, Default, Clone)]
+pub struct SuggestCategory {
+    pub category1_code: Option<String>,
+    pub category2_code: Option<String>,
+    pub category3_code: Option<String>,
+}
+
+/// Product suggestions for the detail item-name field.
+///
+/// Products whose name contains `query` (all products for an empty query),
+/// ranked: used in details of `category` first, then other used products,
+/// both by most recent use; never-used products last, by name. At most 20.
+pub async fn suggest_products(
+    pool: &SqlitePool,
+    user_id: i64,
+    query: &str,
+    category: &SuggestCategory,
+) -> Result<Vec<Product>, ApiError> {
     // Fable-5 review #23 — the previous form was
     // `format!("%{}%", trimmed)`, which passed `%` and `_` through as
     // LIKE wildcards. A product named "果汁100%ジュース" typed as
@@ -85,9 +101,15 @@ pub async fn search_products_by_name(
     // and pair with `LIKE ? ESCAPE '\'` in
     // `sql_queries::PRODUCT_SEARCH_BY_NAME` so the metacharacters
     // match literally.
-    let pattern = format!("%{}%", escape_like_pattern(trimmed));
+    let pattern = format!("%{}%", escape_like_pattern(query.trim()));
+    let category3 = category.category3_code.as_deref().filter(|c| !c.is_empty());
 
     let products = sqlx::query_as::<_, Product>(sql_queries::PRODUCT_SEARCH_BY_NAME)
+        .bind(category.category1_code.as_deref())
+        .bind(category.category2_code.as_deref())
+        .bind(category3)
+        .bind(category3)
+        .bind(user_id)
         .bind(user_id)
         .bind(&pattern)
         .fetch_all(pool)
@@ -303,7 +325,7 @@ mod tests {
             .execute(&pool)
             .await
             .unwrap();
-        sqlx::query(sql_queries::TEST_CREATE_TRANSACTIONS_DETAIL_MINIMAL)
+        sqlx::query(sql_queries::TEST_CREATE_TRANSACTIONS_DETAIL_WITH_CATEGORY)
             .execute(&pool)
             .await
             .unwrap();
@@ -822,7 +844,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_search_products_empty_query_returns_empty() {
+    async fn test_search_products_empty_query_lists_products() {
         let pool = setup_test_db().await;
 
         add_product(&pool, 2, AddProductRequest {
@@ -832,9 +854,13 @@ mod tests {
             is_disabled: None,
         }).await.unwrap();
 
-        // Empty query must not dump the master into the dropdown
-        assert!(search_products_by_name(&pool, 2, "").await.unwrap().is_empty());
-        assert!(search_products_by_name(&pool, 2, "   ").await.unwrap().is_empty());
+        // The item-name field shows suggestions as soon as it gets focus, so
+        // an empty query lists products (up to the suggestion limit).
+        for query in ["", "   "] {
+            let hits = search_products_by_name(&pool, 2, query).await.unwrap();
+            assert_eq!(hits.len(), 1, "query {:?}", query);
+            assert_eq!(hits[0].product_name, "anything");
+        }
     }
 
     #[tokio::test]
@@ -916,6 +942,195 @@ mod tests {
         assert_eq!(hits.len(), 1, "only A_1 must match: {:?}",
                    hits.iter().map(|p| p.product_name.as_str()).collect::<Vec<_>>());
         assert_eq!(hits[0].product_name, "A_1");
+    }
+
+    // Product suggestions for the detail item-name field: products used in
+    // details of the selected category come first, then other used products,
+    // both by most recent use; never-used products follow by name.
+
+    async fn add_named_product(pool: &SqlitePool, name: &str) -> i64 {
+        add_product(pool, 2, AddProductRequest {
+            product_name: name.to_string(),
+            manufacturer_id: None,
+            memo: None,
+            is_disabled: None,
+        }).await.unwrap();
+        get_products(pool, 2, true).await.unwrap()
+            .into_iter()
+            .find(|p| p.product_name == name)
+            .unwrap()
+            .product_id
+    }
+
+    async fn use_product(pool: &SqlitePool, product_id: i64, category: (&str, &str, &str), date: &str) {
+        add_detail(pool, Some(product_id), "item", category, date).await;
+    }
+
+    /// A detail typed by hand (no product link) under `item_name`.
+    async fn use_free_text(pool: &SqlitePool, item_name: &str, category: (&str, &str, &str), date: &str) {
+        add_detail(pool, None, item_name, category, date).await;
+    }
+
+    async fn add_detail(
+        pool: &SqlitePool,
+        product_id: Option<i64>,
+        item_name: &str,
+        category: (&str, &str, &str),
+        date: &str,
+    ) {
+        let (c1, c2, c3) = category;
+        let transaction_id = sqlx::query(sql_queries::TEST_INSERT_TRANSACTIONS_HEADER_DATED)
+            .bind(2_i64)
+            .bind(c1)
+            .bind(date)
+            .execute(pool)
+            .await
+            .unwrap()
+            .last_insert_rowid();
+        sqlx::query(sql_queries::TEST_INSERT_TRANSACTIONS_DETAIL_WITH_PRODUCT)
+            .bind(transaction_id)
+            .bind(c2)
+            .bind(c3)
+            .bind(item_name)
+            .bind(product_id)
+            .execute(pool)
+            .await
+            .unwrap();
+    }
+
+    fn category(c1: &str, c2: &str, c3: Option<&str>) -> SuggestCategory {
+        SuggestCategory {
+            category1_code: Some(c1.to_string()),
+            category2_code: Some(c2.to_string()),
+            category3_code: c3.map(|c| c.to_string()),
+        }
+    }
+
+    fn names(products: &[Product]) -> Vec<&str> {
+        products.iter().map(|p| p.product_name.as_str()).collect()
+    }
+
+    const FOOD_SNACK: (&str, &str, &str) = ("EXPENSE", "C2_FOOD", "C3_SNACK");
+    const FOOD_DRINK: (&str, &str, &str) = ("EXPENSE", "C2_FOOD", "C3_DRINK");
+    const DAILY_SOAP: (&str, &str, &str) = ("EXPENSE", "C2_DAILY", "C3_SOAP");
+
+    /// A: snack 01-10, B: soap 03-01, D: snack 02-01, C: never used.
+    async fn seed_four_products(pool: &SqlitePool) {
+        let a = add_named_product(pool, "Apple chips").await;
+        let b = add_named_product(pool, "Bar soap").await;
+        add_named_product(pool, "Cookies").await;
+        let d = add_named_product(pool, "Dried mango").await;
+        use_product(pool, a, FOOD_SNACK, "2026-01-10").await;
+        use_product(pool, b, DAILY_SOAP, "2026-03-01").await;
+        use_product(pool, d, FOOD_SNACK, "2026-02-01").await;
+    }
+
+    #[tokio::test]
+    async fn test_suggest_products_ranks_selected_category_then_used_then_unused() {
+        let pool = setup_test_db().await;
+        seed_four_products(&pool).await;
+
+        let hits = suggest_products(&pool, 2, "", &category("EXPENSE", "C2_FOOD", Some("C3_SNACK")))
+            .await
+            .unwrap();
+        assert_eq!(names(&hits), ["Dried mango", "Apple chips", "Bar soap", "Cookies"]);
+    }
+
+    #[tokio::test]
+    async fn test_suggest_products_without_category_ranks_by_recent_use() {
+        let pool = setup_test_db().await;
+        seed_four_products(&pool).await;
+
+        let hits = suggest_products(&pool, 2, "", &SuggestCategory::default()).await.unwrap();
+        assert_eq!(names(&hits), ["Bar soap", "Dried mango", "Apple chips", "Cookies"]);
+    }
+
+    #[tokio::test]
+    async fn test_suggest_products_category3_must_match_when_given() {
+        let pool = setup_test_db().await;
+        let snack = add_named_product(&pool, "Snack").await;
+        let drink = add_named_product(&pool, "Drink").await;
+        use_product(&pool, snack, FOOD_SNACK, "2026-01-01").await;
+        use_product(&pool, drink, FOOD_DRINK, "2026-05-01").await;
+
+        // Medium and minor category selected: only the snack is in tier 1.
+        let hits = suggest_products(&pool, 2, "", &category("EXPENSE", "C2_FOOD", Some("C3_SNACK")))
+            .await
+            .unwrap();
+        assert_eq!(names(&hits), ["Snack", "Drink"]);
+
+        // Only the medium category selected: both match, most recent first.
+        let hits = suggest_products(&pool, 2, "", &category("EXPENSE", "C2_FOOD", None))
+            .await
+            .unwrap();
+        assert_eq!(names(&hits), ["Drink", "Snack"]);
+    }
+
+    #[tokio::test]
+    async fn test_suggest_products_uses_the_latest_use_of_each_product() {
+        let pool = setup_test_db().await;
+        let tea = add_named_product(&pool, "Tea").await;
+        let milk = add_named_product(&pool, "Milk").await;
+        use_product(&pool, tea, FOOD_DRINK, "2026-01-01").await;
+        use_product(&pool, milk, FOOD_DRINK, "2026-02-01").await;
+        use_product(&pool, tea, FOOD_DRINK, "2026-03-01").await;
+
+        let hits = suggest_products(&pool, 2, "", &SuggestCategory::default()).await.unwrap();
+        assert_eq!(names(&hits), ["Tea", "Milk"]);
+    }
+
+    #[tokio::test]
+    async fn test_suggest_products_query_filters_and_keeps_the_ranking() {
+        let pool = setup_test_db().await;
+        seed_four_products(&pool).await;
+
+        // "o" matches Bar soap, Cookies and Dried mango, not Apple chips.
+        let hits = suggest_products(&pool, 2, "o", &category("EXPENSE", "C2_FOOD", Some("C3_SNACK")))
+            .await
+            .unwrap();
+        assert_eq!(names(&hits), ["Dried mango", "Bar soap", "Cookies"]);
+    }
+
+    #[tokio::test]
+    async fn test_suggest_products_counts_typed_details_with_the_same_name() {
+        let pool = setup_test_db().await;
+        add_named_product(&pool, "Apple chips").await;
+        add_named_product(&pool, "Bar soap").await;
+        add_named_product(&pool, "Cookies").await;
+        // Details typed by hand before the product master was used: only an
+        // exact name match counts as a use of that product.
+        use_free_text(&pool, "Cookies", FOOD_SNACK, "2026-02-01").await;
+        use_free_text(&pool, "Bar soap", DAILY_SOAP, "2026-03-01").await;
+        use_free_text(&pool, "Apple chips and nuts", FOOD_SNACK, "2026-04-01").await;
+
+        let hits = suggest_products(&pool, 2, "", &category("EXPENSE", "C2_FOOD", Some("C3_SNACK")))
+            .await
+            .unwrap();
+        assert_eq!(names(&hits), ["Cookies", "Bar soap", "Apple chips"]);
+    }
+
+    #[tokio::test]
+    async fn test_suggest_products_typed_detail_linked_elsewhere_is_not_counted_twice() {
+        let pool = setup_test_db().await;
+        let milk = add_named_product(&pool, "Milk").await;
+        add_named_product(&pool, "Oat milk").await;
+        // A detail linked to Milk but typed as "Oat milk" is a use of Milk only.
+        add_detail(&pool, Some(milk), "Oat milk", FOOD_DRINK, "2026-05-01").await;
+
+        let hits = suggest_products(&pool, 2, "", &SuggestCategory::default()).await.unwrap();
+        assert_eq!(names(&hits), ["Milk", "Oat milk"]);
+    }
+
+    #[tokio::test]
+    async fn test_suggest_products_returns_at_most_20() {
+        let pool = setup_test_db().await;
+        for i in 0..25 {
+            add_named_product(&pool, &format!("Item {:02}", i)).await;
+        }
+
+        let hits = suggest_products(&pool, 2, "", &SuggestCategory::default()).await.unwrap();
+        assert_eq!(hits.len(), 20);
+        assert_eq!(hits[0].product_name, "Item 00");
     }
 
     /// Helper: seed a second general user (USER_ID = 3) alongside the

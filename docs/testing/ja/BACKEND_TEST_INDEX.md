@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-10-08 JST  
-**総テスト数**: 466件 (差分反映後。`cargo test --lib` の権威的総数は 735 で、既存の未反映分は別 PR でバックフィル予定)
+**総テスト数**: 475件 (差分反映後。`cargo test --lib` の権威的総数は 743 で、既存の未反映分は別 PR でバックフィル予定)
 
 ---
 
@@ -253,9 +253,9 @@ SQL 文の定義。登録日時・更新日時 (`ENTRY_DT` / `UPDATE_DT`) はす
 
 | テスト関数 | 説明 | ファイル | 行 |
 |-----------|------|---------|-----|
-| `test_sql_queries_store_timestamps_in_utc` | `sql_queries.rs` のどの SQL もローカル時刻を書き込まない (以前はメモ・繰り返し予定から作る入出金・テーブルの初期値がローカル時刻だった) | src/sql_queries.rs | 2797 |
-| `test_init_sql_stores_timestamps_in_utc` | `dbaccess.sql` の日時の初期値はローカル時刻ではなく UTC | src/sql_queries.rs | 2806 |
-| `test_recurring_rules_insert_sets_entry_dt_explicitly` | 既存 DB には列の初期値 (ローカル時刻) が残るため、`RECURRING_RULES_INSERT` は `ENTRY_DT` を自分で指定する | src/sql_queries.rs | 2815 |
+| `test_sql_queries_store_timestamps_in_utc` | `sql_queries.rs` のどの SQL もローカル時刻を書き込まない (以前はメモ・繰り返し予定から作る入出金・テーブルの初期値がローカル時刻だった) | src/sql_queries.rs | 2857 |
+| `test_init_sql_stores_timestamps_in_utc` | `dbaccess.sql` の日時の初期値はローカル時刻ではなく UTC | src/sql_queries.rs | 2866 |
+| `test_recurring_rules_insert_sets_entry_dt_explicitly` | 既存 DB には列の初期値 (ローカル時刻) が残るため、`RECURRING_RULES_INSERT` は `ENTRY_DT` を自分で指定する | src/sql_queries.rs | 2875 |
 
 **合計**: 3件
 
@@ -495,27 +495,36 @@ SQL 文の定義。登録日時・更新日時 (`ENTRY_DT` / `UPDATE_DT`) はす
 
 | テスト関数 | 説明 | ファイル | 行 |
 |-----------|------|---------|-----|
-| `test_add_product_without_manufacturer` | メーカーなしの商品追加 | src/services/product.rs | 326 |
-| `test_add_product_with_manufacturer` | メーカーありの商品追加 | src/services/product.rs | 346 |
-| `test_update_product` | 商品更新テスト | src/services/product.rs | 379 |
-| `test_delete_product` | 未使用の商品は非表示ではなく行ごと削除される (潜在監査 M7) | src/services/product.rs | 412 |
-| `test_delete_disabled_product_removes_row` | 未使用の無効商品も削除でき、行が消える (潜在監査 M7) | src/services/product.rs | 439 |
-| `test_disable_product_allowed_while_referenced` | 明細が使用中の商品は削除できないが無効化はできる (潜在監査 M7) | src/services/product.rs | 460 |
-| `test_empty_product_name` | 空商品名のエラー | src/services/product.rs | 502 |
-| `test_manufacturer_deletion_rejected_while_product_references_it` | 商品が参照中はメーカー削除が `ApiError { code: "in_use", entity: "manufacturer" }` で拒否される — マスタ削除ロック導入で `test_manufacturer_deletion_sets_product_manufacturer_to_null` からリネーム（旧: 論理削除→CASCADE NULL の fallback） | src/services/product.rs | 612 |
-| `test_add_product_rejects_foreign_manufacturer_id` | 他ユーザーの manufacturer_id で add は "Manufacturer not found" (Fable-5 #13) | src/services/product.rs | 943 |
-| `test_add_product_rejects_nonexistent_manufacturer_id` | 存在しない manufacturer_id で add は "Manufacturer not found" (Fable-5 #13) | src/services/product.rs | 994 |
-| `test_update_product_rejects_foreign_manufacturer_id` | 他ユーザーの manufacturer_id で update は "Manufacturer not found" (Fable-5 #13) | src/services/product.rs | 1019 |
-| `test_product_join_scopes_manufacturer_by_user_id` | PRODUCT_GET_* JOIN は他ユーザーの manufacturer 名を漏らさない (Fable-5 #13) | src/services/product.rs | 1098 |
-| `test_delete_product_rejected_when_referenced_by_transaction_detail` | TRANSACTIONS_DETAIL が商品を参照中なら `ApiError { code: "in_use", entity: "product" }` で削除拒否（TRANSACTIONS_HEADER.USER_ID 経由でスコープ、マスタ削除ロック） | src/services/product.rs | 544 |
-| `test_delete_product_ignores_other_users_transaction_details` | 他ユーザーの明細参照は削除をブロックしない（TRANSACTIONS_HEADER.USER_ID でスコープ、マスタ削除ロック） | src/services/product.rs | 581 |
-| `test_search_products_escapes_percent_metacharacter` | オートコンプリート検索で `"100%ジ"` が「果汁100%ジュース」だけにマッチし「果汁100リンゴジュース」にマッチしないこと — `%` をエスケープし `LIKE ? ESCAPE '\'` を併用 (Fable-5 #23) | src/services/product.rs | 870 |
-| `test_search_products_escapes_underscore_metacharacter` | オートコンプリート検索で `"A_1"` が literal "A_1" だけにマッチし "AB1" にマッチしないこと — `_` をエスケープ (Fable-5 #23) | src/services/product.rs | 897 |
+| `test_add_product_without_manufacturer` | メーカーなしの商品追加 | src/services/product.rs | 348 |
+| `test_add_product_with_manufacturer` | メーカーありの商品追加 | src/services/product.rs | 368 |
+| `test_update_product` | 商品更新テスト | src/services/product.rs | 401 |
+| `test_delete_product` | 未使用の商品は非表示ではなく行ごと削除される (潜在監査 M7) | src/services/product.rs | 434 |
+| `test_delete_disabled_product_removes_row` | 未使用の無効商品も削除でき、行が消える (潜在監査 M7) | src/services/product.rs | 461 |
+| `test_disable_product_allowed_while_referenced` | 明細が使用中の商品は削除できないが無効化はできる (潜在監査 M7) | src/services/product.rs | 482 |
+| `test_empty_product_name` | 空商品名のエラー | src/services/product.rs | 524 |
+| `test_manufacturer_deletion_rejected_while_product_references_it` | 商品が参照中はメーカー削除が `ApiError { code: "in_use", entity: "manufacturer" }` で拒否される — マスタ削除ロック導入で `test_manufacturer_deletion_sets_product_manufacturer_to_null` からリネーム（旧: 論理削除→CASCADE NULL の fallback） | src/services/product.rs | 634 |
+| `test_add_product_rejects_foreign_manufacturer_id` | 他ユーザーの manufacturer_id で add は "Manufacturer not found" (Fable-5 #13) | src/services/product.rs | 1158 |
+| `test_add_product_rejects_nonexistent_manufacturer_id` | 存在しない manufacturer_id で add は "Manufacturer not found" (Fable-5 #13) | src/services/product.rs | 1209 |
+| `test_update_product_rejects_foreign_manufacturer_id` | 他ユーザーの manufacturer_id で update は "Manufacturer not found" (Fable-5 #13) | src/services/product.rs | 1234 |
+| `test_product_join_scopes_manufacturer_by_user_id` | PRODUCT_GET_* JOIN は他ユーザーの manufacturer 名を漏らさない (Fable-5 #13) | src/services/product.rs | 1313 |
+| `test_delete_product_rejected_when_referenced_by_transaction_detail` | TRANSACTIONS_DETAIL が商品を参照中なら `ApiError { code: "in_use", entity: "product" }` で削除拒否（TRANSACTIONS_HEADER.USER_ID 経由でスコープ、マスタ削除ロック） | src/services/product.rs | 566 |
+| `test_delete_product_ignores_other_users_transaction_details` | 他ユーザーの明細参照は削除をブロックしない（TRANSACTIONS_HEADER.USER_ID でスコープ、マスタ削除ロック） | src/services/product.rs | 603 |
+| `test_search_products_escapes_percent_metacharacter` | オートコンプリート検索で `"100%ジ"` が「果汁100%ジュース」だけにマッチし「果汁100リンゴジュース」にマッチしないこと — `%` をエスケープし `LIKE ? ESCAPE '\'` を併用 (Fable-5 #23) | src/services/product.rs | 896 |
+| `test_search_products_escapes_underscore_metacharacter` | オートコンプリート検索で `"A_1"` が literal "A_1" だけにマッチし "AB1" にマッチしないこと — `_` をエスケープ (Fable-5 #23) | src/services/product.rs | 923 |
 | `latent_m6_readd_deleted_product_name_is_not_database_error` | 削除済み商品と同名の再登録で汎用 database エラーにならない (潜在監査 M6) | src/services/latent_audit/product.rs | 27 |
 | `latent_m6_readd_disabled_product_name_revives_original_row` | 無効商品と同名の追加は元の行 (同じ PRODUCT_ID) を有効化して再利用 (潜在監査 M6) | src/services/latent_audit/product.rs | 113 |
 | `latent_m6_rename_onto_disabled_product_name_is_duplicate_name` | 無効商品の名前への変更は duplicate_name で拒否 (潜在監査 M6) | src/services/latent_audit/product.rs | 136 |
+| `test_search_products_empty_query_lists_products` | 検索語が空 (空白のみを含む) でも商品を返し、品名欄にカーソルが入った時点で候補を出せる (旧仕様「空なら何も返さない」を置き換え) | src/services/product.rs | 847 |
+| `test_suggest_products_ranks_selected_category_then_used_then_unused` | 候補の並び: 選んだ分類の明細で使った商品、それ以外で使った商品 (いずれも最近使った順)、一度も使っていない商品 (商品名順) | src/services/product.rs | 1029 |
+| `test_suggest_products_without_category_ranks_by_recent_use` | 分類の指定がなければ、使った商品を最近使った順、続いて未使用の商品を商品名順に並べる | src/services/product.rs | 1040 |
+| `test_suggest_products_category3_must_match_when_given` | 小分類を選んでいれば小分類も一致した使用だけが 1 段目、中分類だけなら中分類が一致した使用が 1 段目 | src/services/product.rs | 1049 |
+| `test_suggest_products_uses_the_latest_use_of_each_product` | 何度も使った商品は最後に使った日で並べる | src/services/product.rs | 1070 |
+| `test_suggest_products_query_filters_and_keeps_the_ranking` | 入力した文字で候補を絞り込み、並びは同じルールのまま | src/services/product.rs | 1083 |
+| `test_suggest_products_counts_typed_details_with_the_same_name` | 商品と紐づかない手入力の明細も、品名が商品名と完全一致すればその商品の使用として数える (部分一致は数えない) | src/services/product.rs | 1095 |
+| `test_suggest_products_typed_detail_linked_elsewhere_is_not_counted_twice` | ある商品に紐づいた明細は、品名が同じ別の商品の使用としては数えない | src/services/product.rs | 1113 |
+| `test_suggest_products_returns_at_most_20` | 候補は最大 20 件 | src/services/product.rs | 1125 |
 
-**合計**: 19件
+**合計**: 28件
 
 ### services/shop.rs
 
@@ -744,12 +753,12 @@ SQL 文の定義。登録日時・更新日時 (`ENTRY_DT` / `UPDATE_DT`) はす
 
 | テスト関数 | 説明 | ファイル | 行 |
 |-----------|------|---------|-----|
-| `normalize_language_accepts_names_and_codes` | 言語名・言語コード（en/English/ja/日本語/Japanese）を受理 | src/lib.rs | 2554 |
-| `normalize_language_rejects_unknown_values` | 未知の言語値を拒否 | src/lib.rs | 2563 |
-| `normalize_font_size_accepts_keywords_and_percentages` | サイズキーワードと50〜200%の指定を受理 | src/lib.rs | 2569 |
-| `normalize_font_size_rejects_out_of_range_and_garbage` | 範囲外の割合と不正文字列を拒否 | src/lib.rs | 2578 |
-| `monthly_bounds_with_shift_rejects_out_of_range_month` | month=0/13/100 で `services::period::end_of_month` に到達する前に early-Err を返し、バックエンドスレッド crash を防ぐ (PR6, Fable-5 #22) | src/lib.rs | 2592 |
-| `monthly_bounds_with_shift_accepts_boundary_months` | month=1/12 の境界は引き続き受理されることを確認 (PR6, Fable-5 #22) | src/lib.rs | 2619 |
+| `normalize_language_accepts_names_and_codes` | 言語名・言語コード（en/English/ja/日本語/Japanese）を受理 | src/lib.rs | 2564 |
+| `normalize_language_rejects_unknown_values` | 未知の言語値を拒否 | src/lib.rs | 2573 |
+| `normalize_font_size_accepts_keywords_and_percentages` | サイズキーワードと50〜200%の指定を受理 | src/lib.rs | 2579 |
+| `normalize_font_size_rejects_out_of_range_and_garbage` | 範囲外の割合と不正文字列を拒否 | src/lib.rs | 2588 |
+| `monthly_bounds_with_shift_rejects_out_of_range_month` | month=0/13/100 で `services::period::end_of_month` に到達する前に early-Err を返し、バックエンドスレッド crash を防ぐ (PR6, Fable-5 #22) | src/lib.rs | 2602 |
+| `monthly_bounds_with_shift_accepts_boundary_months` | month=1/12 の境界は引き続き受理されることを確認 (PR6, Fable-5 #22) | src/lib.rs | 2629 |
 
 **合計**: 6件
 
@@ -762,7 +771,7 @@ SQL 文の定義。登録日時・更新日時 (`ENTRY_DT` / `UPDATE_DT`) はす
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **443件** |
+| **インラインテスト** | **452件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -778,7 +787,7 @@ SQL 文の定義。登録日時・更新日時 (`ENTRY_DT` / `UPDATE_DT`) はす
 | services/account.rs | 24 |
 | services/category.rs | 45 |
 | services/manufacturer.rs | 17 |
-| services/product.rs | 19 |
+| services/product.rs | 28 |
 | services/shop.rs | 19 |
 | services/transaction.rs | 64 |
 | services/aggregation.rs | 27 |
@@ -787,7 +796,7 @@ SQL 文の定義。登録日時・更新日時 (`ENTRY_DT` / `UPDATE_DT`) はす
 | services/i18n.rs | 8 |
 | services/recurring.rs | 28 |
 | lib.rs | 6 |
-| **総計** | **466件** |
+| **総計** | **475件** |
 
 ---
 

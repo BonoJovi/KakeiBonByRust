@@ -668,6 +668,9 @@ function installProductAutocomplete() {
     if (!input || !dropdown) return;
 
     input.addEventListener('input', handleAutocompleteInput);
+    // Suggestions appear as soon as the field gets focus, so the user sees
+    // that registered products can be picked before typing anything.
+    input.addEventListener('focus', handleAutocompleteFocus);
     input.addEventListener('keydown', handleAutocompleteKeydown);
     input.addEventListener('blur', handleAutocompleteBlur);
     // mousedown (not click) so the input's blur doesn't fire first and hide
@@ -680,21 +683,37 @@ function handleAutocompleteInput(event) {
     // master link; demote back to free-text until they pick again.
     autocompleteState.selectedProductId = setHiddenProductId(null);
 
+    // An empty field lists suggestions too (the backend ranks them by use).
+    // Drop any answer still on its way (e.g. the search sent on focus): it
+    // was for the text before this keystroke.
     const query = event.target.value.trim();
-    if (!query) {
-        hideAutocomplete();
-        return;
-    }
-
+    autocompleteState.requestToken++;
     clearTimeout(autocompleteState.debounceTimer);
     autocompleteState.debounceTimer = setTimeout(() => fetchAndRenderCandidates(query), AUTOCOMPLETE_DEBOUNCE_MS);
+}
+
+function handleAutocompleteFocus(event) {
+    clearTimeout(autocompleteState.debounceTimer);
+    fetchAndRenderCandidates(event.target.value.trim());
+}
+
+// The detail's categories let the backend rank products used in the same
+// category first: category1 from the header, category2/3 from the form.
+function currentSuggestCategories() {
+    return {
+        category1Code: category1Code || null,
+        category2Code: document.getElementById('category2-code')?.value || null,
+        category3Code: document.getElementById('category3-code')?.value || null,
+    };
 }
 
 async function fetchAndRenderCandidates(query) {
     const token = ++autocompleteState.requestToken;
     try {
-        const results = await invoke('search_products_by_name', { query });
+        const results = await invoke('search_products_by_name', { query, ...currentSuggestCategories() });
         if (token !== autocompleteState.requestToken) return; // stale
+        // The user may have left the field while the request was running.
+        if (document.activeElement !== document.getElementById('item-name')) return;
         renderAutocomplete(results || []);
     } catch (err) {
         console.error('search_products_by_name failed:', err);
@@ -788,6 +807,10 @@ function selectCandidate(index) {
         // Notify char counter / validators of the programmatic change
         input.dispatchEvent(new Event('input', { bubbles: false }));
     }
+    // That synthetic input also scheduled a new search; cancel it (and any
+    // request in flight) so the list does not open again after the pick.
+    clearTimeout(autocompleteState.debounceTimer);
+    autocompleteState.requestToken++;
     autocompleteState.selectedProductId = setHiddenProductId(candidate.product_id);
     hideAutocomplete();
 }
@@ -895,8 +918,10 @@ async function openDetailModal(detail = null) {
     if (itemNameInput) attachCharCounter(itemNameInput, MAX_ITEM_NAME_LEN);
     if (memoInput) attachCharCounter(memoInput, MAX_MEMO_LEN);
 
-    // Focus on item name input after modal opens (preventScroll to avoid modal shifting)
-    setTimeout(() => document.getElementById('item-name')?.focus({ preventScroll: true }), 0);
+    // Focus the first field, the medium category, after the modal opens
+    // (preventScroll to avoid modal shifting). The categories come before the
+    // item name so its suggestions can be ranked by them.
+    setTimeout(() => document.getElementById('category2-code')?.focus({ preventScroll: true }), 0);
 }
 
 function closeDetailModal() {
