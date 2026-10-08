@@ -31,7 +31,7 @@ describe('Period Aggregation Tests', () => {
     });
 
     describe('UI Initialization', () => {
-        it('should display start date input with default first day of current month', () => {
+        it('should show the first day of the current month in the start date when the screen opens', () => {
             const startDateInput = document.querySelector('#start-date');
             expect(startDateInput).toBeTruthy();
             
@@ -41,7 +41,7 @@ describe('Period Aggregation Tests', () => {
             expect(startDateInput.value).toBe(expectedDate);
         });
 
-        it('should display end date input with default today', () => {
+        it('should show today in the end date when the screen opens', () => {
             const endDateInput = document.querySelector('#end-date');
             expect(endDateInput).toBeTruthy();
             
@@ -49,7 +49,7 @@ describe('Period Aggregation Tests', () => {
             expect(endDateInput.value).toBe(today);
         });
 
-        it('should display group-by select with default value', () => {
+        it('should show the group-by select set to category1 when the screen opens', () => {
             const groupBySelect = document.querySelector('#group-by');
             expect(groupBySelect).toBeTruthy();
             expect(groupBySelect.value).toBe('category1');
@@ -57,7 +57,7 @@ describe('Period Aggregation Tests', () => {
     });
 
     describe('Date Range Validation', () => {
-        it('should accept valid date range', async () => {
+        it('should show no error when the start date is before the end date', async () => {
             window.__TAURI__.core.invoke = async () => [];
             
             setInputValue('#start-date', '2024-11-01');
@@ -82,7 +82,7 @@ describe('Period Aggregation Tests', () => {
             expect(errorMsg.textContent).toMatch(/start.*end|range/i);
         });
 
-        it('should reject future start date', async () => {
+        it('should show an error when the start date is in the future', async () => {
             const tomorrow = new Date();
             tomorrow.setDate(tomorrow.getDate() + 1);
             const futureDate = tomorrow.toISOString().split('T')[0];
@@ -98,7 +98,7 @@ describe('Period Aggregation Tests', () => {
             expect(errorMsg.textContent).toMatch(/future/i);
         });
 
-        it('should reject future end date', async () => {
+        it('should show an error when the end date is in the future', async () => {
             const tomorrow = new Date();
             tomorrow.setDate(tomorrow.getDate() + 1);
             const futureDate = tomorrow.toISOString().split('T')[0];
@@ -114,7 +114,7 @@ describe('Period Aggregation Tests', () => {
             expect(errorMsg.textContent).toMatch(/future/i);
         });
 
-        it('should accept same start and end date', async () => {
+        it('should show no error when the start and end dates are the same', async () => {
             window.__TAURI__.core.invoke = async () => [];
             
             const today = new Date().toISOString().split('T')[0];
@@ -128,7 +128,7 @@ describe('Period Aggregation Tests', () => {
             expect(errorMsg.style.display).toBe('none');
         });
 
-        it('should reject empty start date', async () => {
+        it('should show an error when the start date is empty', async () => {
             setInputValue('#start-date', '');
             setInputValue('#end-date', '2024-11-20');
             clickButton('#execute-btn');
@@ -139,7 +139,7 @@ describe('Period Aggregation Tests', () => {
             expect(errorMsg).toBeTruthy();
         });
 
-        it('should reject empty end date', async () => {
+        it('should show an error when the end date is empty', async () => {
             setInputValue('#start-date', '2024-11-01');
             setInputValue('#end-date', '');
             clickButton('#execute-btn');
@@ -152,7 +152,7 @@ describe('Period Aggregation Tests', () => {
     });
 
     describe('Aggregation Execution', () => {
-        it('should call backend with correct parameters', async () => {
+        it('should send the form values to the backend when Execute is pressed', async () => {
             const calls = [];
             window.__TAURI__.core.invoke = async (cmd, args) => {
                 calls.push({ cmd, args });
@@ -174,7 +174,7 @@ describe('Period Aggregation Tests', () => {
             expect(calls[0].args.groupBy).toBe('category2');
         });
 
-        it('should display results after execution', async () => {
+        it('should show the result rows when the aggregation returns data', async () => {
             window.__TAURI__.core.invoke = async () => [
                 { group_key: 'EXPENSE', group_name: 'Expense', total_amount: -80000, count: 50, avg_amount: -1600 }
             ];
@@ -190,7 +190,7 @@ describe('Period Aggregation Tests', () => {
             expect(tableData[0][0]).toBe('Expense');
         });
 
-        it('should handle empty results', async () => {
+        it('should show an empty table when the aggregation returns no rows', async () => {
             window.__TAURI__.core.invoke = async () => [];
             
             clickButton('#execute-btn');
@@ -202,7 +202,7 @@ describe('Period Aggregation Tests', () => {
             expect(tbody?.children.length).toBe(0);
         });
 
-        it('should handle backend errors', async () => {
+        it('should show an error when the backend fails', async () => {
             window.__TAURI__.core.invoke = async () => {
                 throw new Error('Failed to fetch data');
             };
@@ -217,7 +217,7 @@ describe('Period Aggregation Tests', () => {
     });
 
     describe('Common Use Cases', () => {
-        it('should handle 1-week period', async () => {
+        it('should show no error when the period is one week', async () => {
             window.__TAURI__.core.invoke = async () => [];
             
             setInputValue('#start-date', '2024-11-14');
@@ -230,7 +230,7 @@ describe('Period Aggregation Tests', () => {
             expect(errorMsg.style.display).toBe('none');
         });
 
-        it('should handle 1-month period', async () => {
+        it('should show no error when the period is one month', async () => {
             window.__TAURI__.core.invoke = async () => [];
             
             setInputValue('#start-date', '2024-10-01');
@@ -243,7 +243,7 @@ describe('Period Aggregation Tests', () => {
             expect(errorMsg.style.display).toBe('none');
         });
 
-        it('should handle quarterly period', async () => {
+        it('should show no error when the period is a quarter', async () => {
             window.__TAURI__.core.invoke = async () => [];
             
             setInputValue('#start-date', '2024-10-01');
@@ -256,7 +256,7 @@ describe('Period Aggregation Tests', () => {
             expect(errorMsg.style.display).toBe('none');
         });
 
-        it('should handle travel period (5 days)', async () => {
+        it('should show no error when the period is 5 days', async () => {
             window.__TAURI__.core.invoke = async () => [];
             
             setInputValue('#start-date', '2024-11-01');
@@ -271,7 +271,7 @@ describe('Period Aggregation Tests', () => {
     });
 
     describe('Grouping Axis Changes', () => {
-        it('should aggregate by all grouping axes', async () => {
+        it('should send each grouping axis when it is selected', async () => {
             const groupings = ['category1', 'category2', 'category3', 'account', 'shop'];
             
             for (const grouping of groupings) {
@@ -316,7 +316,7 @@ describe('Period Aggregation Tests', () => {
     });
 
     describe('Boundary Cases', () => {
-        it('should handle year boundary', async () => {
+        it('should show no error when the period crosses a year boundary', async () => {
             window.__TAURI__.core.invoke = async () => [];
             
             setInputValue('#start-date', '2023-12-20');
@@ -329,7 +329,7 @@ describe('Period Aggregation Tests', () => {
             expect(errorMsg.style.display).toBe('none');
         });
 
-        it('should handle leap year February', async () => {
+        it('should show no error when the period is February of a leap year', async () => {
             window.__TAURI__.core.invoke = async () => [];
             
             setInputValue('#start-date', '2024-02-01');
