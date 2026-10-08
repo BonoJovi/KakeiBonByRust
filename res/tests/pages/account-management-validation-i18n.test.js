@@ -67,22 +67,22 @@ function inlineError(id) {
 }
 
 describe('account master input checks use i18n', () => {
-    test('empty account code', async () => {
+    test('should show the i18n required message when the account code is empty', async () => {
         await submitAccount({ code: '', name: 'Main Bank', template: 'BANK', balance: '0' });
         expect(inlineError('account-code')).toBe('validation.required');
     });
 
-    test('empty account name', async () => {
+    test('should show the i18n required message when the account name is empty', async () => {
         await submitAccount({ code: 'BANK1', name: '  ', template: 'BANK', balance: '0' });
         expect(inlineError('account-name')).toBe('validation.required');
     });
 
-    test('no template selected', async () => {
+    test('should show the i18n required message when no template is selected', async () => {
         await submitAccount({ code: 'BANK1', name: 'Main Bank', template: '', balance: '0' });
         expect(inlineError('template-code')).toBe('validation.required');
     });
 
-    test('empty initial balance', async () => {
+    test('should show the i18n amount message when the initial balance is empty', async () => {
         await submitAccount({ code: 'BANK1', name: 'Main Bank', template: 'BANK', balance: '' });
         expect(inlineError('initial-balance'))
             .toBe('common.error_amount_not_integer');
@@ -90,7 +90,7 @@ describe('account master input checks use i18n', () => {
 });
 
 describe('account list load error uses i18n', () => {
-    test('shows only the localized message, not the backend detail', async () => {
+    test('should show only the localized message, not the backend detail, when the list fails to load', async () => {
         failLoad = true;
         document.getElementById('toggle-disabled-btn').click();
         await flush(10);

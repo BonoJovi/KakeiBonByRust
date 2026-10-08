@@ -60,7 +60,7 @@ describe('shop master screen — disable (regression, latent audit 2026-09)', ()
         invoke.mockClear();
     });
 
-    test('[M7] should list disabled shops, marked, only while "show disabled" is on', async () => {
+    test('should list disabled shops, marked, when "show disabled" is on (M7)', async () => {
         expect(rows()).toHaveLength(1);
 
         document.getElementById('toggle-disabled-btn').click();
@@ -75,7 +75,7 @@ describe('shop master screen — disable (regression, latent audit 2026-09)', ()
         expect(rows()).toHaveLength(1);
     });
 
-    test('[M7] should not let a late "show disabled" response overwrite a newer list', async () => {
+    test('should not let a late "show disabled" response overwrite a newer list when the toggle changes again (M7)', async () => {
         pendingIncludeDisabled = deferred();
         document.getElementById('toggle-disabled-btn').click(); // on: response parked
         await flush(2);
@@ -90,7 +90,7 @@ describe('shop master screen — disable (regression, latent audit 2026-09)', ()
         expect(rows()).toHaveLength(1);
     });
 
-    test('[M7] should send the disabled checkbox when adding a shop', async () => {
+    test('should send the disabled checkbox when adding a shop (M7)', async () => {
         document.getElementById('add-shop-btn').click();
         await flush(5);
         expect(document.getElementById('shop-is-disabled').checked).toBe(false);
@@ -105,7 +105,7 @@ describe('shop master screen — disable (regression, latent audit 2026-09)', ()
         expect(adds[0]).toMatchObject({ shopName: 'Pop-up Store', isDisabled: 1 });
     });
 
-    test('[M7] should show and send the disabled state when editing a shop', async () => {
+    test('should show and send the disabled state when editing a shop (M7)', async () => {
         document.getElementById('toggle-disabled-btn').click();
         await flush(5);
 

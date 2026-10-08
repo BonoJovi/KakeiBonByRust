@@ -1231,10 +1231,10 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[M7] should list disabled shops, marked, only while "show disabled" is on` | 「非表示も表示」で無効な店舗を非表示ラベル付きで一覧に出す |
-| `[M7] should not let a late "show disabled" response overwrite a newer list` | 切替の連打で遅れて届いた古い応答が新しい一覧を上書きしない |
-| `[M7] should send the disabled checkbox when adding a shop` | 追加時に「非表示」チェックを `isDisabled` として送る |
-| `[M7] should show and send the disabled state when editing a shop` | 編集時にチェック状態を表示し、変更を送る (再有効化) |
+| `should list disabled shops, marked, when "show disabled" is on (M7)` | 「非表示も表示」で無効な店舗を非表示ラベル付きで一覧に出す |
+| `should not let a late "show disabled" response overwrite a newer list when the toggle changes again (M7)` | 切替の連打で遅れて届いた古い応答が新しい一覧を上書きしない |
+| `should send the disabled checkbox when adding a shop (M7)` | 追加時に「非表示」チェックを `isDisabled` として送る |
+| `should show and send the disabled state when editing a shop (M7)` | 編集時にチェック状態を表示し、変更を送る (再有効化) |
 
 **ファイル**: res/tests/pages/shop-management-disabled.test.js
 
@@ -1263,10 +1263,10 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[M7] should list disabled accounts, marked, only while "show disabled" is on` | 「非表示も表示」で無効な口座を非表示ラベル付きで一覧に出す (NONE は出さない) |
-| `[M7] should not let a late "show disabled" response overwrite a newer list` | 切替の連打で遅れて届いた古い応答が新しい一覧を上書きしない |
-| `[M7] should send the disabled checkbox when adding an account` | 追加時に「非表示」チェックを `isDisabled` として送る |
-| `[M7] should show and send the disabled state when editing an account` | 編集時にチェック状態を表示し、変更を送る (再有効化) |
+| `should list disabled accounts, marked, when "show disabled" is on (M7)` | 「非表示も表示」で無効な口座を非表示ラベル付きで一覧に出す (NONE は出さない) |
+| `should not let a late "show disabled" response overwrite a newer list when the toggle changes again (M7)` | 切替の連打で遅れて届いた古い応答が新しい一覧を上書きしない |
+| `should send the disabled checkbox when adding an account (M7)` | 追加時に「非表示」チェックを `isDisabled` として送る |
+| `should show and send the disabled state when editing an account (M7)` | 編集時にチェック状態を表示し、変更を送る (再有効化) |
 
 **ファイル**: res/tests/pages/account-management-disabled.test.js
 
@@ -1278,8 +1278,8 @@
 
 | テスト | 説明 |
 |--------|------|
-| `keeps the modal open and the typed input when add_account fails with duplicate_code` | 口座コードの重複でバックエンドが拒否しても、画面が開いたまま入力が残る |
-| `keeps the modal open when a whitespace-only name is stopped before add_account` | 空白だけの名前を入力チェックで止めたときも、画面が開いたまま残る |
+| `should keep the window open and the typed input when add_account fails with duplicate_code` | 口座コードの重複でバックエンドが拒否しても、画面が開いたまま入力が残る |
+| `should keep the window open when a whitespace-only name is stopped before add_account` | 空白だけの名前を入力チェックで止めたときも、画面が開いたまま残る |
 
 **ファイル**: res/tests/pages/account-management-save-error-keeps-form.test.js
 
@@ -1293,11 +1293,11 @@
 
 | テスト | 説明 |
 |--------|------|
-| `empty account code` | 口座コードが空なら入力欄の下に `validation.required` を出す |
-| `empty account name` | 口座名が空白だけなら `validation.required` を出す |
-| `no template selected` | テンプレート未選択なら `validation.required` を出す |
-| `empty initial balance` | 初期残高が空なら `common.error_amount_not_integer` を出す |
-| `shows only the localized message, not the backend detail` | 一覧の読み込み失敗時は `account_mgmt.failed_to_load` だけを出し、バックエンドの英語の詳細は出さない |
+| `should show the i18n required message when the account code is empty` | 口座コードが空なら入力欄の下に `validation.required` を出す |
+| `should show the i18n required message when the account name is empty` | 口座名が空白だけなら `validation.required` を出す |
+| `should show the i18n required message when no template is selected` | テンプレート未選択なら `validation.required` を出す |
+| `should show the i18n amount message when the initial balance is empty` | 初期残高が空なら `common.error_amount_not_integer` を出す |
+| `should show only the localized message, not the backend detail, when the list fails to load` | 一覧の読み込み失敗時は `account_mgmt.failed_to_load` だけを出し、バックエンドの英語の詳細は出さない |
 
 **ファイル**: res/tests/pages/account-management-validation-i18n.test.js
 
@@ -1311,10 +1311,10 @@
 
 | テスト | 説明 |
 |--------|------|
-| `add: the code field shows a 50-character counter and cuts typed input at 50` | 新規登録では口座コード欄に「n / 50」の文字数カウンタが出て、50 文字を超えた入力は切り詰められる |
-| `add: a 51-character code is stopped before add_account with the max-length message` | 51 文字のコードは `add_account` を呼ぶ前に止まり、`validation.max_length` のメッセージが出る |
-| `add: a 50-character code is sent to add_account` | 50 文字のコードはそのまま `add_account` に送られる |
-| `edit: an existing code longer than 50 characters is kept and sent to update_account` | 編集では口座コード欄が読み取り専用でカウンタもなく、50 文字を超える既存のコードも切り詰めずに `update_account` に送られる |
+| `should show a 50-character counter and cut typed input at 50 when an account is added` | 新規登録では口座コード欄に「n / 50」の文字数カウンタが出て、50 文字を超えた入力は切り詰められる |
+| `should stop a 51-character code before add_account with the max-length message when an account is added` | 51 文字のコードは `add_account` を呼ぶ前に止まり、`validation.max_length` のメッセージが出る |
+| `should send a 50-character code to add_account when an account is added` | 50 文字のコードはそのまま `add_account` に送られる |
+| `should keep an existing code longer than 50 characters and send it to update_account when an account is edited` | 編集では口座コード欄が読み取り専用でカウンタもなく、50 文字を超える既存のコードも切り詰めずに `update_account` に送られる |
 
 **ファイル**: res/tests/pages/account-management-code-max-length.test.js
 
@@ -1601,8 +1601,8 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[L19] should show the not-found message and reload the tree when moving a vanished category` | 存在しなくなった費目の移動で `category_mgmt.not_found` を表示しツリーを再読込 |
-| `[L19] should show the not-found message and reload the tree when showing a vanished category` | 存在しなくなった費目の再表示でも同様 |
+| `should show the not-found message and reload the tree when moving a vanished category (L19)` | 存在しなくなった費目の移動で `category_mgmt.not_found` を表示しツリーを再読込 |
+| `should show the not-found message and reload the tree when showing a vanished category (L19)` | 存在しなくなった費目の再表示でも同様 |
 
 **ファイル**: res/tests/pages/category-management-page.test.js
 
@@ -1616,8 +1616,8 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[scan2-M5] the last visible CATEGORY2 cannot move down past hidden ones` | 表示中の最初の中分類は「↑」、最後の中分類は「↓」が押せない (後ろに非表示があっても)。非表示の行には ↑/↓ が無い |
-| `[scan2-M5] the last visible CATEGORY3 cannot move down past hidden ones` | 小分類でも同じ |
+| `should not let the last visible CATEGORY2 move down when only hidden ones follow (scan2-M5)` | 表示中の最初の中分類は「↑」、最後の中分類は「↓」が押せない (後ろに非表示があっても)。非表示の行には ↑/↓ が無い |
+| `should not let the last visible CATEGORY3 move down when only hidden ones follow (scan2-M5)` | 小分類でも同じ |
 
 **ファイル**: res/tests/pages/category-management-move-buttons.test.js
 

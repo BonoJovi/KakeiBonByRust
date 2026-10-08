@@ -56,7 +56,7 @@ await import('../../js/account-management.js');
 await bootPage();
 
 describe('scan2-M4 account modal on save error', () => {
-    test('keeps the modal open and the typed input when add_account fails with duplicate_code', async () => {
+    test('should keep the window open and the typed input when add_account fails with duplicate_code', async () => {
         document.getElementById('add-account-btn').click();
         await flush(5);
 
@@ -79,7 +79,7 @@ describe('scan2-M4 account modal on save error', () => {
         expect(document.getElementById('account-name').value).toBe('Second bank');
     });
 
-    test('keeps the modal open when a whitespace-only name is stopped before add_account', async () => {
+    test('should keep the window open when a whitespace-only name is stopped before add_account', async () => {
         invoke.mockClear();
         const modal = document.getElementById('account-modal');
         if (isHiddenOrAbsent(modal)) {
