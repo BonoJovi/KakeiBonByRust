@@ -1,7 +1,7 @@
 # Coding Standards
 
 **Audience**: Developers & Contributors  
-**Last Updated**: 2026-10-08 17:40 JST
+**Last Updated**: 2026-10-09 01:56 JST
 
 ---
 
@@ -263,7 +263,7 @@ sqlite3 ~/.local/share/kakeibo/kakeibo.db "SELECT * FROM USERS;"
 
 - Applies to the names of JavaScript (Jest) tests: `test('should ...')` / `it('should ...')`.
 - New tests use this form.
-- Some existing tests use an older form, such as `[ID] description`. They are renamed to this form step by step, a few test files per pull request, without changing what the tests check.
+- All existing Jest tests have been renamed to this form.
 - Rust tests are named by their function names (`fn test_...`), so this form does not apply to them.
 
 ### Structure (AAA)
@@ -276,9 +276,9 @@ sqlite3 ~/.local/share/kakeibo/kakeibo.db "SELECT * FROM USERS;"
 - Backend: Use `src/test_helpers.rs` and `src/validation_tests.rs`
 
 ### Test Count
-- Rust backend: 201 tests
-- JavaScript frontend: Manual testing (runner not configured)
-- **Total**: 201+ tests
+This document does not list test counts. Count the tests with these commands, and see the test indexes for the counts.
+- JavaScript frontend (Jest): `cd res/tests && npm test` — counts in [FRONTEND_TEST_INDEX](../../../testing/en/FRONTEND_TEST_INDEX.md)
+- Rust backend: `cargo test --lib` — counts in [BACKEND_TEST_INDEX](../../../testing/en/BACKEND_TEST_INDEX.md)
 
 ---
 

@@ -1,7 +1,7 @@
 # コーディング規約
 
 **対象者**: 開発者・コントリビューター  
-**最終更新**: 2026-10-08 17:40 JST
+**最終更新**: 2026-10-09 01:56 JST
 
 ---
 
@@ -263,7 +263,7 @@ sqlite3 ~/.local/share/kakeibo/kakeibo.db "SELECT * FROM USERS;"
 
 - JavaScript (Jest) のテスト名に適用する: `test('should ...')` / `it('should ...')`。
 - 新しく書くテストはこの形にする。
-- 既存テストの一部は `[ID] 説明` などの旧形式になっている。テストの中身は変えずに、数ファイルずつ PR に分けて順次この形へ改名する。
+- 既存の Jest テストは、すべてこの形に改名済み。
 - Rust のテストは関数名 (`fn test_...`) で名前を付けるので、この形式の対象外とする。
 
 ### 構造（AAA）
@@ -276,9 +276,9 @@ sqlite3 ~/.local/share/kakeibo/kakeibo.db "SELECT * FROM USERS;"
 - バックエンド: `src/test_helpers.rs`と`src/validation_tests.rs`を使用
 
 ### テストカウント
-- Rustバックエンド: 201テスト
-- JavaScriptフロントエンド: 手動テスト（ランナー未設定）
-- **合計**: 201+テスト
+件数はこの文書には書かない。次のコマンドで数え、テスト一覧で確認する。
+- JavaScriptフロントエンド (Jest): `cd res/tests && npm test` — 件数は [FRONTEND_TEST_INDEX](../../../testing/ja/FRONTEND_TEST_INDEX.md)
+- Rustバックエンド: `cargo test --lib` — 件数は [BACKEND_TEST_INDEX](../../../testing/ja/BACKEND_TEST_INDEX.md)
 
 ---
 
