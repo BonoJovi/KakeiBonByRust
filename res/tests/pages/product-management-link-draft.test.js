@@ -11,6 +11,11 @@
  *     item name are left untouched (no silent pick of candidates[0]); an
  *     exact match is still linked.
  *
+ * Also pinned: without a detail draft no draft is created, an empty search
+ * leaves the draft alone, and linking keeps every non-product field of the
+ * draft (these replace a former test file that tested a copy of
+ * linkNewProductToDraft).
+ *
  * The real page module is booted against res/product-management.html (with
  * ?return_to=<transaction_id>, i.e. arriving from the detail modal) via
  * ./_page-harness.js.
@@ -126,4 +131,60 @@ describe('product master screen — detail draft link (regression, latent audit 
         expect(draft.selected_product_id).toBe(100);
         expect(draft.item_name).toBe('Soy Sauce');
     });
+
+    test('should not create a detail draft when the product is added without one', async () => {
+        searchResults = [{ product_id: 100, product_name: 'Soy Sauce', manufacturer_name: null }];
+
+        await addProductNamed('Soy Sauce');
+
+        expect(callsOf(invoke, 'add_product')).toHaveLength(1);
+        expect(sessionStorage.getItem(DETAIL_DRAFT_KEY)).toBeNull();
+    });
+
+    test('should leave the detail draft alone when the search returns no candidates', async () => {
+        const originalDraft = {
+            transaction_id: '10',
+            detail_id: null,
+            item_name: 'Soy Sauce',
+            selected_product_id: null,
+        };
+        sessionStorage.setItem(DETAIL_DRAFT_KEY, JSON.stringify(originalDraft));
+        searchResults = [];
+
+        await addProductNamed('Soy Sauce');
+
+        expect(callsOf(invoke, 'add_product')).toHaveLength(1);
+        expect(JSON.parse(sessionStorage.getItem(DETAIL_DRAFT_KEY))).toEqual(originalDraft);
+    });
+
+    test('should keep all non-product fields when the detail draft is linked to the product', async () => {
+        const originalDraft = {
+            transaction_id: '10',
+            detail_id: '99',
+            item_name: 'Soy Sauce',
+            category2_code: 'FOOD',
+            category3_code: 'SEASONING',
+            tax_rate: '8',
+            amount_excluding_tax: '500',
+            amount_including_tax: '540',
+            tax_amount: '40',
+            memo: 'メモテスト',
+            selected_product_id: null,
+        };
+        sessionStorage.setItem(DETAIL_DRAFT_KEY, JSON.stringify(originalDraft));
+        searchResults = [{ product_id: 100, product_name: 'Soy Sauce', manufacturer_name: null }];
+
+        await addProductNamed('Soy Sauce');
+
+        const draft = JSON.parse(sessionStorage.getItem(DETAIL_DRAFT_KEY));
+        expect(draft).toEqual({ ...originalDraft, selected_product_id: 100 });
+    });
 });
+
+async function addProductNamed(name) {
+    document.getElementById('add-product-btn').click();
+    await flush(5);
+    document.getElementById('product-name').value = name;
+    submitProductForm();
+    await flush(10);
+}

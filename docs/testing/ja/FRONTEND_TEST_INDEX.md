@@ -2,8 +2,8 @@
 
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
-**最終更新**: 2026-10-08 JST  
-**総テスト数**: 963件 (jest suite 92 ファイル、`npm test` 実測)
+**最終更新**: 2026-10-09 JST  
+**総テスト数**: 962件 (jest suite 93 ファイル、`npm test` 実測)
 
 ---
 
@@ -27,9 +27,10 @@
   - [transaction-detail-tax-calculation.test.js](#transaction-detail-tax-calculationtestjs)
   - [toast.test.js](#toasttestjs)
   - [tax-calc.test.js](#tax-calctestjs)
-  - [product-autocomplete.test.js](#product-autocompletetestjs)
-  - [product-draft.test.js](#product-drafttestjs)
-  - [product-master-jump-draft.test.js](#product-master-jump-drafttestjs)
+  - [pages/transaction-detail-draft-storage.test.js](#pagestransaction-detail-draft-storagetestjs)
+  - [pages/transaction-detail-product-link.test.js](#pagestransaction-detail-product-linktestjs)
+  - [pages/product-management-product-draft.test.js](#pagesproduct-management-product-drafttestjs)
+  - [pages/manufacturer-management-product-draft.test.js](#pagesmanufacturer-management-product-drafttestjs)
   - [modal-double-submit.test.js](#modal-double-submittestjs)
   - [modal-stale-save-close.test.js](#modal-stale-save-closetestjs)
   - [master-crud.test.js](#master-crudtestjs)
@@ -538,52 +539,83 @@
 
 ---
 
-### product-autocomplete.test.js
+### pages/transaction-detail-draft-storage.test.js
 
-商品オートコンプリート UI のテスト。マスタからの候補提示・キーボード操作・選択確定。
+明細画面の下書き (明細 → 商品マスタ往復の間 sessionStorage に置く入力内容) のテスト。本物の `transaction-detail-management.js` を読み込み、公開されている `persistDraft` / `consumeDraft` / `clearDraft` を呼ぶ (画面の起動はしない)。
 
-**テスト数**: 10件
+**テスト数**: 6件
 
-| テストカテゴリ | 説明 |
-|--------------|------|
-| 候補表示 | 入力キーワードに応じた suggestion 一覧 |
-| キーボード操作 | 上下キー・Enter での選択 |
-| 選択確定 | フォーム反映と autocomplete 閉じ |
-| クリア | 入力クリア時の suggestion 消去 |
+| テスト | 説明 |
+|--------|------|
+| `should return the same payload when a draft is persisted and then consumed` | 保存した下書きがそのまま読み出せる |
+| `should return null from consume when nothing is stored` | 何も無ければ null |
+| `should return null and clear storage when the stored draft is malformed JSON` | 壊れた JSON は null を返し、保存内容を消す |
+| `should remove the persisted entry when clearDraft is called` | `clearDraft` で保存内容が消える |
+| `should overwrite the earlier draft when persist is called again` | 2 回目の保存が前の下書きを上書きする |
+| `should keep detail_id and selected_product_id when an edit-mode draft makes a round trip` | 編集中の下書きは `detail_id` と `selected_product_id` を保つ |
 
-**ファイル**: res/tests/product-autocomplete.test.js
-
----
-
-### product-draft.test.js
-
-商品マスタの下書き (draft) 状態管理テスト。未保存商品の一時保持と復元。
-
-**テスト数**: 11件
-
-| テストカテゴリ | 説明 |
-|--------------|------|
-| draft 保存 | sessionStorage への draft 書き込み |
-| draft 復元 | 遷移復帰時の form 再構築 |
-| draft 破棄 | 保存成功後 / 明示キャンセル時の cleanup |
-
-**ファイル**: res/tests/product-draft.test.js
+**ファイル**: res/tests/pages/transaction-detail-draft-storage.test.js
 
 ---
 
-### product-master-jump-draft.test.js
+### pages/transaction-detail-product-link.test.js
 
-入出金画面から商品マスタへの側訪 (jump) と、戻り時の draft 引き継ぎテスト。
+本物の明細画面を起動し、品名の商品候補と商品の紐付け (隠し欄 `#product-id`) を試すテスト。
 
-**テスト数**: 11件
+**テスト数**: 9件
 
-| テストカテゴリ | 説明 |
-|--------------|------|
-| jump | 入出金画面から商品マスタへの遷移と source 記録 |
-| 新規商品作成 | マスタ側で保存した商品を入出金 draft に紐付け |
-| 復帰 | source 画面へ戻った際の draft 復元 |
+| テスト | 説明 |
+|--------|------|
+| `should set the product id when a suggestion is picked` | 候補を選ぶと品名と商品 ID が入る |
+| `should replace the product id when a different suggestion is picked` | 別の候補を選び直すと商品 ID が置き換わる |
+| `should save without a product id when the user types after picking a suggestion` | 候補を選んだ後に文字を打つと紐付けが外れ、`productId` null で保存される |
+| `should restore the product id when a product-linked detail is opened for editing` | 商品に紐付いた明細を編集で開くと商品 ID が戻る |
+| `should have no product id when a free-text detail is opened for editing` | 自由入力の明細 (product_id null) を開くと商品 ID は空 |
+| `should save a null product id when a detail without a product_id field is opened and saved` | product_id 項目の無い明細を開いて保存すると `productId` は null |
+| `should clear the product id and the list when the detail window is opened again` | ウィンドウを開き直すと商品 ID と候補リストが消える |
+| `should show the newest answer with no item active when the search answers` | 候補リストは最新の答えを表示し、選択中の行は無い (Enter で何も選ばれない) |
+| `should not show a pending answer when the detail window is opened again before it arrives` | 検索中にウィンドウを開き直すと、後から届いた答えは表示しない |
 
-**ファイル**: res/tests/product-master-jump-draft.test.js
+**ファイル**: res/tests/pages/transaction-detail-product-link.test.js
+
+---
+
+### pages/product-management-product-draft.test.js
+
+本物の商品マスタ画面を起動し、商品 → メーカーマスタの寄り道で使う商品の下書きを試すテスト。テストごとに URL を変えて画面を起動し直す。
+
+**テスト数**: 7件
+
+| テスト | 説明 |
+|--------|------|
+| `should save the window inputs and the transaction to return to when the user came from a detail` | 「メーカーマスタを開く」でウィンドウの入力と戻り先の入出金 (`?return_to=`) を下書きに保存する |
+| `should save a null transaction to return to when the user came from the menu` | メニューから来た場合、戻り先は null |
+| `should overwrite the earlier draft when the user leaves for the manufacturer master again` | もう一度寄り道すると下書きを上書きする |
+| `should restore the window inputs and remove the draft when a draft is stored` | `?restore_product=1` で戻ると入力を復元して下書きを消し、「明細入力に戻る」を表示する |
+| `should not offer "Back to detail entry" when the restored draft has no transaction to return to` | 戻り先の無い下書きでは「明細入力に戻る」を出さない |
+| `should discard the draft and open no window when the stored draft is malformed JSON` | 壊れた下書きは捨て、ウィンドウを開かない |
+| `should open no window when no draft is stored` | 下書きが無ければウィンドウを開かない |
+
+**ファイル**: res/tests/pages/product-management-product-draft.test.js
+
+---
+
+### pages/manufacturer-management-product-draft.test.js
+
+本物のメーカーマスタ画面を `?return_to_product=1` で起動し、追加したメーカーを商品の下書きに紐付ける処理を試すテスト。
+
+**テスト数**: 6件
+
+| テスト | 説明 |
+|--------|------|
+| `should not create a product draft when no draft is stored` | 下書きが無ければ作らない |
+| `should leave the draft alone when the new manufacturer is not in the reloaded list` | 再読み込みした一覧に名前が無ければ下書きを変えない |
+| `should write the new manufacturer id as a string when the manufacturer is in the reloaded list` | 一覧にあればメーカー ID を文字列 (`<select>` の値) で書き込む |
+| `should keep all non-manufacturer fields when the manufacturer is linked` | メーカー以外の項目はそのまま |
+| `should replace the manufacturer id when one was already selected` | 選択済みのメーカー ID を新しいメーカーで置き換える |
+| `should leave the draft alone when the manufacturer master was opened from the menu` | メニューから開いた場合は下書きに触れない |
+
+**ファイル**: res/tests/pages/manufacturer-management-product-draft.test.js
 
 ---
 
@@ -1210,14 +1242,17 @@
 
 ### pages/product-management-link-draft.test.js
 
-明細 → 商品マスタへのジャンプ (`?return_to=`) で商品を追加したときの回帰テスト (潜在監査 L17)。明細の下書きには名前が完全一致した商品だけを紐付け、検索の別候補を紐付けない。
+明細 → 商品マスタへのジャンプ (`?return_to=`) で商品を追加したときの回帰テスト (潜在監査 L17)。明細の下書きには名前が完全一致した商品だけを紐付け、検索の別候補を紐付けない。あわせて、下書きが無いとき・検索結果が 0 件のとき・紐付けで他の項目が保たれることも試す。
 
-**テスト数**: 2件
+**テスト数**: 5件
 
 | テスト | 説明 |
 |--------|------|
 | `should leave the detail draft alone when no product name matches exactly (L17)` | 完全一致が無ければ、下書きの商品紐付けと品名を変えない |
 | `should link the detail draft to the product when its name matches exactly (L17)` | 部分一致の候補が先に並んでも、完全一致の商品を紐付ける |
+| `should not create a detail draft when the product is added without one` | 下書きが無ければ作らない |
+| `should leave the detail draft alone when the search returns no candidates` | 検索結果が 0 件なら下書きを変えない |
+| `should keep all non-product fields when the detail draft is linked to the product` | 紐付けても商品以外の項目はそのまま |
 
 **ファイル**: res/tests/pages/product-management-link-draft.test.js
 
@@ -1865,15 +1900,16 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **540件** |
+| **機能別テスト** | **539件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 30 |
 | toast.test.js | 14 |
 | tax-calc.test.js | 12 |
-| product-autocomplete.test.js | 10 |
-| product-draft.test.js | 11 |
-| product-master-jump-draft.test.js | 11 |
+| pages/transaction-detail-draft-storage.test.js | 6 |
+| pages/transaction-detail-product-link.test.js | 9 |
+| pages/product-management-product-draft.test.js | 7 |
+| pages/manufacturer-management-product-draft.test.js | 6 |
 | modal-double-submit.test.js | 6 |
 | modal-stale-save-close.test.js | 2 |
 | master-crud.test.js | 30 |
@@ -1914,7 +1950,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | pages/dashboard-stale-reload.test.js | 1 |
 | single-flight.test.js | 4 |
 | pages/product-management-page.test.js | 1 |
-| pages/product-management-link-draft.test.js | 2 |
+| pages/product-management-link-draft.test.js | 5 |
 | pages/shop-management-disabled.test.js | 4 |
 | pages/transaction-management-disabled-shop.test.js | 2 |
 | pages/account-management-disabled.test.js | 4 |
@@ -1953,7 +1989,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **963件** |
+| **総計 (jest)** | **962件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 
