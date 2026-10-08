@@ -78,7 +78,7 @@ describe('mapMasterErrorCode — ApiError code → i18n key', () => {
         actualMemoLen: 10,
     };
 
-    test('duplicate_name → inline name error, no toast', () => {
+    test('should show an inline name error and no toast when the code is duplicate_name', () => {
         const err = { code: 'duplicate_name', message: 'Shop name already exists', entity: 'shop' };
         const out = mapMasterErrorCode(err, shopCtx);
         expect(out.nameMessage).toBe('shop_mgmt.duplicate_error');
@@ -86,7 +86,7 @@ describe('mapMasterErrorCode — ApiError code → i18n key', () => {
         expect(out.toastMessage).toBeNull();
     });
 
-    test('duplicate_code → toast (routes to code field, not name), reuses ${prefix}.duplicate_error key', () => {
+    test('should show a toast with the ${prefix}.duplicate_error key, not a name error, when the code is duplicate_code', () => {
         // Account is the current caller: the duplicate check is on the
         // account CODE column, so the inline error must NOT land on the
         // name input the saveMasterEntry helper tracks. Routed as a
@@ -99,7 +99,7 @@ describe('mapMasterErrorCode — ApiError code → i18n key', () => {
         expect(out.toastMessage).toBe('account_mgmt.duplicate_error');
     });
 
-    test('not_found → toast, no inline messages', () => {
+    test('should show a toast and no inline messages when the code is not_found', () => {
         const err = { code: 'not_found', message: 'Shop not found', entity: 'shop' };
         const out = mapMasterErrorCode(err, shopCtx);
         expect(out.nameMessage).toBeNull();
@@ -107,7 +107,7 @@ describe('mapMasterErrorCode — ApiError code → i18n key', () => {
         expect(out.toastMessage).toBe('shop_mgmt.not_found');
     });
 
-    test('admin_protected → per-screen toast via ${prefix}.admin_protected', () => {
+    test('should show the per-screen ${prefix}.admin_protected toast when the code is admin_protected', () => {
         // Introduced by the user_management migration: UserManagementError
         // ::AdminUserCannotBeDeleted maps to ApiError::admin_protected("User"),
         // which the classifier routes to `user_mgmt.admin_protected`.
@@ -119,14 +119,14 @@ describe('mapMasterErrorCode — ApiError code → i18n key', () => {
         expect(out.toastMessage).toBe('user_mgmt.admin_protected');
     });
 
-    test('manufacturer_not_found → product-scoped toast regardless of the caller prefix', () => {
+    test('should show the product-scoped toast for any caller prefix when the code is manufacturer_not_found', () => {
         const err = { code: 'manufacturer_not_found', message: 'Manufacturer not found', entity: 'manufacturer' };
         // Even if invoked from a shop context, this code is product-scoped.
         const out = mapMasterErrorCode(err, shopCtx);
         expect(out.toastMessage).toBe('product_mgmt.manufacturer_not_found');
     });
 
-    test('validation with "Memo …" message routes to memo inline', () => {
+    test('should show a memo inline error when a validation message starts with "Memo …"', () => {
         const err = { code: 'validation', message: 'Memo must be 500 characters or less' };
         const out = mapMasterErrorCode(err, shopCtx);
         expect(out.nameMessage).toBeNull();
@@ -136,13 +136,13 @@ describe('mapMasterErrorCode — ApiError code → i18n key', () => {
         expect(out.memoMessage).toContain('actual=10');
     });
 
-    test('validation with "cannot be empty" routes to name inline via i18n prefix', () => {
+    test('should show the prefixed name inline error when a validation message says "cannot be empty"', () => {
         const err = { code: 'validation', message: 'Shop name cannot be empty' };
         const out = mapMasterErrorCode(err, shopCtx);
         expect(out.nameMessage).toBe('shop_mgmt.empty_name');
     });
 
-    test('validation with "characters or less" routes to name-length inline', () => {
+    test('should show the name-length inline error when a validation message says "characters or less"', () => {
         const err = { code: 'validation', message: 'Shop name must be 128 characters or less' };
         const out = mapMasterErrorCode(err, shopCtx);
         expect(out.nameMessage).toContain('validation.max_length');
@@ -151,30 +151,30 @@ describe('mapMasterErrorCode — ApiError code → i18n key', () => {
         expect(out.nameMessage).toContain('actual=130');
     });
 
-    test('validation with unknown subtype falls back to generic failure inline', () => {
+    test('should fall back to the generic failure inline error when the validation subtype is unknown', () => {
         const err = { code: 'validation', message: 'Something exotic happened' };
         const out = mapMasterErrorCode(err, shopCtx);
         expect(out.nameMessage).toBe('shop_mgmt.failed_to_save');
     });
 
-    test('database code falls back to generic failure inline', () => {
+    test('should fall back to the generic failure inline error when the code is database', () => {
         const err = { code: 'database', message: 'DB borked' };
         const out = mapMasterErrorCode(err, shopCtx);
         expect(out.nameMessage).toBe('shop_mgmt.failed_to_save');
     });
 
-    test('legacy string error still classified for backward compatibility', () => {
+    test('should still classify the error when it is a legacy string', () => {
         // Simulates an as-yet-unmigrated command still returning Err(String).
         const out = mapMasterErrorCode('Shop name already exists', shopCtx);
         expect(out.nameMessage).toBe('shop_mgmt.duplicate_error');
     });
 
-    test('legacy string with "cannot be empty" hits the empty-name path', () => {
+    test('should take the empty-name path when a legacy string says "cannot be empty"', () => {
         const out = mapMasterErrorCode('Shop name cannot be empty', shopCtx);
         expect(out.nameMessage).toBe('shop_mgmt.empty_name');
     });
 
-    test('legacy string that does not match falls back to generic failure', () => {
+    test('should fall back to the generic failure when a legacy string matches no pattern', () => {
         const out = mapMasterErrorCode('Something else', shopCtx);
         expect(out.nameMessage).toBe('shop_mgmt.failed_to_save');
     });
@@ -183,16 +183,16 @@ describe('mapMasterErrorCode — ApiError code → i18n key', () => {
     // renders as "[object Object]" — every unmigrated error-surface site
     // now goes through formatApiError.
     describe('formatApiError', () => {
-        test('returns the message string for an ApiError-shaped object', () => {
+        test('should return the message string when the error is an ApiError-shaped object', () => {
             expect(formatApiError({ code: 'not_found', message: 'Account not found', entity: 'account' }))
                 .toBe('Account not found');
         });
 
-        test('falls back to String(err) for a plain string (unmigrated command)', () => {
+        test('should fall back to String(err) when the error is a plain string (unmigrated command)', () => {
             expect(formatApiError('Legacy error text')).toBe('Legacy error text');
         });
 
-        test('unwraps .message from an Error instance (same shape as ApiError)', () => {
+        test('should return .message when the error is an Error instance (same shape as ApiError)', () => {
             // Error instances have a string .message, so the helper
             // returns it directly — a nicer default than String(err)
             // which would prepend "Error:".
@@ -200,17 +200,17 @@ describe('mapMasterErrorCode — ApiError code → i18n key', () => {
             expect(s).toBe('boom');
         });
 
-        test('falls back to String(err) for an object with no message field', () => {
+        test('should fall back to String(err) when the object has no message field', () => {
             expect(formatApiError({ code: 'weird' })).toBe('[object Object]');
         });
 
-        test('handles null and undefined', () => {
+        test('should handle the value when it is null or undefined', () => {
             expect(formatApiError(null)).toBe('null');
             expect(formatApiError(undefined)).toBe('undefined');
         });
     });
 
-    test('API_ERROR_CODES exports the codes the Rust side documents', () => {
+    test('should export the codes the Rust side documents when API_ERROR_CODES is read', () => {
         expect(API_ERROR_CODES.DUPLICATE_NAME).toBe('duplicate_name');
         expect(API_ERROR_CODES.DUPLICATE_CODE).toBe('duplicate_code');
         expect(API_ERROR_CODES.NOT_FOUND).toBe('not_found');
@@ -237,7 +237,7 @@ const commonCtx = {
 };
 
 describe('saveMasterEntry — validation before invoke', () => {
-    test('empty name shows inline error, does NOT call invokeAdd/invokeUpdate', async () => {
+    test('should show an inline error and not call invokeAdd/invokeUpdate when the name is empty', async () => {
         const invokeAdd = jest.fn();
         const invokeUpdate = jest.fn();
 
@@ -259,7 +259,7 @@ describe('saveMasterEntry — validation before invoke', () => {
         );
     });
 
-    test('name over max-len shows inline error, does NOT invoke', async () => {
+    test('should show an inline error and not invoke when the name is over the maximum length', async () => {
         const invokeAdd = jest.fn();
         await expect(saveMasterEntry({
             nameInput: makeInput('a'.repeat(129)),
@@ -274,7 +274,7 @@ describe('saveMasterEntry — validation before invoke', () => {
         expect(showMaxLengthErrorSpy).toHaveBeenCalled();
     });
 
-    test('memo over max-len shows inline error, does NOT invoke', async () => {
+    test('should show an inline error and not invoke when the memo is over the maximum length', async () => {
         const invokeAdd = jest.fn();
         await expect(saveMasterEntry({
             nameInput: makeInput('ok'),
@@ -290,7 +290,7 @@ describe('saveMasterEntry — validation before invoke', () => {
 });
 
 describe('saveMasterEntry — edit target vanished', () => {
-    test('editingId with empty cache short-circuits to onNotFoundBeforeInvoke and returns { mode: "skip" }', async () => {
+    test('should call onNotFoundBeforeInvoke and return { mode: "skip" } when editingId is set and the cache is empty', async () => {
         const invokeUpdate = jest.fn();
         const onNotFoundBeforeInvoke = jest.fn().mockResolvedValue(undefined);
 
@@ -310,7 +310,7 @@ describe('saveMasterEntry — edit target vanished', () => {
         expect(onNotFoundBeforeInvoke).toHaveBeenCalledTimes(1);
     });
 
-    test('editingId with empty cache and NO onNotFoundBeforeInvoke shows the default not_found toast', async () => {
+    test('should show the default not_found toast when editingId is set, the cache is empty and there is no onNotFoundBeforeInvoke', async () => {
         const result = await saveMasterEntry({
             nameInput: makeInput('name'),
             memoInput: makeInput(''),
@@ -327,7 +327,7 @@ describe('saveMasterEntry — edit target vanished', () => {
 });
 
 describe('saveMasterEntry — happy path', () => {
-    test('editingId null → invokeAdd called, onSuccess("add") fires, returns { mode: "add" }', async () => {
+    test('should call invokeAdd and onSuccess("add") and return { mode: "add" } when editingId is null', async () => {
         const invokeAdd = jest.fn().mockResolvedValue(undefined);
         const invokeUpdate = jest.fn();
         const onSuccess = jest.fn().mockResolvedValue(undefined);
@@ -349,7 +349,7 @@ describe('saveMasterEntry — happy path', () => {
         expect(onSuccess).toHaveBeenCalledWith('add', 'new shop');
     });
 
-    test('editingId with cached target → invokeUpdate called, onSuccess("update") fires', async () => {
+    test('should call invokeUpdate and onSuccess("update") when editingId has a cached target', async () => {
         const cached = { shop_id: 7, display_order: 3 };
         const invokeAdd = jest.fn();
         const invokeUpdate = jest.fn().mockResolvedValue(undefined);
@@ -373,7 +373,7 @@ describe('saveMasterEntry — happy path', () => {
 });
 
 describe('saveMasterEntry — backend error re-throws and classifies', () => {
-    test('duplicate_name → inline name error, modal-open path (throw)', async () => {
+    test('should show an inline name error and throw to keep the window open when the backend returns duplicate_name', async () => {
         const err = { code: 'duplicate_name', message: 'Shop name already exists', entity: 'shop' };
         const invokeAdd = jest.fn().mockRejectedValue(err);
 
@@ -393,7 +393,7 @@ describe('saveMasterEntry — backend error re-throws and classifies', () => {
         );
     });
 
-    test('manufacturer_not_found → product-scoped toast', async () => {
+    test('should show the product-scoped toast when the backend returns manufacturer_not_found', async () => {
         const err = { code: 'manufacturer_not_found', message: 'Manufacturer not found', entity: 'manufacturer' };
         const invokeAdd = jest.fn().mockRejectedValue(err);
 
@@ -418,7 +418,7 @@ describe('saveMasterEntry — backend error re-throws and classifies', () => {
     // reload. saveMasterEntry now routes backend-not_found through the
     // same onNotFoundBeforeInvoke hook the cache-miss path uses, so the
     // list is refreshed AND the modal closes (mode: skip).
-    test('backend not_found routes through onNotFoundBeforeInvoke and returns { mode: "skip" }', async () => {
+    test('should call onNotFoundBeforeInvoke and return { mode: "skip" } when the backend returns not_found', async () => {
         const err = { code: 'not_found', message: 'Shop not found', entity: 'shop' };
         const cached = { shop_id: 7, display_order: 3 };
         const invokeUpdate = jest.fn().mockRejectedValue(err);
@@ -443,7 +443,7 @@ describe('saveMasterEntry — backend error re-throws and classifies', () => {
         expect(showValidationErrorSpy).not.toHaveBeenCalled();
     });
 
-    test('backend not_found with NO onNotFoundBeforeInvoke shows the default not_found toast', async () => {
+    test('should show the default not_found toast when the backend returns not_found and there is no onNotFoundBeforeInvoke', async () => {
         const err = { code: 'not_found', message: 'Shop not found', entity: 'shop' };
         const cached = { shop_id: 7 };
         const invokeUpdate = jest.fn().mockRejectedValue(err);
