@@ -15,44 +15,44 @@ describe('User Deletion - Username Formatting', () => {
         return `"${username}"`;
     }
 
-    test('should wrap username in double quotes', () => {
+    test('should wrap the username in double quotes when it is shown for deletion', () => {
         expect(formatUsernameForDisplay('testuser')).toBe('"testuser"');
     });
 
-    test('should handle Japanese username', () => {
+    test('should quote the username when it is in Japanese', () => {
         expect(formatUsernameForDisplay('山田太郎')).toBe('"山田太郎"');
     });
 
-    test('should handle username with spaces', () => {
+    test('should quote the username when it has spaces', () => {
         expect(formatUsernameForDisplay('test user')).toBe('"test user"');
     });
 
-    test('should handle username with special characters', () => {
+    test('should quote the username when it is in email format', () => {
         expect(formatUsernameForDisplay('user@example.com')).toBe('"user@example.com"');
     });
 
-    test('should handle empty username', () => {
+    test('should show empty quotes when the username is empty', () => {
         expect(formatUsernameForDisplay('')).toBe('""');
     });
 
-    test('should handle username with symbols', () => {
+    test('should quote the username when it has an underscore', () => {
         expect(formatUsernameForDisplay('user_123')).toBe('"user_123"');
     });
 
-    test('should handle long username', () => {
+    test('should quote the whole username when it is long (50 characters)', () => {
         const longName = 'a'.repeat(50);
         expect(formatUsernameForDisplay(longName)).toBe(`"${longName}"`);
     });
 
-    test('should handle username with numbers', () => {
+    test('should quote the username when it has digits', () => {
         expect(formatUsernameForDisplay('user123')).toBe('"user123"');
     });
 
-    test('should handle username with hyphens', () => {
+    test('should quote the username when it has a hyphen', () => {
         expect(formatUsernameForDisplay('test-user')).toBe('"test-user"');
     });
 
-    test('should handle username with dots', () => {
+    test('should quote the username when it has a dot', () => {
         expect(formatUsernameForDisplay('test.user')).toBe('"test.user"');
     });
 });
@@ -78,60 +78,60 @@ describe('User Deletion - User Data Validation', () => {
         return { valid: true };
     }
 
-    test('should validate correct user object', () => {
+    test('should accept the user when the user object is complete', () => {
         const user = { user_id: 1, name: 'testuser' };
         const result = validateUserForDeletion(user);
         expect(result.valid).toBe(true);
     });
 
-    test('should reject null user', () => {
+    test('should reject the user when it is null', () => {
         const result = validateUserForDeletion(null);
         expect(result.valid).toBe(false);
         expect(result.error).toBe('User object is required');
     });
 
-    test('should reject undefined user', () => {
+    test('should reject the user when it is undefined', () => {
         const result = validateUserForDeletion(undefined);
         expect(result.valid).toBe(false);
         expect(result.error).toBe('User object is required');
     });
 
-    test('should reject user without user_id', () => {
+    test('should reject the user when user_id is missing', () => {
         const user = { name: 'testuser' };
         const result = validateUserForDeletion(user);
         expect(result.valid).toBe(false);
         expect(result.error).toBe('User ID is required');
     });
 
-    test('should reject user with non-numeric user_id', () => {
+    test('should reject the user when user_id is not a number', () => {
         const user = { user_id: '1', name: 'testuser' };
         const result = validateUserForDeletion(user);
         expect(result.valid).toBe(false);
         expect(result.error).toBe('User ID must be a number');
     });
 
-    test('should reject user without name', () => {
+    test('should reject the user when the name is missing', () => {
         const user = { user_id: 1 };
         const result = validateUserForDeletion(user);
         expect(result.valid).toBe(false);
         expect(result.error).toBe('Username is required');
     });
 
-    test('should reject user with non-string name', () => {
+    test('should reject the user when the name is not a string', () => {
         const user = { user_id: 1, name: 123 };
         const result = validateUserForDeletion(user);
         expect(result.valid).toBe(false);
         expect(result.error).toBe('Username must be a string');
     });
 
-    test('should accept user with valid data', () => {
+    test('should accept the user when user_id and name are valid', () => {
         const user = { user_id: 123, name: 'testuser' };
         const result = validateUserForDeletion(user);
         expect(result.valid).toBe(true);
         expect(result.error).toBeUndefined();
     });
 
-    test('should accept user with additional properties', () => {
+    test('should accept the user when it has extra properties', () => {
         const user = { 
             user_id: 1, 
             name: 'testuser',
@@ -169,14 +169,14 @@ describe('User Deletion - Modal State', () => {
         }
     }
 
-    test('should initialize with closed state', () => {
+    test('should be closed with no user when the delete window is created', () => {
         const state = new DeleteModalState();
         expect(state.isOpen).toBe(false);
         expect(state.userId).toBeNull();
         expect(state.username).toBeNull();
     });
 
-    test('should open with user data', () => {
+    test('should hold the user when the delete window opens', () => {
         const state = new DeleteModalState();
         const user = { user_id: 1, name: 'testuser' };
         state.open(user);
@@ -186,7 +186,7 @@ describe('User Deletion - Modal State', () => {
         expect(state.username).toBe('testuser');
     });
 
-    test('should close and clear data', () => {
+    test('should clear the user when the delete window closes', () => {
         const state = new DeleteModalState();
         const user = { user_id: 1, name: 'testuser' };
         state.open(user);
@@ -197,7 +197,7 @@ describe('User Deletion - Modal State', () => {
         expect(state.username).toBeNull();
     });
 
-    test('should track if user is selected', () => {
+    test('should report a selected user only when the delete window is open', () => {
         const state = new DeleteModalState();
         expect(state.isUserSelected()).toBe(false);
         
@@ -209,7 +209,7 @@ describe('User Deletion - Modal State', () => {
         expect(state.isUserSelected()).toBe(false);
     });
 
-    test('should handle multiple open/close cycles', () => {
+    test('should hold the right user when the delete window opens and closes several times', () => {
         const state = new DeleteModalState();
         const user1 = { user_id: 1, name: 'user1' };
         const user2 = { user_id: 2, name: 'user2' };
@@ -233,27 +233,27 @@ describe('User Deletion - Edge Cases', () => {
         return `"${username}"`;
     }
 
-    test('should handle username with quotes', () => {
+    test('should keep inner quotes when the username has a double quote', () => {
         expect(formatUsernameForDisplay('test"user')).toBe('"test"user"');
     });
 
-    test('should handle username with backslashes', () => {
+    test('should quote the username when it has a backslash', () => {
         expect(formatUsernameForDisplay('test\\user')).toBe('"test\\user"');
     });
 
-    test('should handle username with newlines', () => {
+    test('should quote the username when it has a newline', () => {
         expect(formatUsernameForDisplay('test\nuser')).toBe('"test\nuser"');
     });
 
-    test('should handle username with tabs', () => {
+    test('should quote the username when it has a tab', () => {
         expect(formatUsernameForDisplay('test\tuser')).toBe('"test\tuser"');
     });
 
-    test('should handle Unicode characters', () => {
+    test('should quote the username when it has Chinese characters', () => {
         expect(formatUsernameForDisplay('用户名123')).toBe('"用户名123"');
     });
 
-    test('should handle emoji in username', () => {
+    test('should quote the username when it has an emoji', () => {
         expect(formatUsernameForDisplay('test😀user')).toBe('"test😀user"');
     });
 });
@@ -288,7 +288,7 @@ describe('User Deletion - Deletion Order Tests', () => {
     }
 
     describe('Three users - Delete last user', () => {
-        test('should delete last user correctly', () => {
+        test('should delete the user when the last of three users is deleted', () => {
             const users = [
                 { user_id: 1, name: 'user1' },
                 { user_id: 2, name: 'user2' },
@@ -301,7 +301,7 @@ describe('User Deletion - Deletion Order Tests', () => {
             expect(manager.getUserCount()).toBe(2);
         });
 
-        test('should keep remaining users in correct order', () => {
+        test('should keep the remaining users in order when the last of three users is deleted', () => {
             const users = [
                 { user_id: 1, name: 'user1' },
                 { user_id: 2, name: 'user2' },
@@ -316,7 +316,7 @@ describe('User Deletion - Deletion Order Tests', () => {
             expect(remaining[1].user_id).toBe(2);
         });
 
-        test('should not affect other users', () => {
+        test('should leave the other users when the last of three users is deleted', () => {
             const users = [
                 { user_id: 1, name: 'user1' },
                 { user_id: 2, name: 'user2' },
@@ -333,7 +333,7 @@ describe('User Deletion - Deletion Order Tests', () => {
     });
 
     describe('Three users - Delete middle user', () => {
-        test('should delete middle user correctly', () => {
+        test('should delete the user when the middle of three users is deleted', () => {
             const users = [
                 { user_id: 1, name: 'user1' },
                 { user_id: 2, name: 'user2' },
@@ -346,7 +346,7 @@ describe('User Deletion - Deletion Order Tests', () => {
             expect(manager.getUserCount()).toBe(2);
         });
 
-        test('should keep remaining users in correct order', () => {
+        test('should keep the remaining users in order when the middle of three users is deleted', () => {
             const users = [
                 { user_id: 1, name: 'user1' },
                 { user_id: 2, name: 'user2' },
@@ -361,7 +361,7 @@ describe('User Deletion - Deletion Order Tests', () => {
             expect(remaining[1].user_id).toBe(3);
         });
 
-        test('should not affect other users', () => {
+        test('should leave the other users when the middle of three users is deleted', () => {
             const users = [
                 { user_id: 1, name: 'user1' },
                 { user_id: 2, name: 'user2' },
@@ -378,7 +378,7 @@ describe('User Deletion - Deletion Order Tests', () => {
     });
 
     describe('Three users - Delete first user', () => {
-        test('should delete first user correctly', () => {
+        test('should delete the user when the first of three users is deleted', () => {
             const users = [
                 { user_id: 1, name: 'user1' },
                 { user_id: 2, name: 'user2' },
@@ -391,7 +391,7 @@ describe('User Deletion - Deletion Order Tests', () => {
             expect(manager.getUserCount()).toBe(2);
         });
 
-        test('should keep remaining users in correct order', () => {
+        test('should keep the remaining users in order when the first of three users is deleted', () => {
             const users = [
                 { user_id: 1, name: 'user1' },
                 { user_id: 2, name: 'user2' },
@@ -406,7 +406,7 @@ describe('User Deletion - Deletion Order Tests', () => {
             expect(remaining[1].user_id).toBe(3);
         });
 
-        test('should not affect other users', () => {
+        test('should leave the other users when the first of three users is deleted', () => {
             const users = [
                 { user_id: 1, name: 'user1' },
                 { user_id: 2, name: 'user2' },
@@ -423,7 +423,7 @@ describe('User Deletion - Deletion Order Tests', () => {
     });
 
     describe('Multiple deletions', () => {
-        test('should handle deleting all users in order', () => {
+        test('should end with no users when all users are deleted in order', () => {
             const users = [
                 { user_id: 1, name: 'user1' },
                 { user_id: 2, name: 'user2' },
@@ -441,7 +441,7 @@ describe('User Deletion - Deletion Order Tests', () => {
             expect(manager.getUserCount()).toBe(0);
         });
 
-        test('should handle deleting users in reverse order', () => {
+        test('should end with no users when all users are deleted in reverse order', () => {
             const users = [
                 { user_id: 1, name: 'user1' },
                 { user_id: 2, name: 'user2' },
@@ -459,7 +459,7 @@ describe('User Deletion - Deletion Order Tests', () => {
             expect(manager.getUserCount()).toBe(0);
         });
 
-        test('should handle deleting users in random order', () => {
+        test('should end with no users when all users are deleted in mixed order', () => {
             const users = [
                 { user_id: 1, name: 'user1' },
                 { user_id: 2, name: 'user2' },
@@ -482,7 +482,7 @@ describe('User Deletion - Deletion Order Tests', () => {
     });
 
     describe('Error cases', () => {
-        test('should handle deleting non-existent user', () => {
+        test('should report not found when the user does not exist', () => {
             const users = [
                 { user_id: 1, name: 'user1' },
                 { user_id: 2, name: 'user2' }
@@ -495,7 +495,7 @@ describe('User Deletion - Deletion Order Tests', () => {
             expect(manager.getUserCount()).toBe(2);
         });
 
-        test('should handle deleting already deleted user', () => {
+        test('should report not found when the user was already deleted', () => {
             const users = [
                 { user_id: 1, name: 'user1' },
                 { user_id: 2, name: 'user2' }
@@ -510,7 +510,7 @@ describe('User Deletion - Deletion Order Tests', () => {
             expect(manager.getUserCount()).toBe(1);
         });
 
-        test('should handle deleting from empty list', () => {
+        test('should report not found when the user list is empty', () => {
             const manager = new UserListManager([]);
             
             const result = manager.deleteUser(1);
