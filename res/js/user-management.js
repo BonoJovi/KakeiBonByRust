@@ -410,8 +410,14 @@ function setupModalEventHandlers() {
     // Only an admin can create users (create_general_user is admin-only);
     // a general user pressing the button just got a raw English error
     // (latent-audit L30).
+    // The footer holds only this button, so it is hidden too; its divider
+    // line alone suggested that something should be shown there. An inline
+    // style is used because `.section-footer { display: flex }` in the page
+    // CSS would override the `hidden` attribute.
     if (addUserBtn && !isSessionAdmin()) {
         addUserBtn.hidden = true;
+        const footer = addUserBtn.closest('.section-footer');
+        if (footer) footer.style.display = 'none';
     }
 
     const periodSettingsBtn = document.getElementById('open-period-settings-btn');

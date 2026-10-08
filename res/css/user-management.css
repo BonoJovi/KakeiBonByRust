@@ -153,6 +153,11 @@ body {
     min-width: 8em;
 }
 
+/* A long username with no spaces wraps instead of widening the column */
+#user-table td:nth-child(2) {
+    overflow-wrap: anywhere;
+}
+
 #user-table th:nth-child(3),
 #user-table td:nth-child(3) {
     width: 10%;
