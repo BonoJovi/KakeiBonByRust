@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-10-08 JST  
-**Total Tests**: 463 (delta-tracked; the full authoritative count from `cargo test --lib` is 732, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 472 (delta-tracked; the full authoritative count from `cargo test --lib` is 740, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -482,27 +482,36 @@ Product management service tests.
 
 | Test Function | Description | File | Line |
 |---------------|-------------|------|------|
-| `test_add_product_without_manufacturer` | Add product without manufacturer | src/services/product.rs | 326 |
-| `test_add_product_with_manufacturer` | Add product with manufacturer | src/services/product.rs | 346 |
-| `test_update_product` | Test product update | src/services/product.rs | 379 |
-| `test_delete_product` | An unused product is removed, not just hidden (latent-audit M7) | src/services/product.rs | 412 |
-| `test_delete_disabled_product_removes_row` | A disabled product that nothing uses can still be deleted, removing the row (latent-audit M7) | src/services/product.rs | 439 |
-| `test_disable_product_allowed_while_referenced` | A product named by a transaction detail can be disabled (not deleted) (latent-audit M7) | src/services/product.rs | 460 |
-| `test_empty_product_name` | Empty product name error | src/services/product.rs | 502 |
-| `test_manufacturer_deletion_rejected_while_product_references_it` | Manufacturer delete rejected with `ApiError { code: "in_use", entity: "manufacturer" }` while any product still references it — renamed from `test_manufacturer_deletion_sets_product_manufacturer_to_null` when the master delete-lock landed (was: fallback ON DELETE SET NULL) | src/services/product.rs | 612 |
-| `test_add_product_rejects_foreign_manufacturer_id` | Cross-owner manufacturer_id on add returns "Manufacturer not found" (Fable-5 #13) | src/services/product.rs | 943 |
-| `test_add_product_rejects_nonexistent_manufacturer_id` | Nonexistent manufacturer_id on add returns "Manufacturer not found" (Fable-5 #13) | src/services/product.rs | 994 |
-| `test_update_product_rejects_foreign_manufacturer_id` | Cross-owner manufacturer_id on update returns "Manufacturer not found" (Fable-5 #13) | src/services/product.rs | 1019 |
-| `test_product_join_scopes_manufacturer_by_user_id` | PRODUCT_GET_* JOIN must not leak another user's manufacturer name (Fable-5 #13) | src/services/product.rs | 1098 |
-| `test_delete_product_rejected_when_referenced_by_transaction_detail` | Delete rejected with `ApiError { code: "in_use", entity: "product" }` when any TRANSACTIONS_DETAIL row (scoped via TRANSACTIONS_HEADER.USER_ID) names the product (master delete-lock) | src/services/product.rs | 544 |
-| `test_delete_product_ignores_other_users_transaction_details` | Cross-user detail rows do NOT block delete — scoping runs through TRANSACTIONS_HEADER.USER_ID (master delete-lock) | src/services/product.rs | 581 |
-| `test_search_products_escapes_percent_metacharacter` | Autocomplete search of `"100%ジ"` matches only "果汁100%ジュース", not "果汁100リンゴジュース" — `%` is escaped and paired with `LIKE ? ESCAPE '\'` (Fable-5 #23) | src/services/product.rs | 870 |
-| `test_search_products_escapes_underscore_metacharacter` | Autocomplete search of `"A_1"` matches only literal "A_1", not "AB1" — `_` is escaped (Fable-5 #23) | src/services/product.rs | 897 |
+| `test_add_product_without_manufacturer` | Add product without manufacturer | src/services/product.rs | 348 |
+| `test_add_product_with_manufacturer` | Add product with manufacturer | src/services/product.rs | 368 |
+| `test_update_product` | Test product update | src/services/product.rs | 401 |
+| `test_delete_product` | An unused product is removed, not just hidden (latent-audit M7) | src/services/product.rs | 434 |
+| `test_delete_disabled_product_removes_row` | A disabled product that nothing uses can still be deleted, removing the row (latent-audit M7) | src/services/product.rs | 461 |
+| `test_disable_product_allowed_while_referenced` | A product named by a transaction detail can be disabled (not deleted) (latent-audit M7) | src/services/product.rs | 482 |
+| `test_empty_product_name` | Empty product name error | src/services/product.rs | 524 |
+| `test_manufacturer_deletion_rejected_while_product_references_it` | Manufacturer delete rejected with `ApiError { code: "in_use", entity: "manufacturer" }` while any product still references it — renamed from `test_manufacturer_deletion_sets_product_manufacturer_to_null` when the master delete-lock landed (was: fallback ON DELETE SET NULL) | src/services/product.rs | 634 |
+| `test_add_product_rejects_foreign_manufacturer_id` | Cross-owner manufacturer_id on add returns "Manufacturer not found" (Fable-5 #13) | src/services/product.rs | 1158 |
+| `test_add_product_rejects_nonexistent_manufacturer_id` | Nonexistent manufacturer_id on add returns "Manufacturer not found" (Fable-5 #13) | src/services/product.rs | 1209 |
+| `test_update_product_rejects_foreign_manufacturer_id` | Cross-owner manufacturer_id on update returns "Manufacturer not found" (Fable-5 #13) | src/services/product.rs | 1234 |
+| `test_product_join_scopes_manufacturer_by_user_id` | PRODUCT_GET_* JOIN must not leak another user's manufacturer name (Fable-5 #13) | src/services/product.rs | 1313 |
+| `test_delete_product_rejected_when_referenced_by_transaction_detail` | Delete rejected with `ApiError { code: "in_use", entity: "product" }` when any TRANSACTIONS_DETAIL row (scoped via TRANSACTIONS_HEADER.USER_ID) names the product (master delete-lock) | src/services/product.rs | 566 |
+| `test_delete_product_ignores_other_users_transaction_details` | Cross-user detail rows do NOT block delete — scoping runs through TRANSACTIONS_HEADER.USER_ID (master delete-lock) | src/services/product.rs | 603 |
+| `test_search_products_escapes_percent_metacharacter` | Autocomplete search of `"100%ジ"` matches only "果汁100%ジュース", not "果汁100リンゴジュース" — `%` is escaped and paired with `LIKE ? ESCAPE '\'` (Fable-5 #23) | src/services/product.rs | 896 |
+| `test_search_products_escapes_underscore_metacharacter` | Autocomplete search of `"A_1"` matches only literal "A_1", not "AB1" — `_` is escaped (Fable-5 #23) | src/services/product.rs | 923 |
 | `latent_m6_readd_deleted_product_name_is_not_database_error` | Re-adding a deleted product name never surfaces a generic database error (latent-audit M6) | src/services/latent_audit/product.rs | 27 |
 | `latent_m6_readd_disabled_product_name_revives_original_row` | Re-adding a disabled product name reuses the original row (same PRODUCT_ID), enabled, with the new memo (latent-audit M6) | src/services/latent_audit/product.rs | 113 |
 | `latent_m6_rename_onto_disabled_product_name_is_duplicate_name` | Renaming onto a disabled product name is rejected with duplicate_name (latent-audit M6) | src/services/latent_audit/product.rs | 136 |
+| `test_search_products_empty_query_lists_products` | An empty (or blank) query lists products, so suggestions can be shown as soon as the item-name field gets focus (replaces the old empty-query-returns-nothing rule) | src/services/product.rs | 847 |
+| `test_suggest_products_ranks_selected_category_then_used_then_unused` | Suggestions: products used in details of the selected category first, then other used products, both by latest use; never-used products last, by name | src/services/product.rs | 1029 |
+| `test_suggest_products_without_category_ranks_by_recent_use` | Without a category, used products come first by latest use, then never-used products by name | src/services/product.rs | 1040 |
+| `test_suggest_products_category3_must_match_when_given` | With a minor category selected, only uses in that minor category count for the first tier; with only a medium category, any use in it counts | src/services/product.rs | 1049 |
+| `test_suggest_products_uses_the_latest_use_of_each_product` | A product used several times is ranked by its latest use | src/services/product.rs | 1070 |
+| `test_suggest_products_query_filters_and_keeps_the_ranking` | A typed query narrows the suggestions and keeps the same ranking | src/services/product.rs | 1083 |
+| `test_suggest_products_counts_typed_details_with_the_same_name` | A detail typed by hand (no product link) counts as a use of the product whose name it equals exactly; a partial match does not count | src/services/product.rs | 1095 |
+| `test_suggest_products_typed_detail_linked_elsewhere_is_not_counted_twice` | A detail linked to one product is not also counted for another product that has its typed name | src/services/product.rs | 1113 |
+| `test_suggest_products_returns_at_most_20` | At most 20 suggestions are returned | src/services/product.rs | 1125 |
 
-**Total**: 19 tests
+**Total**: 28 tests
 
 ### services/shop.rs
 
@@ -731,12 +740,12 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 
 | Test Function | Description | File | Line |
 |---------------|-------------|------|------|
-| `normalize_language_accepts_names_and_codes` | Accept language names and codes (en/English/ja/日本語/Japanese) | src/lib.rs | 2554 |
-| `normalize_language_rejects_unknown_values` | Reject unknown language values | src/lib.rs | 2563 |
-| `normalize_font_size_accepts_keywords_and_percentages` | Accept size keywords and percentages in 50-200 | src/lib.rs | 2569 |
-| `normalize_font_size_rejects_out_of_range_and_garbage` | Reject out-of-range percentages and invalid strings | src/lib.rs | 2578 |
-| `monthly_bounds_with_shift_rejects_out_of_range_month` | month=0/13/100 short-circuits to Err before reaching `services::period::end_of_month` — prevents the backend thread crash (PR6, Fable-5 #22) | src/lib.rs | 2592 |
-| `monthly_bounds_with_shift_accepts_boundary_months` | month=1/12 boundaries still accepted (PR6, Fable-5 #22) | src/lib.rs | 2619 |
+| `normalize_language_accepts_names_and_codes` | Accept language names and codes (en/English/ja/日本語/Japanese) | src/lib.rs | 2564 |
+| `normalize_language_rejects_unknown_values` | Reject unknown language values | src/lib.rs | 2573 |
+| `normalize_font_size_accepts_keywords_and_percentages` | Accept size keywords and percentages in 50-200 | src/lib.rs | 2579 |
+| `normalize_font_size_rejects_out_of_range_and_garbage` | Reject out-of-range percentages and invalid strings | src/lib.rs | 2588 |
+| `monthly_bounds_with_shift_rejects_out_of_range_month` | month=0/13/100 short-circuits to Err before reaching `services::period::end_of_month` — prevents the backend thread crash (PR6, Fable-5 #22) | src/lib.rs | 2602 |
+| `monthly_bounds_with_shift_accepts_boundary_months` | month=1/12 boundaries still accepted (PR6, Fable-5 #22) | src/lib.rs | 2629 |
 
 **Total**: 6 tests
 
@@ -749,7 +758,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **440** |
+| **Inline Tests** | **449** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -764,7 +773,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/account.rs | 24 |
 | services/category.rs | 45 |
 | services/manufacturer.rs | 17 |
-| services/product.rs | 19 |
+| services/product.rs | 28 |
 | services/shop.rs | 19 |
 | services/transaction.rs | 64 |
 | services/aggregation.rs | 27 |
@@ -773,7 +782,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/i18n.rs | 8 |
 | services/recurring.rs | 28 |
 | lib.rs | 6 |
-| **Total** | **463** |
+| **Total** | **472** |
 
 ---
 

@@ -129,17 +129,6 @@
                     <input type="hidden" id="product-id" name="product-id" />
 
                     <div class="form-group">
-                        <label for="item-name" data-i18n="detail_mgmt.item_name">Item Name:</label>
-                        <div class="input-wrapper product-autocomplete-wrapper">
-                            <div class="item-name-row">
-                                <input type="text" id="item-name" name="item-name" maxlength="200" autocomplete="off" required />
-                                <button type="button" class="btn btn-secondary item-name-master-btn" id="open-product-master-btn" data-i18n="detail_mgmt.open_product_master">Open in product master ↗</button>
-                            </div>
-                            <div id="product-autocomplete-dropdown" class="product-autocomplete-dropdown hidden" role="listbox"></div>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
                         <label for="category2-code" data-i18n="common.category2">Medium Category:</label>
                         <div class="input-wrapper">
                             <select id="category2-code" name="category2-code">
@@ -154,6 +143,17 @@
                             <select id="category3-code" name="category3-code">
                                 <option value="" data-i18n="common.select">Select</option>
                             </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="item-name" data-i18n="detail_mgmt.item_name">Item Name:</label>
+                        <div class="input-wrapper product-autocomplete-wrapper">
+                            <div class="item-name-row">
+                                <input type="text" id="item-name" name="item-name" maxlength="200" autocomplete="off" required placeholder="Type to search" data-i18n-placeholder="detail_mgmt.item_name_placeholder" title="Type a name, or click the field, to list registered products" data-i18n-title="detail_mgmt.item_name_hint" />
+                                <button type="button" class="btn btn-secondary item-name-master-btn" id="open-product-master-btn" data-i18n="detail_mgmt.open_product_master">Open in product master ↗</button>
+                            </div>
+                            <div id="product-autocomplete-dropdown" class="product-autocomplete-dropdown hidden" role="listbox"></div>
                         </div>
                     </div>
 

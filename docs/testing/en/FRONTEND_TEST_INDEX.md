@@ -3,7 +3,7 @@
 This document provides a complete index of all frontend tests implemented in JavaScript.
 
 **Last Updated**: 2026-10-08 JST  
-**Total Tests**: 950 (jest suites; 91 test files, per `npm test`)
+**Total Tests**: 955 (jest suites; 92 test files, per `npm test`)
 
 ---
 
@@ -30,7 +30,7 @@ and are **not** added again to the grand total.
 - **login.test.js** - Login tests (58)
 - **user-deletion.test.js** - User deletion tests (46)
 
-### Feature-Specific Tests (527 tests)
+### Feature-Specific Tests (532 tests)
 
 - **transaction-edit.test.js** - Transaction edit tests (112)
 - **transaction-detail-management.test.js** - Transaction detail management tests (51)
@@ -55,6 +55,7 @@ and are **not** added again to the grand total.
 - **pages/transaction-detail-included-typing.test.js** - Boots the real detail page: typing a tax-included amount digit by digit keeps every digit (the field is no longer rewritten mid-typing) and saves the typed price (latent-audit scan2-T1) (1)
 - **pages/transaction-detail-unreachable-included-price.test.js** - Boots the real detail page: a tax-included price with no exact tax-excluded split (1000 at 10 % floor) is kept as typed and saved as 909 + 91 (latent-audit scan2-T2) (1)
 - **pages/transaction-detail-hidden-category.test.js** - Boots the real detail page: editing a detail whose category2 (with its category3) or category3 alone is hidden keeps the category on a memo-only save, the hidden entry being offered with `common.disabled_label` (latent-audit scan2-T3) (2)
+- **pages/transaction-detail-product-suggest.test.js** - Boots the real detail page: the medium and minor categories come before the item name; the item name field has a short placeholder and a tooltip hint; focusing the empty field lists product suggestions with the detail's categories (`category1Code` / `category2Code` / `category3Code`); no list appears when focus has already left the field; picking a suggestion closes the list for good (5)
 - **pages/transaction-management-page.test.js** - Boots the real transaction page against `transaction-management.html`: saving a header without details shows no ¥0 recalc prompt and completes the save flow (latent-audit H4); a blank transaction date is rejected with `validation.required` before sending (latent-audit L8); deleting the only row on the last page moves back to the last page, and a late older page response does not overwrite a newer one (latent-audit L5) (4)
 - **pages/user-management-page.test.js** - Boots the real user management page (admin session): a whitespace-only username is rejected with the required-field message before `create_general_user`, while a normal name still reaches it (latent-audit M13); an admin sees the Add User button and its footer (latent-audit L30) (3)
 - **pages/user-management-delete-last-user.test.js** - Boots the real user management page (admin session): when the backend refuses to delete the last general user (`last_general_user`), the screen shows `user_mgmt.last_general_user` instead of the generic failure with the English backend text (latent-audit scan2-C5) (1)
@@ -145,7 +146,7 @@ and are **not** added again to the grand total.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **Feature-Specific Tests** | **527** |
+| **Feature-Specific Tests** | **532** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 30 |
@@ -169,6 +170,7 @@ and are **not** added again to the grand total.
 | pages/transaction-detail-included-typing.test.js | 1 |
 | pages/transaction-detail-unreachable-included-price.test.js | 1 |
 | pages/transaction-detail-hidden-category.test.js | 2 |
+| pages/transaction-detail-product-suggest.test.js | 5 |
 | pages/transaction-management-page.test.js | 4 |
 | pages/user-management-page.test.js | 3 |
 | pages/user-management-delete-last-user.test.js | 1 |
@@ -232,7 +234,7 @@ and are **not** added again to the grand total.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **Total (jest)** | **950** |
+| **Total (jest)** | **955** |
 
 Grand total is Screen + Feature + Aggregation (Common Test Suites are helper
 libraries invoked from Screen-Specific files and their assertions are already
