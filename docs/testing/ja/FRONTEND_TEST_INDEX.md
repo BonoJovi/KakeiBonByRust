@@ -387,26 +387,30 @@
 
 **テスト数**: 58件
 
-| テストカテゴリ | 説明 | テスト数 |
+| テストカテゴリ (describe) | 説明 | テスト数 |
 |--------------|------|---------|
-| 空フィールドバリデーション | 空のユーザー名・パスワードの検証 | 10件 |
-| ユーザー名バリデーション | ユーザー名の有効性検証 | 8件 |
-| パスワードバリデーション | パスワードの有効性検証 | 5件 |
-| ログイン状態管理 | ログイン成功後の状態管理 | 8件 |
-| フォーム表示 | フォームの表示/非表示制御 | 12件 |
-| フォームクリア | フォームのクリア処理 | 5件 |
-| エラーメッセージ | エラーメッセージのフォーマット | 10件 |
+| Login Validation | 空欄・空白のみの入力、ユーザー名とパスワードの形 | 12件 |
+| Login State Management | ログイン状態の切り替え | 3件 |
+| Login UI Behavior | フォームの表示/非表示とログアウト時のクリア | 8件 |
+| Login Error Messages | エラーメッセージと成功メッセージの形 | 5件 |
+| Login Input Sanitization | SQL インジェクション・スクリプトタグ・特殊文字を文字列のまま扱う | 8件 |
+| Login Response Handling | 応答メッセージの読み取り | 5件 |
+| Login Timing and Performance | 応答時間とタイムアウト | 2件 |
+| Login Security | パスワード欄の伏せ字、試行回数、セッション | 5件 |
+| Login Edge Cases | 長い入力・1 文字・前後の空白・大文字小文字・空の応答 | 6件 |
+| Login Integration | フォーム送信と画面の移動 | 4件 |
 
 #### 詳細テストケース例
 
-**Empty field validation (10件)**
+**Empty field validation (5件)**
 
 | テスト名 | 説明 |
 |---------|------|
-| `should reject when both username and password are empty` | ユーザー名とパスワードが両方空の場合を拒否 |
-| `should reject when username is empty` | ユーザー名が空の場合を拒否 |
-| `should reject when password is empty` | パスワードが空の場合を拒否 |
-| その他... | ... |
+| `should reject the login when the username is empty` | ユーザー名が空 |
+| `should reject the login when the password is empty` | パスワードが空 |
+| `should reject the login when both fields are empty` | 両方が空 |
+| `should reject the login when the username has only whitespace` | ユーザー名が空白のみ |
+| `should reject the login when the password has only whitespace` | パスワードが空白のみ |
 
 **ファイル**: res/tests/login.test.js
 
