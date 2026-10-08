@@ -54,7 +54,7 @@ function submit(formId) {
 describe('setup forms password length — regression (latent audit 2026-09)', () => {
     beforeEach(() => invoke.mockClear());
 
-    test('[L31] admin setup rejects 8 emoji (8 chars) on the frontend', async () => {
+    test('should reject the password on the frontend when admin setup gets 8 emoji (8 chars) (L31)', async () => {
         expect(EIGHT_EMOJI.length).toBe(16);
         document.getElementById('admin-username').value = 'admin';
         document.getElementById('admin-password').value = EIGHT_EMOJI;
@@ -66,7 +66,7 @@ describe('setup forms password length — regression (latent audit 2026-09)', ()
         expect(document.getElementById('setup-message').textContent).toBe('error.password_too_short');
     });
 
-    test('[L31] user setup rejects 8 emoji (8 chars) on the frontend', async () => {
+    test('should reject the password on the frontend when user setup gets 8 emoji (8 chars) (L31)', async () => {
         document.getElementById('user-username').value = 'alice';
         document.getElementById('user-password').value = EIGHT_EMOJI;
         document.getElementById('user-password-confirm').value = EIGHT_EMOJI;

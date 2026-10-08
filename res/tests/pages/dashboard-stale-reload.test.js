@@ -71,7 +71,7 @@ function execute(year, month, trendMonths) {
 }
 
 describe('dashboard reload staleness (latent scan2-A4)', () => {
-    test('[scan2-A4] a slower, older September load does not overwrite the newer March charts', async () => {
+    test('should not overwrite the newer March charts when a slower, older September load finishes later (scan2-A4)', async () => {
         slowSeptember = deferred();
         execute(2026, 9, 12);
         await flush(10);

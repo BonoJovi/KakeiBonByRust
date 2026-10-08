@@ -66,7 +66,7 @@ await import('../../js/dashboard.js');
 await bootPage();
 
 describe('dashboard category bar chart (latent scan2-A1)', () => {
-    test('[scan2-A1] largest expense category is drawn first and kept in the top 10', () => {
+    test('should draw the largest expense category first and keep it in the top 10 when there are more than 10 categories (scan2-A1)', () => {
         const bar = charts.filter((c) => c.config.type === 'bar').pop();
         expect(bar).toBeDefined();
         const labels = bar.config.data.labels;

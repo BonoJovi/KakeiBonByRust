@@ -64,21 +64,21 @@ const setupMessage = () => document.getElementById('setup-message').textContent;
 describe('setup forms — regression (latent audit 2026-09)', () => {
     beforeEach(() => invoke.mockClear());
 
-    test('[L25] should reject the admin setup without calling register_admin when the username is blank', async () => {
+    test('should reject the admin setup without calling register_admin when the username is blank (L25)', async () => {
         await submitAdminSetup(' 　 ');
 
         expect(callsOf(invoke, 'register_admin')).toHaveLength(0);
         expect(setupMessage()).toBe('error.username_required');
     });
 
-    test('[L25] should report the username, not the password, when the backend rejects a blank username', async () => {
+    test('should report the username, not the password, when the backend rejects a blank username (L25)', async () => {
         await submitAdminSetup('backend-blank');
 
         expect(callsOf(invoke, 'register_admin')).toHaveLength(1);
         expect(setupMessage()).toBe('error.username_required');
     });
 
-    test('[L25] should show the duplicate-username message when the backend reports duplicate_name', async () => {
+    test('should show the duplicate-username message when the backend reports duplicate_name (L25)', async () => {
         await submitAdminSetup('taken');
 
         expect(callsOf(invoke, 'register_admin')).toHaveLength(1);

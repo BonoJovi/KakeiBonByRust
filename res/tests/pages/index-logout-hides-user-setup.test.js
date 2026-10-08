@@ -63,7 +63,7 @@ const waitForLoginTimer = async () => {
 };
 
 describe('logout from the user-setup step (scan2-C6)', () => {
-    test('[scan2-C6] logout hides the user-setup form and shows only the login form', async () => {
+    test('should hide the user-setup form and show only the login form when the user logs out (scan2-C6)', async () => {
         expect(visible('login-form')).toBe(true);
 
         await submitLogin();
@@ -82,7 +82,7 @@ describe('logout from the user-setup step (scan2-C6)', () => {
         expect(visible('app-content')).toBe(false);
     });
 
-    test('[scan2-C6] logging out before the login timer runs keeps only the login form', async () => {
+    test('should keep only the login form when the user logs out before the login timer runs (scan2-C6)', async () => {
         await submitLogin();
         await handleLogout();
         await flush();
@@ -94,7 +94,7 @@ describe('logout from the user-setup step (scan2-C6)', () => {
         expect(visible('app-content')).toBe(false);
     });
 
-    test('[scan2-C6] a setup check answering after the logout does not switch screens', async () => {
+    test('should not switch screens when a setup check answers after the logout (scan2-C6)', async () => {
         heldSetupCheck = deferred();
         try {
             await submitLogin();

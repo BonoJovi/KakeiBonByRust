@@ -36,12 +36,12 @@ function seededLanguages() {
 }
 
 describe('menu bar i18n keys are seeded (scan2-C2)', () => {
-    test('menu.back_to_transactions is seeded for ja and en', () => {
+    test('should seed menu.back_to_transactions for ja and en when the i18n SQL is read', () => {
         const seeded = seededLanguages();
         expect([...(seeded.get('menu.back_to_transactions') ?? [])].sort()).toEqual(['en', 'ja']);
     });
 
-    test('every data-i18n key in the menu bar is seeded for ja and en', () => {
+    test('should seed every data-i18n key in the menu bar for ja and en when the i18n SQL is read', () => {
         document.body.innerHTML = '<div id="menu-bar"></div>';
         createMenuBar('transaction-detail');
         const keys = [...document.querySelectorAll('[data-i18n]')]

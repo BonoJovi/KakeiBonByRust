@@ -60,21 +60,21 @@ describe('user text is inserted literally (scan2-C4)', () => {
     });
 
     test.each(['A$&B', "A$'B", 'A$`B', 'A$$B'])(
-        '[scan2-C4] i18n.t() keeps the user name %s literally',
+        'should keep the user name %s literally when i18n.t() fills it in (scan2-C4)',
         (name) => {
             expect(realI18n.t('login.welcome', { name })).toBe(`Welcome, ${name}!`);
         }
     );
 
-    test('[scan2-C4] a value containing another placeholder is not substituted again', () => {
+    test('should not substitute again when a value contains another placeholder (scan2-C4)', () => {
         expect(realI18n.t('test.two_params', { a: '{b}', b: 'B' })).toBe('{b} and B');
     });
 
-    test('[scan2-C4] a placeholder with no param is left as it is', () => {
+    test('should leave the placeholder as it is when it has no param (scan2-C4)', () => {
         expect(realI18n.t('test.two_params', { a: 'A' })).toBe('A and {b}');
     });
 
-    test('[scan2-C4] recurring-rule delete confirmation keeps the rule name literally', async () => {
+    test('should keep the rule name literally when the recurring-rule delete confirmation is shown (scan2-C4)', async () => {
         loadPageBody('recurring-rule.html');
         await import('../../js/recurring-rule.js');
         await bootPage();
