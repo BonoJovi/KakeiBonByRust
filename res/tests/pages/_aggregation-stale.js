@@ -84,7 +84,7 @@ export async function runStaleAggregationScenario(jest, cfg) {
             held = [];
         });
 
-        test('[scan2-A4] a slower, older result arriving later is dropped', async () => {
+        test('should drop the older result when a slower, older request finishes later (scan2-A4)', async () => {
             const older = await runOldThenNew();
             expect(container().classList.contains('loading')).toBe(false);
 
@@ -95,7 +95,7 @@ export async function runStaleAggregationScenario(jest, cfg) {
             expect(firstCells()).not.toContain('OlderGroup');
         });
 
-        test('[scan2-A4] an older request failing later neither shows its error nor clears the table', async () => {
+        test('should neither show the error nor clear the table when an older request fails later (scan2-A4)', async () => {
             const older = await runOldThenNew();
 
             older.reject(new Error('older request failed'));
@@ -105,7 +105,7 @@ export async function runStaleAggregationScenario(jest, cfg) {
             expect(firstCells()).toContain('NewerGroup');
         });
 
-        test('[scan2-A4] the loading state stays until the latest request finishes', async () => {
+        test('should keep the loading state until the latest request finishes when an older request finishes first (scan2-A4)', async () => {
             // Hold both: the older one finishing first must not clear the
             // loading state of the newer one.
             const older = deferred();
@@ -125,7 +125,7 @@ export async function runStaleAggregationScenario(jest, cfg) {
             expect(firstCells()).toContain('NewerGroup');
         });
 
-        test('[scan2-A4] an Execute stopped by the input checks does not strand the running request', async () => {
+        test('should not strand the running request when an Execute is stopped by the input checks (scan2-A4)', async () => {
             const running = deferred();
             held = [running];
             await execute(cfg.fillOld, 10);
