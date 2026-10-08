@@ -1053,10 +1053,10 @@
 
 | テスト | 説明 |
 |--------|------|
-| `should reject start > end with a localized message, not the backend English text` | 開始日が終了日より後なら i18n メッセージを出し、`create_recurring_rule` を呼ばない |
-| `should reject a daily anchor after the end date with a localized message` | 毎日の起点日が終了日より後なら i18n メッセージを出す |
-| `should reject an empty end date with a localized message` | 終了日が空なら i18n メッセージを出す |
-| `should reject an empty start date with the same message` | 開始日が空でも同じメッセージを出す (期間範囲外のメッセージにしない) |
+| `should show a localized message, not the backend English text, when the start date is after the end date` | 開始日が終了日より後なら i18n メッセージを出し、`create_recurring_rule` を呼ばない |
+| `should show a localized message when a daily anchor is after the end date` | 毎日の起点日が終了日より後なら i18n メッセージを出す |
+| `should show a localized message when the end date is empty` | 終了日が空なら i18n メッセージを出す |
+| `should show the same message when the start date is empty` | 開始日が空でも同じメッセージを出す (期間範囲外のメッセージにしない) |
 | `should still create a rule when the dates are in order` | 日付の順序が正しければ従来どおり作成する |
 
 **ファイル**: res/tests/pages/recurring-rule-date-order.test.js
@@ -1071,7 +1071,7 @@
 
 | テスト | 説明 |
 |--------|------|
-| `should bring the cycle UI and the default dates back in line after Reset` | リセット後は「毎日」の表示 (起点日あり・毎月用の欄なし・休日シフトは「なし」で無効) に戻り、既定の日付 (今日 / 1 年後 / 起点日 = 開始日) が入り直す |
+| `should bring the cycle UI and the default dates back in line when Reset is pressed` | リセット後は「毎日」の表示 (起点日あり・毎月用の欄なし・休日シフトは「なし」で無効) に戻り、既定の日付 (今日 / 1 年後 / 起点日 = 開始日) が入り直す |
 
 **ファイル**: res/tests/pages/recurring-rule-reset.test.js
 

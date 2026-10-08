@@ -88,7 +88,7 @@ function isVisible(id) {
 describe('scan2-R4 recurring rule form — Reset', () => {
     afterAll(() => jest.useRealTimers());
 
-    test('should bring the cycle UI and the default dates back in line after Reset', async () => {
+    test('should bring the cycle UI and the default dates back in line when Reset is pressed', async () => {
         // Choose Monthly: Monthly fields shown, anchor hidden.
         const monthly = document.querySelector('input[name="cycle-kind"][value="MONTH"]');
         monthly.checked = true;
