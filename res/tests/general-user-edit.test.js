@@ -45,7 +45,7 @@ describe('General User Edit - Complete Test Suite', () => {
 });
 
 describe('General User Edit - Test Summary', () => {
-    test('Test count summary', () => {
+    test('should pass when this test is only a test-summary placeholder', () => {
         // This test suite includes:
         // - 26 password tests (from password-validation-tests.js)
         // - 13 username tests (from username-validation-tests.js)

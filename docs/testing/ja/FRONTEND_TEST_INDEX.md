@@ -868,9 +868,9 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[M13] a whitespace-only username is rejected before create_general_user` | 空白のみのユーザー名は `validation.required` をユーザー名欄に表示し、`create_general_user` を送らない |
-| `[M13] a normal username still reaches create_general_user` | 通常のユーザー名は `create_general_user` に送られる (比較用) |
-| `[L30] an admin sees the Add User button and its footer` | 管理者には「ユーザー追加」ボタンとその下部の区切り線 (フッター) が表示される (比較用) |
+| `should reject the username before create_general_user when it is only whitespace (M13)` | 空白のみのユーザー名は `validation.required` をユーザー名欄に表示し、`create_general_user` を送らない |
+| `should call create_general_user when the username is normal (M13)` | 通常のユーザー名は `create_general_user` に送られる (比較用) |
+| `should show the Add User button and its footer when the user is an admin (L30)` | 管理者には「ユーザー追加」ボタンとその下部の区切り線 (フッター) が表示される (比較用) |
 | `should show the created and updated times in local time when they are stored in UTC` | 作成日時・更新日時を、保存された UTC のままではなくローカル時刻 (JST) で表示する。更新日時が空なら「-」 |
 
 **ファイル**: res/tests/pages/user-management-page.test.js
@@ -885,7 +885,7 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[scan2-C5] shows the dedicated message when the backend refuses` | バックエンドが `last_general_user` で削除を断ると、英語のエラー文付きの汎用メッセージではなく `user_mgmt.last_general_user` を表示 |
+| `should show the dedicated message when the backend refuses to delete the last general user (scan2-C5)` | バックエンドが `last_general_user` で削除を断ると、英語のエラー文付きの汎用メッセージではなく `user_mgmt.last_general_user` を表示 |
 
 **ファイル**: res/tests/pages/user-management-delete-last-user.test.js
 
@@ -1663,8 +1663,8 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[L24] 16-space password is reported on the password, ...` | 空白16文字のパスワードは、未定義キー `user_mgmt.empty_name` をユーザー名欄に出さず、パスワードのエラーとして表示 |
-| `[L31] 8 emoji (16 UTF-16 units, 8 chars) is rejected by the frontend length check` | 文字数を UTF-16 単位ではなく文字 (コードポイント) で数え、絵文字8文字を拒否 |
+| `should report the error on the password field when the password is 16 spaces (L24)` | 空白16文字のパスワードは、未定義キー `user_mgmt.empty_name` をユーザー名欄に出さず、パスワードのエラーとして表示 |
+| `should reject the password in the frontend when it is 8 emoji (16 UTF-16 units) (L31)` | 文字数を UTF-16 単位ではなく文字 (コードポイント) で数え、絵文字8文字を拒否 |
 
 **ファイル**: res/tests/pages/user-management-password-page.test.js
 
@@ -1678,9 +1678,9 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[L30] a non-admin user is not offered the Add User button` | 一般ユーザーには「ユーザー追加」ボタンを出さない |
-| `[L30] a non-admin user does not see the empty footer line under the list` | ボタンを隠したあとに区切り線 (フッター) だけが残らないよう、フッターごと隠す |
-| `[L30] a non-admin user has no delete button on their own row` | 一般ユーザーの自分の行に削除ボタンを出さない |
+| `should not offer the Add User button when the user is not an admin (L30)` | 一般ユーザーには「ユーザー追加」ボタンを出さない |
+| `should hide the empty footer line under the list when the user is not an admin (L30)` | ボタンを隠したあとに区切り線 (フッター) だけが残らないよう、フッターごと隠す |
+| `should show no delete button on the own row when the user is not an admin (L30)` | 一般ユーザーの自分の行に削除ボタンを出さない |
 
 **ファイル**: res/tests/pages/user-management-nonadmin-page.test.js
 

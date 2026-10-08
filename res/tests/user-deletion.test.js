@@ -522,7 +522,7 @@ describe('User Deletion - Deletion Order Tests', () => {
 });
 
 describe('User Deletion - Test Summary', () => {
-    test('Test count summary', () => {
+    test('should pass when this test is only a test-summary placeholder', () => {
         // This test suite includes:
         // - 10 username formatting tests
         // - 9 user data validation tests
