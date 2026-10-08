@@ -591,7 +591,7 @@
 
 共有 `Modal` クラス (`res/js/modal.js`) の `_handleSave` 再入ガードに対する回帰テスト（Fable-5 レビュー #D2 修正）。Save ボタン連打・Enter 連打で `onSave` が並行発火し、Rust マスタ CRUD 側の SELECT-then-INSERT 重複チェック（TOCTOU）を両方通過して 2 発目が生の `UNIQUE constraint failed` で失敗する経路を防ぐ。
 
-**テスト数**: 5件
+**テスト数**: 6件
 
 | テスト名 | 説明 | 期待結果 |
 |---------|------|---------|
@@ -599,6 +599,7 @@
 | `should disable the save button when onSave is still pending` | 保存中の Save ボタン状態 | disabled=true → 完了後 false |
 | `should call onSave again when the modal is opened and submitted after a successful save` | 保存成功後に再オープン | 2回目の submit で onSave が発火 |
 | `should reset the guard and call onSave again when a retry follows a failed save` | 保存失敗後のリトライ | ガードが解除されリトライ成功 |
+| `should catch the onSave rejection at the listener when the form is submitted` | onSave が reject する状態でフォーム submit | rejection はリスナー内で捕捉され、未処理の rejection にならない。モーダルは開いたまま |
 | `should call onSave only once when the save button is clicked rapidly` (saveButtonId パス) | Save ボタン ID 経由での連打 | onSave 呼び出しは1回のみ |
 
 **ファイル**: res/tests/modal-double-submit.test.js
