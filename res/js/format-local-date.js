@@ -29,3 +29,25 @@ export function formatLocalDate(date) {
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
 }
+
+/**
+ * Show a stored timestamp in the browser's local timezone.
+ *
+ * Created/updated timestamps (ENTRY_DT / UPDATE_DT) are stored in UTC as
+ * `YYYY-MM-DD HH:MM:SS` (SQLite `datetime('now')`). Printing them as stored
+ * showed a JST user times 9 hours behind.
+ *
+ * @param {string|null|undefined} utcText - stored UTC timestamp
+ *   (`YYYY-MM-DD HH:MM:SS`, or with a `T` separator).
+ * @returns {string} `YYYY-MM-DD HH:MM:SS` in local time; '' for an empty
+ *   value; the value itself when it is not a timestamp.
+ */
+export function formatUtcAsLocalDateTime(utcText) {
+    if (!utcText) return '';
+    const match = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/.exec(String(utcText).trim());
+    if (!match) return String(utcText);
+    const [, y, mo, d, h, mi, s] = match.map(Number);
+    const date = new Date(Date.UTC(y, mo - 1, d, h, mi, s));
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${formatLocalDate(date)} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+}

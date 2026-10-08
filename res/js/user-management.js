@@ -10,6 +10,7 @@ import { createMenuBar, handleLogout, handleQuit } from './menu.js';
 import { showValidationError, clearValidationError, showMaxLengthError, attachCharCounter } from './validation-display.js';
 import { invalidatePeriodSettingsCache } from './period.js';
 import { fitWindowToScreen } from './window-fit.js';
+import { formatUtcAsLocalDateTime } from './format-local-date.js';
 import { showToast } from './toast.js';
 import { mapMasterErrorCode, API_ERROR_CODES, formatApiError } from './master-crud.js';
 
@@ -839,9 +840,10 @@ function showMessage(elementId, message, type) {
     }
 }
 
+// Stored timestamps are UTC; show them in the user's local time.
 function formatDateTime(dateTimeStr) {
     if (!dateTimeStr) return '-';
-    return dateTimeStr.replace('T', ' ').substring(0, 19);
+    return escapeHtml(formatUtcAsLocalDateTime(dateTimeStr));
 }
 
 function escapeHtml(text) {
