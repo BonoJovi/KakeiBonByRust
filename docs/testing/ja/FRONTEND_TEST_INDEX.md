@@ -779,9 +779,9 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[H3] saving a product-linked detail without changes keeps its productId` | 商品に紐付いた明細を開いて無変更で保存しても `update_transaction_detail` に元の `productId` が送られる |
-| `[M19] double submit of the add-detail form invokes add_transaction_detail once` | 保存中の二重送信で `add_transaction_detail` が 1 回しか呼ばれない (潜在監査 M19) |
-| `[L7] should show the row total instead of ¥0 when a legacy row has amount_including_tax = 0` | 税込額が 0 の古い明細は ¥0 ではなく AMOUNT + TAX_AMOUNT を表示 (潜在監査 L7) |
+| `should keep the productId when a product-linked detail is saved without changes (H3)` | 商品に紐付いた明細を開いて無変更で保存しても `update_transaction_detail` に元の `productId` が送られる |
+| `should call add_transaction_detail once when the add-detail form is submitted twice (M19)` | 保存中の二重送信で `add_transaction_detail` が 1 回しか呼ばれない (潜在監査 M19) |
+| `should show the row total instead of ¥0 when a legacy row has amount_including_tax = 0 (L7)` | 税込額が 0 の古い明細は ¥0 ではなく AMOUNT + TAX_AMOUNT を表示 (潜在監査 L7) |
 
 **ファイル**: res/tests/pages/transaction-detail-page.test.js
 
@@ -793,7 +793,7 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[T1] typing "100" tax-included at 10 % (floor) keeps 100 and saves 100 / 91 / 9` | 10 %・切り捨てで「100」を 1 文字ずつ入力しても 100 のまま残り、`add_transaction_detail` に 100 / 91 / 9 が送られる |
+| `should keep 100 and save 100 / 91 / 9 when "100" is typed tax-included at 10 % (floor) (T1)` | 10 %・切り捨てで「100」を 1 文字ずつ入力しても 100 のまま残り、`add_transaction_detail` に 100 / 91 / 9 が送られる |
 
 **ファイル**: res/tests/pages/transaction-detail-included-typing.test.js
 
@@ -805,7 +805,7 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[T2] 1000 tax-included at 10 % (floor) is kept, with excluded 909 and tax 91` | 10 %・切り捨てで 1000 を入力すると 1000 のまま残り、`add_transaction_detail` に 1000 / 909 / 91 が送られる |
+| `should keep 1000 with excluded 909 and tax 91 when 1000 is typed tax-included at 10 % (floor) (T2)` | 10 %・切り捨てで 1000 を入力すると 1000 のまま残り、`add_transaction_detail` に 1000 / 909 / 91 が送られる |
 
 **ファイル**: res/tests/pages/transaction-detail-unreachable-included-price.test.js
 
@@ -817,8 +817,8 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[T3] a hidden category2 (and its category3) survives a memo-only edit` | 非表示の中分類 (と配下の小分類) の明細をメモだけ変えて保存しても、分類がそのまま送られる |
-| `[T3] a hidden category3 under an enabled category2 survives a memo-only edit` | 表示中の中分類の下で非表示にした小分類も同様に残る |
+| `should keep a hidden category2 (and its category3) when only the memo is edited (T3)` | 非表示の中分類 (と配下の小分類) の明細をメモだけ変えて保存しても、分類がそのまま送られる |
+| `should keep a hidden category3 under an enabled category2 when only the memo is edited (T3)` | 表示中の中分類の下で非表示にした小分類も同様に残る |
 
 **ファイル**: res/tests/pages/transaction-detail-hidden-category.test.js
 
@@ -832,12 +832,12 @@
 
 | テスト | 説明 |
 |--------|------|
-| `the medium and minor categories come before the item name` | 明細のウィンドウで中分類・小分類が品名より前にある (分類を先に選ぶ) |
-| `the item name field has a defined placeholder and tooltip hint` | 品名欄に短いプレースホルダーと、全文のツールチップ (バルーンヘルプ) があり、どちらも i18n に定義されている |
-| `focusing the empty item name field lists suggestions with the chosen categories` | 空の品名欄にカーソルが入った時点で候補を出し、検索に明細の分類 (`category1Code` / `category2Code` / `category3Code`) を渡す |
-| `the list is not shown when focus has left the field before the answer` | 候補の応答が届く前に欄を離れていたら、一覧を出さない |
-| `typing while the focus search is pending does not show its stale answer` | カーソルが入ったときの検索の応答が届く前に文字を打ったら、その古い応答 (空欄の候補) は出さない |
-| `picking a suggestion closes the list and it stays closed` | 候補を選ぶと一覧が閉じ、そのあと勝手に開き直さない |
+| `should put the medium and minor categories before the item name when the detail window is shown` | 明細のウィンドウで中分類・小分類が品名より前にある (分類を先に選ぶ) |
+| `should have a defined placeholder and tooltip hint when the item name field is shown` | 品名欄に短いプレースホルダーと、全文のツールチップ (バルーンヘルプ) があり、どちらも i18n に定義されている |
+| `should list suggestions with the chosen categories when the empty item name field gets focus` | 空の品名欄にカーソルが入った時点で候補を出し、検索に明細の分類 (`category1Code` / `category2Code` / `category3Code`) を渡す |
+| `should not show the list when focus has left the field before the answer` | 候補の応答が届く前に欄を離れていたら、一覧を出さない |
+| `should not show the stale answer of the focus search when the user types while it is pending` | カーソルが入ったときの検索の応答が届く前に文字を打ったら、その古い応答 (空欄の候補) は出さない |
+| `should close the list and keep it closed when a suggestion is picked` | 候補を選ぶと一覧が閉じ、そのあと勝手に開き直さない |
 
 **ファイル**: res/tests/pages/transaction-detail-product-suggest.test.js
 
@@ -1113,7 +1113,7 @@
 
 | テスト | 説明 |
 |--------|------|
-| `renders the NONE side with common.unspecified, not the stored name` | 口座コードが NONE の側は `common.unspecified` で表示し、保存された「指定なし」は出さない |
+| `should render common.unspecified, not the stored name, when one side is NONE` | 口座コードが NONE の側は `common.unspecified` で表示し、保存された「指定なし」は出さない |
 
 **ファイル**: res/tests/pages/transaction-list-none-account-label.test.js
 
@@ -1127,7 +1127,7 @@
 
 | テスト | 説明 |
 |--------|------|
-| `renders a NONE account with common.unspecified, not the stored name` | 口座コードが NONE の口座は `common.unspecified` で表示し、保存された「指定なし」は出さない |
+| `should render common.unspecified, not the stored name, when the account is NONE` | 口座コードが NONE の口座は `common.unspecified` で表示し、保存された「指定なし」は出さない |
 
 **ファイル**: res/tests/pages/transaction-detail-none-account-label.test.js
 

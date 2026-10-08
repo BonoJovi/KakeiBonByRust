@@ -78,7 +78,7 @@ function typeInto(input, text) {
 }
 
 describe('latent-audit scan2 T1 — tax-included amount typed digit by digit', () => {
-    test('[T1] typing "100" tax-included at 10 % (floor) keeps 100 and saves 100 / 91 / 9', async () => {
+    test('should keep 100 and save 100 / 91 / 9 when "100" is typed tax-included at 10 % (floor) (T1)', async () => {
         document.getElementById('add-detail-btn').click();
         await flush(10);
         expect(document.getElementById('detail-modal').classList.contains('hidden')).toBe(false);

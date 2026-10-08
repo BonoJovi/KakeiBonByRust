@@ -129,7 +129,7 @@ describe('transaction detail screen — regression (latent audit 2026-09)', () =
         invoke.mockClear();
     });
 
-    test('[H3] saving a product-linked detail without changes keeps its productId', async () => {
+    test('should keep the productId when a product-linked detail is saved without changes (H3)', async () => {
         const editBtn = document.querySelector('.edit-detail-btn[data-detail-id="1"]');
         expect(editBtn).not.toBeNull();
         editBtn.click();
@@ -149,7 +149,7 @@ describe('transaction detail screen — regression (latent audit 2026-09)', () =
         expect(updates[0].productId).toBe(7);
     });
 
-    test('[M19] double submit of the add-detail form invokes add_transaction_detail once', async () => {
+    test('should call add_transaction_detail once when the add-detail form is submitted twice (M19)', async () => {
         document.getElementById('add-detail-btn').click();
         await flush(10);
         expect(document.getElementById('detail-modal').classList.contains('hidden')).toBe(false);
@@ -173,7 +173,7 @@ describe('transaction detail screen — regression (latent audit 2026-09)', () =
         expect(adds).toHaveLength(1);
     });
 
-    test('[L7] should show the row total instead of ¥0 when a legacy row has amount_including_tax = 0', () => {
+    test('should show the row total instead of ¥0 when a legacy row has amount_including_tax = 0 (L7)', () => {
         const row = document.querySelector('#detail-list tr[data-detail-id="2"]');
         expect(row).not.toBeNull();
         const amountCell = row.querySelectorAll('td')[2];

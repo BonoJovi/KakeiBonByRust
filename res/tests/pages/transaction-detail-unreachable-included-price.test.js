@@ -73,7 +73,7 @@ await import('../../js/transaction-detail-management.js');
 await bootPage();
 
 describe('latent-audit scan2 T2 — unreachable tax-included prices', () => {
-    test('[T2] 1000 tax-included at 10 % (floor) is kept, with excluded 909 and tax 91', async () => {
+    test('should keep 1000 with excluded 909 and tax 91 when 1000 is typed tax-included at 10 % (floor) (T2)', async () => {
         document.getElementById('add-detail-btn').click();
         await flush(10);
         expect(document.getElementById('detail-modal').classList.contains('hidden')).toBe(false);

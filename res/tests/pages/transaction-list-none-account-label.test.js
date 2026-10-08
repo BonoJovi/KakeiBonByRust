@@ -72,7 +72,7 @@ await import('../../js/transaction-management.js');
 await bootPage();
 
 describe('transaction list NONE account label (scan2-M8)', () => {
-    test('renders the NONE side with common.unspecified, not the stored name', () => {
+    test('should render common.unspecified, not the stored name, when one side is NONE', () => {
         // The list header row uses the same class; take the data rows only.
         const cells = Array.from(
             document.querySelectorAll('#transaction-list .transaction-item .transaction-account')
