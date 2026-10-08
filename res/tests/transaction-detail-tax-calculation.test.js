@@ -259,7 +259,7 @@ describe('Transaction Detail Tax Calculation Tests', () => {
     // ========================================================================
     describe('calculateFromIncluding — three-value self-consistency (Fable-5 #8)', () => {
 
-        it('preserves the typed input under FLOOR when a base±1 candidate reproduces it', () => {
+        it('should keep the typed input under FLOOR when a base±1 candidate reproduces it', () => {
             // The canonical Fable-5 #8 scenario: user types 101 with 10 % / FLOOR.
             // Pre-fix: `tax = included - excluded` left the DB with three
             // inconsistent numbers (91, 10, 101). CodeRabbit on #129 pointed
@@ -276,7 +276,7 @@ describe('Transaction Detail Tax Calculation Tests', () => {
             expect(excluded + tax).toBe(101);
         });
 
-        it('preserves the typed input under CEIL by picking base-1 (91, not the ceil base 92)', () => {
+        it('should keep the typed input under CEIL by picking base-1 (91, not the ceil base 92) when base-1 reproduces it', () => {
             // Same typed 101, but with CEIL. base = ceil(101/1.1) = 92, and
             // 92 + ceil(92*0.1) = 102 (does NOT match). base-1 = 91 with
             // ceil(91*0.1) = 10 yields 101 — pick that so the input stays.
@@ -287,7 +287,7 @@ describe('Transaction Detail Tax Calculation Tests', () => {
             expect(tax).toBe(10);
         });
 
-        it('leaves the tax-included input untouched when the split is already exact', () => {
+        it('should leave the tax-included input untouched when the split is already exact', () => {
             // 330 = 300 + 30 under FLOOR + 10 %; base wins immediately.
             const { excluded, tax } =
                 calculateFromIncluding(330, 10, 0);
@@ -296,7 +296,7 @@ describe('Transaction Detail Tax Calculation Tests', () => {
             expect(tax).toBe(30);
         });
 
-        it('produces consistent numbers under half-up rounding when the base already matches', () => {
+        it('should produce consistent numbers under half-up rounding when the base already matches', () => {
             // 325 / 1.08 ≈ 300.925 → half-up 301, tax = round(301 * 0.08) = 24,
             // 301 + 24 = 325 — base itself matches, no candidate scan needed.
             const { excluded, tax } =
@@ -306,7 +306,7 @@ describe('Transaction Detail Tax Calculation Tests', () => {
             expect(tax).toBe(24);
         });
 
-        it('keeps an unreachable typed price and carves the tax out of it (latent-scan2 T2)', () => {
+        it('should keep the typed price and carve the tax out of it when no base reproduces it (scan2-T2)', () => {
             // 1000 円 at 10 % / FLOOR: base=909, 909+90=999 ≠ 1000; base+1=910,
             // 910+91=1001 ≠ 1000; base-1=908, 908+90=998 ≠ 1000. No candidate
             // fits the tax-excluded formula, so the typed price is kept and
@@ -318,7 +318,7 @@ describe('Transaction Detail Tax Calculation Tests', () => {
             expect(excluded + tax).toBe(1000);
         });
 
-        it('keeps every typed price from 1 to 10,000 under all rounding modes (latent-scan2 T2)', () => {
+        it('should keep every typed price from 1 to 10,000 when any rounding mode is used (scan2-T2)', () => {
             for (const rate of [8, 10]) {
                 for (const rounding of [0, 1, 2]) {
                     for (let included = 1; included <= 10000; included++) {
@@ -331,12 +331,12 @@ describe('Transaction Detail Tax Calculation Tests', () => {
             }
         });
 
-        it('returns zeros for zero input', () => {
+        it('should return zeros when the input is zero', () => {
             expect(calculateFromIncluding(0, 10, 0))
                 .toEqual({ excluded: 0, tax: 0 });
         });
 
-        it('treats a 0 % rate as identity (no tax carved out)', () => {
+        it('should carve out no tax when the rate is 0 %', () => {
             expect(calculateFromIncluding(500, 0, 0))
                 .toEqual({ excluded: 500, tax: 0 });
         });
@@ -344,13 +344,13 @@ describe('Transaction Detail Tax Calculation Tests', () => {
 
     describe('calculateFromExcluding — helper covers the excluded-input side', () => {
 
-        it('applies floor rounding to fractional tax', () => {
+        it('should round the tax down when it has a fraction', () => {
             // 333 * 0.10 = 33.3 → floor 33, included = 366.
             expect(calculateFromExcluding(333, 10, 0))
                 .toEqual({ tax: 33, included: 366 });
         });
 
-        it('returns zeros for zero input', () => {
+        it('should return zeros when the input is zero', () => {
             expect(calculateFromExcluding(0, 10, 0)).toEqual({ tax: 0, included: 0 });
         });
     });
@@ -363,13 +363,13 @@ describe('Transaction Detail Tax Calculation Tests', () => {
         // toward +Infinity for .5, not away from zero) are outside the
         // helper's input contract. Documented explicitly here after
         // CodeRabbit on #129 flagged the pre-fix wording as ambiguous.
-        it('floor is the default for unknown rounding types', () => {
+        it('should round down when the rounding type is unknown', () => {
             expect(applyTaxRounding(9.9, /*unknown*/ 99)).toBe(9);
         });
-        it('half-up on a positive .5 rounds up to the next integer', () => {
+        it('should round up to the next integer when half-up gets a positive .5', () => {
             expect(applyTaxRounding(9.5, 1)).toBe(10);
         });
-        it('ceil bumps a fractional part up', () => {
+        it('should round up when ceil gets a fractional part', () => {
             expect(applyTaxRounding(9.01, 2)).toBe(10);
         });
     });

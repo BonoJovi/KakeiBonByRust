@@ -18,26 +18,26 @@ const detail = (amount, including, rate) => ({
 });
 
 describe('calculateRecommendedTotal', () => {
-    test('single pre-tax detail rounds down by default', () => {
+    test('should round down by default when there is a single pre-tax detail', () => {
         // 1000 × 1.08 = 1080.
         const details = [detail(1000, 1080, 8)];
         expect(calculateRecommendedTotal(details, TAX_ROUND_DOWN)).toBe(1080);
     });
 
-    test('per-rate sum avoids per-detail rounding accumulation', () => {
+    test('should avoid per-detail rounding accumulation when tax is summed per rate', () => {
         // The marquee bug from v1.x: floor(999 × 1.08) × 2 = 2156, but
         // floor((999 + 999) × 1.08) = 2157.
         const details = [detail(999, 1078, 8), detail(999, 1078, 8)];
         expect(calculateRecommendedTotal(details, TAX_ROUND_DOWN)).toBe(2157);
     });
 
-    test('mixed tax rates bucket independently', () => {
+    test('should bucket each rate independently when the tax rates are mixed', () => {
         // 1000 × 1.08 + 2000 × 1.10 = 1080 + 2200.
         const details = [detail(1000, 1080, 8), detail(2000, 2200, 10)];
         expect(calculateRecommendedTotal(details, TAX_ROUND_DOWN)).toBe(3280);
     });
 
-    test('tax-excluded header grosses up amount regardless of amount_including_tax', () => {
+    test('should gross up the amount regardless of amount_including_tax when the header is tax-excluded', () => {
         // amount is always tax-excluded: 200 × 1.08 = 216 whatever the
         // including column holds.
         for (const including of [216, null, 200]) {
@@ -45,24 +45,24 @@ describe('calculateRecommendedTotal', () => {
         }
     });
 
-    test('small rows whose tax rounds to zero are still grossed up (latent-audit L1)', () => {
+    test('should still gross up small rows when their tax rounds to zero (L1)', () => {
         // (5 + 10) × 1.08 = 16.2 → 16, not 5 + 10 = 15.
         const details = [detail(5, 5, 8), detail(10, 10, 8)];
         expect(calculateRecommendedTotal(details, TAX_ROUND_DOWN, TAX_EXCLUDED)).toBe(16);
     });
 
-    test('tax_rate zero passes through', () => {
+    test('should pass the amount through when tax_rate is zero', () => {
         const details = [detail(500, 500, 0), detail(100, null, 0)];
         expect(calculateRecommendedTotal(details, TAX_ROUND_DOWN)).toBe(600);
     });
 
-    test('half-up rounding mode', () => {
+    test('should round half up when the rounding mode is half-up', () => {
         // 999 × 1.08 = 1078.92 → half-up → 1079.
         const details = [detail(999, null, 8)];
         expect(calculateRecommendedTotal(details, TAX_ROUND_HALF_UP)).toBe(1079);
     });
 
-    test('ceil rounding mode', () => {
+    test('should round up when the rounding mode is ceil', () => {
         const details = [detail(999, null, 8)];
         expect(calculateRecommendedTotal(details, TAX_ROUND_UP)).toBe(1079);
 
@@ -71,27 +71,27 @@ describe('calculateRecommendedTotal', () => {
         expect(calculateRecommendedTotal(exact, TAX_ROUND_UP)).toBe(1080);
     });
 
-    test('tax-included header sums amount_including_tax (latent-audit H5)', () => {
+    test('should sum amount_including_tax when the header is tax-included (H5)', () => {
         // 359 + 359 = 718; grossing up 666 × 1.08 would give 719.
         const details = [detail(333, 359, 8), detail(333, 359, 8)];
         expect(calculateRecommendedTotal(details, TAX_ROUND_DOWN, TAX_INCLUDED)).toBe(718);
         expect(calculateRecommendedTotal(details, TAX_ROUND_DOWN, TAX_EXCLUDED)).toBe(719);
     });
 
-    test('tax-included header derives missing tax-included prices', () => {
+    test('should derive missing tax-included prices when the header is tax-included', () => {
         // 1080 (stored) + 1000 × 1.10 (null) + 300 × 1.08 (0 sentinel) = 2504.
         const details = [detail(1000, 1080, 8), detail(1000, null, 10), detail(300, 0, 8)];
         expect(calculateRecommendedTotal(details, TAX_ROUND_DOWN, TAX_INCLUDED)).toBe(2504);
     });
 
-    test('empty detail list returns zero', () => {
+    test('should return zero when the detail list is empty', () => {
         expect(calculateRecommendedTotal([], TAX_ROUND_DOWN)).toBe(0);
     });
 
     // Compatibility shim: callers that pass camelCase keys (`amountIncludingTax`,
     // `taxRate`) should still work, so the helper can be used directly with
     // payloads that came back from Tauri commands.
-    test('accepts camelCase property names', () => {
+    test('should accept the details when they use camelCase property names', () => {
         const details = [
             { amount: 1000, amountIncludingTax: 1080, taxRate: 8 }
         ];
