@@ -64,7 +64,7 @@ await bootPage();
 await new Promise((r) => setTimeout(r, 300));
 
 describe('transaction management screen — draft restore (regression, latent audit 2026-09)', () => {
-    test('[L6] should keep the restored draft instead of the modal\'s late defaults', () => {
+    test('should keep the restored draft instead of the window\'s late defaults when the defaults arrive after the restore (L6)', () => {
         expect(document.getElementById('transaction-modal').classList.contains('hidden')).toBe(false);
         expect(document.getElementById('transaction-date').value).toBe('2026-09-01T10:00');
         expect(document.getElementById('shop').value).toBe('1');

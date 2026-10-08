@@ -137,7 +137,7 @@ describe('transaction management screen — regression (latent audit 2026-09)', 
         invoke.mockClear();
     });
 
-    test('[H4] saving a header without details does not prompt to overwrite the total with ¥0', async () => {
+    test('should not prompt to overwrite the total with ¥0 when a header without details is saved (H4)', async () => {
         const editBtn = rowButtons('common.edit')[0];
         expect(editBtn).toBeDefined();
         editBtn.click();
@@ -175,7 +175,7 @@ describe('transaction management screen — regression (latent audit 2026-09)', 
         expect(callsOf(invoke, 'get_transactions').length).toBeGreaterThan(0);
     });
 
-    test('[L8] should reject the save without calling update_transaction_header when the transaction date is blank', async () => {
+    test('should reject the save without calling update_transaction_header when the transaction date is blank (L8)', async () => {
         const editBtn = rowButtons('common.edit')[0];
         editBtn.click();
         await flush(10);
@@ -198,7 +198,7 @@ describe('transaction management screen — regression (latent audit 2026-09)', 
         await flush(5);
     });
 
-    test('[L5] should move back to the last page when its only row is deleted', async () => {
+    test('should move back to the last page when its only row is deleted (L5)', async () => {
         // 101 rows → pages of 50/50/1.
         seedTransactions(2 * PER_PAGE + 1);
         document.getElementById('clear-filter-btn').click();
@@ -223,7 +223,7 @@ describe('transaction management screen — regression (latent audit 2026-09)', 
         expect(document.querySelectorAll('#transaction-list .transaction-item').length).toBeGreaterThan(0);
     });
 
-    test('[L5] should keep the newer page when an older page response resolves late', async () => {
+    test('should keep the newer page when an older page response resolves late (L5)', async () => {
         seedTransactions(3 * PER_PAGE);
         document.getElementById('clear-filter-btn').click();
         await flush(10);

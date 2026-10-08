@@ -82,7 +82,7 @@ const optionFor = (selectId, value) =>
     Array.from(document.getElementById(selectId).options).find((o) => o.value === value);
 
 describe('transaction-list filter and hidden categories (scan2-M7)', () => {
-    test('[scan2-M7] offers a hidden CATEGORY2 and its CATEGORY3, labelled as hidden', async () => {
+    test('should offer a hidden CATEGORY2 and its CATEGORY3, labelled as hidden, when the list filter is shown (scan2-M7)', async () => {
         choose('filter-category1', 'EXPENSE');
         await flush(3);
 

@@ -95,7 +95,7 @@ describe('latent-audit scan2 T5 — failed header save keeps the modal open', ()
         }
     });
 
-    test('[T5] TRANSFER with both accounts "Unspecified" keeps the form open', async () => {
+    test('should keep the form open when a TRANSFER has both accounts "Unspecified" (T5)', async () => {
         await openNewAndFill({ category1: 'TRANSFER', from: 'NONE', to: 'NONE', total: '5000' });
         await pressSave();
 
@@ -103,7 +103,7 @@ describe('latent-audit scan2 T5 — failed header save keeps the modal open', ()
         expectFormKept('5000');
     });
 
-    test('[T5] a total rejected by parseAmountStrict ("1e3") keeps the form open', async () => {
+    test('should keep the form open when parseAmountStrict rejects the total ("1e3") (T5)', async () => {
         await openNewAndFill({ category1: 'EXPENSE', from: 'CASH', to: 'NONE', total: '1e3' });
         expect(document.getElementById('total-amount').value).toBe('1e3'); // jsdom keeps it, like a browser
         await pressSave();
@@ -112,7 +112,7 @@ describe('latent-audit scan2 T5 — failed header save keeps the modal open', ()
         expectFormKept('1e3');
     });
 
-    test('[T5] a generic backend error keeps the form open', async () => {
+    test('should keep the form open when the backend returns a generic error (T5)', async () => {
         saveError = { code: 'database', message: 'database is locked' };
         await openNewAndFill({ category1: 'EXPENSE', from: 'CASH', to: 'NONE', total: '5000' });
         await pressSave();

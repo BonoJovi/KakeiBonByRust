@@ -73,7 +73,7 @@ await import('../../js/transaction-management.js');
 await bootPage();
 
 describe('transaction management screen — category1 of a header with details (regression, latent audit 2026-09)', () => {
-    test('[M2] should explain why the category cannot change and keep the modal open', async () => {
+    test('should explain why the category cannot change and keep the window open when the transaction has details (M2)', async () => {
         const editBtn = Array.from(document.querySelectorAll('#transaction-list .transaction-item button'))
             .find((b) => b.getAttribute('data-i18n') === 'common.edit');
         editBtn.click();

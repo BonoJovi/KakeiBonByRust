@@ -106,7 +106,7 @@ describe('Manage details from the header edit modal (scan2-T6)', () => {
         expect(confirmSpy).not.toHaveBeenCalled();
     });
 
-    test('[T6] edited header values are saved before leaving', async () => {
+    test('should save the edited header values when leaving for the details (T6)', async () => {
         await openEdit();
 
         document.getElementById('transaction-date').value = '2026-09-20T18:00';
@@ -131,7 +131,7 @@ describe('Manage details from the header edit modal (scan2-T6)', () => {
         expect(navigated()).toBe(true);
     });
 
-    test('[T6] a second click while saving does not save twice', async () => {
+    test('should not save twice when the button is clicked again while saving (T6)', async () => {
         await openEdit();
         document.getElementById('total-amount').value = '6400';
 
@@ -154,7 +154,7 @@ describe('Manage details from the header edit modal (scan2-T6)', () => {
         }
     });
 
-    test('[T6] cancelling the dialog stays in the edit modal without saving', async () => {
+    test('should stay in the edit window without saving when the dialog is cancelled (T6)', async () => {
         await openEdit();
         document.getElementById('total-amount').value = '6400';
 
@@ -169,7 +169,7 @@ describe('Manage details from the header edit modal (scan2-T6)', () => {
         expect(document.getElementById('total-amount').value).toBe('6400');
     });
 
-    test('[T6] Esc closes only the dialog, not the edit modal behind it', async () => {
+    test('should close only the dialog, not the edit window behind it, when Esc is pressed (T6)', async () => {
         await openEdit();
         document.getElementById('total-amount').value = '6400';
 
@@ -185,7 +185,7 @@ describe('Manage details from the header edit modal (scan2-T6)', () => {
         expect(navigated()).toBe(false);
     });
 
-    test('[T6] without changes it moves on at once, without asking or saving', async () => {
+    test('should move on at once, without asking or saving, when nothing was changed (T6)', async () => {
         await openEdit();
 
         await clickManageDetails();
