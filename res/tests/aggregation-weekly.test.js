@@ -31,7 +31,7 @@ describe('Weekly Aggregation Tests', () => {
     });
 
     describe('UI Initialization', () => {
-        it('should display reference date input with default today', () => {
+        it('should show today in the reference date input when the screen opens', () => {
             const dateInput = document.querySelector('#reference-date');
             expect(dateInput).toBeTruthy();
             
@@ -39,26 +39,26 @@ describe('Weekly Aggregation Tests', () => {
             expect(dateInput.value).toBe(today);
         });
 
-        it('should display week start select with default Monday', () => {
+        it('should show the week start select set to Sunday when the screen opens', () => {
             const weekStartSelect = document.querySelector('#week-start');
             expect(weekStartSelect).toBeTruthy();
             expect(weekStartSelect.value).toBe('0'); // Sunday is default (0)
         });
 
-        it('should display group-by select with default value', () => {
+        it('should show the group-by select set to category1 when the screen opens', () => {
             const groupBySelect = document.querySelector('#group-by');
             expect(groupBySelect).toBeTruthy();
             expect(groupBySelect.value).toBe('category1');
         });
 
-        it('should display execute button', () => {
+        it('should show the Execute button when the screen opens', () => {
             const executeBtn = document.querySelector('#execute-btn');
             expect(executeBtn).toBeTruthy();
         });
     });
 
     describe('Reference Date Validation', () => {
-        it('should accept valid date', async () => {
+        it('should show no error when the date is a past date', async () => {
             window.__TAURI__.core.invoke = async () => [];
             
             setInputValue('#reference-date', '2024-11-20');
@@ -70,7 +70,7 @@ describe('Weekly Aggregation Tests', () => {
             expect(errorMsg.style.display).toBe('none');
         });
 
-        it('should reject future date', async () => {
+        it('should show an error when the date is in the future', async () => {
             const tomorrow = new Date();
             tomorrow.setDate(tomorrow.getDate() + 1);
             const futureDate = tomorrow.toISOString().split('T')[0];
@@ -85,7 +85,7 @@ describe('Weekly Aggregation Tests', () => {
             expect(errorMsg.textContent).toMatch(/future/i);
         });
 
-        it('should accept today', async () => {
+        it('should show no error when the date is today', async () => {
             window.__TAURI__.core.invoke = async () => [];
             
             const today = new Date().toISOString().split('T')[0];
@@ -98,7 +98,7 @@ describe('Weekly Aggregation Tests', () => {
             expect(errorMsg.style.display).toBe('none');
         });
 
-        it('should reject empty date', async () => {
+        it('should show an error when the date is empty', async () => {
             setInputValue('#reference-date', '');
             clickButton('#execute-btn');
             
@@ -110,7 +110,7 @@ describe('Weekly Aggregation Tests', () => {
     });
 
     describe('Week Start Selection', () => {
-        it('should accept sunday as week start', async () => {
+        it('should send weekStart 0 when the week starts on Sunday', async () => {
             const calls = [];
             window.__TAURI__.core.invoke = async (cmd, args) => {
                 calls.push({ cmd, args });
@@ -125,7 +125,7 @@ describe('Weekly Aggregation Tests', () => {
             expect(calls[0].args.weekStart).toBe(0);
         });
 
-        it('should accept monday as week start', async () => {
+        it('should send weekStart 1 when the week starts on Monday', async () => {
             const calls = [];
             window.__TAURI__.core.invoke = async (cmd, args) => {
                 calls.push({ cmd, args });
@@ -142,7 +142,7 @@ describe('Weekly Aggregation Tests', () => {
     });
 
     describe('Aggregation Execution', () => {
-        it('should call backend with correct parameters', async () => {
+        it('should send the form values to the backend when Execute is pressed', async () => {
             const calls = [];
             window.__TAURI__.core.invoke = async (cmd, args) => {
                 calls.push({ cmd, args });
@@ -164,7 +164,7 @@ describe('Weekly Aggregation Tests', () => {
             expect(calls[0].args.groupBy).toBe('category2');
         });
 
-        it('should display results after execution', async () => {
+        it('should show the result rows when the aggregation returns data', async () => {
             window.__TAURI__.core.invoke = async () => [
                 { group_key: 'EXPENSE', group_name: 'Expense', total_amount: -30000, count: 20, avg_amount: -1500 }
             ];
@@ -179,7 +179,7 @@ describe('Weekly Aggregation Tests', () => {
             expect(tableData[0][0]).toBe('Expense');
         });
 
-        it('should handle empty results', async () => {
+        it('should show an empty table when the aggregation returns no rows', async () => {
             window.__TAURI__.core.invoke = async () => [];
             
             clickButton('#execute-btn');
@@ -191,7 +191,7 @@ describe('Weekly Aggregation Tests', () => {
             expect(tbody?.children.length).toBe(0);
         });
 
-        it('should handle backend errors', async () => {
+        it('should show an error when the backend fails', async () => {
             window.__TAURI__.core.invoke = async () => {
                 throw new Error('Failed to fetch data');
             };
@@ -206,7 +206,7 @@ describe('Weekly Aggregation Tests', () => {
     });
 
     describe('Week Range Calculation', () => {
-        it('should calculate week range for Monday start', async () => {
+        it('should send the reference date and weekStart 1 when a Monday-start week is aggregated', async () => {
             const calls = [];
             window.__TAURI__.core.invoke = async (cmd, args) => {
                 calls.push({ cmd, args });
@@ -226,7 +226,7 @@ describe('Weekly Aggregation Tests', () => {
             expect(calls[0].args.weekStart).toBe(1);
         });
 
-        it('should calculate week range for Sunday start', async () => {
+        it('should send the reference date and weekStart 0 when a Sunday-start week is aggregated', async () => {
             const calls = [];
             window.__TAURI__.core.invoke = async (cmd, args) => {
                 calls.push({ cmd, args });
@@ -245,7 +245,7 @@ describe('Weekly Aggregation Tests', () => {
     });
 
     describe('Grouping Axis Changes', () => {
-        it('should aggregate by all grouping axes', async () => {
+        it('should send each grouping axis when it is selected', async () => {
             const groupings = ['category1', 'category2', 'category3', 'account', 'shop'];
             
             for (const grouping of groupings) {
@@ -290,7 +290,7 @@ describe('Weekly Aggregation Tests', () => {
     });
 
     describe('Different Days of Week', () => {
-        it('should handle Monday reference date', async () => {
+        it('should show no error when the reference date is a Monday', async () => {
             window.__TAURI__.core.invoke = async () => [];
             
             // Monday, Nov 18, 2024
@@ -304,7 +304,7 @@ describe('Weekly Aggregation Tests', () => {
             expect(errorMsg.style.display).toBe('none');
         });
 
-        it('should handle Sunday reference date', async () => {
+        it('should show no error when the reference date is a Sunday', async () => {
             window.__TAURI__.core.invoke = async () => [];
             
             // Sunday, Nov 17, 2024
@@ -318,7 +318,7 @@ describe('Weekly Aggregation Tests', () => {
             expect(errorMsg.style.display).toBe('none');
         });
 
-        it('should handle Saturday reference date', async () => {
+        it('should show no error when the reference date is a Saturday', async () => {
             window.__TAURI__.core.invoke = async () => [];
             
             // Saturday, Nov 23, 2024

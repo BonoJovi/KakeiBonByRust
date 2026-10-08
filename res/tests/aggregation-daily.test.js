@@ -31,7 +31,7 @@ describe('Daily Aggregation Tests', () => {
     });
 
     describe('UI Initialization', () => {
-        it('should display date input with default today', () => {
+        it('should show today in the date input when the screen opens', () => {
             const dateInput = document.querySelector('#date');
             expect(dateInput).toBeTruthy();
             
@@ -39,20 +39,20 @@ describe('Daily Aggregation Tests', () => {
             expect(dateInput.value).toBe(today);
         });
 
-        it('should display group-by select with default value', () => {
+        it('should show the group-by select set to category1 when the screen opens', () => {
             const groupBySelect = document.querySelector('#group-by');
             expect(groupBySelect).toBeTruthy();
             expect(groupBySelect.value).toBe('category1');
         });
 
-        it('should display execute button', () => {
+        it('should show the Execute button when the screen opens', () => {
             const executeBtn = document.querySelector('#execute-btn');
             expect(executeBtn).toBeTruthy();
         });
     });
 
     describe('Date Input Validation', () => {
-        it('should accept valid date', async () => {
+        it('should show no error when the date is a past date', async () => {
             window.__TAURI__.core.invoke = async () => [];
             
             setInputValue('#date', '2024-11-20');
@@ -64,7 +64,7 @@ describe('Daily Aggregation Tests', () => {
             expect(errorMsg.style.display).toBe('none');
         });
 
-        it('should reject future date', async () => {
+        it('should show an error when the date is in the future', async () => {
             const tomorrow = new Date();
             tomorrow.setDate(tomorrow.getDate() + 1);
             const futureDate = tomorrow.toISOString().split('T')[0];
@@ -79,7 +79,7 @@ describe('Daily Aggregation Tests', () => {
             expect(errorMsg.textContent).toMatch(/future/i);
         });
 
-        it('should accept today', async () => {
+        it('should show no error when the date is today', async () => {
             window.__TAURI__.core.invoke = async () => [];
             
             const today = new Date().toISOString().split('T')[0];
@@ -92,7 +92,7 @@ describe('Daily Aggregation Tests', () => {
             expect(errorMsg.style.display).toBe('none');
         });
 
-        it('should reject invalid date format', async () => {
+        it('should show an error when the date uses slashes', async () => {
             setInputValue('#date', '2024/11/20');
             clickButton('#execute-btn');
             
@@ -102,7 +102,7 @@ describe('Daily Aggregation Tests', () => {
             expect(errorMsg).toBeTruthy();
         });
 
-        it('should reject empty date', async () => {
+        it('should show an error when the date is empty', async () => {
             setInputValue('#date', '');
             clickButton('#execute-btn');
             
@@ -114,7 +114,7 @@ describe('Daily Aggregation Tests', () => {
     });
 
     describe('Aggregation Execution', () => {
-        it('should call backend with correct parameters', async () => {
+        it('should send the form values to the backend when Execute is pressed', async () => {
             const calls = [];
             window.__TAURI__.core.invoke = async (cmd, args) => {
                 calls.push({ cmd, args });
@@ -134,7 +134,7 @@ describe('Daily Aggregation Tests', () => {
             expect(calls[0].args.groupBy).toBe('category2');
         });
 
-        it('should display results after execution', async () => {
+        it('should show the result rows when the aggregation returns data', async () => {
             window.__TAURI__.core.invoke = async () => [
                 { group_key: 'EXPENSE', group_name: 'Expense', total_amount: -5000, count: 3, avg_amount: -1667 }
             ];
@@ -149,7 +149,7 @@ describe('Daily Aggregation Tests', () => {
             expect(tableData[0][0]).toBe('Expense'); // First column of first row
         });
 
-        it('should handle empty results', async () => {
+        it('should show an empty table when the aggregation returns no rows', async () => {
             window.__TAURI__.core.invoke = async () => [];
             
             clickButton('#execute-btn');
@@ -161,7 +161,7 @@ describe('Daily Aggregation Tests', () => {
             expect(tbody?.children.length).toBe(0);
         });
 
-        it('should handle backend errors', async () => {
+        it('should show an error when the backend fails', async () => {
             window.__TAURI__.core.invoke = async () => {
                 throw new Error('Failed to fetch data');
             };
@@ -176,7 +176,7 @@ describe('Daily Aggregation Tests', () => {
     });
 
     describe('Enter Key Execution', () => {
-        it('should execute on Enter key in date field', async () => {
+        it('should run the aggregation when Enter is pressed in the date field', async () => {
             const calls = [];
             window.__TAURI__.core.invoke = async (cmd, args) => {
                 calls.push({ cmd, args });
@@ -196,7 +196,7 @@ describe('Daily Aggregation Tests', () => {
     });
 
     describe('Grouping Axis Changes', () => {
-        it('should aggregate by all grouping axes', async () => {
+        it('should send each grouping axis when it is selected', async () => {
             const groupings = ['category1', 'category2', 'category3', 'account', 'shop'];
             
             for (const grouping of groupings) {
