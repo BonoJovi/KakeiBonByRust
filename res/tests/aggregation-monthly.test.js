@@ -139,7 +139,7 @@ describe('Monthly Aggregation Tests', () => {
     });
 
     describe('Year Spinner Buttons', () => {
-        it.skip('should increment year with up button', () => {
+        it.skip('should add one year when the up button is clicked', () => {
             // TODO: Implement in future patch release
             setInputValue('#year', '2024');
             const initialYear = parseInt(document.querySelector('#year').value);
@@ -150,7 +150,7 @@ describe('Monthly Aggregation Tests', () => {
             expect(newYear).toBe(initialYear + 1);
         });
 
-        it.skip('should decrement year with down button', () => {
+        it.skip('should subtract one year when the down button is clicked', () => {
             // TODO: Implement in future patch release
             setInputValue('#year', '2024');
             const initialYear = parseInt(document.querySelector('#year').value);
@@ -161,7 +161,7 @@ describe('Monthly Aggregation Tests', () => {
             expect(newYear).toBe(initialYear - 1);
         });
 
-        it.skip('should not go below 1900', () => {
+        it.skip('should stay at 1900 when the down button is clicked at 1900', () => {
             // TODO: Implement in future patch release
             setInputValue('#year', '1900');
             clickButton('#year-down');
@@ -170,7 +170,7 @@ describe('Monthly Aggregation Tests', () => {
             expect(year).toBe(1900);
         });
 
-        it.skip('should not go above 2100', () => {
+        it.skip('should stay at 2100 when the up button is clicked at 2100', () => {
             // TODO: Implement in future patch release
             setInputValue('#year', '2100');
             clickButton('#year-up');
