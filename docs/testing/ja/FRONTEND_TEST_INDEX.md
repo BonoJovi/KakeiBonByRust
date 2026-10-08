@@ -975,7 +975,7 @@
 
 | テスト | 説明 |
 |--------|------|
-| `comes back in edit mode for the same product (or the jump is not offered in edit mode)` | 戻ると同じ商品の「編集」画面で開き、保存で `update_product` を呼ぶ (`add_product` は呼ばない) |
+| `should come back in edit mode for the same product when returning from the manufacturer master (or not offer the jump in edit mode) (scan2-M2)` | 戻ると同じ商品の「編集」画面で開き、保存で `update_product` を呼ぶ (`add_product` は呼ばない) |
 
 **ファイル**: res/tests/pages/product-management-edit-manufacturer-roundtrip.test.js
 
@@ -1202,7 +1202,7 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[M5] editing a product of a disabled manufacturer keeps manufacturer_id on save` | 無効化されたメーカーに紐付く商品を無変更で保存しても `manufacturer_id` が保たれる (無効メーカーを「（非表示）」付きで選択肢に追加) |
+| `should keep manufacturer_id on save when the product's manufacturer is disabled (M5)` | 無効化されたメーカーに紐付く商品を無変更で保存しても `manufacturer_id` が保たれる (無効メーカーを「（非表示）」付きで選択肢に追加) |
 
 **ファイル**: res/tests/pages/product-management-page.test.js
 
@@ -1216,8 +1216,8 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[L17] should leave the detail draft alone when no product name matches exactly` | 完全一致が無ければ、下書きの商品紐付けと品名を変えない |
-| `[L17] should link the detail draft to the product whose name matches exactly` | 部分一致の候補が先に並んでも、完全一致の商品を紐付ける |
+| `should leave the detail draft alone when no product name matches exactly (L17)` | 完全一致が無ければ、下書きの商品紐付けと品名を変えない |
+| `should link the detail draft to the product when its name matches exactly (L17)` | 部分一致の候補が先に並んでも、完全一致の商品を紐付ける |
 
 **ファイル**: res/tests/pages/product-management-link-draft.test.js
 

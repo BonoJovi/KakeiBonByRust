@@ -84,36 +84,36 @@ describe('Detail draft persistence (v2.6.0 master jump round-trip)', () => {
     });
 
     describe('persist / consume / clear', () => {
-        it('persist + consume returns the same payload', () => {
+        it('should return the same payload when a draft is persisted and then consumed', () => {
             const draft = sampleDraft();
             persistDraft(storage, draft);
             expect(consumeDraft(storage)).toEqual(draft);
         });
 
-        it('consume returns null when nothing is stored', () => {
+        it('should return null from consume when nothing is stored', () => {
             expect(consumeDraft(storage)).toBeNull();
         });
 
-        it('consume returns null and clears storage on malformed JSON', () => {
+        it('should return null and clear storage when the stored draft is malformed JSON', () => {
             storage.setItem(DETAIL_DRAFT_KEY, '{not json');
             expect(consumeDraft(storage)).toBeNull();
             // Subsequent consume must also see empty storage.
             expect(storage.getItem(DETAIL_DRAFT_KEY)).toBeNull();
         });
 
-        it('clearDraft removes the persisted entry', () => {
+        it('should remove the persisted entry when clearDraft is called', () => {
             persistDraft(storage, sampleDraft());
             clearDraft(storage);
             expect(consumeDraft(storage)).toBeNull();
         });
 
-        it('persist is idempotent — later persist overwrites earlier draft', () => {
+        it('should overwrite the earlier draft when persist is called again', () => {
             persistDraft(storage, sampleDraft({ item_name: 'first' }));
             persistDraft(storage, sampleDraft({ item_name: 'second' }));
             expect(consumeDraft(storage).item_name).toBe('second');
         });
 
-        it('round-trip preserves edit-mode detail_id and selected_product_id', () => {
+        it('should keep detail_id and selected_product_id when an edit-mode draft makes a round trip', () => {
             const draft = sampleDraft({
                 detail_id: '42',
                 selected_product_id: 7,
@@ -126,7 +126,7 @@ describe('Detail draft persistence (v2.6.0 master jump round-trip)', () => {
     });
 
     describe('linkNewProductToDraft (post-add canonicalization)', () => {
-        it('no-ops when there is no persisted draft', () => {
+        it('should do nothing when there is no persisted draft', () => {
             const updated = linkNewProductToDraft(storage, 'サバ缶', [
                 { product_id: 5, product_name: 'サバ缶' },
             ]);
@@ -134,7 +134,7 @@ describe('Detail draft persistence (v2.6.0 master jump round-trip)', () => {
             expect(consumeDraft(storage)).toBeNull();
         });
 
-        it('no-ops when search returned no candidates', () => {
+        it('should do nothing when the search returned no candidates', () => {
             persistDraft(storage, sampleDraft());
             const updated = linkNewProductToDraft(storage, 'サバ缶', []);
             expect(updated).toBe(false);
@@ -142,7 +142,7 @@ describe('Detail draft persistence (v2.6.0 master jump round-trip)', () => {
             expect(consumeDraft(storage).selected_product_id).toBeNull();
         });
 
-        it('stamps the exact-name match into the draft', () => {
+        it('should put the product into the draft when a candidate matches the name exactly', () => {
             persistDraft(storage, sampleDraft({ item_name: 'サバ缶' }));
             const updated = linkNewProductToDraft(storage, 'サバ缶', [
                 { product_id: 10, product_name: 'サバ缶詰' },
@@ -154,7 +154,7 @@ describe('Detail draft persistence (v2.6.0 master jump round-trip)', () => {
             expect(out.item_name).toBe('サバ缶');
         });
 
-        it('falls back to the first candidate when no exact-name match', () => {
+        it('should fall back to the first candidate when no candidate matches the name exactly', () => {
             persistDraft(storage, sampleDraft({ item_name: 'サバ' }));
             const updated = linkNewProductToDraft(storage, 'サバ', [
                 { product_id: 20, product_name: 'サバ缶' },
@@ -167,7 +167,7 @@ describe('Detail draft persistence (v2.6.0 master jump round-trip)', () => {
             expect(out.item_name).toBe('サバ缶');
         });
 
-        it('preserves all non-product fields of the draft', () => {
+        it('should keep all non-product fields when the draft is linked to a product', () => {
             const draft = sampleDraft({
                 detail_id: '99',
                 amount_excluding_tax: '500',

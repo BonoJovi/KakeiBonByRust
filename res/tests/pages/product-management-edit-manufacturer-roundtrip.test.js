@@ -62,7 +62,7 @@ await import('../../js/product-management.js');
 await bootPage();
 
 describe('scan2-M2 product edit -> manufacturer master round trip', () => {
-    test('comes back in edit mode for the same product (or the jump is not offered in edit mode)', async () => {
+    test('should come back in edit mode for the same product when returning from the manufacturer master (or not offer the jump in edit mode) (scan2-M2)', async () => {
         const editBtn = document.querySelector('#product-list .btn-edit, .btn-edit');
         expect(editBtn).not.toBeNull();
         editBtn.click();
