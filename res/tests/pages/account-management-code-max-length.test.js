@@ -91,7 +91,7 @@ async function submitForm(code) {
 describe('account code length limit', () => {
     beforeEach(() => invoke.mockClear());
 
-    test('add: the code field shows a 50-character counter and cuts typed input at 50', async () => {
+    test('should show a 50-character counter and cut typed input at 50 when an account is added', async () => {
         await openAdd();
         expect(counterText()).toBe(`0 / ${MAX_ACCOUNT_CODE_LEN}`);
 
@@ -101,7 +101,7 @@ describe('account code length limit', () => {
         expect(counterText()).toBe(`${MAX_ACCOUNT_CODE_LEN} / ${MAX_ACCOUNT_CODE_LEN}`);
     });
 
-    test('add: a 51-character code is stopped before add_account with the max-length message', async () => {
+    test('should stop a 51-character code before add_account with the max-length message when an account is added', async () => {
         const modal = document.getElementById('account-modal');
         if (isHiddenOrAbsent(modal)) await openAdd();
 
@@ -113,7 +113,7 @@ describe('account code length limit', () => {
         expect(errorText()).toContain(`max=${MAX_ACCOUNT_CODE_LEN}`);
     });
 
-    test('add: a 50-character code is sent to add_account', async () => {
+    test('should send a 50-character code to add_account when an account is added', async () => {
         const modal = document.getElementById('account-modal');
         if (isHiddenOrAbsent(modal)) await openAdd();
 
@@ -124,7 +124,7 @@ describe('account code length limit', () => {
         expect(calls[0].accountCode).toBe('D'.repeat(MAX_ACCOUNT_CODE_LEN));
     });
 
-    test('edit: an existing code longer than 50 characters is kept and sent to update_account', async () => {
+    test('should keep an existing code longer than 50 characters and send it to update_account when an account is edited', async () => {
         const editBtn = [...document.querySelectorAll('.btn-edit')]
             .find((b) => b.dataset.code === LONG_CODE);
         expect(editBtn).toBeTruthy();

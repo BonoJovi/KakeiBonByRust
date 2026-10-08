@@ -84,7 +84,7 @@ describe('category management — regression (latent audit 2026-09)', () => {
         await expandExpense();
     });
 
-    test('[L19] should show the not-found message and reload the tree when moving a vanished category', async () => {
+    test('should show the not-found message and reload the tree when moving a vanished category (L19)', async () => {
         const up = actionButton('move-up', 'C2_E_2');
         expect(up).not.toBeNull();
         // The category is gone by the time the tree is reloaded.
@@ -98,7 +98,7 @@ describe('category management — regression (latent audit 2026-09)', () => {
         expect(document.querySelector('.category-level-2[data-category-code="C2_E_2"]')).toBeNull();
     });
 
-    test('[L19] should show the not-found message and reload the tree when showing a vanished category', async () => {
+    test('should show the not-found message and reload the tree when showing a vanished category (L19)', async () => {
         const show = actionButton('show', 'C2_E_3');
         expect(show).not.toBeNull();
         // The category is gone by the time the tree is reloaded.

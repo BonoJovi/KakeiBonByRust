@@ -72,7 +72,7 @@ describe('scan2-M5 category ↑/↓ buttons ignore hidden siblings', () => {
         await expand('.category-level-2[data-category-code="C2_E_1"]');
     });
 
-    test('[scan2-M5] the last visible CATEGORY2 cannot move down past hidden ones', () => {
+    test('should not let the last visible CATEGORY2 move down when only hidden ones follow (scan2-M5)', () => {
         expect(button(2, 'C2_E_1', 'move-up').disabled).toBe(true);
         expect(button(2, 'C2_E_1', 'move-down').disabled).toBe(false);
         expect(button(2, 'C2_E_2', 'move-up').disabled).toBe(false);
@@ -80,7 +80,7 @@ describe('scan2-M5 category ↑/↓ buttons ignore hidden siblings', () => {
         expect(button(2, 'C2_E_3', 'move-down')).toBeNull(); // hidden row: no ↑/↓
     });
 
-    test('[scan2-M5] the last visible CATEGORY3 cannot move down past hidden ones', () => {
+    test('should not let the last visible CATEGORY3 move down when only hidden ones follow (scan2-M5)', () => {
         expect(button(3, 'C3_E_1_1', 'move-up').disabled).toBe(true);
         expect(button(3, 'C3_E_1_1', 'move-down').disabled).toBe(false);
         expect(button(3, 'C3_E_1_2', 'move-up').disabled).toBe(false);

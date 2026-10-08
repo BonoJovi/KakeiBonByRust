@@ -75,7 +75,7 @@ describe('account master screen — disable (regression, latent audit 2026-09)',
         invoke.mockClear();
     });
 
-    test('[M7] should list disabled accounts, marked, only while "show disabled" is on', async () => {
+    test('should list disabled accounts, marked, when "show disabled" is on (M7)', async () => {
         expect(rows()).toHaveLength(1); // NONE is never listed
 
         document.getElementById('toggle-disabled-btn').click();
@@ -90,7 +90,7 @@ describe('account master screen — disable (regression, latent audit 2026-09)',
         expect(rows()).toHaveLength(1);
     });
 
-    test('[M7] should not let a late "show disabled" response overwrite a newer list', async () => {
+    test('should not let a late "show disabled" response overwrite a newer list when the toggle changes again (M7)', async () => {
         pendingIncludeDisabled = deferred();
         document.getElementById('toggle-disabled-btn').click(); // on: response parked
         await flush(2);
@@ -105,7 +105,7 @@ describe('account master screen — disable (regression, latent audit 2026-09)',
         expect(rows()).toHaveLength(1);
     });
 
-    test('[M7] should send the disabled checkbox when adding an account', async () => {
+    test('should send the disabled checkbox when adding an account (M7)', async () => {
         document.getElementById('add-account-btn').click();
         await flush(5);
         expect(document.getElementById('account-is-disabled').checked).toBe(false);
@@ -123,7 +123,7 @@ describe('account master screen — disable (regression, latent audit 2026-09)',
         expect(adds[0]).toMatchObject({ accountCode: 'WALLET', isDisabled: 1 });
     });
 
-    test('[M7] should show and send the disabled state when editing an account', async () => {
+    test('should show and send the disabled state when editing an account (M7)', async () => {
         document.getElementById('toggle-disabled-btn').click();
         await flush(5);
 
