@@ -64,18 +64,18 @@ describe('Product autocomplete state machine (v2.6.0)', () => {
     });
 
     describe('Selection → keystroke demotion', () => {
-        it('selecting a candidate sets product_id', () => {
+        it('should set product_id when a candidate is selected', () => {
             onSelectCandidate(state, { product_id: 42, product_name: 'サバ缶' });
             expect(state.selectedProductId).toBe(42);
         });
 
-        it('typing after a selection clears product_id (free-text fallback)', () => {
+        it('should clear product_id (free-text fallback) when the user types after a selection', () => {
             onSelectCandidate(state, { product_id: 42, product_name: 'サバ缶' });
             onUserKeystroke(state);
             expect(state.selectedProductId).toBeNull();
         });
 
-        it('selecting a different candidate updates product_id', () => {
+        it('should update product_id when a different candidate is selected', () => {
             onSelectCandidate(state, { product_id: 42, product_name: 'サバ缶' });
             onSelectCandidate(state, { product_id: 99, product_name: '味噌' });
             expect(state.selectedProductId).toBe(99);
@@ -83,22 +83,22 @@ describe('Product autocomplete state machine (v2.6.0)', () => {
     });
 
     describe('Edit-mode restoration', () => {
-        it('opening a product-linked detail seeds product_id', () => {
+        it('should set product_id when a product-linked detail is opened', () => {
             onOpenForEdit(state, { product_id: 7, item_name: 'whatever' });
             expect(state.selectedProductId).toBe(7);
         });
 
-        it('opening a free-text detail leaves product_id null', () => {
+        it('should leave product_id null when a free-text detail is opened', () => {
             onOpenForEdit(state, { product_id: null, item_name: 'free text' });
             expect(state.selectedProductId).toBeNull();
         });
 
-        it('handles undefined product_id like null (defensive)', () => {
+        it('should treat product_id as null when it is undefined (defensive)', () => {
             onOpenForEdit(state, { item_name: 'no product_id field at all' });
             expect(state.selectedProductId).toBeNull();
         });
 
-        it('reset wipes the selection', () => {
+        it('should clear the selection when it is reset', () => {
             onSelectCandidate(state, { product_id: 42, product_name: 'X' });
             onReset(state);
             expect(state.selectedProductId).toBeNull();
@@ -107,7 +107,7 @@ describe('Product autocomplete state machine (v2.6.0)', () => {
     });
 
     describe('Stale-fetch protection', () => {
-        it('rejects results from an older fetch token', () => {
+        it('should reject the results when they come from an older fetch token', () => {
             const oldToken = ++state.requestToken;
             // Simulate the user typing again, which bumps the token
             ++state.requestToken;
@@ -119,7 +119,7 @@ describe('Product autocomplete state machine (v2.6.0)', () => {
             expect(state.candidates).toEqual([]);
         });
 
-        it('accepts results matching the current token', () => {
+        it('should accept the results when they match the current token', () => {
             const currentToken = ++state.requestToken;
             const applied = applyFetchResult(state, currentToken, [
                 { product_id: 1, product_name: 'fresh' },
@@ -129,7 +129,7 @@ describe('Product autocomplete state machine (v2.6.0)', () => {
             expect(state.activeIndex).toBe(-1);
         });
 
-        it('reset bumps the token so an in-flight fetch becomes stale', () => {
+        it('should make an in-flight fetch stale when it is reset', () => {
             const inflightToken = ++state.requestToken;
             onReset(state);
             const applied = applyFetchResult(state, inflightToken, [

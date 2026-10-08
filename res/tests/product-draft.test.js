@@ -80,35 +80,35 @@ describe('Product draft persistence (v2.6.0 product → manufacturer side trip)'
     });
 
     describe('persist / consume / clear', () => {
-        it('persist + consume returns the same payload', () => {
+        it('should return the same payload when a draft is persisted and then consumed', () => {
             const draft = sampleProductDraft();
             persistProductDraft(storage, draft);
             expect(consumeProductDraft(storage)).toEqual(draft);
         });
 
-        it('consume returns null on empty storage', () => {
+        it('should return null from consume when the storage is empty', () => {
             expect(consumeProductDraft(storage)).toBeNull();
         });
 
-        it('consume returns null and discards malformed JSON', () => {
+        it('should return null and discard the draft when it is malformed JSON', () => {
             storage.setItem(PRODUCT_DRAFT_KEY, 'not json{');
             expect(consumeProductDraft(storage)).toBeNull();
             expect(storage.getItem(PRODUCT_DRAFT_KEY)).toBeNull();
         });
 
-        it('clearProductDraft removes the entry', () => {
+        it('should remove the entry when clearProductDraft is called', () => {
             persistProductDraft(storage, sampleProductDraft());
             clearProductDraft(storage);
             expect(consumeProductDraft(storage)).toBeNull();
         });
 
-        it('preserves return_to_transaction_id through the round-trip', () => {
+        it('should keep return_to_transaction_id when the draft makes a round trip', () => {
             const draft = sampleProductDraft({ return_to_transaction_id: '42' });
             persistProductDraft(storage, draft);
             expect(consumeProductDraft(storage).return_to_transaction_id).toBe('42');
         });
 
-        it('preserves null return_to_transaction_id (came from menu, not detail)', () => {
+        it('should keep return_to_transaction_id null when the user came from the menu, not a detail', () => {
             const draft = sampleProductDraft({ return_to_transaction_id: null });
             persistProductDraft(storage, draft);
             expect(consumeProductDraft(storage).return_to_transaction_id).toBeNull();
@@ -116,14 +116,14 @@ describe('Product draft persistence (v2.6.0 product → manufacturer side trip)'
     });
 
     describe('linkNewManufacturerToProductDraft', () => {
-        it('no-ops when no product draft is present', () => {
+        it('should do nothing when no product draft is present', () => {
             const ok = linkNewManufacturerToProductDraft(storage, 'メーカーA', [
                 { manufacturer_id: 5, manufacturer_name: 'メーカーA' },
             ]);
             expect(ok).toBe(false);
         });
 
-        it('no-ops when the manufacturer is not in the reloaded list', () => {
+        it('should do nothing when the manufacturer is not in the reloaded list', () => {
             persistProductDraft(storage, sampleProductDraft());
             const ok = linkNewManufacturerToProductDraft(storage, 'メーカーA', [
                 { manufacturer_id: 99, manufacturer_name: '別メーカー' },
@@ -133,7 +133,7 @@ describe('Product draft persistence (v2.6.0 product → manufacturer side trip)'
             expect(consumeProductDraft(storage).manufacturer_id).toBe('');
         });
 
-        it('stamps the new manufacturer id (as string, matches <select>.value)', () => {
+        it('should put the new manufacturer id (as a string, matching <select>.value) when the manufacturer is in the list', () => {
             persistProductDraft(storage, sampleProductDraft({ manufacturer_id: '' }));
             const ok = linkNewManufacturerToProductDraft(storage, 'メーカーA', [
                 { manufacturer_id: 3, manufacturer_name: '別メーカー' },
@@ -144,7 +144,7 @@ describe('Product draft persistence (v2.6.0 product → manufacturer side trip)'
             expect(out.manufacturer_id).toBe('7');
         });
 
-        it('preserves all non-manufacturer product fields', () => {
+        it('should keep all non-manufacturer product fields when the manufacturer is linked', () => {
             const draft = sampleProductDraft({
                 product_name: '保存テスト',
                 memo: 'メモ',
@@ -162,7 +162,7 @@ describe('Product draft persistence (v2.6.0 product → manufacturer side trip)'
             expect(out.return_to_transaction_id).toBe('99');
         });
 
-        it('overwrites a previously-selected manufacturer_id', () => {
+        it('should overwrite manufacturer_id when one was already selected', () => {
             // User had picked manufacturer 2, then jumped to register a new one.
             persistProductDraft(storage, sampleProductDraft({ manufacturer_id: '2' }));
             linkNewManufacturerToProductDraft(storage, '新規メーカー', [
