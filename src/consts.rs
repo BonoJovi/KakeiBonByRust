@@ -69,6 +69,7 @@ pub const MONTH_DAY_RULE_TYPE_NTH_WEEKDAY: &str = "NTH_WEEKDAY";
 // Bounded-field length limits (in characters, not bytes).
 // Paired with `validation.max_length` i18n key for the user-facing message.
 pub const MAX_NAME_LEN: usize = 128;          // USERS.NAME, CATEGORY*_NAME, ACCOUNTS.ACCOUNT_NAME, SHOPS/MANUFACTURERS/PRODUCTS names
+pub const MAX_ACCOUNT_CODE_LEN: usize = 50;   // ACCOUNTS.ACCOUNT_CODE (checked on add; the code cannot be changed afterwards)
 #[allow(dead_code)]
 pub const MAX_I18N_NAME_LEN: usize = 256;     // CATEGORY*_I18N.*_NAME_I18N
 pub const MAX_ITEM_NAME_LEN: usize = 200;     // TRANSACTIONS_DETAIL.ITEM_NAME, RECURRING_RULE_DETAILS.ITEM_NAME
