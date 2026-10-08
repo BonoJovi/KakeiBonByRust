@@ -35,7 +35,7 @@ function buildModalDom() {
 }
 
 describe('Modal — stale save completion (regression, latent audit 2026-09)', () => {
-    test('[L22] should not close or reset a re-opened modal when an earlier save finishes', async () => {
+    test('should not close or reset a re-opened modal when an earlier save finishes (L22)', async () => {
         buildModalDom();
         const inflight = deferred();
         let calls = 0;
@@ -72,7 +72,7 @@ describe('Modal — stale save completion (regression, latent audit 2026-09)', (
         expect(document.getElementById('field').value).toBe('row 2 typing');
     });
 
-    test('[L22] should let a re-opened modal save while an earlier save is still pending', async () => {
+    test('should let a re-opened modal save when an earlier save is still pending (L22)', async () => {
         buildModalDom();
         const inflight = deferred();
         const saved = [];

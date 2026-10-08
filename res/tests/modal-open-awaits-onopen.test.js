@@ -26,7 +26,7 @@ function buildModalDom() {
 }
 
 describe('Modal.open — async onOpen (latent audit L6)', () => {
-    test('[L6] should settle only after an async onOpen has finished', async () => {
+    test('should settle only after onOpen has finished when onOpen is async (L6)', async () => {
         buildModalDom();
         const loading = deferred();
         const modal = new Modal('test-modal', {
@@ -51,7 +51,7 @@ describe('Modal.open — async onOpen (latent audit L6)', () => {
         expect(document.getElementById('field').value).toBe('initialised');
     });
 
-    test('[L6] should settle at once for a synchronous onOpen', async () => {
+    test('should settle at once when onOpen is synchronous (L6)', async () => {
         buildModalDom();
         const modal = new Modal('test-modal', {
             formId: 'test-form',
