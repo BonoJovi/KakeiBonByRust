@@ -684,7 +684,10 @@ function handleAutocompleteInput(event) {
     autocompleteState.selectedProductId = setHiddenProductId(null);
 
     // An empty field lists suggestions too (the backend ranks them by use).
+    // Drop any answer still on its way (e.g. the search sent on focus): it
+    // was for the text before this keystroke.
     const query = event.target.value.trim();
+    autocompleteState.requestToken++;
     clearTimeout(autocompleteState.debounceTimer);
     autocompleteState.debounceTimer = setTimeout(() => fetchAndRenderCandidates(query), AUTOCOMPLETE_DEBOUNCE_MS);
 }

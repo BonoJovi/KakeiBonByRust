@@ -46,6 +46,14 @@ const SUGGESTIONS = [
     { product_id: 2, product_name: 'Apple chips', manufacturer_name: 'FruitCo' },
 ];
 
+// When set, the next search_products_by_name answers only when resolved.
+let nextSearch = null;
+const deferredSearch = () => {
+    let resolve;
+    const promise = new Promise((r) => { resolve = r; });
+    return { promise, resolve };
+};
+
 const { invoke } = mockPageModules(jest, {
     user: { user_id: 2, name: 'alice', role: 1 },
     invoke: (cmd) => {
@@ -58,7 +66,7 @@ const { invoke } = mockPageModules(jest, {
             case 'get_category_tree_all_with_lang':
                 return TREE;
             case 'search_products_by_name':
-                return SUGGESTIONS;
+                return nextSearch ? nextSearch.promise : SUGGESTIONS;
             case 'compute_recommended_transaction_total':
                 return HEADER.total_amount; // equal -> no recalc prompt
             default:
@@ -142,8 +150,38 @@ describe('detail item-name product suggestions', () => {
         await flush(10);
     });
 
+    test('typing while the focus search is pending does not show its stale answer', async () => {
+        document.getElementById('category2-code').focus();
+        await wait(150);
+        itemName().value = '';
+        nextSearch = deferredSearch();
+        const focusSearch = nextSearch;
+        itemName().focus();
+        await flush(5);
+        nextSearch = null;
+
+        // The user types before the focus search answers.
+        itemName().value = 'Ap';
+        itemName().dispatchEvent(new Event('input'));
+        focusSearch.resolve(SUGGESTIONS);
+        await flush(10);
+        // The empty-field answer must not be shown for "Ap".
+        expect(dropdownOpen()).toBe(false);
+
+        // The typed search (after the 180 ms debounce) shows its own answer.
+        await wait(250);
+        await flush(5);
+        expect(dropdownOpen()).toBe(true);
+        expect(callsOf(invoke, 'search_products_by_name').at(-1).query).toBe('Ap');
+    });
+
     test('picking a suggestion closes the list and it stays closed', async () => {
-        expect(dropdownOpen()).toBe(true); // still open from the previous test
+        document.getElementById('category2-code').focus();
+        await wait(150);
+        itemName().value = '';
+        itemName().focus();
+        await flush(10);
+        expect(dropdownOpen()).toBe(true);
         const item = dropdown().querySelector('.product-autocomplete-item[data-idx="0"]');
         expect(item).not.toBeNull();
         item.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));

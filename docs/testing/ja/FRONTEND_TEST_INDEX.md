@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-10-08 JST  
-**総テスト数**: 955件 (jest suite 92 ファイル、`npm test` 実測)
+**総テスト数**: 956件 (jest suite 92 ファイル、`npm test` 実測)
 
 ---
 
@@ -827,7 +827,7 @@
 
 明細の品名欄の商品候補のテスト。品名欄には商品の補完機能があるが、文字を打つまで候補が出ないため、登録済みの商品を選べることに気づけなかった。
 
-**テスト数**: 5件
+**テスト数**: 6件
 
 | テスト | 説明 |
 |--------|------|
@@ -835,6 +835,7 @@
 | `the item name field has a defined placeholder and tooltip hint` | 品名欄に短いプレースホルダーと、全文のツールチップ (バルーンヘルプ) があり、どちらも i18n に定義されている |
 | `focusing the empty item name field lists suggestions with the chosen categories` | 空の品名欄にカーソルが入った時点で候補を出し、検索に明細の分類 (`category1Code` / `category2Code` / `category3Code`) を渡す |
 | `the list is not shown when focus has left the field before the answer` | 候補の応答が届く前に欄を離れていたら、一覧を出さない |
+| `typing while the focus search is pending does not show its stale answer` | カーソルが入ったときの検索の応答が届く前に文字を打ったら、その古い応答 (空欄の候補) は出さない |
 | `picking a suggestion closes the list and it stays closed` | 候補を選ぶと一覧が閉じ、そのあと勝手に開き直さない |
 
 **ファイル**: res/tests/pages/transaction-detail-product-suggest.test.js
@@ -1862,7 +1863,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **532件** |
+| **機能別テスト** | **533件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 30 |
@@ -1886,7 +1887,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | pages/transaction-detail-included-typing.test.js | 1 |
 | pages/transaction-detail-unreachable-included-price.test.js | 1 |
 | pages/transaction-detail-hidden-category.test.js | 2 |
-| pages/transaction-detail-product-suggest.test.js | 5 |
+| pages/transaction-detail-product-suggest.test.js | 6 |
 | pages/transaction-management-page.test.js | 4 |
 | pages/user-management-page.test.js | 3 |
 | pages/user-management-delete-last-user.test.js | 1 |
@@ -1950,7 +1951,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **955件** |
+| **総計 (jest)** | **956件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 
