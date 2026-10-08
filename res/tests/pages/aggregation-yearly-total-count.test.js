@@ -36,7 +36,7 @@ await import('../../js/aggregation-yearly.js');
 await bootPage();
 
 describe('yearly aggregation total row — regression (latent audit 2026-09)', () => {
-    test('[M11] account axis: one transfer is not counted twice in the shared total row', async () => {
+    test('should not count one transfer twice in the shared total row when the axis is account (M11)', async () => {
         document.getElementById('group-by').value = 'account';
         document.getElementById('execute-btn').click();
         await flush(10);

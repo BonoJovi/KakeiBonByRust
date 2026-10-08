@@ -56,7 +56,7 @@ function firstColumnTexts(tbody) {
 }
 
 describe('renderResults — unspecified-group i18n swap (Fable-5 #22)', () => {
-    test('empty group_name is swapped for the localised label', () => {
+    test('should show the localised label when group_name is empty', () => {
         const { tbody, tfoot } = makeTable();
         renderResults(
             [{ group_key: '0', group_name: '', total_amount: 100, count: 1, avg_amount: 100 }],
@@ -66,7 +66,7 @@ describe('renderResults — unspecified-group i18n swap (Fable-5 #22)', () => {
         expect(firstColumnTexts(tbody)).toEqual(['i18n:unspecified']);
     });
 
-    test('non-empty group_name is rendered verbatim', () => {
+    test('should render group_name verbatim when it is not empty', () => {
         const { tbody, tfoot } = makeTable();
         renderResults(
             [{ group_key: '1', group_name: 'Real Shop', total_amount: 100, count: 1, avg_amount: 100 }],
@@ -76,7 +76,7 @@ describe('renderResults — unspecified-group i18n swap (Fable-5 #22)', () => {
         expect(firstColumnTexts(tbody)).toEqual(['Real Shop']);
     });
 
-    test('mixed rows — real names stay, empty ones swap to i18n', () => {
+    test('should keep real names and swap empty ones to i18n when the rows are mixed', () => {
         const { tbody, tfoot } = makeTable();
         renderResults(
             [
@@ -90,7 +90,7 @@ describe('renderResults — unspecified-group i18n swap (Fable-5 #22)', () => {
         expect(firstColumnTexts(tbody)).toEqual(['Real Shop', 'i18n:unspecified', 'Another']);
     });
 
-    test('null group_name is treated the same as empty (defensive)', () => {
+    test('should treat group_name as empty when it is null (defensive)', () => {
         // Not the current backend contract but a defensive `||` on the
         // JS side also catches this shape, so pin it too.
         const { tbody, tfoot } = makeTable();
@@ -107,7 +107,7 @@ describe('renderResults — regression: no-results path still fires', () => {
     // The unspecified-swap change touches the per-row loop, not the
     // no-results branch. Pin that branch here so a future edit to the
     // helper can't silently break the empty-state UX.
-    test('empty results renders the no_results i18n cell', () => {
+    test('should render the no_results i18n cell when the results are empty', () => {
         const { tbody, tfoot } = makeTable();
         renderResults([], tbody, tfoot);
         // Empty-state row has one <td> that carries the data-i18n

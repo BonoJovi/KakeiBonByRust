@@ -57,7 +57,7 @@ afterAll(() => {
 });
 
 describe('monthly aggregation default period (scan2-A3)', () => {
-    test('[scan2-A3] start day 25, today 2026-09-10 -> opens on the August period that contains today', () => {
+    test('should open on the August period that contains today when the start day is 25 and today is 2026-09-10 (scan2-A3)', () => {
         expect(document.getElementById('year').value).toBe('2026');
         expect(document.getElementById('month').value).toBe('8');
     });

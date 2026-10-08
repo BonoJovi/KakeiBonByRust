@@ -18,7 +18,7 @@ jest.unstable_mockModule('../js/i18n.js', () => ({
 const { createLatestRequestGuard } = await import('../js/aggregation-common.js');
 
 describe('createLatestRequestGuard (latent scan2-A4)', () => {
-    test('[scan2-A4] only the most recent request is latest', () => {
+    test('should treat only the most recent request as latest when several were started (scan2-A4)', () => {
         const nextRequest = createLatestRequestGuard();
         const first = nextRequest();
         expect(first()).toBe(true);
@@ -30,7 +30,7 @@ describe('createLatestRequestGuard (latent scan2-A4)', () => {
         expect(second()).toBe(true);
     });
 
-    test('[scan2-A4] each guard counts its own requests', () => {
+    test('should count only its own requests when there are several guards (scan2-A4)', () => {
         const monthly = createLatestRequestGuard();
         const yearly = createLatestRequestGuard();
         const monthlyRequest = monthly();

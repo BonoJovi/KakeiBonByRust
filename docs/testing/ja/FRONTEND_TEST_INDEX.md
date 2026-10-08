@@ -679,8 +679,8 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[scan2-A4] only the most recent request is latest` | 最後に始めた要求だけが「最後」と判定され、次の要求が始まると前の要求は「最後」でなくなる |
-| `[scan2-A4] each guard counts its own requests` | 部品ごとに独立して数える (別画面の要求に影響されない) |
+| `should treat only the most recent request as latest when several were started (scan2-A4)` | 最後に始めた要求だけが「最後」と判定され、次の要求が始まると前の要求は「最後」でなくなる |
+| `should count only its own requests when there are several guards (scan2-A4)` | 部品ごとに独立して数える (別画面の要求に影響されない) |
 
 **ファイル**: res/tests/aggregation-latest-request.test.js
 
@@ -1442,11 +1442,11 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[M12] empty group_name renders as common.unspecified` | 空の `group_name` を `common.unspecified` で表示 |
-| `[M11] account axis: ...` | 口座軸の合計行は件数・平均を「—」で表示 (振替の二重計上を避ける) |
-| `[M11] category2 axis: ...` | 費目2軸の合計行も件数・平均を「—」で表示 |
-| `[M11] category1 axis still sums the count into the total row` | 費目1軸では従来どおり件数を合計 (比較用) |
-| `[L12] should put the minus sign before the yen symbol when the amount is negative` | 負の金額を「-¥1,234」と表示 (潜在監査 L12) |
+| `should render common.unspecified when group_name is empty (M12)` | 空の `group_name` を `common.unspecified` で表示 |
+| `should not count one transfer (FROM row + TO row) twice in the total row when the axis is account (M11)` | 口座軸の合計行は件数・平均を「—」で表示 (振替の二重計上を避ける) |
+| `should not count one transaction spanning two groups twice in the total row when the axis is category2 (M11)` | 費目2軸の合計行も件数・平均を「—」で表示 |
+| `should still sum the count into the total row when the axis is category1 (M11)` | 費目1軸では従来どおり件数を合計 (比較用) |
+| `should put the minus sign before the yen symbol when the amount is negative (L12)` | 負の金額を「-¥1,234」と表示 (潜在監査 L12) |
 
 **ファイル**: res/tests/pages/aggregation-monthly-page.test.js
 
@@ -1460,7 +1460,7 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[M11] account axis: one transfer is not counted twice in the shared total row` | 口座軸の合計行は件数・平均を「—」で表示 |
+| `should not count one transfer twice in the shared total row when the axis is account (M11)` | 口座軸の合計行は件数・平均を「—」で表示 |
 
 **ファイル**: res/tests/pages/aggregation-yearly-total-count.test.js
 
@@ -1472,7 +1472,7 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[scan2-A3] start day 25, today 2026-09-10 -> opens on the August period that contains today` | 今日を含む「8 月」の期間で開く |
+| `should open on the August period that contains today when the start day is 25 and today is 2026-09-10 (scan2-A3)` | 今日を含む「8 月」の期間で開く |
 
 **ファイル**: res/tests/pages/aggregation-default-period-monthly.test.js
 
@@ -1484,7 +1484,7 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[scan2-A3] year starting 04-01, today 2026-02-10 -> opens on the 2025 period that contains today` | 今日を含む「2025 年度」で開く |
+| `should open on the 2025 period that contains today when the year starts on 04-01 and today is 2026-02-10 (scan2-A3)` | 今日を含む「2025 年度」で開く |
 
 **ファイル**: res/tests/pages/aggregation-default-period-yearly.test.js
 

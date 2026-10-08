@@ -43,39 +43,39 @@ jest.unstable_mockModule('../js/i18n.js', () => ({
 const { translateAggregationError } = await import('../js/aggregation-common.js');
 
 describe('translateAggregationError — legacy string errors (Err(String))', () => {
-    test('routes "Invalid year" to the year i18n key', () => {
+    test('should use the year i18n key when the error says "Invalid year"', () => {
         expect(translateAggregationError('Invalid year: 1800. Year must be between 1900 and 2100.'))
             .toBe('i18n:invalid_year');
     });
 
-    test('routes "Invalid month" to the month i18n key', () => {
+    test('should use the month i18n key when the error says "Invalid month"', () => {
         expect(translateAggregationError('Invalid month: 13. Month must be between 1 and 12.'))
             .toBe('i18n:invalid_month');
     });
 
-    test('routes "Invalid date range" to the date-range i18n key', () => {
+    test('should use the date-range i18n key when the error says "Invalid date range"', () => {
         expect(translateAggregationError('Invalid date range: 2026-01-01 to 2025-12-31.'))
             .toBe('i18n:invalid_date_range');
     });
 
-    test('routes "Invalid day" to the day i18n key', () => {
+    test('should use the day i18n key when the error says "Invalid day"', () => {
         expect(translateAggregationError('Invalid day 31 for 2026-02'))
             .toBe('i18n:invalid_day');
     });
 
-    test('routes "Invalid date format" to the format i18n key', () => {
+    test('should use the format i18n key when the error says "Invalid date format"', () => {
         expect(translateAggregationError('Invalid date format: not-a-date'))
             .toBe('i18n:invalid_date_format');
     });
 
-    test('falls back to the raw string when nothing matches', () => {
+    test('should fall back to the raw string when nothing matches', () => {
         expect(translateAggregationError('Failed to execute aggregation query: db down'))
             .toBe('Failed to execute aggregation query: db down');
     });
 });
 
 describe('translateAggregationError — ApiError shape ({ code, message })', () => {
-    test('extracts .message and routes on it (was rendering "[object Object]" pre-fix)', () => {
+    test('should route on .message when the error is an ApiError (was rendering "[object Object]" pre-fix)', () => {
         const apiError = {
             code: 'validation',
             message: 'Invalid year: 1800. Year must be between 1900 and 2100.',
@@ -83,7 +83,7 @@ describe('translateAggregationError — ApiError shape ({ code, message })', () 
         expect(translateAggregationError(apiError)).toBe('i18n:invalid_year');
     });
 
-    test('unmatched ApiError message falls back to that message, never "[object Object]"', () => {
+    test('should fall back to the message, never "[object Object]", when an ApiError message matches nothing', () => {
         const apiError = {
             code: 'internal',
             message: 'Failed to execute aggregation query: db down',
@@ -94,7 +94,7 @@ describe('translateAggregationError — ApiError shape ({ code, message })', () 
 });
 
 describe('translateAggregationError — Error instances', () => {
-    test('routes Error.message through the substring branches', () => {
+    test('should route Error.message through the substring branches when the error is an Error', () => {
         expect(translateAggregationError(new Error('Invalid month: 13')))
             .toBe('i18n:invalid_month');
     });
@@ -106,19 +106,19 @@ describe('translateAggregationError — hostile shapes', () => {
     // in this block; the point of Fable-5 #9 is that that string is
     // never surfaced. All three cases must land on the localised
     // generic fallback (`aggregation.error_generic`).
-    test('object with no .message resolves to the generic i18n banner (was "[object Object]")', () => {
+    test('should show the generic i18n banner when the object has no .message (was "[object Object]")', () => {
         expect(translateAggregationError({ weird: true })).toBe('i18n:generic');
     });
 
-    test('null resolves to the generic i18n banner', () => {
+    test('should show the generic i18n banner when the error is null', () => {
         expect(translateAggregationError(null)).toBe('i18n:generic');
     });
 
-    test('undefined resolves to the generic i18n banner', () => {
+    test('should show the generic i18n banner when the error is undefined', () => {
         expect(translateAggregationError(undefined)).toBe('i18n:generic');
     });
 
-    test('empty-string ApiError message resolves to the generic banner too', () => {
+    test('should show the generic banner when the ApiError message is an empty string', () => {
         expect(translateAggregationError({ code: 'internal', message: '' })).toBe('i18n:generic');
     });
 });

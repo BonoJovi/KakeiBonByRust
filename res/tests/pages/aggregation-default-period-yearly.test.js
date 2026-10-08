@@ -49,7 +49,7 @@ afterAll(() => {
 });
 
 describe('yearly aggregation default period (scan2-A3)', () => {
-    test('[scan2-A3] year starting 04-01, today 2026-02-10 -> opens on the 2025 period that contains today', () => {
+    test('should open on the 2025 period that contains today when the year starts on 04-01 and today is 2026-02-10 (scan2-A3)', () => {
         expect(document.getElementById('year').value).toBe('2025');
     });
 });
