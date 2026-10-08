@@ -1676,14 +1676,24 @@ async fn delete_product(
     services::product::delete_product(db.pool(), user_id, product_id).await
 }
 
+/// Product suggestions for the detail item-name field. The categories of the
+/// detail being entered are optional and only affect the ranking.
 #[tauri::command]
 async fn search_products_by_name(
     query: String,
+    category1_code: Option<String>,
+    category2_code: Option<String>,
+    category3_code: Option<String>,
     state: tauri::State<'_, AppState>
 ) -> Result<Vec<services::product::Product>, api_error::ApiError> {
     let user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
     let db = &state.db;
-    services::product::search_products_by_name(db.pool(), user_id, &query).await
+    let category = services::product::SuggestCategory {
+        category1_code,
+        category2_code,
+        category3_code,
+    };
+    services::product::suggest_products(db.pool(), user_id, &query, &category).await
 }
 
 // ============================================================================
