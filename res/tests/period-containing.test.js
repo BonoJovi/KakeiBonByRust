@@ -23,7 +23,7 @@ describe('findMonthlyPeriodContaining (latent scan2-A3)', () => {
         invoke.mockReset();
     });
 
-    test('[scan2-A3] should keep the calendar month when its period contains the date', async () => {
+    test('should keep the calendar month when its period contains the date (scan2-A3)', async () => {
         invoke.mockResolvedValue({ start: '2026-09-01', end: '2026-09-30' });
 
         await expect(findMonthlyPeriodContaining(new Date(2026, 8, 10)))
@@ -35,7 +35,7 @@ describe('findMonthlyPeriodContaining (latent scan2-A3)', () => {
     const answerFrom = (bounds) =>
         invoke.mockImplementation(async (cmd, { year, month }) => bounds[`${year}-${month}`]);
 
-    test('[scan2-A3] should step back when the calendar month\'s period starts after the date', async () => {
+    test('should step back when the calendar month\'s period starts after the date (scan2-A3)', async () => {
         // Start day 25: "September" is 9/25 .. 10/24, so 9/10 is in "August".
         answerFrom({
             '2026-9': { start: '2026-09-25', end: '2026-10-24' },
@@ -49,7 +49,7 @@ describe('findMonthlyPeriodContaining (latent scan2-A3)', () => {
             .resolves.toEqual({ year: 2026, month: 12 });
     });
 
-    test('[scan2-A3] should step forward when the calendar month\'s period ended before the date', async () => {
+    test('should step forward when the calendar month\'s period ended before the date (scan2-A3)', async () => {
         // Start day 1, shifted back: "December" starts 11/30, "November" ends 11/29.
         answerFrom({
             '2026-11': { start: '2026-11-01', end: '2026-11-29' },
@@ -62,7 +62,7 @@ describe('findMonthlyPeriodContaining (latent scan2-A3)', () => {
             .resolves.toEqual({ year: 2027, month: 1 });
     });
 
-    test('[scan2-A3] should keep stepping when the neighbouring month does not contain the date either', async () => {
+    test('should keep stepping when the neighbouring month does not contain the date either (scan2-A3)', async () => {
         // Start day 31, next business day: 2026-01-31 and 02-28 are Saturdays,
         // so "January" is 02-02..03-01 and "February" starts on 03-02.
         answerFrom({
@@ -76,7 +76,7 @@ describe('findMonthlyPeriodContaining (latent scan2-A3)', () => {
         expect(invoke).toHaveBeenCalledTimes(3);
     });
 
-    test('[scan2-A3] should give up on the calendar month when no period ever matches', async () => {
+    test('should give up on the calendar month when no period ever matches (scan2-A3)', async () => {
         // A backend answering the same future period for every month.
         invoke.mockResolvedValue({ start: '2099-01-01', end: '2099-01-31' });
         const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
@@ -88,7 +88,7 @@ describe('findMonthlyPeriodContaining (latent scan2-A3)', () => {
         warn.mockRestore();
     });
 
-    test('[scan2-A3] should fall back to the calendar month when the backend fails', async () => {
+    test('should fall back to the calendar month when the backend fails (scan2-A3)', async () => {
         invoke.mockRejectedValue(new Error('boom'));
         const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
@@ -115,7 +115,7 @@ describe('findYearlyPeriodContaining (latent scan2-A3)', () => {
         // Start 02-31 resolves to the month end: 2026-02-28 / 2027-02-28.
         [2, 31, new Date(2026, 1, 27), 2025],
         [2, 31, new Date(2026, 1, 28), 2026],
-    ])('[scan2-A3] start %i/%i, date %p -> %i', (startMonth, startDay, date, expected) => {
+    ])('should place the date in the right yearly period when the year starts on %i/%i (date %p -> year %i) (scan2-A3)', (startMonth, startDay, date, expected) => {
         expect(findYearlyPeriodContaining(date, startMonth, startDay)).toBe(expected);
     });
 });

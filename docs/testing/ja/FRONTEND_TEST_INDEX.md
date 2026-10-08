@@ -729,8 +729,8 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[L14] should return the last day of the user's monthly period` | `get_monthly_period_bounds` の期間最終日を返す (起算日・休日シフト適用済み) |
-| `[L14] should fall back to the calendar month end when the backend fails` | バックエンドが失敗したらカレンダーの月末 (うるう年対応) を返す |
+| `should return the last day of the user's monthly period when the period is requested (L14)` | `get_monthly_period_bounds` の期間最終日を返す (起算日・休日シフト適用済み) |
+| `should fall back to the calendar month end when the backend fails (L14)` | バックエンドが失敗したらカレンダーの月末 (うるう年対応) を返す |
 
 **ファイル**: res/tests/period-end-date.test.js
 
@@ -750,7 +750,7 @@
 | `should keep stepping when the neighbouring month does not contain the date either` | 隣の月の期間も日付を含まないときは、含む月まで進む (起算日 31 日・翌営業日。2026 年 1/31 と 2/28 が土曜なので「1 月」は 2/2〜3/1 になり、3/1 は 2 か月前の「1 月」) |
 | `should give up on the calendar month when no period ever matches` | どの月の期間も日付を含まない答えが続いたら、上限回数で打ち切って暦の月を返す |
 | `should fall back to the calendar month when the backend fails` | バックエンドが答えられないときは暦の月を返す |
-| `[scan2-A3] start %i/%i, date %p -> %i` (10 ケース) | 年度の開始が 1/1・4/1・12/31・2/31 (月末に寄せる) のそれぞれで、開始日の前後の日付がどの年度に入るか |
+| `should place the date in the right yearly period when the year starts on %i/%i (date %p -> year %i) (scan2-A3)` (10 ケース) | 年度の開始が 1/1・4/1・12/31・2/31 (月末に寄せる) のそれぞれで、開始日の前後の日付がどの年度に入るか |
 
 **ファイル**: res/tests/period-containing.test.js
 
