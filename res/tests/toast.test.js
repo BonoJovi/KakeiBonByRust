@@ -30,7 +30,7 @@ afterEach(() => {
 });
 
 describe('showToast — mounting', () => {
-    test('injects style and container on first call', () => {
+    test('should inject the style and the container when it is called for the first time', () => {
         expect(document.getElementById(STYLE_ID)).toBeNull();
         expect(getContainer()).toBeNull();
 
@@ -40,7 +40,7 @@ describe('showToast — mounting', () => {
         expect(getContainer()).not.toBeNull();
     });
 
-    test('reuses the same container across multiple calls', () => {
+    test('should reuse the same container when it is called several times', () => {
         showToast('first');
         const containerAfterFirst = getContainer();
         showToast('second');
@@ -53,20 +53,20 @@ describe('showToast — mounting', () => {
 });
 
 describe('showToast — rendering', () => {
-    test('renders the message text verbatim (caller is responsible for i18n)', () => {
+    test('should render the message text verbatim when it is given (the caller handles i18n)', () => {
         showToast('保存しました');
         const toasts = getToasts();
         expect(toasts).toHaveLength(1);
         expect(toasts[0].querySelector(`.${TOAST_CLASS}-text`).textContent).toBe('保存しました');
     });
 
-    test('defaults to the info variant when none is given', () => {
+    test('should use the info variant when no variant is given', () => {
         showToast('hi');
         const toast = getToasts()[0];
         expect(toast.classList.contains(`${TOAST_CLASS}-info`)).toBe(true);
     });
 
-    test('applies the requested variant class', () => {
+    test('should apply the variant class when a variant is requested', () => {
         for (const variant of ['info', 'success', 'warning', 'error']) {
             clearAllToasts();
             showToast('msg', { variant });
@@ -75,20 +75,20 @@ describe('showToast — rendering', () => {
         }
     });
 
-    test('falls back to info for an unknown variant rather than rendering nothing', () => {
+    test('should fall back to info rather than render nothing when the variant is unknown', () => {
         showToast('msg', { variant: 'bogus' });
         const toast = getToasts()[0];
         expect(toast.classList.contains(`${TOAST_CLASS}-info`)).toBe(true);
     });
 
-    test('error variant uses role=alert and aria-live=assertive for screen readers', () => {
+    test('should use role=alert and aria-live=assertive for screen readers when the variant is error', () => {
         showToast('boom', { variant: 'error' });
         const toast = getToasts()[0];
         expect(toast.getAttribute('role')).toBe('alert');
         expect(toast.getAttribute('aria-live')).toBe('assertive');
     });
 
-    test('non-error variants use role=status / aria-live=polite', () => {
+    test('should use role=status / aria-live=polite when the variant is not error', () => {
         showToast('ok', { variant: 'success' });
         const toast = getToasts()[0];
         expect(toast.getAttribute('role')).toBe('status');
@@ -97,7 +97,7 @@ describe('showToast — rendering', () => {
 });
 
 describe('showToast — dismissal', () => {
-    test('auto-dismisses after the configured duration', () => {
+    test('should dismiss the toast when the configured duration has passed', () => {
         showToast('bye', { duration: 1000 });
         expect(getToasts()).toHaveLength(1);
 
@@ -108,13 +108,13 @@ describe('showToast — dismissal', () => {
         expect(getToasts()).toHaveLength(0);
     });
 
-    test('duration=0 keeps the toast visible (no auto-dismiss timer fires)', () => {
+    test('should keep the toast visible (no auto-dismiss timer fires) when duration is 0', () => {
         showToast('sticky', { duration: 0 });
         jest.advanceTimersByTime(10000);
         expect(getToasts()).toHaveLength(1);
     });
 
-    test('returned dismiss function removes the toast immediately', () => {
+    test('should remove the toast immediately when the returned dismiss function is called', () => {
         const dismiss = showToast('manual', { duration: 0 });
         expect(getToasts()).toHaveLength(1);
 
@@ -124,7 +124,7 @@ describe('showToast — dismissal', () => {
         expect(getToasts()).toHaveLength(0);
     });
 
-    test('clicking the close button dismisses the toast', () => {
+    test('should dismiss the toast when the close button is clicked', () => {
         showToast('closable', { duration: 0 });
         const toast = getToasts()[0];
         const closeBtn = toast.querySelector(`.${TOAST_CLASS}-close`);
@@ -135,7 +135,7 @@ describe('showToast — dismissal', () => {
         expect(getToasts()).toHaveLength(0);
     });
 
-    test('dismiss is idempotent — calling it twice does not throw', () => {
+    test('should not throw when dismiss is called twice', () => {
         const dismiss = showToast('once', { duration: 0 });
         dismiss();
         expect(() => dismiss()).not.toThrow();
@@ -145,7 +145,7 @@ describe('showToast — dismissal', () => {
 });
 
 describe('showToast — stacking', () => {
-    test('multiple toasts stack inside the same container', () => {
+    test('should stack the toasts inside the same container when several are shown', () => {
         showToast('first', { duration: 0 });
         showToast('second', { duration: 0 });
         showToast('third', { duration: 0 });
