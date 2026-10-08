@@ -4,7 +4,7 @@ import i18n from './i18n.js';
 import { setupLanguageMenu, setupLanguageMenuHandlers } from './language-menu.js';
 import { setupFontSizeMenuHandlers, setupFontSizeMenu, applyFontSize, setupFontSizeModalHandlers } from './font-size.js';
 import { fitWindowToScreen } from './window-fit.js';
-import { ROLE_ADMIN, ROLE_USER, MAX_NAME_LEN } from './consts.js';
+import { ROLE_ADMIN, ROLE_USER, MAX_NAME_LEN, MAX_ACCOUNT_CODE_LEN } from './consts.js';
 import { Modal } from './modal.js';
 import { setupIndicators } from './indicators.js';
 import { getCurrentSessionUser, isSessionAuthenticated } from './session.js';
@@ -111,11 +111,22 @@ function initAccountModal() {
                 editingAccountCode = null;
                 document.getElementById('account-is-disabled').checked = false;
 
+                // Live character counter for the code (kept in sync with
+                // backend chars().count()). Add only: attached here, after
+                // form.reset(), so it starts from the empty value.
+                attachCharCounter(accountCodeInput, MAX_ACCOUNT_CODE_LEN);
+
                 // Focus on account code input after modal opens
                 setTimeout(() => accountCodeInput.focus(), 0);
             } else if (mode === 'edit') {
                 modalTitle.setAttribute('data-i18n', 'account_mgmt.modal_title_edit');
                 modalTitle.textContent = i18n.t('account_mgmt.modal_title_edit');
+
+                // The code is read-only here. Remove the add-mode counter
+                // before filling it in: the counter cuts the value at the
+                // limit, and a code saved before the limit existed must be
+                // sent to update_account unchanged.
+                accountCodeInput.__charCounterDetach?.();
 
                 // Populate form
                 accountCodeInput.value = data.account_code;
@@ -326,6 +337,13 @@ async function saveAccount() {
     if (!accountCode) {
         showValidationError(document.getElementById('account-code'), i18n.t('validation.required'));
         throw new Error('Validation error: account code required');
+    }
+
+    // Validation — code max length on add only (mirrors Rust defense in
+    // src/services/account.rs); the code cannot be changed when editing.
+    if (!editingAccountCode && [...accountCode].length > MAX_ACCOUNT_CODE_LEN) {
+        showMaxLengthError(document.getElementById('account-code'), i18n.t('account_mgmt.account_code'), MAX_ACCOUNT_CODE_LEN);
+        throw new Error('Validation error: account code too long');
     }
 
     if (!accountName) {

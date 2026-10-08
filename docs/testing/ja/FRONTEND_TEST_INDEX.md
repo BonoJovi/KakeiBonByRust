@@ -2,8 +2,8 @@
 
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
-**最終更新**: 2026-10-07 JST  
-**総テスト数**: 944件 (jest suite 90 ファイル、`npm test` 実測)
+**最終更新**: 2026-10-08 JST  
+**総テスト数**: 948件 (jest suite 91 ファイル、`npm test` 実測)
 
 ---
 
@@ -75,6 +75,7 @@
   - [pages/account-management-disabled.test.js](#pagesaccount-management-disabledtestjs)
   - [pages/account-management-save-error-keeps-form.test.js](#pagesaccount-management-save-error-keeps-formtestjs)
   - [pages/account-management-validation-i18n.test.js](#pagesaccount-management-validation-i18ntestjs)
+  - [pages/account-management-code-max-length.test.js](#pagesaccount-management-code-max-lengthtestjs)
   - [pages/transaction-management-disabled-account.test.js](#pagestransaction-management-disabled-accounttestjs)
   - [pages/transaction-management-category1-has-details.test.js](#pagestransaction-management-category1-has-detailstestjs)
   - [modal-open-awaits-onopen.test.js](#modal-open-awaits-onopentestjs)
@@ -1279,6 +1280,23 @@
 
 ---
 
+### pages/account-management-code-max-length.test.js
+
+口座コードの文字数上限の回帰テスト。以前は口座コードに上限がなく、256 文字を超えるコードも保存できていた (DB の `VARCHAR(50)` は SQLite では強制されない)。上限は新規登録時だけで、登録後はコードを変更できないため、既存の長いコードはそのまま編集できる。
+
+**テスト数**: 4件
+
+| テスト | 説明 |
+|--------|------|
+| `add: the code field shows a 50-character counter and cuts typed input at 50` | 新規登録では口座コード欄に「n / 50」の文字数カウンタが出て、50 文字を超えた入力は切り詰められる |
+| `add: a 51-character code is stopped before add_account with the max-length message` | 51 文字のコードは `add_account` を呼ぶ前に止まり、`validation.max_length` のメッセージが出る |
+| `add: a 50-character code is sent to add_account` | 50 文字のコードはそのまま `add_account` に送られる |
+| `edit: an existing code longer than 50 characters is kept and sent to update_account` | 編集では口座コード欄が読み取り専用でカウンタもなく、50 文字を超える既存のコードも切り詰めずに `update_account` に送られる |
+
+**ファイル**: res/tests/pages/account-management-code-max-length.test.js
+
+---
+
 ### pages/transaction-management-disabled-account.test.js
 
 入出金画面で無効な口座を使った取引の回帰テスト (潜在監査 M7)。選択肢に無効な口座が無く、保存で口座が失われていた。
@@ -1823,7 +1841,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **521件** |
+| **機能別テスト** | **525件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 30 |
@@ -1877,6 +1895,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | pages/account-management-disabled.test.js | 4 |
 | pages/account-management-save-error-keeps-form.test.js | 2 |
 | pages/account-management-validation-i18n.test.js | 5 |
+| pages/account-management-code-max-length.test.js | 4 |
 | pages/transaction-management-disabled-account.test.js | 2 |
 | pages/transaction-management-category1-has-details.test.js | 1 |
 | modal-open-awaits-onopen.test.js | 2 |
@@ -1909,7 +1928,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **944件** |
+| **総計 (jest)** | **948件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 

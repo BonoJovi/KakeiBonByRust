@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-10-08 JST  
-**総テスト数**: 458件 (差分反映後。`cargo test --lib` の権威的総数は 727 で、既存の未反映分は別 PR でバックフィル予定)
+**総テスト数**: 463件 (差分反映後。`cargo test --lib` の権威的総数は 732 で、既存の未反映分は別 PR でバックフィル予定)
 
 ---
 
@@ -369,27 +369,32 @@ AES-256-GCM暗号化・復号化のテスト。
 
 | テスト関数 | 説明 | ファイル | 行 |
 |-----------|------|---------|-----|
-| `test_add_account_rejects_empty_name` | 口座名が空のとき `ApiError { code: "validation" }` (Fable-5 #16, #23) | src/services/account.rs | 732 |
-| `test_add_account_rejects_whitespace_only_name` | 空白のみの口座名は `ApiError { code: "validation" }` (Fable-5 #16, #23) | src/services/account.rs | 748 |
-| `test_update_account_rejects_empty_name` | 更新で口座名が空のとき `ApiError { code: "validation" }` (Fable-5 #16, #23) | src/services/account.rs | 764 |
-| `test_update_account_not_found_has_stable_code_and_entity` | 存在しない口座の更新は `ApiError { code: "not_found", entity: "account" }` (Fable-5 #23) | src/services/account.rs | 997 |
-| `test_delete_account_not_found_has_stable_code_and_entity` | 存在しない口座の削除は `ApiError { code: "not_found" }` (Fable-5 #23) | src/services/account.rs | 1020 |
-| `test_delete_account_rejected_when_referenced_as_from_account` | TRANSACTIONS_HEADER が FROM 側で参照中なら `ApiError { code: "in_use" }` で削除拒否（マスタ削除ロック） | src/services/account.rs | 1028 |
-| `test_delete_account_rejected_when_referenced_as_to_account` | TRANSACTIONS_HEADER が TO 側で参照中なら `ApiError { code: "in_use" }` で削除拒否（マスタ削除ロック） | src/services/account.rs | 1048 |
-| `test_delete_account_rejected_when_referenced_by_recurring_rule` | RECURRING_RULES が参照中なら `ApiError { code: "in_use" }` で削除拒否（マスタ削除ロック） | src/services/account.rs | 1065 |
-| `test_delete_account_ignores_other_users_references` | 他ユーザーの同一 ACCOUNT_CODE 参照は削除をブロックしない（コードはユーザースコープ、マスタ削除ロック） | src/services/account.rs | 1082 |
-| `test_delete_account_normalizes_input_before_in_use_check` | `"  cash  "` 入力は正規化されてから CHECK_IN_USE に流れ、ガードが発火する（マスタ削除ロック） | src/services/account.rs | 1100 |
-| `test_get_account_balances_as_of_self_transfer_nets_to_zero` | FROM == TO の残存 TRANSFER 行はダッシュボード残高で相殺され、残高が水増しされないこと (Fable-5 #20) | src/services/account.rs | 1192 |
-| `test_get_accounts_lists_only_own_accounts` | 管理者を含め、各ユーザーは自分の口座だけを一覧する (潜在監査 M4) | src/services/account.rs | 860 |
-| `test_get_accounts_include_disabled` | 無効な口座は `include_disabled` 指定時だけ一覧に出る (潜在監査 M7) | src/services/account.rs | 887 |
-| `test_delete_disabled_account_removes_row` | 未使用の無効口座も削除でき、行が消える (潜在監査 M7) | src/services/account.rs | 519 |
-| `test_disable_account_allowed_while_referenced` | 取引が使用中の口座は削除できないが無効化・再有効化はできる (潜在監査 M7) | src/services/account.rs | 532 |
-| `test_account_is_disabled_must_be_zero_or_one` | 無効フラグは追加・更新とも 0 / 1 のみ受け付ける (潜在監査 M7) | src/services/account.rs | 553 |
-| `test_none_account_cannot_be_changed` | NONE (未指定) 口座は追加・編集・無効化・削除できない (潜在監査 M7) | src/services/account.rs | 586 |
-| `test_get_account_balances_as_of_keeps_disabled_accounts_with_balance` | 残高が残っている無効口座はダッシュボードに `is_disabled` 付きで残る (潜在監査 M7) | src/services/account.rs | 1235 |
+| `test_add_account_rejects_empty_name` | 口座名が空のとき `ApiError { code: "validation" }` (Fable-5 #16, #23) | src/services/account.rs | 833 |
+| `test_add_account_rejects_whitespace_only_name` | 空白のみの口座名は `ApiError { code: "validation" }` (Fable-5 #16, #23) | src/services/account.rs | 849 |
+| `test_update_account_rejects_empty_name` | 更新で口座名が空のとき `ApiError { code: "validation" }` (Fable-5 #16, #23) | src/services/account.rs | 865 |
+| `test_update_account_not_found_has_stable_code_and_entity` | 存在しない口座の更新は `ApiError { code: "not_found", entity: "account" }` (Fable-5 #23) | src/services/account.rs | 1098 |
+| `test_delete_account_not_found_has_stable_code_and_entity` | 存在しない口座の削除は `ApiError { code: "not_found" }` (Fable-5 #23) | src/services/account.rs | 1121 |
+| `test_delete_account_rejected_when_referenced_as_from_account` | TRANSACTIONS_HEADER が FROM 側で参照中なら `ApiError { code: "in_use" }` で削除拒否（マスタ削除ロック） | src/services/account.rs | 1129 |
+| `test_delete_account_rejected_when_referenced_as_to_account` | TRANSACTIONS_HEADER が TO 側で参照中なら `ApiError { code: "in_use" }` で削除拒否（マスタ削除ロック） | src/services/account.rs | 1149 |
+| `test_delete_account_rejected_when_referenced_by_recurring_rule` | RECURRING_RULES が参照中なら `ApiError { code: "in_use" }` で削除拒否（マスタ削除ロック） | src/services/account.rs | 1166 |
+| `test_delete_account_ignores_other_users_references` | 他ユーザーの同一 ACCOUNT_CODE 参照は削除をブロックしない（コードはユーザースコープ、マスタ削除ロック） | src/services/account.rs | 1183 |
+| `test_delete_account_normalizes_input_before_in_use_check` | `"  cash  "` 入力は正規化されてから CHECK_IN_USE に流れ、ガードが発火する（マスタ削除ロック） | src/services/account.rs | 1201 |
+| `test_get_account_balances_as_of_self_transfer_nets_to_zero` | FROM == TO の残存 TRANSFER 行はダッシュボード残高で相殺され、残高が水増しされないこと (Fable-5 #20) | src/services/account.rs | 1293 |
+| `test_get_accounts_lists_only_own_accounts` | 管理者を含め、各ユーザーは自分の口座だけを一覧する (潜在監査 M4) | src/services/account.rs | 961 |
+| `test_get_accounts_include_disabled` | 無効な口座は `include_disabled` 指定時だけ一覧に出る (潜在監査 M7) | src/services/account.rs | 988 |
+| `test_delete_disabled_account_removes_row` | 未使用の無効口座も削除でき、行が消える (潜在監査 M7) | src/services/account.rs | 526 |
+| `test_disable_account_allowed_while_referenced` | 取引が使用中の口座は削除できないが無効化・再有効化はできる (潜在監査 M7) | src/services/account.rs | 539 |
+| `test_account_is_disabled_must_be_zero_or_one` | 無効フラグは追加・更新とも 0 / 1 のみ受け付ける (潜在監査 M7) | src/services/account.rs | 560 |
+| `test_none_account_cannot_be_changed` | NONE (未指定) 口座は追加・編集・無効化・削除できない (潜在監査 M7) | src/services/account.rs | 593 |
+| `test_get_account_balances_as_of_keeps_disabled_accounts_with_balance` | 残高が残っている無効口座はダッシュボードに `is_disabled` 付きで残る (潜在監査 M7) | src/services/account.rs | 1336 |
 | `latent_m4_admin_account_list_excludes_other_users_and_deleted` | 管理者に返す口座一覧は管理者自身の有効な口座だけ (潜在監査 M4) | src/services/latent_audit/account.rs | 40 |
+| `test_add_account_accepts_max_chars_code` | 50 文字 (`MAX_ACCOUNT_CODE_LEN`) の口座コードは受け付けて保存される | src/services/account.rs | 695 |
+| `test_add_account_rejects_over_max_chars_code` | 51 文字の口座コードは上限を示す `ApiError { code: "validation" }` で拒否され、保存されない | src/services/account.rs | 705 |
+| `test_add_account_code_limit_counts_chars_not_bytes` | コードの上限はバイトではなく文字数で数える: 日本語 50 文字は通り、51 文字は拒否される | src/services/account.rs | 718 |
+| `test_add_account_code_limit_applies_after_trim` | 前後の空白を取り除いてから文字数を数える | src/services/account.rs | 732 |
+| `test_update_account_keeps_existing_over_limit_code` | 上限導入前に保存された 50 文字超の既存コードも `update_account` で編集できる | src/services/account.rs | 742 |
 
-**合計**: 19件
+**合計**: 24件
 
 ### services/category.rs
 
@@ -744,7 +749,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **435件** |
+| **インラインテスト** | **440件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -756,7 +761,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/auth.rs | 25 |
 | services/user_management.rs | 25 |
 | services/encryption.rs | 11 |
-| services/account.rs | 19 |
+| services/account.rs | 24 |
 | services/category.rs | 45 |
 | services/manufacturer.rs | 17 |
 | services/product.rs | 19 |
@@ -768,7 +773,7 @@ AES-256-GCM暗号化・復号化のテスト。
 | services/i18n.rs | 8 |
 | services/recurring.rs | 28 |
 | lib.rs | 6 |
-| **総計** | **458件** |
+| **総計** | **463件** |
 
 ---
 
