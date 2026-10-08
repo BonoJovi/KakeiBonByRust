@@ -83,7 +83,7 @@ describe('recurring rule form — derived total (regression, latent audit 2026-0
         invoke.mockClear();
     });
 
-    test('[M17] should show a read-only total that follows the detail and tax settings', async () => {
+    test('should show a read-only total that follows the detail and tax settings when they change (M17)', async () => {
         const total = document.getElementById('total-amount');
         expect(total.readOnly).toBe(true);
 
@@ -99,7 +99,7 @@ describe('recurring rule form — derived total (regression, latent audit 2026-0
         expect(total.value).toBe('1086');
     });
 
-    test('[M17] should not send a typed total to create_recurring_rule', async () => {
+    test('should not send a typed total to create_recurring_rule when the rule is saved (M17)', async () => {
         document.getElementById('rule-name').value = 'Rent';
         setSelect('category1', 'EXPENSE');
         await flush();

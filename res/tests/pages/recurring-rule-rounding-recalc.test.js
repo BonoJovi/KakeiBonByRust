@@ -82,7 +82,7 @@ async function submitAndGetDetail() {
 }
 
 describe('recurring rule form: rounding change after the amount (scan2-R5)', () => {
-    test('[scan2-R5] recomputes the detail tax fields when the rounding changes (tax excluded)', async () => {
+    test('should recompute the detail tax fields when the rounding changes (tax excluded) (scan2-R5)', async () => {
         document.getElementById('rule-name').value = 'Sub';
         setSelect('category1', 'EXPENSE');
         await flush();
@@ -104,7 +104,7 @@ describe('recurring rule form: rounding change after the amount (scan2-R5)', () 
             .toEqual({ amount: 105, tax_amount: 11, amount_including_tax: 116 });
     });
 
-    test('[scan2-R5] keeps the typed tax-included price and recomputes the rest (tax included)', async () => {
+    test('should keep the typed tax-included price and recompute the rest when the rounding changes (tax included) (scan2-R5)', async () => {
         document.getElementById('rule-name').value = 'Sub';
         setSelect('category1', 'EXPENSE');
         await flush();

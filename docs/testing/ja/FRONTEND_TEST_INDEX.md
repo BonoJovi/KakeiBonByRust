@@ -915,10 +915,10 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[M16] a TRANSFER from an account to itself is rejected before create_recurring_rule` | 出金元と入金先が同じ振替テンプレートは `transaction_mgmt.transfer_same_account` を表示し、`create_recurring_rule` を送らない |
-| `[M16] a TRANSFER between two different accounts still reaches create_recurring_rule` | 異なる口座間の振替は `create_recurring_rule` に送られる (比較用) |
-| `[M16] a backend transfer_same_account rejection shows the dedicated message` | バックエンドが `transfer_same_account` で拒否した場合も同じ専用メッセージを表示し、汎用の作成失敗メッセージを出さない |
-| `a backend recurring_holiday_shift_too_long rejection shows the localized message` | 休日シフトが 14 日を超えるためバックエンドが拒否したとき、`recurring_rule.holiday_shift_too_long` を表示 (#171 の CodeRabbit 指摘) |
+| `should reject the rule before create_recurring_rule when a TRANSFER goes from an account to itself (M16)` | 出金元と入金先が同じ振替テンプレートは `transaction_mgmt.transfer_same_account` を表示し、`create_recurring_rule` を送らない |
+| `should call create_recurring_rule when a TRANSFER is between two different accounts (M16)` | 異なる口座間の振替は `create_recurring_rule` に送られる (比較用) |
+| `should show the dedicated message when the backend rejects with transfer_same_account (M16)` | バックエンドが `transfer_same_account` で拒否した場合も同じ専用メッセージを表示し、汎用の作成失敗メッセージを出さない |
+| `should show the localized message when the backend rejects with recurring_holiday_shift_too_long` | 休日シフトが 14 日を超えるためバックエンドが拒否したとき、`recurring_rule.holiday_shift_too_long` を表示 (#171 の CodeRabbit 指摘) |
 
 **ファイル**: res/tests/pages/recurring-rule-page.test.js
 
@@ -932,7 +932,7 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[M19] double submit invokes create_recurring_rule only once` | `create_recurring_rule` の実行中に送信を重ねても 1 回しか呼ばれない |
+| `should call create_recurring_rule only once when the form is submitted twice (M19)` | `create_recurring_rule` の実行中に送信を重ねても 1 回しか呼ばれない |
 
 **ファイル**: res/tests/pages/recurring-rule-double-submit.test.js
 
@@ -946,11 +946,11 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[M15/M18] should bound the date pickers to the seeded holiday years` | 開始日・終了日の入力欄に (今年 − 5) 年 1/1 〜 (今年 + 10) 年 12/31 の min / max を設定 |
-| `[M15/M18] should stop an end date past the limit before create_recurring_rule` | 終了日が上限を超えたら送信せず `recurring_rule.period_out_of_range` を表示 |
-| `[M15/M18] should stop a start date before the limit before create_recurring_rule` | 開始日が下限より前でも同様 |
-| `[M15/M18] should move the date pickers to bounds that changed since the page loaded` | 送信時に取得した範囲が画面表示時と変わっていたら、日付入力欄の上限・下限も更新する |
-| `[M15/M18] should show the same message for a backend recurring_period_out_of_range rejection` | バックエンドの `recurring_period_out_of_range` も同じメッセージで表示 |
+| `should bound the date pickers to the seeded holiday years when the page loads (M15/M18)` | 開始日・終了日の入力欄に (今年 − 5) 年 1/1 〜 (今年 + 10) 年 12/31 の min / max を設定 |
+| `should stop the rule before create_recurring_rule when the end date is past the limit (M15/M18)` | 終了日が上限を超えたら送信せず `recurring_rule.period_out_of_range` を表示 |
+| `should stop the rule before create_recurring_rule when the start date is before the limit (M15/M18)` | 開始日が下限より前でも同様 |
+| `should move the date pickers to the new bounds when the bounds changed since the page loaded (M15/M18)` | 送信時に取得した範囲が画面表示時と変わっていたら、日付入力欄の上限・下限も更新する |
+| `should show the same message when the backend rejects with recurring_period_out_of_range (M15/M18)` | バックエンドの `recurring_period_out_of_range` も同じメッセージで表示 |
 
 **ファイル**: res/tests/pages/recurring-rule-period-range.test.js
 
@@ -962,8 +962,8 @@
 
 | テスト | 説明 |
 |--------|------|
-| `starts as the start date and follows it until the anchor is edited` | 起点日の初期値は開始日。起点日を手で変えるまでは開始日に追従する |
-| `follows the start date again after Reset` | リセット後は再び開始日に追従する |
+| `should start as the start date and follow it when the anchor has not been edited` | 起点日の初期値は開始日。起点日を手で変えるまでは開始日に追従する |
+| `should follow the start date again when the form has been reset` | リセット後は再び開始日に追従する |
 
 **ファイル**: res/tests/pages/recurring-rule-anchor-follows-start.test.js
 
@@ -989,8 +989,8 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[M17] should show a read-only total that follows the detail and tax settings` | 合計欄は読み取り専用で、明細とヘッダーの丸め・内税/外税設定から自動計算される |
-| `[M17] should not send a typed total to create_recurring_rule` | `create_recurring_rule` に合計を送らない (バックエンドが明細から計算) |
+| `should show a read-only total that follows the detail and tax settings when they change (M17)` | 合計欄は読み取り専用で、明細とヘッダーの丸め・内税/外税設定から自動計算される |
+| `should not send a typed total to create_recurring_rule when the rule is saved (M17)` | `create_recurring_rule` に合計を送らない (バックエンドが明細から計算) |
 
 **ファイル**: res/tests/pages/recurring-rule-derived-total.test.js
 
@@ -1004,9 +1004,9 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[M14] should send DAY_OR_END for a day of the month` | 日付指定は `DAY_OR_END` で送る (該当日のない月は月末) |
-| `[M14] should offer an end-of-month mode that sends END` | 「月末」モードを選ぶと `END` を送り、日付欄は隠れる |
-| `[L13] should reset and disable the holiday shift for a daily rule` | 「毎日」を選ぶと祝日シフトを「なし」に戻して無効化し、他の周期では再び選べる |
+| `should send DAY_OR_END when a day of the month is chosen (M14)` | 日付指定は `DAY_OR_END` で送る (該当日のない月は月末) |
+| `should send END when the end-of-month mode is chosen (M14)` | 「月末」モードを選ぶと `END` を送り、日付欄は隠れる |
+| `should reset and disable the holiday shift when the rule is daily (L13)` | 「毎日」を選ぶと祝日シフトを「なし」に戻して無効化し、他の周期では再び選べる |
 
 **ファイル**: res/tests/pages/recurring-rule-cycle-options.test.js
 
@@ -1052,8 +1052,8 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[scan2-R5] recomputes the detail tax fields when the rounding changes (tax excluded)` | 外税・税率 10%・105 円で、切り捨てから切り上げに変えると税額・税込額が 11 / 116 になり、登録の要求にもその値が載る |
-| `[scan2-R5] keeps the typed tax-included price and recomputes the rest (tax included)` | 内税で税込 116 円と入力した後に切り上げへ変えると、税込額はそのままで税抜額・税額が 105 / 11 になり、登録の要求にもその値が載る |
+| `should recompute the detail tax fields when the rounding changes (tax excluded) (scan2-R5)` | 外税・税率 10%・105 円で、切り捨てから切り上げに変えると税額・税込額が 11 / 116 になり、登録の要求にもその値が載る |
+| `should keep the typed tax-included price and recompute the rest when the rounding changes (tax included) (scan2-R5)` | 内税で税込 116 円と入力した後に切り上げへ変えると、税込額はそのままで税抜額・税額が 105 / 11 になり、登録の要求にもその値が載る |
 
 **ファイル**: res/tests/pages/recurring-rule-rounding-recalc.test.js
 
