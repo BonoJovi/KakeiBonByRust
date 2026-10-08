@@ -595,11 +595,11 @@
 
 | テスト名 | 説明 | 期待結果 |
 |---------|------|---------|
-| `form-submit rapid-fire invokes onSave only once` | フォーム submit を短時間に3回発火 | onSave 呼び出しは1回のみ |
-| `save button is disabled while onSave is pending` | 保存中の Save ボタン状態 | disabled=true → 完了後 false |
-| `after a successful save, a second open+submit fires onSave again` | 保存成功後に再オープン | 2回目の submit で onSave が発火 |
-| `after a failed save, the guard resets and retry fires onSave again` | 保存失敗後のリトライ | ガードが解除されリトライ成功 |
-| `rapid save-button clicks invoke onSave only once` (saveButtonId パス) | Save ボタン ID 経由での連打 | onSave 呼び出しは1回のみ |
+| `should call onSave only once when the form is submitted rapidly` | フォーム submit を短時間に3回発火 | onSave 呼び出しは1回のみ |
+| `should disable the save button when onSave is still pending` | 保存中の Save ボタン状態 | disabled=true → 完了後 false |
+| `should call onSave again when the modal is opened and submitted after a successful save` | 保存成功後に再オープン | 2回目の submit で onSave が発火 |
+| `should reset the guard and call onSave again when a retry follows a failed save` | 保存失敗後のリトライ | ガードが解除されリトライ成功 |
+| `should call onSave only once when the save button is clicked rapidly` (saveButtonId パス) | Save ボタン ID 経由での連打 | onSave 呼び出しは1回のみ |
 
 **ファイル**: res/tests/modal-double-submit.test.js
 
@@ -613,8 +613,8 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[L22] should not close or reset a re-opened modal when an earlier save finishes` | 先の保存が完了しても、開き直したモーダルは開いたまま・ローディング表示も維持 |
-| `[L22] should let a re-opened modal save while an earlier save is still pending` | 先の保存が未完了でも、開き直したモーダルから保存でき、完了時に閉じる |
+| `should not close or reset a re-opened modal when an earlier save finishes (L22)` | 先の保存が完了しても、開き直したモーダルは開いたまま・ローディング表示も維持 |
+| `should let a re-opened modal save when an earlier save is still pending (L22)` | 先の保存が未完了でも、開き直したモーダルから保存でき、完了時に閉じる |
 
 **ファイル**: res/tests/modal-stale-save-close.test.js
 
@@ -1185,10 +1185,10 @@
 
 | テスト | 説明 |
 |--------|------|
-| ignores a second call while the first is in flight | 実行中の再送信を無視する |
-| calls preventDefault on every submit, including ignored ones | 無視した送信でも `preventDefault` を呼ぶ |
-| accepts a new call after the previous one resolved | 完了後は次の送信を受け付ける |
-| releases the guard when the handler throws | ハンドラが例外を投げてもガードを解除する |
+| should ignore a second call when the first is still in flight | 実行中の再送信を無視する |
+| should call preventDefault on every submit when some submits are ignored | 無視した送信でも `preventDefault` を呼ぶ |
+| should accept a new call when the previous one has resolved | 完了後は次の送信を受け付ける |
+| should release the guard when the handler throws | ハンドラが例外を投げてもガードを解除する |
 
 **ファイル**: res/tests/single-flight.test.js
 
@@ -1357,8 +1357,8 @@
 
 | テスト | 説明 |
 |--------|------|
-| `[L6] should settle only after an async onOpen has finished` | 非同期の `onOpen` が終わるまで `open()` の Promise は完了しない (モーダルはすぐ表示) |
-| `[L6] should settle at once for a synchronous onOpen` | 同期の `onOpen` ならすぐ完了する |
+| `should settle only after onOpen has finished when onOpen is async (L6)` | 非同期の `onOpen` が終わるまで `open()` の Promise は完了しない (モーダルはすぐ表示) |
+| `should settle at once when onOpen is synchronous (L6)` | 同期の `onOpen` ならすぐ完了する |
 
 **ファイル**: res/tests/modal-open-awaits-onopen.test.js
 

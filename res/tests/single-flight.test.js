@@ -15,7 +15,7 @@ function deferred() {
 const fakeEvent = () => ({ preventDefault: jest.fn() });
 
 describe('singleFlight', () => {
-    test('ignores a second call while the first is in flight', async () => {
+    test('should ignore a second call when the first is still in flight', async () => {
         const pending = deferred();
         const handler = jest.fn(() => pending.promise);
         const listener = singleFlight(handler);
@@ -29,7 +29,7 @@ describe('singleFlight', () => {
         await first;
     });
 
-    test('calls preventDefault on every submit, including ignored ones', async () => {
+    test('should call preventDefault on every submit when some submits are ignored', async () => {
         const pending = deferred();
         const listener = singleFlight(() => pending.promise);
         const e1 = fakeEvent();
@@ -44,7 +44,7 @@ describe('singleFlight', () => {
         await first;
     });
 
-    test('accepts a new call after the previous one resolved', async () => {
+    test('should accept a new call when the previous one has resolved', async () => {
         const handler = jest.fn(async () => {});
         const listener = singleFlight(handler);
 
@@ -53,7 +53,7 @@ describe('singleFlight', () => {
         expect(handler).toHaveBeenCalledTimes(2);
     });
 
-    test('releases the guard when the handler throws', async () => {
+    test('should release the guard when the handler throws', async () => {
         const handler = jest.fn()
             .mockImplementationOnce(async () => { throw new Error('boom'); })
             .mockImplementationOnce(async () => {});

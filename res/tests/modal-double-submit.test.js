@@ -84,7 +84,7 @@ describe('Modal double-submit guard — form submit path', () => {
         document.body.innerHTML = '';
     });
 
-    test('form-submit rapid-fire invokes onSave only once', async () => {
+    test('should call onSave only once when the form is submitted rapidly', async () => {
         const inflight = deferred();
         const onSave = jest.fn(() => inflight.promise);
 
@@ -110,7 +110,7 @@ describe('Modal double-submit guard — form submit path', () => {
         await flush();
     });
 
-    test('save button is disabled while onSave is pending', async () => {
+    test('should disable the save button when onSave is still pending', async () => {
         const inflight = deferred();
         const onSave = jest.fn(() => inflight.promise);
 
@@ -140,7 +140,7 @@ describe('Modal double-submit guard — form submit path', () => {
         expect(saveBtn.disabled).toBe(false);
     });
 
-    test('after a successful save, a second open+submit fires onSave again', async () => {
+    test('should call onSave again when the modal is opened and submitted after a successful save', async () => {
         const onSave = jest.fn(() => Promise.resolve());
         const modal = new Modal('test-modal', {
             formId: 'test-form',
@@ -164,7 +164,7 @@ describe('Modal double-submit guard — form submit path', () => {
         expect(onSave).toHaveBeenCalledTimes(2);
     });
 
-    test('after a failed save, the guard resets and retry fires onSave again', async () => {
+    test('should reset the guard and call onSave again when a retry follows a failed save', async () => {
         const onSave = jest.fn()
             .mockRejectedValueOnce(new Error('boom'))
             .mockResolvedValueOnce(undefined);
@@ -203,7 +203,7 @@ describe('Modal — save failure does not leak an unhandled promise rejection (F
         document.body.innerHTML = '';
     });
 
-    test('form-submit path swallows an onSave rejection at the listener boundary', async () => {
+    test('should catch the onSave rejection at the listener when the form is submitted', async () => {
         const onSave = jest.fn().mockRejectedValue(new Error('boom'));
         const modal = new Modal('test-modal', {
             formId: 'test-form',
@@ -242,7 +242,7 @@ describe('Modal double-submit guard — saveButtonId path', () => {
         document.body.innerHTML = '';
     });
 
-    test('rapid save-button clicks invoke onSave only once', async () => {
+    test('should call onSave only once when the save button is clicked rapidly', async () => {
         const inflight = deferred();
         const onSave = jest.fn(() => inflight.promise);
 
