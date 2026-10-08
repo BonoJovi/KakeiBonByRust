@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-10-08 JST  
-**総テスト数**: 956件 (jest suite 92 ファイル、`npm test` 実測)
+**総テスト数**: 963件 (jest suite 92 ファイル、`npm test` 実測)
 
 ---
 
@@ -704,9 +704,9 @@
 
 ### format-local-date.test.js
 
-`res/js/format-local-date.js` の `formatLocalDate` タイムゾーン安全な `YYYY-MM-DD` フォーマッタのテスト (Fable-5 レビュー #13)。旧実装は `new Date().toISOString().slice(0, 10)` (UTC 変換) で、JST ユーザーが 09:00 JST 前に繰り返しルールモーダルを開くと start-date / end-date / anchor-date が全て前日になっていた。ローカル getter (getFullYear / getMonth / getDate) で組み立てる新実装は、実行タイムゾーンに依存せず常に「ローカル壁時計の日付」を返すので、テストはローカル `Date` コンストラクタ経由で書いてある。
+`res/js/format-local-date.js` の `formatLocalDate` タイムゾーン安全な `YYYY-MM-DD` フォーマッタのテスト (Fable-5 レビュー #13)。旧実装は `new Date().toISOString().slice(0, 10)` (UTC 変換) で、JST ユーザーが 09:00 JST 前に繰り返しルールモーダルを開くと start-date / end-date / anchor-date が全て前日になっていた。ローカル getter (getFullYear / getMonth / getDate) で組み立てる新実装は、実行タイムゾーンに依存せず常に「ローカル壁時計の日付」を返すので、テストはローカル `Date` コンストラクタ経由で書いてある。あわせて、UTC で保存された日時を表示用にローカル時刻へ直す `formatUtcAsLocalDateTime` もテストする。
 
-**テスト数**: 16件
+**テスト数**: 22件
 
 テストファイルの先頭で `process.env.TZ = 'Asia/Tokyo'` を pin — CodeRabbit on #134 指摘、UTC 実行では local getter と `.toISOString()` の結果が一致するため UTC 回帰が検出できない問題を解消。
 
@@ -715,6 +715,7 @@
 | normal cases | 通常日付 / 月ゼロ埋め / 日ゼロ埋め / 両方ゼロ埋め / 12月 / 深夜 0 時 / 23:59:59 | 7件 |
 | Fable-5 #13 pin (does not drift to UTC) | UTC 21:30 → JST 翌日 06:30 / UTC 15:30 → JST 翌日 00:30 (UTC/local 発散を確実に検出) + ローカル 06:30 / 23:30 の壁時計固定 | 4件 |
 | boundary years | 1900 / 2100 / 閏年 2月29日 / 年 1 (4桁ゼロ埋め) / 年 999 (4桁ゼロ埋め) | 5件 |
+| formatUtcAsLocalDateTime — stored UTC shown in local time | UTC で保存された `YYYY-MM-DD HH:MM:SS` を JST で表示 (00:00 → 09:00、日付をまたぐ場合、`T` 区切り、日時の後ろに文字が続く値と日時でない値はそのまま、空は空文字) | 6件 |
 
 **ファイル**: res/tests/format-local-date.test.js
 
@@ -861,15 +862,16 @@
 
 ### pages/user-management-page.test.js
 
-実際のユーザー管理画面モジュールを `user-management.html` に対して管理者セッションで起動する回帰テスト (潜在監査 M13、L30)。
+実際のユーザー管理画面モジュールを `user-management.html` に対して管理者セッションで起動する回帰テスト (潜在監査 M13、L30、作成日時・更新日時のローカル時刻表示)。
 
-**テスト数**: 3件
+**テスト数**: 4件
 
 | テスト | 説明 |
 |--------|------|
 | `[M13] a whitespace-only username is rejected before create_general_user` | 空白のみのユーザー名は `validation.required` をユーザー名欄に表示し、`create_general_user` を送らない |
 | `[M13] a normal username still reaches create_general_user` | 通常のユーザー名は `create_general_user` に送られる (比較用) |
 | `[L30] an admin sees the Add User button and its footer` | 管理者には「ユーザー追加」ボタンとその下部の区切り線 (フッター) が表示される (比較用) |
+| `should show the created and updated times in local time when they are stored in UTC` | 作成日時・更新日時を、保存された UTC のままではなくローカル時刻 (JST) で表示する。更新日時が空なら「-」 |
 
 **ファイル**: res/tests/pages/user-management-page.test.js
 
@@ -1863,7 +1865,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | general-user-edit.test.js | 63 |
 | login.test.js | 58 |
 | user-deletion.test.js | 46 |
-| **機能別テスト** | **533件** |
+| **機能別テスト** | **540件** |
 | transaction-edit.test.js | 112 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 30 |
@@ -1879,7 +1881,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | aggregation-error-translate.test.js | 13 |
 | aggregation-latest-request.test.js | 2 |
 | parse-amount-strict.test.js | 24 |
-| format-local-date.test.js | 16 |
+| format-local-date.test.js | 22 |
 | period-end-date.test.js | 2 |
 | period-containing.test.js | 16 |
 | aggregation-render-unspecified.test.js | 5 |
@@ -1889,7 +1891,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | pages/transaction-detail-hidden-category.test.js | 2 |
 | pages/transaction-detail-product-suggest.test.js | 6 |
 | pages/transaction-management-page.test.js | 4 |
-| pages/user-management-page.test.js | 3 |
+| pages/user-management-page.test.js | 4 |
 | pages/user-management-delete-last-user.test.js | 1 |
 | pages/index-logout-hides-user-setup.test.js | 3 |
 | pages/recurring-rule-page.test.js | 4 |
@@ -1951,7 +1953,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **956件** |
+| **総計 (jest)** | **963件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 

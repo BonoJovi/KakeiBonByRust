@@ -21,7 +21,7 @@
  * Pure helper — no i18n / DOM / Tauri stubs needed.
  */
 
-import { formatLocalDate } from '../js/format-local-date.js';
+import { formatLocalDate, formatUtcAsLocalDateTime } from '../js/format-local-date.js';
 
 describe('formatLocalDate — normal cases', () => {
     test('mid-year date renders as YYYY-MM-DD (local zone)', () => {
@@ -132,5 +132,35 @@ describe('formatLocalDate — boundary years', () => {
         const d = new Date(999, 5, 15, 12, 0, 0);
         d.setFullYear(999);
         expect(formatLocalDate(d)).toBe('0999-06-15');
+    });
+});
+
+// Created/updated timestamps are stored in UTC (`datetime('now')`) as
+// `YYYY-MM-DD HH:MM:SS`. The User Management list printed them as stored,
+// so a JST user saw times 9 hours behind. Runs under TZ=Asia/Tokyo.
+describe('formatUtcAsLocalDateTime — stored UTC shown in local time', () => {
+    test('should show 09:00 when the stored UTC time is midnight (JST)', () => {
+        expect(formatUtcAsLocalDateTime('2026-01-01 00:00:00')).toBe('2026-01-01 09:00:00');
+    });
+
+    test('should move to the next local day when the stored UTC time is in the afternoon', () => {
+        expect(formatUtcAsLocalDateTime('2026-04-22 16:43:45')).toBe('2026-04-23 01:43:45');
+    });
+
+    test('should convert the value when it uses the ISO "T" separator', () => {
+        expect(formatUtcAsLocalDateTime('2026-05-26T19:28:14')).toBe('2026-05-27 04:28:14');
+    });
+
+    test('should show the value as it is when it is not a timestamp', () => {
+        expect(formatUtcAsLocalDateTime('not a date')).toBe('not a date');
+    });
+
+    test('should show the value as it is when text follows the timestamp', () => {
+        expect(formatUtcAsLocalDateTime('2026-01-01 00:00:00oops')).toBe('2026-01-01 00:00:00oops');
+    });
+
+    test('should return an empty string when the value is empty', () => {
+        expect(formatUtcAsLocalDateTime('')).toBe('');
+        expect(formatUtcAsLocalDateTime(null)).toBe('');
     });
 });
