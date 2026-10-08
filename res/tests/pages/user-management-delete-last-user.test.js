@@ -43,7 +43,7 @@ await import('../../js/user-management.js');
 await bootPage();
 
 describe('user management: deleting the last general user (scan2-C5)', () => {
-    test('[scan2-C5] shows the dedicated message when the backend refuses', async () => {
+    test('should show the dedicated message when the backend refuses to delete the last general user (scan2-C5)', async () => {
         document.querySelector('.btn-delete[data-user-id="2"]').click();
         await flush(3);
         document.getElementById('confirm-delete').click();

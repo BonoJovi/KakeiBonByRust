@@ -84,7 +84,7 @@ describe('user management (admin) — regression (latent audit 2026-09)', () => 
         document.getElementById('cancel-btn')?.click();
     });
 
-    test('[L24] 16-space password is reported on the password, not as raw user_mgmt.empty_name on the username', async () => {
+    test('should report the error on the password field when the password is 16 spaces (L24)', async () => {
         // Premise: the key the classifier produces is not a defined resource.
         expect(definedI18nKeys().has('user_mgmt.empty_name')).toBe(false);
 
@@ -100,7 +100,7 @@ describe('user management (admin) — regression (latent audit 2026-09)', () => 
         expect(passwordErrorShown).toBe(true);
     });
 
-    test('[L31] 8 emoji (16 UTF-16 units, 8 chars) is rejected by the frontend length check', async () => {
+    test('should reject the password in the frontend when it is 8 emoji (16 UTF-16 units) (L31)', async () => {
         const eightEmoji = '😀'.repeat(8);
         expect(eightEmoji.length).toBe(16);
         expect([...eightEmoji].length).toBe(8);

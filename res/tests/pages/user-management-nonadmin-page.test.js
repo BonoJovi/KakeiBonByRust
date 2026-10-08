@@ -38,12 +38,12 @@ await import('../../js/user-management.js');
 await bootPage();
 
 describe('user management (general user) — regression (latent audit 2026-09)', () => {
-    test('[L30] a non-admin user is not offered the Add User button', () => {
+    test('should not offer the Add User button when the user is not an admin (L30)', () => {
         const addBtn = document.getElementById('add-user-btn');
         expect(isHiddenOrAbsent(addBtn) || addBtn.disabled).toBe(true);
     });
 
-    test('[L30] a non-admin user does not see the empty footer line under the list', () => {
+    test('should hide the empty footer line under the list when the user is not an admin (L30)', () => {
         // The footer holds only the Add User button; with the button hidden,
         // its divider line suggested that something should be shown there.
         const footer = document.getElementById('add-user-btn').closest('.section-footer');
@@ -51,7 +51,7 @@ describe('user management (general user) — regression (latent audit 2026-09)',
         expect(isHiddenOrAbsent(footer)).toBe(true);
     });
 
-    test('[L30] a non-admin user has no delete button on their own row', () => {
+    test('should show no delete button on the own row when the user is not an admin (L30)', () => {
         const rows = Array.from(document.querySelectorAll('#user-list tr'));
         expect(rows).toHaveLength(1); // sanity: list rendered
         const deleteBtn = rows[0].querySelector('.btn-delete');

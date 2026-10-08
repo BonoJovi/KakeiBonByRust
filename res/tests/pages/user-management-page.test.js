@@ -64,14 +64,14 @@ describe('user management (admin) — regression (latent audit 2026-09)', () => 
         document.getElementById('cancel-btn')?.click();
     });
 
-    test('[M13] a whitespace-only username is rejected before create_general_user', async () => {
+    test('should reject the username before create_general_user when it is only whitespace (M13)', async () => {
         await openAddAndSubmit(' 　 ', 'valid_password_123456');
 
         expect(callsOf(invoke, 'create_general_user')).toHaveLength(0);
         expect(inlineErrorOf('username')).toBe('validation.required');
     });
 
-    test('[M13] a normal username still reaches create_general_user', async () => {
+    test('should call create_general_user when the username is normal (M13)', async () => {
         await openAddAndSubmit('bob', 'valid_password_123456');
 
         const creates = callsOf(invoke, 'create_general_user');
@@ -93,7 +93,7 @@ describe('user management (admin) — regression (latent audit 2026-09)', () => 
         expect(alice[4]).toBe('2026-05-27 04:28:14');
     });
 
-    test('[L30] an admin sees the Add User button and its footer', () => {
+    test('should show the Add User button and its footer when the user is an admin (L30)', () => {
         const addBtn = document.getElementById('add-user-btn');
         expect(isHiddenOrAbsent(addBtn)).toBe(false);
         expect(isHiddenOrAbsent(addBtn.closest('.section-footer'))).toBe(false);
