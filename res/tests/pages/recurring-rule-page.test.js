@@ -98,7 +98,7 @@ describe('recurring rule form — regression (latent audit 2026-09)', () => {
         invoke.mockClear();
     });
 
-    test('[M16] a TRANSFER from an account to itself is rejected before create_recurring_rule', async () => {
+    test('should reject the rule before create_recurring_rule when a TRANSFER goes from an account to itself (M16)', async () => {
         await fillTransferForm('CASH', 'CASH');
         // Sanity: the options exist, so the selection really is CASH → CASH.
         expect(document.getElementById('from-account').value).toBe('CASH');
@@ -112,7 +112,7 @@ describe('recurring rule form — regression (latent audit 2026-09)', () => {
         expect(box.textContent).toBe('transaction_mgmt.transfer_same_account');
     });
 
-    test('[M16] a TRANSFER between two different accounts still reaches create_recurring_rule', async () => {
+    test('should call create_recurring_rule when a TRANSFER is between two different accounts (M16)', async () => {
         await fillTransferForm('CASH', 'BANK');
 
         await submitForm();
@@ -123,7 +123,7 @@ describe('recurring rule form — regression (latent audit 2026-09)', () => {
         expect(creates[0].request.to_account_code).toBe('BANK');
     });
 
-    test('[M16] a backend transfer_same_account rejection shows the dedicated message', async () => {
+    test('should show the dedicated message when the backend rejects with transfer_same_account (M16)', async () => {
         // The frontend guard passes (different accounts); the backend
         // rejects anyway — e.g. a stale account list.
         await fillTransferForm('CASH', 'BANK');
@@ -138,7 +138,7 @@ describe('recurring rule form — regression (latent audit 2026-09)', () => {
         expect(box.textContent).not.toContain('recurring_rule.create_failed');
     });
 
-    test('a backend recurring_holiday_shift_too_long rejection shows the localized message', async () => {
+    test('should show the localized message when the backend rejects with recurring_holiday_shift_too_long', async () => {
         await fillTransferForm('CASH', 'BANK');
         createRejection = {
             code: 'recurring_holiday_shift_too_long',

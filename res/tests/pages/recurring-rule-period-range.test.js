@@ -111,7 +111,7 @@ describe('recurring rule form — period range (regression, latent audit 2026-09
         invoke.mockClear();
     });
 
-    test('[M15/M18] should bound the date pickers to the seeded holiday years', () => {
+    test('should bound the date pickers to the seeded holiday years when the page loads (M15/M18)', () => {
         for (const id of ['start-date', 'end-date']) {
             const input = document.getElementById(id);
             expect(input.min).toBe(MIN);
@@ -119,7 +119,7 @@ describe('recurring rule form — period range (regression, latent audit 2026-09
         }
     });
 
-    test('[M15/M18] should stop an end date past the limit before create_recurring_rule', async () => {
+    test('should stop the rule before create_recurring_rule when the end date is past the limit (M15/M18)', async () => {
         await fillExpenseForm();
         document.getElementById('start-date').value = `${year}-01-01`;
         document.getElementById('end-date').value = `${year + 10}-01-01`; // inside the local fallback, outside the backend bound
@@ -132,7 +132,7 @@ describe('recurring rule form — period range (regression, latent audit 2026-09
         expect(box.textContent).toBe(OUT_OF_RANGE_MESSAGE);
     });
 
-    test('[M15/M18] should stop a start date before the limit before create_recurring_rule', async () => {
+    test('should stop the rule before create_recurring_rule when the start date is before the limit (M15/M18)', async () => {
         await fillExpenseForm();
         document.getElementById('start-date').value = `${year - 5}-06-01`; // inside the local fallback, outside the backend bound
         document.getElementById('end-date').value = `${year}-12-31`;
@@ -143,7 +143,7 @@ describe('recurring rule form — period range (regression, latent audit 2026-09
         expect(document.getElementById('result-box').textContent).toBe(OUT_OF_RANGE_MESSAGE);
     });
 
-    test('[M15/M18] should move the date pickers to bounds that changed since the page loaded', async () => {
+    test('should move the date pickers to the new bounds when the bounds changed since the page loaded (M15/M18)', async () => {
         const initial = BACKEND_LIMITS;
         // e.g. the app kept running across New Year, or the first lookup fell back
         BACKEND_LIMITS = { first: `${year - 3}-01-01`, last: `${year + 8}-12-31` };
@@ -167,7 +167,7 @@ describe('recurring rule form — period range (regression, latent audit 2026-09
         }
     });
 
-    test('[M15/M18] should show the same message for a backend recurring_period_out_of_range rejection', async () => {
+    test('should show the same message when the backend rejects with recurring_period_out_of_range (M15/M18)', async () => {
         await fillExpenseForm();
         document.getElementById('start-date').value = MIN;
         document.getElementById('end-date').value = MAX;

@@ -44,7 +44,7 @@ function setStart(value) {
 }
 
 describe('recurring rule form — daily anchor follows the start date (latent-scan2 R2)', () => {
-    test('starts as the start date and follows it until the anchor is edited', () => {
+    test('should start as the start date and follow it when the anchor has not been edited', () => {
         expect(anchor().value).toBe(start().value);
 
         setStart('2026-09-01');
@@ -56,7 +56,7 @@ describe('recurring rule form — daily anchor follows the start date (latent-sc
         expect(anchor().value).toBe('2026-09-03');
     });
 
-    test('follows the start date again after Reset', () => {
+    test('should follow the start date again when the form has been reset', () => {
         document.getElementById('reset-btn').click();
         setStart('2026-07-01');
         expect(anchor().value).toBe('2026-07-01');

@@ -79,7 +79,7 @@ describe('recurring rule form — month end and daily shift (regression, latent 
         invoke.mockClear();
     });
 
-    test('[M14] should send DAY_OR_END for a day of the month', async () => {
+    test('should send DAY_OR_END when a day of the month is chosen (M14)', async () => {
         check('cycle-kind', 'MONTH');
         check('monthly-mode', 'DAY');
         document.getElementById('day-of-month').value = '31';
@@ -90,7 +90,7 @@ describe('recurring rule form — month end and daily shift (regression, latent 
         expect(request.day_of_month).toBe(31);
     });
 
-    test('[M14] should offer an end-of-month mode that sends END', async () => {
+    test('should send END when the end-of-month mode is chosen (M14)', async () => {
         check('cycle-kind', 'MONTH');
         check('monthly-mode', 'END');
         expect(visible('day-of-month-group')).toBe(false);
@@ -101,7 +101,7 @@ describe('recurring rule form — month end and daily shift (regression, latent 
         expect(request.day_of_month).toBeNull();
     });
 
-    test('[L13] should reset and disable the holiday shift for a daily rule', () => {
+    test('should reset and disable the holiday shift when the rule is daily (L13)', () => {
         check('cycle-kind', 'MONTH');
         const shift = document.getElementById('holiday-shift-type');
         shift.value = '2';

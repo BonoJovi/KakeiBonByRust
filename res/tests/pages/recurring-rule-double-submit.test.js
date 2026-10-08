@@ -78,7 +78,7 @@ function submitForm() {
 }
 
 describe('recurring rule form — regression (latent audit 2026-09)', () => {
-    test('[M19] double submit invokes create_recurring_rule only once', async () => {
+    test('should call create_recurring_rule only once when the form is submitted twice (M19)', async () => {
         fillValidForm();
         await flush();
 
