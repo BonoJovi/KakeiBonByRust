@@ -1241,10 +1241,3 @@ function showMessage(type, text) {
         messageDiv.style.display = 'none';
     }, 5000);
 }
-
-// Export functions for testing
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = {
-        applyTaxRounding
-    };
-}
