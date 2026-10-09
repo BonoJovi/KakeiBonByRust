@@ -320,12 +320,12 @@
 
 | テスト名 | 説明 | 期待結果 |
 |---------|------|---------|
-| `should handle password with leading/trailing spaces if matching and long enough` | 前後にスペース付き、両者一致・16文字以上 | valid: true |
-| `should accept very long password` | 1000 文字パスワード | valid: true |
-| `should accept password with emojis` | 絵文字を含むパスワード (2 バイト以上文字含む) | valid: true |
-| `should handle password with newlines (not trimmed)` | 改行を含み、確認側で改行が落ちる | valid: false, "Passwords do not match!" |
-| `should handle zero-width space` | ゼロ幅スペース 1 文字 (可視 0 だが `.length` は 1) | valid: false, "at least 16 characters" |
-| `should reject short numeric password` | 6 桁の数字のみ | valid: false, "at least 16 characters" |
+| `should accept the password when it has leading and trailing spaces and both entries match` | 前後にスペース付き、両者一致・16文字以上 | valid: true |
+| `should accept the password when it is very long (1000 characters)` | 1000 文字パスワード | valid: true |
+| `should accept the password when it has emojis` | 絵文字を含むパスワード (2 バイト以上文字含む) | valid: true |
+| `should reject the password when only one entry has newlines (not trimmed)` | 改行を含み、確認側で改行が落ちる | valid: false, "Passwords do not match!" |
+| `should reject the password when it is a single zero-width space` | ゼロ幅スペース 1 文字 (可視 0 だが `.length` は 1) | valid: false, "at least 16 characters" |
+| `should reject the password when it has only 6 digits` | 6 桁の数字のみ | valid: false, "at least 16 characters" |
 
 **ファイル**: res/tests/admin-setup.test.js
 
@@ -422,25 +422,24 @@
 
 **テスト数**: 46件
 
-| テストカテゴリ | 説明 | テスト数 |
+| テストカテゴリ (describe) | 説明 | テスト数 |
 |--------------|------|---------|
-| ユーザー名フォーマット | ユーザー名の表示フォーマット | 8件 |
-| ユーザーデータバリデーション | ユーザーデータの有効性確認 | 12件 |
-| モーダル状態 | 削除確認モーダルの状態管理 | 10件 |
-| エッジケース | 特殊ケースのテスト | 4件 |
-| 削除順序テスト | 複数ユーザー削除の順序テスト | 12件 |
+| Username Formatting | 削除確認に出すユーザー名の二重引用符付け | 10件 |
+| User Data Validation | 削除対象のユーザーデータの確認 | 9件 |
+| Modal State | 削除確認ウィンドウの開閉と選択中のユーザー | 5件 |
+| Edge Cases | 引用符・バックスラッシュ・改行・タブ・漢字・絵文字を含むユーザー名 | 6件 |
+| Deletion Order Tests | 3 人のうち最後・中間・最初を削除、続けて削除、存在しないユーザーの削除 | 15件 |
+| Test Summary | 件数表示用のプレースホルダー | 1件 |
 
 #### 詳細テストケース例
 
-**Deletion Order Tests (12件)**
+**Deletion Order Tests — Three users - Delete last user (3件)**
 
 | テスト名 | 説明 |
 |---------|------|
-| `Three users - Delete last user` | 3ユーザー中の最後のユーザーを削除 |
-| `Three users - Delete middle user` | 3ユーザー中の中間のユーザーを削除 |
-| `Three users - Delete first user` | 3ユーザー中の最初のユーザーを削除 |
-| `Multiple deletions` | 複数のユーザーを連続削除 |
-| その他... | ... |
+| `should delete the user when the last of three users is deleted` | 削除に成功し、2 人になる |
+| `should keep the remaining users in order when the last of three users is deleted` | 残りの 2 人の順序が保たれる |
+| `should leave the other users when the last of three users is deleted` | ほかの 2 人は残り、削除した人だけが消える |
 
 **ファイル**: res/tests/user-deletion.test.js
 
