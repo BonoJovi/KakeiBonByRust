@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-10-09 JST  
-**総テスト数**: 962件 (jest suite 93 ファイル、`npm test` 実測)
+**総テスト数**: 958件 (jest suite 93 ファイル、`npm test` 実測)
 
 ---
 
@@ -351,14 +351,13 @@
 
 管理者ユーザー編集画面のテスト。
 
-**テスト数**: 63件（パスワード26件 + ユーザー名13件 + ユーザー編集23件 + サマリー1件）
+**テスト数**: 62件（パスワード26件 + ユーザー名13件 + ユーザー編集23件）
 
 | テストカテゴリ | 説明 | テスト数 | 実装方法 |
 |--------------|------|---------|---------|
 | パスワードバリデーション | 共通パスワードテストスイート | 26件 | `runAllPasswordTests()` |
 | ユーザー名バリデーション | 共通ユーザー名テストスイート | 13件 | `testUsernameValidation()` |
 | ユーザー編集バリデーション | 共通ユーザー編集テストスイート | 23件 | `runAllUserEditTests()` |
-| テストサマリー | テスト数の確認 | 1件 | 個別実装 |
 
 **ファイル**: res/tests/admin-edit.test.js
 
@@ -368,14 +367,13 @@
 
 一般ユーザー編集画面のテスト。
 
-**テスト数**: 63件（パスワード26件 + ユーザー名13件 + ユーザー編集23件 + サマリー1件）
+**テスト数**: 62件（パスワード26件 + ユーザー名13件 + ユーザー編集23件）
 
 | テストカテゴリ | 説明 | テスト数 | 実装方法 |
 |--------------|------|---------|---------|
 | パスワードバリデーション | 共通パスワードテストスイート | 26件 | `runAllPasswordTests()` |
 | ユーザー名バリデーション | 共通ユーザー名テストスイート | 13件 | `testUsernameValidation()` |
 | ユーザー編集バリデーション | 共通ユーザー編集テストスイート | 23件 | `runAllUserEditTests()` |
-| テストサマリー | テスト数の確認 | 1件 | 個別実装 |
 
 **ファイル**: res/tests/general-user-edit.test.js
 
@@ -420,7 +418,7 @@
 
 ユーザー削除機能のテスト。
 
-**テスト数**: 46件
+**テスト数**: 45件
 
 | テストカテゴリ (describe) | 説明 | テスト数 |
 |--------------|------|---------|
@@ -429,7 +427,6 @@
 | Modal State | 削除確認ウィンドウの開閉と選択中のユーザー | 5件 |
 | Edge Cases | 引用符・バックスラッシュ・改行・タブ・漢字・絵文字を含むユーザー名 | 6件 |
 | Deletion Order Tests | 3 人のうち最後・中間・最初を削除、続けて削除、存在しないユーザーの削除 | 15件 |
-| Test Summary | 件数表示用のプレースホルダー | 1件 |
 
 #### 詳細テストケース例
 
@@ -451,15 +448,21 @@
 
 取引編集機能のテスト。
 
-**テスト数**: 112件
+**テスト数**: 111件
 
-| テストカテゴリ | 説明 | テスト数 |
+| テストカテゴリ (describe) | 説明 | テスト数 |
 |--------------|------|---------|
-| モーダル状態管理 | モーダルの開閉・状態制御 | 25件 |
-| データロード | 取引データの読み込み | 35件 |
-| 日時フォーマット変換 | SQLite ⇔ datetime-local変換 | 18件 |
-| カテゴリ変更と口座リセット | カテゴリ変更時の口座リセット処理 | 24件 |
-| メモハンドリング | メモの正規化・表示処理 | 10件 |
+| Modal State Management | モーダルの開閉・状態制御 | 5件 |
+| Data Loading | 取引データの読み込み | 13件 |
+| Date/Time Format Conversion | SQLite ⇔ datetime-local変換 | 15件 |
+| Category Change and Account Reset | カテゴリ変更時の口座リセット処理 | 8件 |
+| Memo Handling | メモの正規化・表示処理 | 14件 |
+| Form Validation | 入力値の確認 | 10件 |
+| Amount Formatting | 金額の表示形式と読み取り | 17件 |
+| Error Handling | エラー時の処理 | 10件 |
+| Integration Scenarios | 一連の操作の組み合わせ | 3件 |
+| Shop Selection | 店舗の選択 | 11件 |
+| Shop Selection Integration | 店舗選択の組み合わせ | 5件 |
 
 **ファイル**: res/tests/transaction-edit.test.js
 
@@ -1897,15 +1900,15 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | password-validation-tests.js | 26 |
 | username-validation-tests.js | 20 (13 + 7) |
 | user-edit-validation-tests.js | 23 |
-| **画面別テスト** | **308件** |
+| **画面別テスト** | **305件** |
 | admin-setup.test.js | 32 |
 | user-addition.test.js | 46 |
-| admin-edit.test.js | 63 |
-| general-user-edit.test.js | 63 |
+| admin-edit.test.js | 62 |
+| general-user-edit.test.js | 62 |
 | login.test.js | 58 |
-| user-deletion.test.js | 46 |
-| **機能別テスト** | **539件** |
-| transaction-edit.test.js | 112 |
+| user-deletion.test.js | 45 |
+| **機能別テスト** | **538件** |
+| transaction-edit.test.js | 111 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 30 |
 | toast.test.js | 14 |
@@ -1993,7 +1996,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **962件** |
+| **総計 (jest)** | **958件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 

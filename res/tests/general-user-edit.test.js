@@ -43,17 +43,3 @@ describe('General User Edit - Complete Test Suite', () => {
     // Run all user edit specific tests (approximately 23 tests)
     runAllUserEditTests(validateUserEdit, 'General User Edit');
 });
-
-describe('General User Edit - Test Summary', () => {
-    test('should pass when this test is only a test-summary placeholder', () => {
-        // This test suite includes:
-        // - 26 password tests (from password-validation-tests.js)
-        // - 13 username tests (from username-validation-tests.js)
-        // - 6 username-only edit tests
-        // - 8 password-only edit tests
-        // - 4 combined edit tests
-        // - 5 edit mode vs add mode tests
-        // Total: ~62 tests
-        expect(true).toBe(true);
-    });
-});

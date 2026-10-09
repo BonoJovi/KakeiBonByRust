@@ -3,7 +3,7 @@
 This document provides a complete index of all frontend tests implemented in JavaScript.
 
 **Last Updated**: 2026-10-09 JST  
-**Total Tests**: 962 (jest suites; 93 test files, per `npm test`)
+**Total Tests**: 958 (jest suites; 93 test files, per `npm test`)
 
 ---
 
@@ -25,14 +25,14 @@ and are **not** added again to the grand total.
 ### Screen-Specific Tests (308 tests)
 - **admin-setup.test.js** - Admin setup tests (32)
 - **user-addition.test.js** - User addition tests (46)
-- **admin-edit.test.js** - Admin edit tests (63)
-- **general-user-edit.test.js** - General user edit tests (63)
+- **admin-edit.test.js** - Admin edit tests (62)
+- **general-user-edit.test.js** - General user edit tests (62)
 - **login.test.js** - Login tests (58)
-- **user-deletion.test.js** - User deletion tests (46)
+- **user-deletion.test.js** - User deletion tests (45)
 
 ### Feature-Specific Tests (539 tests)
 
-- **transaction-edit.test.js** - Transaction edit tests (112)
+- **transaction-edit.test.js** - Transaction edit tests (111)
 - **transaction-detail-management.test.js** - Transaction detail management tests (51)
 - **transaction-detail-tax-calculation.test.js** - Tax calculation tests; a typed tax-included price is always kept, with the tax carved out of it when no exact tax-excluded split exists (latent-audit scan2-T2) (30)
 - **toast.test.js** - Toast notification tests (14)
@@ -140,15 +140,15 @@ and are **not** added again to the grand total.
 | password-validation-tests.js | 26 |
 | username-validation-tests.js | 20 |
 | user-edit-validation-tests.js | 23 |
-| **Screen-Specific Tests** | **308** |
+| **Screen-Specific Tests** | **305** |
 | admin-setup.test.js | 32 |
 | user-addition.test.js | 46 |
-| admin-edit.test.js | 63 |
-| general-user-edit.test.js | 63 |
+| admin-edit.test.js | 62 |
+| general-user-edit.test.js | 62 |
 | login.test.js | 58 |
-| user-deletion.test.js | 46 |
-| **Feature-Specific Tests** | **539** |
-| transaction-edit.test.js | 112 |
+| user-deletion.test.js | 45 |
+| **Feature-Specific Tests** | **538** |
+| transaction-edit.test.js | 111 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 30 |
 | toast.test.js | 14 |
@@ -236,7 +236,7 @@ and are **not** added again to the grand total.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **Total (jest)** | **962** |
+| **Total (jest)** | **958** |
 
 Grand total is Screen + Feature + Aggregation (Common Test Suites are helper
 libraries invoked from Screen-Specific files and their assertions are already
