@@ -787,7 +787,7 @@ fn latent_l10_generation_terminates_at_the_end_of_the_date_range() {
 // ===========================================================================
 // Latent-bug scan 2 (2026-09-29): R1, R2, R6, R7
 // (R3 lives in src/latent_audit/db.rs; R4, R5, R8 are Jest tests under
-// res/tests/latent-audit/scan2-r*.test.js)
+// tests/frontend/latent-audit/scan2-r*.test.js)
 // ===========================================================================
 
 async fn occurrence_dates(pool: &SqlitePool, rule_id: i64) -> Vec<String> {

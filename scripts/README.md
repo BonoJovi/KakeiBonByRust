@@ -19,8 +19,8 @@ This directory contains utility scripts for development, release, and statistics
 - **Usage**: `./scripts/run-all-tests.sh`
 - **Runs**:
   1. Rust tests (`cargo test`)
-  2. Frontend tests (`npm test` in `res/tests`)
-- **Note**: Install the frontend test dependencies first with `cd res/tests && npm install`. Both suites run even when the first one fails; the script exits with an error when either fails.
+  2. Frontend tests (`npm test` in `tests/frontend`)
+- **Note**: Install the frontend test dependencies first with `cd tests/frontend && npm install`. Both suites run even when the first one fails; the script exits with an error when either fails.
 
 ## Statistics Scripts
 

@@ -48,7 +48,7 @@ KakeiBonByRust は、Tauri v2 で構築された家計簿（household budget）�
 
 - **形態**: Vanilla JS + HTML + CSS（フレームワークなし）
 - **モジュール形式**: ES Modules（**`.js` 拡張子をインポート時に明記**）
-- **テスト**: Jest（`res/tests/` 以下）
+- **テスト**: Jest（`tests/frontend/` 以下）
 - **node/npm 管理**: nvm（非対話 zsh では PATH に npm が無いことに注意）
 
 ### 2.3 データベース
@@ -94,8 +94,10 @@ KakeiBonByRust/
 ├── res/                          # フロントエンドリソース
 │   ├── js/                       # ES Modules (~34 ファイル)
 │   ├── css/                      # スタイルシート
-│   ├── sql/                      # 初期 SQL / シード
-│   └── tests/                    # Jest テストスイート
+│   └── sql/                      # 初期 SQL / シード
+│
+├── tests/
+│   └── frontend/                 # Jest テストスイート
 │
 ├── docs/                         # ドキュメント (詳細は INDEX_ja.md)
 ├── scripts/                      # リリース・統計・i18n チェックスクリプト
@@ -128,7 +130,7 @@ cargo tauri dev
 cargo test
 
 # フロントエンドテスト (Jest)
-cd res/tests && npm test
+cd tests/frontend && npm test
 
 # 全テスト一括実行（バックエンド + フロントエンド）
 ./scripts/run-all-tests.sh

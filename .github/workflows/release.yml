@@ -56,15 +56,15 @@ jobs:
       - name: Cache npm dependencies
         uses: actions/cache@v5
         with:
-          path: res/tests/node_modules
-          key: ${{ runner.os }}-npm-test-${{ hashFiles('res/tests/package-lock.json') }}
+          path: tests/frontend/node_modules
+          key: ${{ runner.os }}-npm-test-${{ hashFiles('tests/frontend/package-lock.json') }}
 
       - name: Install test dependencies
-        working-directory: res/tests
+        working-directory: tests/frontend
         run: npm install
 
       - name: Run JavaScript tests
-        working-directory: res/tests
+        working-directory: tests/frontend
         run: npm test
 
       - name: Test summary

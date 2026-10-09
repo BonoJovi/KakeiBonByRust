@@ -52,11 +52,11 @@ jobs:
 
       - name: Install frontend dependencies
         run: npm install
-        working-directory: ./res/tests
+        working-directory: ./tests/frontend
 
       - name: Run frontend tests
         run: npm test
-        working-directory: ./res/tests
+        working-directory: ./tests/frontend
 
       - name: Test Summary
         if: always()

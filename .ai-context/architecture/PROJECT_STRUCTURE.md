@@ -96,7 +96,7 @@ KakeiBonByRust/
 │   ├── css/                  # Stylesheets
 │   └── locales/              # Translation files (ja, en)
 │
-├── res/tests/                # Test suites (29 test files, 488 tests)
+├── tests/frontend/           # Test suites (29 test files, 488 tests)
 │   ├── validation-helpers.js          # Common validation logic
 │   ├── password-validation-tests.js   # Password test suite
 │   ├── username-validation-tests.js   # Username test suite
@@ -176,16 +176,16 @@ KakeiBonByRust/
 
 | Module | File | Purpose |
 |--------|------|---------|
-| Validation Helpers | `res/tests/validation-helpers.js` | Common validation functions |
-| Password Tests | `res/tests/password-validation-tests.js` | Reusable password test suite (26 tests) |
-| Username Tests | `res/tests/username-validation-tests.js` | Reusable username test suite (13 tests) |
-| Admin Setup Tests | `res/tests/admin-setup.test.js` | Admin registration screen tests |
-| User Tests | `res/tests/user-*.test.js` | User addition, deletion, update tests |
-| Login Tests | `res/tests/login.test.js` | Login functionality tests |
-| Category Tests | `res/tests/category-management.test.js` | Category CRUD tests |
-| Account Tests | `res/tests/account-management.test.js` | Account CRUD tests |
-| Transaction Tests | `res/tests/transaction-*.test.js` | Transaction editing tests |
-| Master Data Tests | `res/tests/*-management.test.js` | Manufacturer, Product, Shop tests |
+| Validation Helpers | `tests/frontend/validation-helpers.js` | Common validation functions |
+| Password Tests | `tests/frontend/password-validation-tests.js` | Reusable password test suite (26 tests) |
+| Username Tests | `tests/frontend/username-validation-tests.js` | Reusable username test suite (13 tests) |
+| Admin Setup Tests | `tests/frontend/admin-setup.test.js` | Admin registration screen tests |
+| User Tests | `tests/frontend/user-*.test.js` | User addition, deletion, update tests |
+| Login Tests | `tests/frontend/login.test.js` | Login functionality tests |
+| Category Tests | `tests/frontend/category-management.test.js` | Category CRUD tests |
+| Account Tests | `tests/frontend/account-management.test.js` | Account CRUD tests |
+| Transaction Tests | `tests/frontend/transaction-*.test.js` | Transaction editing tests |
+| Master Data Tests | `tests/frontend/*-management.test.js` | Manufacturer, Product, Shop tests |
 
 ---
 
@@ -448,7 +448,7 @@ cargo tauri dev
 cargo test
 
 # JavaScript tests (488 tests)
-cd res/tests
+cd tests/frontend
 npm test
 
 # All tests
@@ -486,12 +486,12 @@ cargo tauri build
 1. Create HTML file in `res/`
 2. Create JS file in `res/js/`
 3. Add Tauri commands in `src/` (if needed)
-4. Create test file in `res/tests/` using common modules
+4. Create test file in `tests/frontend/` using common modules
 5. Update test documentation
 
 ### Modifying validation rules
-1. Update `res/tests/validation-helpers.js`
-2. Update `res/tests/*-validation-tests.js` (if needed)
+1. Update `tests/frontend/validation-helpers.js`
+2. Update `tests/frontend/*-validation-tests.js` (if needed)
 3. Update backend in `src/validation.rs`
 4. Run `npm test` to verify all screens
 
@@ -513,7 +513,7 @@ cargo tauri build
 
 ## Related Documentation
 
-- **User Documentation**: See `res/tests/README_NEW.md`
-- **Test Design**: See `res/tests/TEST_DESIGN.md`
-- **Test Cases**: See `res/tests/TEST_CASES.md`
-- **Quick Start**: See `res/tests/QUICK_START.md`
+- **User Documentation**: See `tests/frontend/README_NEW.md`
+- **Test Design**: See `tests/frontend/TEST_DESIGN.md`
+- **Test Cases**: See `tests/frontend/TEST_CASES.md`
+- **Quick Start**: See `tests/frontend/QUICK_START.md`

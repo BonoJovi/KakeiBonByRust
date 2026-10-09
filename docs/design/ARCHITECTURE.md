@@ -82,10 +82,11 @@ KakeiBonByRust/
 │   │   ├── validation-helpers.js # バリデーション共通
 │   │   └── (各画面のJS)
 │   ├── css/                      # スタイルシート
-│   ├── locales/                  # 翻訳ファイル
-│   │   ├── ja/
-│   │   └── en/
-│   └── tests/                    # フロントエンドテスト
+│   └── locales/                  # 翻訳ファイル
+│       ├── ja/
+│       └── en/
+├── tests/
+│   └── frontend/                 # フロントエンドテスト
 ├── sql/                          # SQLスクリプト
 │   ├── create_tables.sql
 │   └── (その他DDL)

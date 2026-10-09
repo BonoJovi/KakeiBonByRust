@@ -172,7 +172,7 @@ export const ROLE_USER = 1;
 
 ### Frontend (JavaScript)
 - Jest for unit tests
-- Test suites in `res/tests/`
+- Test suites in `tests/frontend/`
 - Common test logic in `*-validation-tests.js` files
 - Reuse test suites across screens
 

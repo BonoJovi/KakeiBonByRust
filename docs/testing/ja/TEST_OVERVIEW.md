@@ -86,7 +86,7 @@ KakeiBonByRust/
 │       ├── encryption.rs
 │       └── ...
 │
-├── res/tests/                    # JavaScriptフロントエンド
+├── tests/frontend/               # JavaScriptフロントエンド
 │   ├── validation-helpers.js     # 共通バリデーション関数
 │   ├── password-validation-tests.js    # パスワードテストスイート
 │   ├── username-validation-tests.js    # ユーザー名テストスイート
@@ -120,7 +120,7 @@ KakeiBonByRust/
 cargo test
 
 # JavaScriptテストを実行
-cd res/tests
+cd tests/frontend
 npm install  # 初回のみ
 npm test
 ```
@@ -132,7 +132,7 @@ npm test
 cargo test validation::
 
 # JavaScript: ログインテストのみ
-cd res/tests
+cd tests/frontend
 npm test pages/index-login-page.test.js
 ```
 
@@ -217,7 +217,7 @@ cargo tarpaulin --out Html
 #### すべてのテストを実行
 
 ```bash
-cd res/tests
+cd tests/frontend
 npm test
 ```
 
@@ -233,7 +233,7 @@ Tests:       <passed> passed, <skipped> skipped, <total> total
 #### 特定のテストファイルのみ実行
 
 ```bash
-cd res/tests
+cd tests/frontend
 npm test admin-setup.test.js
 npm test pages/index-login-page.test.js
 npm test pages/user-management-delete-page.test.js
@@ -309,7 +309,7 @@ mod tests {
 既存のバリデーションに新しいテストケースを追加する場合：
 
 ```javascript
-// res/tests/password-validation-tests.js
+// tests/frontend/password-validation-tests.js
 
 export function testNewPasswordRule(validationFn) {
     describe('New Password Rule', () => {
@@ -327,7 +327,7 @@ export function testNewPasswordRule(validationFn) {
 新しい画面を追加した場合：
 
 ```javascript
-// res/tests/new-screen.test.js
+// tests/frontend/new-screen.test.js
 
 import { validatePassword } from './validation-helpers.js';
 import { runAllPasswordTests } from './password-validation-tests.js';
@@ -426,11 +426,11 @@ jobs:
           node-version: '18'
       - name: Install dependencies
         run: |
-          cd res/tests
+          cd tests/frontend
           npm install
       - name: Run JavaScript tests
         run: |
-          cd res/tests
+          cd tests/frontend
           npm test
 ```
 
@@ -476,7 +476,7 @@ node --experimental-vm-modules node_modules/jest/bin/jest.js
 #### 依存関係エラー
 
 ```bash
-cd res/tests
+cd tests/frontend
 rm -rf node_modules package-lock.json
 npm install
 npm test
@@ -541,7 +541,7 @@ Jest設定で`testEnvironment: "jsdom"`を指定
    cargo tarpaulin --out Html
    
    # JavaScript
-   cd res/tests
+   cd tests/frontend
    npm run test:coverage
    ```
 
