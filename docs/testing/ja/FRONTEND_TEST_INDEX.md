@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-10-09 JST  
-**総テスト数**: 876件 (jest suite 93 ファイル、`npm test` 実測)
+**総テスト数**: 875件 (jest suite 93 ファイル、`npm test` 実測)
 
 ---
 
@@ -409,7 +409,7 @@
 
 取引明細管理機能のテスト。
 
-**テスト数**: 51件 (jest 実測)
+**テスト数**: 47件 (jest 実測)
 
 | テストカテゴリ | 説明 |
 |--------------|------|
@@ -431,15 +431,14 @@
 
 取引明細の税計算機能のテスト。
 
-**テスト数**: 30件 (jest 実測)
+**テスト数**: 33件 (jest 実測)
+
+すべて `res/js/detail-tax-calc.js` の本物の関数を呼ぶ。
 
 | テストカテゴリ | 説明 |
 |--------------|------|
-| 税抜→税込計算 | 税抜金額から税込金額を計算 |
-| 税込→税抜計算 | 税込金額から税抜金額を計算 |
-| 丸め誤差検出 | 税計算の丸め誤差検出 |
-| エッジケース | 0円、負の値などのエッジケース |
-| 複数税率 | 異なる税率での計算 |
+| `calculateFromExcluding` — 税率・上限・丸め (9件) | 税率 10 / 8 / 5 / 0 / 100 % の税額と税込額、1 円 (税 0)、上限 999,999,999 円、丸め区分 1 (四捨五入)・2 (切り上げ) での 33.3 円の丸め |
+| `calculateFromIncluding` — 割り切れる分割と上限 (10件) | 1100 円 (10 %)・1080 円 (8 %)・366 円 (10 %、切り捨て / 切り上げ)・325 円 (8 %、切り捨て / 切り上げ) の分割、1 円、上限の税込額、777 円 → 税込 854 円 → 777 円の往復 (切り捨て)、四捨五入では 854 円が 776 + 78 に分かれること |
 | 三者自動整合 (Fable-5 #8) | `calculateFromIncluding` の pure helper: `excluded + tax` は常に入力した税込額。`tax = round(excluded * rate)` を満たす分割があればそれを使う |
 | 入力不能な税込額 (潜在スキャン scan2-T2) | 税抜の式で表せない税込額 (10 %・切り捨ての 1000 円など) も入力どおり残し、税額は `税込 - 税抜` で切り出す。1〜10,000 円 × 8/10 % × 3 丸めで全額が保たれることを確認 |
 | pure helper 経路 | `calculateFromExcluding` / `applyTaxRounding` の直接テスト (floor / half-up / ceil / unknown default) |
@@ -1889,10 +1888,10 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | user-addition.test.js | 46 |
 | admin-edit.test.js | 62 |
 | general-user-edit.test.js | 62 |
-| **機能別テスト** | **559件** |
+| **機能別テスト** | **558件** |
 | transaction-edit.test.js | 111 |
-| transaction-detail-management.test.js | 51 |
-| transaction-detail-tax-calculation.test.js | 30 |
+| transaction-detail-management.test.js | 47 |
+| transaction-detail-tax-calculation.test.js | 33 |
 | toast.test.js | 14 |
 | tax-calc.test.js | 12 |
 | pages/transaction-detail-draft-storage.test.js | 6 |
@@ -1980,7 +1979,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **876件** |
+| **総計 (jest)** | **875件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 

@@ -3,7 +3,7 @@
 This document provides a complete index of all frontend tests implemented in JavaScript.
 
 **Last Updated**: 2026-10-09 JST  
-**Total Tests**: 876 (jest suites; 93 test files, per `npm test`)
+**Total Tests**: 875 (jest suites; 93 test files, per `npm test`)
 
 ---
 
@@ -28,11 +28,11 @@ and are **not** added again to the grand total.
 - **admin-edit.test.js** - Admin edit tests (62)
 - **general-user-edit.test.js** - General user edit tests (62)
 
-### Feature-Specific Tests (559 tests)
+### Feature-Specific Tests (558 tests)
 
 - **transaction-edit.test.js** - Transaction edit tests (111)
-- **transaction-detail-management.test.js** - Transaction detail management tests (51)
-- **transaction-detail-tax-calculation.test.js** - Tax calculation tests; a typed tax-included price is always kept, with the tax carved out of it when no exact tax-excluded split exists (latent-audit scan2-T2) (30)
+- **transaction-detail-management.test.js** - Transaction detail management tests (47)
+- **transaction-detail-tax-calculation.test.js** - Tax calculation tests on the real helpers in `detail-tax-calc.js` (tax rates, 1 yen, the maximum amount, rounding types, exact splits of a tax-included amount, a round trip); a typed tax-included price is always kept, with the tax carved out of it when no exact tax-excluded split exists (latent-audit scan2-T2) (33)
 - **toast.test.js** - Toast notification tests (14)
 - **tax-calc.test.js** - Tax calculation utility tests (12)
 - **pages/transaction-detail-draft-storage.test.js** - Imports the real detail page module and calls its exported `persistDraft` / `consumeDraft` / `clearDraft` (the detail draft kept in sessionStorage for the detail → product master round trip): a stored draft reads back unchanged, nothing stored reads as null, malformed JSON reads as null and is removed, clear removes the draft, a second persist overwrites the first, and an edit-mode draft keeps `detail_id` and `selected_product_id` (6)
@@ -145,10 +145,10 @@ and are **not** added again to the grand total.
 | user-addition.test.js | 46 |
 | admin-edit.test.js | 62 |
 | general-user-edit.test.js | 62 |
-| **Feature-Specific Tests** | **559** |
+| **Feature-Specific Tests** | **558** |
 | transaction-edit.test.js | 111 |
-| transaction-detail-management.test.js | 51 |
-| transaction-detail-tax-calculation.test.js | 30 |
+| transaction-detail-management.test.js | 47 |
+| transaction-detail-tax-calculation.test.js | 33 |
 | toast.test.js | 14 |
 | tax-calc.test.js | 12 |
 | pages/transaction-detail-draft-storage.test.js | 6 |
@@ -236,7 +236,7 @@ and are **not** added again to the grand total.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **Total (jest)** | **876** |
+| **Total (jest)** | **875** |
 
 Grand total is Screen + Feature + Aggregation (Common Test Suites are helper
 libraries invoked from Screen-Specific files and their assertions are already
