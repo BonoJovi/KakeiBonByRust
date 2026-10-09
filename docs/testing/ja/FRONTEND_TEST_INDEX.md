@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-10-09 JST  
-**総テスト数**: 850件 (jest suite 94 ファイル、`npm test` 実測)
+**総テスト数**: 815件 (jest suite 95 ファイル、`npm test` 実測)
 
 ---
 
@@ -101,6 +101,7 @@
   - [pages/category-management-move-buttons.test.js](#pagescategory-management-move-buttonstestjs)
   - [pages/transaction-management-filter-hidden-category.test.js](#pagestransaction-management-filter-hidden-categorytestjs)
   - [pages/transaction-management-save-before-details.test.js](#pagestransaction-management-save-before-detailstestjs)
+  - [pages/transaction-management-edit-roundtrip.test.js](#pagestransaction-management-edit-roundtriptestjs)
   - [pages/user-management-password-page.test.js](#pagesuser-management-password-pagetestjs)
   - [pages/user-management-nonadmin-page.test.js](#pagesuser-management-nonadmin-pagetestjs)
   - [pages/index-setup-password-length.test.js](#pagesindex-setup-password-lengthtestjs)
@@ -382,21 +383,19 @@
 
 取引編集機能のテスト。
 
-**テスト数**: 111件
+**テスト数**: 66件
 
 | テストカテゴリ (describe) | 説明 | テスト数 |
 |--------------|------|---------|
 | Modal State Management | モーダルの開閉・状態制御 | 5件 |
-| Data Loading | 取引データの読み込み | 13件 |
-| Date/Time Format Conversion | SQLite ⇔ datetime-local変換 | 15件 |
 | Category Change and Account Reset | カテゴリ変更時の口座リセット処理 | 8件 |
-| Memo Handling | メモの正規化・表示処理 | 14件 |
 | Form Validation | 入力値の確認 | 10件 |
 | Amount Formatting | 金額の表示形式と読み取り | 17件 |
 | Error Handling | エラー時の処理 | 10件 |
-| Integration Scenarios | 一連の操作の組み合わせ | 3件 |
 | Shop Selection | 店舗の選択 | 11件 |
 | Shop Selection Integration | 店舗選択の組み合わせ | 5件 |
+
+保存済みヘッダーの読み込みと保存時に送る値は、実際の画面で [pages/transaction-management-edit-roundtrip.test.js](#pagestransaction-management-edit-roundtriptestjs) が確かめる。
 
 **ファイル**: tests/frontend/transaction-edit.test.js
 
@@ -1688,6 +1687,29 @@
 
 ---
 
+### pages/transaction-management-edit-roundtrip.test.js
+
+実際の入出金一覧の編集ウィンドウで、保存済みヘッダーを開いたときの表示と、保存したときに送る値を確かめる。
+
+**テスト数**: 10件
+
+| テスト | 説明 |
+|--------|------|
+| `should show the date and time without seconds when the saved date has seconds` | `2026-09-01 10:30:45` は `2026-09-01T10:30` と表示する |
+| `should show midnight when the saved date has no time` | 時刻のない日付は 00:00 として表示する |
+| `should show an empty memo when the saved memo is null` | メモが null なら空欄で表示する |
+| `should show the saved values when a header is opened` | メモ (改行・日本語)、予定フラグ、大分類、出金元口座、合計、端数処理、内税/外税を保存値どおりに表示する |
+| `should send the date with :00 seconds when an edited header is saved` | 日時 `2026-09-20T18:05` を `2026-09-20 18:05:00` として送る |
+| `should send the memo trimmed when it has surrounding spaces` | メモの前後の空白を取って送る |
+| `should send a null memo when the memo has only spaces` | 空白だけのメモは null として送る |
+| `should send the account codes with NONE when an account is not chosen` | 口座はコードで送り、未指定は `NONE` のまま送る |
+| `should send the saved values back when a header is saved without changes` | 変更せずに保存すると、読み込んだ値をそのまま `update_transaction_header` に送る |
+| `should send the converted values to save_transaction_header when a new header is saved` | 新規作成では同じ変換をした値を `save_transaction_header` に送る |
+
+**ファイル**: tests/frontend/pages/transaction-management-edit-roundtrip.test.js
+
+---
+
 ### pages/user-management-password-page.test.js
 
 ユーザー管理画面 (管理者セッション) のパスワード検証の回帰テスト (潜在監査 L24 / L31)。
@@ -1879,8 +1901,8 @@
 | user-addition.test.js | 46 |
 | admin-edit.test.js | 62 |
 | general-user-edit.test.js | 62 |
-| **機能別テスト** | **533件** |
-| transaction-edit.test.js | 111 |
+| **機能別テスト** | **498件** |
+| transaction-edit.test.js | 66 |
 | transaction-detail-tax-calculation.test.js | 33 |
 | toast.test.js | 14 |
 | tax-calc.test.js | 12 |
@@ -1961,6 +1983,7 @@
 | pages/category-management-move-buttons.test.js | 2 |
 | pages/transaction-management-filter-hidden-category.test.js | 1 |
 | pages/transaction-management-save-before-details.test.js | 5 |
+| pages/transaction-management-edit-roundtrip.test.js | 10 |
 | pages/user-management-password-page.test.js | 2 |
 | pages/user-management-nonadmin-page.test.js | 3 |
 | pages/index-setup-password-length.test.js | 2 |
@@ -1971,7 +1994,7 @@
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **850件** |
+| **総計 (jest)** | **815件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 
