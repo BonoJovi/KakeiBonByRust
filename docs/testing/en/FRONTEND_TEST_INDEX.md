@@ -3,7 +3,7 @@
 This document provides a complete index of all frontend tests implemented in JavaScript.
 
 **Last Updated**: 2026-10-09 JST  
-**Total Tests**: 875 (jest suites; 93 test files, per `npm test`)
+**Total Tests**: 848 (jest suites; 93 test files, per `npm test`)
 
 ---
 
@@ -28,15 +28,15 @@ and are **not** added again to the grand total.
 - **admin-edit.test.js** - Admin edit tests (62)
 - **general-user-edit.test.js** - General user edit tests (62)
 
-### Feature-Specific Tests (558 tests)
+### Feature-Specific Tests (531 tests)
 
 - **transaction-edit.test.js** - Transaction edit tests (111)
-- **transaction-detail-management.test.js** - Transaction detail management tests (47)
 - **transaction-detail-tax-calculation.test.js** - Tax calculation tests on the real helpers in `detail-tax-calc.js` (tax rates, 1 yen, the maximum amount, rounding types, exact splits of a tax-included amount, a round trip); a typed tax-included price is always kept, with the tax carved out of it when no exact tax-excluded split exists (latent-audit scan2-T2) (33)
 - **toast.test.js** - Toast notification tests (14)
 - **tax-calc.test.js** - Tax calculation utility tests (12)
 - **pages/transaction-detail-draft-storage.test.js** - Imports the real detail page module and calls its exported `persistDraft` / `consumeDraft` / `clearDraft` (the detail draft kept in sessionStorage for the detail → product master round trip): a stored draft reads back unchanged, nothing stored reads as null, malformed JSON reads as null and is removed, clear removes the draft, a second persist overwrites the first, and an edit-mode draft keeps `detail_id` and `selected_product_id` (6)
 - **pages/transaction-detail-product-link.test.js** - Boots the real detail page: picking a product suggestion sets the hidden product id and picking another replaces it; typing after a pick drops the id, so the detail is saved with `productId` null; editing a product-linked detail restores its id, a free-text detail has none, and a row without a `product_id` field is saved with `productId` null; reopening the window clears the id and the list; the list shows the newest answer with no item active (Enter picks nothing); an answer that arrives after the window was reopened is not shown (9)
+- **pages/transaction-detail-form-page.test.js** - Boots the real detail page: the medium and minor categories are saved only when chosen (null otherwise), and clearing the medium category empties the minor category choices; a negative amount is rejected on its field before saving, and 0 yen is saved; the tax rate offers 0 / 8 / 10 % (10 % preselected) and is sent as a number; a memo over 1000 code points is rejected before saving, 1000 emoji are accepted, and a blank memo is saved as null; a tax rate change recalculates from the amount typed last; the tax is rounded by the header rounding type (floor when the header has none); the header total is shown as `¥1,234,567` / `¥0` (20)
 - **pages/product-management-product-draft.test.js** - Boots the real product master page: "Open in manufacturer master" saves the window inputs as the product draft, with the transaction to return to from `?return_to=` (null when opened from the menu), and a second jump overwrites the draft; coming back with `?restore_product=1` restores the inputs, removes the draft and shows "Back to detail entry" only when the draft has a transaction to return to; a malformed draft is discarded and no draft opens no window (7)
 - **pages/manufacturer-management-product-draft.test.js** - Boots the real manufacturer master page with `?return_to_product=1`: after adding a manufacturer, its id from the reloaded list is written into the product draft as a string, replacing an earlier pick and keeping every other field; without a draft, or when the name is not in the reloaded list, the draft is left as it is; opened from the menu, the draft is not touched (6)
 - **modal-double-submit.test.js** - Shared `Modal._handleSave` re-entrancy guard + unhandled-rejection swallow tests (6)
@@ -145,14 +145,14 @@ and are **not** added again to the grand total.
 | user-addition.test.js | 46 |
 | admin-edit.test.js | 62 |
 | general-user-edit.test.js | 62 |
-| **Feature-Specific Tests** | **558** |
+| **Feature-Specific Tests** | **531** |
 | transaction-edit.test.js | 111 |
-| transaction-detail-management.test.js | 47 |
 | transaction-detail-tax-calculation.test.js | 33 |
 | toast.test.js | 14 |
 | tax-calc.test.js | 12 |
 | pages/transaction-detail-draft-storage.test.js | 6 |
 | pages/transaction-detail-product-link.test.js | 9 |
+| pages/transaction-detail-form-page.test.js | 20 |
 | pages/product-management-product-draft.test.js | 7 |
 | pages/manufacturer-management-product-draft.test.js | 6 |
 | modal-double-submit.test.js | 6 |
@@ -236,7 +236,7 @@ and are **not** added again to the grand total.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **Total (jest)** | **875** |
+| **Total (jest)** | **848** |
 
 Grand total is Screen + Feature + Aggregation (Common Test Suites are helper
 libraries invoked from Screen-Specific files and their assertions are already

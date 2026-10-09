@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-10-09 JST  
-**総テスト数**: 875件 (jest suite 93 ファイル、`npm test` 実測)
+**総テスト数**: 848件 (jest suite 93 ファイル、`npm test` 実測)
 
 ---
 
@@ -21,12 +21,12 @@
   - [general-user-edit.test.js](#general-user-edittestjs)
 - [機能別テスト](#機能別テスト)
   - [transaction-edit.test.js](#transaction-edittestjs)
-  - [transaction-detail-management.test.js](#transaction-detail-managementtestjs)
   - [transaction-detail-tax-calculation.test.js](#transaction-detail-tax-calculationtestjs)
   - [toast.test.js](#toasttestjs)
   - [tax-calc.test.js](#tax-calctestjs)
   - [pages/transaction-detail-draft-storage.test.js](#pagestransaction-detail-draft-storagetestjs)
   - [pages/transaction-detail-product-link.test.js](#pagestransaction-detail-product-linktestjs)
+  - [pages/transaction-detail-form-page.test.js](#pagestransaction-detail-form-pagetestjs)
   - [pages/product-management-product-draft.test.js](#pagesproduct-management-product-drafttestjs)
   - [pages/manufacturer-management-product-draft.test.js](#pagesmanufacturer-management-product-drafttestjs)
   - [modal-double-submit.test.js](#modal-double-submittestjs)
@@ -405,28 +405,6 @@
 
 ---
 
-### transaction-detail-management.test.js
-
-取引明細管理機能のテスト。
-
-**テスト数**: 47件 (jest 実測)
-
-| テストカテゴリ | 説明 |
-|--------------|------|
-| カテゴリ選択ロジック | カテゴリ選択時の動作 |
-| 金額バリデーション | 金額入力の検証 |
-| 税率バリデーション | 税率入力の検証 |
-| 金額フォーマット | 金額の表示フォーマット |
-| 税種別選択 | 税込/税抜の選択 |
-| メモバリデーション | メモ入力の検証 |
-| 明細IDバリデーション | 明細IDの検証 |
-| 税計算フィールド決定 | 税計算に使用するフィールドの決定 |
-| 入力フィールド状態管理 | 入力フィールドの有効/無効制御 |
-
-**ファイル**: res/tests/transaction-detail-management.test.js
-
----
-
 ### transaction-detail-tax-calculation.test.js
 
 取引明細の税計算機能のテスト。
@@ -519,6 +497,39 @@
 | `should not show a pending answer when the detail window is opened again before it arrives` | 検索中にウィンドウを開き直すと、後から届いた答えは表示しない |
 
 **ファイル**: res/tests/pages/transaction-detail-product-link.test.js
+
+---
+
+### pages/transaction-detail-form-page.test.js
+
+実際の取引明細画面で、明細の入力フォームとヘッダー合計の表示を確かめる。旧 `transaction-detail-management.test.js` (テスト内で書いた値を確かめていた 47 件) の置き換え。
+
+**テスト数**: 20件
+
+| テスト | 説明 |
+|--------|------|
+| `should save no medium or minor category when neither is chosen` | 中分類も小分類も選ばずに保存すると、両方 null で送る |
+| `should save no minor category when only the medium category is chosen` | 中分類だけ選んで保存すると、小分類は null で送る |
+| `should clear the minor category choices when the medium category is cleared` | 中分類を選び直して空に戻すと、小分類の選択肢が「選択」だけになる |
+| `should reject the amount on its field before saving when the tax-excluded amount is negative` | 税抜金額が -100 だと、保存前にその欄に `common.error_amount_not_integer` を出し、保存しない |
+| `should save 0 yen when the amounts are 0` | 金額 0 円は保存できる |
+| `should offer only 0, 8 and 10 percent with 10 selected when the detail window opens` | 税率の選択肢は 0 / 8 / 10 % だけで、10 % が選ばれている |
+| `should send the tax rate as a number when the detail is saved` | 税率は数値で送られ、8 % に変えると税額・税込額も 8 % で送られる |
+| `should reject the memo before saving when it is longer than 1000 characters` | 1001 文字のメモは保存前にメモ欄へ文字数超過を出し、保存しない |
+| `should save the memo when it has 1000 characters outside the BMP` | 絵文字 1000 文字 (UTF-16 では 2000) のメモは保存できる (文字数はコードポイントで数える) |
+| `should save no memo when the memo is empty` | 空のメモは null で送る |
+| `should save no memo when the memo is only spaces` | 空白だけのメモは null で送る |
+| `should recompute the tax and the tax-included amount when the rate changes after the tax-excluded amount was typed` | 税抜金額を入れたあとで税率を変えると、税抜金額はそのままで税額と税込額を計算し直す |
+| `should keep the typed tax-included amount when the rate changes after it was typed` | 税込金額を入れたあとで税率を変えると、税込金額はそのままで税抜金額と税額を計算し直す |
+| `should add 10 yen of tax to 105 yen at 10% when the header rounding type is 0` | ヘッダーの丸め区分 0 (切り捨て) では 105 円の税は 10 円 |
+| `should add 11 yen of tax to 105 yen at 10% when the header rounding type is 1` | 丸め区分 1 (四捨五入) では 105 円の税は 11 円 |
+| `should add 10 yen of tax to 104 yen at 10% when the header rounding type is 1` | 丸め区分 1 (四捨五入) では 104 円の税は 10 円 |
+| `should add 11 yen of tax to 104 yen at 10% when the header rounding type is 2` | 丸め区分 2 (切り上げ) では 104 円の税は 11 円 |
+| `should round the tax down when the header has no rounding type` | ヘッダーに丸め区分がなければ切り捨て |
+| `should show the header total as ¥1,234,567 when the total is 1234567` | ヘッダーの合計 1234567 は `¥1,234,567` と表示 |
+| `should show the header total as ¥0 when the total is 0` | ヘッダーの合計 0 は `¥0` と表示 |
+
+**ファイル**: res/tests/pages/transaction-detail-form-page.test.js
 
 ---
 
@@ -1888,14 +1899,14 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | user-addition.test.js | 46 |
 | admin-edit.test.js | 62 |
 | general-user-edit.test.js | 62 |
-| **機能別テスト** | **558件** |
+| **機能別テスト** | **531件** |
 | transaction-edit.test.js | 111 |
-| transaction-detail-management.test.js | 47 |
 | transaction-detail-tax-calculation.test.js | 33 |
 | toast.test.js | 14 |
 | tax-calc.test.js | 12 |
 | pages/transaction-detail-draft-storage.test.js | 6 |
 | pages/transaction-detail-product-link.test.js | 9 |
+| pages/transaction-detail-form-page.test.js | 20 |
 | pages/product-management-product-draft.test.js | 7 |
 | pages/manufacturer-management-product-draft.test.js | 6 |
 | modal-double-submit.test.js | 6 |
@@ -1979,7 +1990,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **875件** |
+| **総計 (jest)** | **848件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 

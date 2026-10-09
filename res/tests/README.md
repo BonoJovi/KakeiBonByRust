@@ -55,7 +55,7 @@ npm run test:coverage
 
 ### 機能別テスト
 - `transaction-edit.test.js` - 取引編集テスト（112件）
-- `transaction-detail-management.test.js` - 取引明細管理テスト
+- `pages/transaction-detail-form-page.test.js` - 取引明細の入力フォームとヘッダー合計のテスト
 - `transaction-detail-tax-calculation.test.js` - 税計算テスト
 - `category-management-ui-tests.js` - カテゴリ管理UIテスト
 
