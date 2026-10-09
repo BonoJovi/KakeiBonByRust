@@ -8,7 +8,7 @@
 # Usage: ./scripts/run-all-tests.sh
 
 set -uo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/.." || exit 1
 
 if [[ ! -d res/tests/node_modules ]]; then
     echo "res/tests/node_modules is missing; run 'cd res/tests && npm install' first." >&2
