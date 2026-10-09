@@ -37,7 +37,7 @@ describe('Monthly Aggregation Tests', () => {
     });
 
     describe('UI Initialization', () => {
-        it('should display year input with default current year', () => {
+        it('should show the current year in the year input when the screen opens', () => {
             const yearInput = document.querySelector('#year');
             expect(yearInput).toBeTruthy();
             
@@ -45,7 +45,7 @@ describe('Monthly Aggregation Tests', () => {
             expect(parseInt(yearInput.value)).toBe(currentYear);
         });
 
-        it('should display month select with default current month', () => {
+        it('should show the current month in the month select when the screen opens', () => {
             const monthSelect = document.querySelector('#month');
             expect(monthSelect).toBeTruthy();
             
@@ -53,13 +53,13 @@ describe('Monthly Aggregation Tests', () => {
             expect(parseInt(monthSelect.value)).toBe(currentMonth);
         });
 
-        it('should display group-by select with default value', () => {
+        it('should show the group-by select set to category1 when the screen opens', () => {
             const groupBySelect = document.querySelector('#group-by');
             expect(groupBySelect).toBeTruthy();
             expect(groupBySelect.value).toBe('category1');
         });
 
-        it('should display execute button', () => {
+        it('should show the Execute button when the screen opens', () => {
             const executeBtn = document.querySelector('#execute-btn');
             expect(executeBtn).toBeTruthy();
             expect(executeBtn.textContent).toContain('Execute');
@@ -67,7 +67,7 @@ describe('Monthly Aggregation Tests', () => {
     });
 
     describe('Year Input Validation', () => {
-        it('should accept valid year (2024)', async () => {
+        it('should show no error when the year is 2024', async () => {
             setInputValue('#year', '2024');
             clickButton('#execute-btn');
             
@@ -77,7 +77,7 @@ describe('Monthly Aggregation Tests', () => {
             expect(errorMsg === null || !isVisible(".message.error")).toBe(true);
         });
 
-        it('should reject year below 1900', async () => {
+        it('should show an error when the year is below 1900', async () => {
             setInputValue('#year', '1899');
             clickButton('#execute-btn');
             
@@ -88,7 +88,7 @@ describe('Monthly Aggregation Tests', () => {
             expect(errorMsg.textContent).toContain('year');
         });
 
-        it('should reject year above 2100', async () => {
+        it('should show an error when the year is above 2100', async () => {
             setInputValue('#year', '2101');
             clickButton('#execute-btn');
             
@@ -99,7 +99,7 @@ describe('Monthly Aggregation Tests', () => {
             expect(errorMsg.textContent).toContain('year');
         });
 
-        it('should accept boundary year 1900', async () => {
+        it('should show no error when the year is 1900 (lower bound)', async () => {
             setInputValue('#year', '1900');
             setInputValue('#month', '1');
             clickButton('#execute-btn');
@@ -111,7 +111,7 @@ describe('Monthly Aggregation Tests', () => {
             expect(errorMsg === null || !isVisible(".message.error")).toBe(true);
         });
 
-        it('should accept boundary year 2100', () => {
+        it('should keep the year when it is set to 2100 (upper bound)', () => {
             // Only test that input accepts 2100, don't execute
             // (2100 is future date and would be rejected by future date validation)
             setInputValue('#year', '2100');
@@ -122,7 +122,7 @@ describe('Monthly Aggregation Tests', () => {
     });
 
     describe('Month Selection', () => {
-        it('should accept valid month (1-12)', async () => {
+        it('should show no error when each month from 1 to 12 is chosen', async () => {
             // Use a past year to avoid "future date" validation errors
             setInputValue('#year', '2024');
 
@@ -139,7 +139,7 @@ describe('Monthly Aggregation Tests', () => {
     });
 
     describe('Year Spinner Buttons', () => {
-        it.skip('should increment year with up button', () => {
+        it.skip('should add one year when the up button is clicked', () => {
             // TODO: Implement in future patch release
             setInputValue('#year', '2024');
             const initialYear = parseInt(document.querySelector('#year').value);
@@ -150,7 +150,7 @@ describe('Monthly Aggregation Tests', () => {
             expect(newYear).toBe(initialYear + 1);
         });
 
-        it.skip('should decrement year with down button', () => {
+        it.skip('should subtract one year when the down button is clicked', () => {
             // TODO: Implement in future patch release
             setInputValue('#year', '2024');
             const initialYear = parseInt(document.querySelector('#year').value);
@@ -161,7 +161,7 @@ describe('Monthly Aggregation Tests', () => {
             expect(newYear).toBe(initialYear - 1);
         });
 
-        it.skip('should not go below 1900', () => {
+        it.skip('should stay at 1900 when the down button is clicked at 1900', () => {
             // TODO: Implement in future patch release
             setInputValue('#year', '1900');
             clickButton('#year-down');
@@ -170,7 +170,7 @@ describe('Monthly Aggregation Tests', () => {
             expect(year).toBe(1900);
         });
 
-        it.skip('should not go above 2100', () => {
+        it.skip('should stay at 2100 when the up button is clicked at 2100', () => {
             // TODO: Implement in future patch release
             setInputValue('#year', '2100');
             clickButton('#year-up');
@@ -181,7 +181,7 @@ describe('Monthly Aggregation Tests', () => {
     });
 
     describe('Aggregation Execution', () => {
-        it('should call backend with correct parameters', async () => {
+        it('should send the form values to the backend when Execute is pressed', async () => {
             const calls = [];
             window.__TAURI__.core.invoke = async (cmd, args) => {
                 calls.push({ cmd, args });
@@ -203,7 +203,7 @@ describe('Monthly Aggregation Tests', () => {
             expect(calls[0].args.groupBy).toBe('category2');
         });
 
-        it('should display results after execution', async () => {
+        it('should show the result rows when the aggregation returns data', async () => {
             window.__TAURI__.core.invoke = async () => [
                 { group_key: 'EXPENSE', group_name: 'Expense', total_amount: -50000, count: 10, avg_amount: -5000 },
                 { group_key: 'INCOME', group_name: 'Income', total_amount: 100000, count: 2, avg_amount: 50000 }
@@ -226,7 +226,7 @@ describe('Monthly Aggregation Tests', () => {
             expect(tableData[1][0]).toBe('Income'); // First column of second row
         });
 
-        it('should display result count', async () => {
+        it('should show the number of result rows when the aggregation returns data', async () => {
             window.__TAURI__.core.invoke = async () => [
                 { group_key: 'CAT1', group_name: 'Category 1', total_amount: -10000, count: 5, avg_amount: -2000 },
                 { group_key: 'CAT2', group_name: 'Category 2', total_amount: -20000, count: 10, avg_amount: -2000 }
@@ -241,7 +241,7 @@ describe('Monthly Aggregation Tests', () => {
             expect(resultCount.textContent).toMatch(/2/);
         });
 
-        it('should handle empty results', async () => {
+        it('should show an empty table when the aggregation returns no rows', async () => {
             window.__TAURI__.core.invoke = async () => [];
             
             clickButton('#execute-btn');
@@ -253,7 +253,7 @@ describe('Monthly Aggregation Tests', () => {
             expect(tbody?.children.length).toBe(0);
         });
 
-        it('should display loading state during execution', async () => {
+        it('should show the loading indicator when the aggregation is running and hide it when it ends', async () => {
             window.__TAURI__.core.invoke = async () => {
                 await new Promise(resolve => setTimeout(resolve, 50));
                 return [];
@@ -270,7 +270,7 @@ describe('Monthly Aggregation Tests', () => {
             expect(isVisible('#loading-indicator')).toBe(false);
         });
 
-        it('should handle backend errors', async () => {
+        it('should show an error when the backend fails', async () => {
             window.__TAURI__.core.invoke = async () => {
                 throw new Error('Database connection failed');
             };
@@ -284,7 +284,7 @@ describe('Monthly Aggregation Tests', () => {
             expect(errorMsg.textContent).toContain('Database connection failed');
         });
 
-        it('should format amounts correctly', async () => {
+        it('should format the amount with thousands separators when the result is shown', async () => {
             window.__TAURI__.core.invoke = async () => [
                 { group_key: 'TEST', group_name: 'Test', total_amount: -123456, count: 1, avg_amount: -123456 }
             ];
@@ -340,7 +340,7 @@ describe('Monthly Aggregation Tests', () => {
             expect(newDisplay).not.toBe(initialDisplay);
         });
 
-        it('should toggle filter section with toggle button', () => {
+        it('should toggle the filter section when the toggle button is clicked', () => {
             const filterForm = document.querySelector('#filter-form-content');
             const initialDisplay = window.getComputedStyle(filterForm).display;
             
@@ -352,7 +352,7 @@ describe('Monthly Aggregation Tests', () => {
     });
 
     describe('Grouping Axis Changes', () => {
-        it('should aggregate by category1', async () => {
+        it('should send groupBy category1 when category1 is selected', async () => {
             window.__TAURI__.core.invoke = async (cmd, args) => {
                 expect(args.groupBy).toBe('category1');
                 return [{ group_key: 'EXPENSE', group_name: 'Expense', total_amount: -50000, count: 10, avg_amount: -5000 }];
@@ -363,7 +363,7 @@ describe('Monthly Aggregation Tests', () => {
             await waitFor(100);
         });
 
-        it('should aggregate by category2', async () => {
+        it('should send groupBy category2 when category2 is selected', async () => {
             window.__TAURI__.core.invoke = async (cmd, args) => {
                 expect(args.groupBy).toBe('category2');
                 return [{ group_key: 'FOOD', group_name: 'Food', total_amount: -30000, count: 15, avg_amount: -2000 }];
@@ -374,7 +374,7 @@ describe('Monthly Aggregation Tests', () => {
             await waitFor(100);
         });
 
-        it('should aggregate by category3', async () => {
+        it('should send groupBy category3 when category3 is selected', async () => {
             window.__TAURI__.core.invoke = async (cmd, args) => {
                 expect(args.groupBy).toBe('category3');
                 return [{ group_key: 'DINING', group_name: 'Dining Out', total_amount: -15000, count: 5, avg_amount: -3000 }];
@@ -385,7 +385,7 @@ describe('Monthly Aggregation Tests', () => {
             await waitFor(100);
         });
 
-        it('should aggregate by account', async () => {
+        it('should send groupBy account when account is selected', async () => {
             window.__TAURI__.core.invoke = async (cmd, args) => {
                 expect(args.groupBy).toBe('account');
                 return [{ group_key: 'CASH', group_name: 'Cash', total_amount: -25000, count: 20, avg_amount: -1250 }];
@@ -396,7 +396,7 @@ describe('Monthly Aggregation Tests', () => {
             await waitFor(100);
         });
 
-        it('should aggregate by shop', async () => {
+        it('should send groupBy shop when shop is selected', async () => {
             window.__TAURI__.core.invoke = async (cmd, args) => {
                 expect(args.groupBy).toBe('shop');
                 return [{ group_key: '1', group_name: 'Convenience Store', total_amount: -10000, count: 8, avg_amount: -1250 }];
@@ -409,7 +409,7 @@ describe('Monthly Aggregation Tests', () => {
     });
 
     describe('Future Date Validation', () => {
-        it('should reject future month', async () => {
+        it('should show an error when the month is in the future', async () => {
             const now = new Date();
             const futureYear = now.getFullYear() + 1;
             
@@ -424,7 +424,7 @@ describe('Monthly Aggregation Tests', () => {
             expect(errorMsg.textContent).toMatch(/future/i);
         });
 
-        it('should accept current month', async () => {
+        it('should show no error when the month is the current month', async () => {
             window.__TAURI__.core.invoke = async () => [];
             
             const now = new Date();
