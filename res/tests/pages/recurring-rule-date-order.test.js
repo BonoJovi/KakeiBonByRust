@@ -90,7 +90,7 @@ async function submitWithDates({ start, end, anchor }) {
 }
 
 describe('scan2-R8 recurring rule form — date checks', () => {
-    test('should reject start > end with a localized message, not the backend English text', async () => {
+    test('should show a localized message, not the backend English text, when the start date is after the end date', async () => {
         const box = await submitWithDates({
             start: `${year}-06-02`, end: `${year}-06-01`, anchor: `${year}-06-02`,
         });
@@ -100,7 +100,7 @@ describe('scan2-R8 recurring rule form — date checks', () => {
         expect(callsOf(invoke, 'create_recurring_rule')).toHaveLength(0);
     });
 
-    test('should reject a daily anchor after the end date with a localized message', async () => {
+    test('should show a localized message when a daily anchor is after the end date', async () => {
         const box = await submitWithDates({
             start: `${year}-06-01`, end: `${year}-06-30`, anchor: `${year}-07-01`,
         });
@@ -110,7 +110,7 @@ describe('scan2-R8 recurring rule form — date checks', () => {
         expect(callsOf(invoke, 'create_recurring_rule')).toHaveLength(0);
     });
 
-    test('should reject an empty end date with a localized message', async () => {
+    test('should show a localized message when the end date is empty', async () => {
         const box = await submitWithDates({
             start: `${year}-06-01`, end: '', anchor: `${year}-06-01`,
         });
@@ -120,7 +120,7 @@ describe('scan2-R8 recurring rule form — date checks', () => {
         expect(callsOf(invoke, 'create_recurring_rule')).toHaveLength(0);
     });
 
-    test('should reject an empty start date with the same message', async () => {
+    test('should show the same message when the start date is empty', async () => {
         const box = await submitWithDates({
             start: '', end: `${year}-06-30`, anchor: `${year}-06-01`,
         });

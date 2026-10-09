@@ -18,7 +18,7 @@ describe('Transaction Detail Tax Calculation Tests', () => {
     
     describe('Tax-excluding to Tax-including Calculation', () => {
         
-        it('should calculate tax-including amount correctly with 10% tax rate', () => {
+        it('should calculate the tax-including amount when the tax rate is 10%', () => {
             const excludingTax = 1000;
             const taxRate = 10;
             
@@ -29,7 +29,7 @@ describe('Transaction Detail Tax Calculation Tests', () => {
             expect(includingTax).toBe(1100);
         });
         
-        it('should calculate tax-including amount correctly with 8% tax rate', () => {
+        it('should calculate the tax-including amount when the tax rate is 8%', () => {
             const excludingTax = 1000;
             const taxRate = 8;
             
@@ -40,7 +40,7 @@ describe('Transaction Detail Tax Calculation Tests', () => {
             expect(includingTax).toBe(1080);
         });
         
-        it('should handle rounding down correctly (floor)', () => {
+        it('should round the tax down when the tax-excluding amount gives a fraction (floor)', () => {
             const excludingTax = 333;
             const taxRate = 10;
             
@@ -51,7 +51,7 @@ describe('Transaction Detail Tax Calculation Tests', () => {
             expect(includingTax).toBe(366);
         });
         
-        it('should calculate zero tax for 0% tax rate', () => {
+        it('should calculate zero tax when the tax rate is 0%', () => {
             const excludingTax = 1000;
             const taxRate = 0;
             
@@ -66,7 +66,7 @@ describe('Transaction Detail Tax Calculation Tests', () => {
     
     describe('Tax-including to Tax-excluding Calculation', () => {
         
-        it('should calculate tax-excluding amount correctly with 10% tax rate', () => {
+        it('should calculate the tax-excluding amount when the tax rate is 10%', () => {
             const includingTax = 1100;
             const taxRate = 10;
             
@@ -78,7 +78,7 @@ describe('Transaction Detail Tax Calculation Tests', () => {
             expect(taxAmount).toBe(101);
         });
         
-        it('should calculate tax-excluding amount correctly with 8% tax rate', () => {
+        it('should calculate the tax-excluding amount when the tax rate is 8%', () => {
             const includingTax = 1080;
             const taxRate = 8;
             
@@ -90,7 +90,7 @@ describe('Transaction Detail Tax Calculation Tests', () => {
             expect(taxAmount).toBe(81);
         });
         
-        it('should handle rounding down correctly (floor)', () => {
+        it('should round the tax-excluding amount down when the tax-including amount gives a fraction (floor)', () => {
             const includingTax = 366;
             const taxRate = 10;
             
@@ -144,7 +144,7 @@ describe('Transaction Detail Tax Calculation Tests', () => {
             expect(userInputIncluding).toBe(recalculatedIncluding);
         });
         
-        it('should detect rounding error with 8% tax rate', () => {
+        it('should detect the rounding error when recalculating at an 8% tax rate', () => {
             // User inputs tax-including: 325
             const userInputIncluding = 325;
             const taxRate = 8;
@@ -169,7 +169,7 @@ describe('Transaction Detail Tax Calculation Tests', () => {
     
     describe('Edge Cases', () => {
         
-        it('should handle large amounts correctly', () => {
+        it('should calculate the tax when the amount is large (999,999,999)', () => {
             const excludingTax = 999999999; // About 1 billion yen
             const taxRate = 10;
             
@@ -180,7 +180,7 @@ describe('Transaction Detail Tax Calculation Tests', () => {
             expect(includingTax).toBe(1099999998);
         });
         
-        it('should handle small amounts correctly', () => {
+        it('should round the tax to zero when the amount is 1 yen', () => {
             const excludingTax = 1;
             const taxRate = 10;
             
@@ -191,7 +191,7 @@ describe('Transaction Detail Tax Calculation Tests', () => {
             expect(includingTax).toBe(1);
         });
         
-        it('should handle amounts that result in exact division', () => {
+        it('should get the same tax-excluding amount back when the tax divides exactly', () => {
             // Use numbers that work perfectly with floor: 300 -> 330 -> 300
             const excludingTax = 300;
             const taxRate = 10;
@@ -206,7 +206,7 @@ describe('Transaction Detail Tax Calculation Tests', () => {
             expect(reversedExcluding).toBe(excludingTax);
         });
         
-        it('should handle amounts with fractional tax results', () => {
+        it('should get a smaller tax-excluding amount back when the tax has a fraction', () => {
             const excludingTax = 777;
             const taxRate = 10;
             
@@ -232,7 +232,7 @@ describe('Transaction Detail Tax Calculation Tests', () => {
         ];
         
         testCases.forEach(({ rate, excluding, expectedTax, expectedIncluding }) => {
-            it(`should calculate correctly with ${rate}% tax rate`, () => {
+            it(`should calculate the tax and the total when the tax rate is ${rate}%`, () => {
                 const taxAmount = Math.floor(excluding * rate / 100);
                 const includingTax = excluding + taxAmount;
 
