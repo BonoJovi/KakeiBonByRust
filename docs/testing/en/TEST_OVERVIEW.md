@@ -221,13 +221,6 @@ npm test -- --watch
 npm run test:coverage
 ```
 
-#### Standalone tests (Node.js, no dependencies)
-
-```bash
-node login-test-standalone.js
-node backend-validation-standalone.js
-```
-
 ---
 
 ## Adding New Tests

@@ -452,7 +452,7 @@ cd res/tests
 npm test
 
 # All tests
-./res/tests/run-all-tests.sh
+./scripts/run-all-tests.sh
 ```
 
 **Test Count:**

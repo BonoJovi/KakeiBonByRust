@@ -2,6 +2,8 @@
 
 最終更新: 2025-10-22
 
+> **Note:** This is a historical record of the 2025-10-22 test run. The files it names (`res/tests/run-all-tests.sh`, `login-test-standalone.js`, `backend-validation-standalone.js` and the `*.test.html` pages) have since been removed. To run all tests now, use `./scripts/run-all-tests.sh` (`cargo test` + `npm test`).
+
 ## テスト実行コマンド
 
 ```bash

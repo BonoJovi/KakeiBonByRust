@@ -110,11 +110,7 @@
   - [aggregation-monthly.test.js](#aggregation-monthlytestjs)
   - [aggregation-yearly.test.js](#aggregation-yearlytestjs)
   - [aggregation-period.test.js](#aggregation-periodtestjs)
-- [ブラウザ / スタンドアロン (jest 総計に含めない)](#ブラウザ--スタンドアロン-jest-総計に含めない)
-  - [category-management-ui-tests.js](#category-management-ui-testsjs)
-  - [tax-rounding-tests.js](#tax-rounding-testsjs)
-  - [backend-validation-standalone.js](#backend-validation-standalonejs)
-  - [login-test-standalone.js](#login-test-standalonejs)
+- [共通ヘルパー (jest 総計に含めない)](#共通ヘルパー-jest-総計に含めない)
   - [aggregation-test-helpers.js](#aggregation-test-helpersjs)
 
 ---
@@ -1842,41 +1838,9 @@
 
 ---
 
-## ブラウザ / スタンドアロン (jest 総計に含めない)
+## 共通ヘルパー (jest 総計に含めない)
 
-jest では走らない (`node --experimental-vm-modules ... jest.js` の pick 対象外)。ブラウザ上または `node` 直接実行で走らせる補助テスト・ヘルパー群。
-
-### category-management-ui-tests.js
-
-カテゴリ管理 UI の DOM ベーステスト。`console.log`/`console.error` によるアサーション形式で、ブラウザで対象ページを開いたセッションから直接 `<script>` として読み込んで走らせる想定。
-
-**ファイル**: res/tests/category-management-ui-tests.js
-
----
-
-### tax-rounding-tests.js
-
-`tax-rounding-tests.html` のコンパニオン。純関数 (`applyTaxRounding` 等) の入出力を HTML ページ経由で網羅的に叩く手動テスト。
-
-**ファイル**: res/tests/tax-rounding-tests.js
-
----
-
-### backend-validation-standalone.js
-
-Tauri 不要な validation ロジック単体テスト。`node backend-validation-standalone.js` で実行。
-
-**ファイル**: res/tests/backend-validation-standalone.js
-
----
-
-### login-test-standalone.js
-
-Tauri 不要な login ロジック単体テスト。`node login-test-standalone.js` で実行。
-
-**ファイル**: res/tests/login-test-standalone.js
-
----
+テストファイルが import する補助モジュール。単体ではテストとして走らない。
 
 ### aggregation-test-helpers.js
 
@@ -2025,13 +1989,6 @@ npm test -- --testNamePattern="Username Validation"
 
 ```bash
 npm run test:coverage
-```
-
-### スタンドアロンテスト（Node.js）
-
-```bash
-node login-test-standalone.js
-node backend-validation-standalone.js
 ```
 
 ### 権威的なカウントを再取得する

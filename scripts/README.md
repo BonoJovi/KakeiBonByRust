@@ -12,6 +12,16 @@ This directory contains utility scripts for development, release, and statistics
   2. Release tests (`cargo test --release`)
 - **When to use**: Run before creating a new version tag to catch build issues early
 
+## Test Scripts
+
+### `run-all-tests.sh`
+- **Purpose**: Runs the same tests as CI on your machine
+- **Usage**: `./scripts/run-all-tests.sh`
+- **Runs**:
+  1. Rust tests (`cargo test`)
+  2. Frontend tests (`npm test` in `res/tests`)
+- **Note**: Install the frontend test dependencies first with `cd res/tests && npm install`. Both suites run even when the first one fails; the script exits with an error when either fails.
+
 ## Statistics Scripts
 
 ### `fetch_stats.py`
