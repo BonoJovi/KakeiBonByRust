@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-10-09 JST  
-**総テスト数**: 922件 (jest suite 93 ファイル、`npm test` 実測)
+**総テスト数**: 876件 (jest suite 93 ファイル、`npm test` 実測)
 
 ---
 
@@ -19,7 +19,6 @@
   - [user-addition.test.js](#user-additiontestjs)
   - [admin-edit.test.js](#admin-edittestjs)
   - [general-user-edit.test.js](#general-user-edittestjs)
-  - [login.test.js](#logintestjs)
 - [機能別テスト](#機能別テスト)
   - [transaction-edit.test.js](#transaction-edittestjs)
   - [transaction-detail-management.test.js](#transaction-detail-managementtestjs)
@@ -51,6 +50,7 @@
   - [pages/user-management-delete-last-user.test.js](#pagesuser-management-delete-last-usertestjs)
   - [pages/user-management-delete-page.test.js](#pagesuser-management-delete-pagetestjs)
   - [pages/index-logout-hides-user-setup.test.js](#pagesindex-logout-hides-user-setuptestjs)
+  - [pages/index-login-page.test.js](#pagesindex-login-pagetestjs)
   - [pages/recurring-rule-page.test.js](#pagesrecurring-rule-pagetestjs)
   - [pages/recurring-rule-double-submit.test.js](#pagesrecurring-rule-double-submittestjs)
   - [pages/recurring-rule-period-range.test.js](#pagesrecurring-rule-period-rangetestjs)
@@ -376,41 +376,6 @@
 | ユーザー編集バリデーション | 共通ユーザー編集テストスイート | 23件 | `runAllUserEditTests()` |
 
 **ファイル**: res/tests/general-user-edit.test.js
-
----
-
-### login.test.js
-
-ログイン画面のテスト。
-
-**テスト数**: 58件
-
-| テストカテゴリ (describe) | 説明 | テスト数 |
-|--------------|------|---------|
-| Login Validation | 空欄・空白のみの入力、ユーザー名とパスワードの形 | 12件 |
-| Login State Management | ログイン状態の切り替え | 3件 |
-| Login UI Behavior | フォームの表示/非表示とログアウト時のクリア | 8件 |
-| Login Error Messages | エラーメッセージと成功メッセージの形 | 5件 |
-| Login Input Sanitization | SQL インジェクション・スクリプトタグ・特殊文字を文字列のまま扱う | 8件 |
-| Login Response Handling | 応答メッセージの読み取り | 5件 |
-| Login Timing and Performance | 応答時間とタイムアウト | 2件 |
-| Login Security | パスワード欄の伏せ字、試行回数、セッション | 5件 |
-| Login Edge Cases | 長い入力・1 文字・前後の空白・大文字小文字・空の応答 | 6件 |
-| Login Integration | フォーム送信と画面の移動 | 4件 |
-
-#### 詳細テストケース例
-
-**Empty field validation (5件)**
-
-| テスト名 | 説明 |
-|---------|------|
-| `should reject the login when the username is empty` | ユーザー名が空 |
-| `should reject the login when the password is empty` | パスワードが空 |
-| `should reject the login when both fields are empty` | 両方が空 |
-| `should reject the login when the username has only whitespace` | ユーザー名が空白のみ |
-| `should reject the login when the password has only whitespace` | パスワードが空白のみ |
-
-**ファイル**: res/tests/login.test.js
 
 ---
 
@@ -937,6 +902,31 @@
 | `should not switch screens when a setup check answers after the logout (scan2-C6)` | ログイン後の「ユーザー登録が必要か」の確認がログアウト後に返ってきても、画面を切り替えない |
 
 **ファイル**: res/tests/pages/index-logout-hides-user-setup.test.js
+
+---
+
+### pages/index-login-page.test.js
+
+実際のログイン画面 (index.html + menu.js) で、ログインとログアウトの流れを確かめる。旧 `login.test.js` (テスト内で書いた値を確かめていた 58 件) の置き換え。
+
+**テスト数**: 12件
+
+| テスト | 説明 |
+|--------|------|
+| `should show the login form and focus the user name when no session is active at start` | セッションがない状態で開くと、ログインフォームを表示してユーザー名欄にフォーカスする (メイン画面と管理者登録は隠れる) |
+| `should mask the password when the login form is shown` | パスワード欄は `type="password"` で伏せ字になる |
+| `should cancel the browser form submission when the login form is submitted` | 送信時にブラウザ標準のフォーム送信を止める (`preventDefault`) |
+| `should send the user name and password as typed when they have surrounding spaces` | 前後に空白があっても、ユーザー名とパスワードを入力どおり (trim せず) `login_user` に送る |
+| `should show the success and welcome messages when the login succeeds` | ログインに成功すると `login.success` と `login.welcome` (名前入り) を成功の形で表示 |
+| `should show the user name as text when the name in the welcome message contains HTML` | 歓迎メッセージの名前に HTML が含まれていても、文字のまま表示する |
+| `should show the invalid-credentials message when the user name or password is wrong` | `auth_invalid_credentials` では `error.invalid_credentials` を表示し、ログインフォームのまま |
+| `should show the login failure with the backend message when the error is an ApiError from the database` | データベースのエラーでは `error.login_failed: <バックエンドの文>` を表示 |
+| `should show the login failure with the backend message when the error is a plain string` | 文字列のエラーでも `error.login_failed: <その文字列>` を表示 |
+| `should show the app and hide the login form one second after login when no user setup is needed` | ユーザー登録が不要なら、ログインの 1 秒後にログインフォームを隠してメイン画面を表示する |
+| `should clear the session, the user name, the password and the message when the user logs out` | ログアウトでセッションを消し、ユーザー名・パスワード・メッセージを空にしてログインフォームを表示する |
+| `should keep the app on screen and show the failure when the session cannot be cleared at logout` | セッションを消せなかったときは、メイン画面のまま `error.logout_failed` を表示する |
+
+**ファイル**: res/tests/pages/index-login-page.test.js
 
 ---
 
@@ -1894,13 +1884,12 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | password-validation-tests.js | 26 |
 | username-validation-tests.js | 20 (13 + 7) |
 | user-edit-validation-tests.js | 23 |
-| **画面別テスト** | **260件** |
+| **画面別テスト** | **202件** |
 | admin-setup.test.js | 32 |
 | user-addition.test.js | 46 |
 | admin-edit.test.js | 62 |
 | general-user-edit.test.js | 62 |
-| login.test.js | 58 |
-| **機能別テスト** | **547件** |
+| **機能別テスト** | **559件** |
 | transaction-edit.test.js | 111 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 30 |
@@ -1931,6 +1920,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | pages/user-management-delete-last-user.test.js | 1 |
 | pages/user-management-delete-page.test.js | 9 |
 | pages/index-logout-hides-user-setup.test.js | 3 |
+| pages/index-login-page.test.js | 12 |
 | pages/recurring-rule-page.test.js | 4 |
 | pages/recurring-rule-double-submit.test.js | 1 |
 | pages/recurring-rule-period-range.test.js | 5 |
@@ -1990,7 +1980,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **922件** |
+| **総計 (jest)** | **876件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 
@@ -2008,8 +1998,9 @@ npm test
 ### 特定のテストファイルのみ実行
 
 ```bash
+cd res/tests
 npm test admin-setup.test.js
-npm test login.test.js
+npm test pages/index-login-page.test.js
 npm test pages/user-management-delete-page.test.js
 ```
 

@@ -93,7 +93,6 @@ KakeiBonByRust/
 │   ├── user-edit-validation-tests.js   # ユーザー編集テストスイート
 │   ├── admin-setup.test.js       # 管理者登録テスト
 │   ├── user-addition.test.js     # ユーザー追加テスト
-│   ├── login.test.js             # ログインテスト
 │   ├── transaction-*.test.js     # 取引関連テスト
 │   └── aggregation-*.test.js     # 集計関連テスト
 │
@@ -134,7 +133,7 @@ cargo test validation::
 
 # JavaScript: ログインテストのみ
 cd res/tests
-npm test login.test.js
+npm test pages/index-login-page.test.js
 ```
 
 ---
@@ -149,7 +148,7 @@ npm test login.test.js
 - テスト関数名、説明、ファイル名、行番号を含む
 
 ### [GreenBook] [フロントエンドテストインデックス](FRONTEND_TEST_INDEX.md)
-- **総テスト数**: 262件以上
+- **総テスト数**: インデックス冒頭の件数を参照 (テストを変えるたびに更新)
 - JavaScriptで実装されたすべてのテストケースを表形式で網羅
 - テスト名、説明、使用箇所を含む
 
@@ -225,17 +224,18 @@ npm test
 出力例：
 ```
 PASS  ./admin-setup.test.js
-PASS  ./login.test.js
+PASS  ./pages/index-login-page.test.js
 PASS  ./pages/user-management-delete-page.test.js
 ...
-Tests: 262 passed, 262 total
+Tests:       <passed> passed, <skipped> skipped, <total> total
 ```
 
 #### 特定のテストファイルのみ実行
 
 ```bash
+cd res/tests
 npm test admin-setup.test.js
-npm test login.test.js
+npm test pages/index-login-page.test.js
 npm test pages/user-management-delete-page.test.js
 ```
 

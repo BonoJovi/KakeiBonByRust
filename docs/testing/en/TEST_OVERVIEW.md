@@ -95,7 +95,7 @@ cargo test validation::
 
 # JavaScript: Login tests only
 cd res/tests
-npm test login.test.js
+npm test pages/index-login-page.test.js
 ```
 
 ---
@@ -110,7 +110,7 @@ For complete test case listings, see these index documents:
 - Includes test function name, description, file, line number
 
 ### [GreenBook] [Frontend Test Index](FRONTEND_TEST_INDEX.md)
-- **Total Tests**: 262+
+- **Total Tests**: see the count at the top of the index (it is updated with each test change)
 - All JavaScript test cases in table format
 - Includes test name, description, usage
 
@@ -186,17 +186,18 @@ npm test
 Expected output:
 ```
 PASS  ./admin-setup.test.js
-PASS  ./login.test.js
+PASS  ./pages/index-login-page.test.js
 PASS  ./pages/user-management-delete-page.test.js
 ...
-Tests: 262 passed, 262 total
+Tests:       <passed> passed, <skipped> skipped, <total> total
 ```
 
 #### Run specific test file
 
 ```bash
+cd res/tests
 npm test admin-setup.test.js
-npm test login.test.js
+npm test pages/index-login-page.test.js
 npm test pages/user-management-delete-page.test.js
 ```
 

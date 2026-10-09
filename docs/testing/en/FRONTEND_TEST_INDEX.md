@@ -3,7 +3,7 @@
 This document provides a complete index of all frontend tests implemented in JavaScript.
 
 **Last Updated**: 2026-10-09 JST  
-**Total Tests**: 922 (jest suites; 93 test files, per `npm test`)
+**Total Tests**: 876 (jest suites; 93 test files, per `npm test`)
 
 ---
 
@@ -22,14 +22,13 @@ and are **not** added again to the grand total.
 - **user-edit-validation-tests.js** - User edit validation tests (23)
 - **validation-helpers.js** - Common validation functions
 
-### Screen-Specific Tests (260 tests)
+### Screen-Specific Tests (202 tests)
 - **admin-setup.test.js** - Admin setup tests (32)
 - **user-addition.test.js** - User addition tests (46)
 - **admin-edit.test.js** - Admin edit tests (62)
 - **general-user-edit.test.js** - General user edit tests (62)
-- **login.test.js** - Login tests (58)
 
-### Feature-Specific Tests (547 tests)
+### Feature-Specific Tests (559 tests)
 
 - **transaction-edit.test.js** - Transaction edit tests (111)
 - **transaction-detail-management.test.js** - Transaction detail management tests (51)
@@ -61,6 +60,7 @@ and are **not** added again to the grand total.
 - **pages/user-management-delete-last-user.test.js** - Boots the real user management page (admin session): when the backend refuses to delete the last general user (`last_general_user`), the screen shows `user_mgmt.last_general_user` instead of the generic failure with the English backend text (latent-audit scan2-C5) (1)
 - **pages/user-management-delete-page.test.js** - Boots the real user management page (admin session): only general user rows have a delete button; the delete button opens the delete window with the user name as it is; Cancel and × close it without deleting; after a cancel, the user picked last is deleted; a successful delete shows `user_mgmt.user_deleted`, reloads the list and closes the window; a `not_found` error shows `error.delete_user_failed` with the backend message and keeps the window open; `admin_protected` shows `user_mgmt.admin_protected`; a name with HTML markup is shown as plain text (9)
 - **pages/index-logout-hides-user-setup.test.js** - Boots the real index page (menu.js): logging out while the user-setup form is shown, before the 1 s switch after login has run, or before the login's setup check has answered, leaves only the login form on screen (`#user-setup`, `#admin-setup` and `#app-content` hidden) (latent-audit scan2-C6) (3)
+- **pages/index-login-page.test.js** - Boots the real index page (menu.js): with no session the login form is shown and the user name focused; the password field is masked; submitting cancels the browser submission and sends the user name and password as typed (untrimmed) to `login_user`; a successful login shows `login.success` and `login.welcome` (the name as text, not HTML) and switches to the app after 1 s when no user setup is needed; wrong credentials show `error.invalid_credentials`, other errors `error.login_failed` with the backend message; logout clears the session, the fields and the message; when the session cannot be cleared the app stays on screen and `error.logout_failed` is shown (12)
 - **pages/recurring-rule-page.test.js** - Boots the real recurring rule page: a TRANSFER template from an account to itself is rejected with `transaction_mgmt.transfer_same_account` before `create_recurring_rule`, while two different accounts still go through, and a backend `transfer_same_account` rejection shows the same message (latent-audit M16) ; a backend `recurring_holiday_shift_too_long` rejection shows `recurring_rule.holiday_shift_too_long` (4)
 - **pages/recurring-rule-double-submit.test.js** - Boots the real recurring rule page: a double submit while `create_recurring_rule` is in flight invokes it only once (latent-audit M19) (1)
 - **pages/recurring-rule-period-range.test.js** - Boots the real recurring rule page: the start / end date pickers are bounded to the seeded holiday years, an out-of-range period is stopped before `create_recurring_rule` with `recurring_rule.period_out_of_range`, a backend `recurring_period_out_of_range` rejection shows the same message, and bounds that changed since the page loaded are applied to the pickers on submit (latent-audit M15 / M18) (5)
@@ -140,13 +140,12 @@ and are **not** added again to the grand total.
 | password-validation-tests.js | 26 |
 | username-validation-tests.js | 20 |
 | user-edit-validation-tests.js | 23 |
-| **Screen-Specific Tests** | **260** |
+| **Screen-Specific Tests** | **202** |
 | admin-setup.test.js | 32 |
 | user-addition.test.js | 46 |
 | admin-edit.test.js | 62 |
 | general-user-edit.test.js | 62 |
-| login.test.js | 58 |
-| **Feature-Specific Tests** | **547** |
+| **Feature-Specific Tests** | **559** |
 | transaction-edit.test.js | 111 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 30 |
@@ -177,6 +176,7 @@ and are **not** added again to the grand total.
 | pages/user-management-delete-last-user.test.js | 1 |
 | pages/user-management-delete-page.test.js | 9 |
 | pages/index-logout-hides-user-setup.test.js | 3 |
+| pages/index-login-page.test.js | 12 |
 | pages/recurring-rule-page.test.js | 4 |
 | pages/recurring-rule-double-submit.test.js | 1 |
 | pages/recurring-rule-period-range.test.js | 5 |
@@ -236,7 +236,7 @@ and are **not** added again to the grand total.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **Total (jest)** | **922** |
+| **Total (jest)** | **876** |
 
 Grand total is Screen + Feature + Aggregation (Common Test Suites are helper
 libraries invoked from Screen-Specific files and their assertions are already
@@ -256,8 +256,9 @@ npm test
 ### Run specific test file
 
 ```bash
+cd res/tests
 npm test admin-setup.test.js
-npm test login.test.js
+npm test pages/index-login-page.test.js
 npm test pages/user-management-delete-page.test.js
 ```
 
