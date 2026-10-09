@@ -669,7 +669,12 @@ function initializeTransactionModal() {
             // Reset form
             const form = document.getElementById('transaction-form');
             form.reset();
-            
+            // form.reset() leaves the account fields as the last category
+            // set them; show both, as on the first open. An edit hides the
+            // unused one again in loadTransactionData.
+            document.getElementById('from-account-group').style.display = '';
+            document.getElementById('to-account-group').style.display = '';
+
             // Set current date/time (round to hour, minutes=00, seconds=00)
             const now = new Date();
             now.setMinutes(0);
