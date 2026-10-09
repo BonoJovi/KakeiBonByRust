@@ -256,6 +256,7 @@ npm test
 ### Run specific test file
 
 ```bash
+cd res/tests
 npm test admin-setup.test.js
 npm test pages/index-login-page.test.js
 npm test pages/user-management-delete-page.test.js

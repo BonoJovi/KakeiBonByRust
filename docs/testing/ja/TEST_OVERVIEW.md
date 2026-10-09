@@ -148,7 +148,7 @@ npm test pages/index-login-page.test.js
 - テスト関数名、説明、ファイル名、行番号を含む
 
 ### [GreenBook] [フロントエンドテストインデックス](FRONTEND_TEST_INDEX.md)
-- **総テスト数**: 262件以上
+- **総テスト数**: インデックス冒頭の件数を参照 (テストを変えるたびに更新)
 - JavaScriptで実装されたすべてのテストケースを表形式で網羅
 - テスト名、説明、使用箇所を含む
 
@@ -227,12 +227,13 @@ PASS  ./admin-setup.test.js
 PASS  ./pages/index-login-page.test.js
 PASS  ./pages/user-management-delete-page.test.js
 ...
-Tests: 262 passed, 262 total
+Tests:       <passed> passed, <skipped> skipped, <total> total
 ```
 
 #### 特定のテストファイルのみ実行
 
 ```bash
+cd res/tests
 npm test admin-setup.test.js
 npm test pages/index-login-page.test.js
 npm test pages/user-management-delete-page.test.js
