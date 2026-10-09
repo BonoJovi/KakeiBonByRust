@@ -1,10 +1,10 @@
 /**
  * Transaction Detail Tax Calculation Tests
  * 
- * Tests for tax calculation logic including:
- * - Tax-excluding to tax-including calculation
- * - Tax-including to tax-excluding calculation
- * - Rounding error detection and warnings
+ * Tests for the tax helpers in res/js/detail-tax-calc.js:
+ * - calculateFromExcluding: tax-excluded amount to tax and tax-included amount
+ * - calculateFromIncluding: tax-included amount to tax-excluded amount and tax
+ * - applyTaxRounding: the three rounding types (0 = floor, 1 = half-up, 2 = ceil)
  */
 
 import { describe, it, expect, beforeEach } from '@jest/globals';
@@ -16,231 +16,74 @@ import {
 
 describe('Transaction Detail Tax Calculation Tests', () => {
     
-    describe('Tax-excluding to Tax-including Calculation', () => {
-        
-        it('should calculate the tax-including amount when the tax rate is 10%', () => {
-            const excludingTax = 1000;
-            const taxRate = 10;
-            
-            const taxAmount = Math.floor(excludingTax * taxRate / 100);
-            const includingTax = excludingTax + taxAmount;
-            
-            expect(taxAmount).toBe(100);
-            expect(includingTax).toBe(1100);
+    // ========================================================================
+    // Tax rates, limits and rounding types on both sides. These call the
+    // real helpers in res/js/detail-tax-calc.js (they replace tests that
+    // re-did the arithmetic inline, some with a formula the app no longer
+    // uses).
+    // ========================================================================
+    describe('calculateFromExcluding — tax rates, limits and rounding types', () => {
+
+        it.each([
+            { excluded: 1000, rate: 10, tax: 100, included: 1100 },
+            { excluded: 1000, rate: 8, tax: 80, included: 1080 },
+            { excluded: 1000, rate: 5, tax: 50, included: 1050 },
+            { excluded: 1000, rate: 0, tax: 0, included: 1000 },
+            { excluded: 1000, rate: 100, tax: 1000, included: 2000 },
+        ])('should add $tax yen of tax when $excluded yen is taxed at $rate%', ({ excluded, rate, tax, included }) => {
+            expect(calculateFromExcluding(excluded, rate, 0)).toEqual({ tax, included });
         });
-        
-        it('should calculate the tax-including amount when the tax rate is 8%', () => {
-            const excludingTax = 1000;
-            const taxRate = 8;
-            
-            const taxAmount = Math.floor(excludingTax * taxRate / 100);
-            const includingTax = excludingTax + taxAmount;
-            
-            expect(taxAmount).toBe(80);
-            expect(includingTax).toBe(1080);
-        });
-        
-        it('should round the tax down when the tax-excluding amount gives a fraction (floor)', () => {
-            const excludingTax = 333;
-            const taxRate = 10;
-            
-            const taxAmount = Math.floor(excludingTax * taxRate / 100);
-            const includingTax = excludingTax + taxAmount;
-            
-            expect(taxAmount).toBe(33); // 33.3 -> 33
-            expect(includingTax).toBe(366);
-        });
-        
-        it('should calculate zero tax when the tax rate is 0%', () => {
-            const excludingTax = 1000;
-            const taxRate = 0;
-            
-            const taxAmount = Math.floor(excludingTax * taxRate / 100);
-            const includingTax = excludingTax + taxAmount;
-            
-            expect(taxAmount).toBe(0);
-            expect(includingTax).toBe(1000);
-        });
-        
-    });
-    
-    describe('Tax-including to Tax-excluding Calculation', () => {
-        
-        it('should calculate the tax-excluding amount when the tax rate is 10%', () => {
-            const includingTax = 1100;
-            const taxRate = 10;
-            
-            const excludingTax = Math.floor(includingTax / (1 + taxRate / 100));
-            const taxAmount = includingTax - excludingTax;
-            
-            // Due to floating point precision: 1100 / 1.1 = 999.999...
-            expect(excludingTax).toBe(999);
-            expect(taxAmount).toBe(101);
-        });
-        
-        it('should calculate the tax-excluding amount when the tax rate is 8%', () => {
-            const includingTax = 1080;
-            const taxRate = 8;
-            
-            const excludingTax = Math.floor(includingTax / (1 + taxRate / 100));
-            const taxAmount = includingTax - excludingTax;
-            
-            // Due to floating point precision: 1080 / 1.08 = 999.999...
-            expect(excludingTax).toBe(999);
-            expect(taxAmount).toBe(81);
-        });
-        
-        it('should round the tax-excluding amount down when the tax-including amount gives a fraction (floor)', () => {
-            const includingTax = 366;
-            const taxRate = 10;
-            
-            const excludingTax = Math.floor(includingTax / (1 + taxRate / 100));
-            const taxAmount = includingTax - excludingTax;
-            
-            expect(excludingTax).toBe(332); // 332.727... -> 332
-            expect(taxAmount).toBe(34);
-        });
-        
-    });
-    
-    describe('Rounding Error Detection', () => {
-        
-        it('should detect rounding error when recalculating from tax-excluding', () => {
-            // User inputs tax-including: 366
-            const userInputIncluding = 366;
-            const taxRate = 10;
-            
-            // Calculate tax-excluding
-            const calculatedExcluding = Math.floor(userInputIncluding / (1 + taxRate / 100));
-            // 366 / 1.1 = 332.727... -> 332
-            
-            // Recalculate tax-including from calculated tax-excluding
-            const taxAmount = Math.floor(calculatedExcluding * taxRate / 100);
-            const recalculatedIncluding = calculatedExcluding + taxAmount;
-            // 332 + 33 = 365
-            
-            // Should detect 1 yen difference
-            expect(calculatedExcluding).toBe(332);
-            expect(recalculatedIncluding).toBe(365);
-            expect(userInputIncluding).not.toBe(recalculatedIncluding);
-            expect(Math.abs(userInputIncluding - recalculatedIncluding)).toBe(1);
-        });
-        
-        it('should not show warning when calculation is accurate', () => {
-            // Use amount that works perfectly with floor: 330 / 1.1 = 300
-            const userInputIncluding = 330;
-            const taxRate = 10;
-            
-            // Calculate tax-excluding
-            const calculatedExcluding = Math.floor(userInputIncluding / (1 + taxRate / 100));
-            
-            // Recalculate tax-including
-            const taxAmount = Math.floor(calculatedExcluding * taxRate / 100);
-            const recalculatedIncluding = calculatedExcluding + taxAmount;
-            
-            // Should match exactly (330 / 1.1 = 300, 300 * 0.1 = 30, 300 + 30 = 330)
-            expect(calculatedExcluding).toBe(300);
-            expect(recalculatedIncluding).toBe(330);
-            expect(userInputIncluding).toBe(recalculatedIncluding);
-        });
-        
-        it('should detect the rounding error when recalculating at an 8% tax rate', () => {
-            // User inputs tax-including: 325
-            const userInputIncluding = 325;
-            const taxRate = 8;
-            
-            // Calculate tax-excluding
-            const calculatedExcluding = Math.floor(userInputIncluding / (1 + taxRate / 100));
-            // 325 / 1.08 = 300.925... -> 300
-            
-            // Recalculate tax-including
-            const taxAmount = Math.floor(calculatedExcluding * taxRate / 100);
-            const recalculatedIncluding = calculatedExcluding + taxAmount;
-            // 300 + 24 = 324
-            
-            // Should detect 1 yen difference
-            expect(calculatedExcluding).toBe(300);
-            expect(recalculatedIncluding).toBe(324);
-            expect(userInputIncluding).not.toBe(recalculatedIncluding);
-            expect(Math.abs(userInputIncluding - recalculatedIncluding)).toBe(1);
-        });
-        
-    });
-    
-    describe('Edge Cases', () => {
-        
-        it('should calculate the tax when the amount is large (999,999,999)', () => {
-            const excludingTax = 999999999; // About 1 billion yen
-            const taxRate = 10;
-            
-            const taxAmount = Math.floor(excludingTax * taxRate / 100);
-            const includingTax = excludingTax + taxAmount;
-            
-            expect(taxAmount).toBe(99999999);
-            expect(includingTax).toBe(1099999998);
-        });
-        
+
         it('should round the tax to zero when the amount is 1 yen', () => {
-            const excludingTax = 1;
-            const taxRate = 10;
-            
-            const taxAmount = Math.floor(excludingTax * taxRate / 100);
-            const includingTax = excludingTax + taxAmount;
-            
-            expect(taxAmount).toBe(0); // 0.1 -> 0
-            expect(includingTax).toBe(1);
+            expect(calculateFromExcluding(1, 10, 0)).toEqual({ tax: 0, included: 1 });
         });
-        
-        it('should get the same tax-excluding amount back when the tax divides exactly', () => {
-            // Use numbers that work perfectly with floor: 300 -> 330 -> 300
-            const excludingTax = 300;
-            const taxRate = 10;
-            
-            const taxAmount = Math.floor(excludingTax * taxRate / 100);
-            const includingTax = excludingTax + taxAmount;
-            // 300 + 30 = 330
-            
-            // Reverse calculation should match
-            const reversedExcluding = Math.floor(includingTax / (1 + taxRate / 100));
-            // 330 / 1.1 = 300
-            expect(reversedExcluding).toBe(excludingTax);
+
+        it('should keep every digit when the amount is the maximum of 999,999,999 yen', () => {
+            expect(calculateFromExcluding(999999999, 10, 0))
+                .toEqual({ tax: 99999999, included: 1099999998 });
         });
-        
-        it('should get a smaller tax-excluding amount back when the tax has a fraction', () => {
-            const excludingTax = 777;
-            const taxRate = 10;
-            
-            const taxAmount = Math.floor(excludingTax * taxRate / 100);
-            const includingTax = excludingTax + taxAmount;
-            
-            expect(taxAmount).toBe(77); // 77.7 -> 77
-            expect(includingTax).toBe(854);
-            
-            // Verify reverse calculation detects error
-            const reversedExcluding = Math.floor(includingTax / (1 + taxRate / 100));
-            expect(reversedExcluding).toBe(776); // Not 777
+
+        it.each([
+            { mode: 1, tax: 33, included: 366 },
+            { mode: 2, tax: 34, included: 367 },
+        ])('should round 33.3 yen of tax to $tax when the rounding type is $mode', ({ mode, tax, included }) => {
+            expect(calculateFromExcluding(333, 10, mode)).toEqual({ tax, included });
         });
-        
     });
-    
-    describe('Multiple Tax Rates', () => {
-        
-        const testCases = [
-            { rate: 5, excluding: 1000, expectedTax: 50, expectedIncluding: 1050 },
-            { rate: 8, excluding: 1000, expectedTax: 80, expectedIncluding: 1080 },
-            { rate: 10, excluding: 1000, expectedTax: 100, expectedIncluding: 1100 },
-        ];
-        
-        testCases.forEach(({ rate, excluding, expectedTax, expectedIncluding }) => {
-            it(`should calculate the tax and the total when the tax rate is ${rate}%`, () => {
-                const taxAmount = Math.floor(excluding * rate / 100);
-                const includingTax = excluding + taxAmount;
 
-                expect(taxAmount).toBe(expectedTax);
-                expect(includingTax).toBe(expectedIncluding);
-            });
+    describe('calculateFromIncluding — exact splits and limits', () => {
+
+        it.each([
+            { included: 1100, rate: 10, mode: 0, excluded: 1000, tax: 100 },
+            { included: 1080, rate: 8, mode: 0, excluded: 1000, tax: 80 },
+            { included: 366, rate: 10, mode: 0, excluded: 333, tax: 33 },
+            { included: 366, rate: 10, mode: 2, excluded: 332, tax: 34 },
+            { included: 325, rate: 8, mode: 0, excluded: 301, tax: 24 },
+            { included: 325, rate: 8, mode: 2, excluded: 301, tax: 24 },
+        ])('should split $included yen at $rate% into $excluded + $tax when the rounding type is $mode', ({ included, rate, mode, excluded, tax }) => {
+            expect(calculateFromIncluding(included, rate, mode)).toEqual({ excluded, tax });
         });
 
+        it('should keep 1 yen as the price with no tax when 1 yen is typed', () => {
+            expect(calculateFromIncluding(1, 10, 0)).toEqual({ excluded: 1, tax: 0 });
+        });
+
+        it('should keep every digit when the tax-included amount is at the maximum', () => {
+            expect(calculateFromIncluding(1099999998, 10, 0))
+                .toEqual({ excluded: 999999999, tax: 99999999 });
+        });
+
+        it('should get the original amount back when an amount goes to tax-included and back under floor', () => {
+            const { included } = calculateFromExcluding(777, 10, 0);
+            expect(included).toBe(854);
+            expect(calculateFromIncluding(included, 10, 0)).toEqual({ excluded: 777, tax: 77 });
+        });
+
+        it('should pick another split that still adds up to the typed amount when the rounding type is half-up', () => {
+            // 777 + floor(77.7) = 854, but under half-up 777 + 78 = 855, so
+            // 854 splits as 776 + round(77.6) = 776 + 78.
+            expect(calculateFromIncluding(854, 10, 1)).toEqual({ excluded: 776, tax: 78 });
+        });
     });
 
     // ========================================================================
@@ -363,6 +206,9 @@ describe('Transaction Detail Tax Calculation Tests', () => {
         // toward +Infinity for .5, not away from zero) are outside the
         // helper's input contract. Documented explicitly here after
         // CodeRabbit on #129 flagged the pre-fix wording as ambiguous.
+        it('should round down when the rounding type is floor', () => {
+            expect(applyTaxRounding(9.9, 0)).toBe(9);
+        });
         it('should round down when the rounding type is unknown', () => {
             expect(applyTaxRounding(9.9, /*unknown*/ 99)).toBe(9);
         });

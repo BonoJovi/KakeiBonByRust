@@ -365,42 +365,5 @@ describe('Transaction Detail Management Tests', () => {
         });
         
     });
-    
-    describe('Edge Cases', () => {
-        
-        it('should round the tax to zero when the amount is 1 yen', () => {
-            const excludingTax = 1;
-            const taxRate = 10;
-            const taxAmount = Math.floor(excludingTax * taxRate / 100);
-            expect(taxAmount).toBe(0); // 0.1 -> 0
-        });
-        
-        it('should calculate the tax when the amount is the maximum', () => {
-            const excludingTax = 999999999;
-            const taxRate = 10;
-            const taxAmount = Math.floor(excludingTax * taxRate / 100);
-            const includingTax = excludingTax + taxAmount;
-            expect(includingTax).toBe(1099999998);
-        });
-        
-        it('should calculate zero tax when the tax rate is 0%', () => {
-            const excludingTax = 1000;
-            const taxRate = 0;
-            const taxAmount = Math.floor(excludingTax * taxRate / 100);
-            const includingTax = excludingTax + taxAmount;
-            expect(taxAmount).toBe(0);
-            expect(includingTax).toBe(1000);
-        });
-        
-        it('should double the amount when the tax rate is 100%', () => {
-            const excludingTax = 1000;
-            const taxRate = 100;
-            const taxAmount = Math.floor(excludingTax * taxRate / 100);
-            const includingTax = excludingTax + taxAmount;
-            expect(taxAmount).toBe(1000);
-            expect(includingTax).toBe(2000);
-        });
-        
-    });
-    
+
 });
