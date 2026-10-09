@@ -94,7 +94,6 @@ KakeiBonByRust/
 │   ├── admin-setup.test.js       # 管理者登録テスト
 │   ├── user-addition.test.js     # ユーザー追加テスト
 │   ├── login.test.js             # ログインテスト
-│   ├── user-deletion.test.js     # ユーザー削除テスト
 │   ├── transaction-*.test.js     # 取引関連テスト
 │   └── aggregation-*.test.js     # 集計関連テスト
 │
@@ -227,7 +226,7 @@ npm test
 ```
 PASS  ./admin-setup.test.js
 PASS  ./login.test.js
-PASS  ./user-deletion.test.js
+PASS  ./pages/user-management-delete-page.test.js
 ...
 Tests: 262 passed, 262 total
 ```
@@ -237,7 +236,7 @@ Tests: 262 passed, 262 total
 ```bash
 npm test admin-setup.test.js
 npm test login.test.js
-npm test user-deletion.test.js
+npm test pages/user-management-delete-page.test.js
 ```
 
 #### 特定のテストケースのみ実行
