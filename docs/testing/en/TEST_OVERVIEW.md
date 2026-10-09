@@ -95,7 +95,7 @@ cargo test validation::
 
 # JavaScript: Login tests only
 cd res/tests
-npm test login.test.js
+npm test pages/index-login-page.test.js
 ```
 
 ---
@@ -186,7 +186,7 @@ npm test
 Expected output:
 ```
 PASS  ./admin-setup.test.js
-PASS  ./login.test.js
+PASS  ./pages/index-login-page.test.js
 PASS  ./pages/user-management-delete-page.test.js
 ...
 Tests: 262 passed, 262 total
@@ -196,7 +196,7 @@ Tests: 262 passed, 262 total
 
 ```bash
 npm test admin-setup.test.js
-npm test login.test.js
+npm test pages/index-login-page.test.js
 npm test pages/user-management-delete-page.test.js
 ```
 
