@@ -122,11 +122,7 @@ and are **not** added again to the grand total.
 - **aggregation-yearly.test.js** - Yearly aggregation (21)
 - **aggregation-period.test.js** - Period aggregation (23)
 
-### Browser / Standalone (not counted in the jest total)
-- **category-management-ui-tests.js** - DOM-based tests, run in a browser session against a rendered category page
-- **tax-rounding-tests.js** - Companion to `tax-rounding-tests.html`; pure-function harness, run via the HTML page
-- **backend-validation-standalone.js** - Node-standalone runner (`node backend-validation-standalone.js`)
-- **login-test-standalone.js** - Node-standalone runner (`node login-test-standalone.js`)
+### Shared helpers (not counted in the jest total)
 - **aggregation-test-helpers.js** - Shared mock/fixture helpers imported by the aggregation `.test.js` files
 - **pages/_page-harness.js** - Shared jsdom page harness (module mocks, page body loading, boot) used by `pages/*.test.js`, `modal-stale-save-close.test.js`, and the isolated `latent-audit/*.test.js`
 
@@ -273,13 +269,6 @@ npm test -- --testNamePattern="Username Validation"
 
 ```bash
 npm run test:coverage
-```
-
-### Standalone tests (Node.js, no dependencies)
-
-```bash
-node login-test-standalone.js
-node backend-validation-standalone.js
 ```
 
 ### Refreshing the authoritative counts

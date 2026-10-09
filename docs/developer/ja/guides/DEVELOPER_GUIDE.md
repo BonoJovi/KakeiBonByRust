@@ -131,7 +131,7 @@ cargo test
 cd res/tests && npm test
 
 # 全テスト一括実行（バックエンド + フロントエンド）
-./res/tests/run-all-tests.sh
+./scripts/run-all-tests.sh
 
 # リリース前チェック (3 version files 整合, etc.)
 ./scripts/check-release.sh

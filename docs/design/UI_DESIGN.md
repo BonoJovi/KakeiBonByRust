@@ -412,12 +412,8 @@ switchLanguage('en');
 
 ## テスト
 
-### 手動テスト
-**テストファイル**:
-- `res/tests/admin-setup.test.html`
-- `res/tests/login-integration.test.html`
-- `res/tests/user-addition.test.html`
-- `res/tests/tax-rounding-tests.html`
+### 自動テスト
+画面のテストは Jest で実行します（`cd res/tests && npm test`）。一覧は [FRONTEND_TEST_INDEX](../testing/ja/FRONTEND_TEST_INDEX.md) を参照してください。
 
 ### テスト項目
 - ✅ フォームバリデーション

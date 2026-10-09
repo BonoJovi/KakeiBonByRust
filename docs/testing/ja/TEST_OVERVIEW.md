@@ -259,13 +259,6 @@ npm test -- --watch
 npm run test:coverage
 ```
 
-#### スタンドアロンテスト（Node.js、依存関係なし）
-
-```bash
-node login-test-standalone.js
-node backend-validation-standalone.js
-```
-
 ---
 
 ## 新規テストの追加
