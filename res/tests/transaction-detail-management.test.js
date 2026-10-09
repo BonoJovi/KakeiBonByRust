@@ -164,13 +164,13 @@ describe('Transaction Detail Management Tests', () => {
     
     describe('Tax Type Selection', () => {
         
-        it('should treat the tax type as tax-excluding (外税) when it is 0', () => {
+        it('should treat the tax type as tax-excluding (内税) when it is 0', () => {
             const taxType = 0;
             const isTaxExcluding = taxType === 0;
             expect(isTaxExcluding).toBe(true);
         });
         
-        it('should treat the tax type as tax-including (内税) when it is 1', () => {
+        it('should treat the tax type as tax-including (外税) when it is 1', () => {
             const taxType = 1;
             const isTaxIncluding = taxType === 1;
             expect(isTaxIncluding).toBe(true);
