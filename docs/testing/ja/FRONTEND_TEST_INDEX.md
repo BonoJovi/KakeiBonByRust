@@ -139,47 +139,47 @@
 
 | テスト名 | 説明 | 期待結果 |
 |---------|------|---------|
-| `should reject empty string password` | 空文字列パスワードを拒否 | エラー: "Password cannot be empty!" |
-| `should reject password with only spaces` | スペースのみのパスワードを拒否 | エラー: "Password cannot be empty!" |
-| `should reject password with only tabs` | タブのみのパスワードを拒否 | エラー: "Password cannot be empty!" |
-| `should reject password with mixed whitespace` | 混合空白文字のみのパスワードを拒否 | エラー: "Password cannot be empty!" |
-| `should reject null password` | nullパスワードを拒否 | エラー: "Password cannot be empty!" |
-| `should reject undefined password` | undefinedパスワードを拒否 | エラー: "Password cannot be empty!" |
+| `should reject the password when it is an empty string` | 空文字列のパスワード | エラー: "Password cannot be empty!" |
+| `should reject the password when it has only spaces` | スペースのみのパスワード | エラー: "Password cannot be empty!" |
+| `should reject the password when it has only tabs` | タブのみのパスワード | エラー: "Password cannot be empty!" |
+| `should reject the password when it has only mixed whitespace` | スペース・タブ・改行が混ざった空白のみのパスワード | エラー: "Password cannot be empty!" |
+| `should reject the password when it is null` | null のパスワード | エラー: "Password cannot be empty!" |
+| `should reject the password when it is undefined` | undefined のパスワード | エラー: "Password cannot be empty!" |
 
 **testPasswordLengthValidation (6件)**
 
 | テスト名 | 説明 | 期待結果 |
 |---------|------|---------|
-| `should reject password shorter than 16 characters` | 16文字未満のパスワードを拒否 | エラー: "Password must be at least 16 characters long!" |
-| `should reject password with exactly 1 character` | ちょうど1文字のパスワードを拒否 | エラー: "Password must be at least 16 characters long!" |
-| `should reject password with exactly 15 characters` | ちょうど15文字のパスワードを拒否 | エラー: "Password must be at least 16 characters long!" |
-| `should accept password with exactly 16 characters` | ちょうど16文字のパスワードを受け入れ | valid: true |
-| `should accept password longer than 16 characters` | 16文字以上のパスワードを受け入れ | valid: true |
-| `should accept very long password` | 非常に長いパスワード（1000文字）を受け入れ | valid: true |
+| `should reject the password when it is shorter than 16 characters` | 16 文字未満 (5 文字) のパスワード | エラー: "Password must be at least 16 characters long!" |
+| `should reject the password when it has a single character` | 1 文字のパスワード | エラー: "Password must be at least 16 characters long!" |
+| `should reject the password when it has exactly 15 characters` | ちょうど 15 文字のパスワード | エラー: "Password must be at least 16 characters long!" |
+| `should accept the password when it has exactly 16 characters` | ちょうど 16 文字のパスワード | valid: true |
+| `should accept the password when it has more than 16 characters` | 16 文字を超えるパスワード | valid: true |
+| `should accept the password when it is very long (100 characters)` | 100 文字のパスワード | valid: true |
 
 **testPasswordMatchValidation (6件)**
 
 | テスト名 | 説明 | 期待結果 |
 |---------|------|---------|
-| `should reject non-matching passwords` | 不一致のパスワードを拒否 | エラー: "Passwords do not match!" |
-| `should reject when password is valid but confirmation is empty` | パスワードが有効で確認が空の場合を拒否 | エラー: "Password cannot be empty!" or "Passwords do not match!" |
-| `should reject when password is valid but confirmation is null` | パスワードが有効で確認がnullの場合を拒否 | エラー: "Passwords do not match!" |
-| `should reject case-sensitive mismatch` | 大文字小文字の不一致を拒否 | エラー: "Passwords do not match!" |
-| `should accept matching passwords` | 一致するパスワードを受け入れ | valid: true |
-| `should accept matching passwords with special chars` | 特殊文字を含む一致するパスワードを受け入れ | valid: true |
+| `should reject the passwords when they do not match` | パスワードと確認が一致しない | エラー: "Passwords do not match!" |
+| `should reject when password is correct but confirmation is empty` | パスワードは正しいが確認が空 | エラー: "Passwords do not match!" |
+| `should reject when password is correct but confirmation is null` | パスワードは正しいが確認が null | エラー: "Passwords do not match!" |
+| `should reject the passwords when they differ only in letter case` | 大文字・小文字だけが違う | エラー: "Passwords do not match!" |
+| `should reject when passwords differ by one character` | 1 文字だけ違う | エラー: "Passwords do not match!" |
+| `should accept when both passwords match exactly` | 完全に一致する | valid: true |
 
 **testValidPasswordScenarios (8件)**
 
 | テスト名 | 説明 | 期待結果 |
 |---------|------|---------|
-| `should accept password with spaces (if matching and >= 16 chars)` | スペースを含む有効なパスワードを受け入れ | valid: true |
-| `should accept password with special characters` | 特殊文字を含むパスワードを受け入れ | valid: true |
-| `should accept password with leading/trailing spaces (if matching and >= 16 chars)` | 前後にスペースがあるパスワードを受け入れ | valid: true |
-| `should accept very long password` | 非常に長いパスワードを受け入れ | valid: true |
-| `should accept password with unicode characters` | Unicode文字を含むパスワードを受け入れ | valid: true |
-| `should accept password with emoji` | 絵文字を含むパスワードを受け入れ | valid: true |
-| `should accept alphanumeric only password` | 英数字のみのパスワードを受け入れ | valid: true |
-| `should accept numeric only password (if >= 16 chars)` | 数字のみのパスワード（16文字以上）を受け入れ | valid: true |
+| `should accept the passwords when they match and have 16 characters` | 一致する 16 文字のパスワード | valid: true |
+| `should accept password with spaces when matching and long enough` | スペースを含み、一致し 16 文字以上 | valid: true |
+| `should accept the password when it has special characters` | 記号を含むパスワード | valid: true |
+| `should accept the password when it has unicode characters` | Unicode 文字を含むパスワード | valid: true |
+| `should accept the password when it mixes letters, digits and symbols` | 英字・数字・記号が混ざったパスワード | valid: true |
+| `should accept the password when it has only digits` | 数字のみ (16 文字) | valid: true |
+| `should accept the password when it has only letters` | 英字のみ (16 文字) | valid: true |
+| `should accept the password when it has only special characters` | 記号のみ (16 文字) | valid: true |
 
 **使用箇所**: admin-setup.test.js, user-addition.test.js, admin-edit.test.js, general-user-edit.test.js
 
@@ -200,31 +200,31 @@
 
 | テスト名 | 説明 | 期待結果 |
 |---------|------|---------|
-| `should reject empty username` | 空ユーザー名を拒否 | エラー: "Username cannot be empty!" |
-| `should reject username with only spaces` | スペースのみのユーザー名を拒否 | エラー: "Username cannot be empty!" |
-| `should reject username with only tabs` | タブのみのユーザー名を拒否 | エラー: "Username cannot be empty!" |
-| `should reject username with mixed whitespace` | 混合空白文字のみのユーザー名を拒否 | エラー: "Username cannot be empty!" |
-| `should reject null username` | nullユーザー名を拒否 | エラー: "Username cannot be empty!" |
-| `should reject undefined username` | undefinedユーザー名を拒否 | エラー: "Username cannot be empty!" |
-| `should accept valid username` | 有効なユーザー名を受け入れ | valid: true |
-| `should accept username with numbers` | 数字を含むユーザー名を受け入れ | valid: true |
-| `should accept username with underscores` | アンダースコアを含むユーザー名を受け入れ | valid: true |
-| `should accept username with special characters` | 特殊文字を含むユーザー名を受け入れ | valid: true |
-| `should accept unicode username` | Unicode文字を含むユーザー名を受け入れ | valid: true |
-| `should accept single character username` | 1文字のユーザー名を受け入れ | valid: true |
-| `should accept very long username` | 非常に長いユーザー名を受け入れ | valid: true |
+| `should reject the username when it is empty` | 空のユーザー名 | エラー: "Username cannot be empty!" |
+| `should reject the username when it has only spaces` | スペースのみのユーザー名 | エラー: "Username cannot be empty!" |
+| `should reject the username when it has only tabs` | タブのみのユーザー名 | エラー: "Username cannot be empty!" |
+| `should reject the username when it has only mixed whitespace` | スペース・タブ・改行が混ざった空白のみのユーザー名 | エラー: "Username cannot be empty!" |
+| `should reject the username when it is null` | null のユーザー名 | エラー: "Username cannot be empty!" |
+| `should reject the username when it is undefined` | undefined のユーザー名 | エラー: "Username cannot be empty!" |
+| `should accept the username when it has a single character` | 1 文字のユーザー名 | valid: true |
+| `should accept the username when it has several characters` | 複数文字のユーザー名 | valid: true |
+| `should accept the username when it has digits` | 数字を含むユーザー名 | valid: true |
+| `should accept the username when it has underscores and hyphens` | アンダースコアとハイフンを含むユーザー名 | valid: true |
+| `should accept the username when it is in email format` | メールアドレス形式のユーザー名 | valid: true |
+| `should accept the username when it has leading spaces (trimmed)` | 先頭にスペースがあるユーザー名 (trim される) | valid: true |
+| `should accept the username when it has trailing spaces (trimmed)` | 末尾にスペースがあるユーザー名 (trim される) | valid: true |
 
 **testCombinedValidation (7件)**
 
 | テスト名 | 説明 | 期待結果 |
 |---------|------|---------|
-| `should reject when both username and password are empty` | ユーザー名とパスワードが両方空の場合を拒否 | エラー: "Username cannot be empty!" |
-| `should prioritize username validation over password` | ユーザー名のバリデーションをパスワードより優先 | エラー: "Username cannot be empty!" |
-| `should validate password when username is valid` | ユーザー名が有効な場合はパスワードをバリデーション | エラー: "Password cannot be empty!" |
-| `should validate password match when username and password are valid` | ユーザー名とパスワードが有効な場合は一致を確認 | エラー: "Passwords do not match!" |
-| `should accept completely valid input` | 完全に有効な入力を受け入れ | valid: true |
-| `should accept complex username with valid password` | 複雑なユーザー名と有効なパスワードを受け入れ | valid: true |
-| `should accept valid username with complex password` | 有効なユーザー名と複雑なパスワードを受け入れ | valid: true |
+| `should reject when both username and password are empty` | ユーザー名・パスワードとも空 | エラー: "Username cannot be empty!" |
+| `should report the username error first when both the username and the password are invalid` | ユーザー名が空でパスワードも短い (ユーザー名のエラーが先) | エラー: "Username cannot be empty!" |
+| `should report the empty-password error when the password is empty` | ユーザー名は有効でパスワードが空 (長さより空のエラーが先) | エラー: "Password cannot be empty!" |
+| `should report the length error first when the password is short and does not match` | パスワードが短く確認とも一致しない (一致より長さのエラーが先) | エラー: "Password must be at least 16 characters long!" |
+| `should accept the user addition when every field is valid` | すべての項目が有効 | valid: true |
+| `should accept the user addition when the username is in email format` | メールアドレス形式のユーザー名 | valid: true |
+| `should accept the user addition when the password mixes letters, digits and symbols` | 英字・数字・記号が混ざったパスワード | valid: true |
 
 **使用箇所**: user-addition.test.js, admin-edit.test.js, general-user-edit.test.js
 
@@ -248,44 +248,44 @@
 
 | テスト名 | 説明 | 期待結果 |
 |---------|------|---------|
-| `should allow username change without password` | パスワードなしでユーザー名変更を許可 | valid: true |
-| `should reject empty username even when password is empty` | パスワードが空でも空ユーザー名を拒否 | エラー: "Username cannot be empty!" |
-| `should reject whitespace-only username` | 空白のみのユーザー名を拒否 | エラー: "Username cannot be empty!" |
-| `should accept valid username with empty password in edit mode` | 編集モードで有効なユーザー名と空パスワードを受け入れ | valid: true |
-| `should accept unicode username without password change` | パスワード変更なしでUnicodeユーザー名を受け入れ | valid: true |
-| `should accept special chars username without password change` | パスワード変更なしで特殊文字ユーザー名を受け入れ | valid: true |
+| `should allow a username change when no password is entered` | パスワード未入力でユーザー名だけ変更 | valid: true |
+| `should reject the username when it is empty and no password is entered` | パスワード未入力で、ユーザー名が空 | エラー: "Username cannot be empty!" |
+| `should reject the username when it has only whitespace` | 空白のみのユーザー名 | エラー: "Username cannot be empty!" |
+| `should allow the username when it has special characters` | 記号を含むユーザー名 | valid: true |
+| `should allow the username when it has unicode characters` | Unicode 文字のユーザー名 | valid: true |
+| `should allow the username when it is very long (128 characters)` | 128 文字のユーザー名 | valid: true |
 
 **testPasswordOnlyEdit (8件)**
 
 | テスト名 | 説明 | 期待結果 |
 |---------|------|---------|
-| `should allow password change without username change` | ユーザー名変更なしでパスワード変更を許可 | valid: true |
-| `should reject password change if new password is empty` | 新パスワードが空の場合を拒否 | エラー: "Password cannot be empty!" |
-| `should reject password change if new password is too short` | 新パスワードが短すぎる場合を拒否 | エラー: "Password must be at least 16 characters long!" |
-| `should reject password change if passwords don't match` | パスワードが一致しない場合を拒否 | エラー: "Passwords do not match!" |
-| `should accept valid password change with same username` | 同じユーザー名で有効なパスワード変更を受け入れ | valid: true |
-| `should accept password with special characters` | 特殊文字を含むパスワードを受け入れ | valid: true |
-| `should accept password with unicode characters` | Unicode文字を含むパスワードを受け入れ | valid: true |
-| `should accept very long new password` | 非常に長い新パスワードを受け入れ | valid: true |
+| `should allow a password change when the username is unchanged` | ユーザー名は変えずにパスワードを変更 | valid: true |
+| `should reject the password when it is shorter than 16 characters` | 16 文字未満のパスワード | エラー: "Password must be at least 16 characters long!" |
+| `should reject the password when the confirmation does not match` | 確認が一致しない | エラー: "Passwords do not match!" |
+| `should reject the password when the confirmation is empty` | 確認が空 | エラー: "Passwords do not match!" |
+| `should reject the password when it is empty but the confirmation is filled` | パスワードが空で確認だけ入力 | エラー: "Password cannot be empty!" |
+| `should allow the password when it has spaces` | スペースを含むパスワード | valid: true |
+| `should allow the password when it has special characters` | 記号を含むパスワード | valid: true |
+| `should allow the password when it has unicode characters` | Unicode 文字を含むパスワード | valid: true |
 
 **testCombinedEdit (4件)**
 
 | テスト名 | 説明 | 期待結果 |
 |---------|------|---------|
-| `should allow both username and password change` | ユーザー名とパスワード両方の変更を許可 | valid: true |
-| `should reject if username valid but password invalid` | ユーザー名が有効でパスワードが無効な場合を拒否 | エラー: "Password must be at least 16 characters long!" |
-| `should reject if username empty but password valid` | ユーザー名が空でパスワードが有効な場合を拒否 | エラー: "Username cannot be empty!" |
-| `should accept unicode username with new password` | Unicodeユーザー名と新パスワードを受け入れ | valid: true |
+| `should allow the change when both the username and the password change` | ユーザー名とパスワードを両方変更 | valid: true |
+| `should reject the username when it is empty even though the password is valid` | パスワードは有効だがユーザー名が空 | エラー: "Username cannot be empty!" |
+| `should reject the change when the username is valid but the password is short` | ユーザー名は有効だがパスワードが短い | エラー: "Password must be at least 16 characters long!" |
+| `should reject the change when the username is valid but the passwords do not match` | ユーザー名は有効だがパスワードが一致しない | エラー: "Passwords do not match!" |
 
 **testEditModeVsAddMode (5件)**
 
 | テスト名 | 説明 | 期待結果 |
 |---------|------|---------|
-| `edit mode should allow empty password (no change)` | 編集モードで空パスワード（変更なし）を許可 | valid: true |
-| `add mode should reject empty password` | 追加モードで空パスワードを拒否 | エラー: "Password cannot be empty!" |
-| `edit mode should validate password if provided` | 編集モードでパスワード提供時はバリデーション | エラー: "Password must be at least 16 characters long!" |
-| `add mode should require password` | 追加モードでパスワードを必須に | エラー: "Password cannot be empty!" |
-| `both modes should accept valid complete input` | 両モードで完全に有効な入力を受け入れ | valid: true |
+| `should allow an empty password when in edit mode` | 編集モードで空パスワード (変更なし) | valid: true |
+| `should reject an empty password when in add mode` | 追加モードで空パスワード | エラー: "Password cannot be empty!" |
+| `should reject a short password when one is entered in edit mode` | 編集モードで短いパスワードを入力 | エラー: "Password must be at least 16 characters long!" |
+| `should accept a valid password when in add mode` | 追加モードで有効なパスワード | valid: true |
+| `should require the confirmation when a password is entered in edit mode` | 編集モードでパスワードを入力し確認が空 | エラー: "Passwords do not match!" |
 
 **使用箇所**: admin-edit.test.js, general-user-edit.test.js
 
