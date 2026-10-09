@@ -3,7 +3,7 @@
 This document provides a complete index of all frontend tests implemented in JavaScript.
 
 **Last Updated**: 2026-10-09 JST  
-**Total Tests**: 958 (jest suites; 93 test files, per `npm test`)
+**Total Tests**: 922 (jest suites; 93 test files, per `npm test`)
 
 ---
 
@@ -22,15 +22,14 @@ and are **not** added again to the grand total.
 - **user-edit-validation-tests.js** - User edit validation tests (23)
 - **validation-helpers.js** - Common validation functions
 
-### Screen-Specific Tests (305 tests)
+### Screen-Specific Tests (260 tests)
 - **admin-setup.test.js** - Admin setup tests (32)
 - **user-addition.test.js** - User addition tests (46)
 - **admin-edit.test.js** - Admin edit tests (62)
 - **general-user-edit.test.js** - General user edit tests (62)
 - **login.test.js** - Login tests (58)
-- **user-deletion.test.js** - User deletion tests (45)
 
-### Feature-Specific Tests (538 tests)
+### Feature-Specific Tests (547 tests)
 
 - **transaction-edit.test.js** - Transaction edit tests (111)
 - **transaction-detail-management.test.js** - Transaction detail management tests (51)
@@ -60,6 +59,7 @@ and are **not** added again to the grand total.
 - **pages/transaction-management-page.test.js** - Boots the real transaction page against `transaction-management.html`: saving a header without details shows no ¥0 recalc prompt and completes the save flow (latent-audit H4); a blank transaction date is rejected with `validation.required` before sending (latent-audit L8); deleting the only row on the last page moves back to the last page, and a late older page response does not overwrite a newer one (latent-audit L5) (4)
 - **pages/user-management-page.test.js** - Boots the real user management page (admin session): a whitespace-only username is rejected with the required-field message before `create_general_user`, while a normal name still reaches it (latent-audit M13); an admin sees the Add User button and its footer (latent-audit L30); created and updated times are shown in local time, not as stored UTC (4)
 - **pages/user-management-delete-last-user.test.js** - Boots the real user management page (admin session): when the backend refuses to delete the last general user (`last_general_user`), the screen shows `user_mgmt.last_general_user` instead of the generic failure with the English backend text (latent-audit scan2-C5) (1)
+- **pages/user-management-delete-page.test.js** - Boots the real user management page (admin session): only general user rows have a delete button; the delete button opens the delete window with the user name as it is; Cancel and × close it without deleting; after a cancel, the user picked last is deleted; a successful delete shows `user_mgmt.user_deleted`, reloads the list and closes the window; a `not_found` error shows `error.delete_user_failed` with the backend message and keeps the window open; `admin_protected` shows `user_mgmt.admin_protected`; a name with HTML markup is shown as plain text (9)
 - **pages/index-logout-hides-user-setup.test.js** - Boots the real index page (menu.js): logging out while the user-setup form is shown, before the 1 s switch after login has run, or before the login's setup check has answered, leaves only the login form on screen (`#user-setup`, `#admin-setup` and `#app-content` hidden) (latent-audit scan2-C6) (3)
 - **pages/recurring-rule-page.test.js** - Boots the real recurring rule page: a TRANSFER template from an account to itself is rejected with `transaction_mgmt.transfer_same_account` before `create_recurring_rule`, while two different accounts still go through, and a backend `transfer_same_account` rejection shows the same message (latent-audit M16) ; a backend `recurring_holiday_shift_too_long` rejection shows `recurring_rule.holiday_shift_too_long` (4)
 - **pages/recurring-rule-double-submit.test.js** - Boots the real recurring rule page: a double submit while `create_recurring_rule` is in flight invokes it only once (latent-audit M19) (1)
@@ -140,14 +140,13 @@ and are **not** added again to the grand total.
 | password-validation-tests.js | 26 |
 | username-validation-tests.js | 20 |
 | user-edit-validation-tests.js | 23 |
-| **Screen-Specific Tests** | **305** |
+| **Screen-Specific Tests** | **260** |
 | admin-setup.test.js | 32 |
 | user-addition.test.js | 46 |
 | admin-edit.test.js | 62 |
 | general-user-edit.test.js | 62 |
 | login.test.js | 58 |
-| user-deletion.test.js | 45 |
-| **Feature-Specific Tests** | **538** |
+| **Feature-Specific Tests** | **547** |
 | transaction-edit.test.js | 111 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 30 |
@@ -176,6 +175,7 @@ and are **not** added again to the grand total.
 | pages/transaction-management-page.test.js | 4 |
 | pages/user-management-page.test.js | 4 |
 | pages/user-management-delete-last-user.test.js | 1 |
+| pages/user-management-delete-page.test.js | 9 |
 | pages/index-logout-hides-user-setup.test.js | 3 |
 | pages/recurring-rule-page.test.js | 4 |
 | pages/recurring-rule-double-submit.test.js | 1 |
@@ -236,7 +236,7 @@ and are **not** added again to the grand total.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **Total (jest)** | **958** |
+| **Total (jest)** | **922** |
 
 Grand total is Screen + Feature + Aggregation (Common Test Suites are helper
 libraries invoked from Screen-Specific files and their assertions are already
@@ -258,7 +258,7 @@ npm test
 ```bash
 npm test admin-setup.test.js
 npm test login.test.js
-npm test user-deletion.test.js
+npm test pages/user-management-delete-page.test.js
 ```
 
 ### Run specific test case

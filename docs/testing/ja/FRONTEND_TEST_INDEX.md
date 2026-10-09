@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-10-09 JST  
-**総テスト数**: 958件 (jest suite 93 ファイル、`npm test` 実測)
+**総テスト数**: 922件 (jest suite 93 ファイル、`npm test` 実測)
 
 ---
 
@@ -20,7 +20,6 @@
   - [admin-edit.test.js](#admin-edittestjs)
   - [general-user-edit.test.js](#general-user-edittestjs)
   - [login.test.js](#logintestjs)
-  - [user-deletion.test.js](#user-deletiontestjs)
 - [機能別テスト](#機能別テスト)
   - [transaction-edit.test.js](#transaction-edittestjs)
   - [transaction-detail-management.test.js](#transaction-detail-managementtestjs)
@@ -50,6 +49,7 @@
   - [pages/transaction-management-page.test.js](#pagestransaction-management-pagetestjs)
   - [pages/user-management-page.test.js](#pagesuser-management-pagetestjs)
   - [pages/user-management-delete-last-user.test.js](#pagesuser-management-delete-last-usertestjs)
+  - [pages/user-management-delete-page.test.js](#pagesuser-management-delete-pagetestjs)
   - [pages/index-logout-hides-user-setup.test.js](#pagesindex-logout-hides-user-setuptestjs)
   - [pages/recurring-rule-page.test.js](#pagesrecurring-rule-pagetestjs)
   - [pages/recurring-rule-double-submit.test.js](#pagesrecurring-rule-double-submittestjs)
@@ -411,34 +411,6 @@
 | `should reject the login when the password has only whitespace` | パスワードが空白のみ |
 
 **ファイル**: res/tests/login.test.js
-
----
-
-### user-deletion.test.js
-
-ユーザー削除機能のテスト。
-
-**テスト数**: 45件
-
-| テストカテゴリ (describe) | 説明 | テスト数 |
-|--------------|------|---------|
-| Username Formatting | 削除確認に出すユーザー名の二重引用符付け | 10件 |
-| User Data Validation | 削除対象のユーザーデータの確認 | 9件 |
-| Modal State | 削除確認ウィンドウの開閉と選択中のユーザー | 5件 |
-| Edge Cases | 引用符・バックスラッシュ・改行・タブ・漢字・絵文字を含むユーザー名 | 6件 |
-| Deletion Order Tests | 3 人のうち最後・中間・最初を削除、続けて削除、存在しないユーザーの削除 | 15件 |
-
-#### 詳細テストケース例
-
-**Deletion Order Tests — Three users - Delete last user (3件)**
-
-| テスト名 | 説明 |
-|---------|------|
-| `should delete the user when the last of three users is deleted` | 削除に成功し、2 人になる |
-| `should keep the remaining users in order when the last of three users is deleted` | 残りの 2 人の順序が保たれる |
-| `should leave the other users when the last of three users is deleted` | ほかの 2 人は残り、削除した人だけが消える |
-
-**ファイル**: res/tests/user-deletion.test.js
 
 ---
 
@@ -927,6 +899,28 @@
 | `should show the dedicated message when the backend refuses to delete the last general user (scan2-C5)` | バックエンドが `last_general_user` で削除を断ると、英語のエラー文付きの汎用メッセージではなく `user_mgmt.last_general_user` を表示 |
 
 **ファイル**: res/tests/pages/user-management-delete-last-user.test.js
+
+---
+
+### pages/user-management-delete-page.test.js
+
+実際のユーザー管理画面 (管理者セッション) で、ユーザーの削除の流れを確かめる。旧 `user-deletion.test.js` (テスト内に写したロジックを試していた 45 件) の置き換え。
+
+**テスト数**: 9件
+
+| テスト | 説明 |
+|--------|------|
+| `should show a delete button only on general user rows when the admin views the list` | 削除ボタンは一般ユーザーの行だけにあり、管理者の行にはない |
+| `should open the delete window with the user name as it is when a delete button is clicked` | 削除ボタンで削除ウィンドウが開き、ユーザー名がそのまま (引用符などを付けずに) 表示される。この時点では削除しない |
+| `should close the delete window without deleting when #cancel-delete is clicked` | キャンセルでウィンドウが閉じ、削除しない |
+| `should close the delete window without deleting when #close-delete-modal is clicked` | × でウィンドウが閉じ、削除しない |
+| `should delete the user picked last when the window was cancelled and opened for another user` | 一度キャンセルして別のユーザーで開き直すと、あとで選んだユーザーが削除される |
+| `should show the success message, reload the list and close the window when the delete succeeds` | 削除に成功すると `user_mgmt.user_deleted` を表示し、一覧を読み直し (削除したユーザーが消える)、ウィンドウを閉じる |
+| `should show the generic failure with the backend message and keep the window open when the user is not found` | `not_found` では `error.delete_user_failed: <バックエンドの文>` を表示し、ウィンドウは開いたまま |
+| `should show the admin-protected message when the backend refuses to delete an admin` | `admin_protected` では `user_mgmt.admin_protected` を表示 |
+| `should show a name with HTML markup as plain text when the name contains markup` | HTML を含む名前は、一覧でも削除ウィンドウでも文字のまま表示される |
+
+**ファイル**: res/tests/pages/user-management-delete-page.test.js
 
 ---
 
@@ -1900,14 +1894,13 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | password-validation-tests.js | 26 |
 | username-validation-tests.js | 20 (13 + 7) |
 | user-edit-validation-tests.js | 23 |
-| **画面別テスト** | **305件** |
+| **画面別テスト** | **260件** |
 | admin-setup.test.js | 32 |
 | user-addition.test.js | 46 |
 | admin-edit.test.js | 62 |
 | general-user-edit.test.js | 62 |
 | login.test.js | 58 |
-| user-deletion.test.js | 45 |
-| **機能別テスト** | **538件** |
+| **機能別テスト** | **547件** |
 | transaction-edit.test.js | 111 |
 | transaction-detail-management.test.js | 51 |
 | transaction-detail-tax-calculation.test.js | 30 |
@@ -1936,6 +1929,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | pages/transaction-management-page.test.js | 4 |
 | pages/user-management-page.test.js | 4 |
 | pages/user-management-delete-last-user.test.js | 1 |
+| pages/user-management-delete-page.test.js | 9 |
 | pages/index-logout-hides-user-setup.test.js | 3 |
 | pages/recurring-rule-page.test.js | 4 |
 | pages/recurring-rule-double-submit.test.js | 1 |
@@ -1996,7 +1990,7 @@ Tauri 不要な login ロジック単体テスト。`node login-test-standalone.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **958件** |
+| **総計 (jest)** | **922件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 
@@ -2016,7 +2010,7 @@ npm test
 ```bash
 npm test admin-setup.test.js
 npm test login.test.js
-npm test user-deletion.test.js
+npm test pages/user-management-delete-page.test.js
 ```
 
 ### 特定のテストケースのみ実行
