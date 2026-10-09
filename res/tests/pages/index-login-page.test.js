@@ -70,6 +70,13 @@ async function submitLogin() {
     return ev;
 }
 
+// Log out the way the user does: click Logout in the File menu.
+async function clickLogout() {
+    document.querySelector('#file-dropdown [data-i18n="menu.logout"]')
+        .dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    await flush();
+}
+
 const waitForLoginTimer = async () => {
     await new Promise((r) => setTimeout(r, 1100));
     await flush();
@@ -174,8 +181,7 @@ describe('login screen — logging in and out', () => {
         await submitLogin();
         expect(loginMessage().textContent).not.toBe('');
 
-        await handleLogout();
-        await flush();
+        await clickLogout();
 
         expect(session.clearSession).toHaveBeenCalledTimes(1);
         expect(document.getElementById('username').value).toBe('');
@@ -191,8 +197,7 @@ describe('login screen — logging in and out', () => {
         expect(visible('app-content')).toBe(true);
 
         session.clearSession.mockRejectedValueOnce('session busy');
-        await handleLogout();
-        await flush();
+        await clickLogout();
 
         expect(showToast).toHaveBeenCalledWith('error.logout_failed: session busy', { variant: 'error' });
         expect(visible('app-content')).toBe(true);
