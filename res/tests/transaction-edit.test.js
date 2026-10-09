@@ -45,14 +45,14 @@ describe('Transaction Edit - Modal State Management', () => {
         }
     }
 
-    test('should initialize with closed state', () => {
+    test('should be closed with no mode or ID when the edit window is created', () => {
         const state = new TransactionModalState();
         expect(state.isOpen).toBe(false);
         expect(state.mode).toBeNull();
         expect(state.transactionId).toBeNull();
     });
 
-    test('should open in edit mode with transaction ID', () => {
+    test('should open in edit mode with the ID when a transaction ID is given', () => {
         const state = new TransactionModalState();
         state.open('edit', { transactionId: 123 });
 
@@ -62,7 +62,7 @@ describe('Transaction Edit - Modal State Management', () => {
         expect(state.isEditMode()).toBe(true);
     });
 
-    test('should open in add mode without transaction ID', () => {
+    test('should open in add mode when no transaction ID is given', () => {
         const state = new TransactionModalState();
         state.open('add', {});
 
@@ -72,7 +72,7 @@ describe('Transaction Edit - Modal State Management', () => {
         expect(state.isAddMode()).toBe(true);
     });
 
-    test('should close and clear all data', () => {
+    test('should clear all data when the edit window closes', () => {
         const state = new TransactionModalState();
         state.open('edit', { transactionId: 123 });
         state.close();
@@ -83,7 +83,7 @@ describe('Transaction Edit - Modal State Management', () => {
         expect(state.transactionData).toBeNull();
     });
 
-    test('should handle multiple open/close cycles', () => {
+    test('should hold the right ID when the edit window opens and closes several times', () => {
         const state = new TransactionModalState();
 
         state.open('edit', { transactionId: 1 });
@@ -124,7 +124,7 @@ describe('Transaction Edit - Data Loading', () => {
         return { valid: true };
     }
 
-    test('should validate correct transaction object', () => {
+    test('should accept the transaction when the object is complete', () => {
         const transaction = {
             transaction_id: 1,
             transaction_date: '2024-01-15 10:00:00',
@@ -139,19 +139,19 @@ describe('Transaction Edit - Data Loading', () => {
         expect(result.valid).toBe(true);
     });
 
-    test('should reject null transaction', () => {
+    test('should reject the transaction when it is null', () => {
         const result = validateTransactionData(null);
         expect(result.valid).toBe(false);
         expect(result.error).toBe('Transaction object is required');
     });
 
-    test('should reject undefined transaction', () => {
+    test('should reject the transaction when it is undefined', () => {
         const result = validateTransactionData(undefined);
         expect(result.valid).toBe(false);
         expect(result.error).toBe('Transaction object is required');
     });
 
-    test('should reject transaction without ID', () => {
+    test('should reject the transaction when the ID is missing', () => {
         const transaction = {
             transaction_date: '2024-01-15 10:00:00',
             category1_code: 'EXP',
@@ -162,7 +162,7 @@ describe('Transaction Edit - Data Loading', () => {
         expect(result.error).toBe('Transaction ID is required');
     });
 
-    test('should reject transaction with non-numeric ID', () => {
+    test('should reject the transaction when the ID is not a number', () => {
         const transaction = {
             transaction_id: '1',
             transaction_date: '2024-01-15 10:00:00',
@@ -174,7 +174,7 @@ describe('Transaction Edit - Data Loading', () => {
         expect(result.error).toBe('Transaction ID must be a number');
     });
 
-    test('should reject transaction without date', () => {
+    test('should reject the transaction when the date is missing', () => {
         const transaction = {
             transaction_id: 1,
             category1_code: 'EXP',
@@ -185,7 +185,7 @@ describe('Transaction Edit - Data Loading', () => {
         expect(result.error).toBe('Transaction date is required');
     });
 
-    test('should reject transaction without category', () => {
+    test('should reject the transaction when the category is missing', () => {
         const transaction = {
             transaction_id: 1,
             transaction_date: '2024-01-15 10:00:00',
@@ -196,7 +196,7 @@ describe('Transaction Edit - Data Loading', () => {
         expect(result.error).toBe('Category1 code is required');
     });
 
-    test('should reject transaction without amount', () => {
+    test('should reject the transaction when the amount is missing', () => {
         const transaction = {
             transaction_id: 1,
             transaction_date: '2024-01-15 10:00:00',
@@ -207,7 +207,7 @@ describe('Transaction Edit - Data Loading', () => {
         expect(result.error).toBe('Total amount is required');
     });
 
-    test('should reject transaction with non-numeric amount', () => {
+    test('should reject the transaction when the amount is not a number', () => {
         const transaction = {
             transaction_id: 1,
             transaction_date: '2024-01-15 10:00:00',
@@ -219,7 +219,7 @@ describe('Transaction Edit - Data Loading', () => {
         expect(result.error).toBe('Total amount must be a number');
     });
 
-    test('should accept transaction with zero amount', () => {
+    test('should accept the transaction when the amount is zero', () => {
         const transaction = {
             transaction_id: 1,
             transaction_date: '2024-01-15 10:00:00',
@@ -230,7 +230,7 @@ describe('Transaction Edit - Data Loading', () => {
         expect(result.valid).toBe(true);
     });
 
-    test('should accept transaction with negative amount', () => {
+    test('should accept the transaction when the amount is negative', () => {
         const transaction = {
             transaction_id: 1,
             transaction_date: '2024-01-15 10:00:00',
@@ -241,7 +241,7 @@ describe('Transaction Edit - Data Loading', () => {
         expect(result.valid).toBe(true);
     });
 
-    test('should accept transaction with null memo', () => {
+    test('should accept the transaction when the memo is null', () => {
         const transaction = {
             transaction_id: 1,
             transaction_date: '2024-01-15 10:00:00',
@@ -253,7 +253,7 @@ describe('Transaction Edit - Data Loading', () => {
         expect(result.valid).toBe(true);
     });
 
-    test('should accept transaction with empty memo', () => {
+    test('should accept the transaction when the memo is empty', () => {
         const transaction = {
             transaction_id: 1,
             transaction_date: '2024-01-15 10:00:00',
@@ -289,77 +289,77 @@ describe('Transaction Edit - Date/Time Format Conversion', () => {
     }
 
     describe('SQLite to datetime-local', () => {
-        test('should convert valid SQLite datetime', () => {
+        test('should convert to datetime-local when the SQLite datetime is valid', () => {
             expect(convertToDateTimeLocal('2024-01-15 10:30:00'))
                 .toBe('2024-01-15T10:30');
         });
 
-        test('should handle datetime with seconds', () => {
+        test('should drop the seconds when the SQLite datetime has seconds', () => {
             expect(convertToDateTimeLocal('2024-12-31 23:59:59'))
                 .toBe('2024-12-31T23:59');
         });
 
-        test('should handle midnight', () => {
+        test('should convert to datetime-local when the SQLite time is midnight', () => {
             expect(convertToDateTimeLocal('2024-01-01 00:00:00'))
                 .toBe('2024-01-01T00:00');
         });
 
-        test('should handle datetime without time part', () => {
+        test('should add 00:00 when the SQLite value has no time part', () => {
             expect(convertToDateTimeLocal('2024-01-15'))
                 .toBe('2024-01-15T00:00');
         });
 
-        test('should handle empty string', () => {
+        test('should return an empty string when the SQLite value is an empty string', () => {
             expect(convertToDateTimeLocal('')).toBe('');
         });
 
-        test('should handle null', () => {
+        test('should return an empty string when the SQLite value is null', () => {
             expect(convertToDateTimeLocal(null)).toBe('');
         });
 
-        test('should handle undefined', () => {
+        test('should return an empty string when the SQLite value is undefined', () => {
             expect(convertToDateTimeLocal(undefined)).toBe('');
         });
     });
 
     describe('datetime-local to SQLite', () => {
-        test('should convert valid datetime-local', () => {
+        test('should convert to SQLite datetime when the datetime-local value is valid', () => {
             expect(convertToSqliteDateTime('2024-01-15T10:30'))
                 .toBe('2024-01-15 10:30:00');
         });
 
-        test('should handle midnight', () => {
+        test('should convert to SQLite datetime when the datetime-local time is midnight', () => {
             expect(convertToSqliteDateTime('2024-01-01T00:00'))
                 .toBe('2024-01-01 00:00:00');
         });
 
-        test('should handle end of day', () => {
+        test('should convert to SQLite datetime when the datetime-local time is the end of the day', () => {
             expect(convertToSqliteDateTime('2024-12-31T23:59'))
                 .toBe('2024-12-31 23:59:00');
         });
 
-        test('should handle empty string', () => {
+        test('should return an empty string when the datetime-local value is an empty string', () => {
             expect(convertToSqliteDateTime('')).toBe('');
         });
 
-        test('should handle null', () => {
+        test('should return an empty string when the datetime-local value is null', () => {
             expect(convertToSqliteDateTime(null)).toBe('');
         });
 
-        test('should handle undefined', () => {
+        test('should return an empty string when the datetime-local value is undefined', () => {
             expect(convertToSqliteDateTime(undefined)).toBe('');
         });
     });
 
     describe('Round-trip conversion', () => {
-        test('should preserve datetime through round-trip conversion', () => {
+        test('should get the same datetime back when it is converted there and back', () => {
             const original = '2024-01-15 10:30:00';
             const local = convertToDateTimeLocal(original);
             const backToSqlite = convertToSqliteDateTime(local);
             expect(backToSqlite).toBe('2024-01-15 10:30:00');
         });
 
-        test('should handle round-trip with different times', () => {
+        test('should get each datetime back when several times are converted there and back', () => {
             const testCases = [
                 '2024-01-01 00:00:00',
                 '2024-06-15 12:30:00',
@@ -427,7 +427,7 @@ describe('Transaction Edit - Category Change and Account Reset', () => {
         }
     }
 
-    test('should hide both accounts when no category selected', () => {
+    test('should hide both accounts when no category is selected', () => {
         const manager = new AccountFieldManager();
         manager.handleCategoryChange(null);
 
@@ -437,7 +437,7 @@ describe('Transaction Edit - Category Change and Account Reset', () => {
         expect(manager.toAccountValue).toBe('NONE');
     });
 
-    test('should show FROM account for EXPENSE category', () => {
+    test('should show only the FROM account when the category is EXPENSE', () => {
         const manager = new AccountFieldManager();
         manager.handleCategoryChange('EXPENSE');
 
@@ -446,7 +446,7 @@ describe('Transaction Edit - Category Change and Account Reset', () => {
         expect(manager.toAccountValue).toBe('NONE');
     });
 
-    test('should show TO account for INCOME category', () => {
+    test('should show only the TO account when the category is INCOME', () => {
         const manager = new AccountFieldManager();
         manager.handleCategoryChange('INCOME');
 
@@ -455,7 +455,7 @@ describe('Transaction Edit - Category Change and Account Reset', () => {
         expect(manager.fromAccountValue).toBe('NONE');
     });
 
-    test('should show both accounts for TRANSFER category', () => {
+    test('should show both accounts when the category is TRANSFER', () => {
         const manager = new AccountFieldManager();
         manager.handleCategoryChange('TRANSFER');
 
@@ -463,7 +463,7 @@ describe('Transaction Edit - Category Change and Account Reset', () => {
         expect(manager.toAccountVisible).toBe(true);
     });
 
-    test('should reset TO account when switching from TRANSFER to EXPENSE', () => {
+    test('should reset the TO account when switching from TRANSFER to EXPENSE', () => {
         const manager = new AccountFieldManager();
         manager.handleCategoryChange('TRANSFER');
         manager.setToAccount('BANK');
@@ -474,7 +474,7 @@ describe('Transaction Edit - Category Change and Account Reset', () => {
         expect(manager.toAccountValue).toBe('NONE');
     });
 
-    test('should reset FROM account when switching from TRANSFER to INCOME', () => {
+    test('should reset the FROM account when switching from TRANSFER to INCOME', () => {
         const manager = new AccountFieldManager();
         manager.handleCategoryChange('TRANSFER');
         manager.setFromAccount('CASH');
@@ -496,7 +496,7 @@ describe('Transaction Edit - Category Change and Account Reset', () => {
         expect(manager.toAccountValue).toBe('NONE');
     });
 
-    test('should not allow setting invisible account', () => {
+    test('should keep the account NONE when it is set while hidden', () => {
         const manager = new AccountFieldManager();
         manager.handleCategoryChange('EXPENSE');
         manager.setToAccount('BANK');
@@ -521,61 +521,61 @@ describe('Transaction Edit - Memo Handling', () => {
     }
 
     describe('Normalize memo for save', () => {
-        test('should convert empty string to null', () => {
+        test('should save null when the memo is an empty string', () => {
             expect(normalizeMemo('')).toBeNull();
         });
 
-        test('should convert whitespace-only string to null', () => {
+        test('should save null when the memo has only whitespace', () => {
             expect(normalizeMemo('   ')).toBeNull();
         });
 
-        test('should convert null to null', () => {
+        test('should save null when the memo is null', () => {
             expect(normalizeMemo(null)).toBeNull();
         });
 
-        test('should convert undefined to null', () => {
+        test('should save null when the memo is undefined', () => {
             expect(normalizeMemo(undefined)).toBeNull();
         });
 
-        test('should trim and keep non-empty memo', () => {
+        test('should trim the memo when it has surrounding spaces', () => {
             expect(normalizeMemo('  Test memo  ')).toBe('Test memo');
         });
 
-        test('should keep memo with special characters', () => {
+        test('should keep the memo when it has special characters', () => {
             expect(normalizeMemo('Test@#$%')).toBe('Test@#$%');
         });
 
-        test('should keep Japanese memo', () => {
+        test('should keep the memo when it is in Japanese', () => {
             expect(normalizeMemo('テストメモ')).toBe('テストメモ');
         });
 
-        test('should keep memo with newlines', () => {
+        test('should keep the memo when it has newlines', () => {
             expect(normalizeMemo('Line1\nLine2')).toBe('Line1\nLine2');
         });
     });
 
     describe('Display memo in form', () => {
-        test('should display empty string for null memo', () => {
+        test('should show an empty string when the memo is null', () => {
             expect(displayMemo(null)).toBe('');
         });
 
-        test('should display empty string for undefined memo', () => {
+        test('should show an empty string when the memo is undefined', () => {
             expect(displayMemo(undefined)).toBe('');
         });
 
-        test('should display empty string for empty memo', () => {
+        test('should show an empty string when the memo is empty', () => {
             expect(displayMemo('')).toBe('');
         });
 
-        test('should display actual memo text', () => {
+        test('should show the memo text when the memo has text', () => {
             expect(displayMemo('Test memo')).toBe('Test memo');
         });
 
-        test('should display Japanese memo', () => {
+        test('should show the memo when it is in Japanese', () => {
             expect(displayMemo('テストメモ')).toBe('テストメモ');
         });
 
-        test('should display memo with special characters', () => {
+        test('should show the memo when it has special characters', () => {
             expect(displayMemo('Test@#$%')).toBe('Test@#$%');
         });
     });
@@ -628,7 +628,7 @@ describe('Transaction Edit - Form Validation', () => {
         };
     }
 
-    test('should validate correct form data', () => {
+    test('should accept the form when all fields are valid', () => {
         const formData = {
             transaction_date: '2024-01-15 10:00:00',
             category1_code: 'EXPENSE',
@@ -643,7 +643,7 @@ describe('Transaction Edit - Form Validation', () => {
         expect(result.errors.length).toBe(0);
     });
 
-    test('should reject form without date', () => {
+    test('should reject the form when the date is missing', () => {
         const formData = {
             category1_code: 'EXPENSE',
             from_account_code: 'CASH',
@@ -654,7 +654,7 @@ describe('Transaction Edit - Form Validation', () => {
         expect(result.errors).toContain('Transaction date is required');
     });
 
-    test('should reject form without category', () => {
+    test('should reject the form when the category is missing', () => {
         const formData = {
             transaction_date: '2024-01-15 10:00:00',
             total_amount: 1000
@@ -664,7 +664,7 @@ describe('Transaction Edit - Form Validation', () => {
         expect(result.errors).toContain('Category is required');
     });
 
-    test('should reject form without amount', () => {
+    test('should reject the form when the amount is missing', () => {
         const formData = {
             transaction_date: '2024-01-15 10:00:00',
             category1_code: 'EXPENSE',
@@ -675,7 +675,7 @@ describe('Transaction Edit - Form Validation', () => {
         expect(result.errors).toContain('Total amount is required');
     });
 
-    test('should reject expense without from account', () => {
+    test('should reject an expense when the FROM account is missing', () => {
         const formData = {
             transaction_date: '2024-01-15 10:00:00',
             category1_code: 'EXPENSE',
@@ -686,7 +686,7 @@ describe('Transaction Edit - Form Validation', () => {
         expect(result.errors).toContain('From account is required for expense');
     });
 
-    test('should reject income without to account', () => {
+    test('should reject an income when the TO account is missing', () => {
         const formData = {
             transaction_date: '2024-01-15 10:00:00',
             category1_code: 'INCOME',
@@ -697,7 +697,7 @@ describe('Transaction Edit - Form Validation', () => {
         expect(result.errors).toContain('To account is required for income');
     });
 
-    test('should reject transfer without from account', () => {
+    test('should reject a transfer when the FROM account is missing', () => {
         const formData = {
             transaction_date: '2024-01-15 10:00:00',
             category1_code: 'TRANSFER',
@@ -709,7 +709,7 @@ describe('Transaction Edit - Form Validation', () => {
         expect(result.errors).toContain('From account is required for transfer');
     });
 
-    test('should reject transfer without to account', () => {
+    test('should reject a transfer when the TO account is missing', () => {
         const formData = {
             transaction_date: '2024-01-15 10:00:00',
             category1_code: 'TRANSFER',
@@ -721,7 +721,7 @@ describe('Transaction Edit - Form Validation', () => {
         expect(result.errors).toContain('To account is required for transfer');
     });
 
-    test('should accept zero amount', () => {
+    test('should accept the form when the amount is zero', () => {
         const formData = {
             transaction_date: '2024-01-15 10:00:00',
             category1_code: 'EXPENSE',
@@ -732,7 +732,7 @@ describe('Transaction Edit - Form Validation', () => {
         expect(result.valid).toBe(true);
     });
 
-    test('should accept form without memo', () => {
+    test('should accept the form when there is no memo', () => {
         const formData = {
             transaction_date: '2024-01-15 10:00:00',
             category1_code: 'EXPENSE',
@@ -764,78 +764,78 @@ describe('Transaction Edit - Amount Formatting', () => {
     }
 
     describe('Format for display', () => {
-        test('should format 1000 with comma', () => {
+        test('should add a comma when the amount is 1000', () => {
             expect(formatAmountForDisplay(1000)).toBe('1,000');
         });
 
-        test('should format 1000000 with commas', () => {
+        test('should add commas when the amount is 1000000', () => {
             expect(formatAmountForDisplay(1000000)).toBe('1,000,000');
         });
 
-        test('should format small number without comma', () => {
+        test('should add no comma when the amount is below 1000', () => {
             expect(formatAmountForDisplay(999)).toBe('999');
         });
 
-        test('should format zero', () => {
+        test('should show 0 when the amount is zero', () => {
             expect(formatAmountForDisplay(0)).toBe('0');
         });
 
-        test('should handle null', () => {
+        test('should show an empty string when the amount is null', () => {
             expect(formatAmountForDisplay(null)).toBe('');
         });
 
-        test('should handle undefined', () => {
+        test('should show an empty string when the amount is undefined', () => {
             expect(formatAmountForDisplay(undefined)).toBe('');
         });
 
-        test('should format negative amount', () => {
+        test('should keep the minus sign when the amount is negative', () => {
             expect(formatAmountForDisplay(-1000)).toBe('-1,000');
         });
     });
 
     describe('Parse from display', () => {
-        test('should parse amount with commas', () => {
+        test('should parse the amount when it has a comma', () => {
             expect(parseAmountFromDisplay('1,000')).toBe(1000);
         });
 
-        test('should parse amount with multiple commas', () => {
+        test('should parse the amount when it has several commas', () => {
             expect(parseAmountFromDisplay('1,000,000')).toBe(1000000);
         });
 
-        test('should parse amount without commas', () => {
+        test('should parse the amount when it has no commas', () => {
             expect(parseAmountFromDisplay('999')).toBe(999);
         });
 
-        test('should parse zero', () => {
+        test('should parse 0 when the text is zero', () => {
             expect(parseAmountFromDisplay('0')).toBe(0);
         });
 
-        test('should handle empty string', () => {
+        test('should return null when the text is empty', () => {
             expect(parseAmountFromDisplay('')).toBeNull();
         });
 
-        test('should handle null', () => {
+        test('should return null when the text is null', () => {
             expect(parseAmountFromDisplay(null)).toBeNull();
         });
 
-        test('should parse negative amount', () => {
+        test('should parse a negative amount when the text has a minus sign', () => {
             expect(parseAmountFromDisplay('-1,000')).toBe(-1000);
         });
 
-        test('should handle invalid input', () => {
+        test('should return null when the text is not a number', () => {
             expect(parseAmountFromDisplay('abc')).toBeNull();
         });
     });
 
     describe('Round-trip formatting', () => {
-        test('should preserve amount through round-trip', () => {
+        test('should get the same amount back when it is formatted and parsed', () => {
             const original = 1234567;
             const formatted = formatAmountForDisplay(original);
             const parsed = parseAmountFromDisplay(formatted);
             expect(parsed).toBe(original);
         });
 
-        test('should handle various amounts', () => {
+        test('should get each amount back when several amounts are formatted and parsed', () => {
             const testCases = [0, 100, 1000, 10000, 100000, 1000000];
             testCases.forEach(amount => {
                 const formatted = formatAmountForDisplay(amount);
@@ -886,61 +886,61 @@ describe('Transaction Edit - Error Handling', () => {
         }
     }
 
-    test('should handle transaction not found error on save', () => {
+    test('should show the not-found message when saving finds no transaction', () => {
         const handler = new TransactionEditErrorHandler();
         const message = handler.handleSaveError('Transaction not found');
         expect(message).toBe('Transaction not found. It may have been deleted.');
     });
 
-    test('should handle permission error on save', () => {
+    test('should show the permission message when saving is not permitted', () => {
         const handler = new TransactionEditErrorHandler();
         const message = handler.handleSaveError('permission denied');
         expect(message).toBe('You do not have permission to edit this transaction.');
     });
 
-    test('should handle validation error on save', () => {
+    test('should show the validation message when saving fails validation', () => {
         const handler = new TransactionEditErrorHandler();
         const message = handler.handleSaveError('validation failed');
         expect(message).toBe('Validation error: Please check your input.');
     });
 
-    test('should handle network error on save', () => {
+    test('should show the network message when saving hits a network error', () => {
         const handler = new TransactionEditErrorHandler();
         const message = handler.handleSaveError('network timeout');
         expect(message).toBe('Network error: Please check your connection.');
     });
 
-    test('should handle generic error on save', () => {
+    test('should show the generic message when saving fails for another reason', () => {
         const handler = new TransactionEditErrorHandler();
         const message = handler.handleSaveError('unknown error');
         expect(message).toBe('Failed to save transaction: unknown error');
     });
 
-    test('should handle transaction not found error on load', () => {
+    test('should show the not-found message when loading finds no transaction', () => {
         const handler = new TransactionEditErrorHandler();
         const message = handler.handleLoadError('Transaction not found');
         expect(message).toBe('Transaction not found.');
     });
 
-    test('should handle permission error on load', () => {
+    test('should show the permission message when loading is not permitted', () => {
         const handler = new TransactionEditErrorHandler();
         const message = handler.handleLoadError('permission denied');
         expect(message).toBe('You do not have permission to view this transaction.');
     });
 
-    test('should handle generic error on load', () => {
+    test('should show the generic message when loading fails for another reason', () => {
         const handler = new TransactionEditErrorHandler();
         const message = handler.handleLoadError('database error');
         expect(message).toBe('Failed to load transaction: database error');
     });
 
-    test('should store last error', () => {
+    test('should keep the last error when an error is handled', () => {
         const handler = new TransactionEditErrorHandler();
         handler.handleSaveError('test error');
         expect(handler.lastError).toBe('test error');
     });
 
-    test('should clear error', () => {
+    test('should clear the last error when it is cleared', () => {
         const handler = new TransactionEditErrorHandler();
         handler.handleSaveError('test error');
         handler.clearError();
@@ -1016,7 +1016,7 @@ describe('Transaction Edit - Integration Scenarios', () => {
         }
     }
 
-    test('should complete full edit flow', () => {
+    test('should load, edit, validate and build the save data when a transaction is edited', () => {
         const flow = new TransactionEditFlow();
 
         // Load transaction
@@ -1051,7 +1051,7 @@ describe('Transaction Edit - Integration Scenarios', () => {
         expect(saveData.transaction_date).toBe('2024-01-15 10:00:00');
     });
 
-    test('should handle empty memo correctly', () => {
+    test('should save a null memo when the memo is cleared', () => {
         const flow = new TransactionEditFlow();
 
         const transaction = {
@@ -1071,7 +1071,7 @@ describe('Transaction Edit - Integration Scenarios', () => {
         expect(saveData.memo).toBeNull();
     });
 
-    test('should convert NONE to null for accounts', () => {
+    test('should save null when an account is NONE', () => {
         const flow = new TransactionEditFlow();
 
         const transaction = {
@@ -1122,12 +1122,12 @@ describe('Transaction Edit - Shop Selection', () => {
         }
     }
 
-    test('should initialize with null shop ID', () => {
+    test('should have no shop ID when the shop selection starts', () => {
         const handler = new ShopSelectionHandler();
         expect(handler.selectedShopId).toBeNull();
     });
 
-    test('should load shops data', () => {
+    test('should hold the shops when the shop list is loaded', () => {
         const handler = new ShopSelectionHandler();
         const shops = [
             { shop_id: 1, shop_name: 'Shop A' },
@@ -1138,32 +1138,32 @@ describe('Transaction Edit - Shop Selection', () => {
         expect(handler.shops[0].shop_name).toBe('Shop A');
     });
 
-    test('should set shop ID as integer', () => {
+    test('should store the shop ID as an integer when a shop is selected', () => {
         const handler = new ShopSelectionHandler();
         handler.setShopId('5');
         expect(handler.selectedShopId).toBe(5);
         expect(typeof handler.selectedShopId).toBe('number');
     });
 
-    test('should handle empty string as null', () => {
+    test('should store null when the shop ID is an empty string', () => {
         const handler = new ShopSelectionHandler();
         handler.setShopId('');
         expect(handler.selectedShopId).toBeNull();
     });
 
-    test('should handle null shop ID', () => {
+    test('should store null when the shop ID is null', () => {
         const handler = new ShopSelectionHandler();
         handler.setShopId(null);
         expect(handler.selectedShopId).toBeNull();
     });
 
-    test('should handle undefined shop ID', () => {
+    test('should store null when the shop ID is undefined', () => {
         const handler = new ShopSelectionHandler();
         handler.setShopId(undefined);
         expect(handler.selectedShopId).toBeNull();
     });
 
-    test('should get shop name by ID', () => {
+    test('should return the shop name when the shop ID exists', () => {
         const handler = new ShopSelectionHandler();
         handler.loadShops([
             { shop_id: 1, shop_name: 'Shop A' },
@@ -1173,12 +1173,12 @@ describe('Transaction Edit - Shop Selection', () => {
         expect(handler.getShopName(2)).toBe('Shop B');
     });
 
-    test('should return "Unspecified" for null shop ID', () => {
+    test('should return "Unspecified" when the shop ID is null', () => {
         const handler = new ShopSelectionHandler();
         expect(handler.getShopName(null)).toBe('Unspecified');
     });
 
-    test('should return "Unknown" for non-existent shop ID', () => {
+    test('should return "Unknown" when the shop ID does not exist', () => {
         const handler = new ShopSelectionHandler();
         handler.loadShops([
             { shop_id: 1, shop_name: 'Shop A' }
@@ -1186,7 +1186,7 @@ describe('Transaction Edit - Shop Selection', () => {
         expect(handler.getShopName(999)).toBe('Unknown');
     });
 
-    test('should preserve shop ID when switching between shops', () => {
+    test('should hold the new shop ID when switching between shops', () => {
         const handler = new ShopSelectionHandler();
         handler.setShopId('1');
         expect(handler.selectedShopId).toBe(1);
@@ -1195,7 +1195,7 @@ describe('Transaction Edit - Shop Selection', () => {
         expect(handler.selectedShopId).toBe(2);
     });
 
-    test('should allow clearing shop selection', () => {
+    test('should store null when the shop selection is cleared', () => {
         const handler = new ShopSelectionHandler();
         handler.setShopId('1');
         expect(handler.selectedShopId).toBe(1);
@@ -1221,29 +1221,29 @@ describe('Transaction Edit - Shop Selection Integration', () => {
         };
     }
 
-    test('should include shop_id in transaction data', () => {
+    test('should include shop_id when the transaction data is built', () => {
         const transaction = createTransactionWithShop(5);
         expect(transaction.shop_id).toBe(5);
     });
 
-    test('should allow null shop_id', () => {
+    test('should allow a null shop_id when no shop is selected', () => {
         const transaction = createTransactionWithShop(null);
         expect(transaction.shop_id).toBeNull();
     });
 
-    test('should preserve shop_id through form load', () => {
+    test('should keep shop_id when the form is loaded', () => {
         const transaction = createTransactionWithShop(3);
         const formShopId = transaction.shop_id || '';
         expect(formShopId).toBe(3);
     });
 
-    test('should convert empty string to null for save', () => {
+    test('should save null when the shop ID is an empty string', () => {
         const formShopId = '';
         const saveShopId = formShopId ? parseInt(formShopId) : null;
         expect(saveShopId).toBeNull();
     });
 
-    test('should convert string shop ID to integer for save', () => {
+    test('should save an integer when the shop ID is a string', () => {
         const formShopId = '7';
         const saveShopId = formShopId ? parseInt(formShopId) : null;
         expect(saveShopId).toBe(7);
