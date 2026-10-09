@@ -520,16 +520,3 @@ describe('User Deletion - Deletion Order Tests', () => {
         });
     });
 });
-
-describe('User Deletion - Test Summary', () => {
-    test('should pass when this test is only a test-summary placeholder', () => {
-        // This test suite includes:
-        // - 10 username formatting tests
-        // - 9 user data validation tests
-        // - 5 modal state tests
-        // - 6 edge case tests
-        // - 15 deletion order tests
-        // Total: 45 tests
-        expect(true).toBe(true);
-    });
-});

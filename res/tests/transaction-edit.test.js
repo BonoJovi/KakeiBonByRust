@@ -1250,22 +1250,3 @@ describe('Transaction Edit - Shop Selection Integration', () => {
         expect(typeof saveShopId).toBe('number');
     });
 });
-
-describe('Transaction Edit - Test Summary', () => {
-    test('should pass when this test is only a test-summary placeholder', () => {
-        // This test suite includes:
-        // - 5 modal state tests
-        // - 13 data loading validation tests
-        // - 18 date/time format conversion tests
-        // - 8 category change and account reset tests
-        // - 14 memo handling tests
-        // - 10 form validation tests
-        // - 17 amount formatting tests
-        // - 10 error handling tests
-        // - 3 integration scenario tests
-        // - 11 shop selection tests
-        // - 5 shop selection integration tests
-        // Total: 114 tests
-        expect(true).toBe(true);
-    });
-});
