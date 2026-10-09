@@ -277,7 +277,7 @@ sqlite3 ~/.local/share/kakeibo/kakeibo.db "SELECT * FROM USERS;"
 
 ### テストカウント
 件数はこの文書には書かない。件数はテスト一覧で確認する。
-- JavaScriptフロントエンド (Jest): `cd res/tests && npm test` で実行する。件数は [FRONTEND_TEST_INDEX](../../../testing/ja/FRONTEND_TEST_INDEX.md) に載っている。
+- JavaScriptフロントエンド (Jest): `cd tests/frontend && npm test` で実行する。件数は [FRONTEND_TEST_INDEX](../../../testing/ja/FRONTEND_TEST_INDEX.md) に載っている。
 - Rustバックエンド: `cargo test` で実行する。[BACKEND_TEST_INDEX](../../../testing/ja/BACKEND_TEST_INDEX.md) の件数は `cargo test --lib` (ライブラリ crate 内のテスト) の件数。
 
 ---

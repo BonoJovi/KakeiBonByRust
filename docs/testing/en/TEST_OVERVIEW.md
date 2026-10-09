@@ -82,7 +82,7 @@ From project root:
 cargo test
 
 # Run JavaScript tests
-cd res/tests
+cd tests/frontend
 npm install  # First time only
 npm test
 ```
@@ -94,7 +94,7 @@ npm test
 cargo test validation::
 
 # JavaScript: Login tests only
-cd res/tests
+cd tests/frontend
 npm test pages/index-login-page.test.js
 ```
 
@@ -179,7 +179,7 @@ cargo tarpaulin --out Html
 #### Run all tests
 
 ```bash
-cd res/tests
+cd tests/frontend
 npm test
 ```
 
@@ -195,7 +195,7 @@ Tests:       <passed> passed, <skipped> skipped, <total> total
 #### Run specific test file
 
 ```bash
-cd res/tests
+cd tests/frontend
 npm test admin-setup.test.js
 npm test pages/index-login-page.test.js
 npm test pages/user-management-delete-page.test.js
@@ -271,7 +271,7 @@ mod tests {
 When adding new test cases to existing validation:
 
 ```javascript
-// res/tests/password-validation-tests.js
+// tests/frontend/password-validation-tests.js
 
 export function testNewPasswordRule(validationFn) {
     describe('New Password Rule', () => {
@@ -289,7 +289,7 @@ export function testNewPasswordRule(validationFn) {
 When adding a new screen:
 
 ```javascript
-// res/tests/new-screen.test.js
+// tests/frontend/new-screen.test.js
 
 import { validatePassword } from './validation-helpers.js';
 import { runAllPasswordTests } from './password-validation-tests.js';
@@ -388,11 +388,11 @@ jobs:
           node-version: '18'
       - name: Install dependencies
         run: |
-          cd res/tests
+          cd tests/frontend
           npm install
       - name: Run JavaScript tests
         run: |
-          cd res/tests
+          cd tests/frontend
           npm test
 ```
 
@@ -438,7 +438,7 @@ node --experimental-vm-modules node_modules/jest/bin/jest.js
 #### Dependency errors
 
 ```bash
-cd res/tests
+cd tests/frontend
 rm -rf node_modules package-lock.json
 npm install
 npm test
@@ -495,7 +495,7 @@ Specify `testEnvironment: "jsdom"` in Jest config
    cargo tarpaulin --out Html
    
    # JavaScript
-   cd res/tests
+   cd tests/frontend
    npm run test:coverage
    ```
 

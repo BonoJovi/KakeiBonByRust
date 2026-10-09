@@ -3,7 +3,7 @@
 This document provides a complete index of all frontend tests implemented in JavaScript.
 
 **Last Updated**: 2026-10-09 JST  
-**Total Tests**: 848 (jest suites; 93 test files, per `npm test`)
+**Total Tests**: 850 (jest suites; 94 test files, per `npm test`)
 
 ---
 
@@ -28,7 +28,7 @@ and are **not** added again to the grand total.
 - **admin-edit.test.js** - Admin edit tests (62)
 - **general-user-edit.test.js** - General user edit tests (62)
 
-### Feature-Specific Tests (531 tests)
+### Feature-Specific Tests (533 tests)
 
 - **transaction-edit.test.js** - Transaction edit tests (111)
 - **transaction-detail-tax-calculation.test.js** - Tax calculation tests on the real helpers in `detail-tax-calc.js` (tax rates, 1 yen, the maximum amount, rounding types, exact splits of a tax-included amount, a round trip); a typed tax-included price is always kept, with the tax carved out of it when no exact tax-excluded split exists (latent-audit scan2-T2) (33)
@@ -114,6 +114,7 @@ and are **not** added again to the grand total.
 - **pages/user-management-password-page.test.js** - Admin session: a 16-space password is reported as the password error, not as the raw `user_mgmt.empty_name` key on the username (latent-audit L24); 8 emoji (16 UTF-16 units, 8 characters) are rejected by the frontend length check (latent-audit L31) (2)
 - **pages/user-management-nonadmin-page.test.js** - General-user session: no Add User button, no empty footer line where the button was, and no delete button on the user's own row (latent-audit L30) (3)
 - **pages/index-setup-password-length.test.js** - Setup forms count password characters, not UTF-16 units: 8 emoji are rejected for admin and user setup (latent-audit L31) (2)
+- **release-bundle-excludes-tests.test.js** - Walks the folder that Tauri bundles into the app (`build.frontendDist` in tauri.conf.json) and finds no test files and no `node_modules` there (2)
 
 ### Aggregation Tests (115 tests)
 - **aggregation-daily.test.js** - Daily aggregation (16)
@@ -141,7 +142,7 @@ and are **not** added again to the grand total.
 | user-addition.test.js | 46 |
 | admin-edit.test.js | 62 |
 | general-user-edit.test.js | 62 |
-| **Feature-Specific Tests** | **531** |
+| **Feature-Specific Tests** | **533** |
 | transaction-edit.test.js | 111 |
 | transaction-detail-tax-calculation.test.js | 33 |
 | toast.test.js | 14 |
@@ -226,13 +227,14 @@ and are **not** added again to the grand total.
 | pages/user-management-password-page.test.js | 2 |
 | pages/user-management-nonadmin-page.test.js | 3 |
 | pages/index-setup-password-length.test.js | 2 |
+| release-bundle-excludes-tests.test.js | 2 |
 | **Aggregation Tests** | **115** |
 | aggregation-daily.test.js | 16 |
 | aggregation-weekly.test.js | 22 |
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **Total (jest)** | **848** |
+| **Total (jest)** | **850** |
 
 Grand total is Screen + Feature + Aggregation (Common Test Suites are helper
 libraries invoked from Screen-Specific files and their assertions are already
@@ -245,14 +247,14 @@ counted in those screen totals).
 ### Run all tests
 
 ```bash
-cd res/tests
+cd tests/frontend
 npm test
 ```
 
 ### Run specific test file
 
 ```bash
-cd res/tests
+cd tests/frontend
 npm test admin-setup.test.js
 npm test pages/index-login-page.test.js
 npm test pages/user-management-delete-page.test.js
@@ -274,7 +276,7 @@ npm run test:coverage
 ### Refreshing the authoritative counts
 
 ```bash
-cd res/tests
+cd tests/frontend
 node --experimental-vm-modules node_modules/jest/bin/jest.js --json > /tmp/jest.json
 # Per-file counts:
 node -e "const j=JSON.parse(require('fs').readFileSync('/tmp/jest.json','utf8')); \

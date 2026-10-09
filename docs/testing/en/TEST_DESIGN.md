@@ -22,7 +22,7 @@
 ### モジュール構成
 
 ```
-res/tests/
+tests/frontend/
 ├── validation-helpers.js             # 共通バリデーション関数
 ├── password-validation-tests.js      # パスワードテストスイート（26件）
 ├── username-validation-tests.js      # ユーザ名テストスイート（13件）

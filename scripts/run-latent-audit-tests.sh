@@ -9,11 +9,11 @@
 # until each bug is fixed. They are excluded from the normal `cargo test` /
 # `npm test` runs (and therefore from CI):
 #   - Rust: `#[ignore = "latent-audit <ID>"]`, function names start with `latent_`
-#   - Jest: files under res/tests/latent-audit/ (testPathIgnorePatterns)
+#   - Jest: files under tests/frontend/latent-audit/ (testPathIgnorePatterns)
 #
 # When a bug is fixed, remove the `#[ignore]` (Rust) so the test joins the
 # regular suite. For Jest, move the fixed test into a regular test file (page
-# tests go to res/tests/pages/, which shares _page-harness.js with
+# tests go to tests/frontend/pages/, which shares _page-harness.js with
 # latent-audit/); split it out when its file still holds unfixed tests.
 #
 # Usage: ./scripts/run-latent-audit-tests.sh [rust|js]   (default: both)
@@ -33,6 +33,6 @@ fi
 
 if [[ "$target" == "all" || "$target" == "js" ]]; then
     echo "=== Jest latent-audit tests ==="
-    (cd res/tests && npm run -s test:latent -- --verbose 2>&1) \
+    (cd tests/frontend && npm run -s test:latent -- --verbose 2>&1) \
         | grep -E '^\s+(✓|✕)|^Tests:'
 fi

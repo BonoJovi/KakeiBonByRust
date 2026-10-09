@@ -277,7 +277,7 @@ sqlite3 ~/.local/share/kakeibo/kakeibo.db "SELECT * FROM USERS;"
 
 ### Test Count
 This document does not list test counts. See the test indexes for the counts.
-- JavaScript frontend (Jest): run with `cd res/tests && npm test`. Counts are in [FRONTEND_TEST_INDEX](../../../testing/en/FRONTEND_TEST_INDEX.md).
+- JavaScript frontend (Jest): run with `cd tests/frontend && npm test`. Counts are in [FRONTEND_TEST_INDEX](../../../testing/en/FRONTEND_TEST_INDEX.md).
 - Rust backend: run with `cargo test`. The counts in [BACKEND_TEST_INDEX](../../../testing/en/BACKEND_TEST_INDEX.md) are those of `cargo test --lib` (the tests in the library crate).
 
 ---

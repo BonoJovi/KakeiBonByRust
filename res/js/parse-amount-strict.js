@@ -19,7 +19,7 @@
  * caller shows a field-level validation error so the user sees the
  * corruption before the invoke lands.
  *
- * The tests in `res/tests/parse-amount-strict.test.js` pin the full
+ * The tests in `tests/frontend/parse-amount-strict.test.js` pin the full
  * accept/reject table.
  *
  * @param {string|null|undefined} raw - `input.value` from a money field.

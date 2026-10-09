@@ -32,7 +32,7 @@ DB: ~/.kakeibon/KakeiBonDB.sqlite3
 ```bash
 cargo tauri dev          # Development
 cargo test               # Backend tests
-cd res/tests && npm test # Frontend tests (Jest)
+cd tests/frontend && npm test # Frontend tests (Jest)
 ./scripts/check-release.sh  # Pre-release verification
 ```
 

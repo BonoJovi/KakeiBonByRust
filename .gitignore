@@ -12,14 +12,14 @@ test_*.db
 *-test.db
 
 # Node.js dependencies
-/res/tests/node_modules/
-/res/tests/package-lock.json
+/tests/frontend/node_modules/
+/tests/frontend/package-lock.json
 /node_modules/
 pnpm-lock.yaml
 pnpm-workspace.yaml
 
 # Test coverage
-/res/tests/coverage/
+/tests/frontend/coverage/
 
 # Test logs
 *.log

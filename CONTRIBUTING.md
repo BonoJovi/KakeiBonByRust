@@ -139,7 +139,7 @@ For code and documentation contributions:
 2. Make your changes following our coding standards
 3. Write clear commit messages for each change
 4. Add or modify tests as needed (see [Test Overview](docs/testing/en/TEST_OVERVIEW.md))
-5. Ensure all tests pass (`cargo test` and `cd res/tests && npm test`)
+5. Ensure all tests pass (`cargo test` and `cd tests/frontend && npm test`)
 6. Update test indexes if you added new tests:
    - [Backend Test Index](docs/testing/en/BACKEND_TEST_INDEX.md) for Rust tests
    - [Frontend Test Index](docs/testing/en/FRONTEND_TEST_INDEX.md) for JavaScript tests

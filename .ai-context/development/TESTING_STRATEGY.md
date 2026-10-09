@@ -149,7 +149,7 @@ cargo test test_password_validation
 
 #### Test Structure
 ```javascript
-// res/tests/validation-helpers.test.js
+// tests/frontend/validation-helpers.test.js
 import { validatePassword } from '../js/validation-helpers.js';
 
 describe('Password Validation', () => {
@@ -164,9 +164,9 @@ describe('Password Validation', () => {
 ```
 
 #### Common Test Modules
-- `res/tests/validation-helpers.js` - Shared validation functions
-- `res/tests/*-validation-tests.js` - Reusable test suites
-- `res/tests/test-common.js` - Test utilities
+- `tests/frontend/validation-helpers.js` - Shared validation functions
+- `tests/frontend/*-validation-tests.js` - Reusable test suites
+- `tests/frontend/test-common.js` - Test utilities
 
 ---
 

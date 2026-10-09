@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-10-09 JST  
-**総テスト数**: 848件 (jest suite 93 ファイル、`npm test` 実測)
+**総テスト数**: 850件 (jest suite 94 ファイル、`npm test` 実測)
 
 ---
 
@@ -104,6 +104,7 @@
   - [pages/user-management-password-page.test.js](#pagesuser-management-password-pagetestjs)
   - [pages/user-management-nonadmin-page.test.js](#pagesuser-management-nonadmin-pagetestjs)
   - [pages/index-setup-password-length.test.js](#pagesindex-setup-password-lengthtestjs)
+  - [release-bundle-excludes-tests.test.js](#release-bundle-excludes-teststestjs)
 - [集計機能テスト](#集計機能テスト)
   - [aggregation-daily.test.js](#aggregation-dailytestjs)
   - [aggregation-weekly.test.js](#aggregation-weeklytestjs)
@@ -323,7 +324,7 @@
 | `should reject the password when it is a single zero-width space` | ゼロ幅スペース 1 文字 (可視 0 だが `.length` は 1) | valid: false, "at least 16 characters" |
 | `should reject the password when it has only 6 digits` | 6 桁の数字のみ | valid: false, "at least 16 characters" |
 
-**ファイル**: res/tests/admin-setup.test.js
+**ファイル**: tests/frontend/admin-setup.test.js
 
 ---
 
@@ -339,7 +340,7 @@
 | パスワードバリデーション | 共通パスワードテストスイート | 26件 | `runAllPasswordTests()` |
 | 組み合わせバリデーション | ユーザー名とパスワードの組み合わせ | 7件 | `testCombinedValidation()` |
 
-**ファイル**: res/tests/user-addition.test.js
+**ファイル**: tests/frontend/user-addition.test.js
 
 ---
 
@@ -355,7 +356,7 @@
 | ユーザー名バリデーション | 共通ユーザー名テストスイート | 13件 | `testUsernameValidation()` |
 | ユーザー編集バリデーション | 共通ユーザー編集テストスイート | 23件 | `runAllUserEditTests()` |
 
-**ファイル**: res/tests/admin-edit.test.js
+**ファイル**: tests/frontend/admin-edit.test.js
 
 ---
 
@@ -371,7 +372,7 @@
 | ユーザー名バリデーション | 共通ユーザー名テストスイート | 13件 | `testUsernameValidation()` |
 | ユーザー編集バリデーション | 共通ユーザー編集テストスイート | 23件 | `runAllUserEditTests()` |
 
-**ファイル**: res/tests/general-user-edit.test.js
+**ファイル**: tests/frontend/general-user-edit.test.js
 
 ---
 
@@ -397,7 +398,7 @@
 | Shop Selection | 店舗の選択 | 11件 |
 | Shop Selection Integration | 店舗選択の組み合わせ | 5件 |
 
-**ファイル**: res/tests/transaction-edit.test.js
+**ファイル**: tests/frontend/transaction-edit.test.js
 
 ---
 
@@ -417,7 +418,7 @@
 | 入力不能な税込額 (潜在スキャン scan2-T2) | 税抜の式で表せない税込額 (10 %・切り捨ての 1000 円など) も入力どおり残し、税額は `税込 - 税抜` で切り出す。1〜10,000 円 × 8/10 % × 3 丸めで全額が保たれることを確認 |
 | pure helper 経路 | `calculateFromExcluding` / `applyTaxRounding` の直接テスト (floor / half-up / ceil / unknown default) |
 
-**ファイル**: res/tests/transaction-detail-tax-calculation.test.js
+**ファイル**: tests/frontend/transaction-detail-tax-calculation.test.js
 
 ---
 
@@ -433,7 +434,7 @@
 | レンダリング | メッセージ表示、variant クラス、複数トーストの並び |
 | クリア | `clearAllToasts()` の挙動、setTimeout との整合 |
 
-**ファイル**: res/tests/toast.test.js
+**ファイル**: tests/frontend/toast.test.js
 
 ---
 
@@ -451,7 +452,7 @@
 | エッジケース | 0円、端数 |
 | 内税/外税 (潜在監査 H5/L1) | AMOUNT は常に税抜。外税は AMOUNT を税率単位で gross-up (税額 0 円の少額明細も)、内税は AMOUNT_INCLUDING_TAX を合算し欠損行は導出 |
 
-**ファイル**: res/tests/tax-calc.test.js
+**ファイル**: tests/frontend/tax-calc.test.js
 
 ---
 
@@ -470,7 +471,7 @@
 | `should overwrite the earlier draft when persist is called again` | 2 回目の保存が前の下書きを上書きする |
 | `should keep detail_id and selected_product_id when an edit-mode draft makes a round trip` | 編集中の下書きは `detail_id` と `selected_product_id` を保つ |
 
-**ファイル**: res/tests/pages/transaction-detail-draft-storage.test.js
+**ファイル**: tests/frontend/pages/transaction-detail-draft-storage.test.js
 
 ---
 
@@ -492,7 +493,7 @@
 | `should show the newest answer with no item active when the search answers` | 候補リストは最新の答えを表示し、選択中の行は無い (Enter で何も選ばれない) |
 | `should not show a pending answer when the detail window is opened again before it arrives` | 検索中にウィンドウを開き直すと、後から届いた答えは表示しない |
 
-**ファイル**: res/tests/pages/transaction-detail-product-link.test.js
+**ファイル**: tests/frontend/pages/transaction-detail-product-link.test.js
 
 ---
 
@@ -525,7 +526,7 @@
 | `should show the header total as ¥1,234,567 when the total is 1234567` | ヘッダーの合計 1234567 は `¥1,234,567` と表示 |
 | `should show the header total as ¥0 when the total is 0` | ヘッダーの合計 0 は `¥0` と表示 |
 
-**ファイル**: res/tests/pages/transaction-detail-form-page.test.js
+**ファイル**: tests/frontend/pages/transaction-detail-form-page.test.js
 
 ---
 
@@ -545,7 +546,7 @@
 | `should discard the draft and open no window when the stored draft is malformed JSON` | 壊れた下書きは捨て、ウィンドウを開かない |
 | `should open no window when no draft is stored` | 下書きが無ければウィンドウを開かない |
 
-**ファイル**: res/tests/pages/product-management-product-draft.test.js
+**ファイル**: tests/frontend/pages/product-management-product-draft.test.js
 
 ---
 
@@ -564,7 +565,7 @@
 | `should replace the manufacturer id when one was already selected` | 選択済みのメーカー ID を新しいメーカーで置き換える |
 | `should leave the draft alone when the manufacturer master was opened from the menu` | メニューから開いた場合は下書きに触れない |
 
-**ファイル**: res/tests/pages/manufacturer-management-product-draft.test.js
+**ファイル**: tests/frontend/pages/manufacturer-management-product-draft.test.js
 
 ---
 
@@ -583,7 +584,7 @@
 | `should catch the onSave rejection at the listener when the form is submitted` | onSave が reject する状態でフォーム submit | rejection はリスナー内で捕捉され、未処理の rejection にならない。モーダルは開いたまま |
 | `should call onSave only once when the save button is clicked rapidly` (saveButtonId パス) | Save ボタン ID 経由での連打 | onSave 呼び出しは1回のみ |
 
-**ファイル**: res/tests/modal-double-submit.test.js
+**ファイル**: tests/frontend/modal-double-submit.test.js
 
 ---
 
@@ -598,7 +599,7 @@
 | `should not close or reset a re-opened modal when an earlier save finishes (L22)` | 先の保存が完了しても、開き直したモーダルは開いたまま・ローディング表示も維持 |
 | `should let a re-opened modal save when an earlier save is still pending (L22)` | 先の保存が未完了でも、開き直したモーダルから保存でき、完了時に閉じる |
 
-**ファイル**: res/tests/modal-stale-save-close.test.js
+**ファイル**: tests/frontend/modal-stale-save-close.test.js
 
 ---
 
@@ -617,7 +618,7 @@
 | `saveMasterEntry — happy path` | 新規追加 / 更新 それぞれで `invokeAdd`/`invokeUpdate` が正しい引数で呼ばれ `onSuccess` が発火 | 2件 |
 | `saveMasterEntry — backend error re-throws and classifies` | `duplicate_name` → inline、`manufacturer_not_found` → toast (product スコープ)、いずれも throw で Modal は開いたまま。backend not_found (invoke 後) は cache-miss と同じく `onNotFoundBeforeInvoke` を通して一覧を再読み込み + Modal を閉じる (Devin #97 レビュー対応の 2 件を含む) | 4件 |
 
-**ファイル**: res/tests/master-crud.test.js
+**ファイル**: tests/frontend/master-crud.test.js
 
 ---
 
@@ -632,7 +633,7 @@
 | 非 IME baseline | 単純タイピング切り詰め / 初期値切り詰め / 表示カウンター描画 | 3件 |
 | IME composition ガード | compositionstart 中は `.value` を書き換えない / compositionend で切り詰め / 連続 composition / idempotent (二重 attach でリスナー累積しない) / detach で全リスナー除去 | 5件 |
 
-**ファイル**: res/tests/attach-char-counter-ime.test.js
+**ファイル**: tests/frontend/attach-char-counter-ime.test.js
 
 ---
 
@@ -649,7 +650,7 @@
 | Error instance | `Error.message` が substring 分岐にちゃんと渡る | 1件 |
 | hostile shapes | `.message` の無い object / null / undefined / 空 `.message` を汎用 i18n バナー (`aggregation.error_generic`) にすげ替え、`"[object Object]"` / `"null"` / `"undefined"` / `""` の literal を絶対に見せない | 4件 |
 
-**ファイル**: res/tests/aggregation-error-translate.test.js
+**ファイル**: tests/frontend/aggregation-error-translate.test.js
 
 ---
 
@@ -664,7 +665,7 @@
 | `should treat only the most recent request as latest when several were started (scan2-A4)` | 最後に始めた要求だけが「最後」と判定され、次の要求が始まると前の要求は「最後」でなくなる |
 | `should count only its own requests when there are several guards (scan2-A4)` | 部品ごとに独立して数える (別画面の要求に影響されない) |
 
-**ファイル**: res/tests/aggregation-latest-request.test.js
+**ファイル**: tests/frontend/aggregation-latest-request.test.js
 
 ---
 
@@ -680,7 +681,7 @@
 | empty inputs default to 0 | 空 / 空白のみ / null / undefined | 4件 |
 | reject (Fable-5 #10 pin cases) | 小数 / "0.5" / カンマ区切り / 指数表記 / 末尾ゴミ / 先頭ゴミ / 符号 (`-5` `+5`) / 内部空白 / 全角数字 / 単独ピリオド / 末尾ピリオド / `2^53-1` は受理 / `2^53` は拒否 / `9007199254740993` は precision loss なので拒否 | 15件 |
 
-**ファイル**: res/tests/parse-amount-strict.test.js
+**ファイル**: tests/frontend/parse-amount-strict.test.js
 
 ---
 
@@ -699,7 +700,7 @@
 | boundary years | 1900 / 2100 / 閏年 2月29日 / 年 1 (4桁ゼロ埋め) / 年 999 (4桁ゼロ埋め) | 5件 |
 | formatUtcAsLocalDateTime — stored UTC shown in local time | UTC で保存された `YYYY-MM-DD HH:MM:SS` を JST で表示 (00:00 → 09:00、日付をまたぐ場合、`T` 区切り、日時の後ろに文字が続く値と日時でない値はそのまま、空は空文字) | 6件 |
 
-**ファイル**: res/tests/format-local-date.test.js
+**ファイル**: tests/frontend/format-local-date.test.js
 
 ---
 
@@ -714,7 +715,7 @@
 | `should return the last day of the user's monthly period when the period is requested (L14)` | `get_monthly_period_bounds` の期間最終日を返す (起算日・休日シフト適用済み) |
 | `should fall back to the calendar month end when the backend fails (L14)` | バックエンドが失敗したらカレンダーの月末 (うるう年対応) を返す |
 
-**ファイル**: res/tests/period-end-date.test.js
+**ファイル**: tests/frontend/period-end-date.test.js
 
 ---
 
@@ -734,7 +735,7 @@
 | `should fall back to the calendar month when the backend fails` | バックエンドが答えられないときは暦の月を返す |
 | `should place the date in the right yearly period when the year starts on %i/%i (date %p -> year %i) (scan2-A3)` (10 ケース) | 年度の開始が 1/1・4/1・12/31・2/31 (月末に寄せる) のそれぞれで、開始日の前後の日付がどの年度に入るか |
 
-**ファイル**: res/tests/period-containing.test.js
+**ファイル**: tests/frontend/period-containing.test.js
 
 ---
 
@@ -749,7 +750,7 @@
 | unspecified-group i18n swap (Fable-5 #22) | 空文字 group_name が i18n ラベルにスワップ / 通常の group_name はそのまま / mixed rows / null group_name も同様 | 4件 |
 | regression: no-results path | 空 results 時に no_results i18n セルが正しく表示される | 1件 |
 
-**ファイル**: res/tests/aggregation-render-unspecified.test.js
+**ファイル**: tests/frontend/aggregation-render-unspecified.test.js
 
 ---
 
@@ -765,7 +766,7 @@
 | `should call add_transaction_detail once when the add-detail form is submitted twice (M19)` | 保存中の二重送信で `add_transaction_detail` が 1 回しか呼ばれない (潜在監査 M19) |
 | `should show the row total instead of ¥0 when a legacy row has amount_including_tax = 0 (L7)` | 税込額が 0 の古い明細は ¥0 ではなく AMOUNT + TAX_AMOUNT を表示 (潜在監査 L7) |
 
-**ファイル**: res/tests/pages/transaction-detail-page.test.js
+**ファイル**: tests/frontend/pages/transaction-detail-page.test.js
 
 ### pages/transaction-detail-included-typing.test.js
 
@@ -777,7 +778,7 @@
 |--------|------|
 | `should keep 100 and save 100 / 91 / 9 when "100" is typed tax-included at 10 % (floor) (T1)` | 10 %・切り捨てで「100」を 1 文字ずつ入力しても 100 のまま残り、`add_transaction_detail` に 100 / 91 / 9 が送られる |
 
-**ファイル**: res/tests/pages/transaction-detail-included-typing.test.js
+**ファイル**: tests/frontend/pages/transaction-detail-included-typing.test.js
 
 ### pages/transaction-detail-unreachable-included-price.test.js
 
@@ -789,7 +790,7 @@
 |--------|------|
 | `should keep 1000 with excluded 909 and tax 91 when 1000 is typed tax-included at 10 % (floor) (T2)` | 10 %・切り捨てで 1000 を入力すると 1000 のまま残り、`add_transaction_detail` に 1000 / 909 / 91 が送られる |
 
-**ファイル**: res/tests/pages/transaction-detail-unreachable-included-price.test.js
+**ファイル**: tests/frontend/pages/transaction-detail-unreachable-included-price.test.js
 
 ### pages/transaction-detail-hidden-category.test.js
 
@@ -802,7 +803,7 @@
 | `should keep a hidden category2 (and its category3) when only the memo is edited (T3)` | 非表示の中分類 (と配下の小分類) の明細をメモだけ変えて保存しても、分類がそのまま送られる |
 | `should keep a hidden category3 under an enabled category2 when only the memo is edited (T3)` | 表示中の中分類の下で非表示にした小分類も同様に残る |
 
-**ファイル**: res/tests/pages/transaction-detail-hidden-category.test.js
+**ファイル**: tests/frontend/pages/transaction-detail-hidden-category.test.js
 
 ---
 
@@ -821,7 +822,7 @@
 | `should not show the stale answer of the focus search when the user types while it is pending` | カーソルが入ったときの検索の応答が届く前に文字を打ったら、その古い応答 (空欄の候補) は出さない |
 | `should close the list and keep it closed when a suggestion is picked` | 候補を選ぶと一覧が閉じ、そのあと勝手に開き直さない |
 
-**ファイル**: res/tests/pages/transaction-detail-product-suggest.test.js
+**ファイル**: tests/frontend/pages/transaction-detail-product-suggest.test.js
 
 ---
 
@@ -838,7 +839,7 @@
 | `should move back to the last page when its only row is deleted (L5)` | 最終ページの唯一の行を削除すると最後に存在するページへ戻る (潜在監査 L5) |
 | `should keep the newer page when an older page response resolves late (L5)` | 古いページ要求の応答が遅れて届いても新しいページの表示を上書きしない (潜在監査 L5) |
 
-**ファイル**: res/tests/pages/transaction-management-page.test.js
+**ファイル**: tests/frontend/pages/transaction-management-page.test.js
 
 ---
 
@@ -855,7 +856,7 @@
 | `should show the Add User button and its footer when the user is an admin (L30)` | 管理者には「ユーザー追加」ボタンとその下部の区切り線 (フッター) が表示される (比較用) |
 | `should show the created and updated times in local time when they are stored in UTC` | 作成日時・更新日時を、保存された UTC のままではなくローカル時刻 (JST) で表示する。更新日時が空なら「-」 |
 
-**ファイル**: res/tests/pages/user-management-page.test.js
+**ファイル**: tests/frontend/pages/user-management-page.test.js
 
 ---
 
@@ -869,7 +870,7 @@
 |--------|------|
 | `should show the dedicated message when the backend refuses to delete the last general user (scan2-C5)` | バックエンドが `last_general_user` で削除を断ると、英語のエラー文付きの汎用メッセージではなく `user_mgmt.last_general_user` を表示 |
 
-**ファイル**: res/tests/pages/user-management-delete-last-user.test.js
+**ファイル**: tests/frontend/pages/user-management-delete-last-user.test.js
 
 ---
 
@@ -891,7 +892,7 @@
 | `should show the admin-protected message when the backend refuses to delete an admin` | `admin_protected` では `user_mgmt.admin_protected` を表示 |
 | `should show a name with HTML markup as plain text when the name contains markup` | HTML を含む名前は、一覧でも削除ウィンドウでも文字のまま表示される |
 
-**ファイル**: res/tests/pages/user-management-delete-page.test.js
+**ファイル**: tests/frontend/pages/user-management-delete-page.test.js
 
 ---
 
@@ -907,7 +908,7 @@
 | `should keep only the login form when the user logs out before the login timer runs (scan2-C6)` | ログイン後 1 秒の画面切り替えより前にログアウトしても、切り替えは取り消され、ログインフォームだけが残る |
 | `should not switch screens when a setup check answers after the logout (scan2-C6)` | ログイン後の「ユーザー登録が必要か」の確認がログアウト後に返ってきても、画面を切り替えない |
 
-**ファイル**: res/tests/pages/index-logout-hides-user-setup.test.js
+**ファイル**: tests/frontend/pages/index-logout-hides-user-setup.test.js
 
 ---
 
@@ -932,7 +933,7 @@
 | `should clear the session, the user name, the password and the message when the user logs out` | ログアウトでセッションを消し、ユーザー名・パスワード・メッセージを空にしてログインフォームを表示する |
 | `should keep the app on screen and show the failure when the session cannot be cleared at logout` | セッションを消せなかったときは、メイン画面のまま `error.logout_failed` を表示する |
 
-**ファイル**: res/tests/pages/index-login-page.test.js
+**ファイル**: tests/frontend/pages/index-login-page.test.js
 
 ---
 
@@ -949,7 +950,7 @@
 | `should show the dedicated message when the backend rejects with transfer_same_account (M16)` | バックエンドが `transfer_same_account` で拒否した場合も同じ専用メッセージを表示し、汎用の作成失敗メッセージを出さない |
 | `should show the localized message when the backend rejects with recurring_holiday_shift_too_long` | 休日シフトが 14 日を超えるためバックエンドが拒否したとき、`recurring_rule.holiday_shift_too_long` を表示 (#171 の CodeRabbit 指摘) |
 
-**ファイル**: res/tests/pages/recurring-rule-page.test.js
+**ファイル**: tests/frontend/pages/recurring-rule-page.test.js
 
 ---
 
@@ -963,7 +964,7 @@
 |--------|------|
 | `should call create_recurring_rule only once when the form is submitted twice (M19)` | `create_recurring_rule` の実行中に送信を重ねても 1 回しか呼ばれない |
 
-**ファイル**: res/tests/pages/recurring-rule-double-submit.test.js
+**ファイル**: tests/frontend/pages/recurring-rule-double-submit.test.js
 
 ---
 
@@ -981,7 +982,7 @@
 | `should move the date pickers to the new bounds when the bounds changed since the page loaded (M15/M18)` | 送信時に取得した範囲が画面表示時と変わっていたら、日付入力欄の上限・下限も更新する |
 | `should show the same message when the backend rejects with recurring_period_out_of_range (M15/M18)` | バックエンドの `recurring_period_out_of_range` も同じメッセージで表示 |
 
-**ファイル**: res/tests/pages/recurring-rule-period-range.test.js
+**ファイル**: tests/frontend/pages/recurring-rule-period-range.test.js
 
 ### pages/recurring-rule-anchor-follows-start.test.js
 
@@ -994,7 +995,7 @@
 | `should start as the start date and follow it when the anchor has not been edited` | 起点日の初期値は開始日。起点日を手で変えるまでは開始日に追従する |
 | `should follow the start date again when the form has been reset` | リセット後は再び開始日に追従する |
 
-**ファイル**: res/tests/pages/recurring-rule-anchor-follows-start.test.js
+**ファイル**: tests/frontend/pages/recurring-rule-anchor-follows-start.test.js
 
 ### pages/product-management-edit-manufacturer-roundtrip.test.js
 
@@ -1006,7 +1007,7 @@
 |--------|------|
 | `should come back in edit mode for the same product when returning from the manufacturer master (or not offer the jump in edit mode) (scan2-M2)` | 戻ると同じ商品の「編集」画面で開き、保存で `update_product` を呼ぶ (`add_product` は呼ばない) |
 
-**ファイル**: res/tests/pages/product-management-edit-manufacturer-roundtrip.test.js
+**ファイル**: tests/frontend/pages/product-management-edit-manufacturer-roundtrip.test.js
 
 ---
 
@@ -1021,7 +1022,7 @@
 | `should show a read-only total that follows the detail and tax settings when they change (M17)` | 合計欄は読み取り専用で、明細とヘッダーの丸め・内税/外税設定から自動計算される |
 | `should not send a typed total to create_recurring_rule when the rule is saved (M17)` | `create_recurring_rule` に合計を送らない (バックエンドが明細から計算) |
 
-**ファイル**: res/tests/pages/recurring-rule-derived-total.test.js
+**ファイル**: tests/frontend/pages/recurring-rule-derived-total.test.js
 
 ---
 
@@ -1037,7 +1038,7 @@
 | `should send END when the end-of-month mode is chosen (M14)` | 「月末」モードを選ぶと `END` を送り、日付欄は隠れる |
 | `should reset and disable the holiday shift when the rule is daily (L13)` | 「毎日」を選ぶと祝日シフトを「なし」に戻して無効化し、他の周期では再び選べる |
 
-**ファイル**: res/tests/pages/recurring-rule-cycle-options.test.js
+**ファイル**: tests/frontend/pages/recurring-rule-cycle-options.test.js
 
 ---
 
@@ -1055,7 +1056,7 @@
 | `should show the same message when the start date is empty` | 開始日が空でも同じメッセージを出す (期間範囲外のメッセージにしない) |
 | `should still create a rule when the dates are in order` | 日付の順序が正しければ従来どおり作成する |
 
-**ファイル**: res/tests/pages/recurring-rule-date-order.test.js
+**ファイル**: tests/frontend/pages/recurring-rule-date-order.test.js
 
 ---
 
@@ -1069,7 +1070,7 @@
 |--------|------|
 | `should bring the cycle UI and the default dates back in line when Reset is pressed` | リセット後は「毎日」の表示 (起点日あり・毎月用の欄なし・休日シフトは「なし」で無効) に戻り、既定の日付 (今日 / 1 年後 / 起点日 = 開始日) が入り直す |
 
-**ファイル**: res/tests/pages/recurring-rule-reset.test.js
+**ファイル**: tests/frontend/pages/recurring-rule-reset.test.js
 
 ---
 
@@ -1084,7 +1085,7 @@
 | `should recompute the detail tax fields when the rounding changes (tax excluded) (scan2-R5)` | 外税・税率 10%・105 円で、切り捨てから切り上げに変えると税額・税込額が 11 / 116 になり、登録の要求にもその値が載る |
 | `should keep the typed tax-included price and recompute the rest when the rounding changes (tax included) (scan2-R5)` | 内税で税込 116 円と入力した後に切り上げへ変えると、税込額はそのままで税抜額・税額が 105 / 11 になり、登録の要求にもその値が載る |
 
-**ファイル**: res/tests/pages/recurring-rule-rounding-recalc.test.js
+**ファイル**: tests/frontend/pages/recurring-rule-rounding-recalc.test.js
 
 ---
 
@@ -1099,7 +1100,7 @@
 | `should seed menu.back_to_transactions for ja and en when the i18n SQL is read` | `dbaccess.sql` に `menu.back_to_transactions` の ja / en 両方の行がある |
 | `should seed every data-i18n key in the menu bar for ja and en when the i18n SQL is read` | 明細画面のメニューバーが描画する `data-i18n` キーがすべて ja / en 両方とも `dbaccess.sql` に登録されている |
 
-**ファイル**: res/tests/pages/menu-i18n-seed.test.js
+**ファイル**: tests/frontend/pages/menu-i18n-seed.test.js
 
 ---
 
@@ -1116,7 +1117,7 @@
 | `should leave the placeholder as it is when it has no param (scan2-C4)` | 値を渡していない `{b}` はそのまま残る |
 | `should keep the rule name literally when the recurring-rule delete confirmation is shown (scan2-C4)` | 繰り返しルールの削除確認で、`$'` や `{1}` を含むルール名がそのまま出て、件数も正しい位置に入る |
 
-**ファイル**: res/tests/pages/i18n-literal-user-text.test.js
+**ファイル**: tests/frontend/pages/i18n-literal-user-text.test.js
 
 ---
 
@@ -1130,7 +1131,7 @@
 |--------|------|
 | `should show 残高 (ja) / Balance (en) when the balance column header is rendered` | `dbaccess.sql` を上から適用した結果で、列見出しのキーが ja「残高」/ en「Balance」になる |
 
-**ファイル**: res/tests/pages/dashboard-balance-header.test.js
+**ファイル**: tests/frontend/pages/dashboard-balance-header.test.js
 
 ---
 
@@ -1144,7 +1145,7 @@
 |--------|------|
 | `should render common.unspecified, not the stored name, when one side is NONE` | 口座コードが NONE の側は `common.unspecified` で表示し、保存された「指定なし」は出さない |
 
-**ファイル**: res/tests/pages/transaction-list-none-account-label.test.js
+**ファイル**: tests/frontend/pages/transaction-list-none-account-label.test.js
 
 ---
 
@@ -1158,7 +1159,7 @@
 |--------|------|
 | `should render common.unspecified, not the stored name, when the account is NONE` | 口座コードが NONE の口座は `common.unspecified` で表示し、保存された「指定なし」は出さない |
 
-**ファイル**: res/tests/pages/transaction-detail-none-account-label.test.js
+**ファイル**: tests/frontend/pages/transaction-detail-none-account-label.test.js
 
 ---
 
@@ -1174,7 +1175,7 @@
 | `should show the full signed amount, without K / M, when the axis ticks are drawn (scan2-A2)` | 推移グラフと棒グラフの目盛りが「-¥30,000」「¥1,500,000」「¥0」のように略さず符号付きで出る |
 | `should put the minus sign before ¥ when an account balance is negative (scan2-A2)` | 口座別残高が「¥1,500,000」「-¥1,234」になる |
 
-**ファイル**: res/tests/pages/dashboard-balance-sign.test.js
+**ファイル**: tests/frontend/pages/dashboard-balance-sign.test.js
 
 ---
 
@@ -1188,7 +1189,7 @@
 |--------|------|
 | `should default to the August period that contains today when the start day is 25 and today is 2026-09-10 (scan2-A3)` | 今日を含む「8 月」の期間で開き、その月のデータを読み込む |
 
-**ファイル**: res/tests/pages/dashboard-default-period.test.js
+**ファイル**: tests/frontend/pages/dashboard-default-period.test.js
 
 ---
 
@@ -1202,7 +1203,7 @@
 |--------|------|
 | `should not overwrite the newer March charts when a slower, older September load finishes later (scan2-A4)` | 古い 9 月の結果は捨てられ、グラフと見出しは 3 月のまま |
 
-**ファイル**: res/tests/pages/dashboard-stale-reload.test.js
+**ファイル**: tests/frontend/pages/dashboard-stale-reload.test.js
 
 ---
 
@@ -1219,7 +1220,7 @@
 | should accept a new call when the previous one has resolved | 完了後は次の送信を受け付ける |
 | should release the guard when the handler throws | ハンドラが例外を投げてもガードを解除する |
 
-**ファイル**: res/tests/single-flight.test.js
+**ファイル**: tests/frontend/single-flight.test.js
 
 ---
 
@@ -1233,7 +1234,7 @@
 |--------|------|
 | `should keep manufacturer_id on save when the product's manufacturer is disabled (M5)` | 無効化されたメーカーに紐付く商品を無変更で保存しても `manufacturer_id` が保たれる (無効メーカーを「（非表示）」付きで選択肢に追加) |
 
-**ファイル**: res/tests/pages/product-management-page.test.js
+**ファイル**: tests/frontend/pages/product-management-page.test.js
 
 ---
 
@@ -1251,7 +1252,7 @@
 | `should leave the detail draft alone when the search returns no candidates` | 検索結果が 0 件なら下書きを変えない |
 | `should keep all non-product fields when the detail draft is linked to the product` | 紐付けても商品以外の項目はそのまま |
 
-**ファイル**: res/tests/pages/product-management-link-draft.test.js
+**ファイル**: tests/frontend/pages/product-management-link-draft.test.js
 
 ---
 
@@ -1268,7 +1269,7 @@
 | `should send the disabled checkbox when adding a shop (M7)` | 追加時に「非表示」チェックを `isDisabled` として送る |
 | `should show and send the disabled state when editing a shop (M7)` | 編集時にチェック状態を表示し、変更を送る (再有効化) |
 
-**ファイル**: res/tests/pages/shop-management-disabled.test.js
+**ファイル**: tests/frontend/pages/shop-management-disabled.test.js
 
 ---
 
@@ -1283,7 +1284,7 @@
 | `should keep a disabled shop selected when editing a transaction that names it (M7)` | 編集時は無効な店舗を非表示ラベル付きで選択したまま保存する |
 | `should not offer a disabled shop when the transaction is new (M7)` | 新規取引では無効な店舗を選択肢に出さない |
 
-**ファイル**: res/tests/pages/transaction-management-disabled-shop.test.js
+**ファイル**: tests/frontend/pages/transaction-management-disabled-shop.test.js
 
 ---
 
@@ -1300,7 +1301,7 @@
 | `should send the disabled checkbox when adding an account (M7)` | 追加時に「非表示」チェックを `isDisabled` として送る |
 | `should show and send the disabled state when editing an account (M7)` | 編集時にチェック状態を表示し、変更を送る (再有効化) |
 
-**ファイル**: res/tests/pages/account-management-disabled.test.js
+**ファイル**: tests/frontend/pages/account-management-disabled.test.js
 
 ### pages/account-management-save-error-keeps-form.test.js
 
@@ -1313,7 +1314,7 @@
 | `should keep the window open and the typed input when add_account fails with duplicate_code` | 口座コードの重複でバックエンドが拒否しても、画面が開いたまま入力が残る |
 | `should keep the window open when a whitespace-only name is stopped before add_account` | 空白だけの名前を入力チェックで止めたときも、画面が開いたまま残る |
 
-**ファイル**: res/tests/pages/account-management-save-error-keeps-form.test.js
+**ファイル**: tests/frontend/pages/account-management-save-error-keeps-form.test.js
 
 ---
 
@@ -1331,7 +1332,7 @@
 | `should show the i18n amount message when the initial balance is empty` | 初期残高が空なら `common.error_amount_not_integer` を出す |
 | `should show only the localized message, not the backend detail, when the list fails to load` | 一覧の読み込み失敗時は `account_mgmt.failed_to_load` だけを出し、バックエンドの英語の詳細は出さない |
 
-**ファイル**: res/tests/pages/account-management-validation-i18n.test.js
+**ファイル**: tests/frontend/pages/account-management-validation-i18n.test.js
 
 ---
 
@@ -1348,7 +1349,7 @@
 | `should send a 50-character code to add_account when an account is added` | 50 文字のコードはそのまま `add_account` に送られる |
 | `should keep an existing code longer than 50 characters and send it to update_account when an account is edited` | 編集では口座コード欄が読み取り専用でカウンタもなく、50 文字を超える既存のコードも切り詰めずに `update_account` に送られる |
 
-**ファイル**: res/tests/pages/account-management-code-max-length.test.js
+**ファイル**: tests/frontend/pages/account-management-code-max-length.test.js
 
 ---
 
@@ -1363,7 +1364,7 @@
 | `should keep a disabled account selected when editing a transaction that names it (M7)` | 編集時は無効な口座を非表示ラベル付きで選択したまま保存する |
 | `should not offer a disabled account when the transaction is new (M7)` | 新規取引では無効な口座を選択肢に出さない |
 
-**ファイル**: res/tests/pages/transaction-management-disabled-account.test.js
+**ファイル**: tests/frontend/pages/transaction-management-disabled-account.test.js
 
 ---
 
@@ -1377,7 +1378,7 @@
 |--------|------|
 | `should explain why the category cannot change and keep the window open when the transaction has details (M2)` | バックエンドの `category1_has_details` を受けて `transaction_mgmt.category1_has_details` を表示し、モーダルを開いたままにする |
 
-**ファイル**: res/tests/pages/transaction-management-category1-has-details.test.js
+**ファイル**: tests/frontend/pages/transaction-management-category1-has-details.test.js
 
 ---
 
@@ -1392,7 +1393,7 @@
 | `should settle only after onOpen has finished when onOpen is async (L6)` | 非同期の `onOpen` が終わるまで `open()` の Promise は完了しない (モーダルはすぐ表示) |
 | `should settle at once when onOpen is synchronous (L6)` | 同期の `onOpen` ならすぐ完了する |
 
-**ファイル**: res/tests/modal-open-awaits-onopen.test.js
+**ファイル**: tests/frontend/modal-open-awaits-onopen.test.js
 
 ---
 
@@ -1406,7 +1407,7 @@
 |--------|------|
 | `should keep the restored draft instead of the window's late defaults when the defaults arrive after the restore (L6)` | 復元した日付・店舗・メモが、モーダル自身の初期化 (フォームのリセット・現在日時) で上書きされない |
 
-**ファイル**: res/tests/pages/transaction-management-restore-draft.test.js
+**ファイル**: tests/frontend/pages/transaction-management-restore-draft.test.js
 
 ### pages/transaction-management-shop-roundtrip-draft.test.js
 
@@ -1420,7 +1421,7 @@
 | `should keep edit-mode changes to rounding, account and memo when the edit makes the shop round trip (T4b)` | 編集中に変えた丸め・口座と、空にしたメモが往復後も残る |
 | `should keep category1 cleared when it was cleared in edit mode before the shop round trip (T4c)` | 編集中に空にした大分類が、往復後も DB の値に戻らず空のまま残る (#170 の CodeRabbit 指摘) |
 
-**ファイル**: res/tests/pages/transaction-management-shop-roundtrip-draft.test.js
+**ファイル**: tests/frontend/pages/transaction-management-shop-roundtrip-draft.test.js
 
 ### pages/transaction-management-rejected-save-keeps-form.test.js
 
@@ -1434,7 +1435,7 @@
 | `should keep the form open when parseAmountStrict rejects the total ("1e3") (T5)` | 金額 `1e3` を入力チェックで止めても、画面が開いたまま残る |
 | `should keep the form open when the backend returns a generic error (T5)` | バックエンドの一般的なエラーでも、画面が開いたまま残る |
 
-**ファイル**: res/tests/pages/transaction-management-rejected-save-keeps-form.test.js
+**ファイル**: tests/frontend/pages/transaction-management-rejected-save-keeps-form.test.js
 
 ---
 
@@ -1448,7 +1449,7 @@
 |--------|------|
 | `should not give a restored new transaction a shop when the shop was disabled after the draft was saved (M7)` | 新規取引の復元では無効化された店舗を選ばず「未指定」にする |
 
-**ファイル**: res/tests/pages/transaction-management-restore-disabled-shop.test.js
+**ファイル**: tests/frontend/pages/transaction-management-restore-disabled-shop.test.js
 
 ---
 
@@ -1462,7 +1463,7 @@
 |--------|------|
 | `should not write the draft into a window when it was reopened while the restore was waiting (L6)` | 復元が待っている間に閉じて開き直したモーダルには、古い下書きを書き込まない |
 
-**ファイル**: res/tests/pages/transaction-management-restore-reopened.test.js
+**ファイル**: tests/frontend/pages/transaction-management-restore-reopened.test.js
 
 ---
 
@@ -1480,7 +1481,7 @@
 | `should still sum the count into the total row when the axis is category1 (M11)` | 費目1軸では従来どおり件数を合計 (比較用) |
 | `should put the minus sign before the yen symbol when the amount is negative (L12)` | 負の金額を「-¥1,234」と表示 (潜在監査 L12) |
 
-**ファイル**: res/tests/pages/aggregation-monthly-page.test.js
+**ファイル**: tests/frontend/pages/aggregation-monthly-page.test.js
 
 ---
 
@@ -1494,7 +1495,7 @@
 |--------|------|
 | `should not count one transfer twice in the shared total row when the axis is account (M11)` | 口座軸の合計行は件数・平均を「—」で表示 |
 
-**ファイル**: res/tests/pages/aggregation-yearly-total-count.test.js
+**ファイル**: tests/frontend/pages/aggregation-yearly-total-count.test.js
 
 ### pages/aggregation-default-period-monthly.test.js
 
@@ -1506,7 +1507,7 @@
 |--------|------|
 | `should open on the August period that contains today when the start day is 25 and today is 2026-09-10 (scan2-A3)` | 今日を含む「8 月」の期間で開く |
 
-**ファイル**: res/tests/pages/aggregation-default-period-monthly.test.js
+**ファイル**: tests/frontend/pages/aggregation-default-period-monthly.test.js
 
 ### pages/aggregation-default-period-yearly.test.js
 
@@ -1518,7 +1519,7 @@
 |--------|------|
 | `should open on the 2025 period that contains today when the year starts on 04-01 and today is 2026-02-10 (scan2-A3)` | 今日を含む「2025 年度」で開く |
 
-**ファイル**: res/tests/pages/aggregation-default-period-yearly.test.js
+**ファイル**: tests/frontend/pages/aggregation-default-period-yearly.test.js
 
 ### pages/aggregation-monthly-stale.test.js
 
@@ -1533,7 +1534,7 @@
 | `should keep the loading state until the latest request finishes when an older request finishes first (scan2-A4)` | 古い要求が先に終わっても読み込み中の表示は消えず、最後の要求が終わったときに消える |
 | `should not strand the running request when an Execute is stopped by the input checks (scan2-A4)` | 入力チェックで止まった実行は要求を始めないので、実行中の要求は「最後」のままで、終わると読み込み中の表示が消える (CodeRabbit on #179) |
 
-**ファイル**: res/tests/pages/aggregation-monthly-stale.test.js
+**ファイル**: tests/frontend/pages/aggregation-monthly-stale.test.js
 
 ### pages/aggregation-daily-stale.test.js
 
@@ -1548,7 +1549,7 @@
 | `should keep the loading state until the latest request finishes when an older request finishes first (scan2-A4)` | 古い要求が先に終わっても読み込み中の表示は消えず、最後の要求が終わったときに消える |
 | `should not strand the running request when an Execute is stopped by the input checks (scan2-A4)` | 入力チェックで止まった実行は要求を始めないので、実行中の要求は「最後」のままで、終わると読み込み中の表示が消える (CodeRabbit on #179) |
 
-**ファイル**: res/tests/pages/aggregation-daily-stale.test.js
+**ファイル**: tests/frontend/pages/aggregation-daily-stale.test.js
 
 ### pages/aggregation-weekly-stale.test.js
 
@@ -1563,7 +1564,7 @@
 | `should keep the loading state until the latest request finishes when an older request finishes first (scan2-A4)` | 古い要求が先に終わっても読み込み中の表示は消えず、最後の要求が終わったときに消える |
 | `should not strand the running request when an Execute is stopped by the input checks (scan2-A4)` | 入力チェックで止まった実行は要求を始めないので、実行中の要求は「最後」のままで、終わると読み込み中の表示が消える (CodeRabbit on #179) |
 
-**ファイル**: res/tests/pages/aggregation-weekly-stale.test.js
+**ファイル**: tests/frontend/pages/aggregation-weekly-stale.test.js
 
 ### pages/aggregation-period-stale.test.js
 
@@ -1578,7 +1579,7 @@
 | `should keep the loading state until the latest request finishes when an older request finishes first (scan2-A4)` | 古い要求が先に終わっても読み込み中の表示は消えず、最後の要求が終わったときに消える |
 | `should not strand the running request when an Execute is stopped by the input checks (scan2-A4)` | 入力チェックで止まった実行は要求を始めないので、実行中の要求は「最後」のままで、終わると読み込み中の表示が消える (CodeRabbit on #179) |
 
-**ファイル**: res/tests/pages/aggregation-period-stale.test.js
+**ファイル**: tests/frontend/pages/aggregation-period-stale.test.js
 
 ### pages/aggregation-yearly-stale.test.js
 
@@ -1593,7 +1594,7 @@
 | `should keep the loading state until the latest request finishes when an older request finishes first (scan2-A4)` | 古い要求が先に終わっても読み込み中の表示は消えず、最後の要求が終わったときに消える |
 | `should not strand the running request when an Execute is stopped by the input checks (scan2-A4)` | 入力チェックで止まった実行は要求を始めないので、実行中の要求は「最後」のままで、終わると読み込み中の表示が消える (CodeRabbit on #179) |
 
-**ファイル**: res/tests/pages/aggregation-yearly-stale.test.js
+**ファイル**: tests/frontend/pages/aggregation-yearly-stale.test.js
 
 ### pages/dashboard-bar-top10.test.js
 
@@ -1605,7 +1606,7 @@
 |--------|------|
 | `should draw the largest expense category first and keep it in the top 10 when there are more than 10 categories (scan2-A1)` | 支出を金額の大きさ順に並べ、最大の支出が先頭に来て上位 10 件に残る |
 
-**ファイル**: res/tests/pages/dashboard-bar-top10.test.js
+**ファイル**: tests/frontend/pages/dashboard-bar-top10.test.js
 
 ---
 
@@ -1621,7 +1622,7 @@
 | `should report the username, not the password, when the backend rejects a blank username (L25)` | バックエンドの「Username cannot be empty」をパスワードではなくユーザー名のエラーとして表示 |
 | `should show the duplicate-username message when the backend reports duplicate_name (L25)` | `duplicate_name` で `error.username_duplicate` を表示 |
 
-**ファイル**: res/tests/pages/index-setup-page.test.js
+**ファイル**: tests/frontend/pages/index-setup-page.test.js
 
 ---
 
@@ -1636,7 +1637,7 @@
 | `should show the not-found message and reload the tree when moving a vanished category (L19)` | 存在しなくなった費目の移動で `category_mgmt.not_found` を表示しツリーを再読込 |
 | `should show the not-found message and reload the tree when showing a vanished category (L19)` | 存在しなくなった費目の再表示でも同様 |
 
-**ファイル**: res/tests/pages/category-management-page.test.js
+**ファイル**: tests/frontend/pages/category-management-page.test.js
 
 ---
 
@@ -1651,7 +1652,7 @@
 | `should not let the last visible CATEGORY2 move down when only hidden ones follow (scan2-M5)` | 表示中の最初の中分類は「↑」、最後の中分類は「↓」が押せない (後ろに非表示があっても)。非表示の行には ↑/↓ が無い |
 | `should not let the last visible CATEGORY3 move down when only hidden ones follow (scan2-M5)` | 小分類でも同じ |
 
-**ファイル**: res/tests/pages/category-management-move-buttons.test.js
+**ファイル**: tests/frontend/pages/category-management-move-buttons.test.js
 
 ---
 
@@ -1665,7 +1666,7 @@
 |--------|------|
 | `should offer a hidden CATEGORY2 and its CATEGORY3, labelled as hidden, when the list filter is shown (scan2-M7)` | 非表示の中分類「外食」とその小分類が `common.disabled_label` 付きで選べる。表示中の「食費」はラベル無しのまま |
 
-**ファイル**: res/tests/pages/transaction-management-filter-hidden-category.test.js
+**ファイル**: tests/frontend/pages/transaction-management-filter-hidden-category.test.js
 
 ---
 
@@ -1683,7 +1684,7 @@
 | `should close only the dialog, not the edit window behind it, when Esc is pressed (T6)` | Esc キーはダイアログだけを閉じ、後ろの編集ウィンドウは入力した値のまま残る |
 | `should move on at once, without asking or saving, when nothing was changed (T6)` | 変更がなければ確認も保存もせずにすぐ移動する |
 
-**ファイル**: res/tests/pages/transaction-management-save-before-details.test.js
+**ファイル**: tests/frontend/pages/transaction-management-save-before-details.test.js
 
 ---
 
@@ -1698,7 +1699,7 @@
 | `should report the error on the password field when the password is 16 spaces (L24)` | 空白16文字のパスワードは、未定義キー `user_mgmt.empty_name` をユーザー名欄に出さず、パスワードのエラーとして表示 |
 | `should reject the password in the frontend when it is 8 emoji (16 UTF-16 units) (L31)` | 文字数を UTF-16 単位ではなく文字 (コードポイント) で数え、絵文字8文字を拒否 |
 
-**ファイル**: res/tests/pages/user-management-password-page.test.js
+**ファイル**: tests/frontend/pages/user-management-password-page.test.js
 
 ---
 
@@ -1714,7 +1715,7 @@
 | `should hide the empty footer line under the list when the user is not an admin (L30)` | ボタンを隠したあとに区切り線 (フッター) だけが残らないよう、フッターごと隠す |
 | `should show no delete button on the own row when the user is not an admin (L30)` | 一般ユーザーの自分の行に削除ボタンを出さない |
 
-**ファイル**: res/tests/pages/user-management-nonadmin-page.test.js
+**ファイル**: tests/frontend/pages/user-management-nonadmin-page.test.js
 
 ---
 
@@ -1729,7 +1730,22 @@
 | `should reject the password on the frontend when admin setup gets 8 emoji (8 chars) (L31)` | 管理者セットアップで絵文字8文字を拒否 |
 | `should reject the password on the frontend when user setup gets 8 emoji (8 chars) (L31)` | 一般ユーザーセットアップでも同様 |
 
-**ファイル**: res/tests/pages/index-setup-password-length.test.js
+**ファイル**: tests/frontend/pages/index-setup-password-length.test.js
+
+---
+
+### release-bundle-excludes-tests.test.js
+
+アプリに同梱されるフォルダ (tauri.conf.json の `build.frontendDist`) にテストが入っていないことの確認。テストが `res/tests` にあった頃は、テストファイルと Jest の `node_modules` がすべてリリース版に入っていた。
+
+**テスト数**: 2件
+
+| テスト | 説明 |
+|--------|------|
+| `should find no test files when the bundled frontend folder is walked` | 同梱フォルダにテストファイル (`*.test.js` など) がない |
+| `should find no node_modules folder when the bundled frontend folder is walked` | 同梱フォルダに `node_modules` がない |
+
+**ファイル**: tests/frontend/release-bundle-excludes-tests.test.js
 
 ---
 
@@ -1750,7 +1766,7 @@
 | グルーピング軸変更 | 集計軸の変更 |
 | 口座メモ表示 | 口座メモの表示 |
 
-**ファイル**: res/tests/aggregation-daily.test.js
+**ファイル**: tests/frontend/aggregation-daily.test.js
 
 ---
 
@@ -1771,7 +1787,7 @@
 | 口座メモ表示 | 口座メモの表示 |
 | 異なる曜日 | 異なる曜日での動作 |
 
-**ファイル**: res/tests/aggregation-weekly.test.js
+**ファイル**: tests/frontend/aggregation-weekly.test.js
 
 ---
 
@@ -1793,7 +1809,7 @@
 | グルーピング軸変更 | 集計軸の変更 |
 | 未来日付バリデーション | 未来日付の検証 |
 
-**ファイル**: res/tests/aggregation-monthly.test.js
+**ファイル**: tests/frontend/aggregation-monthly.test.js
 
 ---
 
@@ -1814,7 +1830,7 @@
 | グルーピング軸変更 | 集計軸の変更 |
 | 口座メモ表示 | 口座メモの表示 |
 
-**ファイル**: res/tests/aggregation-yearly.test.js
+**ファイル**: tests/frontend/aggregation-yearly.test.js
 
 ---
 
@@ -1834,7 +1850,7 @@
 | 口座メモ表示 | 口座メモの表示 |
 | 境界値ケース | 境界値のテスト |
 
-**ファイル**: res/tests/aggregation-period.test.js
+**ファイル**: tests/frontend/aggregation-period.test.js
 
 ---
 
@@ -1846,7 +1862,7 @@
 
 集計機能テスト (aggregation-*.test.js) が共通で import する mock / fixture ヘルパー。単体でテストとして走ることはない。
 
-**ファイル**: res/tests/aggregation-test-helpers.js
+**ファイル**: tests/frontend/aggregation-test-helpers.js
 
 ---
 
@@ -1863,7 +1879,7 @@
 | user-addition.test.js | 46 |
 | admin-edit.test.js | 62 |
 | general-user-edit.test.js | 62 |
-| **機能別テスト** | **531件** |
+| **機能別テスト** | **533件** |
 | transaction-edit.test.js | 111 |
 | transaction-detail-tax-calculation.test.js | 33 |
 | toast.test.js | 14 |
@@ -1948,13 +1964,14 @@
 | pages/user-management-password-page.test.js | 2 |
 | pages/user-management-nonadmin-page.test.js | 3 |
 | pages/index-setup-password-length.test.js | 2 |
+| release-bundle-excludes-tests.test.js | 2 |
 | **集計機能テスト** | **115件** |
 | aggregation-daily.test.js | 16 |
 | aggregation-weekly.test.js | 22 |
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **848件** |
+| **総計 (jest)** | **850件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 
@@ -1965,14 +1982,14 @@
 ### すべてのテストを実行
 
 ```bash
-cd res/tests
+cd tests/frontend
 npm test
 ```
 
 ### 特定のテストファイルのみ実行
 
 ```bash
-cd res/tests
+cd tests/frontend
 npm test admin-setup.test.js
 npm test pages/index-login-page.test.js
 npm test pages/user-management-delete-page.test.js
@@ -1996,7 +2013,7 @@ npm run test:coverage
 `--json` を付けて jest を走らせ、per-file の実測値を採取。統計サマリー更新時はこれをソースに。`--silent` は付けない (assertion 数が 0 になる)。
 
 ```bash
-cd res/tests
+cd tests/frontend
 node --experimental-vm-modules node_modules/jest/bin/jest.js --json > /tmp/jest.json
 node -e "const j=JSON.parse(require('fs').readFileSync('/tmp/jest.json','utf8')); \
   j.testResults.map(r=>({f:r.name.replace(/^.*\\//,''),n:r.assertionResults.length})) \

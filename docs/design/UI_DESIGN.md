@@ -413,7 +413,7 @@ switchLanguage('en');
 ## テスト
 
 ### 自動テスト
-画面のテストは Jest で実行します（`cd res/tests && npm test`）。一覧は [FRONTEND_TEST_INDEX](../testing/ja/FRONTEND_TEST_INDEX.md) を参照してください。
+画面のテストは Jest で実行します（`cd tests/frontend && npm test`）。一覧は [FRONTEND_TEST_INDEX](../testing/ja/FRONTEND_TEST_INDEX.md) を参照してください。
 
 ### テスト項目
 - ✅ フォームバリデーション

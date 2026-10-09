@@ -387,7 +387,7 @@ describe('Password Tests', () => {
 
 ### Frontend and Backend Must Match
 ```javascript
-// Frontend: res/tests/validation-helpers.js
+// Frontend: tests/frontend/validation-helpers.js
 if (password.length < 16) {
     return { valid: false, message: 'Password must be at least 16 characters long!' };
 }
@@ -609,7 +609,7 @@ git push --force            # Requires hardware key
 1. **Backend code**: Always in `src/`
 2. **Frontend code**: Always in `res/`
 3. **Tests**: 
-   - Frontend tests: `res/tests/`
+   - Frontend tests: `tests/frontend/`
    - Backend tests: Inline with code (Rust convention)
 4. **Documentation**: 
    - User docs: Project root or `docs/`
@@ -813,7 +813,7 @@ Result:
 
 **Test Organization**:
 ```
-res/tests/
+tests/frontend/
 ├── validation-helpers.js       # Common validation functions
 ├── password-validation-tests.js # Reusable password test suite
 ├── username-validation-tests.js # Reusable username test suite

@@ -24,10 +24,10 @@ reviews:
   path_filters:
     # Rust build artifacts.
     - "!target/**"
-    # Frontend / Jest dependencies (root + res/tests).
+    # Frontend / Jest dependencies (root + tests/frontend).
     - "!node_modules/**"
-    - "!res/tests/node_modules/**"
-    - "!res/tests/target/**"
+    - "!tests/frontend/node_modules/**"
+    - "!tests/frontend/target/**"
     # AI collaboration methodology docs — pulled into CLAUDE.md
     # via `@` on demand, not the source of truth for code review.
     - "!.ai-context/**"
@@ -123,7 +123,7 @@ reviews:
         "restart the app" phrasing in any suggested user-facing copy,
         never "reload the browser".
 
-    - path: "res/tests/**/*.js"
+    - path: "tests/frontend/**/*.js"
       instructions: |
         Jest suite. Flag any NEW `*.test.js` file whose filename is not
         registered in BOTH `docs/testing/en/FRONTEND_TEST_INDEX.md` and
