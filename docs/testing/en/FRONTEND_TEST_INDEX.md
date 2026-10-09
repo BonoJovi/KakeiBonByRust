@@ -22,7 +22,7 @@ and are **not** added again to the grand total.
 - **user-edit-validation-tests.js** - User edit validation tests (23)
 - **validation-helpers.js** - Common validation functions
 
-### Screen-Specific Tests (308 tests)
+### Screen-Specific Tests (305 tests)
 - **admin-setup.test.js** - Admin setup tests (32)
 - **user-addition.test.js** - User addition tests (46)
 - **admin-edit.test.js** - Admin edit tests (62)
@@ -30,7 +30,7 @@ and are **not** added again to the grand total.
 - **login.test.js** - Login tests (58)
 - **user-deletion.test.js** - User deletion tests (45)
 
-### Feature-Specific Tests (539 tests)
+### Feature-Specific Tests (538 tests)
 
 - **transaction-edit.test.js** - Transaction edit tests (111)
 - **transaction-detail-management.test.js** - Transaction detail management tests (51)
