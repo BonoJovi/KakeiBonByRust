@@ -44,7 +44,9 @@ function findUnder(dir, isUnwanted) {
 
 describe('release bundle — frontend tests', () => {
     test('should find no test files when the bundled frontend folder is walked', () => {
-        expect(findUnder(DIST, (e) => /\.test\.(js|cjs|html)$/.test(e.name))).toEqual([]);
+        // `*.test.js` (Jest) and `*-tests.js` (shared suites such as
+        // password-validation-tests.js).
+        expect(findUnder(DIST, (e) => /(\.test|-tests)\.(c?js|html)$/.test(e.name))).toEqual([]);
     });
 
     test('should find no node_modules folder when the bundled frontend folder is walked', () => {
