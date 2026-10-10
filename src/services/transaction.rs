@@ -981,6 +981,19 @@ impl TransactionService {
         user_id: i64,
         transaction_id: i64,
     ) -> Result<(), TransactionError> {
+        // A scheduled header saved before the account check can lack the
+        // account its category needs; confirming it would make an actual
+        // transaction that moves no account balance. The user chooses the
+        // account with Edit first.
+        let header = self.get_transaction_header(user_id, transaction_id).await?;
+        if missing_required_account(
+            &header.category1_code,
+            &header.from_account_code,
+            &header.to_account_code,
+        ) {
+            return Err(TransactionError::AccountRequired);
+        }
+
         let result = sqlx::query(sql_queries::TRANSACTION_HEADER_CONFIRM_SCHEDULED)
             .bind(transaction_id)
             .bind(user_id)

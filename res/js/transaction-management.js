@@ -627,6 +627,11 @@ async function confirmScheduledTransaction(transactionId) {
         await loadTransactions();
     } catch (error) {
         console.error('Failed to confirm scheduled transaction:', error);
+        if (error && typeof error === 'object'
+            && error.code === API_ERROR_CODES.ACCOUNT_REQUIRED) {
+            showToast(i18n.t('transaction_mgmt.account_required'), { variant: 'error' });
+            return;
+        }
         showToast(i18n.t('transaction_mgmt.confirm_error') + ': ' + formatApiError(error), { variant: 'error' });
     }
 }

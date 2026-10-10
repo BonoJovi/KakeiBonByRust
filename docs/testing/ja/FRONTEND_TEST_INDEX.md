@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-10-10 JST  
-**総テスト数**: 835件 (jest suite 100 ファイル、`npm test` 実測)
+**総テスト数**: 836件 (jest suite 100 ファイル、`npm test` 実測)
 
 ---
 
@@ -1172,9 +1172,9 @@
 
 ### pages/transaction-list-account-missing.test.js
 
-入出金一覧で、大分類が使う口座が「未指定」のままの行 (口座の必須チェックより前に保存されたもの) を目立たせることを確かめる。こうした行は支出・収入として数えられる一方、どの口座の残高も動かさない。抜けている側を赤字の「⚠ 口座未指定」(`transaction_mgmt.account_missing_label`) にし、口座欄の下に `transaction_mgmt.account_missing_hint` を表示する。使わない側は普通の「未指定」のまま。
+入出金一覧で、大分類が使う口座が「未指定」のままの行 (口座の必須チェックより前に保存されたもの) を目立たせることを確かめる。こうした行は支出・収入として数えられる一方、どの口座の残高も動かさない。抜けている側を赤字の「⚠ 口座未指定」(`transaction_mgmt.account_missing_label`) にし、口座欄の下に `transaction_mgmt.account_missing_hint` を表示する。使わない側は普通の「未指定」のまま。こうした予定の行は確定できない (バックエンドが `account_required` で断る)。
 
-**テスト数**: 7件
+**テスト数**: 8件
 
 | テスト | 説明 |
 |--------|------|
@@ -1185,6 +1185,7 @@
 | `should mark nothing when an income has a To account` | 入金先がある収入は何も目立たせない |
 | `should mark the From account when a transfer has no From account` | 出金元が未指定の振替は出金元を目立たせる |
 | `should mark the To account when a transfer has no To account` | 入金先が未指定の振替は入金先を目立たせる |
+| `should show the account-required message when confirming a scheduled row is refused for its account` | こうした予定の行で「確定」を押し、バックエンドが `account_required` で断ったときは `transaction_mgmt.account_required` のトーストを出す |
 
 **ファイル**: tests/frontend/pages/transaction-list-account-missing.test.js
 
@@ -2007,7 +2008,7 @@
 | user-addition.test.js | 46 |
 | admin-edit.test.js | 62 |
 | general-user-edit.test.js | 62 |
-| **機能別テスト** | **518件** |
+| **機能別テスト** | **519件** |
 | transaction-edit.test.js | 48 |
 | transaction-detail-tax-calculation.test.js | 33 |
 | toast.test.js | 14 |
@@ -2054,7 +2055,7 @@
 | pages/i18n-literal-user-text.test.js | 7 |
 | pages/dashboard-balance-header.test.js | 1 |
 | pages/transaction-list-none-account-label.test.js | 1 |
-| pages/transaction-list-account-missing.test.js | 7 |
+| pages/transaction-list-account-missing.test.js | 8 |
 | pages/transaction-detail-none-account-label.test.js | 1 |
 | pages/dashboard-balance-sign.test.js | 3 |
 | pages/dashboard-default-period.test.js | 1 |
@@ -2105,7 +2106,7 @@
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **835件** |
+| **総計 (jest)** | **836件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 
