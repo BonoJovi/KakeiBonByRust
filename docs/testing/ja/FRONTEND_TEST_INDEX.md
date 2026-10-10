@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-10-10 JST  
-**総テスト数**: 828件 (jest suite 99 ファイル、`npm test` 実測)
+**総テスト数**: 835件 (jest suite 100 ファイル、`npm test` 実測)
 
 ---
 
@@ -66,6 +66,7 @@
   - [pages/i18n-literal-user-text.test.js](#pagesi18n-literal-user-texttestjs)
   - [pages/dashboard-balance-header.test.js](#pagesdashboard-balance-headertestjs)
   - [pages/transaction-list-none-account-label.test.js](#pagestransaction-list-none-account-labeltestjs)
+  - [pages/transaction-list-account-missing.test.js](#pagestransaction-list-account-missingtestjs)
   - [pages/transaction-detail-none-account-label.test.js](#pagestransaction-detail-none-account-labeltestjs)
   - [pages/dashboard-balance-sign.test.js](#pagesdashboard-balance-signtestjs)
   - [pages/dashboard-default-period.test.js](#pagesdashboard-default-periodtestjs)
@@ -1169,6 +1170,26 @@
 
 ---
 
+### pages/transaction-list-account-missing.test.js
+
+入出金一覧で、大分類が使う口座が「未指定」のままの行 (口座の必須チェックより前に保存されたもの) を目立たせることを確かめる。こうした行は支出・収入として数えられる一方、どの口座の残高も動かさない。抜けている側を赤字の「⚠ 口座未指定」(`transaction_mgmt.account_missing_label`) にし、口座欄の下に `transaction_mgmt.account_missing_hint` を表示する。使わない側は普通の「未指定」のまま。
+
+**テスト数**: 7件
+
+| テスト | 説明 |
+|--------|------|
+| `should render every transaction when the list is loaded` | 6 件の行がすべて表示される (前提の確認) |
+| `should mark the From account and show the hint when an expense has no From account` | 出金元が未指定の支出は出金元を「⚠ 口座未指定」にし、補足を表示する |
+| `should mark nothing when an expense has a From account` | 出金元がある支出は何も目立たせない (入金先は普通の「未指定」) |
+| `should mark the To account and show the hint when an income has no To account` | 入金先が未指定の収入は入金先を「⚠ 口座未指定」にし、補足を表示する |
+| `should mark nothing when an income has a To account` | 入金先がある収入は何も目立たせない |
+| `should mark the From account when a transfer has no From account` | 出金元が未指定の振替は出金元を目立たせる |
+| `should mark the To account when a transfer has no To account` | 入金先が未指定の振替は入金先を目立たせる |
+
+**ファイル**: tests/frontend/pages/transaction-list-account-missing.test.js
+
+---
+
 ### pages/transaction-detail-none-account-label.test.js
 
 明細画面の上部 (取引情報) の「指定なし」口座の表示の回帰テスト (潜在スキャン scan2-M8)。入出金一覧と同じく、保存された口座名「指定なし」がそのまま出ていた。
@@ -1986,7 +2007,7 @@
 | user-addition.test.js | 46 |
 | admin-edit.test.js | 62 |
 | general-user-edit.test.js | 62 |
-| **機能別テスト** | **511件** |
+| **機能別テスト** | **518件** |
 | transaction-edit.test.js | 48 |
 | transaction-detail-tax-calculation.test.js | 33 |
 | toast.test.js | 14 |
@@ -2033,6 +2054,7 @@
 | pages/i18n-literal-user-text.test.js | 7 |
 | pages/dashboard-balance-header.test.js | 1 |
 | pages/transaction-list-none-account-label.test.js | 1 |
+| pages/transaction-list-account-missing.test.js | 7 |
 | pages/transaction-detail-none-account-label.test.js | 1 |
 | pages/dashboard-balance-sign.test.js | 3 |
 | pages/dashboard-default-period.test.js | 1 |
@@ -2083,7 +2105,7 @@
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **828件** |
+| **総計 (jest)** | **835件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 

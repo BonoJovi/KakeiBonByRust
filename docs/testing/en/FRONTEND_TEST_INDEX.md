@@ -3,7 +3,7 @@
 This document provides a complete index of all frontend tests implemented in JavaScript.
 
 **Last Updated**: 2026-10-10 JST  
-**Total Tests**: 828 (jest suites; 99 test files, per `npm test`)
+**Total Tests**: 835 (jest suites; 100 test files, per `npm test`)
 
 ---
 
@@ -28,7 +28,7 @@ and are **not** added again to the grand total.
 - **admin-edit.test.js** - Admin edit tests (62)
 - **general-user-edit.test.js** - General user edit tests (62)
 
-### Feature-Specific Tests (511 tests)
+### Feature-Specific Tests (518 tests)
 
 - **transaction-edit.test.js** - Transaction edit tests (48)
 - **transaction-detail-tax-calculation.test.js** - Tax calculation tests on the real helpers in `detail-tax-calc.js` (tax rates, 1 yen, the maximum amount, rounding types, exact splits of a tax-included amount, a round trip); a typed tax-included price is always kept, with the tax carved out of it when no exact tax-excluded split exists (latent-audit scan2-T2) (33)
@@ -76,6 +76,7 @@ and are **not** added again to the grand total.
 - **pages/i18n-literal-user-text.test.js** - User text is inserted literally: `i18n.t()` keeps `$&`, `$'`, `` $` `` and `$$` in a user name, fills every placeholder in one pass (a value containing `{b}` is not filled again), leaves a placeholder with no param as it is, and the recurring-rule delete confirmation keeps a rule name containing `$'` and `{1}` (latent-audit scan2-C4) (7)
 - **pages/dashboard-balance-header.test.js** - The dashboard's Account Balances column header uses its own key that resolves to 残高 / Balance after `dbaccess.sql` is applied, instead of `dashboard.balance` (収支, the chart label) (latent-audit scan2-C3) (1)
 - **pages/transaction-list-none-account-label.test.js** - Boots the real transaction list: a row whose account is NONE shows `common.unspecified` instead of the stored name 指定なし (latent-audit scan2-M8) (1)
+- **pages/transaction-list-account-missing.test.js** - Boots the real transaction list: a row whose category needs an account left "Unspecified" (EXPENSE: From, INCOME: To, TRANSFER: both), saved before the account check, shows `⚠ transaction_mgmt.account_missing_label` on the missing side and `transaction_mgmt.account_missing_hint` under the accounts; rows with the needed account, and the unused side, keep the plain labels (7)
 - **pages/transaction-detail-none-account-label.test.js** - Boots the real transaction detail screen: the header's account shows `common.unspecified` for the NONE account instead of the stored name 指定なし (latent-audit scan2-M8) (1)
 - **pages/dashboard-balance-sign.test.js** - Boots the real dashboard: the trend chart's Balance tooltip keeps the minus sign ("-¥30,000"), the axis ticks show the full signed amount without K / M abbreviations, and the account balances read "-¥1,234" (latent-audit scan2-A2) (3)
 - **pages/dashboard-default-period.test.js** - Boots the real dashboard with start day 25 on 2026-09-10: it opens on the August period that contains today, not the future September period, and loads that month (latent-audit scan2-A3) (1)
@@ -147,7 +148,7 @@ and are **not** added again to the grand total.
 | user-addition.test.js | 46 |
 | admin-edit.test.js | 62 |
 | general-user-edit.test.js | 62 |
-| **Feature-Specific Tests** | **511** |
+| **Feature-Specific Tests** | **518** |
 | transaction-edit.test.js | 48 |
 | transaction-detail-tax-calculation.test.js | 33 |
 | toast.test.js | 14 |
@@ -194,6 +195,7 @@ and are **not** added again to the grand total.
 | pages/i18n-literal-user-text.test.js | 7 |
 | pages/dashboard-balance-header.test.js | 1 |
 | pages/transaction-list-none-account-label.test.js | 1 |
+| pages/transaction-list-account-missing.test.js | 7 |
 | pages/transaction-detail-none-account-label.test.js | 1 |
 | pages/dashboard-balance-sign.test.js | 3 |
 | pages/dashboard-default-period.test.js | 1 |
@@ -244,7 +246,7 @@ and are **not** added again to the grand total.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **Total (jest)** | **828** |
+| **Total (jest)** | **835** |
 
 Grand total is Screen + Feature + Aggregation (Common Test Suites are helper
 libraries invoked from Screen-Specific files and their assertions are already

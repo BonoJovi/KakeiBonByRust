@@ -445,11 +445,40 @@ function createTransactionItem(transaction) {
     // like the form's NONE option (latent-scan2 M8).
     const accountDiv = document.createElement('div');
     accountDiv.className = 'transaction-account';
-    const accountDisplay = (code, name) =>
-        code === 'NONE' ? i18n.t('common.unspecified') : (name || code);
-    const fromAccountDisplay = accountDisplay(transaction.from_account_code, transaction.from_account_name);
-    const toAccountDisplay = accountDisplay(transaction.to_account_code, transaction.to_account_name);
-    accountDiv.textContent = `${fromAccountDisplay} → ${toAccountDisplay}`;
+    // A row saved before the account check (#238) can lack the account its
+    // category needs; it counts as an expense or income on no account
+    // balance. Mark that side and say how to fix it.
+    const missingAccounts = missingRequiredAccounts(
+        transaction.category1_code, transaction.from_account_code, transaction.to_account_code);
+    const accountSide = (code, name, missing) => {
+        const span = document.createElement('span');
+        span.className = 'account-side';
+        if (missing) {
+            span.classList.add('account-missing');
+            const icon = document.createElement('span');
+            icon.setAttribute('aria-hidden', 'true');
+            icon.textContent = '⚠ ';
+            const label = document.createElement('span');
+            label.setAttribute('data-i18n', 'transaction_mgmt.account_missing_label');
+            label.textContent = i18n.t('transaction_mgmt.account_missing_label');
+            span.append(icon, label);
+        } else {
+            span.textContent = code === 'NONE' ? i18n.t('common.unspecified') : (name || code);
+        }
+        return span;
+    };
+    accountDiv.appendChild(accountSide(
+        transaction.from_account_code, transaction.from_account_name, missingAccounts.from));
+    accountDiv.appendChild(document.createTextNode(' → '));
+    accountDiv.appendChild(accountSide(
+        transaction.to_account_code, transaction.to_account_name, missingAccounts.to));
+    if (missingAccounts.from || missingAccounts.to) {
+        const hint = document.createElement('div');
+        hint.className = 'account-missing-hint';
+        hint.setAttribute('data-i18n', 'transaction_mgmt.account_missing_hint');
+        hint.textContent = i18n.t('transaction_mgmt.account_missing_hint');
+        accountDiv.appendChild(hint);
+    }
     contentWrapper.appendChild(accountDiv);
     
     // Amount
