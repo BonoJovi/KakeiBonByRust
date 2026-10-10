@@ -3632,6 +3632,87 @@ mod tests {
         );
     }
 
+    /// A header whose category needs an account (EXPENSE: FROM, INCOME: TO,
+    /// TRANSFER: both) was saved with that side left as the NONE account.
+    /// The dashboard hides NONE, so the amount was counted as an expense or
+    /// income but moved no account balance.
+    fn account_request(category1: &str, from: &str, to: &str) -> SaveTransactionRequest {
+        SaveTransactionRequest {
+            shop_id: None,
+            category1_code: category1.to_string(),
+            from_account_code: from.to_string(),
+            to_account_code: to.to_string(),
+            transaction_date: "2024-01-01 10:00:00".to_string(),
+            total_amount: 1000,
+            tax_rounding_type: consts::TAX_ROUND_DOWN,
+            tax_included_type: consts::TAX_EXCLUDED,
+            memo: None,
+            is_scheduled: None,
+        }
+    }
+
+    #[tokio::test]
+    async fn test_save_header_rejects_missing_account_when_category_needs_it() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+
+        for (category1, from, to) in [
+            ("EXPENSE", "NONE", "NONE"),
+            ("INCOME", "NONE", "NONE"),
+            ("TRANSFER", "NONE", "BANK"),
+            ("TRANSFER", "CASH", "NONE"),
+        ] {
+            let result = service
+                .save_transaction_header(2, account_request(category1, from, to))
+                .await;
+            let code = result.err().map(|e| ApiError::from(e).code);
+            assert_eq!(
+                code.as_deref(),
+                Some("account_required"),
+                "{} with FROM={} TO={} must be refused with account_required",
+                category1, from, to
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn test_update_header_rejects_missing_account_when_category_needs_it() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        for (category1, from, to) in [
+            ("EXPENSE", "NONE", "BANK"),
+            ("INCOME", "CASH", "NONE"),
+            ("TRANSFER", "NONE", "BANK"),
+        ] {
+            let result = service
+                .update_transaction_header(2, transaction_id, account_request(category1, from, to))
+                .await;
+            let code = result.err().map(|e| ApiError::from(e).code);
+            assert_eq!(
+                code.as_deref(),
+                Some("account_required"),
+                "{} with FROM={} TO={} must be refused on update with account_required",
+                category1, from, to
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn test_update_header_accepts_income_when_only_to_account_is_given() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        // The test DB has no NONE account row, so give the unused FROM side
+        // a real account; only the TO side is required for an income.
+        let result = service
+            .update_transaction_header(2, transaction_id, account_request("INCOME", "CASH", "BANK"))
+            .await;
+        assert!(result.is_ok(), "an income with a TO account must be saved, got {:?}", result);
+    }
+
     /// Fable-5 review #6 — `save_transaction_header` used to run the
     /// MEMO insert and the TRANSACTION_HEADER insert on separate pool
     /// connections. If the HEADER insert tripped an FK, the MEMO row
