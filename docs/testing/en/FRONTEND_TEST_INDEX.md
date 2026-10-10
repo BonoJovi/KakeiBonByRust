@@ -3,7 +3,7 @@
 This document provides a complete index of all frontend tests implemented in JavaScript.
 
 **Last Updated**: 2026-10-09 JST  
-**Total Tests**: 850 (jest suites; 94 test files, per `npm test`)
+**Total Tests**: 815 (jest suites; 95 test files, per `npm test`)
 
 ---
 
@@ -28,9 +28,9 @@ and are **not** added again to the grand total.
 - **admin-edit.test.js** - Admin edit tests (62)
 - **general-user-edit.test.js** - General user edit tests (62)
 
-### Feature-Specific Tests (533 tests)
+### Feature-Specific Tests (498 tests)
 
-- **transaction-edit.test.js** - Transaction edit tests (111)
+- **transaction-edit.test.js** - Transaction edit tests (66)
 - **transaction-detail-tax-calculation.test.js** - Tax calculation tests on the real helpers in `detail-tax-calc.js` (tax rates, 1 yen, the maximum amount, rounding types, exact splits of a tax-included amount, a round trip); a typed tax-included price is always kept, with the tax carved out of it when no exact tax-excluded split exists (latent-audit scan2-T2) (33)
 - **toast.test.js** - Toast notification tests (14)
 - **tax-calc.test.js** - Tax calculation utility tests (12)
@@ -111,6 +111,7 @@ and are **not** added again to the grand total.
 - **pages/category-management-move-buttons.test.js** - Boots the real category management page: the first / last *visible* CATEGORY2 and CATEGORY3 have their ↑ / ↓ disabled, ignoring hidden siblings listed after them; hidden rows have no ↑/↓ (latent-audit scan2-M5) (2)
 - **pages/transaction-management-filter-hidden-category.test.js** - Boots the real transaction list: the category filter also offers a hidden CATEGORY2 and its CATEGORY3, labelled with `common.disabled_label`, so their past transactions can still be searched (latent-audit scan2-M7) (1)
 - **pages/transaction-management-save-before-details.test.js** - Boots the real transaction list: "Manage details" with unsaved header edits asks in an in-app dialog (`#save-before-details-modal`, `transaction_mgmt.save_before_details_confirm`, no native `confirm()`), saves the header through the normal save and moves on, and a second click while saving does not save twice; Cancel or Esc closes only the dialog and keeps the edit modal open without saving; without changes it moves on at once (latent-audit scan2-T6) (5)
+- **pages/transaction-management-edit-roundtrip.test.js** - Boots the real transaction list: opening a saved header shows its date without seconds (00:00 when it has no time), a null memo as an empty field and the other saved values; saving sends the date as `YYYY-MM-DD HH:MM:00`, the memo trimmed (blank → null) and the accounts as their codes (`NONE` when none is chosen); a header saved without changes sends its saved values back, and a new header goes to `save_transaction_header` (10)
 - **pages/user-management-password-page.test.js** - Admin session: a 16-space password is reported as the password error, not as the raw `user_mgmt.empty_name` key on the username (latent-audit L24); 8 emoji (16 UTF-16 units, 8 characters) are rejected by the frontend length check (latent-audit L31) (2)
 - **pages/user-management-nonadmin-page.test.js** - General-user session: no Add User button, no empty footer line where the button was, and no delete button on the user's own row (latent-audit L30) (3)
 - **pages/index-setup-password-length.test.js** - Setup forms count password characters, not UTF-16 units: 8 emoji are rejected for admin and user setup (latent-audit L31) (2)
@@ -142,8 +143,8 @@ and are **not** added again to the grand total.
 | user-addition.test.js | 46 |
 | admin-edit.test.js | 62 |
 | general-user-edit.test.js | 62 |
-| **Feature-Specific Tests** | **533** |
-| transaction-edit.test.js | 111 |
+| **Feature-Specific Tests** | **498** |
+| transaction-edit.test.js | 66 |
 | transaction-detail-tax-calculation.test.js | 33 |
 | toast.test.js | 14 |
 | tax-calc.test.js | 12 |
@@ -224,6 +225,7 @@ and are **not** added again to the grand total.
 | pages/category-management-move-buttons.test.js | 2 |
 | pages/transaction-management-filter-hidden-category.test.js | 1 |
 | pages/transaction-management-save-before-details.test.js | 5 |
+| pages/transaction-management-edit-roundtrip.test.js | 10 |
 | pages/user-management-password-page.test.js | 2 |
 | pages/user-management-nonadmin-page.test.js | 3 |
 | pages/index-setup-password-length.test.js | 2 |
@@ -234,7 +236,7 @@ and are **not** added again to the grand total.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **Total (jest)** | **850** |
+| **Total (jest)** | **815** |
 
 Grand total is Screen + Feature + Aggregation (Common Test Suites are helper
 libraries invoked from Screen-Specific files and their assertions are already
