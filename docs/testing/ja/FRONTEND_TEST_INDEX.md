@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-10-10 JST  
-**総テスト数**: 836件 (jest suite 100 ファイル、`npm test` 実測)
+**総テスト数**: 831件 (jest suite 101 ファイル、`npm test` 実測)
 
 ---
 
@@ -106,6 +106,7 @@
   - [pages/transaction-management-save-before-details.test.js](#pagestransaction-management-save-before-detailstestjs)
   - [pages/transaction-management-edit-roundtrip.test.js](#pagestransaction-management-edit-roundtriptestjs)
   - [pages/transaction-management-edit-accounts.test.js](#pagestransaction-management-edit-accountstestjs)
+  - [pages/transaction-management-edit-shop.test.js](#pagestransaction-management-edit-shoptestjs)
   - [pages/transaction-management-account-required.test.js](#pagestransaction-management-account-requiredtestjs)
   - [pages/user-management-password-page.test.js](#pagesuser-management-password-pagetestjs)
   - [pages/user-management-nonadmin-page.test.js](#pagesuser-management-nonadmin-pagetestjs)
@@ -388,17 +389,15 @@
 
 取引編集機能のテスト。
 
-**テスト数**: 48件
+**テスト数**: 32件
 
 | テストカテゴリ (describe) | 説明 | テスト数 |
 |--------------|------|---------|
 | Modal State Management | モーダルの開閉・状態制御 | 5件 |
 | Amount Formatting | 金額の表示形式と読み取り | 17件 |
 | Error Handling | エラー時の処理 | 10件 |
-| Shop Selection | 店舗の選択 | 11件 |
-| Shop Selection Integration | 店舗選択の組み合わせ | 5件 |
 
-保存済みヘッダーの読み込みと保存時に送る値は、実際の画面で [pages/transaction-management-edit-roundtrip.test.js](#pagestransaction-management-edit-roundtriptestjs) が確かめる。大分類による口座欄の表示と保存時の確認は [pages/transaction-management-edit-accounts.test.js](#pagestransaction-management-edit-accountstestjs) が確かめる。
+保存済みヘッダーの読み込みと保存時に送る値は、実際の画面で [pages/transaction-management-edit-roundtrip.test.js](#pagestransaction-management-edit-roundtriptestjs) が確かめる。大分類による口座欄の表示と保存時の確認は [pages/transaction-management-edit-accounts.test.js](#pagestransaction-management-edit-accountstestjs) が、店舗欄は [pages/transaction-management-edit-shop.test.js](#pagestransaction-management-edit-shoptestjs) が確かめる。
 
 **ファイル**: tests/frontend/transaction-edit.test.js
 
@@ -1797,6 +1796,30 @@
 
 ---
 
+### pages/transaction-management-edit-shop.test.js
+
+実際の入出金一覧の編集ウィンドウで、店舗欄の選択肢、保存済みヘッダーを開いたときの店舗、保存時に送る店舗を確かめる。
+
+**テスト数**: 11件
+
+| テスト | 説明 |
+|--------|------|
+| `should list Unspecified first and then the shops when the window opens` | 先頭が「未指定」、その後に店舗が get_shops の順で並ぶ |
+| `should select Unspecified when a new header is opened` | 新規追加では「未指定」が選ばれている |
+| `should select the saved shop when the header has a shop` | 保存済みヘッダーの店舗が選ばれる |
+| `should select Unspecified when the saved header has no shop` | 店舗が null のヘッダーは「未指定」になる |
+| `should select Unspecified when the saved shop is not in the list` | 一覧に無い店舗のヘッダーは「未指定」になる |
+| `should send the saved shop back when a header is saved without changes` | 変更せずに保存すると、保存済みの店舗をそのまま送る |
+| `should send the shop as an integer when a shop is chosen` | 選んだ店舗を整数の `shopId` として送る |
+| `should send the last chosen shop when the shop is changed twice` | 店舗を 2 回変えると、最後に選んだ店舗を送る |
+| `should send null when the shop is changed to Unspecified` | 「未指定」に戻すと null を送る |
+| `should send null when a new header is saved with no shop` | 店舗なしの新規ヘッダーは null を送る |
+| `should send the shop as an integer when a new header is saved with a shop` | 店舗ありの新規ヘッダーは整数の `shopId` を送る |
+
+**ファイル**: tests/frontend/pages/transaction-management-edit-shop.test.js
+
+---
+
 ### pages/transaction-management-account-required.test.js
 
 実際の入出金一覧の編集ウィンドウで、大分類が使う口座を「未指定」のまま保存しようとすると断ることを確かめる (支出は出金元、収入は入金先、振替は両方)。以前は保存でき、ダッシュボードは「未指定」の口座を表示しないため、支出・収入としては数えられるのにどの口座の残高も動かなかった。
@@ -2008,8 +2031,8 @@
 | user-addition.test.js | 46 |
 | admin-edit.test.js | 62 |
 | general-user-edit.test.js | 62 |
-| **機能別テスト** | **519件** |
-| transaction-edit.test.js | 48 |
+| **機能別テスト** | **514件** |
+| transaction-edit.test.js | 32 |
 | transaction-detail-tax-calculation.test.js | 33 |
 | toast.test.js | 14 |
 | tax-calc.test.js | 12 |
@@ -2095,6 +2118,7 @@
 | pages/transaction-management-save-before-details.test.js | 5 |
 | pages/transaction-management-edit-roundtrip.test.js | 10 |
 | pages/transaction-management-edit-accounts.test.js | 14 |
+| pages/transaction-management-edit-shop.test.js | 11 |
 | pages/transaction-management-account-required.test.js | 7 |
 | pages/user-management-password-page.test.js | 2 |
 | pages/user-management-nonadmin-page.test.js | 3 |
@@ -2106,7 +2130,7 @@
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **836件** |
+| **総計 (jest)** | **831件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 
