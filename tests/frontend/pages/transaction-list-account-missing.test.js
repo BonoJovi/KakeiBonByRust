@@ -11,13 +11,16 @@
  * can find these rows and fix them with Edit. The unused side keeps the
  * plain `common.unspecified` label.
  *
+ * Confirming such a scheduled row is refused by the backend
+ * (`account_required`); the list shows `transaction_mgmt.account_required`.
+ *
  * The real page module is booted against res/transaction-management.html
  * via ./_page-harness.js.
  */
 
 import { jest } from '@jest/globals';
 import {
-    mockPageModules, loadPageBody, bootPage,
+    mockPageModules, loadPageBody, bootPage, flush, callsOf,
 } from './_page-harness.js';
 
 const row = (id, category1, from, to) => ({
@@ -45,9 +48,10 @@ const TRANSACTIONS = [
     row(4, 'INCOME', 'NONE', 'BANK'),
     row(5, 'TRANSFER', 'NONE', 'BANK'),
     row(6, 'TRANSFER', 'CASH', 'NONE'),
+    { ...row(7, 'EXPENSE', 'NONE', 'NONE'), is_scheduled: 1 },
 ];
 
-mockPageModules(jest, {
+const { invoke, showToast } = mockPageModules(jest, {
     user: { user_id: 2, name: 'alice', role: 1 },
     invoke: (cmd, args) => {
         switch (cmd) {
@@ -65,6 +69,8 @@ mockPageModules(jest, {
                 return [];
             case 'get_shops':
                 return [];
+            case 'confirm_scheduled_transaction':
+                throw { code: 'account_required', message: 'An account is required for this category' };
             default:
                 return null;
         }
@@ -145,5 +151,13 @@ describe('transaction list — transactions without the account their category n
             to: { text: MISSING, missing: true },
             hint: HINT,
         });
+    });
+
+    test('should show the account-required message when confirming a scheduled row is refused for its account', async () => {
+        showToast.mockClear();
+        items()[6].querySelector('.btn-confirm').click();
+        await flush(5);
+        expect(callsOf(invoke, 'confirm_scheduled_transaction')).toHaveLength(1);
+        expect(showToast).toHaveBeenCalledWith('transaction_mgmt.account_required', { variant: 'error' });
     });
 });
