@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-10-10 JST  
-**総テスト数**: 819件 (jest suite 96 ファイル、`npm test` 実測)
+**総テスト数**: 815件 (jest suite 97 ファイル、`npm test` 実測)
 
 ---
 
@@ -103,6 +103,7 @@
   - [pages/transaction-management-filter-hidden-category.test.js](#pagestransaction-management-filter-hidden-categorytestjs)
   - [pages/transaction-management-save-before-details.test.js](#pagestransaction-management-save-before-detailstestjs)
   - [pages/transaction-management-edit-roundtrip.test.js](#pagestransaction-management-edit-roundtriptestjs)
+  - [pages/transaction-management-edit-accounts.test.js](#pagestransaction-management-edit-accountstestjs)
   - [pages/user-management-password-page.test.js](#pagesuser-management-password-pagetestjs)
   - [pages/user-management-nonadmin-page.test.js](#pagesuser-management-nonadmin-pagetestjs)
   - [pages/index-setup-password-length.test.js](#pagesindex-setup-password-lengthtestjs)
@@ -384,19 +385,17 @@
 
 取引編集機能のテスト。
 
-**テスト数**: 66件
+**テスト数**: 48件
 
 | テストカテゴリ (describe) | 説明 | テスト数 |
 |--------------|------|---------|
 | Modal State Management | モーダルの開閉・状態制御 | 5件 |
-| Category Change and Account Reset | カテゴリ変更時の口座リセット処理 | 8件 |
-| Form Validation | 入力値の確認 | 10件 |
 | Amount Formatting | 金額の表示形式と読み取り | 17件 |
 | Error Handling | エラー時の処理 | 10件 |
 | Shop Selection | 店舗の選択 | 11件 |
 | Shop Selection Integration | 店舗選択の組み合わせ | 5件 |
 
-保存済みヘッダーの読み込みと保存時に送る値は、実際の画面で [pages/transaction-management-edit-roundtrip.test.js](#pagestransaction-management-edit-roundtriptestjs) が確かめる。
+保存済みヘッダーの読み込みと保存時に送る値は、実際の画面で [pages/transaction-management-edit-roundtrip.test.js](#pagestransaction-management-edit-roundtriptestjs) が確かめる。大分類による口座欄の表示と保存時の確認は [pages/transaction-management-edit-accounts.test.js](#pagestransaction-management-edit-accountstestjs) が確かめる。
 
 **ファイル**: tests/frontend/transaction-edit.test.js
 
@@ -1728,6 +1727,33 @@
 
 ---
 
+### pages/transaction-management-edit-accounts.test.js
+
+実際の入出金一覧の編集ウィンドウで、大分類によって出金元・入金先の欄がどう変わるかと、保存ボタンを押したときの確認を確かめる。口座欄は大分類の名前で決まる (支出は出金元、収入は入金先、振替とそれ以外は両方)。
+
+**テスト数**: 14件
+
+| テスト | 説明 |
+|--------|------|
+| `should show only the From account when the category is an expense` | 支出では出金元だけを表示する |
+| `should show only the To account when the category is an income` | 収入では入金先だけを表示する |
+| `should show both accounts when the category is a transfer` | 振替では両方を表示する |
+| `should show both accounts when the category is not an expense, income or transfer` | 支出・収入・振替のどれでもない大分類では両方を表示する |
+| `should hide both accounts and set them to NONE when no category is chosen` | 大分類を未選択にすると両方を隠し、両方を `NONE` に戻す |
+| `should set the To account to NONE when a transfer is changed to an expense` | 振替から支出に変えると、隠れる入金先を `NONE` に戻す (出金元はそのまま) |
+| `should set the From account to NONE when a transfer is changed to an income` | 振替から収入に変えると、隠れる出金元を `NONE` に戻す (入金先はそのまま) |
+| `should keep both accounts when an expense is changed to a transfer` | 支出から振替に変えたとき、出金元を残したまま入金先と一緒に保存する |
+| `should send the header when every field is filled in` | すべて入力済みなら保存ボタンでヘッダーを送る |
+| `should not send the header when the date is blank` | 日時が空なら送らず、ウィンドウを開いたままにする |
+| `should not send the header when no category is chosen` | 大分類が未選択なら送らない (`required`) |
+| `should not send the header when the total is blank` | 合計が空なら送らない (`required`) |
+| `should send a total of 0 when the total is 0` | 合計 0 はそのまま 0 として送る |
+| `should show the same-account message and not send when a transfer has the same account twice` | 出金元と入金先が同じ振替は送らず、`transaction_mgmt.transfer_same_account` を表示する |
+
+**ファイル**: tests/frontend/pages/transaction-management-edit-accounts.test.js
+
+---
+
 ### pages/user-management-password-page.test.js
 
 ユーザー管理画面 (管理者セッション) のパスワード検証の回帰テスト (潜在監査 L24 / L31)。
@@ -1919,8 +1945,8 @@
 | user-addition.test.js | 46 |
 | admin-edit.test.js | 62 |
 | general-user-edit.test.js | 62 |
-| **機能別テスト** | **502件** |
-| transaction-edit.test.js | 66 |
+| **機能別テスト** | **498件** |
+| transaction-edit.test.js | 48 |
 | transaction-detail-tax-calculation.test.js | 33 |
 | toast.test.js | 14 |
 | tax-calc.test.js | 12 |
@@ -2003,6 +2029,7 @@
 | pages/transaction-management-filter-hidden-category.test.js | 1 |
 | pages/transaction-management-save-before-details.test.js | 5 |
 | pages/transaction-management-edit-roundtrip.test.js | 10 |
+| pages/transaction-management-edit-accounts.test.js | 14 |
 | pages/user-management-password-page.test.js | 2 |
 | pages/user-management-nonadmin-page.test.js | 3 |
 | pages/index-setup-password-length.test.js | 2 |
@@ -2013,7 +2040,7 @@
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **819件** |
+| **総計 (jest)** | **815件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 
