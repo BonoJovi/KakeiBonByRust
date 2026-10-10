@@ -2,8 +2,8 @@
 
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
-**最終更新**: 2026-10-09 JST  
-**総テスト数**: 815件 (jest suite 95 ファイル、`npm test` 実測)
+**最終更新**: 2026-10-10 JST  
+**総テスト数**: 819件 (jest suite 96 ファイル、`npm test` 実測)
 
 ---
 
@@ -86,6 +86,7 @@
   - [pages/transaction-management-rejected-save-keeps-form.test.js](#pagestransaction-management-rejected-save-keeps-formtestjs)
   - [pages/transaction-management-restore-disabled-shop.test.js](#pagestransaction-management-restore-disabled-shoptestjs)
   - [pages/transaction-management-restore-reopened.test.js](#pagestransaction-management-restore-reopenedtestjs)
+  - [pages/transaction-management-add-account-groups.test.js](#pagestransaction-management-add-account-groupstestjs)
   - [pages/aggregation-monthly-page.test.js](#pagesaggregation-monthly-pagetestjs)
   - [pages/aggregation-yearly-total-count.test.js](#pagesaggregation-yearly-total-counttestjs)
   - [pages/aggregation-default-period-monthly.test.js](#pagesaggregation-default-period-monthlytestjs)
@@ -1466,6 +1467,23 @@
 
 ---
 
+### pages/transaction-management-add-account-groups.test.js
+
+新規追加ウィンドウの口座欄 (出金元・入金先) の表示を確かめるテスト。以前は、収入や支出の取引を編集して閉じたあとに新規追加を開くと、大分類は未選択なのに、前の取引で隠した口座欄が隠れたままだった。
+
+**テスト数**: 4件
+
+| テスト | 説明 |
+|--------|------|
+| `should show both account fields when the add window is opened first` | 最初に開いた新規追加では、口座欄を両方表示する |
+| `should show both account fields when the add window is opened after editing an income` | 収入の取引を編集して閉じたあとの新規追加でも、口座欄を両方表示する |
+| `should show both account fields when the add window is opened after editing an expense` | 支出の取引を編集して閉じたあとの新規追加でも、口座欄を両方表示する |
+| `should hide the unused account field when an income is opened after the add window` | 新規追加のあとに収入の取引を開くと、使わない出金元の欄を隠す |
+
+**ファイル**: tests/frontend/pages/transaction-management-add-account-groups.test.js
+
+---
+
 ### pages/aggregation-monthly-page.test.js
 
 実際の月次集計画面の回帰テスト (潜在監査 M11 / M12)。
@@ -1901,7 +1919,7 @@
 | user-addition.test.js | 46 |
 | admin-edit.test.js | 62 |
 | general-user-edit.test.js | 62 |
-| **機能別テスト** | **498件** |
+| **機能別テスト** | **502件** |
 | transaction-edit.test.js | 66 |
 | transaction-detail-tax-calculation.test.js | 33 |
 | toast.test.js | 14 |
@@ -1968,6 +1986,7 @@
 | pages/transaction-management-rejected-save-keeps-form.test.js | 3 |
 | pages/transaction-management-restore-disabled-shop.test.js | 1 |
 | pages/transaction-management-restore-reopened.test.js | 1 |
+| pages/transaction-management-add-account-groups.test.js | 4 |
 | pages/aggregation-monthly-page.test.js | 5 |
 | pages/aggregation-yearly-total-count.test.js | 1 |
 | pages/aggregation-default-period-monthly.test.js | 1 |
@@ -1994,7 +2013,7 @@
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **815件** |
+| **総計 (jest)** | **819件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 

@@ -2,8 +2,8 @@
 
 This document provides a complete index of all frontend tests implemented in JavaScript.
 
-**Last Updated**: 2026-10-09 JST  
-**Total Tests**: 815 (jest suites; 95 test files, per `npm test`)
+**Last Updated**: 2026-10-10 JST  
+**Total Tests**: 819 (jest suites; 96 test files, per `npm test`)
 
 ---
 
@@ -28,7 +28,7 @@ and are **not** added again to the grand total.
 - **admin-edit.test.js** - Admin edit tests (62)
 - **general-user-edit.test.js** - General user edit tests (62)
 
-### Feature-Specific Tests (498 tests)
+### Feature-Specific Tests (502 tests)
 
 - **transaction-edit.test.js** - Transaction edit tests (66)
 - **transaction-detail-tax-calculation.test.js** - Tax calculation tests on the real helpers in `detail-tax-calc.js` (tax rates, 1 yen, the maximum amount, rounding types, exact splits of a tax-included amount, a round trip); a typed tax-included price is always kept, with the tax carved out of it when no exact tax-excluded split exists (latent-audit scan2-T2) (33)
@@ -96,6 +96,7 @@ and are **not** added again to the grand total.
 - **pages/transaction-management-rejected-save-keeps-form.test.js** - Boots the real transaction page: a TRANSFER between two "Unspecified" accounts, a total rejected by `parseAmountStrict` (`1e3`) and a generic backend error each keep the modal open with the date, total and memo (latent-audit scan2-T5) (3)
 - **pages/transaction-management-restore-disabled-shop.test.js** - Boots the real transaction page with a saved draft whose shop was disabled since: the restored new transaction falls back to "Unspecified" (latent-audit M7, reachable since L6) (1)
 - **pages/transaction-management-restore-reopened.test.js** - Boots the real transaction page with a saved draft, then closes and reopens the modal while the restore is still waiting: the draft is not written into the reopened form (latent-audit L6) (1)
+- **pages/transaction-management-add-account-groups.test.js** - Boots the real transaction page: the add window shows both the From and To account fields, also after an income or expense was opened for editing and closed, and an edit opened after it still hides the unused field (4)
 - **pages/aggregation-monthly-page.test.js** - Boots the real monthly aggregation page: an empty `group_name` renders as `common.unspecified` (latent-audit M12); the total row shows "—" for count / average on the account and category2 axes, and still sums the count on category1 (latent-audit M11); negative amounts render as "-¥1,234" (latent-audit L12) (5)
 - **pages/aggregation-yearly-total-count.test.js** - Boots the real yearly aggregation page: the shared renderer's total row shows "—" for count / average on the account axis (latent-audit M11) (1)
 - **pages/aggregation-default-period-monthly.test.js** - Boots the real monthly aggregation page with start day 25 on 2026-09-10: it opens on the August period that contains today, not the future September period (latent-audit scan2-A3) (1)
@@ -143,7 +144,7 @@ and are **not** added again to the grand total.
 | user-addition.test.js | 46 |
 | admin-edit.test.js | 62 |
 | general-user-edit.test.js | 62 |
-| **Feature-Specific Tests** | **498** |
+| **Feature-Specific Tests** | **502** |
 | transaction-edit.test.js | 66 |
 | transaction-detail-tax-calculation.test.js | 33 |
 | toast.test.js | 14 |
@@ -210,6 +211,7 @@ and are **not** added again to the grand total.
 | pages/transaction-management-rejected-save-keeps-form.test.js | 3 |
 | pages/transaction-management-restore-disabled-shop.test.js | 1 |
 | pages/transaction-management-restore-reopened.test.js | 1 |
+| pages/transaction-management-add-account-groups.test.js | 4 |
 | pages/aggregation-monthly-page.test.js | 5 |
 | pages/aggregation-yearly-total-count.test.js | 1 |
 | pages/aggregation-default-period-monthly.test.js | 1 |
@@ -236,7 +238,7 @@ and are **not** added again to the grand total.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **Total (jest)** | **815** |
+| **Total (jest)** | **819** |
 
 Grand total is Screen + Feature + Aggregation (Common Test Suites are helper
 libraries invoked from Screen-Specific files and their assertions are already
