@@ -253,9 +253,9 @@ SQL statement definitions. Created/updated timestamps (`ENTRY_DT` / `UPDATE_DT`)
 
 | Test Function | Description | File | Line |
 |---------------|-------------|------|------|
-| `test_sql_queries_store_timestamps_in_utc` | No statement in `sql_queries.rs` writes local time (memos, recurring-generated transactions and table defaults used to) | src/sql_queries.rs | 2948 |
-| `test_init_sql_stores_timestamps_in_utc` | `dbaccess.sql` defaults timestamps to UTC, not local time | src/sql_queries.rs | 2957 |
-| `test_recurring_rules_insert_sets_entry_dt_explicitly` | `RECURRING_RULES_INSERT` sets `ENTRY_DT` itself, because databases created before this change keep the local-time column default | src/sql_queries.rs | 2966 |
+| `test_sql_queries_store_timestamps_in_utc` | No statement in `sql_queries.rs` writes local time (memos, recurring-generated transactions and table defaults used to) | src/sql_queries.rs | 2873 |
+| `test_init_sql_stores_timestamps_in_utc` | `dbaccess.sql` defaults timestamps to UTC, not local time | src/sql_queries.rs | 2882 |
+| `test_recurring_rules_insert_sets_entry_dt_explicitly` | `RECURRING_RULES_INSERT` sets `ENTRY_DT` itself, because databases created before this change keep the local-time column default | src/sql_queries.rs | 2891 |
 
 **Total**: 3 tests
 
