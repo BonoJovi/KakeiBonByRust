@@ -5,6 +5,10 @@ pub const ROLE_USER: i64 = 1;
 #[allow(dead_code)]
 pub const ROLE_VISIT: i64 = 999;
 
+/// The per-user "unspecified" account. Transactions and recurring rules
+/// point at it (through a foreign key) when a side has no account.
+pub const NONE_ACCOUNT_CODE: &str = "NONE";
+
 // Database constants
 pub const DB_DIR_NAME: &str = ".kakeibon";
 pub const DB_FILE_NAME: &str = "KakeiBonDB.sqlite3";

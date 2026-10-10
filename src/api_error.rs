@@ -66,6 +66,9 @@ impl ApiError {
     // `transaction_mgmt.transfer_same_account` toast instead of the
     // raw English fallback via `formatApiError`.
     pub const CODE_TRANSFER_SAME_ACCOUNT: &'static str = "transfer_same_account";
+    // A transaction or recurring rule left the account its category needs
+    // (EXPENSE: FROM, INCOME: TO, TRANSFER: both) as the NONE account.
+    pub const CODE_ACCOUNT_REQUIRED: &'static str = "account_required";
     // Latent-audit M15 / M18 — a recurring rule's period falls outside the
     // years with seeded holiday data.
     pub const CODE_RECURRING_PERIOD_OUT_OF_RANGE: &'static str = "recurring_period_out_of_range";
@@ -211,6 +214,17 @@ impl ApiError {
         Self {
             code: Self::CODE_TRANSFER_SAME_ACCOUNT.to_string(),
             message: "Transfer source and destination accounts must be different".to_string(),
+            entity: None,
+        }
+    }
+
+    /// Transaction or recurring rule refused because the account its
+    /// category needs is the NONE account. The frontend shows the
+    /// `transaction_mgmt.account_required` message for this code.
+    pub fn account_required() -> Self {
+        Self {
+            code: Self::CODE_ACCOUNT_REQUIRED.to_string(),
+            message: "An account is required for this category".to_string(),
             entity: None,
         }
     }

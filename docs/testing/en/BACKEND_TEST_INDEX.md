@@ -2,8 +2,8 @@
 
 This document provides a complete index of all backend tests implemented in Rust.
 
-**Last Updated**: 2026-10-08 JST  
-**Total Tests**: 475 (delta-tracked; the full authoritative count from `cargo test --lib` is 743, and a follow-up pass will backfill the remaining pre-existing gap)
+**Last Updated**: 2026-10-10 JST  
+**Total Tests**: 479 (delta-tracked; the full authoritative count from `cargo test --lib` is 747, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -233,17 +233,17 @@ Settings management functionality tests.
 
 | Test Function | Description | File | Line |
 |---------------|-------------|------|------|
-| `duplicate_name_carries_lowercased_entity_and_stable_code` | `ApiError::duplicate_name("Shop")` → `code="duplicate_name"`, `entity="shop"` | src/api_error.rs | 290 |
-| `not_found_carries_lowercased_entity_and_stable_code` | `ApiError::not_found("Manufacturer")` → `code="not_found"`, `entity="manufacturer"` | src/api_error.rs | 298 |
-| `duplicate_code_carries_lowercased_entity_and_distinct_code` | `ApiError::duplicate_code("Account")` → `code="duplicate_code"` (distinct from `duplicate_name`) | src/api_error.rs | 305 |
-| `admin_protected_carries_lowercased_entity_and_stable_code` | `ApiError::admin_protected("User")` → `code="admin_protected"` (for user-management delete guard) | src/api_error.rs | 314 |
-| `manufacturer_not_found_has_its_own_code` | `ApiError::manufacturer_not_found()` → `code="manufacturer_not_found"` (distinct from generic `not_found`) | src/api_error.rs | 338 |
-| `validation_carries_message_through_and_omits_entity` | `ApiError::validation(msg)` → `code="validation"`, message passed through, no entity | src/api_error.rs | 345 |
-| `database_from_sqlx_row_not_found` | `sqlx::Error → ApiError::database` via `From<sqlx::Error>` | src/api_error.rs | 353 |
-| `serialises_with_snake_case_code_and_optional_entity` | Serialised JSON has snake_case `code` and populated `entity` field | src/api_error.rs | 361 |
-| `serialises_without_entity_key_when_none` | Serialised JSON omits `entity` when None (via `skip_serializing_if`) | src/api_error.rs | 370 |
-| `in_use_carries_lowercased_entity_and_stable_code` | `ApiError::in_use("Shop")` → `code="in_use"`, `entity="shop"` (master delete-lock guard) | src/api_error.rs | 322 |
-| `last_general_user_has_its_own_code_and_no_entity` | `UserManagementError::LastGeneralUser` → `code="last_general_user"`, no entity (latent-audit scan2-C5) | src/api_error.rs | 330 |
+| `duplicate_name_carries_lowercased_entity_and_stable_code` | `ApiError::duplicate_name("Shop")` → `code="duplicate_name"`, `entity="shop"` | src/api_error.rs | 304 |
+| `not_found_carries_lowercased_entity_and_stable_code` | `ApiError::not_found("Manufacturer")` → `code="not_found"`, `entity="manufacturer"` | src/api_error.rs | 312 |
+| `duplicate_code_carries_lowercased_entity_and_distinct_code` | `ApiError::duplicate_code("Account")` → `code="duplicate_code"` (distinct from `duplicate_name`) | src/api_error.rs | 319 |
+| `admin_protected_carries_lowercased_entity_and_stable_code` | `ApiError::admin_protected("User")` → `code="admin_protected"` (for user-management delete guard) | src/api_error.rs | 328 |
+| `manufacturer_not_found_has_its_own_code` | `ApiError::manufacturer_not_found()` → `code="manufacturer_not_found"` (distinct from generic `not_found`) | src/api_error.rs | 352 |
+| `validation_carries_message_through_and_omits_entity` | `ApiError::validation(msg)` → `code="validation"`, message passed through, no entity | src/api_error.rs | 359 |
+| `database_from_sqlx_row_not_found` | `sqlx::Error → ApiError::database` via `From<sqlx::Error>` | src/api_error.rs | 367 |
+| `serialises_with_snake_case_code_and_optional_entity` | Serialised JSON has snake_case `code` and populated `entity` field | src/api_error.rs | 375 |
+| `serialises_without_entity_key_when_none` | Serialised JSON omits `entity` when None (via `skip_serializing_if`) | src/api_error.rs | 384 |
+| `in_use_carries_lowercased_entity_and_stable_code` | `ApiError::in_use("Shop")` → `code="in_use"`, `entity="shop"` (master delete-lock guard) | src/api_error.rs | 336 |
+| `last_general_user_has_its_own_code_and_no_entity` | `UserManagementError::LastGeneralUser` → `code="last_general_user"`, no entity (latent-audit scan2-C5) | src/api_error.rs | 344 |
 
 **Total**: 11 tests
 
@@ -382,30 +382,30 @@ Account management service tests. Assertions on empty-name and duplicate-code pa
 
 | Test Function | Description | File | Line |
 |---------------|-------------|------|------|
-| `test_add_account_rejects_empty_name` | Empty account name returns `ApiError { code: "validation" }` (Fable-5 #16, #23) | src/services/account.rs | 833 |
-| `test_add_account_rejects_whitespace_only_name` | Whitespace-only account name returns `ApiError { code: "validation" }` (Fable-5 #16, #23) | src/services/account.rs | 849 |
-| `test_update_account_rejects_empty_name` | Empty account name via update returns `ApiError { code: "validation" }` (Fable-5 #16, #23) | src/services/account.rs | 865 |
-| `test_update_account_not_found_has_stable_code_and_entity` | Updating a missing account returns `ApiError { code: "not_found", entity: "account" }` (Fable-5 #23) | src/services/account.rs | 1098 |
-| `test_delete_account_not_found_has_stable_code_and_entity` | Deleting a missing account returns `ApiError { code: "not_found" }` (Fable-5 #23) | src/services/account.rs | 1121 |
-| `test_delete_account_rejected_when_referenced_as_from_account` | Delete rejected with `ApiError { code: "in_use" }` when a TRANSACTIONS_HEADER row names the account as FROM (master delete-lock) | src/services/account.rs | 1129 |
-| `test_delete_account_rejected_when_referenced_as_to_account` | Delete rejected with `ApiError { code: "in_use" }` when a TRANSACTIONS_HEADER row names the account as TO (master delete-lock) | src/services/account.rs | 1149 |
-| `test_delete_account_rejected_when_referenced_by_recurring_rule` | Delete rejected with `ApiError { code: "in_use" }` when any RECURRING_RULES row names the account (master delete-lock) | src/services/account.rs | 1166 |
-| `test_delete_account_ignores_other_users_references` | Cross-user references to the same ACCOUNT_CODE do NOT block delete — codes are user-scoped (master delete-lock) | src/services/account.rs | 1183 |
-| `test_delete_account_normalizes_input_before_in_use_check` | Delete input (`"  cash  "`) is uppercased/trimmed before the CHECK_IN_USE query so the guard fires (master delete-lock) | src/services/account.rs | 1201 |
-| `test_get_account_balances_as_of_self_transfer_nets_to_zero` | Stale TRANSFER row with FROM == TO nets to zero on the dashboard instead of inflating the balance (Fable-5 #20) | src/services/account.rs | 1293 |
-| `test_get_accounts_lists_only_own_accounts` | Every user, the admin included, lists only their own accounts (latent-audit M4) | src/services/account.rs | 961 |
-| `test_get_accounts_include_disabled` | Disabled accounts are listed only with `include_disabled` (latent-audit M7) | src/services/account.rs | 988 |
-| `test_delete_disabled_account_removes_row` | A disabled account that nothing uses can still be deleted, removing the row (latent-audit M7) | src/services/account.rs | 526 |
-| `test_disable_account_allowed_while_referenced` | An account used by a transaction can be disabled (not deleted) and enabled again (latent-audit M7) | src/services/account.rs | 539 |
-| `test_account_is_disabled_must_be_zero_or_one` | The disabled flag only accepts 0 or 1, on add and update (latent-audit M7) | src/services/account.rs | 560 |
-| `test_none_account_cannot_be_changed` | The NONE (unspecified) account cannot be added, edited, disabled or deleted (latent-audit M7) | src/services/account.rs | 593 |
-| `test_get_account_balances_as_of_keeps_disabled_accounts_with_balance` | A disabled account that still holds money stays on the dashboard, marked `is_disabled` (latent-audit M7) | src/services/account.rs | 1336 |
+| `test_add_account_rejects_empty_name` | Empty account name returns `ApiError { code: "validation" }` (Fable-5 #16, #23) | src/services/account.rs | 832 |
+| `test_add_account_rejects_whitespace_only_name` | Whitespace-only account name returns `ApiError { code: "validation" }` (Fable-5 #16, #23) | src/services/account.rs | 848 |
+| `test_update_account_rejects_empty_name` | Empty account name via update returns `ApiError { code: "validation" }` (Fable-5 #16, #23) | src/services/account.rs | 864 |
+| `test_update_account_not_found_has_stable_code_and_entity` | Updating a missing account returns `ApiError { code: "not_found", entity: "account" }` (Fable-5 #23) | src/services/account.rs | 1097 |
+| `test_delete_account_not_found_has_stable_code_and_entity` | Deleting a missing account returns `ApiError { code: "not_found" }` (Fable-5 #23) | src/services/account.rs | 1120 |
+| `test_delete_account_rejected_when_referenced_as_from_account` | Delete rejected with `ApiError { code: "in_use" }` when a TRANSACTIONS_HEADER row names the account as FROM (master delete-lock) | src/services/account.rs | 1128 |
+| `test_delete_account_rejected_when_referenced_as_to_account` | Delete rejected with `ApiError { code: "in_use" }` when a TRANSACTIONS_HEADER row names the account as TO (master delete-lock) | src/services/account.rs | 1148 |
+| `test_delete_account_rejected_when_referenced_by_recurring_rule` | Delete rejected with `ApiError { code: "in_use" }` when any RECURRING_RULES row names the account (master delete-lock) | src/services/account.rs | 1165 |
+| `test_delete_account_ignores_other_users_references` | Cross-user references to the same ACCOUNT_CODE do NOT block delete — codes are user-scoped (master delete-lock) | src/services/account.rs | 1182 |
+| `test_delete_account_normalizes_input_before_in_use_check` | Delete input (`"  cash  "`) is uppercased/trimmed before the CHECK_IN_USE query so the guard fires (master delete-lock) | src/services/account.rs | 1200 |
+| `test_get_account_balances_as_of_self_transfer_nets_to_zero` | Stale TRANSFER row with FROM == TO nets to zero on the dashboard instead of inflating the balance (Fable-5 #20) | src/services/account.rs | 1292 |
+| `test_get_accounts_lists_only_own_accounts` | Every user, the admin included, lists only their own accounts (latent-audit M4) | src/services/account.rs | 960 |
+| `test_get_accounts_include_disabled` | Disabled accounts are listed only with `include_disabled` (latent-audit M7) | src/services/account.rs | 987 |
+| `test_delete_disabled_account_removes_row` | A disabled account that nothing uses can still be deleted, removing the row (latent-audit M7) | src/services/account.rs | 525 |
+| `test_disable_account_allowed_while_referenced` | An account used by a transaction can be disabled (not deleted) and enabled again (latent-audit M7) | src/services/account.rs | 538 |
+| `test_account_is_disabled_must_be_zero_or_one` | The disabled flag only accepts 0 or 1, on add and update (latent-audit M7) | src/services/account.rs | 559 |
+| `test_none_account_cannot_be_changed` | The NONE (unspecified) account cannot be added, edited, disabled or deleted (latent-audit M7) | src/services/account.rs | 592 |
+| `test_get_account_balances_as_of_keeps_disabled_accounts_with_balance` | A disabled account that still holds money stays on the dashboard, marked `is_disabled` (latent-audit M7) | src/services/account.rs | 1335 |
 | `latent_m4_admin_account_list_excludes_other_users_and_deleted` | The account list served to the admin holds only the admin's own active accounts (latent-audit M4) | src/services/latent_audit/account.rs | 40 |
-| `test_add_account_accepts_max_chars_code` | A 50-character account code (`MAX_ACCOUNT_CODE_LEN`) is accepted and saved | src/services/account.rs | 695 |
-| `test_add_account_rejects_over_max_chars_code` | A 51-character account code is rejected with `ApiError { code: "validation" }` naming the limit, and nothing is saved | src/services/account.rs | 705 |
-| `test_add_account_code_limit_counts_chars_not_bytes` | The code limit counts characters, not bytes: 50 Japanese characters are accepted, 51 are rejected | src/services/account.rs | 718 |
-| `test_add_account_code_limit_applies_after_trim` | Surrounding spaces are trimmed before the code is counted | src/services/account.rs | 732 |
-| `test_update_account_keeps_existing_over_limit_code` | An existing code longer than 50 characters (saved before the limit) stays editable through `update_account` | src/services/account.rs | 742 |
+| `test_add_account_accepts_max_chars_code` | A 50-character account code (`MAX_ACCOUNT_CODE_LEN`) is accepted and saved | src/services/account.rs | 694 |
+| `test_add_account_rejects_over_max_chars_code` | A 51-character account code is rejected with `ApiError { code: "validation" }` naming the limit, and nothing is saved | src/services/account.rs | 704 |
+| `test_add_account_code_limit_counts_chars_not_bytes` | The code limit counts characters, not bytes: 50 Japanese characters are accepted, 51 are rejected | src/services/account.rs | 717 |
+| `test_add_account_code_limit_applies_after_trim` | Surrounding spaces are trimmed before the code is counted | src/services/account.rs | 731 |
+| `test_update_account_keeps_existing_over_limit_code` | An existing code longer than 50 characters (saved before the limit) stays editable through `update_account` | src/services/account.rs | 741 |
 
 **Total**: 24 tests
 
@@ -560,47 +560,50 @@ Transaction management service tests.
 
 | Test Function | Description | File | Line |
 |---------------|-------------|------|------|
-| `test_save_transaction_header_with_tax_excluded` | Save tax-excluded transaction header | src/services/transaction.rs | 2436 |
-| `test_save_transaction_header_with_tax_included` | Save tax-included transaction header | src/services/transaction.rs | 2469 |
-| `test_update_transaction_header_tax_type` | Update transaction header tax type | src/services/transaction.rs | 2501 |
-| `test_default_tax_type_is_excluded` | Verify default tax type is excluded | src/services/transaction.rs | 2545 |
-| `test_tax_type_validation_values` | Verify valid tax type values | src/services/transaction.rs | 2570 |
-| `test_get_transactions_end_date_includes_boundary_day` | End-date filter must include same-day timestamps (bare 'YYYY-MM-DD' anchored to 23:59:59) | src/services/transaction.rs | 3957 |
-| `test_get_transactions_keyword_matches_header_and_detail_memo` | Keyword must substring-match memo text on both header and detail rows | src/services/transaction.rs | 4031 |
-| `test_update_detail_memo_does_not_corrupt_shared_header_memo` | Detail memo edit must not clobber header memo sharing MEMO_ID | src/services/transaction.rs | 4409 |
-| `test_delete_detail_preserves_memo_still_referenced_by_header` | Detail delete must keep memo row when header still references it | src/services/transaction.rs | 4443 |
-| `test_update_detail_memo_updates_in_place_when_not_shared` | Solo-referenced memo still updates in place | src/services/transaction.rs | 4469 |
-| `test_delete_detail_removes_orphaned_memo` | Solo-referenced memo is deleted when detail removed | src/services/transaction.rs | 4499 |
-| `test_clear_detail_memo_does_not_delete_memo_still_used_by_header` | Clearing shared detail memo must not delete memo row used by header | src/services/transaction.rs | 4531 |
-| `test_update_detail_memo_does_not_corrupt_recurring_rule_memo` | Detail memo edit must not overwrite memo shared with a recurring rule | src/services/transaction.rs | 4585 |
-| `test_delete_detail_preserves_memo_still_referenced_by_recurring_rule` | Detail delete must keep memo row still referenced by a recurring rule | src/services/transaction.rs | 4630 |
-| `test_clear_detail_memo_succeeds_under_foreign_keys_on` | Clearing a detail memo must not violate the MEMOS foreign key | src/services/transaction.rs | 4668 |
-| `test_add_detail_rejects_foreign_transaction_id` | Adding a detail against another user's transaction_id must return NotFound (Fable-5 #12) | src/services/transaction.rs | 4707 |
-| `test_add_detail_rejects_nonexistent_transaction_id` | Adding a detail against a missing transaction_id must return NotFound (Fable-5 #12) | src/services/transaction.rs | 4740 |
-| `not_found_maps_to_not_found_code_with_transaction_entity` | TransactionError::NotFound maps to ApiError::not_found("transaction") (PR2b) | src/services/transaction.rs | 4923 |
-| `validation_preserves_message_and_omits_entity` | TransactionError::ValidationError maps to ApiError::CODE_VALIDATION with the message preserved (PR2b) | src/services/transaction.rs | 4930 |
-| `database_error_maps_to_database_code` | TransactionError::DatabaseError maps to ApiError::CODE_DATABASE (PR2b) | src/services/transaction.rs | 4941 |
-| `field_needle_message_survives_conversion_for_frontend_routing` | Two field needles (`"Item name must be"` / `"Memo must be"`) survive at the head of the wire message so the frontend `startsWith` routing keeps working (PR2b) | src/services/transaction.rs | 4962 |
-| `test_find_matching_pattern_preserves_user_half_up_when_settings_match` | `HALF_UP + EXCLUDED` stored on a round-cent receipt (500円 × 10% = 550円) survives bulk recalc instead of being silently downgraded to FLOOR (Fable-5 #2) | src/services/transaction.rs | 2185 |
-| `test_find_matching_pattern_preserves_user_ceil_when_settings_match` | Same guarantee for `UP + EXCLUDED` (Fable-5 #2) | src/services/transaction.rs | 2202 |
-| `test_find_matching_pattern_falls_back_to_priority_when_preferred_mismatches` | When the stored settings do not reproduce the total, fall back to the priority-ordered PATTERNS scan (Fable-5 #2) | src/services/transaction.rs | 2219 |
-| `test_find_matching_pattern_returns_none_when_no_pattern_fits` | No combination reproduces the target → `None`, caller overwrites TOTAL_AMOUNT instead of the setting columns (Fable-5 #2) | src/services/transaction.rs | 2245 |
-| `test_save_header_rejects_invalid_tax_included_type` | `save_transaction_header` rejects `tax_included_type` outside `{TAX_INCLUDED, TAX_EXCLUDED}` so a bogus value cannot survive `find_matching_pattern`'s preferred-first check (CodeRabbit on #125) | src/services/transaction.rs | 3524 |
-| `test_update_header_rejects_invalid_tax_included_type` | Same guard on the update entry point (CodeRabbit on #125) | src/services/transaction.rs | 3551 |
-| `test_save_header_rejects_transfer_from_equals_to` | `save_transaction_header` rejects TRANSFER with FROM == TO so a self-transfer cannot inflate the dashboard balance (Fable-5 #20) | src/services/transaction.rs | 3582 |
-| `test_update_header_rejects_transfer_from_equals_to` | Same guard on the update entry point (Fable-5 #20) | src/services/transaction.rs | 3610 |
-| `test_save_header_failure_rolls_back_memo_insert_in_same_tx` | HEADER insert failure inside the tx (via a local `RAISE(FAIL)` trigger) rolls the MEMO insert back too — MEMOS stays empty (Fable-5 #6) | src/services/transaction.rs | 3645 |
-| `test_save_header_dedupes_memo_text_across_multiple_saves` | Two saves with the same memo body land on one MEMOS row and share the MEMO_ID (dedup side effect of the tx-based helper reuse, Fable-5 #6) | src/services/transaction.rs | 3709 |
-| `test_add_detail_dedupes_memo_text_across_multiple_adds` | `add_transaction_detail` reuses the existing MEMOS row when the memo text already exists for the user — no duplicate row, and both details share one MEMO_ID (Fable-5 #7) | src/services/transaction.rs | 4765 |
-| `test_add_detail_reuses_memo_shared_with_header` | An add whose memo text matches the parent header's MEMO_ID reuses that MEMO_ID so the "shared memo" update path is reachable from adds too (Fable-5 #7) | src/services/transaction.rs | 4809 |
-| `test_add_detail_failure_rolls_back_memo_insert_in_same_tx` | An FK failure inside the DETAIL_INSERT (missing `(USER_ID, CATEGORY1_CODE) → CATEGORY1`) rolls the MEMO insert back too — MEMOS stays empty (Fable-5 #7) | src/services/transaction.rs | 4875 |
-| `transfer_same_account_maps_to_stable_wire_code_and_omits_entity` | `TransactionError::TransferSameAccount` maps to `ApiError { code: "transfer_same_account", entity: None }` — pins the wire contract so a future refactor cannot silently downgrade to the generic `validation` fallback (CodeRabbit on #127) | src/services/transaction.rs | 4954 |
+| `test_save_transaction_header_with_tax_excluded` | Save tax-excluded transaction header | src/services/transaction.rs | 2472 |
+| `test_save_transaction_header_with_tax_included` | Save tax-included transaction header | src/services/transaction.rs | 2505 |
+| `test_update_transaction_header_tax_type` | Update transaction header tax type | src/services/transaction.rs | 2537 |
+| `test_default_tax_type_is_excluded` | Verify default tax type is excluded | src/services/transaction.rs | 2581 |
+| `test_tax_type_validation_values` | Verify valid tax type values | src/services/transaction.rs | 2606 |
+| `test_get_transactions_end_date_includes_boundary_day` | End-date filter must include same-day timestamps (bare 'YYYY-MM-DD' anchored to 23:59:59) | src/services/transaction.rs | 4073 |
+| `test_get_transactions_keyword_matches_header_and_detail_memo` | Keyword must substring-match memo text on both header and detail rows | src/services/transaction.rs | 4147 |
+| `test_update_detail_memo_does_not_corrupt_shared_header_memo` | Detail memo edit must not clobber header memo sharing MEMO_ID | src/services/transaction.rs | 4525 |
+| `test_delete_detail_preserves_memo_still_referenced_by_header` | Detail delete must keep memo row when header still references it | src/services/transaction.rs | 4559 |
+| `test_update_detail_memo_updates_in_place_when_not_shared` | Solo-referenced memo still updates in place | src/services/transaction.rs | 4585 |
+| `test_delete_detail_removes_orphaned_memo` | Solo-referenced memo is deleted when detail removed | src/services/transaction.rs | 4615 |
+| `test_clear_detail_memo_does_not_delete_memo_still_used_by_header` | Clearing shared detail memo must not delete memo row used by header | src/services/transaction.rs | 4647 |
+| `test_update_detail_memo_does_not_corrupt_recurring_rule_memo` | Detail memo edit must not overwrite memo shared with a recurring rule | src/services/transaction.rs | 4701 |
+| `test_delete_detail_preserves_memo_still_referenced_by_recurring_rule` | Detail delete must keep memo row still referenced by a recurring rule | src/services/transaction.rs | 4746 |
+| `test_clear_detail_memo_succeeds_under_foreign_keys_on` | Clearing a detail memo must not violate the MEMOS foreign key | src/services/transaction.rs | 4784 |
+| `test_add_detail_rejects_foreign_transaction_id` | Adding a detail against another user's transaction_id must return NotFound (Fable-5 #12) | src/services/transaction.rs | 4823 |
+| `test_add_detail_rejects_nonexistent_transaction_id` | Adding a detail against a missing transaction_id must return NotFound (Fable-5 #12) | src/services/transaction.rs | 4856 |
+| `not_found_maps_to_not_found_code_with_transaction_entity` | TransactionError::NotFound maps to ApiError::not_found("transaction") (PR2b) | src/services/transaction.rs | 5039 |
+| `validation_preserves_message_and_omits_entity` | TransactionError::ValidationError maps to ApiError::CODE_VALIDATION with the message preserved (PR2b) | src/services/transaction.rs | 5046 |
+| `database_error_maps_to_database_code` | TransactionError::DatabaseError maps to ApiError::CODE_DATABASE (PR2b) | src/services/transaction.rs | 5057 |
+| `field_needle_message_survives_conversion_for_frontend_routing` | Two field needles (`"Item name must be"` / `"Memo must be"`) survive at the head of the wire message so the frontend `startsWith` routing keeps working (PR2b) | src/services/transaction.rs | 5078 |
+| `test_find_matching_pattern_preserves_user_half_up_when_settings_match` | `HALF_UP + EXCLUDED` stored on a round-cent receipt (500円 × 10% = 550円) survives bulk recalc instead of being silently downgraded to FLOOR (Fable-5 #2) | src/services/transaction.rs | 2221 |
+| `test_find_matching_pattern_preserves_user_ceil_when_settings_match` | Same guarantee for `UP + EXCLUDED` (Fable-5 #2) | src/services/transaction.rs | 2238 |
+| `test_find_matching_pattern_falls_back_to_priority_when_preferred_mismatches` | When the stored settings do not reproduce the total, fall back to the priority-ordered PATTERNS scan (Fable-5 #2) | src/services/transaction.rs | 2255 |
+| `test_find_matching_pattern_returns_none_when_no_pattern_fits` | No combination reproduces the target → `None`, caller overwrites TOTAL_AMOUNT instead of the setting columns (Fable-5 #2) | src/services/transaction.rs | 2281 |
+| `test_save_header_rejects_invalid_tax_included_type` | `save_transaction_header` rejects `tax_included_type` outside `{TAX_INCLUDED, TAX_EXCLUDED}` so a bogus value cannot survive `find_matching_pattern`'s preferred-first check (CodeRabbit on #125) | src/services/transaction.rs | 3560 |
+| `test_update_header_rejects_invalid_tax_included_type` | Same guard on the update entry point (CodeRabbit on #125) | src/services/transaction.rs | 3587 |
+| `test_save_header_rejects_transfer_from_equals_to` | `save_transaction_header` rejects TRANSFER with FROM == TO so a self-transfer cannot inflate the dashboard balance (Fable-5 #20) | src/services/transaction.rs | 3618 |
+| `test_update_header_rejects_transfer_from_equals_to` | Same guard on the update entry point (Fable-5 #20) | src/services/transaction.rs | 3646 |
+| `test_save_header_rejects_missing_account_when_category_needs_it` | `save_transaction_header` refuses an EXPENSE without a FROM account, an INCOME without a TO account and a TRANSFER missing either (`account_required`), so no amount is counted on the hidden NONE account | src/services/transaction.rs | 3691 |
+| `test_update_header_rejects_missing_account_when_category_needs_it` | Same `account_required` check on the update entry point | src/services/transaction.rs | 3715 |
+| `test_update_header_accepts_income_when_only_to_account_is_given` | An INCOME with a TO account and FROM left as NONE is still saved (only the side the category needs is required) | src/services/transaction.rs | 3739 |
+| `test_save_header_failure_rolls_back_memo_insert_in_same_tx` | HEADER insert failure inside the tx (via a local `RAISE(FAIL)` trigger) rolls the MEMO insert back too — MEMOS stays empty (Fable-5 #6) | src/services/transaction.rs | 3761 |
+| `test_save_header_dedupes_memo_text_across_multiple_saves` | Two saves with the same memo body land on one MEMOS row and share the MEMO_ID (dedup side effect of the tx-based helper reuse, Fable-5 #6) | src/services/transaction.rs | 3825 |
+| `test_add_detail_dedupes_memo_text_across_multiple_adds` | `add_transaction_detail` reuses the existing MEMOS row when the memo text already exists for the user — no duplicate row, and both details share one MEMO_ID (Fable-5 #7) | src/services/transaction.rs | 4881 |
+| `test_add_detail_reuses_memo_shared_with_header` | An add whose memo text matches the parent header's MEMO_ID reuses that MEMO_ID so the "shared memo" update path is reachable from adds too (Fable-5 #7) | src/services/transaction.rs | 4925 |
+| `test_add_detail_failure_rolls_back_memo_insert_in_same_tx` | An FK failure inside the DETAIL_INSERT (missing `(USER_ID, CATEGORY1_CODE) → CATEGORY1`) rolls the MEMO insert back too — MEMOS stays empty (Fable-5 #7) | src/services/transaction.rs | 4991 |
+| `transfer_same_account_maps_to_stable_wire_code_and_omits_entity` | `TransactionError::TransferSameAccount` maps to `ApiError { code: "transfer_same_account", entity: None }` — pins the wire contract so a future refactor cannot silently downgrade to the generic `validation` fallback (CodeRabbit on #127) | src/services/transaction.rs | 5070 |
 | `latent_h5_included_header_total_sums_amount_including_tax` | Tax-included header total = SUM(AMOUNT_INCLUDING_TAX) (latent-audit H5) | src/services/latent_audit/transaction.rs | 201 |
 | `latent_h5_compute_recommended_total_honours_included_header` | `compute_recommended_total` honours the header TAX_INCLUDED_TYPE (latent-audit H5) | src/services/latent_audit/transaction.rs | 213 |
 | `latent_h5_bulk_recalc_keeps_consistent_included_header` | Bulk recalc leaves a consistent tax-included header untouched (latent-audit H5) | src/services/latent_audit/transaction.rs | 234 |
 | `latent_l1_small_detail_with_zero_tax_is_still_grossed_up` | Small rows whose tax rounds to 0 are still grossed up per rate (latent-audit L1) | src/services/latent_audit/transaction.rs | 261 |
-| `test_calculate_recommended_total_uses_amount_not_amount_including_tax` | Tax-excluded total grosses up AMOUNT regardless of AMOUNT_INCLUDING_TAX (AMOUNT is always tax-excluded) | src/services/transaction.rs | 2088 |
-| `test_calculate_recommended_total_with_settings_included_derives_missing_rows` | Tax-included total derives NULL / 0-sentinel rows from AMOUNT + TAX_RATE | src/services/transaction.rs | 2141 |
+| `test_calculate_recommended_total_uses_amount_not_amount_including_tax` | Tax-excluded total grosses up AMOUNT regardless of AMOUNT_INCLUDING_TAX (AMOUNT is always tax-excluded) | src/services/transaction.rs | 2124 |
+| `test_calculate_recommended_total_with_settings_included_derives_missing_rows` | Tax-included total derives NULL / 0-sentinel rows from AMOUNT + TAX_RATE | src/services/transaction.rs | 2177 |
 | `latent_h4_bulk_recalc_keeps_total_without_details` | Bulk recalc leaves a header without details untouched (latent-audit H4) | src/services/latent_audit/transaction.rs | 180 |
 | `latent_h4_compute_recommended_total_is_none_without_details` | `compute_recommended_total` returns None for a header without details (latent-audit H4) | src/services/latent_audit/transaction.rs | 870 |
 | `latent_m1_update_header_persists_is_scheduled` | Header update persists the IS_SCHEDULED checkbox (latent-audit M1) | src/services/latent_audit/transaction.rs | 276 |
@@ -625,7 +628,7 @@ Transaction management service tests.
 | `latent_l3_failed_detail_update_rolls_back_memo_change` | A detail update that fails rolls back its memo change too (memo handling runs in the same transaction) (latent-audit L3) | src/services/latent_audit/transaction.rs | 747 |
 | `latent_l3_in_place_memo_update_is_trimmed` | An in-place memo update stores the trimmed text, matching memo dedup (latent-audit L3) | src/services/latent_audit/transaction.rs | 775 |
 
-**Total**: 64 tests
+**Total**: 67 tests
 
 ### services/aggregation.rs
 
@@ -716,36 +719,37 @@ Recurring transaction rule service tests.
 
 | Test Function | Description | File | Line |
 |---------------|-------------|------|------|
-| `test_delete_rule_returns_not_found_for_missing` | Delete of a missing rule returns NotFound instead of empty-commit fake success (Fable-5 #8) | src/services/recurring.rs | 2148 |
-| `not_found_maps_to_not_found_code_with_recurring_rule_entity` | RecurringError::NotFound maps to ApiError::not_found("recurring rule") (PR2a) | src/services/recurring.rs | 2178 |
-| `validation_preserves_message_and_omits_entity` | RecurringError::Validation maps to ApiError::CODE_VALIDATION with the message preserved (PR2a) | src/services/recurring.rs | 2185 |
-| `database_error_maps_to_database_code` | RecurringError::Database maps to ApiError::CODE_DATABASE (PR2a) | src/services/recurring.rs | 2196 |
-| `field_needle_message_survives_conversion_for_frontend_routing` | Four field needles (`"Rule name must be"` etc.) survive at the head of the wire message so the frontend `startsWith` routing keeps working (PR2a) | src/services/recurring.rs | 2203 |
+| `test_delete_rule_returns_not_found_for_missing` | Delete of a missing rule returns NotFound instead of empty-commit fake success (Fable-5 #8) | src/services/recurring.rs | 2162 |
+| `not_found_maps_to_not_found_code_with_recurring_rule_entity` | RecurringError::NotFound maps to ApiError::not_found("recurring rule") (PR2a) | src/services/recurring.rs | 2192 |
+| `validation_preserves_message_and_omits_entity` | RecurringError::Validation maps to ApiError::CODE_VALIDATION with the message preserved (PR2a) | src/services/recurring.rs | 2199 |
+| `database_error_maps_to_database_code` | RecurringError::Database maps to ApiError::CODE_DATABASE (PR2a) | src/services/recurring.rs | 2210 |
+| `field_needle_message_survives_conversion_for_frontend_routing` | Four field needles (`"Rule name must be"` etc.) survive at the head of the wire message so the frontend `startsWith` routing keeps working (PR2a) | src/services/recurring.rs | 2217 |
 | `latent_h2_cascade_delete_keeps_confirmed_headers` | Cascade rule delete removes only still-scheduled occurrences; confirmed (IS_SCHEDULED = 0) headers survive, detached (latent-audit H2) | src/services/latent_audit/recurring.rs | 195 |
 | `latent_m16_transfer_same_account_rejected` | Creating a TRANSFER rule with from == to account is rejected (latent-audit M16) | src/services/latent_audit/recurring.rs | 337 |
-| `latent_m16_tax_rounding_type_out_of_range_rejected` | Out-of-range tax rounding type is rejected on rule creation (latent-audit M16) | src/services/latent_audit/recurring.rs | 359 |
-| `latent_m16_tax_included_type_out_of_range_rejected` | Out-of-range tax included type is rejected on rule creation (latent-audit M16) | src/services/latent_audit/recurring.rs | 380 |
+| `recurring_rule_rejects_missing_account_when_category_needs_it` | Creating a rule whose category needs an account left as NONE (EXPENSE: FROM, INCOME: TO, TRANSFER: both) is refused with `account_required` | src/services/latent_audit/recurring.rs | 361 |
+| `latent_m16_tax_rounding_type_out_of_range_rejected` | Out-of-range tax rounding type is rejected on rule creation (latent-audit M16) | src/services/latent_audit/recurring.rs | 392 |
+| `latent_m16_tax_included_type_out_of_range_rejected` | Out-of-range tax included type is rejected on rule creation (latent-audit M16) | src/services/latent_audit/recurring.rs | 413 |
 | `latent_m15_holiday_shift_applies_beyond_seeded_range` | A rule beyond the seeded holiday years is rejected (`PeriodOutOfRange`) instead of silently skipping the holiday shift (latent-audit M15) | src/services/latent_audit/recurring.rs | 251 |
-| `latent_m18_huge_generation_rejected` | A daily rule ending 9999-12-31 is rejected (`PeriodOutOfRange`) instead of generating millions of rows (latent-audit M18) | src/services/latent_audit/recurring.rs | 451 |
-| `latent_m15_m18_period_limits_are_inclusive` | The first and last allowed day are accepted; one day outside is rejected (latent-audit M15 / M18) | src/services/latent_audit/recurring.rs | 481 |
-| `latent_m15_period_limit_follows_seeded_holidays` | With holidays seeded only up to the year before the date-based limit (app left running across New Year), that last year and the last seeded year are rejected, and the year before the last seeded one is allowed (latent-audit M15, scan2-R7) | src/services/latent_audit/recurring.rs | 521 |
-| `latent_m15_m18_period_limits_service_clamps_to_seeded_years` | `RecurringService::period_limits` (served to the screen by `get_recurring_period_limits` and enforced on create) is the date-based window clamped to the seeded holiday years, ending one year before the last seeded year (latent-audit M15 / M18, scan2-R7) | src/services/latent_audit/recurring.rs | 574 |
-| `latent_m15_m18_period_limits_follow_seeded_years` | The limits are Jan 1 of (year − 5) .. Dec 31 of (year + 10), the holiday seeding window (latent-audit M15 / M18) | src/services/latent_audit/recurring.rs | 601 |
-| `latent_m17_total_is_derived_from_the_detail` | A rule's total (and every occurrence's) is derived from its single detail under the header's rounding / tax-included settings (latent-audit M17) | src/services/latent_audit/recurring.rs | 617 |
-| `latent_l13_daily_rule_rejects_holiday_shift` | A daily rule with a holiday shift is rejected; daily without shift and monthly with shift are accepted (latent-audit L13) | src/services/latent_audit/recurring.rs | 673 |
-| `latent_m16_detail_amount_out_of_range_rejected` | Out-of-range detail amount is rejected on rule creation (latent-audit M16) | src/services/latent_audit/recurring.rs | 401 |
-| `latent_m16_detail_tax_rate_out_of_range_rejected` | Out-of-range detail tax rate is rejected on rule creation (latent-audit M16) | src/services/latent_audit/recurring.rs | 422 |
-| `transfer_same_account_maps_to_transfer_same_account_code` | `RecurringError::TransferSameAccount` maps to the `transfer_same_account` wire code (latent-audit M16) | src/services/recurring.rs | 2170 |
-| `latent_l2_recurring_rejects_foreign_shop_and_product` | Recurring rule creation accepts own shop / product and rejects another user's (latent-audit L2) | src/services/latent_audit/recurring.rs | 714 |
-| `latent_l10_generation_terminates_at_the_end_of_the_date_range` | Monthly / yearly generation near the end of chrono's range terminates instead of looping forever (latent-audit L10) | src/services/latent_audit/recurring.rs | 773 |
-| `latent_scan2_r1_shifted_date_inside_period_is_kept` | A calendar date just outside the period whose holiday shift lands inside it is generated, at both ends (latent-audit scan2-R1) | src/services/latent_audit/recurring.rs | 823 |
-| `latent_scan2_r2_daily_anchor_is_checked_against_the_period` | A blank daily anchor falls back to the start date; an anchor after the end date is rejected (latent-audit scan2-R2) | src/services/latent_audit/recurring.rs | 867 |
-| `latent_scan2_r6_detail_category1_must_match_header` | A recurring rule whose detail category1 differs from the header's (header INCOME, detail EXPENSE) is rejected as a validation error, as for a normal transaction (latent-audit M2) (latent-audit scan2-R6) | src/services/latent_audit/recurring.rs | 905 |
-| `latent_scan2_r7_next_shift_past_the_last_seeded_year` | With holidays seeded through 2028 only, a month-end rule ending 2028-12-31 with a "next business day" shift is rejected (`PeriodOutOfRange`) instead of landing on 元日 2029-01-01 (latent-audit scan2-R7) | src/services/latent_audit/recurring.rs | 957 |
-| `err_interval_above_max` | An interval above `MAX_PERIOD_INTERVAL` (999, the form's max) is rejected; the limit itself is accepted (CodeRabbit on #171) | src/services/recurring.rs | 1991 |
-| `shift_beyond_window_is_refused` | A holiday shift beyond the 14-day window (non-business days through the whole window after the period, for Prev) refuses creation; a 13-day shift is still generated (CodeRabbit on #171) | src/services/recurring.rs | 1818 |
+| `latent_m18_huge_generation_rejected` | A daily rule ending 9999-12-31 is rejected (`PeriodOutOfRange`) instead of generating millions of rows (latent-audit M18) | src/services/latent_audit/recurring.rs | 484 |
+| `latent_m15_m18_period_limits_are_inclusive` | The first and last allowed day are accepted; one day outside is rejected (latent-audit M15 / M18) | src/services/latent_audit/recurring.rs | 514 |
+| `latent_m15_period_limit_follows_seeded_holidays` | With holidays seeded only up to the year before the date-based limit (app left running across New Year), that last year and the last seeded year are rejected, and the year before the last seeded one is allowed (latent-audit M15, scan2-R7) | src/services/latent_audit/recurring.rs | 554 |
+| `latent_m15_m18_period_limits_service_clamps_to_seeded_years` | `RecurringService::period_limits` (served to the screen by `get_recurring_period_limits` and enforced on create) is the date-based window clamped to the seeded holiday years, ending one year before the last seeded year (latent-audit M15 / M18, scan2-R7) | src/services/latent_audit/recurring.rs | 607 |
+| `latent_m15_m18_period_limits_follow_seeded_years` | The limits are Jan 1 of (year − 5) .. Dec 31 of (year + 10), the holiday seeding window (latent-audit M15 / M18) | src/services/latent_audit/recurring.rs | 634 |
+| `latent_m17_total_is_derived_from_the_detail` | A rule's total (and every occurrence's) is derived from its single detail under the header's rounding / tax-included settings (latent-audit M17) | src/services/latent_audit/recurring.rs | 650 |
+| `latent_l13_daily_rule_rejects_holiday_shift` | A daily rule with a holiday shift is rejected; daily without shift and monthly with shift are accepted (latent-audit L13) | src/services/latent_audit/recurring.rs | 706 |
+| `latent_m16_detail_amount_out_of_range_rejected` | Out-of-range detail amount is rejected on rule creation (latent-audit M16) | src/services/latent_audit/recurring.rs | 434 |
+| `latent_m16_detail_tax_rate_out_of_range_rejected` | Out-of-range detail tax rate is rejected on rule creation (latent-audit M16) | src/services/latent_audit/recurring.rs | 455 |
+| `transfer_same_account_maps_to_transfer_same_account_code` | `RecurringError::TransferSameAccount` maps to the `transfer_same_account` wire code (latent-audit M16) | src/services/recurring.rs | 2184 |
+| `latent_l2_recurring_rejects_foreign_shop_and_product` | Recurring rule creation accepts own shop / product and rejects another user's (latent-audit L2) | src/services/latent_audit/recurring.rs | 747 |
+| `latent_l10_generation_terminates_at_the_end_of_the_date_range` | Monthly / yearly generation near the end of chrono's range terminates instead of looping forever (latent-audit L10) | src/services/latent_audit/recurring.rs | 806 |
+| `latent_scan2_r1_shifted_date_inside_period_is_kept` | A calendar date just outside the period whose holiday shift lands inside it is generated, at both ends (latent-audit scan2-R1) | src/services/latent_audit/recurring.rs | 856 |
+| `latent_scan2_r2_daily_anchor_is_checked_against_the_period` | A blank daily anchor falls back to the start date; an anchor after the end date is rejected (latent-audit scan2-R2) | src/services/latent_audit/recurring.rs | 900 |
+| `latent_scan2_r6_detail_category1_must_match_header` | A recurring rule whose detail category1 differs from the header's (header INCOME, detail EXPENSE) is rejected as a validation error, as for a normal transaction (latent-audit M2) (latent-audit scan2-R6) | src/services/latent_audit/recurring.rs | 938 |
+| `latent_scan2_r7_next_shift_past_the_last_seeded_year` | With holidays seeded through 2028 only, a month-end rule ending 2028-12-31 with a "next business day" shift is rejected (`PeriodOutOfRange`) instead of landing on 元日 2029-01-01 (latent-audit scan2-R7) | src/services/latent_audit/recurring.rs | 990 |
+| `err_interval_above_max` | An interval above `MAX_PERIOD_INTERVAL` (999, the form's max) is rejected; the limit itself is accepted (CodeRabbit on #171) | src/services/recurring.rs | 2005 |
+| `shift_beyond_window_is_refused` | A holiday shift beyond the 14-day window (non-business days through the whole window after the period, for Prev) refuses creation; a 13-day shift is still generated (CodeRabbit on #171) | src/services/recurring.rs | 1832 |
 
-**Total**: 28 tests
+**Total**: 29 tests
 
 ### lib.rs
 
@@ -771,7 +775,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **452** |
+| **Inline Tests** | **456** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -789,14 +793,14 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/manufacturer.rs | 17 |
 | services/product.rs | 28 |
 | services/shop.rs | 19 |
-| services/transaction.rs | 64 |
+| services/transaction.rs | 67 |
 | services/aggregation.rs | 27 |
 | services/period.rs | 3 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
-| services/recurring.rs | 28 |
+| services/recurring.rs | 29 |
 | lib.rs | 6 |
-| **Total** | **475** |
+| **Total** | **479** |
 
 ---
 

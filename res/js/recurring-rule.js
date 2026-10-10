@@ -13,6 +13,7 @@ import {
     HOLIDAY_SEED_YEARS_BACK, HOLIDAY_SEED_YEARS_AHEAD,
 } from './consts.js';
 import { formatApiError, API_ERROR_CODES } from './master-crud.js';
+import { missingRequiredAccounts } from './required-accounts.js';
 import { singleFlight } from './single-flight.js';
 import { parseAmountStrict } from './parse-amount-strict.js';
 import { formatLocalDate } from './format-local-date.js';
@@ -405,6 +406,23 @@ function setupFormSubmit() {
             return;
         }
 
+        // The account the category needs must be chosen (EXPENSE: From,
+        // INCOME: To, TRANSFER: both), as on the transaction screen; the
+        // Rust side refuses it too (account_required).
+        const missingAccounts = missingRequiredAccounts(
+            document.getElementById('category1').value,
+            document.getElementById('from-account').value,
+            document.getElementById('to-account').value,
+        );
+        if (missingAccounts.from) {
+            showResult('error', i18n.t('transaction_mgmt.from_account_required'));
+            return;
+        }
+        if (missingAccounts.to) {
+            showResult('error', i18n.t('transaction_mgmt.to_account_required'));
+            return;
+        }
+
         // Latent-audit M16 — a TRANSFER from an account to itself is
         // rejected by the transaction screen and by the Rust side; catch it
         // here with the same message before any occurrence is generated.
@@ -575,6 +593,12 @@ function setupFormSubmit() {
             if (err && typeof err === 'object'
                 && err.code === API_ERROR_CODES.TRANSFER_SAME_ACCOUNT) {
                 showResult('error', i18n.t('transaction_mgmt.transfer_same_account'));
+                return;
+            }
+
+            if (err && typeof err === 'object'
+                && err.code === API_ERROR_CODES.ACCOUNT_REQUIRED) {
+                showResult('error', i18n.t('transaction_mgmt.account_required'));
                 return;
             }
 

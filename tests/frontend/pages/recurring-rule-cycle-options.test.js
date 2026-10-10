@@ -62,6 +62,8 @@ async function fillAndSubmit() {
     category1.value = 'EXPENSE';
     category1.dispatchEvent(new Event('change'));
     await flush();
+    // An expense needs a From account.
+    document.getElementById('from-account').value = 'CASH';
     document.getElementById('item-name').value = 'Rent';
     setInput('tax-rate', '0');
     setInput('amount-excluding-tax', '80000');

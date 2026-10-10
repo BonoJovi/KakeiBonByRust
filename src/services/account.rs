@@ -9,10 +9,9 @@ use crate::validation;
 const CODE_LABEL: &str = "Account code";
 const NAME_LABEL: &str = "Account name";
 const ENTITY_LABEL: &str = "Account";
-/// The per-user "unspecified" account. Transactions and recurring rules
-/// point at it (through a foreign key) when a side has no account, so it
-/// must never be deleted, disabled or edited.
-const NONE_ACCOUNT_CODE: &str = "NONE";
+// The per-user "unspecified" account must never be deleted, disabled or
+// edited: transactions and recurring rules point at it.
+use consts::NONE_ACCOUNT_CODE;
 
 fn reject_none_account(account_code: &str) -> Result<(), ApiError> {
     if account_code == NONE_ACCOUNT_CODE {

@@ -73,6 +73,8 @@ async function submitWithDates({ start, end, anchor }) {
     category1.value = 'EXPENSE';
     category1.dispatchEvent(new Event('change'));
     await flush();
+    // An expense needs a From account.
+    document.getElementById('from-account').value = 'BANK';
     document.getElementById('item-name').value = 'Rent';
     document.getElementById('tax-rate').value = '0';
     document.getElementById('amount-excluding-tax').value = '80000';

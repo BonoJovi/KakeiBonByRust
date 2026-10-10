@@ -103,6 +103,8 @@ describe('recurring rule form — derived total (regression, latent audit 2026-0
         document.getElementById('rule-name').value = 'Rent';
         setSelect('category1', 'EXPENSE');
         await flush();
+        // An expense needs a From account.
+        document.getElementById('from-account').value = 'CASH';
         document.getElementById('item-name').value = 'Rent';
         setSelect('tax-included-type', '1');
         setInput('tax-rate', '0');

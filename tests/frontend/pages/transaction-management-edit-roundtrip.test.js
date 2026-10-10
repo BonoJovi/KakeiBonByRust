@@ -189,6 +189,7 @@ describe('transaction edit window — saving', () => {
         field('transaction-date').value = '2026-10-01T09:00';
         field('category1').value = 'INCOME';
         field('category1').dispatchEvent(new Event('change'));
+        field('to-account').value = 'CASH';
         field('total-amount').value = '1200';
         field('transaction-memo').value = '  gift  ';
         await save();
@@ -196,6 +197,7 @@ describe('transaction edit window — saving', () => {
         expect(sentNew()).toMatchObject({
             category1Code: 'INCOME',
             fromAccountCode: 'NONE',
+            toAccountCode: 'CASH',
             transactionDate: '2026-10-01 09:00:00',
             totalAmount: 1200,
             memo: 'gift',

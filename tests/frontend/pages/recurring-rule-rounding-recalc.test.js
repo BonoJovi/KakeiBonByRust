@@ -86,6 +86,8 @@ describe('recurring rule form: rounding change after the amount (scan2-R5)', () 
         document.getElementById('rule-name').value = 'Sub';
         setSelect('category1', 'EXPENSE');
         await flush();
+        // An expense needs a From account.
+        document.getElementById('from-account').value = 'BANK';
         document.getElementById('item-name').value = 'Sub';
         setSelect('tax-included-type', '1'); // tax-excluded
         setSelect('tax-rounding-type', '0'); // floor
@@ -108,6 +110,8 @@ describe('recurring rule form: rounding change after the amount (scan2-R5)', () 
         document.getElementById('rule-name').value = 'Sub';
         setSelect('category1', 'EXPENSE');
         await flush();
+        // An expense needs a From account.
+        document.getElementById('from-account').value = 'BANK';
         document.getElementById('item-name').value = 'Sub';
         setSelect('tax-included-type', '0'); // tax-included
         setSelect('tax-rounding-type', '0'); // floor

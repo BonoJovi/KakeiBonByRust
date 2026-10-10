@@ -228,6 +228,9 @@ pub enum TransactionError {
     /// `category1_has_details` code) instead of leaving header and details
     /// disagreeing on income / expense.
     Category1HasDetails,
+    /// The account the category needs is the NONE account; see
+    /// `missing_required_account`. Mapped to the `account_required` code.
+    AccountRequired,
 }
 
 impl std::fmt::Display for TransactionError {
@@ -241,6 +244,9 @@ impl std::fmt::Display for TransactionError {
             }
             TransactionError::Category1HasDetails => {
                 write!(f, "Category cannot be changed while the transaction has details")
+            }
+            TransactionError::AccountRequired => {
+                write!(f, "An account is required for this category")
             }
         }
     }
@@ -279,7 +285,23 @@ impl From<TransactionError> for ApiError {
             TransactionError::DatabaseError(msg) => ApiError::database(msg),
             TransactionError::TransferSameAccount => ApiError::transfer_same_account(),
             TransactionError::Category1HasDetails => ApiError::category1_has_details(),
+            TransactionError::AccountRequired => ApiError::account_required(),
         }
+    }
+}
+
+/// Whether the account the category needs is left as the NONE account: an
+/// EXPENSE needs FROM, an INCOME needs TO and a TRANSFER needs both. Such a
+/// row counts as an expense or income but moves no account balance, since
+/// the dashboard hides NONE. Shared with the recurring rule write path.
+pub(crate) fn missing_required_account(category1_code: &str, from: &str, to: &str) -> bool {
+    let from_missing = from == consts::NONE_ACCOUNT_CODE;
+    let to_missing = to == consts::NONE_ACCOUNT_CODE;
+    match category1_code {
+        "EXPENSE" => from_missing,
+        "INCOME" => to_missing,
+        "TRANSFER" => from_missing || to_missing,
+        _ => false,
     }
 }
 
@@ -670,6 +692,13 @@ impl TransactionService {
         // account balance by the transfer amount. Reject the write
         // outright; the CASE was made symmetric in the same PR as a
         // second line of defence for legacy rows.
+        if missing_required_account(
+            &request.category1_code,
+            &request.from_account_code,
+            &request.to_account_code,
+        ) {
+            return Err(TransactionError::AccountRequired);
+        }
         if request.category1_code == "TRANSFER"
             && request.from_account_code == request.to_account_code
         {
@@ -1168,6 +1197,13 @@ impl TransactionService {
         // account balance by the transfer amount. Reject the write
         // outright; the CASE was made symmetric in the same PR as a
         // second line of defence for legacy rows.
+        if missing_required_account(
+            &request.category1_code,
+            &request.from_account_code,
+            &request.to_account_code,
+        ) {
+            return Err(TransactionError::AccountRequired);
+        }
         if request.category1_code == "TRANSFER"
             && request.from_account_code == request.to_account_code
         {
@@ -3705,10 +3741,9 @@ mod tests {
         let service = TransactionService::new(pool);
         let transaction_id = create_test_header(&service).await;
 
-        // The test DB has no NONE account row, so give the unused FROM side
-        // a real account; only the TO side is required for an income.
+        // Only the TO side is required for an income; FROM stays NONE.
         let result = service
-            .update_transaction_header(2, transaction_id, account_request("INCOME", "CASH", "BANK"))
+            .update_transaction_header(2, transaction_id, account_request("INCOME", "NONE", "BANK"))
             .await;
         assert!(result.is_ok(), "an income with a TO account must be saved, got {:?}", result);
     }
