@@ -3,7 +3,7 @@
 This document provides a complete index of all backend tests implemented in Rust.
 
 **Last Updated**: 2026-10-10 JST  
-**Total Tests**: 479 (delta-tracked; the full authoritative count from `cargo test --lib` is 747, and a follow-up pass will backfill the remaining pre-existing gap)
+**Total Tests**: 480 (delta-tracked; the full authoritative count from `cargo test --lib` is 748, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -253,9 +253,9 @@ SQL statement definitions. Created/updated timestamps (`ENTRY_DT` / `UPDATE_DT`)
 
 | Test Function | Description | File | Line |
 |---------------|-------------|------|------|
-| `test_sql_queries_store_timestamps_in_utc` | No statement in `sql_queries.rs` writes local time (memos, recurring-generated transactions and table defaults used to) | src/sql_queries.rs | 2857 |
-| `test_init_sql_stores_timestamps_in_utc` | `dbaccess.sql` defaults timestamps to UTC, not local time | src/sql_queries.rs | 2866 |
-| `test_recurring_rules_insert_sets_entry_dt_explicitly` | `RECURRING_RULES_INSERT` sets `ENTRY_DT` itself, because databases created before this change keep the local-time column default | src/sql_queries.rs | 2875 |
+| `test_sql_queries_store_timestamps_in_utc` | No statement in `sql_queries.rs` writes local time (memos, recurring-generated transactions and table defaults used to) | src/sql_queries.rs | 2861 |
+| `test_init_sql_stores_timestamps_in_utc` | `dbaccess.sql` defaults timestamps to UTC, not local time | src/sql_queries.rs | 2870 |
+| `test_recurring_rules_insert_sets_entry_dt_explicitly` | `RECURRING_RULES_INSERT` sets `ENTRY_DT` itself, because databases created before this change keep the local-time column default | src/sql_queries.rs | 2879 |
 
 **Total**: 3 tests
 
@@ -560,50 +560,51 @@ Transaction management service tests.
 
 | Test Function | Description | File | Line |
 |---------------|-------------|------|------|
-| `test_save_transaction_header_with_tax_excluded` | Save tax-excluded transaction header | src/services/transaction.rs | 2472 |
-| `test_save_transaction_header_with_tax_included` | Save tax-included transaction header | src/services/transaction.rs | 2505 |
-| `test_update_transaction_header_tax_type` | Update transaction header tax type | src/services/transaction.rs | 2537 |
-| `test_default_tax_type_is_excluded` | Verify default tax type is excluded | src/services/transaction.rs | 2581 |
-| `test_tax_type_validation_values` | Verify valid tax type values | src/services/transaction.rs | 2606 |
-| `test_get_transactions_end_date_includes_boundary_day` | End-date filter must include same-day timestamps (bare 'YYYY-MM-DD' anchored to 23:59:59) | src/services/transaction.rs | 4073 |
-| `test_get_transactions_keyword_matches_header_and_detail_memo` | Keyword must substring-match memo text on both header and detail rows | src/services/transaction.rs | 4147 |
-| `test_update_detail_memo_does_not_corrupt_shared_header_memo` | Detail memo edit must not clobber header memo sharing MEMO_ID | src/services/transaction.rs | 4525 |
-| `test_delete_detail_preserves_memo_still_referenced_by_header` | Detail delete must keep memo row when header still references it | src/services/transaction.rs | 4559 |
-| `test_update_detail_memo_updates_in_place_when_not_shared` | Solo-referenced memo still updates in place | src/services/transaction.rs | 4585 |
-| `test_delete_detail_removes_orphaned_memo` | Solo-referenced memo is deleted when detail removed | src/services/transaction.rs | 4615 |
-| `test_clear_detail_memo_does_not_delete_memo_still_used_by_header` | Clearing shared detail memo must not delete memo row used by header | src/services/transaction.rs | 4647 |
-| `test_update_detail_memo_does_not_corrupt_recurring_rule_memo` | Detail memo edit must not overwrite memo shared with a recurring rule | src/services/transaction.rs | 4701 |
-| `test_delete_detail_preserves_memo_still_referenced_by_recurring_rule` | Detail delete must keep memo row still referenced by a recurring rule | src/services/transaction.rs | 4746 |
-| `test_clear_detail_memo_succeeds_under_foreign_keys_on` | Clearing a detail memo must not violate the MEMOS foreign key | src/services/transaction.rs | 4784 |
-| `test_add_detail_rejects_foreign_transaction_id` | Adding a detail against another user's transaction_id must return NotFound (Fable-5 #12) | src/services/transaction.rs | 4823 |
-| `test_add_detail_rejects_nonexistent_transaction_id` | Adding a detail against a missing transaction_id must return NotFound (Fable-5 #12) | src/services/transaction.rs | 4856 |
-| `not_found_maps_to_not_found_code_with_transaction_entity` | TransactionError::NotFound maps to ApiError::not_found("transaction") (PR2b) | src/services/transaction.rs | 5039 |
-| `validation_preserves_message_and_omits_entity` | TransactionError::ValidationError maps to ApiError::CODE_VALIDATION with the message preserved (PR2b) | src/services/transaction.rs | 5046 |
-| `database_error_maps_to_database_code` | TransactionError::DatabaseError maps to ApiError::CODE_DATABASE (PR2b) | src/services/transaction.rs | 5057 |
-| `field_needle_message_survives_conversion_for_frontend_routing` | Two field needles (`"Item name must be"` / `"Memo must be"`) survive at the head of the wire message so the frontend `startsWith` routing keeps working (PR2b) | src/services/transaction.rs | 5078 |
-| `test_find_matching_pattern_preserves_user_half_up_when_settings_match` | `HALF_UP + EXCLUDED` stored on a round-cent receipt (500円 × 10% = 550円) survives bulk recalc instead of being silently downgraded to FLOOR (Fable-5 #2) | src/services/transaction.rs | 2221 |
-| `test_find_matching_pattern_preserves_user_ceil_when_settings_match` | Same guarantee for `UP + EXCLUDED` (Fable-5 #2) | src/services/transaction.rs | 2238 |
-| `test_find_matching_pattern_falls_back_to_priority_when_preferred_mismatches` | When the stored settings do not reproduce the total, fall back to the priority-ordered PATTERNS scan (Fable-5 #2) | src/services/transaction.rs | 2255 |
-| `test_find_matching_pattern_returns_none_when_no_pattern_fits` | No combination reproduces the target → `None`, caller overwrites TOTAL_AMOUNT instead of the setting columns (Fable-5 #2) | src/services/transaction.rs | 2281 |
-| `test_save_header_rejects_invalid_tax_included_type` | `save_transaction_header` rejects `tax_included_type` outside `{TAX_INCLUDED, TAX_EXCLUDED}` so a bogus value cannot survive `find_matching_pattern`'s preferred-first check (CodeRabbit on #125) | src/services/transaction.rs | 3560 |
-| `test_update_header_rejects_invalid_tax_included_type` | Same guard on the update entry point (CodeRabbit on #125) | src/services/transaction.rs | 3587 |
-| `test_save_header_rejects_transfer_from_equals_to` | `save_transaction_header` rejects TRANSFER with FROM == TO so a self-transfer cannot inflate the dashboard balance (Fable-5 #20) | src/services/transaction.rs | 3618 |
-| `test_update_header_rejects_transfer_from_equals_to` | Same guard on the update entry point (Fable-5 #20) | src/services/transaction.rs | 3646 |
-| `test_save_header_rejects_missing_account_when_category_needs_it` | `save_transaction_header` refuses an EXPENSE without a FROM account, an INCOME without a TO account and a TRANSFER missing either (`account_required`), so no amount is counted on the hidden NONE account | src/services/transaction.rs | 3691 |
-| `test_update_header_rejects_missing_account_when_category_needs_it` | Same `account_required` check on the update entry point | src/services/transaction.rs | 3715 |
-| `test_update_header_accepts_income_when_only_to_account_is_given` | An INCOME with a TO account and FROM left as NONE is still saved (only the side the category needs is required) | src/services/transaction.rs | 3739 |
-| `test_save_header_failure_rolls_back_memo_insert_in_same_tx` | HEADER insert failure inside the tx (via a local `RAISE(FAIL)` trigger) rolls the MEMO insert back too — MEMOS stays empty (Fable-5 #6) | src/services/transaction.rs | 3761 |
-| `test_save_header_dedupes_memo_text_across_multiple_saves` | Two saves with the same memo body land on one MEMOS row and share the MEMO_ID (dedup side effect of the tx-based helper reuse, Fable-5 #6) | src/services/transaction.rs | 3825 |
-| `test_add_detail_dedupes_memo_text_across_multiple_adds` | `add_transaction_detail` reuses the existing MEMOS row when the memo text already exists for the user — no duplicate row, and both details share one MEMO_ID (Fable-5 #7) | src/services/transaction.rs | 4881 |
-| `test_add_detail_reuses_memo_shared_with_header` | An add whose memo text matches the parent header's MEMO_ID reuses that MEMO_ID so the "shared memo" update path is reachable from adds too (Fable-5 #7) | src/services/transaction.rs | 4925 |
-| `test_add_detail_failure_rolls_back_memo_insert_in_same_tx` | An FK failure inside the DETAIL_INSERT (missing `(USER_ID, CATEGORY1_CODE) → CATEGORY1`) rolls the MEMO insert back too — MEMOS stays empty (Fable-5 #7) | src/services/transaction.rs | 4991 |
-| `transfer_same_account_maps_to_stable_wire_code_and_omits_entity` | `TransactionError::TransferSameAccount` maps to `ApiError { code: "transfer_same_account", entity: None }` — pins the wire contract so a future refactor cannot silently downgrade to the generic `validation` fallback (CodeRabbit on #127) | src/services/transaction.rs | 5070 |
+| `test_save_transaction_header_with_tax_excluded` | Save tax-excluded transaction header | src/services/transaction.rs | 2485 |
+| `test_save_transaction_header_with_tax_included` | Save tax-included transaction header | src/services/transaction.rs | 2518 |
+| `test_update_transaction_header_tax_type` | Update transaction header tax type | src/services/transaction.rs | 2550 |
+| `test_default_tax_type_is_excluded` | Verify default tax type is excluded | src/services/transaction.rs | 2594 |
+| `test_tax_type_validation_values` | Verify valid tax type values | src/services/transaction.rs | 2619 |
+| `test_get_transactions_end_date_includes_boundary_day` | End-date filter must include same-day timestamps (bare 'YYYY-MM-DD' anchored to 23:59:59) | src/services/transaction.rs | 4124 |
+| `test_get_transactions_keyword_matches_header_and_detail_memo` | Keyword must substring-match memo text on both header and detail rows | src/services/transaction.rs | 4198 |
+| `test_update_detail_memo_does_not_corrupt_shared_header_memo` | Detail memo edit must not clobber header memo sharing MEMO_ID | src/services/transaction.rs | 4576 |
+| `test_delete_detail_preserves_memo_still_referenced_by_header` | Detail delete must keep memo row when header still references it | src/services/transaction.rs | 4610 |
+| `test_update_detail_memo_updates_in_place_when_not_shared` | Solo-referenced memo still updates in place | src/services/transaction.rs | 4636 |
+| `test_delete_detail_removes_orphaned_memo` | Solo-referenced memo is deleted when detail removed | src/services/transaction.rs | 4666 |
+| `test_clear_detail_memo_does_not_delete_memo_still_used_by_header` | Clearing shared detail memo must not delete memo row used by header | src/services/transaction.rs | 4698 |
+| `test_update_detail_memo_does_not_corrupt_recurring_rule_memo` | Detail memo edit must not overwrite memo shared with a recurring rule | src/services/transaction.rs | 4752 |
+| `test_delete_detail_preserves_memo_still_referenced_by_recurring_rule` | Detail delete must keep memo row still referenced by a recurring rule | src/services/transaction.rs | 4797 |
+| `test_clear_detail_memo_succeeds_under_foreign_keys_on` | Clearing a detail memo must not violate the MEMOS foreign key | src/services/transaction.rs | 4835 |
+| `test_add_detail_rejects_foreign_transaction_id` | Adding a detail against another user's transaction_id must return NotFound (Fable-5 #12) | src/services/transaction.rs | 4874 |
+| `test_add_detail_rejects_nonexistent_transaction_id` | Adding a detail against a missing transaction_id must return NotFound (Fable-5 #12) | src/services/transaction.rs | 4907 |
+| `not_found_maps_to_not_found_code_with_transaction_entity` | TransactionError::NotFound maps to ApiError::not_found("transaction") (PR2b) | src/services/transaction.rs | 5090 |
+| `validation_preserves_message_and_omits_entity` | TransactionError::ValidationError maps to ApiError::CODE_VALIDATION with the message preserved (PR2b) | src/services/transaction.rs | 5097 |
+| `database_error_maps_to_database_code` | TransactionError::DatabaseError maps to ApiError::CODE_DATABASE (PR2b) | src/services/transaction.rs | 5108 |
+| `field_needle_message_survives_conversion_for_frontend_routing` | Two field needles (`"Item name must be"` / `"Memo must be"`) survive at the head of the wire message so the frontend `startsWith` routing keeps working (PR2b) | src/services/transaction.rs | 5129 |
+| `test_find_matching_pattern_preserves_user_half_up_when_settings_match` | `HALF_UP + EXCLUDED` stored on a round-cent receipt (500円 × 10% = 550円) survives bulk recalc instead of being silently downgraded to FLOOR (Fable-5 #2) | src/services/transaction.rs | 2234 |
+| `test_find_matching_pattern_preserves_user_ceil_when_settings_match` | Same guarantee for `UP + EXCLUDED` (Fable-5 #2) | src/services/transaction.rs | 2251 |
+| `test_find_matching_pattern_falls_back_to_priority_when_preferred_mismatches` | When the stored settings do not reproduce the total, fall back to the priority-ordered PATTERNS scan (Fable-5 #2) | src/services/transaction.rs | 2268 |
+| `test_find_matching_pattern_returns_none_when_no_pattern_fits` | No combination reproduces the target → `None`, caller overwrites TOTAL_AMOUNT instead of the setting columns (Fable-5 #2) | src/services/transaction.rs | 2294 |
+| `test_save_header_rejects_invalid_tax_included_type` | `save_transaction_header` rejects `tax_included_type` outside `{TAX_INCLUDED, TAX_EXCLUDED}` so a bogus value cannot survive `find_matching_pattern`'s preferred-first check (CodeRabbit on #125) | src/services/transaction.rs | 3573 |
+| `test_update_header_rejects_invalid_tax_included_type` | Same guard on the update entry point (CodeRabbit on #125) | src/services/transaction.rs | 3600 |
+| `test_save_header_rejects_transfer_from_equals_to` | `save_transaction_header` rejects TRANSFER with FROM == TO so a self-transfer cannot inflate the dashboard balance (Fable-5 #20) | src/services/transaction.rs | 3631 |
+| `test_update_header_rejects_transfer_from_equals_to` | Same guard on the update entry point (Fable-5 #20) | src/services/transaction.rs | 3659 |
+| `test_save_header_rejects_missing_account_when_category_needs_it` | `save_transaction_header` refuses an EXPENSE without a FROM account, an INCOME without a TO account and a TRANSFER missing either (`account_required`), so no amount is counted on the hidden NONE account | src/services/transaction.rs | 3704 |
+| `test_update_header_rejects_missing_account_when_category_needs_it` | Same `account_required` check on the update entry point | src/services/transaction.rs | 3728 |
+| `test_update_header_accepts_income_when_only_to_account_is_given` | An INCOME with a TO account and FROM left as NONE is still saved (only the side the category needs is required) | src/services/transaction.rs | 3752 |
+| `test_confirm_scheduled_rejects_missing_account_when_category_needs_it` | Confirming a scheduled header that lacks the account its category needs (saved before the account check) is refused with `account_required`, and the header stays scheduled | src/services/transaction.rs | 3966 |
+| `test_save_header_failure_rolls_back_memo_insert_in_same_tx` | HEADER insert failure inside the tx (via a local `RAISE(FAIL)` trigger) rolls the MEMO insert back too — MEMOS stays empty (Fable-5 #6) | src/services/transaction.rs | 3774 |
+| `test_save_header_dedupes_memo_text_across_multiple_saves` | Two saves with the same memo body land on one MEMOS row and share the MEMO_ID (dedup side effect of the tx-based helper reuse, Fable-5 #6) | src/services/transaction.rs | 3838 |
+| `test_add_detail_dedupes_memo_text_across_multiple_adds` | `add_transaction_detail` reuses the existing MEMOS row when the memo text already exists for the user — no duplicate row, and both details share one MEMO_ID (Fable-5 #7) | src/services/transaction.rs | 4932 |
+| `test_add_detail_reuses_memo_shared_with_header` | An add whose memo text matches the parent header's MEMO_ID reuses that MEMO_ID so the "shared memo" update path is reachable from adds too (Fable-5 #7) | src/services/transaction.rs | 4976 |
+| `test_add_detail_failure_rolls_back_memo_insert_in_same_tx` | An FK failure inside the DETAIL_INSERT (missing `(USER_ID, CATEGORY1_CODE) → CATEGORY1`) rolls the MEMO insert back too — MEMOS stays empty (Fable-5 #7) | src/services/transaction.rs | 5042 |
+| `transfer_same_account_maps_to_stable_wire_code_and_omits_entity` | `TransactionError::TransferSameAccount` maps to `ApiError { code: "transfer_same_account", entity: None }` — pins the wire contract so a future refactor cannot silently downgrade to the generic `validation` fallback (CodeRabbit on #127) | src/services/transaction.rs | 5121 |
 | `latent_h5_included_header_total_sums_amount_including_tax` | Tax-included header total = SUM(AMOUNT_INCLUDING_TAX) (latent-audit H5) | src/services/latent_audit/transaction.rs | 201 |
 | `latent_h5_compute_recommended_total_honours_included_header` | `compute_recommended_total` honours the header TAX_INCLUDED_TYPE (latent-audit H5) | src/services/latent_audit/transaction.rs | 213 |
 | `latent_h5_bulk_recalc_keeps_consistent_included_header` | Bulk recalc leaves a consistent tax-included header untouched (latent-audit H5) | src/services/latent_audit/transaction.rs | 234 |
 | `latent_l1_small_detail_with_zero_tax_is_still_grossed_up` | Small rows whose tax rounds to 0 are still grossed up per rate (latent-audit L1) | src/services/latent_audit/transaction.rs | 261 |
-| `test_calculate_recommended_total_uses_amount_not_amount_including_tax` | Tax-excluded total grosses up AMOUNT regardless of AMOUNT_INCLUDING_TAX (AMOUNT is always tax-excluded) | src/services/transaction.rs | 2124 |
-| `test_calculate_recommended_total_with_settings_included_derives_missing_rows` | Tax-included total derives NULL / 0-sentinel rows from AMOUNT + TAX_RATE | src/services/transaction.rs | 2177 |
+| `test_calculate_recommended_total_uses_amount_not_amount_including_tax` | Tax-excluded total grosses up AMOUNT regardless of AMOUNT_INCLUDING_TAX (AMOUNT is always tax-excluded) | src/services/transaction.rs | 2137 |
+| `test_calculate_recommended_total_with_settings_included_derives_missing_rows` | Tax-included total derives NULL / 0-sentinel rows from AMOUNT + TAX_RATE | src/services/transaction.rs | 2190 |
 | `latent_h4_bulk_recalc_keeps_total_without_details` | Bulk recalc leaves a header without details untouched (latent-audit H4) | src/services/latent_audit/transaction.rs | 180 |
 | `latent_h4_compute_recommended_total_is_none_without_details` | `compute_recommended_total` returns None for a header without details (latent-audit H4) | src/services/latent_audit/transaction.rs | 870 |
 | `latent_m1_update_header_persists_is_scheduled` | Header update persists the IS_SCHEDULED checkbox (latent-audit M1) | src/services/latent_audit/transaction.rs | 276 |
@@ -628,7 +629,7 @@ Transaction management service tests.
 | `latent_l3_failed_detail_update_rolls_back_memo_change` | A detail update that fails rolls back its memo change too (memo handling runs in the same transaction) (latent-audit L3) | src/services/latent_audit/transaction.rs | 747 |
 | `latent_l3_in_place_memo_update_is_trimmed` | An in-place memo update stores the trimmed text, matching memo dedup (latent-audit L3) | src/services/latent_audit/transaction.rs | 775 |
 
-**Total**: 67 tests
+**Total**: 68 tests
 
 ### services/aggregation.rs
 
@@ -775,7 +776,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **456** |
+| **Inline Tests** | **457** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -793,14 +794,14 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/manufacturer.rs | 17 |
 | services/product.rs | 28 |
 | services/shop.rs | 19 |
-| services/transaction.rs | 67 |
+| services/transaction.rs | 68 |
 | services/aggregation.rs | 27 |
 | services/period.rs | 3 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 29 |
 | lib.rs | 6 |
-| **Total** | **479** |
+| **Total** | **480** |
 
 ---
 

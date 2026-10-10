@@ -981,6 +981,19 @@ impl TransactionService {
         user_id: i64,
         transaction_id: i64,
     ) -> Result<(), TransactionError> {
+        // A scheduled header saved before the account check can lack the
+        // account its category needs; confirming it would make an actual
+        // transaction that moves no account balance. The user chooses the
+        // account with Edit first.
+        let header = self.get_transaction_header(user_id, transaction_id).await?;
+        if missing_required_account(
+            &header.category1_code,
+            &header.from_account_code,
+            &header.to_account_code,
+        ) {
+            return Err(TransactionError::AccountRequired);
+        }
+
         let result = sqlx::query(sql_queries::TRANSACTION_HEADER_CONFIRM_SCHEDULED)
             .bind(transaction_id)
             .bind(user_id)
@@ -3943,6 +3956,44 @@ mod tests {
         // Verify it's now actual
         let header = service.get_transaction_header(2, transaction_id).await.unwrap();
         assert_eq!(header.is_scheduled, 0);
+    }
+
+    /// A scheduled header saved before the account check (#238) can lack the
+    /// account its category needs. Confirming it must not turn it into an
+    /// actual transaction that moves no account balance; the user is asked
+    /// to choose the account first (`account_required`).
+    #[tokio::test]
+    async fn test_confirm_scheduled_rejects_missing_account_when_category_needs_it() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool.clone());
+
+        let request = SaveTransactionRequest {
+            shop_id: None,
+            category1_code: "EXPENSE".to_string(),
+            from_account_code: "CASH".to_string(),
+            to_account_code: "NONE".to_string(),
+            transaction_date: "2024-02-01 10:00:00".to_string(),
+            total_amount: 5000,
+            tax_rounding_type: consts::TAX_ROUND_DOWN,
+            tax_included_type: consts::TAX_EXCLUDED,
+            memo: None,
+            is_scheduled: Some(1),
+        };
+        let transaction_id = service.save_transaction_header(2, request).await.unwrap();
+        sqlx::query(sql_queries::TEST_TRANSACTION_HEADER_SET_ACCOUNTS)
+            .bind("NONE")
+            .bind("NONE")
+            .bind(transaction_id)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let result = service.confirm_scheduled_transaction(2, transaction_id).await;
+        let code = result.err().map(|e| ApiError::from(e).code);
+        assert_eq!(code.as_deref(), Some("account_required"));
+
+        let header = service.get_transaction_header(2, transaction_id).await.unwrap();
+        assert_eq!(header.is_scheduled, 1, "the refused header must stay scheduled");
     }
 
     #[tokio::test]

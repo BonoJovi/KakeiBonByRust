@@ -2609,6 +2609,11 @@ pub const TEST_TRANSACTION_INSERT_ACCOUNT_CASH: &str = "INSERT INTO ACCOUNTS (US
 
 pub const TEST_TRANSACTION_INSERT_ACCOUNT_BANK: &str = "INSERT INTO ACCOUNTS (USER_ID, ACCOUNT_CODE, ACCOUNT_NAME, TEMPLATE_CODE) VALUES (2, 'BANK', '銀行', 'BANK')";
 
+// Puts a header back into the state of a row saved before the account check
+// (#238), which the save path now refuses to write.
+#[cfg(test)]
+pub const TEST_TRANSACTION_HEADER_SET_ACCOUNTS: &str = "UPDATE TRANSACTIONS_HEADER SET FROM_ACCOUNT_CODE = ?, TO_ACCOUNT_CODE = ? WHERE TRANSACTION_ID = ?";
+
 // IF NOT EXISTS so the master-delete-lock tests can also create this from
 // their own setup_test_db without racing the balance-computation tests
 // that create it inline.

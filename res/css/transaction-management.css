@@ -229,6 +229,19 @@ body {
     grid-column: 3;
 }
 
+/* A side whose account the category needs but is left Unspecified
+ * (saved before the account check). */
+.transaction-account .account-missing {
+    color: #c0392b;
+    font-weight: 700;
+}
+
+.transaction-account .account-missing-hint {
+    color: #c0392b;
+    font-size: 0.85em;
+    margin-top: 2px;
+}
+
 .transaction-amount {
     font-weight: 700;
     text-align: right;

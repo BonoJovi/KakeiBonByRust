@@ -3,7 +3,7 @@
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-10-10 JST  
-**総テスト数**: 479件 (差分反映後。`cargo test --lib` の権威的総数は 747 で、既存の未反映分は別 PR でバックフィル予定)
+**総テスト数**: 480件 (差分反映後。`cargo test --lib` の権威的総数は 748 で、既存の未反映分は別 PR でバックフィル予定)
 
 ---
 
@@ -253,9 +253,9 @@ SQL 文の定義。登録日時・更新日時 (`ENTRY_DT` / `UPDATE_DT`) はす
 
 | テスト関数 | 説明 | ファイル | 行 |
 |-----------|------|---------|-----|
-| `test_sql_queries_store_timestamps_in_utc` | `sql_queries.rs` のどの SQL もローカル時刻を書き込まない (以前はメモ・繰り返し予定から作る入出金・テーブルの初期値がローカル時刻だった) | src/sql_queries.rs | 2857 |
-| `test_init_sql_stores_timestamps_in_utc` | `dbaccess.sql` の日時の初期値はローカル時刻ではなく UTC | src/sql_queries.rs | 2866 |
-| `test_recurring_rules_insert_sets_entry_dt_explicitly` | 既存 DB には列の初期値 (ローカル時刻) が残るため、`RECURRING_RULES_INSERT` は `ENTRY_DT` を自分で指定する | src/sql_queries.rs | 2875 |
+| `test_sql_queries_store_timestamps_in_utc` | `sql_queries.rs` のどの SQL もローカル時刻を書き込まない (以前はメモ・繰り返し予定から作る入出金・テーブルの初期値がローカル時刻だった) | src/sql_queries.rs | 2861 |
+| `test_init_sql_stores_timestamps_in_utc` | `dbaccess.sql` の日時の初期値はローカル時刻ではなく UTC | src/sql_queries.rs | 2870 |
+| `test_recurring_rules_insert_sets_entry_dt_explicitly` | 既存 DB には列の初期値 (ローカル時刻) が残るため、`RECURRING_RULES_INSERT` は `ENTRY_DT` を自分で指定する | src/sql_queries.rs | 2879 |
 
 **合計**: 3件
 
@@ -560,50 +560,51 @@ SQL 文の定義。登録日時・更新日時 (`ENTRY_DT` / `UPDATE_DT`) はす
 
 | テスト関数 | 説明 | ファイル | 行 |
 |-----------|------|---------|-----|
-| `test_save_transaction_header_with_tax_excluded` | 税抜取引ヘッダー保存 | src/services/transaction.rs | 2472 |
-| `test_save_transaction_header_with_tax_included` | 税込取引ヘッダー保存 | src/services/transaction.rs | 2505 |
-| `test_update_transaction_header_tax_type` | 取引ヘッダーの税種別更新 | src/services/transaction.rs | 2537 |
-| `test_default_tax_type_is_excluded` | デフォルト税種別が税抜であることを確認 | src/services/transaction.rs | 2581 |
-| `test_tax_type_validation_values` | 税種別の有効値確認 | src/services/transaction.rs | 2606 |
-| `test_get_transactions_end_date_includes_boundary_day` | 終了日フィルタが同日タイムスタンプを含むこと (bare 'YYYY-MM-DD' を 23:59:59 に正規化) | src/services/transaction.rs | 4073 |
-| `test_get_transactions_keyword_matches_header_and_detail_memo` | キーワードがヘッダー/明細のメモテキストで部分一致すること | src/services/transaction.rs | 4147 |
-| `test_update_detail_memo_does_not_corrupt_shared_header_memo` | 明細メモ編集が MEMO_ID を共有するヘッダーメモを破壊しないこと | src/services/transaction.rs | 4525 |
-| `test_delete_detail_preserves_memo_still_referenced_by_header` | ヘッダーが参照中の memo は明細削除で残ること | src/services/transaction.rs | 4559 |
-| `test_update_detail_memo_updates_in_place_when_not_shared` | 単独参照メモは in-place update のままであること | src/services/transaction.rs | 4585 |
-| `test_delete_detail_removes_orphaned_memo` | 単独参照メモは明細削除で MEMOS 行も削除されること | src/services/transaction.rs | 4615 |
-| `test_clear_detail_memo_does_not_delete_memo_still_used_by_header` | 共有中の明細メモをクリアしてもヘッダー側の memo 行が残ること | src/services/transaction.rs | 4647 |
-| `test_update_detail_memo_does_not_corrupt_recurring_rule_memo` | 明細メモ編集が繰り返しルールと共有するメモを破壊しないこと | src/services/transaction.rs | 4701 |
-| `test_delete_detail_preserves_memo_still_referenced_by_recurring_rule` | 繰り返しルールが参照中の memo は明細削除で残ること | src/services/transaction.rs | 4746 |
-| `test_clear_detail_memo_succeeds_under_foreign_keys_on` | 明細メモのクリアが MEMOS 外部キーに違反しないこと | src/services/transaction.rs | 4784 |
-| `test_add_detail_rejects_foreign_transaction_id` | 他ユーザーの transaction_id で明細追加は NotFound を返す (Fable-5 #12) | src/services/transaction.rs | 4823 |
-| `test_add_detail_rejects_nonexistent_transaction_id` | 存在しない transaction_id で明細追加は NotFound を返す (Fable-5 #12) | src/services/transaction.rs | 4856 |
-| `not_found_maps_to_not_found_code_with_transaction_entity` | TransactionError::NotFound が ApiError::not_found("transaction") にマッピングされること (PR2b) | src/services/transaction.rs | 5039 |
-| `validation_preserves_message_and_omits_entity` | TransactionError::ValidationError が ApiError::CODE_VALIDATION に変換され、メッセージが保持されること (PR2b) | src/services/transaction.rs | 5046 |
-| `database_error_maps_to_database_code` | TransactionError::DatabaseError が ApiError::CODE_DATABASE に変換されること (PR2b) | src/services/transaction.rs | 5057 |
-| `field_needle_message_survives_conversion_for_frontend_routing` | 2 つのフィールド needle (`"Item name must be"` / `"Memo must be"`) が変換後もそのまま先頭に残り、フロントの `startsWith` ルーティングを維持できること (PR2b) | src/services/transaction.rs | 5078 |
-| `test_find_matching_pattern_preserves_user_half_up_when_settings_match` | 端数なしの伝票 (500円 × 10% = 550円) で `HALF_UP + EXCLUDED` を保存している場合、一括再計算で FLOOR に無言で書き換えられないこと (Fable-5 #2) | src/services/transaction.rs | 2221 |
-| `test_find_matching_pattern_preserves_user_ceil_when_settings_match` | `UP + EXCLUDED` にも同じ保証 (Fable-5 #2) | src/services/transaction.rs | 2238 |
-| `test_find_matching_pattern_falls_back_to_priority_when_preferred_mismatches` | 現在設定で `target_total` を再現できない場合、優先順 PATTERNS 探索へフォールバック (Fable-5 #2) | src/services/transaction.rs | 2255 |
-| `test_find_matching_pattern_returns_none_when_no_pattern_fits` | どの組み合わせも `target_total` を再現できない場合は `None`、呼び出し側は設定列でなく TOTAL_AMOUNT を上書き (Fable-5 #2) | src/services/transaction.rs | 2281 |
-| `test_save_header_rejects_invalid_tax_included_type` | `save_transaction_header` が `{TAX_INCLUDED, TAX_EXCLUDED}` 以外の `tax_included_type` を拒否し、無効値が `find_matching_pattern` の「優先設定を先に確認する判定」に流れて残らないこと (#125 の CodeRabbit 指摘) | src/services/transaction.rs | 3560 |
-| `test_update_header_rejects_invalid_tax_included_type` | 更新入口にも同じガード (#125 の CodeRabbit 指摘) | src/services/transaction.rs | 3587 |
-| `test_save_header_rejects_transfer_from_equals_to` | `save_transaction_header` が FROM == TO の TRANSFER を拒否し、ダッシュボード残高の水増しを防ぐ (Fable-5 #20) | src/services/transaction.rs | 3618 |
-| `test_update_header_rejects_transfer_from_equals_to` | 更新入口にも同じガード (Fable-5 #20) | src/services/transaction.rs | 3646 |
-| `test_save_header_rejects_missing_account_when_category_needs_it` | `save_transaction_header` は、出金元のない支出・入金先のない収入・どちらかが欠けた振替を `account_required` で拒否し、隠れた NONE 口座に金額が計上されないようにする | src/services/transaction.rs | 3691 |
-| `test_update_header_rejects_missing_account_when_category_needs_it` | 更新入口にも同じ `account_required` の確認 | src/services/transaction.rs | 3715 |
-| `test_update_header_accepts_income_when_only_to_account_is_given` | 入金先があり出金元が NONE の収入は保存できる (必須なのは大分類が使う側だけ) | src/services/transaction.rs | 3739 |
-| `test_save_header_failure_rolls_back_memo_insert_in_same_tx` | tx 内 HEADER insert 失敗 (ローカル `RAISE(FAIL)` トリガー) で MEMO insert も同 tx でロールバック、MEMOS 空を確認 (Fable-5 #6) | src/services/transaction.rs | 3761 |
-| `test_save_header_dedupes_memo_text_across_multiple_saves` | 同じ memo 本文で 2 回 save → MEMOS 1 行のみ、MEMO_ID 共有 (tx-based helper 再利用の dedup 副次効果、Fable-5 #6) | src/services/transaction.rs | 3825 |
-| `test_add_detail_dedupes_memo_text_across_multiple_adds` | `add_transaction_detail` が同一ユーザーの同一メモ本文で既存 MEMOS 行を再利用。重複行なし、両明細で MEMO_ID 共有 (Fable-5 #7) | src/services/transaction.rs | 4881 |
-| `test_add_detail_reuses_memo_shared_with_header` | 親ヘッダーの MEMO_ID と同じ本文で detail 追加すると同じ MEMO_ID を再利用。update の「共有メモ」経路が add 側からも到達可能に (Fable-5 #7) | src/services/transaction.rs | 4925 |
-| `test_add_detail_failure_rolls_back_memo_insert_in_same_tx` | DETAIL_INSERT 内の FK 失敗 (`(USER_ID, CATEGORY1_CODE) → CATEGORY1` が未 seed) で MEMO insert も同 tx でロールバック、MEMOS 空を確認 (Fable-5 #7) | src/services/transaction.rs | 4991 |
-| `transfer_same_account_maps_to_stable_wire_code_and_omits_entity` | `TransactionError::TransferSameAccount` が `ApiError { code: "transfer_same_account", entity: None }` に変換される wire contract を固定。将来のリファクタで generic な `validation` フォールバックへ無言で退化させないための pin (#127 の CodeRabbit 指摘) | src/services/transaction.rs | 5070 |
+| `test_save_transaction_header_with_tax_excluded` | 税抜取引ヘッダー保存 | src/services/transaction.rs | 2485 |
+| `test_save_transaction_header_with_tax_included` | 税込取引ヘッダー保存 | src/services/transaction.rs | 2518 |
+| `test_update_transaction_header_tax_type` | 取引ヘッダーの税種別更新 | src/services/transaction.rs | 2550 |
+| `test_default_tax_type_is_excluded` | デフォルト税種別が税抜であることを確認 | src/services/transaction.rs | 2594 |
+| `test_tax_type_validation_values` | 税種別の有効値確認 | src/services/transaction.rs | 2619 |
+| `test_get_transactions_end_date_includes_boundary_day` | 終了日フィルタが同日タイムスタンプを含むこと (bare 'YYYY-MM-DD' を 23:59:59 に正規化) | src/services/transaction.rs | 4124 |
+| `test_get_transactions_keyword_matches_header_and_detail_memo` | キーワードがヘッダー/明細のメモテキストで部分一致すること | src/services/transaction.rs | 4198 |
+| `test_update_detail_memo_does_not_corrupt_shared_header_memo` | 明細メモ編集が MEMO_ID を共有するヘッダーメモを破壊しないこと | src/services/transaction.rs | 4576 |
+| `test_delete_detail_preserves_memo_still_referenced_by_header` | ヘッダーが参照中の memo は明細削除で残ること | src/services/transaction.rs | 4610 |
+| `test_update_detail_memo_updates_in_place_when_not_shared` | 単独参照メモは in-place update のままであること | src/services/transaction.rs | 4636 |
+| `test_delete_detail_removes_orphaned_memo` | 単独参照メモは明細削除で MEMOS 行も削除されること | src/services/transaction.rs | 4666 |
+| `test_clear_detail_memo_does_not_delete_memo_still_used_by_header` | 共有中の明細メモをクリアしてもヘッダー側の memo 行が残ること | src/services/transaction.rs | 4698 |
+| `test_update_detail_memo_does_not_corrupt_recurring_rule_memo` | 明細メモ編集が繰り返しルールと共有するメモを破壊しないこと | src/services/transaction.rs | 4752 |
+| `test_delete_detail_preserves_memo_still_referenced_by_recurring_rule` | 繰り返しルールが参照中の memo は明細削除で残ること | src/services/transaction.rs | 4797 |
+| `test_clear_detail_memo_succeeds_under_foreign_keys_on` | 明細メモのクリアが MEMOS 外部キーに違反しないこと | src/services/transaction.rs | 4835 |
+| `test_add_detail_rejects_foreign_transaction_id` | 他ユーザーの transaction_id で明細追加は NotFound を返す (Fable-5 #12) | src/services/transaction.rs | 4874 |
+| `test_add_detail_rejects_nonexistent_transaction_id` | 存在しない transaction_id で明細追加は NotFound を返す (Fable-5 #12) | src/services/transaction.rs | 4907 |
+| `not_found_maps_to_not_found_code_with_transaction_entity` | TransactionError::NotFound が ApiError::not_found("transaction") にマッピングされること (PR2b) | src/services/transaction.rs | 5090 |
+| `validation_preserves_message_and_omits_entity` | TransactionError::ValidationError が ApiError::CODE_VALIDATION に変換され、メッセージが保持されること (PR2b) | src/services/transaction.rs | 5097 |
+| `database_error_maps_to_database_code` | TransactionError::DatabaseError が ApiError::CODE_DATABASE に変換されること (PR2b) | src/services/transaction.rs | 5108 |
+| `field_needle_message_survives_conversion_for_frontend_routing` | 2 つのフィールド needle (`"Item name must be"` / `"Memo must be"`) が変換後もそのまま先頭に残り、フロントの `startsWith` ルーティングを維持できること (PR2b) | src/services/transaction.rs | 5129 |
+| `test_find_matching_pattern_preserves_user_half_up_when_settings_match` | 端数なしの伝票 (500円 × 10% = 550円) で `HALF_UP + EXCLUDED` を保存している場合、一括再計算で FLOOR に無言で書き換えられないこと (Fable-5 #2) | src/services/transaction.rs | 2234 |
+| `test_find_matching_pattern_preserves_user_ceil_when_settings_match` | `UP + EXCLUDED` にも同じ保証 (Fable-5 #2) | src/services/transaction.rs | 2251 |
+| `test_find_matching_pattern_falls_back_to_priority_when_preferred_mismatches` | 現在設定で `target_total` を再現できない場合、優先順 PATTERNS 探索へフォールバック (Fable-5 #2) | src/services/transaction.rs | 2268 |
+| `test_find_matching_pattern_returns_none_when_no_pattern_fits` | どの組み合わせも `target_total` を再現できない場合は `None`、呼び出し側は設定列でなく TOTAL_AMOUNT を上書き (Fable-5 #2) | src/services/transaction.rs | 2294 |
+| `test_save_header_rejects_invalid_tax_included_type` | `save_transaction_header` が `{TAX_INCLUDED, TAX_EXCLUDED}` 以外の `tax_included_type` を拒否し、無効値が `find_matching_pattern` の「優先設定を先に確認する判定」に流れて残らないこと (#125 の CodeRabbit 指摘) | src/services/transaction.rs | 3573 |
+| `test_update_header_rejects_invalid_tax_included_type` | 更新入口にも同じガード (#125 の CodeRabbit 指摘) | src/services/transaction.rs | 3600 |
+| `test_save_header_rejects_transfer_from_equals_to` | `save_transaction_header` が FROM == TO の TRANSFER を拒否し、ダッシュボード残高の水増しを防ぐ (Fable-5 #20) | src/services/transaction.rs | 3631 |
+| `test_update_header_rejects_transfer_from_equals_to` | 更新入口にも同じガード (Fable-5 #20) | src/services/transaction.rs | 3659 |
+| `test_save_header_rejects_missing_account_when_category_needs_it` | `save_transaction_header` は、出金元のない支出・入金先のない収入・どちらかが欠けた振替を `account_required` で拒否し、隠れた NONE 口座に金額が計上されないようにする | src/services/transaction.rs | 3704 |
+| `test_update_header_rejects_missing_account_when_category_needs_it` | 更新入口にも同じ `account_required` の確認 | src/services/transaction.rs | 3728 |
+| `test_update_header_accepts_income_when_only_to_account_is_given` | 入金先があり出金元が NONE の収入は保存できる (必須なのは大分類が使う側だけ) | src/services/transaction.rs | 3752 |
+| `test_confirm_scheduled_rejects_missing_account_when_category_needs_it` | 大分類が使う口座のない予定ヘッダー (口座の必須チェックより前に保存されたもの) の確定を `account_required` で拒否し、予定のまま残す | src/services/transaction.rs | 3966 |
+| `test_save_header_failure_rolls_back_memo_insert_in_same_tx` | tx 内 HEADER insert 失敗 (ローカル `RAISE(FAIL)` トリガー) で MEMO insert も同 tx でロールバック、MEMOS 空を確認 (Fable-5 #6) | src/services/transaction.rs | 3774 |
+| `test_save_header_dedupes_memo_text_across_multiple_saves` | 同じ memo 本文で 2 回 save → MEMOS 1 行のみ、MEMO_ID 共有 (tx-based helper 再利用の dedup 副次効果、Fable-5 #6) | src/services/transaction.rs | 3838 |
+| `test_add_detail_dedupes_memo_text_across_multiple_adds` | `add_transaction_detail` が同一ユーザーの同一メモ本文で既存 MEMOS 行を再利用。重複行なし、両明細で MEMO_ID 共有 (Fable-5 #7) | src/services/transaction.rs | 4932 |
+| `test_add_detail_reuses_memo_shared_with_header` | 親ヘッダーの MEMO_ID と同じ本文で detail 追加すると同じ MEMO_ID を再利用。update の「共有メモ」経路が add 側からも到達可能に (Fable-5 #7) | src/services/transaction.rs | 4976 |
+| `test_add_detail_failure_rolls_back_memo_insert_in_same_tx` | DETAIL_INSERT 内の FK 失敗 (`(USER_ID, CATEGORY1_CODE) → CATEGORY1` が未 seed) で MEMO insert も同 tx でロールバック、MEMOS 空を確認 (Fable-5 #7) | src/services/transaction.rs | 5042 |
+| `transfer_same_account_maps_to_stable_wire_code_and_omits_entity` | `TransactionError::TransferSameAccount` が `ApiError { code: "transfer_same_account", entity: None }` に変換される wire contract を固定。将来のリファクタで generic な `validation` フォールバックへ無言で退化させないための pin (#127 の CodeRabbit 指摘) | src/services/transaction.rs | 5121 |
 | `latent_h5_included_header_total_sums_amount_including_tax` | 税込ヘッダーの合計 = SUM(AMOUNT_INCLUDING_TAX) (潜在監査 H5) | src/services/latent_audit/transaction.rs | 201 |
 | `latent_h5_compute_recommended_total_honours_included_header` | `compute_recommended_total` がヘッダーの TAX_INCLUDED_TYPE を考慮する (潜在監査 H5) | src/services/latent_audit/transaction.rs | 213 |
 | `latent_h5_bulk_recalc_keeps_consistent_included_header` | 整合した税込ヘッダーを一括再計算が書き換えない (潜在監査 H5) | src/services/latent_audit/transaction.rs | 234 |
 | `latent_l1_small_detail_with_zero_tax_is_still_grossed_up` | 税額が丸めで 0 円になる少額明細も税率単位で gross-up される (潜在監査 L1) | src/services/latent_audit/transaction.rs | 261 |
-| `test_calculate_recommended_total_uses_amount_not_amount_including_tax` | 外税の合計は AMOUNT_INCLUDING_TAX に関係なく AMOUNT を gross-up (AMOUNT は常に税抜) | src/services/transaction.rs | 2124 |
-| `test_calculate_recommended_total_with_settings_included_derives_missing_rows` | 税込の合計で NULL / 0 の行を AMOUNT + TAX_RATE から導出 | src/services/transaction.rs | 2177 |
+| `test_calculate_recommended_total_uses_amount_not_amount_including_tax` | 外税の合計は AMOUNT_INCLUDING_TAX に関係なく AMOUNT を gross-up (AMOUNT は常に税抜) | src/services/transaction.rs | 2137 |
+| `test_calculate_recommended_total_with_settings_included_derives_missing_rows` | 税込の合計で NULL / 0 の行を AMOUNT + TAX_RATE から導出 | src/services/transaction.rs | 2190 |
 | `latent_h4_bulk_recalc_keeps_total_without_details` | 明細なしヘッダーは一括再計算で TOTAL_AMOUNT を変更しない (潜在監査 H4) | src/services/latent_audit/transaction.rs | 180 |
 | `latent_h4_compute_recommended_total_is_none_without_details` | 明細なしヘッダーの `compute_recommended_total` は None を返す (潜在監査 H4) | src/services/latent_audit/transaction.rs | 870 |
 | `latent_m1_update_header_persists_is_scheduled` | ヘッダー更新で予定チェック (IS_SCHEDULED) が保存される (潜在監査 M1) | src/services/latent_audit/transaction.rs | 276 |
@@ -628,7 +629,7 @@ SQL 文の定義。登録日時・更新日時 (`ENTRY_DT` / `UPDATE_DT`) はす
 | `latent_l3_failed_detail_update_rolls_back_memo_change` | 明細更新が失敗したらメモの変更も戻る (メモ処理を同じトランザクションで実行、潜在監査 L3) | src/services/latent_audit/transaction.rs | 747 |
 | `latent_l3_in_place_memo_update_is_trimmed` | メモの上書き更新は前後の空白を除いた内容で保存し、重複排除と一致させる (潜在監査 L3) | src/services/latent_audit/transaction.rs | 775 |
 
-**合計**: 67件
+**合計**: 68件
 
 ### services/aggregation.rs
 
@@ -775,7 +776,7 @@ SQL 文の定義。登録日時・更新日時 (`ENTRY_DT` / `UPDATE_DT`) はす
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **456件** |
+| **インラインテスト** | **457件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -793,14 +794,14 @@ SQL 文の定義。登録日時・更新日時 (`ENTRY_DT` / `UPDATE_DT`) はす
 | services/manufacturer.rs | 17 |
 | services/product.rs | 28 |
 | services/shop.rs | 19 |
-| services/transaction.rs | 67 |
+| services/transaction.rs | 68 |
 | services/aggregation.rs | 27 |
 | services/period.rs | 3 |
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 29 |
 | lib.rs | 6 |
-| **総計** | **479件** |
+| **総計** | **480件** |
 
 ---
 
