@@ -353,6 +353,39 @@ async fn latent_m16_transfer_same_account_rejected() {
     );
 }
 
+/// A rule whose category needs an account (EXPENSE: FROM, INCOME: TO,
+/// TRANSFER: both) is refused when that side is the NONE account, as
+/// `save_transaction_header` refuses it; otherwise every generated
+/// occurrence would count as an expense or income on no account.
+#[tokio::test]
+async fn recurring_rule_rejects_missing_account_when_category_needs_it() {
+    let pool = setup_recurring_db().await;
+    let service = RecurringService::new(pool.clone());
+    assert_baseline_ok(&service).await;
+
+    for (category1, from, to) in [
+        ("EXPENSE", "NONE", "BANK"),
+        ("INCOME", "BANK", "NONE"),
+        ("TRANSFER", "NONE", "BANK"),
+        ("TRANSFER", "BANK", "NONE"),
+    ] {
+        let mut request = valid_request();
+        request.category1_code = category1.to_string();
+        request.detail.category1_code = category1.to_string();
+        request.from_account_code = from.to_string();
+        request.to_account_code = to.to_string();
+
+        let result = service.create_rule_with_instances(USER_ID, request).await;
+        let code = result.err().map(|e| ApiError::from(e).code);
+        assert_eq!(
+            code.as_deref(),
+            Some("account_required"),
+            "{} with FROM={} TO={} must be refused with account_required",
+            category1, from, to
+        );
+    }
+}
+
 /// M16: recurring creation accepts any TAX_ROUNDING_TYPE value.
 /// Expected: values outside {DOWN, HALF_UP, UP} are rejected.
 #[tokio::test]

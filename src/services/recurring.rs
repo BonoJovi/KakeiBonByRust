@@ -663,6 +663,9 @@ pub enum RecurringError {
     /// (latent-audit M16). Mapped to the same `transfer_same_account` code
     /// the transaction screen uses, so the UI can show its i18n message.
     TransferSameAccount,
+    /// The account the category needs is the NONE account, as
+    /// `TransactionService` refuses it. Mapped to `account_required`.
+    AccountRequired,
     /// The rule's start / end date is outside the years with seeded holiday
     /// data, `first..=last` (latent-audit M15 / M18).
     PeriodOutOfRange { first: NaiveDate, last: NaiveDate },
@@ -693,6 +696,9 @@ impl std::fmt::Display for RecurringError {
             RecurringError::NotFound => write!(f, "Recurring rule not found"),
             RecurringError::TransferSameAccount => {
                 write!(f, "Transfer source and destination accounts must differ")
+            }
+            RecurringError::AccountRequired => {
+                write!(f, "An account is required for this category")
             }
             RecurringError::PeriodOutOfRange { first, last } => {
                 write!(f, "The rule period must be between {} and {}", first, last)
@@ -731,6 +737,7 @@ impl From<RecurringError> for ApiError {
             RecurringError::NotFound => ApiError::not_found(ENTITY_LABEL),
             RecurringError::Validation(msg) => ApiError::validation(msg),
             RecurringError::TransferSameAccount => ApiError::transfer_same_account(),
+            RecurringError::AccountRequired => ApiError::account_required(),
             RecurringError::PeriodOutOfRange { first, last } => {
                 ApiError::recurring_period_out_of_range(
                     &first.format("%Y-%m-%d").to_string(),
@@ -890,6 +897,13 @@ impl RecurringService {
         // transaction (TransactionService::save_transaction_header /
         // add_transaction_detail); without it every generated occurrence
         // could carry a value the regular edit path later rejects.
+        if crate::services::transaction::missing_required_account(
+            &request.category1_code,
+            &request.from_account_code,
+            &request.to_account_code,
+        ) {
+            return Err(RecurringError::AccountRequired);
+        }
         if request.category1_code == "TRANSFER"
             && request.from_account_code == request.to_account_code
         {

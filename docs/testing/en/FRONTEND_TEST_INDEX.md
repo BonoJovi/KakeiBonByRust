@@ -3,7 +3,7 @@
 This document provides a complete index of all frontend tests implemented in JavaScript.
 
 **Last Updated**: 2026-10-10 JST  
-**Total Tests**: 815 (jest suites; 97 test files, per `npm test`)
+**Total Tests**: 828 (jest suites; 99 test files, per `npm test`)
 
 ---
 
@@ -28,7 +28,7 @@ and are **not** added again to the grand total.
 - **admin-edit.test.js** - Admin edit tests (62)
 - **general-user-edit.test.js** - General user edit tests (62)
 
-### Feature-Specific Tests (498 tests)
+### Feature-Specific Tests (511 tests)
 
 - **transaction-edit.test.js** - Transaction edit tests (48)
 - **transaction-detail-tax-calculation.test.js** - Tax calculation tests on the real helpers in `detail-tax-calc.js` (tax rates, 1 yen, the maximum amount, rounding types, exact splits of a tax-included amount, a round trip); a typed tax-included price is always kept, with the tax carved out of it when no exact tax-excluded split exists (latent-audit scan2-T2) (33)
@@ -62,6 +62,7 @@ and are **not** added again to the grand total.
 - **pages/index-logout-hides-user-setup.test.js** - Boots the real index page (menu.js): logging out while the user-setup form is shown, before the 1 s switch after login has run, or before the login's setup check has answered, leaves only the login form on screen (`#user-setup`, `#admin-setup` and `#app-content` hidden) (latent-audit scan2-C6) (3)
 - **pages/index-login-page.test.js** - Boots the real index page (menu.js): with no session the login form is shown and the user name focused; the password field is masked; submitting cancels the browser submission and sends the user name and password as typed (untrimmed) to `login_user`; a successful login shows `login.success` and `login.welcome` (the name as text, not HTML) and switches to the app after 1 s when no user setup is needed; wrong credentials show `error.invalid_credentials`, other errors `error.login_failed` with the backend message; logout clears the session, the fields and the message; when the session cannot be cleared the app stays on screen and `error.logout_failed` is shown (12)
 - **pages/recurring-rule-page.test.js** - Boots the real recurring rule page: a TRANSFER template from an account to itself is rejected with `transaction_mgmt.transfer_same_account` before `create_recurring_rule`, while two different accounts still go through, and a backend `transfer_same_account` rejection shows the same message (latent-audit M16) ; a backend `recurring_holiday_shift_too_long` rejection shows `recurring_rule.holiday_shift_too_long` (4)
+- **pages/recurring-rule-account-required.test.js** - Boots the real recurring rule page: a rule whose category needs an account left "Unspecified" (EXPENSE: From, INCOME: To, TRANSFER: both) is refused before `create_recurring_rule` with `transaction_mgmt.from_account_required` / `to_account_required`, an income rule with only a To account is created, and a backend `account_required` refusal shows `transaction_mgmt.account_required` (6)
 - **pages/recurring-rule-double-submit.test.js** - Boots the real recurring rule page: a double submit while `create_recurring_rule` is in flight invokes it only once (latent-audit M19) (1)
 - **pages/recurring-rule-period-range.test.js** - Boots the real recurring rule page: the start / end date pickers are bounded to the seeded holiday years, an out-of-range period is stopped before `create_recurring_rule` with `recurring_rule.period_out_of_range`, a backend `recurring_period_out_of_range` rejection shows the same message, and bounds that changed since the page loaded are applied to the pickers on submit (latent-audit M15 / M18) (5)
 - **pages/recurring-rule-anchor-follows-start.test.js** - Boots the real recurring rule page: the daily anchor starts as the start date and follows it until the user edits the anchor, and follows again after Reset (latent-audit scan2-R2) (2)
@@ -114,6 +115,7 @@ and are **not** added again to the grand total.
 - **pages/transaction-management-save-before-details.test.js** - Boots the real transaction list: "Manage details" with unsaved header edits asks in an in-app dialog (`#save-before-details-modal`, `transaction_mgmt.save_before_details_confirm`, no native `confirm()`), saves the header through the normal save and moves on, and a second click while saving does not save twice; Cancel or Esc closes only the dialog and keeps the edit modal open without saving; without changes it moves on at once (latent-audit scan2-T6) (5)
 - **pages/transaction-management-edit-roundtrip.test.js** - Boots the real transaction list: opening a saved header shows its date without seconds (00:00 when it has no time), a null memo as an empty field and the other saved values; saving sends the date as `YYYY-MM-DD HH:MM:00`, the memo trimmed (blank → null) and the accounts as their codes (`NONE` when none is chosen); a header saved without changes sends its saved values back, and a new header goes to `save_transaction_header` (10)
 - **pages/transaction-management-edit-accounts.test.js** - Boots the real transaction list: choosing a category shows the From account for an expense, the To account for an income and both for a transfer or any other category; a hidden account is set to `NONE` and no category hides both; clicking Save sends a filled-in header and a total of 0, but not a header with no date, category or total, and a transfer with the same account twice shows `transaction_mgmt.transfer_same_account` instead (14)
+- **pages/transaction-management-account-required.test.js** - Boots the real transaction list: saving a header whose category needs an account left "Unspecified" (EXPENSE: From, INCOME: To, TRANSFER: both) is refused with a message under the empty field and the window stays open; the message clears once the account is chosen, an income with only a To account is sent, and a backend `account_required` refusal shows the `transaction_mgmt.account_required` toast (7)
 - **pages/user-management-password-page.test.js** - Admin session: a 16-space password is reported as the password error, not as the raw `user_mgmt.empty_name` key on the username (latent-audit L24); 8 emoji (16 UTF-16 units, 8 characters) are rejected by the frontend length check (latent-audit L31) (2)
 - **pages/user-management-nonadmin-page.test.js** - General-user session: no Add User button, no empty footer line where the button was, and no delete button on the user's own row (latent-audit L30) (3)
 - **pages/index-setup-password-length.test.js** - Setup forms count password characters, not UTF-16 units: 8 emoji are rejected for admin and user setup (latent-audit L31) (2)
@@ -145,7 +147,7 @@ and are **not** added again to the grand total.
 | user-addition.test.js | 46 |
 | admin-edit.test.js | 62 |
 | general-user-edit.test.js | 62 |
-| **Feature-Specific Tests** | **498** |
+| **Feature-Specific Tests** | **511** |
 | transaction-edit.test.js | 48 |
 | transaction-detail-tax-calculation.test.js | 33 |
 | toast.test.js | 14 |
@@ -178,6 +180,7 @@ and are **not** added again to the grand total.
 | pages/index-logout-hides-user-setup.test.js | 3 |
 | pages/index-login-page.test.js | 12 |
 | pages/recurring-rule-page.test.js | 4 |
+| pages/recurring-rule-account-required.test.js | 6 |
 | pages/recurring-rule-double-submit.test.js | 1 |
 | pages/recurring-rule-period-range.test.js | 5 |
 | pages/recurring-rule-anchor-follows-start.test.js | 2 |
@@ -230,6 +233,7 @@ and are **not** added again to the grand total.
 | pages/transaction-management-save-before-details.test.js | 5 |
 | pages/transaction-management-edit-roundtrip.test.js | 10 |
 | pages/transaction-management-edit-accounts.test.js | 14 |
+| pages/transaction-management-account-required.test.js | 7 |
 | pages/user-management-password-page.test.js | 2 |
 | pages/user-management-nonadmin-page.test.js | 3 |
 | pages/index-setup-password-length.test.js | 2 |
@@ -240,7 +244,7 @@ and are **not** added again to the grand total.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **Total (jest)** | **815** |
+| **Total (jest)** | **828** |
 
 Grand total is Screen + Feature + Aggregation (Common Test Suites are helper
 libraries invoked from Screen-Specific files and their assertions are already

@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-10-10 JST  
-**総テスト数**: 815件 (jest suite 97 ファイル、`npm test` 実測)
+**総テスト数**: 828件 (jest suite 99 ファイル、`npm test` 実測)
 
 ---
 
@@ -52,6 +52,7 @@
   - [pages/index-logout-hides-user-setup.test.js](#pagesindex-logout-hides-user-setuptestjs)
   - [pages/index-login-page.test.js](#pagesindex-login-pagetestjs)
   - [pages/recurring-rule-page.test.js](#pagesrecurring-rule-pagetestjs)
+  - [pages/recurring-rule-account-required.test.js](#pagesrecurring-rule-account-requiredtestjs)
   - [pages/recurring-rule-double-submit.test.js](#pagesrecurring-rule-double-submittestjs)
   - [pages/recurring-rule-period-range.test.js](#pagesrecurring-rule-period-rangetestjs)
   - [pages/recurring-rule-anchor-follows-start.test.js](#pagesrecurring-rule-anchor-follows-starttestjs)
@@ -104,6 +105,7 @@
   - [pages/transaction-management-save-before-details.test.js](#pagestransaction-management-save-before-detailstestjs)
   - [pages/transaction-management-edit-roundtrip.test.js](#pagestransaction-management-edit-roundtriptestjs)
   - [pages/transaction-management-edit-accounts.test.js](#pagestransaction-management-edit-accountstestjs)
+  - [pages/transaction-management-account-required.test.js](#pagestransaction-management-account-requiredtestjs)
   - [pages/user-management-password-page.test.js](#pagesuser-management-password-pagetestjs)
   - [pages/user-management-nonadmin-page.test.js](#pagesuser-management-nonadmin-pagetestjs)
   - [pages/index-setup-password-length.test.js](#pagesindex-setup-password-lengthtestjs)
@@ -953,6 +955,25 @@
 
 ---
 
+### pages/recurring-rule-account-required.test.js
+
+繰り返し予定の画面で、大分類が使う口座を「未指定」のままにしたルールを断ることを確かめる (支出は出金側、収入は入金側、振替は両方)。以前は作成でき、生成した予定はどの口座の残高も動かさずに支出・収入として数えられていた。
+
+**テスト数**: 6件
+
+| テスト | 説明 |
+|--------|------|
+| `should refuse an expense rule when its From account is unspecified` | 出金側が未指定の支出ルールは `create_recurring_rule` を呼ばずに `transaction_mgmt.from_account_required` を表示する |
+| `should refuse an income rule when its To account is unspecified` | 入金側が未指定の収入ルールは `transaction_mgmt.to_account_required` を表示する |
+| `should refuse a transfer rule when its From account is unspecified` | 出金側が未指定の振替ルールを断る |
+| `should refuse a transfer rule when its To account is unspecified` | 入金側が未指定の振替ルールを断る |
+| `should create an income rule when only its To account is chosen` | 入金側だけ指定した収入ルールは作成する (出金側は未指定のまま) |
+| `should show the account-required message when the backend refuses with account_required` | バックエンドが `account_required` で断ったときは `transaction_mgmt.account_required` を表示する |
+
+**ファイル**: tests/frontend/pages/recurring-rule-account-required.test.js
+
+---
+
 ### pages/recurring-rule-double-submit.test.js
 
 実際の繰り返しルール画面での二重送信の回帰テスト (潜在監査 M19)。
@@ -1754,6 +1775,26 @@
 
 ---
 
+### pages/transaction-management-account-required.test.js
+
+実際の入出金一覧の編集ウィンドウで、大分類が使う口座を「未指定」のまま保存しようとすると断ることを確かめる (支出は出金元、収入は入金先、振替は両方)。以前は保存でき、ダッシュボードは「未指定」の口座を表示しないため、支出・収入としては数えられるのにどの口座の残高も動かなかった。
+
+**テスト数**: 7件
+
+| テスト | 説明 |
+|--------|------|
+| `should refuse an expense and mark the From account when it is unspecified` | 出金元が未指定の支出は送らず、出金元の欄の下に `transaction_mgmt.from_account_required` を表示してウィンドウを開いたままにする |
+| `should refuse an income and mark the To account when it is unspecified` | 入金先が未指定の収入は送らず、入金先の欄の下に `transaction_mgmt.to_account_required` を表示する |
+| `should refuse a transfer and mark the From account when only the To account is chosen` | 出金元が未指定の振替を断り、出金元の欄にだけ表示する |
+| `should refuse a transfer and mark the To account when only the From account is chosen` | 入金先が未指定の振替を断り、入金先の欄にだけ表示する |
+| `should send an income when its To account is chosen` | 入金先を指定した収入は送る (出金元は `NONE` のまま) |
+| `should clear the account message when the save is tried again with the account chosen` | 口座を選んで保存し直すとメッセージが消え、保存する |
+| `should show the account-required message and keep the window open when the backend refuses with account_required` | バックエンドが `account_required` で断ったときは `transaction_mgmt.account_required` のトーストを出し、ウィンドウを開いたままにする |
+
+**ファイル**: tests/frontend/pages/transaction-management-account-required.test.js
+
+---
+
 ### pages/user-management-password-page.test.js
 
 ユーザー管理画面 (管理者セッション) のパスワード検証の回帰テスト (潜在監査 L24 / L31)。
@@ -1945,7 +1986,7 @@
 | user-addition.test.js | 46 |
 | admin-edit.test.js | 62 |
 | general-user-edit.test.js | 62 |
-| **機能別テスト** | **498件** |
+| **機能別テスト** | **511件** |
 | transaction-edit.test.js | 48 |
 | transaction-detail-tax-calculation.test.js | 33 |
 | toast.test.js | 14 |
@@ -1978,6 +2019,7 @@
 | pages/index-logout-hides-user-setup.test.js | 3 |
 | pages/index-login-page.test.js | 12 |
 | pages/recurring-rule-page.test.js | 4 |
+| pages/recurring-rule-account-required.test.js | 6 |
 | pages/recurring-rule-double-submit.test.js | 1 |
 | pages/recurring-rule-period-range.test.js | 5 |
 | pages/recurring-rule-anchor-follows-start.test.js | 2 |
@@ -2030,6 +2072,7 @@
 | pages/transaction-management-save-before-details.test.js | 5 |
 | pages/transaction-management-edit-roundtrip.test.js | 10 |
 | pages/transaction-management-edit-accounts.test.js | 14 |
+| pages/transaction-management-account-required.test.js | 7 |
 | pages/user-management-password-page.test.js | 2 |
 | pages/user-management-nonadmin-page.test.js | 3 |
 | pages/index-setup-password-length.test.js | 2 |
@@ -2040,7 +2083,7 @@
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **815件** |
+| **総計 (jest)** | **828件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 

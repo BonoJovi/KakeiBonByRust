@@ -24,7 +24,7 @@ const HEADER = {
     transaction_date: '2026-09-01 10:00:00',
     shop_id: null,
     category1_code: 'EXPENSE',
-    from_account_code: 'NONE',
+    from_account_code: 'CASH',
     to_account_code: 'NONE',
     total_amount: 5000,
     tax_rounding_type: 0,
@@ -50,6 +50,7 @@ const { invoke } = mockPageModules(jest, {
                     total_pages: 1,
                 };
             case 'get_accounts':
+                return [{ account_code: 'CASH', account_name: 'Cash', is_disabled: 0 }];
             case 'get_shops':
                 return [];
             case 'get_transaction_header':

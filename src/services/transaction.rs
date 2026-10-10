@@ -228,6 +228,9 @@ pub enum TransactionError {
     /// `category1_has_details` code) instead of leaving header and details
     /// disagreeing on income / expense.
     Category1HasDetails,
+    /// The account the category needs is the NONE account; see
+    /// `missing_required_account`. Mapped to the `account_required` code.
+    AccountRequired,
 }
 
 impl std::fmt::Display for TransactionError {
@@ -241,6 +244,9 @@ impl std::fmt::Display for TransactionError {
             }
             TransactionError::Category1HasDetails => {
                 write!(f, "Category cannot be changed while the transaction has details")
+            }
+            TransactionError::AccountRequired => {
+                write!(f, "An account is required for this category")
             }
         }
     }
@@ -279,7 +285,23 @@ impl From<TransactionError> for ApiError {
             TransactionError::DatabaseError(msg) => ApiError::database(msg),
             TransactionError::TransferSameAccount => ApiError::transfer_same_account(),
             TransactionError::Category1HasDetails => ApiError::category1_has_details(),
+            TransactionError::AccountRequired => ApiError::account_required(),
         }
+    }
+}
+
+/// Whether the account the category needs is left as the NONE account: an
+/// EXPENSE needs FROM, an INCOME needs TO and a TRANSFER needs both. Such a
+/// row counts as an expense or income but moves no account balance, since
+/// the dashboard hides NONE. Shared with the recurring rule write path.
+pub(crate) fn missing_required_account(category1_code: &str, from: &str, to: &str) -> bool {
+    let from_missing = from == consts::NONE_ACCOUNT_CODE;
+    let to_missing = to == consts::NONE_ACCOUNT_CODE;
+    match category1_code {
+        "EXPENSE" => from_missing,
+        "INCOME" => to_missing,
+        "TRANSFER" => from_missing || to_missing,
+        _ => false,
     }
 }
 
@@ -670,6 +692,13 @@ impl TransactionService {
         // account balance by the transfer amount. Reject the write
         // outright; the CASE was made symmetric in the same PR as a
         // second line of defence for legacy rows.
+        if missing_required_account(
+            &request.category1_code,
+            &request.from_account_code,
+            &request.to_account_code,
+        ) {
+            return Err(TransactionError::AccountRequired);
+        }
         if request.category1_code == "TRANSFER"
             && request.from_account_code == request.to_account_code
         {
@@ -1168,6 +1197,13 @@ impl TransactionService {
         // account balance by the transfer amount. Reject the write
         // outright; the CASE was made symmetric in the same PR as a
         // second line of defence for legacy rows.
+        if missing_required_account(
+            &request.category1_code,
+            &request.from_account_code,
+            &request.to_account_code,
+        ) {
+            return Err(TransactionError::AccountRequired);
+        }
         if request.category1_code == "TRANSFER"
             && request.from_account_code == request.to_account_code
         {
@@ -3630,6 +3666,86 @@ mod tests {
             "TRANSFER with from == to must be rejected on update with the typed variant, got {:?}",
             result
         );
+    }
+
+    /// A header whose category needs an account (EXPENSE: FROM, INCOME: TO,
+    /// TRANSFER: both) was saved with that side left as the NONE account.
+    /// The dashboard hides NONE, so the amount was counted as an expense or
+    /// income but moved no account balance.
+    fn account_request(category1: &str, from: &str, to: &str) -> SaveTransactionRequest {
+        SaveTransactionRequest {
+            shop_id: None,
+            category1_code: category1.to_string(),
+            from_account_code: from.to_string(),
+            to_account_code: to.to_string(),
+            transaction_date: "2024-01-01 10:00:00".to_string(),
+            total_amount: 1000,
+            tax_rounding_type: consts::TAX_ROUND_DOWN,
+            tax_included_type: consts::TAX_EXCLUDED,
+            memo: None,
+            is_scheduled: None,
+        }
+    }
+
+    #[tokio::test]
+    async fn test_save_header_rejects_missing_account_when_category_needs_it() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+
+        for (category1, from, to) in [
+            ("EXPENSE", "NONE", "NONE"),
+            ("INCOME", "NONE", "NONE"),
+            ("TRANSFER", "NONE", "BANK"),
+            ("TRANSFER", "CASH", "NONE"),
+        ] {
+            let result = service
+                .save_transaction_header(2, account_request(category1, from, to))
+                .await;
+            let code = result.err().map(|e| ApiError::from(e).code);
+            assert_eq!(
+                code.as_deref(),
+                Some("account_required"),
+                "{} with FROM={} TO={} must be refused with account_required",
+                category1, from, to
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn test_update_header_rejects_missing_account_when_category_needs_it() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        for (category1, from, to) in [
+            ("EXPENSE", "NONE", "BANK"),
+            ("INCOME", "CASH", "NONE"),
+            ("TRANSFER", "NONE", "BANK"),
+        ] {
+            let result = service
+                .update_transaction_header(2, transaction_id, account_request(category1, from, to))
+                .await;
+            let code = result.err().map(|e| ApiError::from(e).code);
+            assert_eq!(
+                code.as_deref(),
+                Some("account_required"),
+                "{} with FROM={} TO={} must be refused on update with account_required",
+                category1, from, to
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn test_update_header_accepts_income_when_only_to_account_is_given() {
+        let pool = setup_test_db().await;
+        let service = TransactionService::new(pool);
+        let transaction_id = create_test_header(&service).await;
+
+        // Only the TO side is required for an income; FROM stays NONE.
+        let result = service
+            .update_transaction_header(2, transaction_id, account_request("INCOME", "NONE", "BANK"))
+            .await;
+        assert!(result.is_ok(), "an income with a TO account must be saved, got {:?}", result);
     }
 
     /// Fable-5 review #6 — `save_transaction_header` used to run the

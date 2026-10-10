@@ -46,7 +46,7 @@ function seedTransactions(n) {
         transaction_date: '2026-09-01 10:00:00',
         category1_code: 'EXPENSE',
         category1_name: 'Expense',
-        from_account_code: 'NONE',
+        from_account_code: 'CASH',
         to_account_code: 'NONE',
         total_amount: 100,
         memo: null,
@@ -75,7 +75,7 @@ const DETAILLESS_HEADER = {
     transaction_date: '2026-09-01 10:00:00',
     shop_id: null,
     category1_code: 'EXPENSE',
-    from_account_code: 'NONE',
+    from_account_code: 'CASH',
     to_account_code: 'NONE',
     total_amount: 5000,
     tax_rounding_type: 0,
@@ -103,7 +103,7 @@ const { invoke } = mockPageModules(jest, {
                 );
                 return null;
             case 'get_accounts':
-                return [];
+                return [{ account_code: 'CASH', account_name: 'Cash', is_disabled: 0 }];
             case 'get_shops':
                 return [];
             case 'get_transaction_header':

@@ -16,6 +16,7 @@ import { showToast } from './toast.js';
 import { parseAmountStrict } from './parse-amount-strict.js';
 import { escapeHtml } from './escape-html.js';
 import { formatApiError, API_ERROR_CODES } from './master-crud.js';
+import { missingRequiredAccounts } from './required-accounts.js';
 
 let currentUserId = null;
 let currentUserRole = null;
@@ -708,6 +709,8 @@ function initializeTransactionModal() {
             const memoInput = document.getElementById('transaction-memo');
             clearValidationError(memoInput);
             memoInput?.dispatchEvent(new Event('input'));
+            clearValidationError(document.getElementById('from-account'));
+            clearValidationError(document.getElementById('to-account'));
 
             // The saved values, to tell whether the header was changed
             // before "Manage details" (scan2-T6). A restored draft is
@@ -1144,6 +1147,24 @@ async function handleTransactionSubmit(event) {
     // of even reaching the invoke. It throws like the other checks so
     // the form stays open (latent-scan2 T5); the only caller is Modal's
     // onSave, whose handlers catch it.
+    // The account the category needs must be chosen (EXPENSE: From,
+    // INCOME: To, TRANSFER: both); "Unspecified" would count the amount on
+    // no account. The backend refuses it too (account_required).
+    const fromAccountEl = document.getElementById('from-account');
+    const toAccountEl = document.getElementById('to-account');
+    clearValidationError(fromAccountEl);
+    clearValidationError(toAccountEl);
+    const missingAccounts = missingRequiredAccounts(category1Code, fromAccountCode, toAccountCode);
+    if (missingAccounts.from) {
+        showValidationError(fromAccountEl, i18n.t('transaction_mgmt.from_account_required'));
+    }
+    if (missingAccounts.to) {
+        showValidationError(toAccountEl, i18n.t('transaction_mgmt.to_account_required'));
+    }
+    if (missingAccounts.from || missingAccounts.to) {
+        throw new Error('Validation error: account required');
+    }
+
     if (category1Code === 'TRANSFER' && fromAccountCode === toAccountCode) {
         showToast(i18n.t('transaction_mgmt.transfer_same_account'), { variant: 'error' });
         throw new Error('Validation error: transfer between the same account');
@@ -1222,6 +1243,12 @@ async function handleTransactionSubmit(event) {
         if (error && typeof error === 'object'
             && error.code === API_ERROR_CODES.TRANSFER_SAME_ACCOUNT) {
             showToast(i18n.t('transaction_mgmt.transfer_same_account'), { variant: 'error' });
+            throw error;
+        }
+
+        if (error && typeof error === 'object'
+            && error.code === API_ERROR_CODES.ACCOUNT_REQUIRED) {
+            showToast(i18n.t('transaction_mgmt.account_required'), { variant: 'error' });
             throw error;
         }
 
