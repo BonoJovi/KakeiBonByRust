@@ -29,12 +29,6 @@ pub const AUTH_COUNT_USERS: &str = "SELECT COUNT(*) as count FROM USERS";
 
 pub const AUTH_COUNT_USERS_BY_ROLE: &str = "SELECT COUNT(*) as count FROM USERS WHERE ROLE = ?";
 
-pub const AUTH_GET_USER_NAME_BY_ID: &str = "SELECT NAME FROM USERS WHERE USER_ID = 1";
-
-pub const AUTH_GET_PASSWORD_BY_ID: &str = "SELECT PAW FROM USERS WHERE USER_ID = 1";
-
-pub const AUTH_GET_ROLE_BY_ID: &str = "SELECT ROLE FROM USERS WHERE USER_ID = 1";
-
 // ============================================================================
 // User Management Service Queries
 // ============================================================================
@@ -137,12 +131,6 @@ WHERE USER_ID = ?
 // Encryption Service Queries
 // ============================================================================
 
-pub const ENCRYPTION_LIST_FIELDS: &str = r#"
-SELECT FIELD_ID, TABLE_NAME, COLUMN_NAME, DESCRIPTION, IS_ACTIVE 
-FROM ENCRYPTED_FIELDS 
-WHERE IS_ACTIVE = 1
-"#;
-
 pub const ENCRYPTION_GET_NEXT_FIELD_ID: &str = "SELECT COALESCE(MAX(FIELD_ID), 0) + 1 as next_id FROM ENCRYPTED_FIELDS";
 
 /// Declared type of a column (latent-audit L27). The table name is bound as
@@ -193,8 +181,6 @@ ORDER BY LANG_CODE
 // ============================================================================
 // Category Service Queries
 // ============================================================================
-
-pub const CATEGORY_COUNT_BY_USER: &str = "SELECT COUNT(*) FROM CATEGORY1 WHERE USER_ID = ?";
 
 // PR4 (Fable-5 #24): category.rs count queries used for either a
 // "already populated?" guard or as the incremental suffix for the next
@@ -397,32 +383,10 @@ WHERE USER_ID = ? AND CATEGORY1_CODE = ? AND CATEGORY2_CODE = ?
 AND CATEGORY3_CODE != ? AND LANG_CODE = ? AND CATEGORY3_NAME_I18N = ?
 "#;
 
-pub const CATEGORY2_CHECK_DUPLICATE_CODE: &str = r#"
-SELECT COUNT(*) as count FROM CATEGORY2 
-WHERE USER_ID = ? AND CATEGORY1_CODE = ? AND CATEGORY2_CODE = ?
-"#;
-
-pub const CATEGORY3_CHECK_DUPLICATE_CODE: &str = r#"
-SELECT COUNT(*) as count FROM CATEGORY3 
-WHERE USER_ID = ? AND CATEGORY1_CODE = ? AND CATEGORY2_CODE = ? AND CATEGORY3_CODE = ?
-"#;
-
-pub const CATEGORY2_UPDATE: &str = r#"
-UPDATE CATEGORY2 
-SET CATEGORY2_NAME = ?, UPDATE_DT = datetime('now') 
-WHERE USER_ID = ? AND CATEGORY1_CODE = ? AND CATEGORY2_CODE = ?
-"#;
-
 pub const CATEGORY2_I18N_UPDATE: &str = r#"
 UPDATE CATEGORY2_I18N 
 SET CATEGORY2_NAME_I18N = ?, UPDATE_DT = datetime('now') 
 WHERE USER_ID = ? AND CATEGORY1_CODE = ? AND CATEGORY2_CODE = ? AND LANG_CODE = ?
-"#;
-
-pub const CATEGORY3_UPDATE: &str = r#"
-UPDATE CATEGORY3 
-SET CATEGORY3_NAME = ?, UPDATE_DT = datetime('now') 
-WHERE USER_ID = ? AND CATEGORY1_CODE = ? AND CATEGORY2_CODE = ? AND CATEGORY3_CODE = ?
 "#;
 
 pub const CATEGORY3_I18N_UPDATE: &str = r#"
@@ -1754,11 +1718,6 @@ SET TAX_ROUNDING_TYPE = ?, TAX_INCLUDED_TYPE = ?, UPDATE_DT = datetime('now')
 WHERE TRANSACTION_ID = ? AND USER_ID = ?
 "#;
 
-pub const TRANSACTION_HEADER_DELETE: &str = r#"
-DELETE FROM TRANSACTIONS_HEADER
-WHERE TRANSACTION_ID = ? AND USER_ID = ?
-"#;
-
 pub const TRANSACTION_HEADER_CONFIRM_SCHEDULED: &str = r#"
 UPDATE TRANSACTIONS_HEADER
 SET IS_SCHEDULED = 0, UPDATE_DT = datetime('now')
@@ -1768,21 +1727,6 @@ WHERE TRANSACTION_ID = ? AND USER_ID = ? AND IS_SCHEDULED = 1
 // ============================================================================
 // Transaction Detail Queries
 // ============================================================================
-
-pub const TRANSACTION_DETAIL_INSERT: &str = r#"
-INSERT INTO TRANSACTIONS_DETAIL (
-    TRANSACTION_ID, CATEGORY2_CODE, CATEGORY3_CODE, ITEM_NAME,
-    AMOUNT, TAX_AMOUNT, TAX_RATE, MEMO_ID, ENTRY_DT
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
-"#;
-
-pub const TRANSACTION_DETAIL_GET_BY_HEADER: &str = r#"
-SELECT DETAIL_ID, TRANSACTION_ID, CATEGORY2_CODE, CATEGORY3_CODE,
-       ITEM_NAME, AMOUNT, TAX_AMOUNT, TAX_RATE, MEMO_ID, ENTRY_DT, UPDATE_DT
-FROM TRANSACTIONS_DETAIL
-WHERE TRANSACTION_ID = ?
-ORDER BY DETAIL_ID
-"#;
 
 /// Read the minimal set of columns that drive `calculate_recommended_total`:
 /// pre-tax AMOUNT, the optional tax-included counterpart, and the per-detail
@@ -1807,19 +1751,6 @@ WHERE USER_ID = ?
 ORDER BY TRANSACTION_ID, DETAIL_ID
 "#;
 
-pub const TRANSACTION_DETAIL_UPDATE: &str = r#"
-UPDATE TRANSACTIONS_DETAIL
-SET CATEGORY2_CODE = ?, CATEGORY3_CODE = ?, ITEM_NAME = ?,
-    AMOUNT = ?, TAX_AMOUNT = ?, TAX_RATE = ?, MEMO_ID = ?,
-    UPDATE_DT = datetime('now')
-WHERE DETAIL_ID = ? AND TRANSACTION_ID = ?
-"#;
-
-pub const TRANSACTION_DETAIL_DELETE: &str = r#"
-DELETE FROM TRANSACTIONS_DETAIL
-WHERE DETAIL_ID = ?
-"#;
-
 // ============================================================================
 // Memo Queries
 // ============================================================================
@@ -1827,12 +1758,6 @@ WHERE DETAIL_ID = ?
 pub const MEMO_INSERT: &str = r#"
 INSERT INTO MEMOS (USER_ID, MEMO_TEXT, ENTRY_DT)
 VALUES (?, ?, datetime('now'))
-"#;
-
-pub const MEMO_GET_BY_ID: &str = r#"
-SELECT MEMO_ID, MEMO_TEXT, ENTRY_DT, UPDATE_DT
-FROM MEMOS
-WHERE MEMO_ID = ?
 "#;
 
 pub const MEMO_UPDATE: &str = r#"
