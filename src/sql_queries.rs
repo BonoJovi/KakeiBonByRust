@@ -2611,6 +2611,7 @@ pub const TEST_TRANSACTION_INSERT_ACCOUNT_BANK: &str = "INSERT INTO ACCOUNTS (US
 
 // Puts a header back into the state of a row saved before the account check
 // (#238), which the save path now refuses to write.
+#[cfg(test)]
 pub const TEST_TRANSACTION_HEADER_SET_ACCOUNTS: &str = "UPDATE TRANSACTIONS_HEADER SET FROM_ACCOUNT_CODE = ?, TO_ACCOUNT_CODE = ? WHERE TRANSACTION_ID = ?";
 
 // IF NOT EXISTS so the master-delete-lock tests can also create this from
