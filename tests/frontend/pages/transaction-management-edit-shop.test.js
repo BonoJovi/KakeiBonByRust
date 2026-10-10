@@ -35,10 +35,11 @@ const SAVED = {
     is_scheduled: 0,
 };
 
+// Neither in ID nor in name order, so a page that sorted the list would fail.
 const SHOPS = [
+    { shop_id: 7, shop_name: 'Shop G', is_disabled: 0 },
     { shop_id: 1, shop_name: 'Shop A', is_disabled: 0 },
     { shop_id: 2, shop_name: 'Shop B', is_disabled: 0 },
-    { shop_id: 7, shop_name: 'Shop G', is_disabled: 0 },
 ];
 
 // What get_transaction_header answers for the header being edited.
@@ -127,9 +128,9 @@ describe('transaction edit window — Shop list', () => {
         const options = Array.from(shopSelect().options).map((o) => [o.value, o.textContent]);
         expect(options).toEqual([
             ['', 'common.unspecified'],
+            ['7', 'Shop G'],
             ['1', 'Shop A'],
             ['2', 'Shop B'],
-            ['7', 'Shop G'],
         ]);
     });
 
