@@ -756,12 +756,16 @@ pub const DB_TEST_CONNECTION: &str = "SELECT 1 as test";
 // Test-Only Queries (用于测试代码)
 // ============================================================================
 
+#[cfg(test)]
 pub const TEST_AUTH_GET_USER_NAME_BY_ID: &str = "SELECT NAME FROM USERS WHERE USER_ID = 1";
 
+#[cfg(test)]
 pub const TEST_AUTH_GET_PASSWORD_BY_ID: &str = "SELECT PAW FROM USERS WHERE USER_ID = 1";
 
+#[cfg(test)]
 pub const TEST_AUTH_GET_ROLE_BY_ID: &str = "SELECT ROLE FROM USERS WHERE USER_ID = 1";
 
+#[cfg(test)]
 pub const TEST_CREATE_USERS_TABLE: &str = r#"
 CREATE TABLE USERS (
     USER_ID INTEGER PRIMARY KEY,
@@ -774,15 +778,20 @@ CREATE TABLE USERS (
 "#;
 
 // Test queries for category service
+#[cfg(test)]
 pub const TEST_CATEGORY_GET_CATEGORY2_NAME: &str = "SELECT CATEGORY2_NAME FROM CATEGORY2 WHERE USER_ID = ? AND CATEGORY2_CODE = ?";
 
+#[cfg(test)]
 pub const TEST_CATEGORY_GET_CATEGORY2_I18N_NAME: &str = "SELECT CATEGORY2_NAME_I18N FROM CATEGORY2_I18N WHERE USER_ID = ? AND CATEGORY2_CODE = ? AND LANG_CODE = ?";
 
+#[cfg(test)]
 pub const TEST_CATEGORY_GET_FIRST_CATEGORY2_CODE: &str = "SELECT CATEGORY2_CODE FROM CATEGORY2 WHERE USER_ID = ? LIMIT 1";
 
+#[cfg(test)]
 pub const TEST_CATEGORY_GET_CATEGORY3_NAME: &str = "SELECT CATEGORY3_NAME FROM CATEGORY3 WHERE USER_ID = ? AND CATEGORY3_CODE = ?";
 
 // Test queries for account service
+#[cfg(test)]
 pub const TEST_ACCOUNT_CREATE_TEMPLATES_TABLE: &str = r#"
 CREATE TABLE ACCOUNT_TEMPLATES (
     TEMPLATE_ID INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -794,6 +803,7 @@ CREATE TABLE ACCOUNT_TEMPLATES (
 )
 "#;
 
+#[cfg(test)]
 pub const TEST_ACCOUNT_CREATE_ACCOUNTS_TABLE: &str = r#"
 CREATE TABLE ACCOUNTS (
     ACCOUNT_ID INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -812,6 +822,7 @@ CREATE TABLE ACCOUNTS (
 )
 "#;
 
+#[cfg(test)]
 pub const TEST_ACCOUNT_INSERT_TEMPLATES: &str = r#"
 INSERT INTO ACCOUNT_TEMPLATES (TEMPLATE_CODE, TEMPLATE_NAME_JA, TEMPLATE_NAME_EN, DISPLAY_ORDER)
 VALUES 
@@ -819,8 +830,10 @@ VALUES
 ('BANK', '銀行口座', 'Bank Account', 2)
 "#;
 
+#[cfg(test)]
 pub const TEST_INSERT_USER_ADMIN: &str = "INSERT INTO USERS (USER_ID, NAME, PAW, ROLE, ENTRY_DT) VALUES (1, 'admin', 'dummy', 0, datetime('now'))";
 
+#[cfg(test)]
 pub const TEST_INSERT_USER_GENERAL: &str = "INSERT INTO USERS (USER_ID, NAME, PAW, ROLE, ENTRY_DT) VALUES (2, 'testuser', 'dummy', 1, datetime('now'))";
 
 /// Auto-increment USERS INSERT for test helpers that need a per-user
@@ -830,17 +843,23 @@ pub const TEST_INSERT_USER_GENERAL: &str = "INSERT INTO USERS (USER_ID, NAME, PA
 /// helpers in `test_helpers.rs` used to duplicate this INSERT verbatim
 /// (CodeRabbit review on #123). Bind order: NAME, PAW, ROLE,
 /// ENCRYPTION_SALT, ENTRY_DT.
+#[cfg(test)]
 pub const TEST_INSERT_USER_WITH_SALT: &str =
     "INSERT INTO USERS (NAME, PAW, ROLE, ENCRYPTION_SALT, ENTRY_DT) VALUES (?, ?, ?, ?, ?)";
 
+#[cfg(test)]
 pub const TEST_CATEGORY2_GET_DISPLAY_ORDER: &str = "SELECT DISPLAY_ORDER FROM CATEGORY2 WHERE USER_ID = ? AND CATEGORY2_CODE = ?";
 
+#[cfg(test)]
 pub const TEST_CATEGORY3_GET_DISPLAY_ORDER: &str = "SELECT DISPLAY_ORDER FROM CATEGORY3 WHERE USER_ID = ? AND CATEGORY3_CODE = ?";
 
+#[cfg(test)]
 pub const TEST_CATEGORY2_COUNT: &str = "SELECT COUNT(*) FROM CATEGORY2 WHERE USER_ID = ?";
 
+#[cfg(test)]
 pub const TEST_CATEGORY3_COUNT: &str = "SELECT COUNT(*) FROM CATEGORY3 WHERE USER_ID = ?";
 
+#[cfg(test)]
 pub const TEST_CREATE_CATEGORY2_TABLE: &str = r#"
 CREATE TABLE IF NOT EXISTS CATEGORY2 (
     USER_ID INTEGER NOT NULL,
@@ -856,6 +875,7 @@ CREATE TABLE IF NOT EXISTS CATEGORY2 (
 )
 "#;
 
+#[cfg(test)]
 pub const TEST_CREATE_CATEGORY3_TABLE: &str = r#"
 CREATE TABLE IF NOT EXISTS CATEGORY3 (
     USER_ID INTEGER NOT NULL,
@@ -872,6 +892,7 @@ CREATE TABLE IF NOT EXISTS CATEGORY3 (
 )
 "#;
 
+#[cfg(test)]
 pub const TEST_CREATE_CATEGORY1_TABLE: &str = r#"
 CREATE TABLE CATEGORY1 (
     USER_ID INTEGER NOT NULL,
@@ -884,20 +905,26 @@ CREATE TABLE CATEGORY1 (
 )
 "#;
 
+#[cfg(test)]
 pub const TEST_INSERT_TEST_USER: &str = "INSERT INTO USERS (USER_ID, NAME, PAW, ROLE, ENTRY_DT) VALUES (1, 'testuser', 'hash', 0, datetime('now'))";
 
+#[cfg(test)]
 pub const TEST_INSERT_CATEGORY1: &str = "INSERT INTO CATEGORY1 (USER_ID, CATEGORY1_CODE, CATEGORY1_NAME, ENTRY_DT) VALUES (1, 'INCOME', '収入', datetime('now'))";
 
+#[cfg(test)]
 pub const TEST_INSERT_CATEGORY2: &str = "INSERT INTO CATEGORY2 (USER_ID, CATEGORY1_CODE, CATEGORY2_CODE, CATEGORY2_NAME, DISPLAY_ORDER, ENTRY_DT) VALUES (1, 'INCOME', 'SALARY', '給料', 0, datetime('now'))";
 
+#[cfg(test)]
 pub const TEST_INSERT_CATEGORY3: &str = "INSERT INTO CATEGORY3 (USER_ID, CATEGORY1_CODE, CATEGORY2_CODE, CATEGORY3_CODE, CATEGORY3_NAME, DISPLAY_ORDER, ENTRY_DT) VALUES (1, 'INCOME', 'SALARY', 'MONTHLY', '月給', 0, datetime('now'))";
 
+#[cfg(test)]
 pub const TEST_INSERT_TRANSACTION_HEADER: &str = r#"
 INSERT INTO TRANSACTIONS_HEADER
 (USER_ID, CATEGORY1_CODE, FROM_ACCOUNT_CODE, TO_ACCOUNT_CODE, TRANSACTION_DATE, TOTAL_AMOUNT, ENTRY_DT)
 VALUES (1, 'INCOME', 'NONE', 'NONE', datetime('now'), 1000, datetime('now'))
 "#;
 
+#[cfg(test)]
 pub const TEST_CREATE_OLD_TRANSACTIONS_DETAIL_TABLE: &str = r#"
 CREATE TABLE TRANSACTIONS_DETAIL (
     DETAIL_ID INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -917,12 +944,14 @@ CREATE TABLE TRANSACTIONS_DETAIL (
 )
 "#;
 
+#[cfg(test)]
 pub const TEST_INSERT_TRANSACTION_DETAIL: &str = r#"
 INSERT INTO TRANSACTIONS_DETAIL
 (TRANSACTION_ID, CATEGORY2_CODE, CATEGORY3_CODE, ITEM_NAME, AMOUNT, ENTRY_DT)
 VALUES (1, 'SALARY', 'MONTHLY', 'Test Item', 1000, datetime('now'))
 "#;
 
+#[cfg(test)]
 pub const TEST_SELECT_MIGRATED_TRANSACTION_DETAIL: &str = "SELECT DETAIL_ID, TRANSACTION_ID, USER_ID, CATEGORY1_CODE, CATEGORY2_CODE, CATEGORY3_CODE, ITEM_NAME, AMOUNT FROM TRANSACTIONS_DETAIL WHERE DETAIL_ID = 1";
 
 // ============================================================================
@@ -944,10 +973,13 @@ VALUES (?, ?, ?, ?, ?)
 // ============================================================================
 
 // Test data setup queries
+#[cfg(test)]
 pub const TEST_CATEGORY_INSERT_CATEGORY1: &str = "INSERT INTO CATEGORY1 (USER_ID, CATEGORY1_CODE, DISPLAY_ORDER, CATEGORY1_NAME, IS_DISABLED, ENTRY_DT) VALUES (?, ?, ?, ?, ?, datetime('now'))";
 
+#[cfg(test)]
 pub const TEST_CATEGORY_INSERT_CATEGORY1_I18N: &str = "INSERT INTO CATEGORY1_I18N (USER_ID, CATEGORY1_CODE, LANG_CODE, CATEGORY1_NAME_I18N, ENTRY_DT) VALUES (?, ?, ?, ?, datetime('now'))";
 
+#[cfg(test)]
 pub const TEST_USER_GET_PASSWORD_BY_ID: &str = "SELECT PAW FROM USERS WHERE USER_ID = ?";
 
 // ============================================================================
@@ -2199,6 +2231,7 @@ LIMIT 1
 // Test Queries - Shop
 // ============================================================================
 
+#[cfg(test)]
 pub const TEST_SHOP_CREATE_TABLE: &str = r#"
 CREATE TABLE IF NOT EXISTS SHOPS (
     SHOP_ID INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -2217,6 +2250,7 @@ CREATE TABLE IF NOT EXISTS SHOPS (
 // Test Queries - Manufacturer
 // ============================================================================
 
+#[cfg(test)]
 pub const TEST_MANUFACTURER_CREATE_TABLE: &str = r#"
 CREATE TABLE IF NOT EXISTS MANUFACTURERS (
     MANUFACTURER_ID INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -2236,6 +2270,7 @@ CREATE TABLE IF NOT EXISTS MANUFACTURERS (
 // Test Queries - Product
 // ============================================================================
 
+#[cfg(test)]
 pub const TEST_PRODUCT_CREATE_TABLE: &str = r#"
 CREATE TABLE IF NOT EXISTS PRODUCTS (
     PRODUCT_ID INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -2264,6 +2299,7 @@ CREATE TABLE IF NOT EXISTS PRODUCTS (
 // spin up CATEGORY1 + MEMOS + PRODUCTS just to insert one reference row.
 // FOREIGN KEYs deliberately omitted.
 // ============================================================================
+#[cfg(test)]
 pub const TEST_CREATE_RECURRING_RULES_MINIMAL: &str = r#"
 CREATE TABLE IF NOT EXISTS RECURRING_RULES (
     RULE_ID INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -2274,6 +2310,7 @@ CREATE TABLE IF NOT EXISTS RECURRING_RULES (
 )
 "#;
 
+#[cfg(test)]
 pub const TEST_CREATE_TRANSACTIONS_DETAIL_MINIMAL: &str = r#"
 CREATE TABLE IF NOT EXISTS TRANSACTIONS_DETAIL (
     DETAIL_ID INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -2287,12 +2324,14 @@ CREATE TABLE IF NOT EXISTS TRANSACTIONS_DETAIL (
 /// (CATEGORY1_CODE / FROM_ACCOUNT_CODE / TO_ACCOUNT_CODE /
 /// TRANSACTION_DATE / TOTAL_AMOUNT) get harmless literals — the guard
 /// only reads USER_ID and SHOP_ID.
+#[cfg(test)]
 pub const TEST_INSERT_TRANSACTIONS_HEADER_SHOP_REF: &str = r#"
 INSERT INTO TRANSACTIONS_HEADER
     (USER_ID, SHOP_ID, CATEGORY1_CODE, FROM_ACCOUNT_CODE, TO_ACCOUNT_CODE, TRANSACTION_DATE, TOTAL_AMOUNT)
 VALUES (?, ?, 'EXPENSE', 'CASH', 'CASH', '2026-01-01', 0)
 "#;
 
+#[cfg(test)]
 pub const TEST_INSERT_RECURRING_RULES_SHOP_REF: &str = r#"
 INSERT INTO RECURRING_RULES (USER_ID, SHOP_ID, FROM_ACCOUNT_CODE, TO_ACCOUNT_CODE)
 VALUES (?, ?, 'CASH', 'CASH')
@@ -2300,12 +2339,14 @@ VALUES (?, ?, 'CASH', 'CASH')
 
 /// Insert one TRANSACTIONS_HEADER row for account delete-lock tests.
 /// Binds `(user_id, from_account_code, to_account_code)`.
+#[cfg(test)]
 pub const TEST_INSERT_TRANSACTIONS_HEADER_ACCOUNT_REF: &str = r#"
 INSERT INTO TRANSACTIONS_HEADER
     (USER_ID, CATEGORY1_CODE, FROM_ACCOUNT_CODE, TO_ACCOUNT_CODE, TRANSACTION_DATE, TOTAL_AMOUNT)
 VALUES (?, 'EXPENSE', ?, ?, '2026-01-01', 0)
 "#;
 
+#[cfg(test)]
 pub const TEST_INSERT_RECURRING_RULES_ACCOUNT_REF: &str = r#"
 INSERT INTO RECURRING_RULES (USER_ID, FROM_ACCOUNT_CODE, TO_ACCOUNT_CODE)
 VALUES (?, ?, ?)
@@ -2314,12 +2355,14 @@ VALUES (?, ?, ?)
 /// Insert one TRANSACTIONS_HEADER row scoped to `user_id`, used to give
 /// a TRANSACTIONS_DETAIL row a parent for product delete-lock tests.
 /// Binds `(user_id)`.
+#[cfg(test)]
 pub const TEST_INSERT_TRANSACTIONS_HEADER_USER_ONLY: &str = r#"
 INSERT INTO TRANSACTIONS_HEADER
     (USER_ID, CATEGORY1_CODE, FROM_ACCOUNT_CODE, TO_ACCOUNT_CODE, TRANSACTION_DATE, TOTAL_AMOUNT)
 VALUES (?, 'EXPENSE', 'CASH', 'CASH', '2026-01-01', 0)
 "#;
 
+#[cfg(test)]
 pub const TEST_INSERT_TRANSACTIONS_DETAIL_PRODUCT_REF: &str = r#"
 INSERT INTO TRANSACTIONS_DETAIL (TRANSACTION_ID, PRODUCT_ID)
 VALUES (?, ?)
@@ -2328,6 +2371,7 @@ VALUES (?, ?)
 /// Product tests need the detail categories for the suggestion query, which
 /// TEST_CREATE_TRANSACTIONS_DETAIL_MINIMAL leaves out. Only the columns the
 /// product service reads are kept.
+#[cfg(test)]
 pub const TEST_CREATE_TRANSACTIONS_DETAIL_WITH_CATEGORY: &str = r#"
 CREATE TABLE IF NOT EXISTS TRANSACTIONS_DETAIL (
     DETAIL_ID INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -2340,6 +2384,7 @@ CREATE TABLE IF NOT EXISTS TRANSACTIONS_DETAIL (
 "#;
 
 /// Binds `(user_id, category1_code, transaction_date)`.
+#[cfg(test)]
 pub const TEST_INSERT_TRANSACTIONS_HEADER_DATED: &str = r#"
 INSERT INTO TRANSACTIONS_HEADER
     (USER_ID, CATEGORY1_CODE, FROM_ACCOUNT_CODE, TO_ACCOUNT_CODE, TRANSACTION_DATE, TOTAL_AMOUNT)
@@ -2347,6 +2392,7 @@ VALUES (?, ?, 'CASH', 'CASH', ?, 0)
 "#;
 
 /// Binds `(transaction_id, category2_code, category3_code, item_name, product_id)`.
+#[cfg(test)]
 pub const TEST_INSERT_TRANSACTIONS_DETAIL_WITH_PRODUCT: &str = r#"
 INSERT INTO TRANSACTIONS_DETAIL (TRANSACTION_ID, CATEGORY2_CODE, CATEGORY3_CODE, ITEM_NAME, PRODUCT_ID)
 VALUES (?, ?, ?, ?, ?)
@@ -2355,6 +2401,7 @@ VALUES (?, ?, ?, ?, ?)
 /// Insert one active PRODUCTS row that points at a manufacturer,
 /// scoped to `user_id`. Binds `(user_id, product_name, manufacturer_id)`.
 /// Used by the manufacturer delete-lock tests to build a reference.
+#[cfg(test)]
 pub const TEST_INSERT_PRODUCT_WITH_MANUFACTURER: &str = r#"
 INSERT INTO PRODUCTS (USER_ID, PRODUCT_NAME, MANUFACTURER_ID, DISPLAY_ORDER)
 VALUES (?, ?, ?, 0)
@@ -2364,6 +2411,7 @@ VALUES (?, ?, ?, 0)
 /// IS_DISABLED=1. The manufacturer guard must still block delete when
 /// only disabled products reference it — the FK link is preserved and
 /// the products screen still surfaces the row under "Show disabled".
+#[cfg(test)]
 pub const TEST_INSERT_PRODUCT_WITH_MANUFACTURER_DISABLED: &str = r#"
 INSERT INTO PRODUCTS (USER_ID, PRODUCT_NAME, MANUFACTURER_ID, DISPLAY_ORDER, IS_DISABLED)
 VALUES (?, ?, ?, 0, 1)
@@ -2490,6 +2538,7 @@ WHERE DETAIL_ID = ? AND USER_ID = ?
 // Transaction Service Test Queries
 // ============================================================================
 
+#[cfg(test)]
 pub const TEST_TRANSACTION_CREATE_USERS_TABLE: &str = r#"
 CREATE TABLE USERS (
     USER_ID INTEGER PRIMARY KEY,
@@ -2501,6 +2550,7 @@ CREATE TABLE USERS (
 )
 "#;
 
+#[cfg(test)]
 pub const TEST_TRANSACTION_INSERT_USER: &str = "INSERT INTO USERS (USER_ID, NAME, PAW, ROLE, ENTRY_DT) VALUES (2, 'testuser', 'hash', 1, datetime('now'))";
 
 // Fable-5 #7 (CodeRabbit on #130): test-only SQL used by the
@@ -2512,31 +2562,37 @@ pub const TEST_TRANSACTION_INSERT_USER: &str = "INSERT INTO USERS (USER_ID, NAME
 /// List MEMO_ID for all details of a given transaction, in DETAIL_ID
 /// order, filtering out NULLs. Used to confirm two adds land on the
 /// same MEMO_ID.
+#[cfg(test)]
 pub const TEST_ADD_DETAIL_SELECT_MEMO_IDS_BY_TXN: &str =
     "SELECT MEMO_ID FROM TRANSACTIONS_DETAIL \
      WHERE TRANSACTION_ID = ? AND MEMO_ID IS NOT NULL ORDER BY DETAIL_ID";
 
 /// Count MEMOS rows carrying the same (USER_ID, MEMO_TEXT). Used to
 /// confirm the dedup fix does not create a duplicate row.
+#[cfg(test)]
 pub const TEST_ADD_DETAIL_COUNT_MEMOS_BY_TEXT: &str =
     "SELECT COUNT(*) FROM MEMOS WHERE USER_ID = ? AND MEMO_TEXT = ?";
 
 /// Insert a MEMOS row and return the new MEMO_ID. Used by the
 /// header-sharing pin to seed a header memo the add path should
 /// reuse.
+#[cfg(test)]
 pub const TEST_ADD_DETAIL_INSERT_MEMO_RETURNING_ID: &str =
     "INSERT INTO MEMOS (USER_ID, MEMO_TEXT) VALUES (?, ?) RETURNING MEMO_ID";
 
 /// Point a given header at a specific MEMO_ID.
+#[cfg(test)]
 pub const TEST_ADD_DETAIL_UPDATE_HEADER_MEMO_ID: &str =
     "UPDATE TRANSACTIONS_HEADER SET MEMO_ID = ? WHERE TRANSACTION_ID = ?";
 
 /// Fetch the MEMO_ID a specific detail row references (nullable).
+#[cfg(test)]
 pub const TEST_ADD_DETAIL_SELECT_DETAIL_MEMO_ID: &str =
     "SELECT MEMO_ID FROM TRANSACTIONS_DETAIL WHERE DETAIL_ID = ?";
 
 /// Count MEMOS rows carrying a specific text (any user). Used by the
 /// rollback pin to confirm a failed add did not leak a MEMOS row.
+#[cfg(test)]
 pub const TEST_ADD_DETAIL_COUNT_MEMOS_ORPHAN: &str =
     "SELECT COUNT(*) FROM MEMOS WHERE MEMO_TEXT = ?";
 
@@ -2549,6 +2605,7 @@ pub const TEST_ADD_DETAIL_COUNT_MEMOS_ORPHAN: &str =
 /// written, so the pin can assert the MEMO insert rolls back too.
 /// Kept as a `TEST_*` constant instead of an inline literal so a
 /// future schema tweak fails in one place.
+#[cfg(test)]
 pub const TEST_SAVE_HEADER_INSTALL_ROLLBACK_TRIGGER: &str =
     "CREATE TRIGGER pin_reject_bad_header BEFORE INSERT ON TRANSACTIONS_HEADER \
      BEGIN \
@@ -2559,10 +2616,12 @@ pub const TEST_SAVE_HEADER_INSTALL_ROLLBACK_TRIGGER: &str =
 /// Fetch the MEMO_ID two specific headers reference (filtered to
 /// non-NULL). Used by the header-dedup pin to confirm two saves
 /// with the same memo text land on the same MEMOS row.
+#[cfg(test)]
 pub const TEST_SAVE_HEADER_SELECT_MEMO_IDS_BY_TXN_PAIR: &str =
     "SELECT MEMO_ID FROM TRANSACTIONS_HEADER \
      WHERE TRANSACTION_ID IN (?, ?) AND MEMO_ID IS NOT NULL ORDER BY TRANSACTION_ID";
 
+#[cfg(test)]
 pub const TEST_TRANSACTION_CREATE_MEMOS_TABLE: &str = r#"
 CREATE TABLE MEMOS (
     MEMO_ID INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -2574,6 +2633,7 @@ CREATE TABLE MEMOS (
 )
 "#;
 
+#[cfg(test)]
 pub const TEST_TRANSACTION_CREATE_CATEGORY1_TABLE: &str = r#"
 CREATE TABLE CATEGORY1 (
     USER_ID INTEGER NOT NULL,
@@ -2587,8 +2647,10 @@ CREATE TABLE CATEGORY1 (
 )
 "#;
 
+#[cfg(test)]
 pub const TEST_TRANSACTION_INSERT_CATEGORY1: &str = "INSERT INTO CATEGORY1 (USER_ID, CATEGORY1_CODE, CATEGORY1_NAME) VALUES (2, 'EXPENSE', '支出')";
 
+#[cfg(test)]
 pub const TEST_TRANSACTION_CREATE_ACCOUNTS_TABLE: &str = r#"
 CREATE TABLE ACCOUNTS (
     ACCOUNT_ID INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -2605,8 +2667,10 @@ CREATE TABLE ACCOUNTS (
 )
 "#;
 
+#[cfg(test)]
 pub const TEST_TRANSACTION_INSERT_ACCOUNT_CASH: &str = "INSERT INTO ACCOUNTS (USER_ID, ACCOUNT_CODE, ACCOUNT_NAME, TEMPLATE_CODE) VALUES (2, 'CASH', '現金', 'CASH')";
 
+#[cfg(test)]
 pub const TEST_TRANSACTION_INSERT_ACCOUNT_BANK: &str = "INSERT INTO ACCOUNTS (USER_ID, ACCOUNT_CODE, ACCOUNT_NAME, TEMPLATE_CODE) VALUES (2, 'BANK', '銀行', 'BANK')";
 
 // Puts a header back into the state of a row saved before the account check
@@ -2617,6 +2681,7 @@ pub const TEST_TRANSACTION_HEADER_SET_ACCOUNTS: &str = "UPDATE TRANSACTIONS_HEAD
 // IF NOT EXISTS so the master-delete-lock tests can also create this from
 // their own setup_test_db without racing the balance-computation tests
 // that create it inline.
+#[cfg(test)]
 pub const TEST_TRANSACTION_CREATE_HEADER_TABLE: &str = r#"
 CREATE TABLE IF NOT EXISTS TRANSACTIONS_HEADER (
     TRANSACTION_ID INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -2637,6 +2702,7 @@ CREATE TABLE IF NOT EXISTS TRANSACTIONS_HEADER (
 )
 "#;
 
+#[cfg(test)]
 pub const TEST_TRANSACTION_CREATE_SHOPS_TABLE: &str = r#"
 CREATE TABLE SHOPS (
     SHOP_ID INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -2650,6 +2716,7 @@ CREATE TABLE SHOPS (
 )
 "#;
 
+#[cfg(test)]
 pub const TEST_TRANSACTION_CREATE_CATEGORY2_TABLE: &str = r#"
 CREATE TABLE CATEGORY2 (
     USER_ID INTEGER NOT NULL,
@@ -2665,6 +2732,7 @@ CREATE TABLE CATEGORY2 (
 )
 "#;
 
+#[cfg(test)]
 pub const TEST_TRANSACTION_CREATE_CATEGORY3_TABLE: &str = r#"
 CREATE TABLE CATEGORY3 (
     USER_ID INTEGER NOT NULL,
@@ -2684,6 +2752,7 @@ CREATE TABLE CATEGORY3 (
 // Category name tables joined by TRANSACTION_LIST_BASE and
 // TRANSACTION_DETAIL_GET_WITH_INFO (latent-scan2 M3 / M8). Same columns as
 // res/sql/dbaccess.sql; tests leave them empty unless they check names.
+#[cfg(test)]
 pub const TEST_TRANSACTION_CREATE_CATEGORY1_I18N_TABLE: &str = r#"
 CREATE TABLE CATEGORY1_I18N (
     USER_ID INTEGER NOT NULL,
@@ -2696,6 +2765,7 @@ CREATE TABLE CATEGORY1_I18N (
 )
 "#;
 
+#[cfg(test)]
 pub const TEST_TRANSACTION_CREATE_CATEGORY2_I18N_TABLE: &str = r#"
 CREATE TABLE CATEGORY2_I18N (
     USER_ID INTEGER NOT NULL,
@@ -2709,6 +2779,7 @@ CREATE TABLE CATEGORY2_I18N (
 )
 "#;
 
+#[cfg(test)]
 pub const TEST_TRANSACTION_CREATE_CATEGORY3_I18N_TABLE: &str = r#"
 CREATE TABLE CATEGORY3_I18N (
     USER_ID INTEGER NOT NULL,
@@ -2723,6 +2794,7 @@ CREATE TABLE CATEGORY3_I18N (
 )
 "#;
 
+#[cfg(test)]
 pub const TEST_TRANSACTION_CREATE_DETAIL_TABLE: &str = r#"
 CREATE TABLE TRANSACTIONS_DETAIL (
     DETAIL_ID INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -2754,9 +2826,11 @@ CREATE TABLE TRANSACTIONS_DETAIL (
 )
 "#;
 
+#[cfg(test)]
 pub const TEST_TRANSACTION_INSERT_CATEGORY2: &str =
     "INSERT INTO CATEGORY2 (USER_ID, CATEGORY1_CODE, CATEGORY2_CODE, DISPLAY_ORDER, CATEGORY2_NAME) VALUES (2, 'EXPENSE', 'FOOD', 1, '食費')";
 
+#[cfg(test)]
 pub const TEST_TRANSACTION_INSERT_CATEGORY3: &str =
     "INSERT INTO CATEGORY3 (USER_ID, CATEGORY1_CODE, CATEGORY2_CODE, CATEGORY3_CODE, DISPLAY_ORDER, CATEGORY3_NAME) VALUES (2, 'EXPENSE', 'FOOD', 'GROCERY', 1, '食料品')";
 
@@ -2765,6 +2839,7 @@ pub const TEST_TRANSACTION_INSERT_CATEGORY3: &str =
 // Test queries for holiday service
 // ============================================================================
 
+#[cfg(test)]
 pub const TEST_HOLIDAY_CREATE_USERS_TABLE: &str = r#"
 CREATE TABLE USERS (
     USER_ID INTEGER PRIMARY KEY,
@@ -2776,12 +2851,15 @@ CREATE TABLE USERS (
 )
 "#;
 
+#[cfg(test)]
 pub const TEST_HOLIDAY_INSERT_USER: &str =
     "INSERT INTO USERS (USER_ID, NAME, PAW, ROLE, HOLIDAY_LOCALE) VALUES (?, ?, 'hash', 1, ?)";
 
+#[cfg(test)]
 pub const TEST_HOLIDAY_INSERT_STANDARD: &str =
     "INSERT INTO HOLIDAYS_STANDARD (LOCALE, HOLIDAY_DATE, HOLIDAY_NAME) VALUES (?, ?, ?)";
 
+#[cfg(test)]
 pub const TEST_HOLIDAY_INSERT_CUSTOM: &str =
     "INSERT INTO HOLIDAYS_USER_CUSTOM (USER_ID, HOLIDAY_DATE, HOLIDAY_NAME) VALUES (?, ?, ?)";
 
@@ -2790,6 +2868,7 @@ pub const TEST_HOLIDAY_INSERT_CUSTOM: &str =
 // ============================================================================
 
 // Pre-v2.1.0 USERS schema: no HOLIDAY_LOCALE / WEEK_START_DAY / period columns.
+#[cfg(test)]
 pub const TEST_DB_CREATE_LEGACY_USERS_TABLE: &str = r#"
 CREATE TABLE USERS (
     USER_ID INTEGER PRIMARY KEY,
@@ -2802,6 +2881,7 @@ CREATE TABLE USERS (
 
 // Pre-v2.1.0 TRANSACTIONS_HEADER schema: no RULE_ID, but carries the obsolete
 // linked-list columns an unreleased dev build added.
+#[cfg(test)]
 pub const TEST_DB_CREATE_LEGACY_HEADER_TABLE: &str = r#"
 CREATE TABLE TRANSACTIONS_HEADER (
     TRANSACTION_ID INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -2817,12 +2897,15 @@ CREATE TABLE TRANSACTIONS_HEADER (
 )
 "#;
 
+#[cfg(test)]
 pub const TEST_DB_COUNT_TABLE_COLUMN: &str =
     "SELECT COUNT(*) FROM pragma_table_info(?) WHERE name = ?";
 
+#[cfg(test)]
 pub const TEST_DB_COUNT_TABLE: &str =
     "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = ?";
 
+#[cfg(test)]
 pub const TEST_DB_COUNT_STANDARD_HOLIDAYS: &str =
     "SELECT COUNT(*) FROM HOLIDAYS_STANDARD WHERE LOCALE = 'JP'";
 
@@ -2830,6 +2913,7 @@ pub const TEST_DB_COUNT_STANDARD_HOLIDAYS: &str =
 // Additional test queries for account service
 // ============================================================================
 
+#[cfg(test)]
 pub const TEST_ACCOUNT_INSERT_HEADER: &str = r#"
 INSERT INTO TRANSACTIONS_HEADER
     (USER_ID, CATEGORY1_CODE, FROM_ACCOUNT_CODE, TO_ACCOUNT_CODE,
@@ -2837,9 +2921,11 @@ INSERT INTO TRANSACTIONS_HEADER
 VALUES (?, ?, ?, ?, ?, ?, ?)
 "#;
 
+#[cfg(test)]
 pub const TEST_ACCOUNT_GET_IS_DISABLED: &str =
     "SELECT IS_DISABLED FROM ACCOUNTS WHERE USER_ID = ? AND ACCOUNT_CODE = ?";
 
+#[cfg(test)]
 pub const TEST_ACCOUNT_INSERT_NONE_TEMPLATE: &str = r#"
 INSERT INTO ACCOUNT_TEMPLATES (TEMPLATE_CODE, TEMPLATE_NAME_JA, TEMPLATE_NAME_EN, DISPLAY_ORDER)
 VALUES ('NONE', '指定なし', 'Unspecified', 0)

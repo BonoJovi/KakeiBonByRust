@@ -316,7 +316,7 @@ impl UserManagementService {
         }
 
         // Verify old password against the current hash.
-        let row = sqlx::query(sql_queries::TEST_USER_GET_PASSWORD_BY_ID)
+        let row = sqlx::query(sql_queries::USER_GET_PASSWORD_BY_ID)
             .bind(user_id)
             .fetch_one(&self.pool)
             .await?;
@@ -399,7 +399,7 @@ impl UserManagementService {
                 // No password change — still verify the old password so
                 // this entry point cannot be used to rename an account
                 // without proving knowledge of the current password.
-                let row = sqlx::query(sql_queries::TEST_USER_GET_PASSWORD_BY_ID)
+                let row = sqlx::query(sql_queries::USER_GET_PASSWORD_BY_ID)
                     .bind(user_id)
                     .fetch_one(&self.pool)
                     .await?;
@@ -460,7 +460,7 @@ impl UserManagementService {
                 self.change_password_in_tx(user_id, old_password, new_pwd, new_username).await
             }
             None => {
-                let row = sqlx::query(sql_queries::TEST_USER_GET_PASSWORD_BY_ID)
+                let row = sqlx::query(sql_queries::USER_GET_PASSWORD_BY_ID)
                     .bind(user_id)
                     .fetch_one(&self.pool)
                     .await?;

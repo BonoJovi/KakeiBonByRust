@@ -253,9 +253,9 @@ SQL 文の定義。登録日時・更新日時 (`ENTRY_DT` / `UPDATE_DT`) はす
 
 | テスト関数 | 説明 | ファイル | 行 |
 |-----------|------|---------|-----|
-| `test_sql_queries_store_timestamps_in_utc` | `sql_queries.rs` のどの SQL もローカル時刻を書き込まない (以前はメモ・繰り返し予定から作る入出金・テーブルの初期値がローカル時刻だった) | src/sql_queries.rs | 2861 |
-| `test_init_sql_stores_timestamps_in_utc` | `dbaccess.sql` の日時の初期値はローカル時刻ではなく UTC | src/sql_queries.rs | 2870 |
-| `test_recurring_rules_insert_sets_entry_dt_explicitly` | 既存 DB には列の初期値 (ローカル時刻) が残るため、`RECURRING_RULES_INSERT` は `ENTRY_DT` を自分で指定する | src/sql_queries.rs | 2879 |
+| `test_sql_queries_store_timestamps_in_utc` | `sql_queries.rs` のどの SQL もローカル時刻を書き込まない (以前はメモ・繰り返し予定から作る入出金・テーブルの初期値がローカル時刻だった) | src/sql_queries.rs | 2948 |
+| `test_init_sql_stores_timestamps_in_utc` | `dbaccess.sql` の日時の初期値はローカル時刻ではなく UTC | src/sql_queries.rs | 2957 |
+| `test_recurring_rules_insert_sets_entry_dt_explicitly` | 既存 DB には列の初期値 (ローカル時刻) が残るため、`RECURRING_RULES_INSERT` は `ENTRY_DT` を自分で指定する | src/sql_queries.rs | 2966 |
 
 **合計**: 3件
 
