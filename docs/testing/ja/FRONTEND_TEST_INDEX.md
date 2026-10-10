@@ -1469,7 +1469,7 @@
 
 ### pages/transaction-management-add-account-groups.test.js
 
-新規追加ウィンドウの口座欄 (支出元・入金先) の表示を確かめるテスト。以前は、収入や支出の取引を編集して閉じたあとに新規追加を開くと、大分類は未選択なのに、前の取引で隠した口座欄が隠れたままだった。
+新規追加ウィンドウの口座欄 (出金元・入金先) の表示を確かめるテスト。以前は、収入や支出の取引を編集して閉じたあとに新規追加を開くと、大分類は未選択なのに、前の取引で隠した口座欄が隠れたままだった。
 
 **テスト数**: 4件
 
@@ -1478,7 +1478,7 @@
 | `should show both account fields when the add window is opened first` | 最初に開いた新規追加では、口座欄を両方表示する |
 | `should show both account fields when the add window is opened after editing an income` | 収入の取引を編集して閉じたあとの新規追加でも、口座欄を両方表示する |
 | `should show both account fields when the add window is opened after editing an expense` | 支出の取引を編集して閉じたあとの新規追加でも、口座欄を両方表示する |
-| `should hide the unused account field when an income is opened after the add window` | 新規追加のあとに収入の取引を開くと、使わない支出元の欄を隠す |
+| `should hide the unused account field when an income is opened after the add window` | 新規追加のあとに収入の取引を開くと、使わない出金元の欄を隠す |
 
 **ファイル**: tests/frontend/pages/transaction-management-add-account-groups.test.js
 
