@@ -180,22 +180,32 @@ await invoke('update_general_user_info', {
   username: 'john_updated'
 });
 
+// ユーザ削除 (管理者のみ)
+await invoke('delete_general_user_info', { userId: userId });
+```
+
+自分自身の編集は、そのユーザでログインしたセッションで行う (本人用のコマンドはセッションのユーザを対象にする)：
+
+```javascript
+// 一般ユーザ john_updated でログイン
+await invoke('login_user', {
+  username: 'john_updated',
+  password: 'secure_password_123'
+});
+
 // 自分の名前を変更 (現在のパスワードが必要)
 await invoke('update_general_user_with_reencryption', {
-  oldPassword: 'current_secure_password',
-  username: 'john_updated',
+  oldPassword: 'secure_password_123',
+  username: 'john_renamed',
   newPassword: null
 });
 
 // 自分のパスワードを変更
 await invoke('update_general_user_with_reencryption', {
-  oldPassword: 'current_secure_password',
+  oldPassword: 'secure_password_123',
   username: null,
   newPassword: 'new_secure_password_16'
 });
-
-// ユーザ削除
-await invoke('delete_general_user_info', { user_id: userId });
 ```
 
 ## データベーススキーマ（参考）
