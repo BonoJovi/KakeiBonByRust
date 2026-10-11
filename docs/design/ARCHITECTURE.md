@@ -126,7 +126,7 @@ KakeiBonByRust/
     ↓ セッション作成
 [session.rs]
     ↓ 画面遷移
-[main.html]
+[index.html]
 ```
 
 ### 4.3 データ暗号化フロー
@@ -278,7 +278,7 @@ cargo build --release
 ./db.sh "SELECT * FROM USERS;"
 
 # マイグレーション
-./db.sh < sql/create_tables.sql
+./db.sh < sql/<スクリプト名>.sql
 ```
 
 ### 9.3 テスト実行
