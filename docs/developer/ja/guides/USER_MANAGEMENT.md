@@ -179,9 +179,6 @@ await invoke('update_general_user_info', {
   userId: userId,
   username: 'john_updated'
 });
-
-// ユーザ削除 (管理者のみ)
-await invoke('delete_general_user_info', { userId: userId });
 ```
 
 自分自身の編集は、そのユーザでログインしたセッションで行う (本人用のコマンドはセッションのユーザを対象にする)：
@@ -206,6 +203,19 @@ await invoke('update_general_user_with_reencryption', {
   username: null,
   newPassword: 'new_secure_password_16'
 });
+```
+
+ユーザの削除は管理者の操作なので、管理者でログインし直してから行う：
+
+```javascript
+// 管理者でログイン
+await invoke('login_user', {
+  username: 'admin',
+  password: 'admin_secure_password'
+});
+
+// ユーザ削除 (管理者のみ。最後の 1 人の一般ユーザは削除できず last_general_user で断られる)
+await invoke('delete_general_user_info', { userId: userId });
 ```
 
 ## データベーススキーマ（参考）
