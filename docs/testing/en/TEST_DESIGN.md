@@ -107,7 +107,6 @@ restore the code with `git checkout`.
 
 - `"type": "module"` and `node --experimental-vm-modules` for ES modules
 - `"testEnvironment": "jsdom"`, `"testMatch": ["**/*.test.js"]`
-- `latent-audit/` is ignored by default (`npm run test:latent` runs it)
 
 Imports must include the `.js` extension.
 

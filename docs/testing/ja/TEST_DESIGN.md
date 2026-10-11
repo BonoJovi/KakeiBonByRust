@@ -83,7 +83,6 @@ test('should refuse with the right message and not register when the password ha
 
 - ES Modules のために `"type": "module"` と `node --experimental-vm-modules`
 - `"testEnvironment": "jsdom"`、`"testMatch": ["**/*.test.js"]`
-- `latent-audit/` は通常は除外 (`npm run test:latent` で実行)
 
 import には `.js` 拡張子を付ける。
 
