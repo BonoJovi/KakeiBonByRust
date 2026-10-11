@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-10-11 JST  
-**総テスト数**: 827件 (jest suite 102 ファイル、`npm test` 実測)
+**総テスト数**: 822件 (jest suite 102 ファイル、`npm test` 実測)
 
 ---
 
@@ -20,7 +20,6 @@
   - [admin-edit.test.js](#admin-edittestjs)
   - [general-user-edit.test.js](#general-user-edittestjs)
 - [機能別テスト](#機能別テスト)
-  - [transaction-edit.test.js](#transaction-edittestjs)
   - [transaction-detail-tax-calculation.test.js](#transaction-detail-tax-calculationtestjs)
   - [toast.test.js](#toasttestjs)
   - [tax-calc.test.js](#tax-calctestjs)
@@ -108,6 +107,7 @@
   - [pages/transaction-management-edit-accounts.test.js](#pagestransaction-management-edit-accountstestjs)
   - [pages/transaction-management-edit-shop.test.js](#pagestransaction-management-edit-shoptestjs)
   - [pages/transaction-management-edit-modal-errors.test.js](#pagestransaction-management-edit-modal-errorstestjs)
+  - [pages/transaction-management-amounts.test.js](#pagestransaction-management-amountstestjs)
   - [pages/transaction-management-account-required.test.js](#pagestransaction-management-account-requiredtestjs)
   - [pages/user-management-password-page.test.js](#pagesuser-management-password-pagetestjs)
   - [pages/user-management-nonadmin-page.test.js](#pagesuser-management-nonadmin-pagetestjs)
@@ -385,22 +385,6 @@
 ---
 
 ## 機能別テスト
-
-### transaction-edit.test.js
-
-取引編集機能のテスト。
-
-**テスト数**: 17件
-
-| テストカテゴリ (describe) | 説明 | テスト数 |
-|--------------|------|---------|
-| Amount Formatting | 金額の表示形式と読み取り | 17件 |
-
-保存済みヘッダーの読み込みと保存時に送る値は、実際の画面で [pages/transaction-management-edit-roundtrip.test.js](#pagestransaction-management-edit-roundtriptestjs) が確かめる。大分類による口座欄の表示と保存時の確認は [pages/transaction-management-edit-accounts.test.js](#pagestransaction-management-edit-accountstestjs) が、店舗欄は [pages/transaction-management-edit-shop.test.js](#pagestransaction-management-edit-shoptestjs) が、どのヘッダーを扱うかと読み込み・保存に失敗したときの表示は [pages/transaction-management-edit-modal-errors.test.js](#pagestransaction-management-edit-modal-errorstestjs) が確かめる。
-
-**ファイル**: tests/frontend/transaction-edit.test.js
-
----
 
 ### transaction-detail-tax-calculation.test.js
 
@@ -1843,6 +1827,31 @@
 
 ---
 
+### pages/transaction-management-amounts.test.js
+
+実際の入出金一覧と編集ウィンドウで、合計金額の表示と読み取りを確かめる。parseAmountStrict 自体は [parse-amount-strict.test.js](#parse-amount-stricttestjs) が確かめる。
+
+**テスト数**: 12件
+
+| テスト | 説明 |
+|--------|------|
+| `should show the total with ¥ and commas when it is 1000 or more` | 一覧の合計は `¥` 付きで 3 桁ごとにカンマを入れる (`¥1,234,567`) |
+| `should show the total with ¥ and no comma when it is below 1000` | 1000 未満はカンマなし (`¥999`) |
+| `should show ¥0 when the total is 0` | 0 は `¥0` |
+| `should show the saved total as plain digits when a header is opened` | 編集ウィンドウの合計欄はカンマなしの数字で表示する |
+| `should send the saved total back when a header is saved without changes` | 変更せずに保存すると、保存済みの合計をそのまま送る |
+| `should send the typed total as a number when it is plain digits` | 数字だけの入力は数値として送る |
+| `should not send the header when the total has a comma` | 「1,000」は入力欄自体のチェックで止まり、送らない |
+| `should not send the header when the total has a decimal point` | 「1099.5」は入力欄自体のチェックで止まり、送らない |
+| `should not send the header when the total is negative` | 「-5」は入力欄自体のチェックで止まり、送らない |
+| `should show the whole-number message under the total and not send when it is in scientific notation` | 「1e3」は合計欄の下に `common.error_amount_not_integer` を表示し、送らない |
+| `should show the whole-number message under the total and not send when it is past the safe integer range` | 安全な整数の範囲を超える数字も同じく断る |
+| `should clear the whole-number message when the total is fixed and saved again` | 直して保存し直すとメッセージが消え、送られる |
+
+**ファイル**: tests/frontend/pages/transaction-management-amounts.test.js
+
+---
+
 ### pages/transaction-management-account-required.test.js
 
 実際の入出金一覧の編集ウィンドウで、大分類が使う口座を「未指定」のまま保存しようとすると断ることを確かめる (支出は出金元、収入は入金先、振替は両方)。以前は保存でき、ダッシュボードは「未指定」の口座を表示しないため、支出・収入としては数えられるのにどの口座の残高も動かなかった。
@@ -2054,8 +2063,7 @@
 | user-addition.test.js | 46 |
 | admin-edit.test.js | 62 |
 | general-user-edit.test.js | 62 |
-| **機能別テスト** | **510件** |
-| transaction-edit.test.js | 17 |
+| **機能別テスト** | **505件** |
 | transaction-detail-tax-calculation.test.js | 33 |
 | toast.test.js | 14 |
 | tax-calc.test.js | 12 |
@@ -2143,6 +2151,7 @@
 | pages/transaction-management-edit-accounts.test.js | 14 |
 | pages/transaction-management-edit-shop.test.js | 11 |
 | pages/transaction-management-edit-modal-errors.test.js | 11 |
+| pages/transaction-management-amounts.test.js | 12 |
 | pages/transaction-management-account-required.test.js | 7 |
 | pages/user-management-password-page.test.js | 2 |
 | pages/user-management-nonadmin-page.test.js | 3 |
@@ -2154,7 +2163,7 @@
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **827件** |
+| **総計 (jest)** | **822件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 

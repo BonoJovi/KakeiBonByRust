@@ -54,8 +54,9 @@ npm run test:coverage
 - `pages/user-management-delete-page.test.js` - ユーザー削除のテスト
 
 ### 機能別テスト
-- `transaction-edit.test.js` - 取引編集テスト
 - `pages/transaction-management-edit-roundtrip.test.js` - 取引ヘッダーの読み込みと保存で送る値のテスト
+- `pages/transaction-management-edit-modal-errors.test.js` - 編集ウィンドウが扱うヘッダーと、読み込み・保存失敗時の表示のテスト
+- `pages/transaction-management-amounts.test.js` - 合計金額の表示と読み取りのテスト
 - `pages/transaction-detail-form-page.test.js` - 取引明細の入力フォームとヘッダー合計のテスト
 - `transaction-detail-tax-calculation.test.js` - 税計算テスト
 
