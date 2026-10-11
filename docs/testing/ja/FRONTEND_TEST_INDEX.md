@@ -3,7 +3,7 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-10-11 JST  
-**総テスト数**: 694件 (jest suite 101 ファイル、`npm test` 実測)
+**総テスト数**: 700件 (jest suite 101 ファイル、`npm test` 実測)
 
 ---
 
@@ -141,7 +141,7 @@
 
 実際のユーザー管理画面 (管理者でログイン) で、ユーザーの追加と編集の入力チェックを確かめる。自分自身の編集は共通の確認 [pages/_user-self-edit-checks.js](#pages_user-self-edit-checksjs) を使う。
 
-**テスト数**: 27件 (追加 12 + 他ユーザーの編集 2 + 自分の編集 13)
+**テスト数**: 30件 (追加 12 + 他ユーザーの編集 2 + 自分の編集 16)
 
 | テスト | 説明 |
 |--------|------|
@@ -159,9 +159,9 @@
 
 ### pages/user-management-self-edit-validation.test.js
 
-実際のユーザー管理画面 (一般ユーザーでログイン) で、自分自身の編集の入力チェックを確かめる。中身は共通の確認 [pages/_user-self-edit-checks.js](#pages_user-self-edit-checksjs) で、呼ぶコマンドは `update_general_user_info` / `update_general_user_with_reencryption`。
+実際のユーザー管理画面 (一般ユーザーでログイン) で、自分自身の編集の入力チェックを確かめる。中身は共通の確認 [pages/_user-self-edit-checks.js](#pages_user-self-edit-checksjs) で、`update_general_user_info` は呼ばず、`update_general_user_with_reencryption` で保存する。
 
-**テスト数**: 13件
+**テスト数**: 16件
 
 **ファイル**: tests/frontend/pages/user-management-self-edit-validation.test.js
 
@@ -1835,16 +1835,18 @@
 
 ### pages/_user-self-edit-checks.js
 
-ユーザー管理画面で自分自身を編集するときの確認。管理者用と一般ユーザー用の 2 つのテストが、呼ぶコマンドだけ変えて使う (13 件)。
+ユーザー管理画面で自分自身を編集するときの確認。管理者用と一般ユーザー用の 2 つのテストが、呼ぶコマンドだけ変えて使う (16 件)。自分の行の保存は名前変更だけでも現在のパスワードが必須で、それを DB と照合するコマンド (名前変更だけなら `newPassword` は null) を通る。パスワードなしの名前変更コマンドは使わない。
 
 | テスト | 説明 |
 |--------|------|
 | `should show the current password, password and confirmation fields when the own row is edited` | 自分の編集では現在のパスワード・パスワード・確認入力の 3 欄を出す |
-| `should rename without a password when only the user name is changed` | パスワードなしなら名前変更のコマンドで、前後の空白を除いた名前を送る |
+| `should rename with the current password when only the user name is changed` | 名前だけ変える場合も、現在のパスワードを付けて照合するコマンドで送る (前後の空白を除いた名前、newPassword は null) |
 | `should send no new user name when the user name is unchanged` | 名前を変えなければ username は null |
+| `should refuse a rename and send nothing when the current password is not entered` | 現在のパスワードなしの名前変更は `error.current_password_required` で断る |
+| `should show the incorrect-password message under the current password when the backend refuses it` | バックエンドが現在のパスワードの不一致で断ると、現在のパスワード欄の下に `error.old_password_incorrect` を出す |
 | `should change the password with the current password when all three are entered` | 3 欄とも入力すると、再暗号化のコマンドに現在のパスワードと新しいパスワードを送る |
 | `should send the new user name with the password change when both are changed` | 名前とパスワードを両方変えると、再暗号化のコマンドに新しい名前も入る |
-| `should refuse with the right message and send nothing when %s` (7 ケース) | 確認入力が違う・空 → `error.password_mismatch`、空白 16 文字 → `error.password_empty`、15 文字・UTF-16 で 19 単位の 15 文字 → `error.password_too_short`、短くて確認入力も違う → `error.password_mismatch`、現在のパスワードなし → `error.current_password_required` |
+| `should refuse with the right message and send nothing when %s` (8 ケース) | 確認入力が違う・空・確認入力だけ入力 → `error.password_mismatch`、空白 16 文字 → `error.password_empty`、15 文字・UTF-16 で 19 単位の 15 文字 → `error.password_too_short`、短くて確認入力も違う → `error.password_mismatch`、現在のパスワードなし → `error.current_password_required` |
 | `should refuse an empty user name under the field and send nothing even when the password is valid` | 名前が空白だけなら、パスワードが正しくても名前欄の下に `validation.required` を出して送らない |
 
 **ファイル**: tests/frontend/pages/_user-self-edit-checks.js
@@ -1855,10 +1857,10 @@
 
 | カテゴリ | テスト数 |
 |---------|---------|
-| **画面別テスト** | **74件** |
+| **画面別テスト** | **80件** |
 | pages/index-setup-validation.test.js | 34 |
-| pages/user-management-admin-validation.test.js | 27 |
-| pages/user-management-self-edit-validation.test.js | 13 |
+| pages/user-management-admin-validation.test.js | 30 |
+| pages/user-management-self-edit-validation.test.js | 16 |
 | **機能別テスト** | **505件** |
 | transaction-detail-tax-calculation.test.js | 33 |
 | toast.test.js | 14 |
@@ -1959,7 +1961,7 @@
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **694件** |
+| **総計 (jest)** | **700件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。
 

@@ -84,17 +84,19 @@ pub struct AppState {
 - 戻り値: 新規ユーザID
 - フロントエンド呼び出し: `invoke('create_general_user', { username: 'user1', password: 'password123' })`
 
-##### `update_general_user_info(user_id: i64, username: Option<String>, password: Option<String>)`
-- 一般ユーザ情報を更新
-- ユーザ名とパスワードの両方またはいずれかを更新
-- パスワードバリデーション実施（パスワード指定時）
-- フロントエンド呼び出し: `invoke('update_general_user_info', { user_id: 2, username: 'newname', password: null })`
+##### `update_general_user_info(user_id: i64, username: Option<String>)`
+- 管理者が他の一般ユーザの名前を変更 (パスワードは受け取らない)
+- 自分自身の名前変更は断る (現在のパスワードが必要なため `update_general_user_with_reencryption` を使う)
+- フロントエンド呼び出し: `invoke('update_general_user_info', { userId: 2, username: 'newname' })`
 
-##### `update_admin_user_info(user_id: i64, username: Option<String>, password: Option<String>)`
-- 管理者ユーザ情報を更新
-- ユーザ名とパスワードの両方またはいずれかを更新
-- パスワードバリデーション実施（パスワード指定時）
-- フロントエンド呼び出し: `invoke('update_admin_user_info', { user_id: 1, username: null, password: 'newpassword' })`
+##### `update_general_user_with_reencryption(old_password: String, username: Option<String>, new_password: Option<String>)`
+- ログイン中のユーザが自分のアカウントを編集 (名前変更・パスワード変更・その両方)
+- 現在のパスワードは常に必須で、保存済みのパスワードと照合する
+- `new_password` が null なら名前変更のみ。パスワード変更時は暗号化データを再暗号化する
+- フロントエンド呼び出し: `invoke('update_general_user_with_reencryption', { oldPassword: '...', username: 'newname', newPassword: null })`
+
+##### `update_admin_user_info(user_id: i64, username: Option<String>)` / `update_admin_user_with_reencryption(...)`
+- 管理者アカウント向けの同じ組み合わせ。管理者が自分の名前を変えるときも `update_admin_user_with_reencryption` を使う
 
 ##### `delete_general_user_info(user_id: i64)`
 - 一般ユーザを削除
@@ -172,25 +174,24 @@ const userId = await invoke('create_general_user', {
   password: 'secure_password_123'
 });
 
-// ユーザ名のみ更新
+// 管理者が他のユーザの名前を変更
 await invoke('update_general_user_info', {
-  user_id: userId,
+  userId: userId,
+  username: 'john_updated'
+});
+
+// 自分の名前を変更 (現在のパスワードが必要)
+await invoke('update_general_user_with_reencryption', {
+  oldPassword: 'current_secure_password',
   username: 'john_updated',
-  password: null
+  newPassword: null
 });
 
-// パスワードのみ更新
-await invoke('update_general_user_info', {
-  user_id: userId,
+// 自分のパスワードを変更
+await invoke('update_general_user_with_reencryption', {
+  oldPassword: 'current_secure_password',
   username: null,
-  password: 'new_secure_password'
-});
-
-// 管理者ユーザのパスワード更新
-await invoke('update_admin_user_info', {
-  user_id: 1,
-  username: null,
-  password: 'new_admin_password'
+  newPassword: 'new_secure_password_16'
 });
 
 // ユーザ削除

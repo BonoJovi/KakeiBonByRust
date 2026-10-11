@@ -7,13 +7,17 @@
  * the page calls.
  *
  * Editing one's own row shows the current password, password and
- * confirmation fields, none of them required. With no password the page
- * renames through `renameCommand` (username null when unchanged). With a
- * password it checks, in this order: the confirmation (error.password_mismatch),
- * only whitespace (error.password_empty), fewer than 16 characters counted
- * as code points (error.password_too_short) and the current password
- * (error.current_password_required); then it calls `reencryptCommand`.
- * Every message goes to #form-message.
+ * confirmation fields. Every save of one's own row, a rename included,
+ * needs the current password: the page checks, in this order, the
+ * confirmation (error.password_mismatch, also when only the confirmation
+ * is filled in), only whitespace (error.password_empty), fewer than 16
+ * characters counted as code points (error.password_too_short) and the
+ * current password (error.current_password_required), then calls
+ * `reencryptCommand` (newPassword null for a rename), whose backend checks
+ * the current password against the stored one. `renameCommand`, which
+ * renames without a password, is never used for one's own row. Every
+ * message goes to #form-message, except a wrong current password, which
+ * is shown under that field.
  */
 
 import { flush, callsOf } from './_page-harness.js';
@@ -58,19 +62,39 @@ export function describeSelfEditChecks({ invoke, self, renameCommand, reencryptC
             }
         });
 
-        test('should rename without a password when only the user name is changed', async () => {
+        test('should rename with the current password when only the user name is changed', async () => {
             await openSelfEdit();
-            await save({ username: '  renamed  ' });
+            await save({ username: '  renamed  ', oldPassword: 'current-password-1' });
 
-            expect(callsOf(invoke, renameCommand)).toEqual([{ userId: self.user_id, username: 'renamed' }]);
-            expect(callsOf(invoke, reencryptCommand)).toHaveLength(0);
+            expect(callsOf(invoke, reencryptCommand)).toEqual([
+                { oldPassword: 'current-password-1', username: 'renamed', newPassword: null },
+            ]);
+            expect(callsOf(invoke, renameCommand)).toHaveLength(0);
         });
 
         test('should send no new user name when the user name is unchanged', async () => {
             await openSelfEdit();
-            await save();
+            await save({ oldPassword: 'current-password-1' });
 
-            expect(callsOf(invoke, renameCommand)).toEqual([{ userId: self.user_id, username: null }]);
+            expect(callsOf(invoke, reencryptCommand)).toEqual([
+                { oldPassword: 'current-password-1', username: null, newPassword: null },
+            ]);
+        });
+
+        test('should refuse a rename and send nothing when the current password is not entered', async () => {
+            await openSelfEdit();
+            await save({ username: 'renamed' });
+
+            expect(formMessage()).toBe('error.current_password_required');
+            expect(sent()).toHaveLength(0);
+        });
+
+        test('should show the incorrect-password message under the current password when the backend refuses it', async () => {
+            await openSelfEdit();
+            invoke.mockImplementationOnce(() => Promise.reject({ code: 'old_password_incorrect', message: 'Old password is incorrect' }));
+            await save({ username: 'renamed', oldPassword: 'wrong-password-1' });
+
+            expect(field('old-password').parentElement.querySelector('.validation-error').textContent).toBe('error.old_password_incorrect');
         });
 
         test('should change the password with the current password when all three are entered', async () => {
@@ -94,6 +118,7 @@ export function describeSelfEditChecks({ invoke, self, renameCommand, reencryptC
         test.each([
             ['the confirmation differs', { oldPassword: CURRENT, password: SIXTEEN, confirm: '6543210987654321' }, 'error.password_mismatch'],
             ['the confirmation is empty', { oldPassword: CURRENT, password: SIXTEEN, confirm: '' }, 'error.password_mismatch'],
+            ['only the confirmation is entered', { oldPassword: CURRENT, password: '', confirm: SIXTEEN }, 'error.password_mismatch'],
             ['the password is 16 spaces', { oldPassword: CURRENT, password: ' '.repeat(16) }, 'error.password_empty'],
             ['the password has 15 characters', { oldPassword: CURRENT, password: '123456789012345' }, 'error.password_too_short'],
             ['the password has 15 characters but 19 UTF-16 units', { oldPassword: CURRENT, password: 'password🔐🔐🔐🔐123' }, 'error.password_too_short'],

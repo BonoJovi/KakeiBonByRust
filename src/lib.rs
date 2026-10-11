@@ -93,6 +93,25 @@ fn require_admin_session(state: &tauri::State<'_, AppState>) -> Result<(), Strin
     }
 }
 
+/// Whether a user may be renamed without the current password: only by
+/// an administrator renaming someone else, who cannot know that user's
+/// password. Users renaming themselves (the administrator included) must
+/// use the `*_with_reencryption` command, which checks the current
+/// password against the stored hash before renaming.
+fn check_rename_without_password(
+    session_user_id: i64,
+    session_is_admin: bool,
+    target_user_id: i64,
+) -> Result<(), String> {
+    if target_user_id == session_user_id {
+        return Err("Your current password is required to change your own account.".to_string());
+    }
+    if !session_is_admin {
+        return Err("Administrator privileges are required for this operation.".to_string());
+    }
+    Ok(())
+}
+
 #[tauri::command]
 async fn login_user(
     username: String,
@@ -376,15 +395,17 @@ async fn update_general_user_info(
     // `USERS.PAW` update commit as one atomic step
     // (Fable-5 review #1, #5).
     //
-    // Fable-5 review #19 — the target `user_id` now comes from the
-    // frontend rather than being derived from the session, so an
-    // administrator can rename other users from the user-management
-    // screen. Anyone editing themselves is allowed; editing anyone
-    // else requires an admin session.
-    let session_user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
-    if user_id != session_user_id {
-        require_admin_session(&state).map_err(api_error::ApiError::validation)?;
-    }
+    // Fable-5 review #19 — the target `user_id` comes from the frontend
+    // so an administrator can rename other users from the
+    // user-management screen. Renaming oneself needs the current
+    // password, so it goes through `update_general_user_with_reencryption`
+    // instead.
+    let session_user = get_session_user(&state).map_err(api_error::ApiError::validation)?;
+    check_rename_without_password(
+        session_user.user_id,
+        session_user.role == consts::ROLE_ADMIN,
+        user_id,
+    ).map_err(api_error::ApiError::validation)?;
 
     let user_mgmt = state.user_mgmt.lock().await;
     user_mgmt.update_general_user(
@@ -424,10 +445,12 @@ async fn update_admin_user_info(
 ) -> Result<(), api_error::ApiError> {
     // Rename-only path. See `update_general_user_info` for the
     // password-routing and Fable-5 #19 authorization contract.
-    let session_user_id = get_session_user_id(&state).map_err(api_error::ApiError::validation)?;
-    if user_id != session_user_id {
-        require_admin_session(&state).map_err(api_error::ApiError::validation)?;
-    }
+    let session_user = get_session_user(&state).map_err(api_error::ApiError::validation)?;
+    check_rename_without_password(
+        session_user.user_id,
+        session_user.role == consts::ROLE_ADMIN,
+        user_id,
+    ).map_err(api_error::ApiError::validation)?;
 
     let user_mgmt = state.user_mgmt.lock().await;
     user_mgmt.update_admin_user(
@@ -2554,6 +2577,31 @@ pub fn run() {
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[cfg(test)]
+mod rename_without_password_tests {
+    use super::*;
+
+    #[test]
+    fn should_refuse_when_a_user_renames_themselves_without_a_password() {
+        assert!(check_rename_without_password(2, false, 2).is_err());
+    }
+
+    #[test]
+    fn should_refuse_when_an_administrator_renames_themselves_without_a_password() {
+        assert!(check_rename_without_password(1, true, 1).is_err());
+    }
+
+    #[test]
+    fn should_allow_when_an_administrator_renames_another_user() {
+        assert!(check_rename_without_password(1, true, 2).is_ok());
+    }
+
+    #[test]
+    fn should_refuse_when_a_general_user_renames_another_user() {
+        assert!(check_rename_without_password(2, false, 3).is_err());
+    }
 }
 
 #[cfg(test)]

@@ -129,102 +129,84 @@ try {
 
 ### update_general_user_info
 
-ログイン中の一般ユーザーが自分の情報を更新します（パスワード変更なし）。
+管理者が他の一般ユーザーの名前を変更します。パスワードは受け取らず、変更もできません。
 
 **パラメータ:**
-- `username` (Option\<String\>): 新しいユーザー名（変更する場合）
-- `password` (Option\<String\>): 新しいパスワード（変更する場合）
+- `userId` (i64): 名前を変えるユーザー
+- `username` (Option\<String\>): 新しいユーザー名。null なら変更しない
 
 **戻り値:** なし
 
 **使用例:**
 ```javascript
-// ユーザー名のみ変更
 await invoke('update_general_user_info', {
-    username: 'new_username',
-    password: null
-});
-
-// パスワードのみ変更
-await invoke('update_general_user_info', {
-    username: null,
-    password: 'NewPassword123456'
+    userId: 2,
+    username: 'new_username'
 });
 ```
 
-**注意:**
-- セッションユーザーIDを自動取得（`get_session_user_id`）
-- パスワード変更時、暗号化データは**再暗号化されません**
-- 暗号化データがある場合は`update_general_user_with_reencryption`を使用
-
 **権限:**
-- 一般ユーザーが自分自身を更新
+- 管理者セッションで、**他の**ユーザーの名前を変える場合のみ
+- `userId` がセッションユーザー自身の ID なら断る: 自分の名前変更には現在のパスワードが必要なので、`update_general_user_with_reencryption` を使う
+- 一般ユーザーのセッションで他人の名前を変えようとした場合も断る
 
 ---
 
 ### update_general_user_with_reencryption
 
-パスワード変更と同時に暗号化データを再暗号化します。
+ログイン中の一般ユーザーが自分のアカウントを編集します: 名前の変更、パスワードの変更 (暗号化データの再暗号化を含む)、またはその両方。現在のパスワードは常に必須で、最初に保存済みのパスワードと照合します。
 
 **パラメータ:**
 - `old_password` (String): 現在のパスワード（認証用）
-- `username` (Option\<String\>): 新しいユーザー名
-- `new_password` (Option\<String\>): 新しいパスワード
+- `username` (Option\<String\>): 新しいユーザー名。null なら変更しない
+- `new_password` (Option\<String\>): 新しいパスワード。null なら名前変更のみ
 
 **戻り値:** なし
 
 **使用例:**
 ```javascript
-try {
-    await invoke('update_general_user_with_reencryption', {
-        oldPassword: 'CurrentPassword123456',
-        username: null,
-        newPassword: 'NewPassword123456'
-    });
-    alert('パスワードを変更しました。暗号化データを再暗号化しました。');
-} catch (error) {
-    alert(`更新失敗: ${error}`);
-}
+// 名前変更のみ
+await invoke('update_general_user_with_reencryption', {
+    oldPassword: 'CurrentPassword123456',
+    username: 'new_username',
+    newPassword: null
+});
+
+// パスワード変更
+await invoke('update_general_user_with_reencryption', {
+    oldPassword: 'CurrentPassword123456',
+    username: null,
+    newPassword: 'NewPassword123456'
+});
 ```
 
-**処理フロー:**
+**処理フロー (パスワード変更時):**
 1. 現在のパスワードで認証
 2. 暗号化データを復号化（旧パスワード）
-3. ユーザー情報を更新
-4. 暗号化データを再暗号化（新パスワード）
+3. ユーザー情報更新
+4. データを再暗号化（新パスワード）
 
 **エラー:**
-- `"Invalid password"`: 現在のパスワードが間違っている
-- `"Password must be at least 16 characters long"`: 新パスワードが短い
-- `"Failed to update user: ..."`: 更新エラー
+- `old_password_incorrect`: 現在のパスワードが間違っている
+- `validation` ("Password must be at least 16 characters long!"): 新パスワードが短すぎる
 
-**重要:**
-- 暗号化データがある場合は必ずこのAPIを使用
-- パスワード変更時のみ使用（ユーザー名のみ変更なら`update_general_user_info`）
+**権限:**
+- セッションユーザー自身のアカウントのみ (ユーザー ID はセッションから取得)
 
 ---
 
 ### update_admin_user_info
 
-ログイン中の管理者が自分の情報を更新します（パスワード変更なし）。
+管理者アカウント向けの `update_general_user_info`。管理者は自分の名前をこのコマンドで変えられず、管理者は 1 人なので、今の画面からは使われない。
 
 **パラメータ:**
+- `userId` (i64): 名前を変えるユーザー
 - `username` (Option\<String\>): 新しいユーザー名
-- `password` (Option\<String\>): 新しいパスワード
 
 **戻り値:** なし
 
-**使用例:**
-```javascript
-await invoke('update_admin_user_info', {
-    username: 'new_admin_name',
-    password: null
-});
-```
-
 **注意:**
-- 一般ユーザー向けの`update_general_user_info`と同様の動作
-- 管理者専用（内部的にロールチェックあり）
+- `userId` がセッションユーザー自身の ID なら断る。管理者が自分の名前を変えるときは `update_admin_user_with_reencryption` を使う
 
 ---
 

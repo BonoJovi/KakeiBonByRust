@@ -2,8 +2,8 @@
 
 このドキュメントは、Rustで実装されたバックエンドテストの完全なインデックスです。
 
-**最終更新**: 2026-10-10 JST  
-**総テスト数**: 480件 (差分反映後。`cargo test --lib` の権威的総数は 748 で、既存の未反映分は別 PR でバックフィル予定)
+**最終更新**: 2026-10-11 JST  
+**総テスト数**: 484件 (差分反映後。`cargo test --lib` の権威的総数は 752 で、既存の未反映分は別 PR でバックフィル予定)
 
 ---
 
@@ -754,18 +754,22 @@ SQL 文の定義。登録日時・更新日時 (`ENTRY_DT` / `UPDATE_DT`) はす
 
 ### lib.rs
 
-`set_language` / `set_font_size` / `update_user_settings` コマンドが使う設定値バリデーションのテスト。
+`set_language` / `set_font_size` / `update_user_settings` コマンドが使う設定値バリデーションと、現在のパスワードなしで名前を変えてよい場合 (`update_*_user_info`) のテスト。
 
 | テスト関数 | 説明 | ファイル | 行 |
 |-----------|------|---------|-----|
-| `normalize_language_accepts_names_and_codes` | 言語名・言語コード（en/English/ja/日本語/Japanese）を受理 | src/lib.rs | 2564 |
-| `normalize_language_rejects_unknown_values` | 未知の言語値を拒否 | src/lib.rs | 2573 |
-| `normalize_font_size_accepts_keywords_and_percentages` | サイズキーワードと50〜200%の指定を受理 | src/lib.rs | 2579 |
-| `normalize_font_size_rejects_out_of_range_and_garbage` | 範囲外の割合と不正文字列を拒否 | src/lib.rs | 2588 |
-| `monthly_bounds_with_shift_rejects_out_of_range_month` | month=0/13/100 で `services::period::end_of_month` に到達する前に early-Err を返し、バックエンドスレッド crash を防ぐ (PR6, Fable-5 #22) | src/lib.rs | 2602 |
-| `monthly_bounds_with_shift_accepts_boundary_months` | month=1/12 の境界は引き続き受理されることを確認 (PR6, Fable-5 #22) | src/lib.rs | 2629 |
+| `should_refuse_when_a_user_renames_themselves_without_a_password` | パスワードなしの名前変更コマンドで自分の名前を変えようとすると断る | src/lib.rs | 2587 |
+| `should_refuse_when_an_administrator_renames_themselves_without_a_password` | 管理者が自分の名前をパスワードなしで変えようとしても断る | src/lib.rs | 2592 |
+| `should_allow_when_an_administrator_renames_another_user` | 管理者は他のユーザーの名前を、そのユーザーのパスワードなしで変えられる | src/lib.rs | 2597 |
+| `should_refuse_when_a_general_user_renames_another_user` | 一般ユーザーは他のユーザーの名前を変えられない | src/lib.rs | 2602 |
+| `normalize_language_accepts_names_and_codes` | 言語名・言語コード（en/English/ja/日本語/Japanese）を受理 | src/lib.rs | 2612 |
+| `normalize_language_rejects_unknown_values` | 未知の言語値を拒否 | src/lib.rs | 2621 |
+| `normalize_font_size_accepts_keywords_and_percentages` | サイズキーワードと50〜200%の指定を受理 | src/lib.rs | 2627 |
+| `normalize_font_size_rejects_out_of_range_and_garbage` | 範囲外の割合と不正文字列を拒否 | src/lib.rs | 2636 |
+| `monthly_bounds_with_shift_rejects_out_of_range_month` | month=0/13/100 で `services::period::end_of_month` に到達する前に early-Err を返し、バックエンドスレッド crash を防ぐ (PR6, Fable-5 #22) | src/lib.rs | 2650 |
+| `monthly_bounds_with_shift_accepts_boundary_months` | month=1/12 の境界は引き続き受理されることを確認 (PR6, Fable-5 #22) | src/lib.rs | 2677 |
 
-**合計**: 6件
+**合計**: 10件
 
 ---
 
@@ -776,7 +780,7 @@ SQL 文の定義。登録日時・更新日時 (`ENTRY_DT` / `UPDATE_DT`) はす
 | **共通テストスイート** | **23件** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **インラインテスト** | **457件** |
+| **インラインテスト** | **461件** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -800,8 +804,8 @@ SQL 文の定義。登録日時・更新日時 (`ENTRY_DT` / `UPDATE_DT`) はす
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 29 |
-| lib.rs | 6 |
-| **総計** | **480件** |
+| lib.rs | 10 |
+| **総計** | **484件** |
 
 ---
 
