@@ -122,7 +122,7 @@ For detailed Japanese version with all test cases, see [Japanese Frontend Test I
 ### Shared helpers (not counted in the jest total)
 - **aggregation-test-helpers.js** - Shared mock/fixture helpers imported by the aggregation `.test.js` files
 - **pages/_user-self-edit-checks.js** - Self-edit checks shared by the admin and general-user user management tests: every save of one's own row, a rename included, needs the current password and goes through the command that checks it (`newPassword` null for a rename); refusals in order: mismatch (also a confirmation without a password), whitespace, too short, current password missing; a wrong current password is shown under that field
-- **pages/_page-harness.js** - Shared jsdom page harness (module mocks, page body loading, boot) used by `pages/*.test.js`, `modal-stale-save-close.test.js`, and the isolated `latent-audit/*.test.js`
+- **pages/_page-harness.js** - Shared jsdom page harness (module mocks, page body loading, boot) used by `pages/*.test.js` and `modal-stale-save-close.test.js`
 
 ---
 

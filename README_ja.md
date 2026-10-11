@@ -296,12 +296,12 @@ cargo tauri build
 
 #### 設計ドキュメント
 - [Build]️ **[アーキテクチャ](docs/developer/ja/design/ARCHITECTURE.md)** - システム全体の構造
-- [Lock] **[セキュリティ設計](docs/developer/ja/design/SECURITY_DESIGN.md)** - セキュリティの実装
+- [Lock] **[セキュリティ設計](docs/design/SECURITY_DESIGN.md)** - セキュリティの実装
 - [Cabinet]️ **[データベース設計](docs/developer/ja/design/DATABASE_DESIGN.md)** - DBスキーマとER図
-- [Art] **[UI設計](docs/developer/ja/design/UI_DESIGN.md)** - ユーザーインターフェース設計
+- [Art] **[UI設計](docs/design/UI_DESIGN.md)** - ユーザーインターフェース設計
 
 #### 開発ガイド
-- [Rocket] **[開発環境セットアップ](docs/developer/ja/guides/DEVELOPMENT_SETUP.md)** - 開発環境の構築
+- [Rocket] **[開発環境セットアップ](docs/developer/ja/setup/DEVELOPMENT_SETUP.md)** - 開発環境の構築
 - [Note] **[コーディング規約](docs/developer/ja/guides/CODING_STANDARDS.md)** - コードスタイルガイド
 - [Test] **テストドキュメント**
   - [Book] **[テスト概要](docs/testing/ja/TEST_OVERVIEW.md)** - テスト戦略と実行方法

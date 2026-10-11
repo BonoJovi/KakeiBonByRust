@@ -22,7 +22,7 @@ Help make KakeiBon accessible to users worldwide!
 **Currently Supported**: Japanese (ja), English (en)
 **Seeking**: Chinese (zh), Korean (ko), French (fr), German (de), Spanish (es), and more!
 
-[Book] **[Translation Guide](docs/developer/en/guides/TRANSLATION_GUIDE.md)**
+[Book] **[Translation Guide](docs/developer/en/guides/translation-guide.md)**
 
 🆕 **[Submit Translation Request](https://github.com/BonoJovi/KakeiBonByRust/issues/new?template=translation.yml)**
 
@@ -45,7 +45,7 @@ Help improve KakeiBon's quality across different platforms!
 - ⚠️ **Windows**: Needs testers!
 - ⚠️ **macOS**: Needs testers!
 
-[Book] **[Testing Guide](docs/developer/en/guides/TESTING_GUIDE.md)**
+[Book] **[Testing Guide](docs/testing/en/TEST_OVERVIEW.md)**
 
 🆕 **[Submit Testing Feedback](https://github.com/BonoJovi/KakeiBonByRust/issues/new?template=testing-feedback.yml)**
 

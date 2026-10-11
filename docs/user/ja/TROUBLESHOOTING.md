@@ -250,7 +250,7 @@ fn log_to_file(message: &str) {
 すべてのデータベース接続で`get_db_path()`関数を使用します。
 
 #### 2. 定数の一元管理
-`src-tauri/src/consts.rs`でデータベース関連の定数を管理します。
+`src/consts.rs`でデータベース関連の定数を管理します。
 
 #### 3. テストとプロダクションの分離
 ```rust

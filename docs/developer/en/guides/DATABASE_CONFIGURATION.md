@@ -34,7 +34,7 @@ fn get_test_connection() -> Result<Connection> {
 
 ### Constants Definition
 
-Database-related constants are centrally managed in `src-tauri/src/consts.rs`:
+Database-related constants are centrally managed in `src/consts.rs`:
 
 ```rust
 // src-tauri/src/consts.rs
@@ -312,7 +312,7 @@ test_*.db
 
 ## Related Documentation
 
-- [Troubleshooting Guide](./TROUBLESHOOTING.md)
+- [Troubleshooting Guide](../../../user/en/TROUBLESHOOTING.md)
 - [I18N Implementation Guide](./I18N_IMPLEMENTATION.md)
 - [Developer Guide](./DEVELOPER_GUIDE.md)
 

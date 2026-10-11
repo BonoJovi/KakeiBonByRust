@@ -84,11 +84,6 @@ updateCategory3Dropdown()
 async deleteTransaction(transactionId)
 ```
 
-#### テストデータ
-- ファイル: `sql/test_data_transactions.sql`
-- データ数: 31件
-- 内容: 様々な日付、カテゴリ、金額パターン
-
 **テスト状況**: 手動動作確認のみ（自動テスト未実施）
 
 ---
@@ -144,15 +139,14 @@ Category2変更
 ## 参考
 
 ### ドキュメント
-- [入出金管理 要件定義](../TRANSACTION_REQUIREMENTS.md)
-- [費目管理API](./API_CATEGORY_ja.md)
-- [TODO.md](../../TODO.md)
+- [入出金管理 要件定義](../../../design/requirements/TRANSACTION_REQUIREMENTS.md)
+- [費目管理API](../api/API_CATEGORY.md)
+- [TODO.md](../../../../TODO.md)
 
 ### ソースコード
 - バックエンド: `src/services/transaction.rs`
 - フロントエンド: `res/transaction-management.{html,js,css}`
 - データベース: `res/sql/dbaccess.sql`
-- テストデータ: `sql/test_data_transactions.sql`
 
 ---
 

@@ -437,9 +437,9 @@ JOIN TRANSACTION_HEADERS h ON (適切なJOIN条件);
 ## 参考資料
 
 ### 関連ドキュメント
-- [入出金管理 要件定義](../TRANSACTION_REQUIREMENTS.md)
-- [入出金管理画面 実装ドキュメント v1](./TRANSACTION_MANAGEMENT_UI.md)
-- [費目管理API](./API_CATEGORY_ja.md)
+- [入出金管理 要件定義](../requirements/TRANSACTION_REQUIREMENTS.md)
+- [入出金管理画面 実装ドキュメント v1](../../developer/ja/guides/TRANSACTION_MANAGEMENT_UI.md)
+- [費目管理API](../../developer/ja/api/API_CATEGORY.md)
 
 ### データベーススキーマ
 - `res/sql/dbaccess.sql`

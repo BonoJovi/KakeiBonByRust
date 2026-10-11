@@ -382,9 +382,9 @@ const currentUserRole = ROLE_USER;
 
 ## Related Documents
 
-- [Account Management API Specification](./API_ACCOUNT.md)
+- [Account Management API Specification](../api/API_ACCOUNT.md)
 - [Database Design](./DATABASE_CONFIGURATION.md)
-- [Troubleshooting](./TROUBLESHOOTING.md)
+- [Troubleshooting](../../../user/en/TROUBLESHOOTING.md)
 
 ---
 

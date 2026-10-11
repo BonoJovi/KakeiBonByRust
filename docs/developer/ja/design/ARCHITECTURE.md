@@ -61,7 +61,7 @@ KakeiBonは、Tauri v2フレームワークを使用したデスクトップア�
 **主要画面**:
 - `index.html` - ログイン画面・初期管理者セットアップ
 - `user-management.html` - ユーザー管理画面（管理者専用）
-- `main.html` - メイン家計簿画面（取引管理、カテゴリ管理、集計等）
+- その他の画面（入出金・明細・マスタ・集計 など）も `res/*.html` に 1 画面 1 ファイル
 
 **特徴**:
 - フレームワーク不使用（軽量、依存関係なし）
@@ -284,10 +284,9 @@ cargo test
 ## 関連ドキュメント
 
 - [データベース設計](./DATABASE_DESIGN.md)
-- [セキュリティ設計](./SECURITY_DESIGN.md)
+- [セキュリティ設計](../../../design/SECURITY_DESIGN.md)
 - [API仕様](../api/)
-- [コーディング規約](../.ai-context/CONVENTIONS.md)
+- [コーディング規約](../guides/CODING_STANDARDS.md)
 
 ---
 
-**ガイドライン遵守**: このドキュメントはドキュメント作成ガイドライン（`.ai-context/DOCUMENTATION_CREATION_GUIDELINES.md`）に従って作成されました。

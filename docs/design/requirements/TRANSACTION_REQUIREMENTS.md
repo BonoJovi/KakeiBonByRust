@@ -423,19 +423,18 @@ async fn delete_transaction(
 ## 8. 参考 / References
 
 ### ドキュメント
-- [費目管理API（日本語）](./ja/API_CATEGORY_ja.md)
-- [費目管理API（英語）](./en/API_CATEGORY.md)
-- [ユーザー管理（日本語）](./ja/USER_MANAGEMENT.md)
-- [ユーザー管理（英語）](./en/USER_MANAGEMENT.md)
+- [費目管理API（日本語）](../../developer/ja/api/API_CATEGORY.md)
+- [費目管理API（英語）](../../developer/en/api/API_CATEGORY.md)
+- [ユーザー管理（日本語）](../../developer/ja/guides/USER_MANAGEMENT.md)
+- [ユーザー管理（英語）](../../developer/en/guides/USER_MANAGEMENT.md)
 
 ### ソースコード
 - データベーススキーマ: `res/sql/dbaccess.sql`
 - トランザクションサービス: `src/services/transaction.rs`
 - トランザクション画面: `res/transaction-management.html/css/js`
-- テストデータ: `sql/test_data_transactions.sql`
 
 ### TODO
-- [開発タスク管理](../TODO.md)
+- [開発タスク管理](../../../TODO.md)
 
 ---
 

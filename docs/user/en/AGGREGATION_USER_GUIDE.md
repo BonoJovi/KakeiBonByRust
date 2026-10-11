@@ -354,9 +354,9 @@ Currently in development or planned:
 
 ## Related Documentation
 
-- [Aggregation API Reference](API_AGGREGATION.md) - Developer API specs
-- [Transaction Management Guide](TRANSACTION_MANAGEMENT_UI_V2.md) - Data entry
-- [Category Management Guide](CATEGORY_MANAGEMENT_UI.md) - Category setup
+- [Aggregation API Reference](../../developer/en/api/API_AGGREGATION.md) - Developer API specs
+- [Transaction Management Guide](../../developer/en/guides/TRANSACTION_MANAGEMENT_UI_V2.md) - Data entry
+- [Category Management Guide](../../developer/en/guides/CATEGORY_MANAGEMENT_UI.md) - Category setup
 
 ---
 

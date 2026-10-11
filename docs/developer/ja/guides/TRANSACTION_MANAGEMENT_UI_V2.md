@@ -329,7 +329,7 @@ JavaScriptで動的にSELECTボックスを更新する際、`innerHTML`で上�
 
 ## 参考資料
 
-- [TRANSACTION_DESIGN_V2.md](./TRANSACTION_DESIGN_V2.md) - V2設計詳細
+- [TRANSACTION_DESIGN_V2.md](../../../design/architecture/TRANSACTION_DESIGN_V2_ja.md) - V2設計詳細
 - [ACCOUNT_MANAGEMENT_UI.md](./ACCOUNT_MANAGEMENT_UI.md) - 口座管理画面
 - [I18N_IMPLEMENTATION.md](./I18N_IMPLEMENTATION.md) - 多言語化実装
 

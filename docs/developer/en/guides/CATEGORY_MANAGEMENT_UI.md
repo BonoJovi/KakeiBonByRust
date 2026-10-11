@@ -411,9 +411,9 @@ WHERE USER_ID = ?;
 
 ## Reference Documents
 
-- [Category Management API Documentation](API_CATEGORY.md)
-- [Accessibility Indicators](ACCESSIBILITY_INDICATORS.md)
-- [Testing Strategy](TEST_SUMMARY.md)
+- [Category Management API Documentation](../api/API_CATEGORY.md)
+- [Accessibility Indicators](../../../etc/ACCESSIBILITY_INDICATORS.md)
+- [Testing Strategy](../../../testing/en/TEST_OVERVIEW.md)
 
 ---
 

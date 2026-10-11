@@ -55,7 +55,7 @@ This document describes the user interface design of KakeiBon.
 ## Common UI Elements
 
 ### Menu Bar
-**Module**: `res/js/modules/menu-bar.js`
+**Module**: `res/js/menu.js`
 
 **Features**:
 - User info display
@@ -82,7 +82,7 @@ import { loadMenuBar } from './modules/menu-bar.js';
 **Future Implementation**: Screen reader support (ARIA attributes)
 
 ### Font Size Adjustment
-**Module**: `res/js/modules/font-size.js`
+**Module**: `res/js/font-size.js`
 
 **Size Options**:
 - Small: 12px
@@ -122,7 +122,7 @@ import { loadMenuBar } from './modules/menu-bar.js';
 - Role management (Admin/User)
 
 ### 3. Category Management Screen
-**File**: `res/category.html`
+**File**: `res/category-management.html`
 
 **Features**:
 - 3-level hierarchy (CATEGORY1/2/3)
@@ -130,7 +130,7 @@ import { loadMenuBar } from './modules/menu-bar.js';
 - Parent-child relationship management
 
 ### 4. Account Management Screen
-**File**: `res/account.html`
+**File**: `res/account-management.html`
 
 **Features**:
 - Bank account management
@@ -138,7 +138,7 @@ import { loadMenuBar } from './modules/menu-bar.js';
 - Balance display
 
 ### 5. Shop Management Screen
-**File**: `res/shop.html`
+**File**: `res/shop-management.html`
 
 **Features**:
 - Shop information management
@@ -146,7 +146,7 @@ import { loadMenuBar } from './modules/menu-bar.js';
 - Shop search
 
 ### 6. Manufacturer Management Screen
-**File**: `res/manufacturer.html`
+**File**: `res/manufacturer-management.html`
 
 **Features**:
 - Manufacturer information management
@@ -154,7 +154,7 @@ import { loadMenuBar } from './modules/menu-bar.js';
 - Manufacturer search
 
 ### 7. Product Management Screen
-**File**: `res/product.html`
+**File**: `res/product-management.html`
 
 **Features**:
 - Product information management
@@ -163,7 +163,7 @@ import { loadMenuBar } from './modules/menu-bar.js';
 - Product search
 
 ### 8. Transaction Management Screen
-**File**: `res/transaction.html`
+**File**: `res/transaction-management.html`
 
 **Features**:
 - Transaction header management
@@ -207,10 +207,10 @@ import { loadMenuBar } from './modules/menu-bar.js';
 ---
 
 **Related Documents**:
-- [Architecture Design](ARCHITECTURE_en.md)
-- [Database Design](DATABASE_DESIGN_en.md)
-- [Security Design](SECURITY_DESIGN_en.md)
-- [API Common](../api/en/API_COMMON_en.md)
+- [Architecture Design](../ARCHITECTURE.md) (Japanese only)
+- [Database Design](../../developer/en/design/DATABASE_DESIGN_en.md)
+- [Security Design](../SECURITY_DESIGN_en.md)
+- [API Common](../../developer/en/api/API_COMMON.md)
 
 ---
 

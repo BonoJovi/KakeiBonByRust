@@ -34,7 +34,7 @@ fn get_test_connection() -> Result<Connection> {
 
 ### 定数の定義
 
-データベース関連の定数は`src-tauri/src/consts.rs`で一元管理します：
+データベース関連の定数は`src/consts.rs`で一元管理します：
 
 ```rust
 // src-tauri/src/consts.rs
@@ -312,7 +312,7 @@ test_*.db
 
 ## 関連ドキュメント
 
-- [トラブルシューティングガイド](./TROUBLESHOOTING.md)
+- [トラブルシューティングガイド](../../../user/ja/TROUBLESHOOTING.md)
 - [I18N実装ガイド](./I18N_IMPLEMENTATION.md)
 - [開発者ガイド](./DEVELOPER_GUIDE.md)
 

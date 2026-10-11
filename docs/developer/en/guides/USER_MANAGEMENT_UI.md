@@ -353,7 +353,7 @@ function escapeHtml(text) {
 
 ## Related Documentation
 - [User Management Implementation](./USER_MANAGEMENT.md) - Backend implementation
-- [Accessibility Indicators](./ACCESSIBILITY_INDICATORS.md) - Indicator specification
+- [Accessibility Indicators](../../../etc/ACCESSIBILITY_INDICATORS.md) - Indicator specification
 - [Dynamic Language Menu](./DYNAMIC_LANGUAGE_MENU.md) - Language switching
 - [I18N Implementation](./I18N_IMPLEMENTATION.md) - i18n infrastructure
 

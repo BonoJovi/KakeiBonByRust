@@ -75,44 +75,30 @@ cargo tauri dev
 
 ```
 KakeiBonByRust/
-├── src/                    # Frontend source
-│   ├── index.html          # Main HTML
-│   ├── js/                 # JavaScript modules
-│   │   ├── main.js
-│   │   ├── i18n.js        # Internationalization
-│   │   ├── user_mgmt.js   # User management
-│   │   └── category.js    # Category management
-│   └── css/               # Stylesheets
+├── src/                          # Rust backend
+│   ├── main.rs / lib.rs          # Entry point, Tauri command registration
+│   ├── db.rs                     # Database connection layer
+│   ├── sql_queries.rs            # All SQL queries
+│   ├── consts.rs                 # ROLE_ADMIN/USER, MIN_PASSWORD_LENGTH, ...
+│   ├── crypto.rs                 # AES-256-GCM encryption
+│   ├── security.rs               # Argon2 hashing, authentication
+│   ├── settings.rs               # User settings
+│   ├── validation.rs             # Input validation
+│   ├── test_helpers.rs           # Test helpers (sqlx)
+│   └── services/                 # Domain logic (account, aggregation, auth, category, ...)
 │
-├── src-tauri/             # Backend source (Rust)
-│   ├── src/
-│   │   ├── main.rs        # Application entry point
-│   │   ├── lib.rs         # Tauri command registration
-│   │   ├── consts.rs      # Constants definition
-│   │   ├── commands/      # Tauri command implementation
-│   │   │   ├── mod.rs
-│   │   │   ├── i18n.rs
-│   │   │   ├── category.rs
-│   │   │   └── settings.rs
-│   │   ├── db/            # Database access layer
-│   │   │   ├── mod.rs
-│   │   │   ├── i18n.rs
-│   │   │   └── category.rs
-│   │   └── models/        # Data models
-│   │       ├── mod.rs
-│   │       └── category.rs
-│   ├── Cargo.toml         # Rust dependencies
-│   └── tauri.conf.json    # Tauri configuration
+├── res/                          # Frontend
+│   ├── *.html                    # One file per screen
+│   ├── js/                       # ES modules
+│   ├── css/                      # Stylesheets
+│   └── sql/dbaccess.sql          # Database initialization SQL (incl. i18n resources)
 │
-├── res/                   # Resource files
-│   └── sql/
-│       └── dbaccess.sql   # Database initialization SQL
-│
-├── docs/                  # Documentation
-│   ├── ja/               # Japanese documentation
-│   └── en/               # English documentation
-│
-└── TODO.md               # Task management
+├── tests/frontend/               # Jest test suites
+├── sql/                          # Initialization and migration SQL scripts
+├── docs/                         # Documentation (see docs/INDEX_en.md)
+├── scripts/                      # Release, stats and i18n check scripts
+├── tauri.conf.json               # Tauri configuration
+└── Cargo.toml / package.json     # Dependencies
 ```
 
 ---
@@ -275,12 +261,12 @@ const DEFAULT_LANGUAGE = 'ja';
 
 ## Constants Management Best Practices
 
-### Centralized Constants Management (`src-tauri/src/consts.rs`)
+### Centralized Constants Management (`src/consts.rs`)
 
 All constants used throughout the project are centrally managed in `consts.rs`.
 
 ```rust
-// src-tauri/src/consts.rs
+// src/consts.rs
 
 // User role constants
 pub const ROLE_ADMIN: i64 = 0;

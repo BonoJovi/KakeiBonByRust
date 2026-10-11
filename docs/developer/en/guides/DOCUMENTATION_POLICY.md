@@ -76,49 +76,21 @@ Documentation maintenance is divided into two phases:
 
 ## Document Structure / ドキュメント構造
 
-### Current Structure (Development Phase) / 現在の構造（開発フェーズ）
+### Current Structure / 現在の構造
+
+Documents are grouped by reader (Phase B-3 is done).
+ドキュメントは読者別に分かれている (Phase B-3 は完了)。
 
 ```
 docs/
-  ├── ja/                           # Japanese documentation
-  │   ├── *.md                      # Various implementation docs
-  │   └── ...
-  ├── en/                           # English documentation
-  │   ├── *.md                      # Various implementation docs
-  │   └── ...
-  ├── TRANSACTION_REQUIREMENTS.md   # Shared requirements docs
-  └── DOCUMENTATION_POLICY.md       # This file
+  ├── INDEX_en.md / INDEX_ja.md     # Entry points / 入り口
+  ├── user/{en,ja}/                 # For users / 利用者向け
+  ├── developer/{en,ja}/            # For developers (api/, design/, guides/, setup/) / 開発者向け
+  ├── design/                       # Architecture, security, UI, requirements / 設計
+  ├── testing/{en,ja}/              # Test overview, design and indexes / テスト
+  ├── security/                     # Security alert notes / セキュリティアラート
+  └── etc/                          # Other notes / その他
 ```
-
-**Characteristics / 特徴**:
-- Many granular documents / 多数の細かいドキュメント
-- Mixed purposes / 用途が混在
-- Development-focused / 開発重視
-
-### Target Structure (Release Phase) / 目標構造（リリースフェーズ）
-
-```
-docs/
-  ├── ja/
-  │   ├── USER_GUIDE.md           # User manual
-  │   ├── DEVELOPER_GUIDE.md      # Developer documentation
-  │   ├── API_REFERENCE.md        # API specifications
-  │   └── ARCHITECTURE.md         # Design philosophy
-  ├── en/
-  │   ├── USER_GUIDE.md
-  │   ├── DEVELOPER_GUIDE.md
-  │   ├── API_REFERENCE.md
-  │   └── ARCHITECTURE.md
-  └── DOCUMENTATION_POLICY.md     # This file
-```
-
-**Characteristics / 特徴**:
-- Consolidated, focused documents / 統合された焦点の絞られたドキュメント
-- Clear audience separation / 明確な読者の分離
-- User-focused / ユーザー重視
-
-**Note / 注記**: This structure is tentative and may be adjusted based on needs that arise during development.
-この構造は暫定的であり、開発中に生じるニーズに応じて調整される可能性があります。
 
 ---
 
@@ -196,9 +168,9 @@ When implementation is complete but testing is incomplete, add notes:
 ## References / 参考
 
 ### Related Documents / 関連ドキュメント
-- [TODO.md](../TODO.md) - Development task management
-- [.ai-context/CONVENTIONS.md](../.ai-context/CONVENTIONS.md) - Coding conventions
-- [.github/copilot-instructions.md](../.github/copilot-instructions.md) - AI guidelines
+- [TODO.md](../../../../TODO.md) - Development task management
+- [CODING_STANDARDS_en.md](CODING_STANDARDS_en.md) - Coding conventions
+- [.github/copilot-instructions.md](../../../../.github/copilot-instructions.md) - AI guidelines
 
 ### External Resources / 外部リソース
 - [Write the Docs](https://www.writethedocs.org/) - Documentation best practices

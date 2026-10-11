@@ -339,6 +339,6 @@ This document does not list test counts. See the test indexes for the counts.
 ---
 
 **Related Documentation**:
-- [Development Environment Setup](./DEVELOPMENT_SETUP_en.md)
-- [Testing Guide](./testing-guide-en.md)
-- [API Reference](../../reference/en/api/)
+- [Development Environment Setup](../../ja/setup/DEVELOPMENT_SETUP.md)
+- [Testing Guide](../../../testing/en/TEST_OVERVIEW.md)
+- [API Reference](../api/)

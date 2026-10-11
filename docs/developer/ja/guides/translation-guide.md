@@ -310,7 +310,7 @@ KakeiBonは**丁寧だが過度にフォーマルでない**言語を使用：
 
 ソースからKakeiBonをビルドできる場合：
 
-1. **依存関係をインストール**（[インストールガイド](../../../user/ja/installation.md)を参照）
+1. **依存関係をインストール**（[インストールガイド](../../../user/ja/INSTALLATION_GUIDE.md)を参照）
 
 2. **データベースに翻訳を追加**
    - メンテナーがこのステップをサポートします
@@ -600,7 +600,7 @@ Error: Invalid UTF-8 sequence
 Gitに慣れている場合：
 
 1. リポジトリをフォーク
-2. `src-tauri/migrations/`に翻訳を追加
+2. `sql/init/i18n/`に翻訳を追加
 3. SQLマイグレーションファイルを作成（メンテナーがサポート）
 4. プルリクエストを提出
 
@@ -662,8 +662,8 @@ Gitに慣れている場合：
 ## 追加リソース
 
 - **[コントリビューションガイド](../../../../CONTRIBUTING.md)**
-- **[テストガイド](testing-guide.md)**
-- **[インストールガイド](../../../user/ja/installation.md)**
+- **[テストガイド](../../../testing/ja/TEST_OVERVIEW.md)**
+- **[インストールガイド](../../../user/ja/INSTALLATION_GUIDE.md)**
 - **[翻訳リクエストを提出](https://github.com/BonoJovi/KakeiBonByRust/issues/new?template=translation.yml)**
 
 ---

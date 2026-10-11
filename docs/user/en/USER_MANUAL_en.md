@@ -44,7 +44,7 @@ KakeiBon is a desktop application designed to support personal finance managemen
   - Rust 1.70 or higher
   - Node.js 18 or higher
   - SQLite 3.35 or higher
-  - Various system libraries (see [Setup Guide](SETUP_GUIDE_en.md) for details)
+  - Various system libraries (see [Setup Guide](SETUP_GUIDE.md) for details)
 
 ---
 
