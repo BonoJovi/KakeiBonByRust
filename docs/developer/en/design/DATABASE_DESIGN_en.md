@@ -319,8 +319,8 @@ KakeiBon uses SQLite database to manage household accounting data. This document
 
 - [Database Configuration Guide](../guides/DATABASE_CONFIGURATION.md)
 - [Database Migration](../guides/DATABASE_MIGRATION.md)
-- [Security Design](SECURITY_DESIGN_en.md)
-- [Architecture Overview](ARCHITECTURE_en.md)
+- [Security Design](../../../design/SECURITY_DESIGN_en.md)
+- [Architecture Overview](../../../design/ARCHITECTURE.md)
 
 ---
 

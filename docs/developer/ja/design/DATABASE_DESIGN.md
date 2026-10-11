@@ -319,7 +319,7 @@ KakeiBonは、SQLiteデータベースを使用して家計簿データを管理
 
 - [データベース設定ガイド](../guides/DATABASE_CONFIGURATION.md)
 - [データベースマイグレーション](../guides/DATABASE_MIGRATION.md)
-- [セキュリティ設計](SECURITY_DESIGN.md)
+- [セキュリティ設計](../../../design/SECURITY_DESIGN.md)
 - [アーキテクチャ概要](ARCHITECTURE.md)
 
 ---

@@ -215,4 +215,4 @@ If you encounter issues not covered here:
 
 ---
 
-**Next Steps**: After installation, see the [User Guide](USER_GUIDE.md) for how to use KakeiBon.
+**Next Steps**: After installation, see the [User Manual](USER_MANUAL_en.md) for how to use KakeiBon.

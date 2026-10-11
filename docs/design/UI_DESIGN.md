@@ -55,7 +55,7 @@ KakeiBonのユーザーインターフェース設計について記述します
 ## 共通UI要素
 
 ### メニューバー
-**場所**: `res/js/modules/menu-bar.js`
+**場所**: `res/js/menu.js`
 
 **機能**:
 - ナビゲーションリンク
@@ -82,7 +82,7 @@ import { loadMenuBar } from './modules/menu-bar.js';
 **将来実装予定**: スクリーンリーダー対応（ARIA属性の追加）
 
 ### フォントサイズ調整
-**モジュール**: `res/js/modules/font-size.js`
+**モジュール**: `res/js/font-size.js`
 
 **サイズオプション**:
 - Small: 12px
@@ -343,8 +343,7 @@ import { loadMenuBar } from './modules/menu-bar.js';
 - 英語
 
 ### 翻訳ファイル
-- `res/locales/ja.json`
-- `res/locales/en.json`
+- `res/sql/dbaccess.sql` の `I18N_RESOURCES` (日本語・英語)
 
 ### 実装
 ```javascript
@@ -443,5 +442,5 @@ switchLanguage('en');
 
 **関連ドキュメント**:
 - [アーキテクチャ設計](./ARCHITECTURE.md)
-- [データベース設計](./DATABASE_DESIGN.md)
-- [API仕様書](../api/)
+- [データベース設計](../developer/ja/design/DATABASE_DESIGN.md)
+- [API仕様書](../developer/ja/api/)

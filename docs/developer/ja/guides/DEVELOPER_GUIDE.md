@@ -101,7 +101,7 @@ KakeiBonByRust/
 │
 ├── docs/                         # ドキュメント (詳細は INDEX_ja.md)
 ├── scripts/                      # リリース・統計・i18n チェックスクリプト
-├── src-tauri ファイル群           # tauri.conf.json など
+├── tauri.conf.json               # Tauri 設定
 ├── CHANGELOG_ja.md / CHANGELOG_en.md  # リリースノート
 └── Cargo.toml / package.json     # 依存定義
 ```
@@ -192,7 +192,7 @@ cargo tauri build
 
 3 つのバージョンファイルを必ず**同期**:
 1. `Cargo.toml` の `version`
-2. `src-tauri/tauri.conf.json` の `version`
+2. `tauri.conf.json` の `version`
 3. `package.json` の `version`
 
 その後:

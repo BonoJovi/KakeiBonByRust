@@ -420,44 +420,22 @@ sqlite3 ~/.kakeibon/KakeiBonDB.sqlite3 "PRAGMA foreign_key_check;"
 
 ```
 sql/
-├── README.md                           # SQLスクリプトの説明
-├── phase4/                             # フェーズ別スクリプト
-│   ├── phase4-0_init_categories.sql
-│   └── phase4-0_update_category_codes.sql
-└── migrations/                         # マイグレーションスクリプト（将来）
-    ├── 001_add_new_table.sql
-    └── 002_remove_email_column.sql
+├── README.md       # SQLスクリプトの説明
+├── init/           # 初期化スクリプト (categories/, i18n/, tables/)
+└── add_*.sql       # 1 回限りのマイグレーションスクリプト
 ```
 
-### マイグレーションスクリプトの命名規則
+### マイグレーションスクリプトの命名
 
-```
-{番号}_{説明}.sql
-```
+`sql/` のマイグレーションスクリプトは `add_<内容>.sql` と名付ける (例: `add_shop_id_to_transactions_header.sql`)。
 
-- **番号**: 3桁のシーケンス番号（001, 002, ...）
-- **説明**: スネークケースで簡潔に（例: `add_email_field`, `update_category_codes`）
+### スクリプトの適用
 
-### スクリプトの実行順序
-
-マイグレーションスクリプトは番号順に実行します：
+マイグレーションスクリプトは手動で適用する：
 
 ```bash
-# 手動実行例
-for script in sql/migrations/*.sql; do
-    echo "Applying $script..."
-    sqlite3 ~/.kakeibon/KakeiBonDB.sqlite3 < "$script"
-done
+sqlite3 ~/.kakeibon/KakeiBonDB.sqlite3 < sql/add_shop_id_to_transactions_header.sql
 ```
-
-### フェーズ別スクリプト
-
-`sql/phase4/`のようなフェーズ別ディレクトリは、開発中の特定機能に関連するスクリプトを保存します。
-
-**用途**:
-- 開発環境での初期データセットアップ
-- テストデータの投入
-- 参照用（実際のマイグレーションには使用しない）
 
 **実行例**:
 
@@ -600,7 +578,7 @@ EOF
 
 - [データベース設定ガイド](DATABASE_CONFIGURATION.md) - データベースの基本設定
 - [開発者ガイド](DEVELOPER_GUIDE.md) - データベース接続パターン
-- [トラブルシューティング](TROUBLESHOOTING.md) - 一般的な問題と解決方法
+- [トラブルシューティング](../../../user/ja/TROUBLESHOOTING.md) - 一般的な問題と解決方法
 
 ---
 

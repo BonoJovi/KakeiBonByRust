@@ -216,4 +216,4 @@ sudo dnf install webkit2gtk4.1 gtk3
 ---
 
 **関連ドキュメント**:
-- [開発環境セットアップガイド](../../developer/ja/guides/SETUP_GUIDE.md)
+- [開発環境セットアップガイド](../../developer/ja/setup/DEVELOPMENT_SETUP.md)

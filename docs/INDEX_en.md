@@ -41,7 +41,7 @@ Highlights of recent feature additions and bug fixes. See [CHANGELOG_en](../CHAN
 - [Setup Guide](user/en/SETUP_GUIDE.md) - Initial configuration steps
 
 ### For Developers
-- [Development Setup](developer/en/guides/DEVELOPMENT_SETUP.md) - Setting up development environment (Japanese only)
+- [Development Setup](developer/ja/setup/DEVELOPMENT_SETUP.md) - Setting up development environment (Japanese only)
 - [Developer Guide](developer/en/guides/DEVELOPER_GUIDE.md) - How to start developing
 
 ---
@@ -82,7 +82,7 @@ Highlights of recent feature additions and bug fixes. See [CHANGELOG_en](../CHAN
 |----------|-------------|
 | [Developer Guide](developer/en/guides/DEVELOPER_GUIDE.md) | Development process and workflow |
 | [Coding Standards](developer/en/guides/CODING_STANDARDS_en.md) | Rust/JavaScript/CSS coding standards |
-| [Testing Guide](developer/en/guides/TESTING_GUIDE_en.md) | Test strategy and implementation |
+| [Testing Guide](testing/en/TEST_OVERVIEW.md) | Test strategy and implementation |
 | [Documentation Policy](developer/en/guides/DOCUMENTATION_POLICY.md) | Documentation creation rules |
 
 ### Feature Implementation Guides
@@ -116,9 +116,9 @@ Highlights of recent feature additions and bug fixes. See [CHANGELOG_en](../CHAN
 | Document | Description |
 |----------|-------------|
 | [Test Overview](testing/en/TEST_OVERVIEW.md) | Test strategy and automated testing |
-| [Testing Strategy](developer/en/testing/TESTING.md) | Comprehensive testing strategy |
+| [Test Design](testing/en/TEST_DESIGN.md) | How the tests are built, and why |
 | [Test Results](testing/en/TEST_RESULTS.md) | Test results summary |
-| [Session Management Test Report](developer/en/testing/session-management-test-report.md) | Session management test results |
+| [Session Management Test Report](testing/en/session-management-test-report.md) | Session management test results |
 
 ---
 

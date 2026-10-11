@@ -250,7 +250,7 @@ When an issue occurs, check in the following order:
 Use `get_db_path()` function for all database connections.
 
 #### 2. Centralized Constants Management
-Manage database-related constants in `src-tauri/src/consts.rs`.
+Manage database-related constants in `src/consts.rs`.
 
 #### 3. Separate Test and Production
 ```rust
@@ -284,7 +284,6 @@ Add to `.gitignore` to prevent committing development databases.
 
 - [User Manual](USER_MANUAL_en.md)
 - [Installation Guide](SETUP_GUIDE.md)
-- [FAQ](FAQ_en.md)
 - [Developer I18N Implementation Guide](../../developer/en/guides/I18N_IMPLEMENTATION.md)
 - [Developer Database Configuration Guide](../../developer/en/guides/DATABASE_CONFIGURATION.md)
 

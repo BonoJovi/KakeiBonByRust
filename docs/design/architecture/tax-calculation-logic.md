@@ -336,7 +336,7 @@ Detail level stores both tax-excluded amount (AMOUNT) and tax-included amount (A
 - **Frontend**: `res/js/transaction-detail-management.js`
 - **Constants**: `res/js/consts.js`, `src/consts.rs`
 - **Translation**: `res/locales/*/transaction-detail-management.json`
-- **Database**: `sql/schema.sql`
+- **Database**: `res/sql/dbaccess.sql`
 
 ---
 

@@ -724,7 +724,7 @@ mod session_tests {
 
 ### コーディング規約
 
-`.ai-context/CONVENTIONS.md` を参照:
+`.ai-context/development/CONVENTIONS_OVERVIEW.md` を参照:
 - SQL queries centralization
 - Constants externalization
 - Error handling patterns

@@ -382,9 +382,9 @@ const currentUserRole = ROLE_USER;
 
 ## 関連ドキュメント
 
-- [口座管理API仕様](./API_ACCOUNT_ja.md)
+- [口座管理API仕様](../api/API_ACCOUNT.md)
 - [データベース設計](./DATABASE_CONFIGURATION.md)
-- [トラブルシューティング](./TROUBLESHOOTING.md)
+- [トラブルシューティング](../../../user/ja/TROUBLESHOOTING.md)
 
 ---
 

@@ -288,14 +288,14 @@ See [Test Overview](docs/testing/en/TEST_OVERVIEW.md) for details
 ### [Man]‍[PC] For Developers
 
 #### Design Documents
-- [Build]️ **[Architecture](docs/developer/en/design/ARCHITECTURE.md)** - System architecture overview
-- [Lock] **[Security Design](docs/developer/en/design/SECURITY_DESIGN.md)** - Security implementation
-- [Cabinet]️ **[Database Design](docs/developer/en/design/DATABASE_DESIGN.md)** - DB schema and ER diagrams
-- [Art] **[UI Design](docs/developer/en/design/UI_DESIGN.md)** - User interface design
+- [Build]️ **[Architecture](docs/design/ARCHITECTURE.md)** - System architecture overview (Japanese only)
+- [Lock] **[Security Design](docs/design/SECURITY_DESIGN_en.md)** - Security implementation
+- [Cabinet]️ **[Database Design](docs/developer/en/design/DATABASE_DESIGN_en.md)** - DB schema and ER diagrams
+- [Art] **[UI Design](docs/design/en/UI_DESIGN_en.md)** - User interface design
 
 #### Development Guides
-- [Rocket] **[Development Setup](docs/developer/en/guides/DEVELOPMENT_SETUP.md)** - Setting up dev environment
-- [Note] **[Coding Standards](docs/developer/en/guides/CODING_STANDARDS.md)** - Code style guide
+- [Rocket] **[Development Setup](docs/developer/ja/setup/DEVELOPMENT_SETUP.md)** - Setting up dev environment (Japanese only)
+- [Note] **[Coding Standards](docs/developer/en/guides/CODING_STANDARDS_en.md)** - Code style guide
 - [Test] **Testing Documentation**
   - [Book] **[Test Overview](docs/testing/en/TEST_OVERVIEW.md)** - Test strategy and execution guide
   - [BlueBook] **[Backend Test Index](docs/testing/en/BACKEND_TEST_INDEX.md)** - Complete Rust test list (350 tests)

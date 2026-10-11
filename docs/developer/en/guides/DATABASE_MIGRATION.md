@@ -420,44 +420,23 @@ sqlite3 ~/.kakeibon/KakeiBonDB.sqlite3 "PRAGMA foreign_key_check;"
 
 ```
 sql/
-├── README.md                           # SQL script documentation
-├── phase4/                             # Phase-specific scripts
-│   ├── phase4-0_init_categories.sql
-│   └── phase4-0_update_category_codes.sql
-└── migrations/                         # Migration scripts (future)
-    ├── 001_add_new_table.sql
-    └── 002_remove_email_column.sql
+├── README.md       # SQL script documentation
+├── init/           # Initialization scripts (categories/, i18n/, tables/)
+└── add_*.sql       # One-off migration scripts
 ```
 
-### Migration Script Naming Convention
+### Migration Script Naming
 
-```
-{number}_{description}.sql
-```
+Migration scripts in `sql/` are named `add_<what>.sql` (for example
+`add_shop_id_to_transactions_header.sql`).
 
-- **Number**: 3-digit sequence number (001, 002, ...)
-- **Description**: Brief description in snake_case (e.g., `add_email_field`, `update_category_codes`)
+### Applying a Script
 
-### Script Execution Order
-
-Execute migration scripts in numerical order:
+Apply a migration script by hand:
 
 ```bash
-# Manual execution example
-for script in sql/migrations/*.sql; do
-    echo "Applying $script..."
-    sqlite3 ~/.kakeibon/KakeiBonDB.sqlite3 < "$script"
-done
+sqlite3 ~/.kakeibon/KakeiBonDB.sqlite3 < sql/add_shop_id_to_transactions_header.sql
 ```
-
-### Phase-Specific Scripts
-
-Phase-specific directories like `sql/phase4/` store scripts related to specific features under development.
-
-**Usage**:
-- Initial data setup in development environment
-- Test data insertion
-- Reference (not used for actual migrations)
 
 **Execution Example**:
 
@@ -600,7 +579,7 @@ EOF
 
 - [Database Configuration Guide](DATABASE_CONFIGURATION.md) - Basic database configuration
 - [Developer Guide](DEVELOPER_GUIDE.md) - Database connection patterns
-- [Troubleshooting](TROUBLESHOOTING.md) - Common issues and solutions
+- [Troubleshooting](../../../user/en/TROUBLESHOOTING.md) - Common issues and solutions
 
 ---
 

@@ -310,7 +310,7 @@ Review your translations in context:
 
 If you can build KakeiBon from source:
 
-1. **Install dependencies** (see [Installation Guide](../../../user/en/installation.md))
+1. **Install dependencies** (see [Installation Guide](../../../user/en/INSTALLATION_GUIDE.md))
 
 2. **Add your translations to the database**
    - The maintainer will help with this step
@@ -600,7 +600,7 @@ Error: Invalid UTF-8 sequence
 If you're comfortable with Git:
 
 1. Fork the repository
-2. Add your translations to `src-tauri/migrations/`
+2. Add your translations to `sql/init/i18n/`
 3. Create SQL migration file (maintainer can help)
 4. Submit a pull request
 
@@ -662,8 +662,8 @@ Send to: [bonojovi2741@gmail.com](mailto:bonojovi2741@gmail.com)
 ## Additional Resources
 
 - **[Contributing Guide](../../../../CONTRIBUTING.md)**
-- **[Testing Guide](testing-guide.md)**
-- **[Installation Guide](../../../user/en/installation.md)**
+- **[Testing Guide](../../../testing/en/TEST_OVERVIEW.md)**
+- **[Installation Guide](../../../user/en/INSTALLATION_GUIDE.md)**
 - **[Submit Translation Request](https://github.com/BonoJovi/KakeiBonByRust/issues/new?template=translation.yml)**
 
 ---

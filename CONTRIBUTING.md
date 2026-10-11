@@ -25,7 +25,7 @@ KakeiBonを世界中のユーザーに届けるお手伝いをしてください
 **Currently Supported**: Japanese (ja), English (en)
 **Seeking**: Chinese (zh), Korean (ko), French (fr), German (de), Spanish (es), and more!
 
-[Book] **[Translation Guide](docs/developer/en/guides/TRANSLATION_GUIDE.md)** | **[翻訳ガイド](docs/developer/ja/guides/TRANSLATION_GUIDE.md)**
+[Book] **[Translation Guide](docs/developer/en/guides/translation-guide.md)** | **[翻訳ガイド](docs/developer/ja/guides/translation-guide.md)**
 
 🆕 **[Submit Translation Request](https://github.com/BonoJovi/KakeiBonByRust/issues/new?template=translation.yml)**
 

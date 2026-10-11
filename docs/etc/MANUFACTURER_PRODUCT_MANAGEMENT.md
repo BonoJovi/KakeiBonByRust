@@ -242,10 +242,9 @@ IS_DISABLED機能は、データを完全に削除せず、一時的に非表示
 
 ## 関連ドキュメント
 
-- [IS_DISABLED実装ガイド（開発者向け）](./IS_DISABLED_IMPLEMENTATION_GUIDE.md)
-- [メーカー管理 API仕様](./API_MANUFACTURER.md)
-- [商品管理 API仕様](./API_PRODUCT.md)
-- [データベース設計](./DATABASE_CONFIGURATION.md)
+- [IS_DISABLED実装ガイド（開発者向け）](../developer/ja/guides/IS_DISABLED_IMPLEMENTATION_GUIDE.md)
+- [マスタデータ API仕様 (メーカー・商品)](../developer/ja/api/API_MASTER_DATA.md)
+- [データベース設計](../developer/ja/guides/DATABASE_CONFIGURATION.md)
 
 ---
 

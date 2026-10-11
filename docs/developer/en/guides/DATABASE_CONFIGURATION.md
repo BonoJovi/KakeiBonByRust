@@ -34,10 +34,10 @@ fn get_test_connection() -> Result<Connection> {
 
 ### Constants Definition
 
-Database-related constants are centrally managed in `src-tauri/src/consts.rs`:
+Database-related constants are centrally managed in `src/consts.rs`:
 
 ```rust
-// src-tauri/src/consts.rs
+// src/consts.rs
 pub const DB_DIR_NAME: &str = ".kakeibon";
 pub const DB_FILE_NAME: &str = "KakeiBonDB.sqlite3";
 ```
@@ -47,27 +47,35 @@ pub const DB_FILE_NAME: &str = "KakeiBonDB.sqlite3";
 Common helper function used for all database connections:
 
 ```rust
+// src/db.rs
 use std::path::PathBuf;
 use crate::consts::{DB_DIR_NAME, DB_FILE_NAME};
 
-fn get_db_path() -> PathBuf {
-    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
-    PathBuf::from(home).join(DB_DIR_NAME).join(DB_FILE_NAME)
+pub fn get_db_path() -> PathBuf {
+    let home = std::env::var("HOME")
+        .or_else(|_| std::env::var("USERPROFILE"))
+        .unwrap_or_else(|_| ".".to_string());
+
+    PathBuf::from(home)
+        .join(DB_DIR_NAME)
+        .join(DB_FILE_NAME)
 }
 ```
 
 **Usage Example:**
 
 ```rust
-// src-tauri/src/db/i18n.rs
-pub fn get_all_translations(lang_code: &str) -> Result<HashMap<String, String>> {
-    let conn = Connection::open(get_db_path())?;
-    // ...
-}
+// src/db.rs
+impl Database {
+    pub async fn new() -> Result<Self, sqlx::Error> {
+        let db_path = get_db_path();
+        // ... create the folder, then open the pool with sqlite://<db_path>?mode=rwc
+    }
 
-// src-tauri/src/db/category.rs
-pub fn get_connection() -> Result<Connection> {
-    Connection::open(get_db_path())
+    pub fn db_exists() -> bool {
+        let db_path = get_db_path();
+        db_path.exists()
+    }
 }
 ```
 
@@ -312,7 +320,7 @@ test_*.db
 
 ## Related Documentation
 
-- [Troubleshooting Guide](./TROUBLESHOOTING.md)
+- [Troubleshooting Guide](../../../user/en/TROUBLESHOOTING.md)
 - [I18N Implementation Guide](./I18N_IMPLEMENTATION.md)
 - [Developer Guide](./DEVELOPER_GUIDE.md)
 

@@ -103,8 +103,8 @@ This document describes the implementation details of all input-related screens 
 - User-friendly automation
 
 **Code Location**: 
-- Backend: `src/services/tax_calculation.rs`
-- Frontend: `res/js/transaction-detail-management.js`
+- Backend: `src/services/transaction.rs`
+- Frontend: `res/js/transaction-detail-management.js`, `res/js/detail-tax-calc.js`
 
 ### 2. Dynamic Category Selection
 
@@ -140,8 +140,8 @@ This document describes the implementation details of all input-related screens 
 ### Common Module Implementation
 
 All management screens now use shared modules for:
-- **Menu System**: `res/js/modules/menu-module.js`
-- **Font Size Modal**: `res/js/modules/font-modal.js`
+- **Menu System**: `res/js/menu.js`
+- **Font Size Modal**: `res/js/font-size.js`
 - **Table Styles**: Unified scrollbar and button styles
 
 **Benefits**:
@@ -264,8 +264,8 @@ Calculated fields:
 
 ### Migration Scripts
 
-- `sql/migrations/add_tax_columns.sql`: Adds new tax-related columns
-- `sql/init_db.sql`: Updated with new schema
+- `sql/add_amount_including_tax_to_transactions_detail.sql`, `sql/add_tax_included_type_to_transactions_header.sql`: Add the tax-related columns
+- `res/sql/dbaccess.sql`: Updated with new schema
 - `sql/insert_translation_resources.sql`: Includes detail management UI labels
 
 ---

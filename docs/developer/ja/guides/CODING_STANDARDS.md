@@ -339,6 +339,6 @@ sqlite3 ~/.local/share/kakeibo/kakeibo.db "SELECT * FROM USERS;"
 ---
 
 **関連ドキュメント**:
-- [開発環境セットアップ](./DEVELOPMENT_SETUP.md)
-- [テストガイド](./testing-guide.md)
-- [APIリファレンス](../../reference/ja/api/)
+- [開発環境セットアップ](../setup/DEVELOPMENT_SETUP.md)
+- [テストガイド](../../../testing/ja/TEST_OVERVIEW.md)
+- [APIリファレンス](../api/)

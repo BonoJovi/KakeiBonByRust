@@ -84,11 +84,6 @@ updateCategory3Dropdown()
 async deleteTransaction(transactionId)
 ```
 
-#### Test Data
-- File: `sql/test_data_transactions.sql`
-- Count: 31 items
-- Content: Various date, category, amount patterns
-
 **Test Status**: Manual testing only (automated tests not implemented)
 
 ---
@@ -144,15 +139,14 @@ Category2 Changed
 ## References
 
 ### Documentation
-- [Transaction Requirements](../TRANSACTION_REQUIREMENTS.md)
-- [Category Management API](./API_CATEGORY.md)
-- [TODO.md](../../TODO.md)
+- [Transaction Requirements](../../../design/requirements/TRANSACTION_REQUIREMENTS.md)
+- [Category Management API](../api/API_CATEGORY.md)
+- [TODO.md](../../../../TODO.md)
 
 ### Source Code
 - Backend: `src/services/transaction.rs`
 - Frontend: `res/transaction-management.{html,js,css}`
 - Database: `res/sql/dbaccess.sql`
-- Test Data: `sql/test_data_transactions.sql`
 
 ---
 

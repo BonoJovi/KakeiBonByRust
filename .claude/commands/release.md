@@ -28,7 +28,6 @@ grep -A1 '^name = "app"' Cargo.lock | grep version
 - `CHANGELOG_ja.md` / `CHANGELOG_en.md` — Add version section
 - `README.md` / `README_ja.md` / `README_en.md` — Version badge, release message
 - `.ai-context/core/QUICK_REFERENCE.md` — Version number
-- `zundou-website-vps/index.html` — `data-version` and `data-date` attributes
 
 ### 3. Pre-Release Check (MANDATORY)
 

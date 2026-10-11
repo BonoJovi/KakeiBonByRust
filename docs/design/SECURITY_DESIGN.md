@@ -355,10 +355,10 @@ cargo test
 
 ## 関連ドキュメント
 
-- [API仕様書（共通）](../api/API_COMMON.md) - 認証・暗号化API
-- [API仕様書（ユーザー管理）](../api/API_USER.md) - ユーザーCRUD API
+- [API仕様書（共通）](../developer/ja/api/API_COMMON.md) - 認証・暗号化API
+- [API仕様書（ユーザー管理）](../developer/ja/api/API_USER.md) - ユーザーCRUD API
 - [アーキテクチャ設計](./ARCHITECTURE.md) - システム全体構造
-- [データベース設計](./DATABASE_DESIGN.md) - ENCRYPTED_FIELDSテーブル詳細
+- [データベース設計](../developer/ja/design/DATABASE_DESIGN.md) - ENCRYPTED_FIELDSテーブル詳細
 
 ---
 

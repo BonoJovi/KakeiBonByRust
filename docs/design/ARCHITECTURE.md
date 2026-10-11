@@ -76,23 +76,17 @@ KakeiBonByRust/
 ├── res/                          # フロントエンド
 │   ├── index.html                # ログイン画面
 │   ├── user-management.html      # ユーザー管理画面
-│   ├── main.html                 # メイン画面
 │   ├── js/                       # JavaScript
 │   │   ├── consts.js             # 定数
 │   │   ├── validation-display.js # 入力エラーの表示
 │   │   └── (各画面のJS)
 │   ├── css/                      # スタイルシート
-│   └── locales/                  # 翻訳ファイル
-│       ├── ja/
-│       └── en/
+│   └── sql/dbaccess.sql          # DB 初期化 (翻訳リソース I18N_RESOURCES を含む)
 ├── tests/
 │   └── frontend/                 # フロントエンドテスト
-├── sql/                          # SQLスクリプト
-│   ├── create_tables.sql
-│   └── (その他DDL)
+├── sql/                          # 初期化・マイグレーション用 SQL スクリプト
 ├── docs/                         # ドキュメント
 │   ├── design/                   # 設計書
-│   ├── api/                      # API仕様
 │   └── developer/                # 開発者向け
 └── tauri.conf.json               # Tauri設定
 ```
@@ -132,7 +126,7 @@ KakeiBonByRust/
     ↓ セッション作成
 [session.rs]
     ↓ 画面遷移
-[main.html]
+[index.html]
 ```
 
 ### 4.3 データ暗号化フロー
@@ -284,7 +278,7 @@ cargo build --release
 ./db.sh "SELECT * FROM USERS;"
 
 # マイグレーション
-./db.sh < sql/create_tables.sql
+./db.sh < sql/<スクリプト名>.sql
 ```
 
 ### 9.3 テスト実行
@@ -299,7 +293,7 @@ cargo tarpaulin --out Html
 
 ## 10. 関連ドキュメント
 
-- [API仕様](../api/ja/) - 各Tauriコマンドの詳細
+- [API仕様](../developer/ja/api/) - 各Tauriコマンドの詳細
 - [トランザクション設計](./architecture/TRANSACTION_DESIGN_V2_ja.md) - ヘッダ・明細構造の詳細
 - [セッション管理仕様](./architecture/session-management-spec.md)
 - [税計算ロジック](./architecture/tax-calculation-logic.md)

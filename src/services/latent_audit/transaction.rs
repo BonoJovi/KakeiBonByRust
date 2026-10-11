@@ -1,9 +1,7 @@
 //! Latent-audit regression tests (Opus 5.5, 2026-09-26) — transaction domain.
 //!
-//! Every test here asserts the CORRECT behaviour for a latent bug from
-//! `work/bug_list_opus_5_5_latent_audit_2026-09-26.md`, so it FAILS on the
-//! current code (TDD red phase) and is `#[ignore]`d until the fix lands.
-//! Run with: `cargo test --lib latent_ -- --ignored`.
+//! Each test pins a bug found in the 2026-09 latent-bug audit. The bugs are
+//! fixed, and the tests run in the normal `cargo test` suite.
 
 use super::*;
 use sqlx::sqlite::SqlitePoolOptions;

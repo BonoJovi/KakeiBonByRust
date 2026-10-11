@@ -411,9 +411,9 @@ WHERE USER_ID = ?;
 
 ## 参照ドキュメント
 
-- [費目管理 API ドキュメント](API_CATEGORY_ja.md)
-- [アクセシビリティインジケータ](ACCESSIBILITY_INDICATORS.md)
-- [テスト戦略](TEST_SUMMARY.md)
+- [費目管理 API ドキュメント](../api/API_CATEGORY.md)
+- [アクセシビリティインジケータ](../../../etc/ACCESSIBILITY_INDICATORS.md)
+- [テスト戦略](../../../testing/ja/TEST_OVERVIEW.md)
 
 ---
 

@@ -178,9 +178,8 @@ export const ROLE_USER = 1;
 ## Additional Context
 
 For detailed information, refer to:
-- `.ai-context/PROJECT_STRUCTURE.md`: Comprehensive structure
-- `.ai-context/CONVENTIONS.md`: Detailed conventions
-- `.ai-context/KEY_FILES.md`: Important files quick reference
+- `.ai-context/architecture/PROJECT_STRUCTURE.md`: Comprehensive structure
+- `.ai-context/development/CONVENTIONS_OVERVIEW.md`: Conventions overview
 - `.github/copilot-instructions.md`: GitHub Copilot specific instructions
 
 ## Current Work (2024-11-09)

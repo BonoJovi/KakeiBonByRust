@@ -710,7 +710,7 @@ async function setSafeSetting(key, value) {
 
 ### Implementation Files
 
-- Settings Service: `src/services/settings.rs`
+- Settings Service: `src/settings.rs`
 - I18N Service: `src/services/i18n.rs`
 - Tauri Commands: `src/lib.rs`
 

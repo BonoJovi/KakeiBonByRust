@@ -1,8 +1,7 @@
 //! Latent-audit 2026-09 regression tests for `services::recurring`.
 //!
-//! TDD red phase: every test asserts the CORRECT behaviour and is expected to
-//! FAIL against the current code. All are `#[ignore]`d so the normal suite
-//! stays green; run them with `cargo test --lib latent_ -- --ignored`.
+//! Each test pins a bug found in the 2026-09 latent-bug audit. The bugs are
+//! fixed, and the tests run in the normal `cargo test` suite.
 //!
 //! Schema note: the shared `test_helpers::database::setup_test_db` schema
 //! lacks `TRANSACTIONS_HEADER.IS_SCHEDULED` and the migrated DETAIL columns,
@@ -819,8 +818,8 @@ fn latent_l10_generation_terminates_at_the_end_of_the_date_range() {
 
 // ===========================================================================
 // Latent-bug scan 2 (2026-09-29): R1, R2, R6, R7
-// (R3 lives in src/latent_audit/db.rs; R4, R5, R8 are Jest tests under
-// tests/frontend/latent-audit/scan2-r*.test.js)
+// (R3 lives in src/latent_audit/db.rs; R4, R5, R8 are Jest tests in
+// tests/frontend/pages/recurring-rule-*.test.js)
 // ===========================================================================
 
 async fn occurrence_dates(pool: &SqlitePool, rule_id: i64) -> Vec<String> {

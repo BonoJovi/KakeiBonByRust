@@ -353,7 +353,7 @@ function escapeHtml(text) {
 
 ## 関連ドキュメント
 - [ユーザ管理機能実装ドキュメント](./USER_MANAGEMENT.md) - バックエンド実装
-- [アクセシビリティインジケータ](./ACCESSIBILITY_INDICATORS.md) - インジケータ仕様
+- [アクセシビリティインジケータ](../../../etc/ACCESSIBILITY_INDICATORS.md) - インジケータ仕様
 - [動的言語メニュー](./DYNAMIC_LANGUAGE_MENU.md) - 言語切り替え機能
 - [多言語化実装](./I18N_IMPLEMENTATION.md) - i18n基盤
 

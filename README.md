@@ -495,12 +495,8 @@ See [Test Overview](docs/testing/en/TEST_OVERVIEW.md) for details / 詳細は [�
 #### API Documentation / API ドキュメント
 - [Folder] **Category Management API / 費目管理 API**
   - [English](docs/developer/en/api/API_CATEGORY.md) / [日本語](docs/developer/ja/api/API_CATEGORY.md)
-- [Shop] **Shop Management API / 店舗管理 API**
-  - [English](docs/developer/en/api/API_SHOP.md) / [日本語](docs/developer/ja/api/API_SHOP.md)
-- [Factory] **Manufacturer Management API / メーカー管理 API**
-  - [English](docs/developer/en/api/API_MANUFACTURER.md) / [日本語](docs/developer/ja/api/API_MANUFACTURER.md)
-- [Package] **Product Management API / 商品管理 API**
-  - [English](docs/developer/en/api/API_PRODUCT.md) / [日本語](docs/developer/ja/api/API_PRODUCT.md)
+- [Shop] **Master Data API (Shop, Manufacturer, Product) / マスタデータ API (店舗・メーカー・商品)**
+  - [English](docs/developer/en/api/API_MASTER_DATA.md) / [日本語](docs/developer/ja/api/API_MASTER_DATA.md)
 - [Money] **Transaction Management API / 入出金管理 API**
   - [English](docs/developer/en/api/API_TRANSACTION.md) / [日本語](docs/developer/ja/api/API_TRANSACTION.md)
 

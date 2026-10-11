@@ -329,7 +329,7 @@ default options with `data-i18n` attributes. Changed to preserve default options
 
 ## References
 
-- [TRANSACTION_DESIGN_V2.md](./TRANSACTION_DESIGN_V2.md) - V2 Design Details
+- [TRANSACTION_DESIGN_V2.md](../../../design/architecture/TRANSACTION_DESIGN_V2.md) - V2 Design Details
 - [ACCOUNT_MANAGEMENT_UI.md](./ACCOUNT_MANAGEMENT_UI.md) - Account Management Screen
 - [I18N_IMPLEMENTATION.md](./I18N_IMPLEMENTATION.md) - Internationalization Implementation
 

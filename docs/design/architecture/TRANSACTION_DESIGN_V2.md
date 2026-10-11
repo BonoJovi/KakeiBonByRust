@@ -412,9 +412,9 @@ JOIN TRANSACTION_HEADERS h ON (appropriate JOIN condition);
 ## References
 
 ### Related Documents
-- [Transaction Requirements](../TRANSACTION_REQUIREMENTS.md)
-- [Transaction Management UI Implementation v1](./TRANSACTION_MANAGEMENT_UI.md)
-- [Category Management API](./API_CATEGORY.md)
+- [Transaction Requirements](../requirements/TRANSACTION_REQUIREMENTS.md)
+- [Transaction Management UI Implementation v1](../../developer/en/guides/TRANSACTION_MANAGEMENT_UI.md)
+- [Category Management API](../../developer/en/api/API_CATEGORY.md)
 
 ### Database Schema
 - `res/sql/dbaccess.sql`

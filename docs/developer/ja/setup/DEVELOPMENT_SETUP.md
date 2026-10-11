@@ -262,8 +262,8 @@ cargo test
 セットアップが完了したら、以下のドキュメントを参照してください:
 
 - [開発者ガイド](../guides/DEVELOPER_GUIDE.md) - コーディング規約とベストプラクティス
-- [アーキテクチャ設計](../../design/ja/ARCHITECTURE.md) - システム全体像
-- [API仕様書](../api/ja/) - 各種APIの詳細仕様
+- [アーキテクチャ設計](../../../design/ARCHITECTURE.md) - システム全体像
+- [API仕様書](../api/) - 各種APIの詳細仕様
 
 ---
 

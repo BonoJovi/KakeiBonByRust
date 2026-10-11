@@ -366,9 +366,9 @@ v1.1.0から、集計データをグラフで可視化できる**ダッシュボ
 
 ## 関連ドキュメント
 
-- [集計APIリファレンス](API_AGGREGATION.md) - 開発者向けAPI仕様
-- [入出金管理ガイド](TRANSACTION_MANAGEMENT_UI_V2.md) - データ入力方法
-- [カテゴリ管理ガイド](CATEGORY_MANAGEMENT_UI.md) - 費目の設定方法
+- [集計APIリファレンス](../../developer/ja/api/API_AGGREGATION.md) - 開発者向けAPI仕様
+- [入出金管理ガイド](../../developer/ja/guides/TRANSACTION_MANAGEMENT_UI_V2.md) - データ入力方法
+- [カテゴリ管理ガイド](../../developer/ja/guides/CATEGORY_MANAGEMENT_UI.md) - 費目の設定方法
 
 ---
 
