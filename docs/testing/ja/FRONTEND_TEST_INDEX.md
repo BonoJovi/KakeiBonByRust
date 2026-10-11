@@ -2,8 +2,8 @@
 
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
-**最終更新**: 2026-10-10 JST  
-**総テスト数**: 831件 (jest suite 101 ファイル、`npm test` 実測)
+**最終更新**: 2026-10-11 JST  
+**総テスト数**: 827件 (jest suite 102 ファイル、`npm test` 実測)
 
 ---
 
@@ -107,6 +107,7 @@
   - [pages/transaction-management-edit-roundtrip.test.js](#pagestransaction-management-edit-roundtriptestjs)
   - [pages/transaction-management-edit-accounts.test.js](#pagestransaction-management-edit-accountstestjs)
   - [pages/transaction-management-edit-shop.test.js](#pagestransaction-management-edit-shoptestjs)
+  - [pages/transaction-management-edit-modal-errors.test.js](#pagestransaction-management-edit-modal-errorstestjs)
   - [pages/transaction-management-account-required.test.js](#pagestransaction-management-account-requiredtestjs)
   - [pages/user-management-password-page.test.js](#pagesuser-management-password-pagetestjs)
   - [pages/user-management-nonadmin-page.test.js](#pagesuser-management-nonadmin-pagetestjs)
@@ -389,15 +390,13 @@
 
 取引編集機能のテスト。
 
-**テスト数**: 32件
+**テスト数**: 17件
 
 | テストカテゴリ (describe) | 説明 | テスト数 |
 |--------------|------|---------|
-| Modal State Management | モーダルの開閉・状態制御 | 5件 |
 | Amount Formatting | 金額の表示形式と読み取り | 17件 |
-| Error Handling | エラー時の処理 | 10件 |
 
-保存済みヘッダーの読み込みと保存時に送る値は、実際の画面で [pages/transaction-management-edit-roundtrip.test.js](#pagestransaction-management-edit-roundtriptestjs) が確かめる。大分類による口座欄の表示と保存時の確認は [pages/transaction-management-edit-accounts.test.js](#pagestransaction-management-edit-accountstestjs) が、店舗欄は [pages/transaction-management-edit-shop.test.js](#pagestransaction-management-edit-shoptestjs) が確かめる。
+保存済みヘッダーの読み込みと保存時に送る値は、実際の画面で [pages/transaction-management-edit-roundtrip.test.js](#pagestransaction-management-edit-roundtriptestjs) が確かめる。大分類による口座欄の表示と保存時の確認は [pages/transaction-management-edit-accounts.test.js](#pagestransaction-management-edit-accountstestjs) が、店舗欄は [pages/transaction-management-edit-shop.test.js](#pagestransaction-management-edit-shoptestjs) が、どのヘッダーを扱うかと読み込み・保存に失敗したときの表示は [pages/transaction-management-edit-modal-errors.test.js](#pagestransaction-management-edit-modal-errorstestjs) が確かめる。
 
 **ファイル**: tests/frontend/transaction-edit.test.js
 
@@ -1820,6 +1819,30 @@
 
 ---
 
+### pages/transaction-management-edit-modal-errors.test.js
+
+実際の入出金一覧の編集ウィンドウで、どのヘッダーを扱うか (タイトル・読み込むヘッダー・閉じた後の保存先) と、読み込み・保存に失敗したときの表示を確かめる。
+
+**テスト数**: 11件
+
+| テスト | 説明 |
+|--------|------|
+| `should show the edit title and load that header when a transaction is opened from the list` | 一覧から開くと編集のタイトルになり、その取引のヘッダーを読み込む |
+| `should show the add title and load no header when the add window is opened` | 新規追加では追加のタイトルになり、ヘッダーを読み込まない |
+| `should save a new header when the add window is opened after an edit window is closed` | 編集ウィンドウを閉じた後の新規追加は、更新ではなく新しいヘッダーとして保存する |
+| `should update the second transaction when it is opened after the first is closed` | 1 件目を閉じて 2 件目を開くと、2 件目を更新する |
+| `should show the save-failed message with the backend message and keep the window open when the backend refuses the save` | 保存を断られると `transaction_mgmt.failed_to_save` とバックエンドのメッセージを表示し、ウィンドウは開いたまま |
+| `should show the save-failed message with the text when the backend answers a plain string` | エラーが文字列のときは、その文字列を添えて表示する |
+| `should show the memo limit under the memo and no toast when the backend refuses the memo` | バックエンドがメモの長さで断ると、トーストではなくメモ欄の下に上限超過を表示する |
+| `should show the save-failed message when a validation error is not about the memo` | メモ以外の入力エラーは保存失敗のトーストで表示し、メモ欄には出さない |
+| `should show no memo message when the window is opened again after a memo error` | メモのエラーの後でウィンドウを開き直すと、メモ欄のエラーは消えている |
+| `should show the load-failed message with the backend message when the header cannot be loaded` | ヘッダーを読み込めないと `transaction_mgmt.failed_to_load` とバックエンドのメッセージを表示する |
+| `should show the load-failed message with the text when loading answers a plain string` | 読み込みエラーが文字列のときは、その文字列を添えて表示する |
+
+**ファイル**: tests/frontend/pages/transaction-management-edit-modal-errors.test.js
+
+---
+
 ### pages/transaction-management-account-required.test.js
 
 実際の入出金一覧の編集ウィンドウで、大分類が使う口座を「未指定」のまま保存しようとすると断ることを確かめる (支出は出金元、収入は入金先、振替は両方)。以前は保存でき、ダッシュボードは「未指定」の口座を表示しないため、支出・収入としては数えられるのにどの口座の残高も動かなかった。
@@ -2031,8 +2054,8 @@
 | user-addition.test.js | 46 |
 | admin-edit.test.js | 62 |
 | general-user-edit.test.js | 62 |
-| **機能別テスト** | **514件** |
-| transaction-edit.test.js | 32 |
+| **機能別テスト** | **510件** |
+| transaction-edit.test.js | 17 |
 | transaction-detail-tax-calculation.test.js | 33 |
 | toast.test.js | 14 |
 | tax-calc.test.js | 12 |
@@ -2119,6 +2142,7 @@
 | pages/transaction-management-edit-roundtrip.test.js | 10 |
 | pages/transaction-management-edit-accounts.test.js | 14 |
 | pages/transaction-management-edit-shop.test.js | 11 |
+| pages/transaction-management-edit-modal-errors.test.js | 11 |
 | pages/transaction-management-account-required.test.js | 7 |
 | pages/user-management-password-page.test.js | 2 |
 | pages/user-management-nonadmin-page.test.js | 3 |
@@ -2130,7 +2154,7 @@
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **831件** |
+| **総計 (jest)** | **827件** |
 
 総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
 
