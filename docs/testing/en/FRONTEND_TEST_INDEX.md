@@ -3,7 +3,7 @@
 This document provides a complete index of all frontend tests implemented in JavaScript.
 
 **Last Updated**: 2026-10-11 JST  
-**Total Tests**: 827 (jest suites; 102 test files, per `npm test`)
+**Total Tests**: 822 (jest suites; 102 test files, per `npm test`)
 
 ---
 
@@ -28,9 +28,8 @@ and are **not** added again to the grand total.
 - **admin-edit.test.js** - Admin edit tests (62)
 - **general-user-edit.test.js** - General user edit tests (62)
 
-### Feature-Specific Tests (510 tests)
+### Feature-Specific Tests (505 tests)
 
-- **transaction-edit.test.js** - Transaction edit tests (17)
 - **transaction-detail-tax-calculation.test.js** - Tax calculation tests on the real helpers in `detail-tax-calc.js` (tax rates, 1 yen, the maximum amount, rounding types, exact splits of a tax-included amount, a round trip); a typed tax-included price is always kept, with the tax carved out of it when no exact tax-excluded split exists (latent-audit scan2-T2) (33)
 - **toast.test.js** - Toast notification tests (14)
 - **tax-calc.test.js** - Tax calculation utility tests (12)
@@ -118,6 +117,7 @@ and are **not** added again to the grand total.
 - **pages/transaction-management-edit-accounts.test.js** - Boots the real transaction list: choosing a category shows the From account for an expense, the To account for an income and both for a transfer or any other category; a hidden account is set to `NONE` and no category hides both; clicking Save sends a filled-in header and a total of 0, but not a header with no date, category or total, and a transfer with the same account twice shows `transaction_mgmt.transfer_same_account` instead (14)
 - **pages/transaction-management-edit-shop.test.js** - Boots the real transaction list: the Shop select lists Unspecified first and then the shops in order; opening a saved header selects its shop, and Unspecified when it has none or the shop is not in the list; saving sends the chosen shop as an integer `shopId`, or null for Unspecified, for an edited and for a new header (11)
 - **pages/transaction-management-edit-modal-errors.test.js** - Boots the real transaction list: opening a transaction shows the edit title and loads that header, the add window shows the add title and loads none; after the window is closed the next add saves a new header and the next edit updates the transaction that was opened; a failed save shows `transaction_mgmt.failed_to_save` with the backend message (or the plain text) and keeps the window open, a backend memo limit error is shown under the memo instead and is gone when the window is opened again; a failed load shows `transaction_mgmt.failed_to_load` with the backend message (11)
+- **pages/transaction-management-amounts.test.js** - Boots the real transaction list: the list shows each total as `¥` with ja-JP commas (`¥1,234,567`, `¥999`, `¥0`); the edit window shows the saved total as plain digits and sends it back unchanged, and a typed total of plain digits is sent as a number; on Save the field's own checks stop "1,000", "1099.5" and "-5", and "1e3" or a total past the safe integer range shows `common.error_amount_not_integer` under the field without sending; the message clears once the total is fixed (12)
 - **pages/transaction-management-account-required.test.js** - Boots the real transaction list: saving a header whose category needs an account left "Unspecified" (EXPENSE: From, INCOME: To, TRANSFER: both) is refused with a message under the empty field and the window stays open; the message clears once the account is chosen, an income with only a To account is sent, and a backend `account_required` refusal shows the `transaction_mgmt.account_required` toast (7)
 - **pages/user-management-password-page.test.js** - Admin session: a 16-space password is reported as the password error, not as the raw `user_mgmt.empty_name` key on the username (latent-audit L24); 8 emoji (16 UTF-16 units, 8 characters) are rejected by the frontend length check (latent-audit L31) (2)
 - **pages/user-management-nonadmin-page.test.js** - General-user session: no Add User button, no empty footer line where the button was, and no delete button on the user's own row (latent-audit L30) (3)
@@ -150,8 +150,7 @@ and are **not** added again to the grand total.
 | user-addition.test.js | 46 |
 | admin-edit.test.js | 62 |
 | general-user-edit.test.js | 62 |
-| **Feature-Specific Tests** | **510** |
-| transaction-edit.test.js | 17 |
+| **Feature-Specific Tests** | **505** |
 | transaction-detail-tax-calculation.test.js | 33 |
 | toast.test.js | 14 |
 | tax-calc.test.js | 12 |
@@ -239,6 +238,7 @@ and are **not** added again to the grand total.
 | pages/transaction-management-edit-accounts.test.js | 14 |
 | pages/transaction-management-edit-shop.test.js | 11 |
 | pages/transaction-management-edit-modal-errors.test.js | 11 |
+| pages/transaction-management-amounts.test.js | 12 |
 | pages/transaction-management-account-required.test.js | 7 |
 | pages/user-management-password-page.test.js | 2 |
 | pages/user-management-nonadmin-page.test.js | 3 |
@@ -250,7 +250,7 @@ and are **not** added again to the grand total.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **Total (jest)** | **827** |
+| **Total (jest)** | **822** |
 
 Grand total is Screen + Feature + Aggregation (Common Test Suites are helper
 libraries invoked from Screen-Specific files and their assertions are already
