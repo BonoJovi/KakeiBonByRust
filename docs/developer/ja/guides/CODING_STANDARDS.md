@@ -123,10 +123,10 @@ src/
 
 ```javascript
 // ✓ Good
-import { validatePassword } from './validation-helpers.js';
+import { showToast } from './toast.js';
 
 // ✗ Bad
-import { validatePassword } from './validation-helpers';
+import { showToast } from './toast';
 ```
 
 ### Async/Await
@@ -183,14 +183,12 @@ pub fn validate_password(password: &str) -> ValidationResult {
 ```
 
 ```javascript
-// res/js/validation-helpers.js
-export const MIN_PASSWORD_LENGTH = 16;
-
-export function validatePassword(password) {
-    if (password.length < MIN_PASSWORD_LENGTH) {
-        return { valid: false, error: 'Password too short' };
-    }
-    return { valid: true };
+// res/js/menu.js (handleAdminSetup) — UTF-16 の単位ではなく、
+// バックエンドの chars().count() と同じく文字 (コードポイント) で数える
+if ([...password].length < 16) {
+    messageDiv.textContent = i18n.t('error.password_too_short');
+    messageDiv.className = 'message error';
+    return;
 }
 ```
 
@@ -272,7 +270,7 @@ sqlite3 ~/.local/share/kakeibo/kakeibo.db "SELECT * FROM USERS;"
 3. **Assert**: 結果検証
 
 ### 共通モジュールの再利用
-- フロントエンド: `*-validation-tests.js`からテストスイートをインポート
+- フロントエンド: `tests/frontend/pages/_page-harness.js` で実際の画面を起動する。複数画面で共通の確認は、使うテストの隣の補助ファイルにまとめる (例: `pages/_user-self-edit-checks.js`)
 - バックエンド: `src/test_helpers.rs`と`src/validation_tests.rs`を使用
 
 ### テストカウント

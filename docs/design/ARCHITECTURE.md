@@ -79,7 +79,7 @@ KakeiBonByRust/
 │   ├── main.html                 # メイン画面
 │   ├── js/                       # JavaScript
 │   │   ├── consts.js             # 定数
-│   │   ├── validation-helpers.js # バリデーション共通
+│   │   ├── validation-display.js # 入力エラーの表示
 │   │   └── (各画面のJS)
 │   ├── css/                      # スタイルシート
 │   └── locales/                  # 翻訳ファイル
@@ -106,7 +106,7 @@ KakeiBonByRust/
     ↓ (1) 入力/クリック
 [HTML/JS]
     ↓ (2) クライアント側バリデーション
-[validation-helpers.js]
+[各画面の JS (res/js/*.js)]
     ↓ (3) Tauri IPC呼び出し
 [window.__TAURI__.invoke()]
     ↓ (4) コマンド実行
@@ -257,10 +257,8 @@ ENCRYPTED_FIELDS (暗号化メモ)
 
 ### 8.2 フロントエンド (JavaScript)
 
-- **共通モジュール**: 
-  - `validation-helpers.js`: 検証ロジック
-  - `*-validation-tests.js`: テストスイート
-- **各画面**: 共通モジュールをインポート
+- **page テスト**: `tests/frontend/pages/*.test.js` が実際の画面の HTML と JS を起動し、入力チェックの表示と Tauri コマンドの呼び出しを確かめる
+- **起動の共通部品**: `tests/frontend/pages/_page-harness.js`
 
 ### 8.3 CI/CD
 

@@ -131,7 +131,7 @@ cargo test test_password_validation
 
 ## Frontend Testing (JavaScript)
 
-### Current Approach: Manual Testing
+### Manual Checklist (in the running app)
 
 **Checklist** (per screen):
 - [ ] Form validation (empty fields, invalid input)
@@ -143,30 +143,29 @@ cargo test test_password_validation
 - [ ] CRUD operations
 - [ ] Data persistence after refresh
 
-### Future: Automated Testing
+### Automated Testing: Jest + jsdom
 
-**Planned Framework**: Jest + JSDOM
+Run with `cd tests/frontend && npm test`. Frontend tests boot the real page
+module, not a copy of its rules:
 
-#### Test Structure
 ```javascript
-// tests/frontend/validation-helpers.test.js
-import { validatePassword } from '../js/validation-helpers.js';
+// tests/frontend/pages/index-setup-validation.test.js
+const { invoke } = mockPageModules(jest, { keepMenu: true, invoke: (cmd) => ... });
+loadPageBody('index.html');
+await import('../../../res/js/menu.js');
+await bootPage();
 
-describe('Password Validation', () => {
-    test('should accept 16+ character password', () => {
-        expect(validatePassword('a'.repeat(16))).toBe(true);
-    });
-    
-    test('should reject < 16 character password', () => {
-        expect(validatePassword('a'.repeat(15))).toBe(false);
-    });
+test('should refuse with the right message and not register when the password has 15 characters', async () => {
+    // fill in #admin-setup-form and dispatch submit
+    expect(document.getElementById('setup-message').textContent).toBe('error.password_too_short');
+    expect(callsOf(invoke, 'register_admin')).toHaveLength(0);
 });
 ```
 
-#### Common Test Modules
-- `tests/frontend/validation-helpers.js` - Shared validation functions
-- `tests/frontend/*-validation-tests.js` - Reusable test suites
-- `tests/frontend/test-common.js` - Test utilities
+#### Page Test Modules
+- `tests/frontend/pages/_page-harness.js` - Boots a real page with mocked Tauri, i18n and session
+- `tests/frontend/pages/*.test.js` - Tests on the real screens
+- Full list: `docs/testing/en/FRONTEND_TEST_INDEX.md`
 
 ---
 

@@ -3,22 +3,16 @@
 このドキュメントは、JavaScriptで実装されたフロントエンドテストの完全なインデックスです。
 
 **最終更新**: 2026-10-11 JST  
-**総テスト数**: 822件 (jest suite 102 ファイル、`npm test` 実測)
+**総テスト数**: 694件 (jest suite 101 ファイル、`npm test` 実測)
 
 ---
 
 ## 目次
 
-- [共通テストスイート](#共通テストスイート)
-  - [password-validation-tests.js](#password-validation-testsjs)
-  - [username-validation-tests.js](#username-validation-testsjs)
-  - [user-edit-validation-tests.js](#user-edit-validation-testsjs)
-  - [validation-helpers.js](#validation-helpersjs)
 - [画面別テスト](#画面別テスト)
-  - [admin-setup.test.js](#admin-setuptestjs)
-  - [user-addition.test.js](#user-additiontestjs)
-  - [admin-edit.test.js](#admin-edittestjs)
-  - [general-user-edit.test.js](#general-user-edittestjs)
+  - [pages/index-setup-validation.test.js](#pagesindex-setup-validationtestjs)
+  - [pages/user-management-admin-validation.test.js](#pagesuser-management-admin-validationtestjs)
+  - [pages/user-management-self-edit-validation.test.js](#pagesuser-management-self-edit-validationtestjs)
 - [機能別テスト](#機能別テスト)
   - [transaction-detail-tax-calculation.test.js](#transaction-detail-tax-calculationtestjs)
   - [toast.test.js](#toasttestjs)
@@ -121,266 +115,55 @@
   - [aggregation-period.test.js](#aggregation-periodtestjs)
 - [共通ヘルパー (jest 総計に含めない)](#共通ヘルパー-jest-総計に含めない)
   - [aggregation-test-helpers.js](#aggregation-test-helpersjs)
-
----
-
-## 共通テストスイート
-
-### password-validation-tests.js
-
-パスワードバリデーションの再利用可能なテストスイート。すべての画面で共通利用。
-
-| テストスイート関数 | 説明 | テスト数 | 行 |
-|-------------------|------|---------|-----|
-| `testEmptyPasswordValidation(validationFn)` | 空パスワードのバリデーション | 6件 | 12 |
-| `testPasswordLengthValidation(validationFn)` | パスワード長のバリデーション | 6件 | 55 |
-| `testPasswordMatchValidation(validationFn)` | パスワード一致のバリデーション | 6件 | 99 |
-| `testValidPasswordScenarios(validationFn)` | 有効なパスワードシナリオ | 8件 | 142 |
-| `runAllPasswordTests(validationFn, suiteName)` | すべてのパスワードテストを一括実行 | 26件 | 199 |
-
-#### 詳細テストケース
-
-**testEmptyPasswordValidation (6件)**
-
-| テスト名 | 説明 | 期待結果 |
-|---------|------|---------|
-| `should reject the password when it is an empty string` | 空文字列のパスワード | エラー: "Password cannot be empty!" |
-| `should reject the password when it has only spaces` | スペースのみのパスワード | エラー: "Password cannot be empty!" |
-| `should reject the password when it has only tabs` | タブのみのパスワード | エラー: "Password cannot be empty!" |
-| `should reject the password when it has only mixed whitespace` | スペース・タブ・改行が混ざった空白のみのパスワード | エラー: "Password cannot be empty!" |
-| `should reject the password when it is null` | null のパスワード | エラー: "Password cannot be empty!" |
-| `should reject the password when it is undefined` | undefined のパスワード | エラー: "Password cannot be empty!" |
-
-**testPasswordLengthValidation (6件)**
-
-| テスト名 | 説明 | 期待結果 |
-|---------|------|---------|
-| `should reject the password when it is shorter than 16 characters` | 16 文字未満 (5 文字) のパスワード | エラー: "Password must be at least 16 characters long!" |
-| `should reject the password when it has a single character` | 1 文字のパスワード | エラー: "Password must be at least 16 characters long!" |
-| `should reject the password when it has exactly 15 characters` | ちょうど 15 文字のパスワード | エラー: "Password must be at least 16 characters long!" |
-| `should accept the password when it has exactly 16 characters` | ちょうど 16 文字のパスワード | valid: true |
-| `should accept the password when it has more than 16 characters` | 16 文字を超えるパスワード | valid: true |
-| `should accept the password when it is very long (100 characters)` | 100 文字のパスワード | valid: true |
-
-**testPasswordMatchValidation (6件)**
-
-| テスト名 | 説明 | 期待結果 |
-|---------|------|---------|
-| `should reject the passwords when they do not match` | パスワードと確認が一致しない | エラー: "Passwords do not match!" |
-| `should reject when password is correct but confirmation is empty` | パスワードは正しいが確認が空 | エラー: "Passwords do not match!" |
-| `should reject when password is correct but confirmation is null` | パスワードは正しいが確認が null | エラー: "Passwords do not match!" |
-| `should reject the passwords when they differ only in letter case` | 大文字・小文字だけが違う | エラー: "Passwords do not match!" |
-| `should reject when passwords differ by one character` | 1 文字だけ違う | エラー: "Passwords do not match!" |
-| `should accept when both passwords match exactly` | 完全に一致する | valid: true |
-
-**testValidPasswordScenarios (8件)**
-
-| テスト名 | 説明 | 期待結果 |
-|---------|------|---------|
-| `should accept the passwords when they match and have 16 characters` | 一致する 16 文字のパスワード | valid: true |
-| `should accept password with spaces when matching and long enough` | スペースを含み、一致し 16 文字以上 | valid: true |
-| `should accept the password when it has special characters` | 記号を含むパスワード | valid: true |
-| `should accept the password when it has unicode characters` | Unicode 文字を含むパスワード | valid: true |
-| `should accept the password when it mixes letters, digits and symbols` | 英字・数字・記号が混ざったパスワード | valid: true |
-| `should accept the password when it has only digits` | 数字のみ (16 文字) | valid: true |
-| `should accept the password when it has only letters` | 英字のみ (16 文字) | valid: true |
-| `should accept the password when it has only special characters` | 記号のみ (16 文字) | valid: true |
-
-**使用箇所**: admin-setup.test.js, user-addition.test.js, admin-edit.test.js, general-user-edit.test.js
-
----
-
-### username-validation-tests.js
-
-ユーザー名バリデーションの再利用可能なテストスイート。
-
-| テストスイート関数 | 説明 | テスト数 | 行 |
-|-------------------|------|---------|-----|
-| `testUsernameValidation(validationFn)` | ユーザー名バリデーション | 13件 | 11 |
-| `testCombinedValidation(validationFn)` | ユーザー名とパスワードの組み合わせバリデーション | 7件 | 98 |
-
-#### 詳細テストケース
-
-**testUsernameValidation (13件)**
-
-| テスト名 | 説明 | 期待結果 |
-|---------|------|---------|
-| `should reject the username when it is empty` | 空のユーザー名 | エラー: "Username cannot be empty!" |
-| `should reject the username when it has only spaces` | スペースのみのユーザー名 | エラー: "Username cannot be empty!" |
-| `should reject the username when it has only tabs` | タブのみのユーザー名 | エラー: "Username cannot be empty!" |
-| `should reject the username when it has only mixed whitespace` | スペース・タブ・改行が混ざった空白のみのユーザー名 | エラー: "Username cannot be empty!" |
-| `should reject the username when it is null` | null のユーザー名 | エラー: "Username cannot be empty!" |
-| `should reject the username when it is undefined` | undefined のユーザー名 | エラー: "Username cannot be empty!" |
-| `should accept the username when it has a single character` | 1 文字のユーザー名 | valid: true |
-| `should accept the username when it has several characters` | 複数文字のユーザー名 | valid: true |
-| `should accept the username when it has digits` | 数字を含むユーザー名 | valid: true |
-| `should accept the username when it has underscores and hyphens` | アンダースコアとハイフンを含むユーザー名 | valid: true |
-| `should accept the username when it is in email format` | メールアドレス形式のユーザー名 | valid: true |
-| `should accept the username when it has leading spaces (trimmed)` | 先頭にスペースがあるユーザー名 (trim される) | valid: true |
-| `should accept the username when it has trailing spaces (trimmed)` | 末尾にスペースがあるユーザー名 (trim される) | valid: true |
-
-**testCombinedValidation (7件)**
-
-| テスト名 | 説明 | 期待結果 |
-|---------|------|---------|
-| `should reject when both username and password are empty` | ユーザー名・パスワードとも空 | エラー: "Username cannot be empty!" |
-| `should report the username error first when both the username and the password are invalid` | ユーザー名が空でパスワードも短い (ユーザー名のエラーが先) | エラー: "Username cannot be empty!" |
-| `should report the empty-password error when the password is empty` | ユーザー名は有効でパスワードが空 (長さより空のエラーが先) | エラー: "Password cannot be empty!" |
-| `should report the length error first when the password is short and does not match` | パスワードが短く確認とも一致しない (一致より長さのエラーが先) | エラー: "Password must be at least 16 characters long!" |
-| `should accept the user addition when every field is valid` | すべての項目が有効 | valid: true |
-| `should accept the user addition when the username is in email format` | メールアドレス形式のユーザー名 | valid: true |
-| `should accept the user addition when the password mixes letters, digits and symbols` | 英字・数字・記号が混ざったパスワード | valid: true |
-
-**使用箇所**: user-addition.test.js, admin-edit.test.js, general-user-edit.test.js
-
----
-
-### user-edit-validation-tests.js
-
-ユーザー編集バリデーションの再利用可能なテストスイート。
-
-| テストスイート関数 | 説明 | テスト数 | 行 |
-|-------------------|------|---------|-----|
-| `testUsernameOnlyEdit(validateFunc)` | ユーザー名のみ編集のテスト | 6件 | 13 |
-| `testPasswordOnlyEdit(validateFunc)` | パスワードのみ編集のテスト | 8件 | 56 |
-| `testCombinedEdit(validateFunc)` | ユーザー名とパスワード同時編集のテスト | 4件 | 113 |
-| `testEditModeVsAddMode(validateFunc)` | 編集モードと追加モードの比較テスト | 5件 | 146 |
-| `runAllUserEditTests(validateFunc, contextName)` | すべてのユーザー編集テストを一括実行 | 23件 | 184 |
-
-#### 詳細テストケース
-
-**testUsernameOnlyEdit (6件)**
-
-| テスト名 | 説明 | 期待結果 |
-|---------|------|---------|
-| `should allow a username change when no password is entered` | パスワード未入力でユーザー名だけ変更 | valid: true |
-| `should reject the username when it is empty and no password is entered` | パスワード未入力で、ユーザー名が空 | エラー: "Username cannot be empty!" |
-| `should reject the username when it has only whitespace` | 空白のみのユーザー名 | エラー: "Username cannot be empty!" |
-| `should allow the username when it has special characters` | 記号を含むユーザー名 | valid: true |
-| `should allow the username when it has unicode characters` | Unicode 文字のユーザー名 | valid: true |
-| `should allow the username when it is very long (128 characters)` | 128 文字のユーザー名 | valid: true |
-
-**testPasswordOnlyEdit (8件)**
-
-| テスト名 | 説明 | 期待結果 |
-|---------|------|---------|
-| `should allow a password change when the username is unchanged` | ユーザー名は変えずにパスワードを変更 | valid: true |
-| `should reject the password when it is shorter than 16 characters` | 16 文字未満のパスワード | エラー: "Password must be at least 16 characters long!" |
-| `should reject the password when the confirmation does not match` | 確認が一致しない | エラー: "Passwords do not match!" |
-| `should reject the password when the confirmation is empty` | 確認が空 | エラー: "Passwords do not match!" |
-| `should reject the password when it is empty but the confirmation is filled` | パスワードが空で確認だけ入力 | エラー: "Password cannot be empty!" |
-| `should allow the password when it has spaces` | スペースを含むパスワード | valid: true |
-| `should allow the password when it has special characters` | 記号を含むパスワード | valid: true |
-| `should allow the password when it has unicode characters` | Unicode 文字を含むパスワード | valid: true |
-
-**testCombinedEdit (4件)**
-
-| テスト名 | 説明 | 期待結果 |
-|---------|------|---------|
-| `should allow the change when both the username and the password change` | ユーザー名とパスワードを両方変更 | valid: true |
-| `should reject the username when it is empty even though the password is valid` | パスワードは有効だがユーザー名が空 | エラー: "Username cannot be empty!" |
-| `should reject the change when the username is valid but the password is short` | ユーザー名は有効だがパスワードが短い | エラー: "Password must be at least 16 characters long!" |
-| `should reject the change when the username is valid but the passwords do not match` | ユーザー名は有効だがパスワードが一致しない | エラー: "Passwords do not match!" |
-
-**testEditModeVsAddMode (5件)**
-
-| テスト名 | 説明 | 期待結果 |
-|---------|------|---------|
-| `should allow an empty password when in edit mode` | 編集モードで空パスワード (変更なし) | valid: true |
-| `should reject an empty password when in add mode` | 追加モードで空パスワード | エラー: "Password cannot be empty!" |
-| `should reject a short password when one is entered in edit mode` | 編集モードで短いパスワードを入力 | エラー: "Password must be at least 16 characters long!" |
-| `should accept a valid password when in add mode` | 追加モードで有効なパスワード | valid: true |
-| `should require the confirmation when a password is entered in edit mode` | 編集モードでパスワードを入力し確認が空 | エラー: "Passwords do not match!" |
-
-**使用箇所**: admin-edit.test.js, general-user-edit.test.js
-
----
-
-### validation-helpers.js
-
-共通バリデーション関数（テスト関数なし、ユーティリティのみ）
-
-| 関数名 | 説明 | パラメータ | 戻り値 |
-|-------|------|-----------|-------|
-| `validatePassword(password, passwordConfirm)` | パスワードとパスワード確認のバリデーション | `password`, `passwordConfirm` | `{valid: boolean, message: string}` |
-| `validateUserAddition(username, password, passwordConfirm)` | ユーザー追加時のバリデーション | `username`, `password`, `passwordConfirm` | `{valid: boolean, message: string}` |
-| `validateUserEdit(username, password, passwordConfirm, isEditMode)` | ユーザー編集時のバリデーション | `username`, `password`, `passwordConfirm`, `isEditMode` | `{valid: boolean, message: string}` |
+  - [pages/_user-self-edit-checks.js](#pages_user-self-edit-checksjs)
 
 ---
 
 ## 画面別テスト
 
-### admin-setup.test.js
+### pages/index-setup-validation.test.js
 
-管理者登録画面のテスト。
+実際の起動画面 (index.html + menu.js) の管理者登録フォームとユーザー登録フォームで、登録前の入力チェックを確かめる。2 つのフォームで同じケースを試す (`describe.each`、各 17 件)。チェックの順はユーザー名 → パスワード (空・空白だけ → 16 文字未満) → 確認入力。文字数はバックエンドと同じくコードポイントで数える。
 
-**テスト数**: 32件（共通26件 + 画面固有6件、jest 実測）
+**テスト数**: 34件 (17件 × 2 フォーム)
 
-| テストカテゴリ | 説明 | テスト数 | 実装方法 |
-|--------------|------|---------|---------|
-| パスワードバリデーション | 共通パスワードテストスイート | 26件 | `runAllPasswordTests()` |
-| 画面固有エッジケース | 管理者登録画面特有のテスト | 6件 | 個別実装 (`Admin Setup Specific Edge Cases` describe) |
+| テスト | 説明 |
+|--------|------|
+| `should refuse with the right message and not register when %s` (11 ケース) | ユーザー名が空・空白とタブだけ → `error.username_required`、パスワードが空・空白 16 文字 → `error.password_empty`、15 文字・15 文字だが UTF-16 で 19 単位 (`password🔐🔐🔐🔐123`) → `error.password_too_short`、確認入力が 1 文字違い・大文字小文字違い・空 → `error.password_mismatch`、ユーザー名が空でパスワードも短い → ユーザー名のメッセージ、短くて確認入力も違う → 短すぎのメッセージ。いずれも `register_admin` / `register_user` を呼ばない |
+| `should register with the password as typed when %s` (5 ケース) | ちょうど 16 文字、絵文字を含む 16 文字、記号入り、日本語、前後に空白があるパスワードは、そのまま送って登録する |
+| `should register the user name without surrounding spaces when it has them` | ユーザー名の前後の空白は取り除いて送る |
 
-#### 画面固有テスト (6件)
-
-| テスト名 | 説明 | 期待結果 |
-|---------|------|---------|
-| `should accept the password when it has leading and trailing spaces and both entries match` | 前後にスペース付き、両者一致・16文字以上 | valid: true |
-| `should accept the password when it is very long (1000 characters)` | 1000 文字パスワード | valid: true |
-| `should accept the password when it has emojis` | 絵文字を含むパスワード (2 バイト以上文字含む) | valid: true |
-| `should reject the password when only one entry has newlines (not trimmed)` | 改行を含み、確認側で改行が落ちる | valid: false, "Passwords do not match!" |
-| `should reject the password when it is a single zero-width space` | ゼロ幅スペース 1 文字 (可視 0 だが `.length` は 1) | valid: false, "at least 16 characters" |
-| `should reject the password when it has only 6 digits` | 6 桁の数字のみ | valid: false, "at least 16 characters" |
-
-**ファイル**: tests/frontend/admin-setup.test.js
+**ファイル**: tests/frontend/pages/index-setup-validation.test.js
 
 ---
 
-### user-addition.test.js
+### pages/user-management-admin-validation.test.js
 
-ユーザー追加画面のテスト。共通スイートのみで構成 (画面固有 describe は無し)。
+実際のユーザー管理画面 (管理者でログイン) で、ユーザーの追加と編集の入力チェックを確かめる。自分自身の編集は共通の確認 [pages/_user-self-edit-checks.js](#pages_user-self-edit-checksjs) を使う。
 
-**テスト数**: 46件 (jest 実測、13 + 26 + 7)
+**テスト数**: 27件 (追加 12 + 他ユーザーの編集 2 + 自分の編集 13)
 
-| テストカテゴリ | 説明 | テスト数 | 実装方法 |
-|--------------|------|---------|---------|
-| ユーザー名バリデーション | 共通ユーザー名テストスイート | 13件 | `testUsernameValidation()` |
-| パスワードバリデーション | 共通パスワードテストスイート | 26件 | `runAllPasswordTests()` |
-| 組み合わせバリデーション | ユーザー名とパスワードの組み合わせ | 7件 | `testCombinedValidation()` |
+| テスト | 説明 |
+|--------|------|
+| `should show the required message under the user name and not add when %s` (2 ケース) | ユーザー名が空・空白とタブだけなら、ユーザー名欄の下に `validation.required` を出し、追加しない |
+| `should refuse with the right message and not add when %s` (5 ケース) | 確認入力が違う・空 → `error.password_mismatch`、15 文字・UTF-16 で 19 単位の 15 文字 → `error.password_too_short`、短くて確認入力も違う → `error.password_mismatch` (一致確認が先) |
+| `should not submit the form when the Save button is pressed with no password` | パスワード欄は必須なので、空のまま保存ボタンを押しても送信されない |
+| `should add the user with the password as typed when %s` (3 ケース) | ちょうど 16 文字、絵文字を含む 16 文字、日本語のパスワードで `create_general_user` を呼ぶ |
+| `should add the user name without surrounding spaces when it has them` | ユーザー名の前後の空白は取り除いて送る |
+| `should hide the password fields when another user's row is edited` | 他のユーザーの編集ではパスワード欄 3 つを隠す |
+| `should rename that user when the user name is changed` | 他のユーザーは `update_general_user_info` で名前だけ変える |
 
-**ファイル**: tests/frontend/user-addition.test.js
-
----
-
-### admin-edit.test.js
-
-管理者ユーザー編集画面のテスト。
-
-**テスト数**: 62件（パスワード26件 + ユーザー名13件 + ユーザー編集23件）
-
-| テストカテゴリ | 説明 | テスト数 | 実装方法 |
-|--------------|------|---------|---------|
-| パスワードバリデーション | 共通パスワードテストスイート | 26件 | `runAllPasswordTests()` |
-| ユーザー名バリデーション | 共通ユーザー名テストスイート | 13件 | `testUsernameValidation()` |
-| ユーザー編集バリデーション | 共通ユーザー編集テストスイート | 23件 | `runAllUserEditTests()` |
-
-**ファイル**: tests/frontend/admin-edit.test.js
+**ファイル**: tests/frontend/pages/user-management-admin-validation.test.js
 
 ---
 
-### general-user-edit.test.js
+### pages/user-management-self-edit-validation.test.js
 
-一般ユーザー編集画面のテスト。
+実際のユーザー管理画面 (一般ユーザーでログイン) で、自分自身の編集の入力チェックを確かめる。中身は共通の確認 [pages/_user-self-edit-checks.js](#pages_user-self-edit-checksjs) で、呼ぶコマンドは `update_general_user_info` / `update_general_user_with_reencryption`。
 
-**テスト数**: 62件（パスワード26件 + ユーザー名13件 + ユーザー編集23件）
+**テスト数**: 13件
 
-| テストカテゴリ | 説明 | テスト数 | 実装方法 |
-|--------------|------|---------|---------|
-| パスワードバリデーション | 共通パスワードテストスイート | 26件 | `runAllPasswordTests()` |
-| ユーザー名バリデーション | 共通ユーザー名テストスイート | 13件 | `testUsernameValidation()` |
-| ユーザー編集バリデーション | 共通ユーザー編集テストスイート | 23件 | `runAllUserEditTests()` |
-
-**ファイル**: tests/frontend/general-user-edit.test.js
+**ファイル**: tests/frontend/pages/user-management-self-edit-validation.test.js
 
 ---
 
@@ -2050,19 +1833,32 @@
 
 ---
 
+### pages/_user-self-edit-checks.js
+
+ユーザー管理画面で自分自身を編集するときの確認。管理者用と一般ユーザー用の 2 つのテストが、呼ぶコマンドだけ変えて使う (13 件)。
+
+| テスト | 説明 |
+|--------|------|
+| `should show the current password, password and confirmation fields when the own row is edited` | 自分の編集では現在のパスワード・パスワード・確認入力の 3 欄を出す |
+| `should rename without a password when only the user name is changed` | パスワードなしなら名前変更のコマンドで、前後の空白を除いた名前を送る |
+| `should send no new user name when the user name is unchanged` | 名前を変えなければ username は null |
+| `should change the password with the current password when all three are entered` | 3 欄とも入力すると、再暗号化のコマンドに現在のパスワードと新しいパスワードを送る |
+| `should send the new user name with the password change when both are changed` | 名前とパスワードを両方変えると、再暗号化のコマンドに新しい名前も入る |
+| `should refuse with the right message and send nothing when %s` (7 ケース) | 確認入力が違う・空 → `error.password_mismatch`、空白 16 文字 → `error.password_empty`、15 文字・UTF-16 で 19 単位の 15 文字 → `error.password_too_short`、短くて確認入力も違う → `error.password_mismatch`、現在のパスワードなし → `error.current_password_required` |
+| `should refuse an empty user name under the field and send nothing even when the password is valid` | 名前が空白だけなら、パスワードが正しくても名前欄の下に `validation.required` を出して送らない |
+
+**ファイル**: tests/frontend/pages/_user-self-edit-checks.js
+
+---
+
 ## テスト統計サマリー
 
 | カテゴリ | テスト数 |
 |---------|---------|
-| **共通テストスイート** (ヘルパー — 画面別テストの中で invoke されるため総計には別計上しない) | 56件 |
-| password-validation-tests.js | 26 |
-| username-validation-tests.js | 20 (13 + 7) |
-| user-edit-validation-tests.js | 23 |
-| **画面別テスト** | **202件** |
-| admin-setup.test.js | 32 |
-| user-addition.test.js | 46 |
-| admin-edit.test.js | 62 |
-| general-user-edit.test.js | 62 |
+| **画面別テスト** | **74件** |
+| pages/index-setup-validation.test.js | 34 |
+| pages/user-management-admin-validation.test.js | 27 |
+| pages/user-management-self-edit-validation.test.js | 13 |
 | **機能別テスト** | **505件** |
 | transaction-detail-tax-calculation.test.js | 33 |
 | toast.test.js | 14 |
@@ -2163,9 +1959,9 @@
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **総計 (jest)** | **822件** |
+| **総計 (jest)** | **694件** |
 
-総計は 画面別 + 機能別 + 集計機能 の合計。共通テストスイートは画面別テストの内部で `runAll*` 経由で invoke されるヘルパー library であり、そのアサーションは既に画面別テストの数に含まれているため、総計には別途加算しない (double-count 防止)。
+総計は 画面別 + 機能別 + 集計機能 の合計。
 
 ---
 
@@ -2182,7 +1978,7 @@ npm test
 
 ```bash
 cd tests/frontend
-npm test admin-setup.test.js
+npm test pages/index-setup-validation.test.js
 npm test pages/index-login-page.test.js
 npm test pages/user-management-delete-page.test.js
 ```

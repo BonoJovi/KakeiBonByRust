@@ -318,7 +318,7 @@ import { loadMenuBar } from './modules/menu-bar.js';
 ## バリデーション
 
 ### クライアントサイド
-**モジュール**: `res/js/modules/validation-helpers.js`
+**モジュール**: 各画面の JS (`res/js/*.js`)。入力欄の下のエラー表示は `res/js/validation-display.js`
 
 **検証項目**:
 - 必須フィールド

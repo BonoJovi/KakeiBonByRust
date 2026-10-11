@@ -181,7 +181,7 @@ pub const ROLE_USER: i32 = 1;   // General user
 ### Input Validation
 
 **Validation Layers**:
-1. **Frontend** (`res/js/validation-helpers.js`): UX immediate feedback
+1. **Frontend** (each screen's handler in `res/js/`, e.g. `menu.js`, `user-management.js`): UX immediate feedback
 2. **Backend** (`src/validation.rs`): Security enforcement layer
 
 **Validation Rules**:
