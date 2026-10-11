@@ -146,8 +146,8 @@ KakeiBon is a desktop application designed to support personal finance managemen
 1. Select user from the list
 2. Click **"編集"/"Edit"** button
 3. Modify information (password change is optional)
-4. When you edit your own account, enter **"現在のパスワード"/"Current password"** (required even if you change only the username; not needed when an administrator edits another user)
-5. Click **"更新"/"Update"** button
+4. When you edit your own account, enter **"Current password"** (required even if you change only the username; not needed when an administrator edits another user)
+5. Click **"Save"** button
 
 ### User Deletion
 
