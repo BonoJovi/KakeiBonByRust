@@ -1,38 +1,21 @@
 #!/usr/bin/env bash
-# Run the isolated latent-audit regression tests (2026-09 audit and scan).
+# Run the isolated latent-audit regression tests (Rust).
 #
-# These tests pin bugs listed in
-# work/bug_list_opus_5_5_latent_audit_2026-09-26.md and
-# work/bug_list_latent_scan_2026-09-29.md (IDs prefixed `scan2-`, e.g.
-# `#[ignore = "latent-audit scan2-A1"]`, Jest files `scan2-a1-*.test.js`)
-# and are EXPECTED to fail
-# until each bug is fixed. They are excluded from the normal `cargo test` /
-# `npm test` runs (and therefore from CI):
-#   - Rust: `#[ignore = "latent-audit <ID>"]`, function names start with `latent_`
-#   - Jest: files under tests/frontend/latent-audit/ (testPathIgnorePatterns)
+# A latent-audit test pins a bug that is not fixed yet, so it is EXPECTED to
+# fail. It is marked `#[ignore = "latent-audit <ID>"]` and its function name
+# starts with `latent_`, which keeps it out of the normal `cargo test` run
+# (and therefore out of CI). When the bug is fixed, remove the `#[ignore]` so
+# the test joins the regular suite.
 #
-# When a bug is fixed, remove the `#[ignore]` (Rust) so the test joins the
-# regular suite. For Jest, move the fixed test into a regular test file (page
-# tests go to tests/frontend/pages/, which shares _page-harness.js with
-# latent-audit/); split it out when its file still holds unfixed tests.
+# Every test of the 2026-09 audit and scan has been fixed and moved into the
+# regular suites, so this script currently runs no tests.
 #
-# Usage: ./scripts/run-latent-audit-tests.sh [rust|js]   (default: both)
+# Usage: ./scripts/run-latent-audit-tests.sh
 
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
-target="${1:-all}"
-
-if [[ "$target" == "all" || "$target" == "rust" ]]; then
-    echo "=== Rust latent-audit tests ==="
-    cargo test --lib latent_ -- --ignored --test-threads=1 2>&1 \
-        | grep -E '^test .*latent_.* \.\.\. |^test result:' \
-        | sed -E 's/^test (.*) \.\.\. (ok|FAILED)$/\2\t\1/'
-    echo
-fi
-
-if [[ "$target" == "all" || "$target" == "js" ]]; then
-    echo "=== Jest latent-audit tests ==="
-    (cd tests/frontend && npm run -s test:latent -- --verbose 2>&1) \
-        | grep -E '^\s+(✓|✕)|^Tests:'
-fi
+echo "=== Rust latent-audit tests ==="
+cargo test --lib latent_ -- --ignored --test-threads=1 2>&1 \
+    | grep -E '^test .*latent_.* \.\.\. |^test result:' \
+    | sed -E 's/^test (.*) \.\.\. (ok|FAILED)$/\2\t\1/'
