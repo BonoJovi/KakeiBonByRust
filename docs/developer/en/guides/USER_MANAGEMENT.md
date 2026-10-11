@@ -203,11 +203,18 @@ const user = await invoke('login_user', {
   password: 'UserPassword123!'
 });
 
-// Password change
+// Rename your own account (needs the current password)
 await invoke('update_general_user_with_reencryption', {
-  userId: user.user_id,
-  newPassword: 'NewPassword123!',
-  currentPassword: 'UserPassword123!'
+  oldPassword: 'UserPassword123!',
+  username: 'user1_renamed',
+  newPassword: null
+});
+
+// Change your own password
+await invoke('update_general_user_with_reencryption', {
+  oldPassword: 'UserPassword123!',
+  username: null,
+  newPassword: 'NewPassword123456'
 });
 ```
 
