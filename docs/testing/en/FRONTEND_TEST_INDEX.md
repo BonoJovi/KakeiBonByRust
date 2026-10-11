@@ -3,7 +3,7 @@
 This document provides a complete index of all frontend tests implemented in JavaScript.
 
 **Last Updated**: 2026-10-11 JST  
-**Total Tests**: 822 (jest suites; 102 test files, per `npm test`)
+**Total Tests**: 694 (jest suites; 101 test files, per `npm test`)
 
 ---
 
@@ -11,22 +11,10 @@ For detailed Japanese version with all test cases, see [Japanese Frontend Test I
 
 ## Quick Reference
 
-### Common Test Suites (56 tests — helper libraries)
-
-Helper functions invoked from screen tests. Their assertions are counted in
-the Screen-Specific totals below; they are listed here for discoverability
-and are **not** added again to the grand total.
-
-- **password-validation-tests.js** - Password validation tests (26)
-- **username-validation-tests.js** - Username validation tests (20)
-- **user-edit-validation-tests.js** - User edit validation tests (23)
-- **validation-helpers.js** - Common validation functions
-
-### Screen-Specific Tests (202 tests)
-- **admin-setup.test.js** - Admin setup tests (32)
-- **user-addition.test.js** - User addition tests (46)
-- **admin-edit.test.js** - Admin edit tests (62)
-- **general-user-edit.test.js** - General user edit tests (62)
+### Screen-Specific Tests (74 tests)
+- **pages/index-setup-validation.test.js** - Boots the real setup forms (menu.js on index.html) for both the administrator and the user form: a blank or whitespace user name, an empty or whitespace password, fewer than 16 characters (counted as code points, so "password🔐🔐🔐🔐123" is refused) and a confirmation that differs (by one character, by letter case, or empty) are refused with `error.username_required` / `error.password_empty` / `error.password_too_short` / `error.password_mismatch` in that order, without calling `register_admin` / `register_user`; an accepted form sends the trimmed user name and the password as typed (34)
+- **pages/user-management-admin-validation.test.js** - Boots the real user management page (admin session): adding a user refuses a blank name under the field and a mismatched, too short (code points) password in the form message, and sends `create_general_user` with the trimmed name; the Save button does not submit without a password; editing another user hides the password fields and only renames; editing the admin's own row runs the shared self-edit checks with `update_admin_user_info` / `update_admin_user_with_reencryption` (27)
+- **pages/user-management-self-edit-validation.test.js** - Boots the real user management page (general-user session) and runs the shared self-edit checks on the user's own row with `update_general_user_info` / `update_general_user_with_reencryption` (13)
 
 ### Feature-Specific Tests (505 tests)
 
@@ -133,6 +121,7 @@ and are **not** added again to the grand total.
 
 ### Shared helpers (not counted in the jest total)
 - **aggregation-test-helpers.js** - Shared mock/fixture helpers imported by the aggregation `.test.js` files
+- **pages/_user-self-edit-checks.js** - Self-edit checks (password fields shown, rename, password change with the current password, and the refusals in order: mismatch, whitespace, too short, current password missing) shared by the admin and general-user user management tests
 - **pages/_page-harness.js** - Shared jsdom page harness (module mocks, page body loading, boot) used by `pages/*.test.js`, `modal-stale-save-close.test.js`, and the isolated `latent-audit/*.test.js`
 
 ---
@@ -141,15 +130,10 @@ and are **not** added again to the grand total.
 
 | Category | Test Count |
 |----------|------------|
-| **Common Test Suites** (helpers — counted inside Screen-Specific) | 56 |
-| password-validation-tests.js | 26 |
-| username-validation-tests.js | 20 |
-| user-edit-validation-tests.js | 23 |
-| **Screen-Specific Tests** | **202** |
-| admin-setup.test.js | 32 |
-| user-addition.test.js | 46 |
-| admin-edit.test.js | 62 |
-| general-user-edit.test.js | 62 |
+| **Screen-Specific Tests** | **74** |
+| pages/index-setup-validation.test.js | 34 |
+| pages/user-management-admin-validation.test.js | 27 |
+| pages/user-management-self-edit-validation.test.js | 13 |
 | **Feature-Specific Tests** | **505** |
 | transaction-detail-tax-calculation.test.js | 33 |
 | toast.test.js | 14 |
@@ -250,11 +234,9 @@ and are **not** added again to the grand total.
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **Total (jest)** | **822** |
+| **Total (jest)** | **694** |
 
-Grand total is Screen + Feature + Aggregation (Common Test Suites are helper
-libraries invoked from Screen-Specific files and their assertions are already
-counted in those screen totals).
+Grand total is Screen + Feature + Aggregation.
 
 ---
 
@@ -271,7 +253,7 @@ npm test
 
 ```bash
 cd tests/frontend
-npm test admin-setup.test.js
+npm test pages/index-setup-validation.test.js
 npm test pages/index-login-page.test.js
 npm test pages/user-management-delete-page.test.js
 ```

@@ -39,17 +39,10 @@ npm run test:coverage
 
 ## テスト構成
 
-### 共通テストスイート
-- `password-validation-tests.js` - パスワードバリデーションテスト（26件）
-- `username-validation-tests.js` - ユーザー名バリデーションテスト（20件）
-- `user-edit-validation-tests.js` - ユーザー編集バリデーションテスト（23件）
-- `validation-helpers.js` - 共通バリデーション関数
-
 ### 画面別テスト
-- `admin-setup.test.js` - 管理者登録テスト（29件）
-- `user-addition.test.js` - ユーザー追加テスト（49件）
-- `admin-edit.test.js` - 管理者編集テスト（63件）
-- `general-user-edit.test.js` - 一般ユーザー編集テスト（63件）
+- `pages/index-setup-validation.test.js` - 管理者登録・ユーザー登録フォームの入力チェックのテスト
+- `pages/user-management-admin-validation.test.js` - ユーザー管理（管理者）の追加・編集の入力チェックのテスト
+- `pages/user-management-self-edit-validation.test.js` - ユーザー管理（一般ユーザー）の自分の編集の入力チェックのテスト
 - `pages/index-login-page.test.js` - ログイン・ログアウトのテスト
 - `pages/user-management-delete-page.test.js` - ユーザー削除のテスト
 
