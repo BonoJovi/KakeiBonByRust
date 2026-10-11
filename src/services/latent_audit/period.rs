@@ -1,9 +1,8 @@
 //! Latent-audit 2026-09 regression tests for `services::period` and its
 //! monthly entry point `crate::monthly_bounds_with_shift_for` (lib.rs).
 //!
-//! TDD red phase: every test asserts the CORRECT behaviour and is expected to
-//! FAIL against the current code. All are `#[ignore]`d; run them with
-//! `cargo test --lib latent_ -- --ignored`.
+//! Each test pins a bug found in the 2026-09 latent-bug audit. The bugs are
+//! fixed, and the tests run in the normal `cargo test` suite.
 
 use super::*;
 use crate::services::holiday::HolidayShift;

@@ -1,8 +1,7 @@
 //! Latent-audit 2026-09 regression tests for `services::recurring`.
 //!
-//! TDD red phase: every test asserts the CORRECT behaviour and is expected to
-//! FAIL against the current code. All are `#[ignore]`d so the normal suite
-//! stays green; run them with `cargo test --lib latent_ -- --ignored`.
+//! Each test pins a bug found in the 2026-09 latent-bug audit. The bugs are
+//! fixed, and the tests run in the normal `cargo test` suite.
 //!
 //! Schema note: the shared `test_helpers::database::setup_test_db` schema
 //! lacks `TRANSACTIONS_HEADER.IS_SCHEDULED` and the migrated DETAIL columns,

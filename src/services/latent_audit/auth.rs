@@ -1,7 +1,7 @@
-//! Latent-audit 2026-09 regression tests (TDD red phase) for
-//! `services::auth`. Every test is `#[ignore]`d and asserts the CORRECT
-//! behaviour, so it fails on the current code and passes once the
-//! corresponding bug is fixed.
+//! Latent-audit 2026-09 regression tests for `services::auth`.
+//!
+//! Each test pins a bug found in the 2026-09 latent-bug audit. The bugs are
+//! fixed, and the tests run in the normal `cargo test` suite.
 
 use super::*;
 use crate::api_error::ApiError;

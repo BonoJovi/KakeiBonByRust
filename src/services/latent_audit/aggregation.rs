@@ -1,8 +1,7 @@
 //! Latent-audit (2026-09) regression tests for `services::aggregation`.
 //!
-//! All tests are `#[ignore]`d TDD-red tests: they assert the CORRECT
-//! behaviour and are expected to FAIL against the current code. Run with
-//! `cargo test --lib latent_ -- --ignored`.
+//! Each test pins a bug found in the 2026-09 latent-bug audit. The bugs are
+//! fixed, and the tests run in the normal `cargo test` suite.
 
 use super::*;
 use chrono::Datelike;

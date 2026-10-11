@@ -1,4 +1,8 @@
-//! Latent-audit 2026-09 regression tests for the Shop master (TDD red phase).
+//! Latent-audit 2026-09 regression tests for the Shop master.
+//!
+//! Each test pins a bug found in the 2026-09 latent-bug audit. The bugs are
+//! fixed, and the tests run in the normal `cargo test` suite.
+//!
 //! Wired from `src/services/shop.rs` via `#[path]`; `use super::*;` reaches
 //! the parent module's private items.
 

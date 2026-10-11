@@ -1,8 +1,10 @@
 //! Latent-audit regression tests (Opus 5.5, 2026-09-26) — DB startup migrations.
 //!
+//! Each test pins a bug found in the 2026-09 latent-bug audit. The bugs are
+//! fixed, and the tests run in the normal `cargo test` suite.
+//!
 //! Lives under `db` so it can build a `Database` around an in-memory pool
-//! (the `pool` field is private). `#[ignore]`d until the fix lands; run with
-//! `cargo test --lib latent_ -- --ignored`.
+//! (the `pool` field is private).
 
 use super::*;
 use sqlx::Row;
