@@ -183,8 +183,8 @@ pub fn validate_password(password: &str) -> ValidationResult {
 ```
 
 ```javascript
-// res/js/menu.js (handleAdminSetup) — count characters (code points)
-// like the backend's chars().count(), not UTF-16 units
+// res/js/menu.js (handleAdminSetup) — UTF-16 の単位ではなく、
+// バックエンドの chars().count() と同じく文字 (コードポイント) で数える
 if ([...password].length < 16) {
     messageDiv.textContent = i18n.t('error.password_too_short');
     messageDiv.className = 'message error';
