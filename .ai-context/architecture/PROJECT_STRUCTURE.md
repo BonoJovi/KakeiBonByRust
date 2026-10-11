@@ -3,7 +3,7 @@
 **Last Updated**: 2025-12-11 03:48 JST  
 **Purpose**: This document helps AI assistants quickly understand the project structure without reading every file  
 **Keywords**: project structure, プロジェクト構造, directory structure, ディレクトリ構造, module organization, モジュール構成, file organization, ファイル構成, Rust modules, Rustモジュール, src directory, srcディレクトリ, res directory, resディレクトリ, frontend, フロントエンド, backend, バックエンド, Tauri, services, サービス, components, コンポーネント, locales, ロケール, i18n, tests, テスト, architecture, アーキテクチャ, codebase, コードベース  
-**Related**: @architecture/TAURI_DEVELOPMENT.md, @core/QUICK_REFERENCE.md, @development/CONVENTIONS.md, @development/TESTING_STRATEGY.md
+**Related**: @architecture/TAURI_DEVELOPMENT.md, @core/QUICK_REFERENCE.md, @development/CONVENTIONS_OVERVIEW.md, @development/TESTING_STRATEGY.md
 
 ---
 
@@ -94,7 +94,7 @@ KakeiBonByRust/
 │   │   ├── html-files.js     # HTML file paths
 │   │   └── consts.js         # JS constants
 │   ├── css/                  # Stylesheets
-│   └── locales/              # Translation files (ja, en)
+│   └── sql/dbaccess.sql      # DB init, incl. i18n resources (ja, en)
 │
 ├── tests/frontend/           # Test suites (29 test files, 488 tests)
 │   ├── validation-helpers.js          # Common validation logic
@@ -102,19 +102,11 @@ KakeiBonByRust/
 │   ├── username-validation-tests.js   # Username test suite
 │   ├── admin-setup.test.js            # Admin setup tests
 │   ├── user-addition.test.js          # User addition tests
-│   ├── login.test.js                  # Login tests
-│   ├── category-management.test.js    # Category CRUD tests
-│   ├── account-management.test.js     # Account CRUD tests
-│   ├── transaction-edit.test.js       # Transaction editing tests
-│   ├── manufacturer-management.test.js # Manufacturer tests
-│   ├── product-management.test.js     # Product tests
-│   ├── shop-management.test.js        # Shop tests
-│   └── [additional test files]        # See test output for full list
+│   ├── pages/                         # Tests that boot the real screens
+│   └── [additional test files]        # See docs/testing/en/FRONTEND_TEST_INDEX.md
 │
-├── .ai-context/              # AI assistant context (THIS DIRECTORY)
-│   ├── PROJECT_STRUCTURE.md  # This file
-│   ├── KEY_FILES.md          # Important files quick reference
-│   └── CONVENTIONS.md        # Coding conventions
+├── .ai-context/              # AI assistant context
+│   └── architecture/PROJECT_STRUCTURE.md # This file
 │
 ├── Cargo.toml                # Rust dependencies
 ├── tauri.conf.json           # Tauri configuration
@@ -180,12 +172,8 @@ KakeiBonByRust/
 | Password Tests | `tests/frontend/password-validation-tests.js` | Reusable password test suite (26 tests) |
 | Username Tests | `tests/frontend/username-validation-tests.js` | Reusable username test suite (13 tests) |
 | Admin Setup Tests | `tests/frontend/admin-setup.test.js` | Admin registration screen tests |
-| User Tests | `tests/frontend/user-*.test.js` | User addition, deletion, update tests |
-| Login Tests | `tests/frontend/login.test.js` | Login functionality tests |
-| Category Tests | `tests/frontend/category-management.test.js` | Category CRUD tests |
-| Account Tests | `tests/frontend/account-management.test.js` | Account CRUD tests |
-| Transaction Tests | `tests/frontend/transaction-*.test.js` | Transaction editing tests |
-| Master Data Tests | `tests/frontend/*-management.test.js` | Manufacturer, Product, Shop tests |
+| User Addition Tests | `tests/frontend/user-addition.test.js` | User addition tests |
+| Page Tests | `tests/frontend/pages/*.test.js` | Tests that boot the real screens (login, masters, transactions, aggregation, ...) |
 
 ---
 
@@ -381,7 +369,7 @@ CREATE TABLE MEMO (
 - English (`en`)
 
 ### Files
-- Backend: `res/locales/{lang}.json`
+- Resources: `I18N_RESOURCES` rows in `res/sql/dbaccess.sql` (see `@workflows/I18N_MANAGEMENT.md`)
 - Frontend: Loaded via `i18n.js`
 - Keys: Dot notation (e.g., `user_mgmt.add_user`)
 
@@ -496,7 +484,7 @@ cargo tauri build
 4. Run `npm test` to verify all screens
 
 ### Adding a new language
-1. Create `res/locales/{lang}.json`
+1. Add the language's `I18N_RESOURCES` rows to `res/sql/dbaccess.sql`
 2. Add to `src/services/i18n.rs`
 3. Test with `invoke('set_language', { lang })`
 
@@ -513,7 +501,5 @@ cargo tauri build
 
 ## Related Documentation
 
-- **User Documentation**: See `tests/frontend/README_NEW.md`
-- **Test Design**: See `tests/frontend/TEST_DESIGN.md`
-- **Test Cases**: See `tests/frontend/TEST_CASES.md`
-- **Quick Start**: See `tests/frontend/QUICK_START.md`
+- **Frontend Tests**: See `tests/frontend/README.md`
+- **Test Index**: See `docs/testing/en/FRONTEND_TEST_INDEX.md` and `docs/testing/en/BACKEND_TEST_INDEX.md`
