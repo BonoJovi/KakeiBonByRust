@@ -13,7 +13,7 @@
 # Usage: ./scripts/run-latent-audit-tests.sh
 
 set -uo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/.." || exit 1
 
 echo "=== Rust latent-audit tests ==="
 cargo test --lib latent_ -- --ignored --test-threads=1 2>&1 \
