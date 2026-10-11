@@ -1,7 +1,6 @@
 /// Common test helper functions
 ///
-/// This module provides shared test utilities used across different test modules,
-/// similar to the validation-helpers.js pattern in the JavaScript tests.
+/// This module provides shared test utilities used across different test modules.
 
 #[cfg(test)]
 #[allow(dead_code)]

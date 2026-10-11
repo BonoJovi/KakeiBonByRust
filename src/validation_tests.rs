@@ -2,7 +2,6 @@
 /// 
 /// This module provides a common set of password validation tests that can be
 /// reused across different contexts (admin setup, user addition, password change, etc.).
-/// Similar to the JavaScript password-validation-tests.js module.
 
 #[cfg(test)]
 pub mod password_tests {
@@ -205,8 +204,7 @@ pub mod password_tests {
 
     /// Run all password validation tests
     /// 
-    /// This function runs all password tests in sequence, similar to
-    /// runAllPasswordTests() in the JavaScript test suite
+    /// This function runs all password tests in sequence.
     pub fn run_all_tests() {
         test_empty_passwords();
         test_whitespace_only_passwords();

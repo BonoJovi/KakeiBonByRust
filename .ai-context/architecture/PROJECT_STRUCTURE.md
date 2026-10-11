@@ -97,12 +97,8 @@ KakeiBonByRust/
 │   └── sql/dbaccess.sql      # DB init, incl. i18n resources (ja, en)
 │
 ├── tests/frontend/           # Test suites (29 test files, 488 tests)
-│   ├── validation-helpers.js          # Common validation logic
-│   ├── password-validation-tests.js   # Password test suite
-│   ├── username-validation-tests.js   # Username test suite
-│   ├── admin-setup.test.js            # Admin setup tests
-│   ├── user-addition.test.js          # User addition tests
 │   ├── pages/                         # Tests that boot the real screens
+│   │   └── _page-harness.js           # Boots a real page with mocked Tauri/i18n/session
 │   └── [additional test files]        # See docs/testing/en/FRONTEND_TEST_INDEX.md
 │
 ├── .ai-context/              # AI assistant context
@@ -168,11 +164,7 @@ KakeiBonByRust/
 
 | Module | File | Purpose |
 |--------|------|---------|
-| Validation Helpers | `tests/frontend/validation-helpers.js` | Common validation functions |
-| Password Tests | `tests/frontend/password-validation-tests.js` | Reusable password test suite (26 tests) |
-| Username Tests | `tests/frontend/username-validation-tests.js` | Reusable username test suite (13 tests) |
-| Admin Setup Tests | `tests/frontend/admin-setup.test.js` | Admin registration screen tests |
-| User Addition Tests | `tests/frontend/user-addition.test.js` | User addition tests |
+| Page Harness | `tests/frontend/pages/_page-harness.js` | Loads a page's HTML and boots its real module with mocked Tauri, i18n and session |
 | Page Tests | `tests/frontend/pages/*.test.js` | Tests that boot the real screens (login, masters, transactions, aggregation, ...) |
 
 ---
@@ -377,29 +369,29 @@ CREATE TABLE MEMO (
 
 ## Test Architecture
 
-### Common Module Pattern
-Tests use a DRY (Don't Repeat Yourself) pattern:
+### Frontend (JavaScript): test the real page
+Frontend tests boot the real page module, not a copy of its rules:
 
-**Frontend (JavaScript):**
-1. **Common validation functions** in `validation-helpers.js`
-2. **Common test suites** in `*-validation-tests.js`
-3. **Screen-specific tests** import and reuse common modules
+1. `tests/frontend/pages/_page-harness.js` loads the screen's HTML from `res/` and mocks Tauri `invoke`, i18n (keys are echoed), toast and session
+2. The test imports the real `res/js/*.js` module, fills in the form and submits it
+3. It checks the messages shown and the commands sent to `invoke`
 
-**Backend (Rust):**
+Checks shared by several screens live in a helper next to the tests that use it (for example `pages/_user-self-edit-checks.js`).
+
+### Backend (Rust): common module pattern
 1. **Common test helpers** in `src/test_helpers.rs`
 2. **Common validation test suites** in `src/validation_tests.rs`
 3. **Module-specific tests** use common helpers and test suites
 
 **Example (JavaScript)**:
 ```javascript
-// user-addition.test.js
-import { validateUserAddition } from './validation-helpers.js';
-import { runAllPasswordTests } from './password-validation-tests.js';
-import { testUsernameValidation } from './username-validation-tests.js';
-
-// Reuse 26 password tests + 13 username tests
-runAllPasswordTests(wrapperFn, 'User Addition Password Tests');
-testUsernameValidation(validateUserAddition);
+// pages/index-setup-validation.test.js
+const { invoke } = mockPageModules(jest, { keepMenu: true, invoke: (cmd) => ... });
+loadPageBody('index.html');
+await import('../../../res/js/menu.js');
+await bootPage();
+// fill in #admin-setup-form, dispatch submit, then check
+// #setup-message and callsOf(invoke, 'register_admin')
 ```
 
 **Example (Rust)**:
@@ -416,10 +408,8 @@ async fn test_register_general_user() {
 ```
 
 **Benefits**:
-- Validation rule change → modify 1 file → all screens updated
-- New screen → 5 lines of code → full test coverage
-- Consistent behavior across all screens
-- Backend and frontend tests follow same pattern
+- A frontend test fails when the screen's real code changes behavior
+- Backend checks are shared through common Rust test suites
 
 ---
 
@@ -474,14 +464,13 @@ cargo tauri build
 1. Create HTML file in `res/`
 2. Create JS file in `res/js/`
 3. Add Tauri commands in `src/` (if needed)
-4. Create test file in `tests/frontend/` using common modules
+4. Create a page test in `tests/frontend/pages/` using `_page-harness.js`
 5. Update test documentation
 
 ### Modifying validation rules
-1. Update `tests/frontend/validation-helpers.js`
-2. Update `tests/frontend/*-validation-tests.js` (if needed)
-3. Update backend in `src/validation.rs`
-4. Run `npm test` to verify all screens
+1. Update the screen's handler in `res/js/` (for passwords: `res/js/menu.js` and `res/js/user-management.js`)
+2. Update backend in `src/validation.rs`
+3. Update the page tests in `tests/frontend/pages/` and run `npm test`
 
 ### Adding a new language
 1. Add the language's `I18N_RESOURCES` rows to `res/sql/dbaccess.sql`

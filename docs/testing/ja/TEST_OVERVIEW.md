@@ -87,12 +87,8 @@ KakeiBonByRust/
 │       └── ...
 │
 ├── tests/frontend/               # JavaScriptフロントエンド
-│   ├── validation-helpers.js     # 共通バリデーション関数
-│   ├── password-validation-tests.js    # パスワードテストスイート
-│   ├── username-validation-tests.js    # ユーザー名テストスイート
-│   ├── user-edit-validation-tests.js   # ユーザー編集テストスイート
-│   ├── admin-setup.test.js       # 管理者登録テスト
-│   ├── user-addition.test.js     # ユーザー追加テスト
+│   ├── pages/                    # 実際の画面を起動するテスト
+│   │   └── _page-harness.js      # 画面起動の共通部品
 │   ├── transaction-*.test.js     # 取引関連テスト
 │   └── aggregation-*.test.js     # 集計関連テスト
 │
@@ -223,7 +219,7 @@ npm test
 
 出力例：
 ```
-PASS  ./admin-setup.test.js
+PASS  ./pages/index-setup-validation.test.js
 PASS  ./pages/index-login-page.test.js
 PASS  ./pages/user-management-delete-page.test.js
 ...
@@ -234,7 +230,7 @@ Tests:       <passed> passed, <skipped> skipped, <total> total
 
 ```bash
 cd tests/frontend
-npm test admin-setup.test.js
+npm test pages/index-setup-validation.test.js
 npm test pages/index-login-page.test.js
 npm test pages/user-management-delete-page.test.js
 ```
@@ -304,45 +300,33 @@ mod tests {
 
 ### JavaScriptテストの追加
 
-#### パターン1: 共通テストスイートに追加（推奨）
-
-既存のバリデーションに新しいテストケースを追加する場合：
+アプリのルールの写しではなく、実際の画面を試す。`tests/frontend/pages/_page-harness.js` で画面を起動し、フォームに入力して送信し、表示されたメッセージと `invoke` に送られたコマンドを確かめる：
 
 ```javascript
-// tests/frontend/password-validation-tests.js
+// tests/frontend/pages/new-screen.test.js
+import { jest } from '@jest/globals';
+import { mockPageModules, loadPageBody, bootPage, flush, callsOf } from './_page-harness.js';
 
-export function testNewPasswordRule(validationFn) {
-    describe('New Password Rule', () => {
-        test('should enforce new rule', () => {
-            const result = validationFn('test', 'test');
-            expect(result.valid).toBe(false);
-            expect(result.message).toBe('New rule error!');
-        });
-    });
-}
-```
+const { invoke } = mockPageModules(jest, {
+    invoke: (cmd) => (cmd === 'save_something' ? 1 : null),
+});
 
-#### パターン2: 新しい画面のテスト追加
+loadPageBody('new-screen.html');
+await import('../../../res/js/new-screen.js');
+await bootPage();
 
-新しい画面を追加した場合：
+test('should show the required message and not save when the name is blank', async () => {
+    document.getElementById('name').value = '   ';
+    document.getElementById('new-form').dispatchEvent(
+        new Event('submit', { cancelable: true, bubbles: true })
+    );
+    await flush(10);
 
-```javascript
-// tests/frontend/new-screen.test.js
-
-import { validatePassword } from './validation-helpers.js';
-import { runAllPasswordTests } from './password-validation-tests.js';
-
-// 共通パスワードテストを実行
-runAllPasswordTests(validatePassword, 'New Screen Password Validation');
-
-// 画面固有のテストを追加
-describe('New Screen Specific Tests', () => {
-    test('specific edge case', () => {
-        const result = validatePassword('特定のケース', '特定のケース');
-        expect(result.valid).toBe(true);
-    });
+    expect(callsOf(invoke, 'save_something')).toHaveLength(0);
 });
 ```
+
+複数の画面で共通の確認は、使うテストの隣の補助ファイルにまとめる (例: `pages/_user-self-edit-checks.js`)。
 
 ### テストインデックスの更新
 

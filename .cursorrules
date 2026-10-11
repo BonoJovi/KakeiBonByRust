@@ -31,7 +31,7 @@
 ### JavaScript
 - **ES Modules**: Always include `.js` extension in imports
   ```javascript
-  import { validatePassword } from './validation-helpers.js';
+  import { showToast } from './toast.js';
   ```
 - **Async/Await**: Always use try/catch with async functions
 - **Naming**: camelCase for functions, PascalCase for classes
@@ -97,7 +97,7 @@ export const ROLE_USER = 1;
 
 ### Validation
 - Backend: `src/validation.rs`
-- Frontend: `res/js/validation-helpers.js`
+- Frontend: each screen's handler in `res/js/` (passwords: `menu.js`, `user-management.js`); field messages via `res/js/validation-display.js`
 - Both must enforce same rules
 
 ### i18n
@@ -173,8 +173,7 @@ export const ROLE_USER = 1;
 ### Frontend (JavaScript)
 - Jest for unit tests
 - Test suites in `tests/frontend/`
-- Common test logic in `*-validation-tests.js` files
-- Reuse test suites across screens
+- Page tests in `tests/frontend/pages/` boot the real screen (`_page-harness.js`); never test a copy of the app's rules
 
 ## Additional Context
 

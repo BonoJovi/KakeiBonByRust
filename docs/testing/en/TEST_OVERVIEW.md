@@ -185,7 +185,7 @@ npm test
 
 Expected output:
 ```
-PASS  ./admin-setup.test.js
+PASS  ./pages/index-setup-validation.test.js
 PASS  ./pages/index-login-page.test.js
 PASS  ./pages/user-management-delete-page.test.js
 ...
@@ -196,7 +196,7 @@ Tests:       <passed> passed, <skipped> skipped, <total> total
 
 ```bash
 cd tests/frontend
-npm test admin-setup.test.js
+npm test pages/index-setup-validation.test.js
 npm test pages/index-login-page.test.js
 npm test pages/user-management-delete-page.test.js
 ```
@@ -266,45 +266,36 @@ mod tests {
 
 ### Adding JavaScript Tests
 
-#### Pattern 1: Add to common test suite (recommended)
-
-When adding new test cases to existing validation:
-
-```javascript
-// tests/frontend/password-validation-tests.js
-
-export function testNewPasswordRule(validationFn) {
-    describe('New Password Rule', () => {
-        test('should enforce new rule', () => {
-            const result = validationFn('test', 'test');
-            expect(result.valid).toBe(false);
-            expect(result.message).toBe('New rule error!');
-        });
-    });
-}
-```
-
-#### Pattern 2: Add tests for new screen
-
-When adding a new screen:
+Test the real screen, not a copy of its rules. Boot the page with
+`tests/frontend/pages/_page-harness.js`, fill in the form, submit it, and
+check the message shown and the commands sent to `invoke`:
 
 ```javascript
-// tests/frontend/new-screen.test.js
+// tests/frontend/pages/new-screen.test.js
+import { jest } from '@jest/globals';
+import { mockPageModules, loadPageBody, bootPage, flush, callsOf } from './_page-harness.js';
 
-import { validatePassword } from './validation-helpers.js';
-import { runAllPasswordTests } from './password-validation-tests.js';
+const { invoke } = mockPageModules(jest, {
+    invoke: (cmd) => (cmd === 'save_something' ? 1 : null),
+});
 
-// Run common password tests
-runAllPasswordTests(validatePassword, 'New Screen Password Validation');
+loadPageBody('new-screen.html');
+await import('../../../res/js/new-screen.js');
+await bootPage();
 
-// Add screen-specific tests
-describe('New Screen Specific Tests', () => {
-    test('specific edge case', () => {
-        const result = validatePassword('specific case', 'specific case');
-        expect(result.valid).toBe(true);
-    });
+test('should show the required message and not save when the name is blank', async () => {
+    document.getElementById('name').value = '   ';
+    document.getElementById('new-form').dispatchEvent(
+        new Event('submit', { cancelable: true, bubbles: true })
+    );
+    await flush(10);
+
+    expect(callsOf(invoke, 'save_something')).toHaveLength(0);
 });
 ```
+
+Checks shared by several screens go in a helper next to the tests that use
+it (for example `pages/_user-self-edit-checks.js`).
 
 ### Update Test Indexes
 
