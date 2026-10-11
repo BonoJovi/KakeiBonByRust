@@ -322,6 +322,8 @@ test('should show the required message and not save when the name is blank', asy
     );
     await flush(10);
 
+    const nameError = document.getElementById('name').parentElement.querySelector('.validation-error');
+    expect(nameError.textContent).toBe('validation.required');
     expect(callsOf(invoke, 'save_something')).toHaveLength(0);
 });
 ```
