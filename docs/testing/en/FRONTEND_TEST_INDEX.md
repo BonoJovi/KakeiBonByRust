@@ -3,7 +3,7 @@
 This document provides a complete index of all frontend tests implemented in JavaScript.
 
 **Last Updated**: 2026-10-11 JST  
-**Total Tests**: 694 (jest suites; 101 test files, per `npm test`)
+**Total Tests**: 700 (jest suites; 101 test files, per `npm test`)
 
 ---
 
@@ -11,10 +11,10 @@ For detailed Japanese version with all test cases, see [Japanese Frontend Test I
 
 ## Quick Reference
 
-### Screen-Specific Tests (74 tests)
+### Screen-Specific Tests (80 tests)
 - **pages/index-setup-validation.test.js** - Boots the real setup forms (menu.js on index.html) for both the administrator and the user form: a blank or whitespace user name, an empty or whitespace password, fewer than 16 characters (counted as code points, so "password🔐🔐🔐🔐123" is refused) and a confirmation that differs (by one character, by letter case, or empty) are refused with `error.username_required` / `error.password_empty` / `error.password_too_short` / `error.password_mismatch` in that order, without calling `register_admin` / `register_user`; an accepted form sends the trimmed user name and the password as typed (34)
-- **pages/user-management-admin-validation.test.js** - Boots the real user management page (admin session): adding a user refuses a blank name under the field and a mismatched, too short (code points) password in the form message, and sends `create_general_user` with the trimmed name; the Save button does not submit without a password; editing another user hides the password fields and only renames; editing the admin's own row runs the shared self-edit checks with `update_admin_user_info` / `update_admin_user_with_reencryption` (27)
-- **pages/user-management-self-edit-validation.test.js** - Boots the real user management page (general-user session) and runs the shared self-edit checks on the user's own row with `update_general_user_info` / `update_general_user_with_reencryption` (13)
+- **pages/user-management-admin-validation.test.js** - Boots the real user management page (admin session): adding a user refuses a blank name under the field and a mismatched, too short (code points) password in the form message, and sends `create_general_user` with the trimmed name; the Save button does not submit without a password; editing another user hides the password fields and only renames; editing the admin's own row runs the shared self-edit checks, which must never call `update_admin_user_info` and save through `update_admin_user_with_reencryption` (30)
+- **pages/user-management-self-edit-validation.test.js** - Boots the real user management page (general-user session) and runs the shared self-edit checks on the user's own row, which must never call `update_general_user_info` and save through `update_general_user_with_reencryption` (16)
 
 ### Feature-Specific Tests (505 tests)
 
@@ -121,7 +121,7 @@ For detailed Japanese version with all test cases, see [Japanese Frontend Test I
 
 ### Shared helpers (not counted in the jest total)
 - **aggregation-test-helpers.js** - Shared mock/fixture helpers imported by the aggregation `.test.js` files
-- **pages/_user-self-edit-checks.js** - Self-edit checks (password fields shown, rename, password change with the current password, and the refusals in order: mismatch, whitespace, too short, current password missing) shared by the admin and general-user user management tests
+- **pages/_user-self-edit-checks.js** - Self-edit checks shared by the admin and general-user user management tests: every save of one's own row, a rename included, needs the current password and goes through the command that checks it (`newPassword` null for a rename); refusals in order: mismatch (also a confirmation without a password), whitespace, too short, current password missing; a wrong current password is shown under that field
 - **pages/_page-harness.js** - Shared jsdom page harness (module mocks, page body loading, boot) used by `pages/*.test.js`, `modal-stale-save-close.test.js`, and the isolated `latent-audit/*.test.js`
 
 ---
@@ -130,10 +130,10 @@ For detailed Japanese version with all test cases, see [Japanese Frontend Test I
 
 | Category | Test Count |
 |----------|------------|
-| **Screen-Specific Tests** | **74** |
+| **Screen-Specific Tests** | **80** |
 | pages/index-setup-validation.test.js | 34 |
-| pages/user-management-admin-validation.test.js | 27 |
-| pages/user-management-self-edit-validation.test.js | 13 |
+| pages/user-management-admin-validation.test.js | 30 |
+| pages/user-management-self-edit-validation.test.js | 16 |
 | **Feature-Specific Tests** | **505** |
 | transaction-detail-tax-calculation.test.js | 33 |
 | toast.test.js | 14 |
@@ -234,7 +234,7 @@ For detailed Japanese version with all test cases, see [Japanese Frontend Test I
 | aggregation-monthly.test.js | 33 |
 | aggregation-yearly.test.js | 21 |
 | aggregation-period.test.js | 23 |
-| **Total (jest)** | **694** |
+| **Total (jest)** | **700** |
 
 Grand total is Screen + Feature + Aggregation.
 

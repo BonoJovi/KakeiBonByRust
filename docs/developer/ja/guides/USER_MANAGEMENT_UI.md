@@ -135,15 +135,16 @@ const userId = await invoke('create_general_user', {
 
 ### ユーザ編集 (`updateUser()`)
 ```javascript
-// 一般ユーザ更新
-await invoke('update_general_user_info', updateParams);
+// 自分の行: 常に現在のパスワード付き (newPassword が null なら名前変更のみ)
+await invoke('update_general_user_with_reencryption', { oldPassword, username, newPassword });
+// (管理者は update_admin_user_with_reencryption)
 
-// 管理者更新
-await invoke('update_admin_user_info', updateParams);
+// 管理者が他のユーザの名前を変更
+await invoke('update_general_user_info', { userId, username });
 ```
-- ロールに応じた更新関数の使い分け
+- 自分の行: 名前変更だけでも現在のパスワードが必須
+- 他のユーザの行 (管理者のみ): パスワード欄は隠れ、名前変更のみ
 - 変更がない項目はnullを渡す
-- パスワードは任意（変更時のみ）
 
 ### ユーザ削除 (`handleDeleteConfirm()`)
 ```javascript
@@ -267,9 +268,9 @@ document.addEventListener('DOMContentLoaded', async function() {
 ### ユーザ編集フロー
 1. 「Edit」ボタンクリック → `openEditUserModal(user)`
 2. 既存データをフォームに設定
-3. フォーム編集 → パスワードは任意
-4. 「Save」ボタンクリック → `handleUserFormSubmit()`
-5. ロール判定 → `update_general_user_info` or `update_admin_user_info`
+3. フォーム編集 → 自分の行では現在のパスワードを入力 (新しいパスワードは任意)
+4. 「Save」ボタンクリック → `handleUserSave()`
+5. 自分の行 → `update_*_user_with_reencryption`、他のユーザの行 → `update_general_user_info`
 6. 変更項目のみをパラメータに含める
 7. 成功メッセージ表示 → モーダルを閉じる
 8. ユーザ一覧を再読み込み

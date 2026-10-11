@@ -2,8 +2,8 @@
 
 This document provides a complete index of all backend tests implemented in Rust.
 
-**Last Updated**: 2026-10-10 JST  
-**Total Tests**: 480 (delta-tracked; the full authoritative count from `cargo test --lib` is 748, and a follow-up pass will backfill the remaining pre-existing gap)
+**Last Updated**: 2026-10-11 JST  
+**Total Tests**: 484 (delta-tracked; the full authoritative count from `cargo test --lib` is 752, and a follow-up pass will backfill the remaining pre-existing gap)
 
 ---
 
@@ -754,18 +754,22 @@ Recurring transaction rule service tests.
 
 ### lib.rs
 
-Settings value validation used by the `set_language` / `set_font_size` / `update_user_settings` commands.
+Settings value validation used by the `set_language` / `set_font_size` / `update_user_settings` commands, and who may rename a user without the current password (`update_*_user_info`).
 
 | Test Function | Description | File | Line |
 |---------------|-------------|------|------|
-| `normalize_language_accepts_names_and_codes` | Accept language names and codes (en/English/ja/日本語/Japanese) | src/lib.rs | 2564 |
-| `normalize_language_rejects_unknown_values` | Reject unknown language values | src/lib.rs | 2573 |
-| `normalize_font_size_accepts_keywords_and_percentages` | Accept size keywords and percentages in 50-200 | src/lib.rs | 2579 |
-| `normalize_font_size_rejects_out_of_range_and_garbage` | Reject out-of-range percentages and invalid strings | src/lib.rs | 2588 |
-| `monthly_bounds_with_shift_rejects_out_of_range_month` | month=0/13/100 short-circuits to Err before reaching `services::period::end_of_month` — prevents the backend thread crash (PR6, Fable-5 #22) | src/lib.rs | 2602 |
-| `monthly_bounds_with_shift_accepts_boundary_months` | month=1/12 boundaries still accepted (PR6, Fable-5 #22) | src/lib.rs | 2629 |
+| `should_refuse_when_a_user_renames_themselves_without_a_password` | A user renaming their own account through the rename-only command (no password) is refused | src/lib.rs | 2587 |
+| `should_refuse_when_an_administrator_renames_themselves_without_a_password` | The administrator renaming their own account without a password is refused too | src/lib.rs | 2592 |
+| `should_allow_when_an_administrator_renames_another_user` | The administrator may rename another user without that user's password | src/lib.rs | 2597 |
+| `should_refuse_when_a_general_user_renames_another_user` | A general user may not rename another user | src/lib.rs | 2602 |
+| `normalize_language_accepts_names_and_codes` | Accept language names and codes (en/English/ja/日本語/Japanese) | src/lib.rs | 2612 |
+| `normalize_language_rejects_unknown_values` | Reject unknown language values | src/lib.rs | 2621 |
+| `normalize_font_size_accepts_keywords_and_percentages` | Accept size keywords and percentages in 50-200 | src/lib.rs | 2627 |
+| `normalize_font_size_rejects_out_of_range_and_garbage` | Reject out-of-range percentages and invalid strings | src/lib.rs | 2636 |
+| `monthly_bounds_with_shift_rejects_out_of_range_month` | month=0/13/100 short-circuits to Err before reaching `services::period::end_of_month` — prevents the backend thread crash (PR6, Fable-5 #22) | src/lib.rs | 2650 |
+| `monthly_bounds_with_shift_accepts_boundary_months` | month=1/12 boundaries still accepted (PR6, Fable-5 #22) | src/lib.rs | 2677 |
 
-**Total**: 6 tests
+**Total**: 10 tests
 
 ---
 
@@ -776,7 +780,7 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | **Common Test Suites** | **23** |
 | validation_tests.rs | 10 |
 | font_size_tests.rs | 13 |
-| **Inline Tests** | **457** |
+| **Inline Tests** | **461** |
 | validation.rs | 25 |
 | security.rs | 13 |
 | crypto.rs | 15 |
@@ -800,8 +804,8 @@ Settings value validation used by the `set_language` / `set_font_size` / `update
 | services/session.rs | 9 |
 | services/i18n.rs | 8 |
 | services/recurring.rs | 29 |
-| lib.rs | 6 |
-| **Total** | **480** |
+| lib.rs | 10 |
+| **Total** | **484** |
 
 ---
 

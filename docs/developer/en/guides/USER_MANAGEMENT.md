@@ -78,31 +78,27 @@ Retrieves specific user information.
 - Registration date
 - Update date
 
-### 6. General User Information Update (`update_general_user_info`)
-Updates username and password without changing encrypted data.
+### 6. General User Rename by an Administrator (`update_general_user_info`)
+An administrator renames another general user. No password is taken or changed.
 
 **Parameters**:
-- `user_id`: User ID
-- `new_username`: New username (optional)
-- `new_password`: New password (optional)
-- `current_password`: Current password (for verification)
+- `user_id`: The user to rename
+- `username`: New username (optional)
 
-**Features**:
-- Can change only username
-- Can change only password
-- Can change both
-- Current password verification required
+**Permissions**:
+- Administrator renaming another user only; renaming yourself is refused here
+  because it needs your current password (use command 7)
 
-### 7. General User Update with Re-encryption (`update_general_user_with_reencryption`)
-Updates username and password and re-encrypts all encrypted fields.
+### 7. Editing Your Own Account (`update_general_user_with_reencryption`)
+Renames your own account, changes your password and re-encrypts all
+encrypted fields, or both. The current password is always required.
 
 **Parameters**:
-- `user_id`: User ID
-- `new_username`: New username (optional)
-- `new_password`: New password (required)
-- `current_password`: Current password (for verification)
+- `old_password`: Current password (checked against the stored one)
+- `username`: New username (optional)
+- `new_password`: New password (optional; null renames only)
 
-**Processing Flow**:
+**Processing Flow (password change)**:
 1. Verify current password
 2. Decrypt all encrypted fields with old key
 3. Generate new key from new password
@@ -113,17 +109,12 @@ Updates username and password and re-encrypts all encrypted fields.
 - Performed within transaction
 - Rollback on error
 
-### 8. Administrator User Information Update (`update_admin_user_info`)
-Updates administrator username and password without changing encrypted data.
+### 8. Administrator Rename (`update_admin_user_info`)
+Same as command 6 for an administrator account. The administrator cannot
+rename their own account through it.
 
-**Parameters**:
-- Same as general user update
-
-### 9. Administrator Update with Re-encryption (`update_admin_user_with_reencryption`)
-Updates administrator username and password and re-encrypts all data.
-
-**Parameters**:
-- Same as general user update
+### 9. Administrator Editing Their Own Account (`update_admin_user_with_reencryption`)
+Same as command 7 for the administrator.
 
 **Important Notes**:
 - Only one administrator can exist in the system
@@ -212,11 +203,18 @@ const user = await invoke('login_user', {
   password: 'UserPassword123!'
 });
 
-// Password change
+// Rename your own account (needs the current password)
 await invoke('update_general_user_with_reencryption', {
-  userId: user.user_id,
-  newPassword: 'NewPassword123!',
-  currentPassword: 'UserPassword123!'
+  oldPassword: 'UserPassword123!',
+  username: 'user1_renamed',
+  newPassword: null
+});
+
+// Change your own password
+await invoke('update_general_user_with_reencryption', {
+  oldPassword: 'UserPassword123!',
+  username: null,
+  newPassword: 'NewPassword123456'
 });
 ```
 

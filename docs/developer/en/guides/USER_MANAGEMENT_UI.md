@@ -135,15 +135,16 @@ const userId = await invoke('create_general_user', {
 
 ### Edit User (`updateUser()`)
 ```javascript
-// Update general user
-await invoke('update_general_user_info', updateParams);
+// Your own row: always with the current password (newPassword null = rename only)
+await invoke('update_general_user_with_reencryption', { oldPassword, username, newPassword });
+// (update_admin_user_with_reencryption for the administrator)
 
-// Update admin user
-await invoke('update_admin_user_info', updateParams);
+// An administrator renaming someone else
+await invoke('update_general_user_info', { userId, username });
 ```
-- Use appropriate function based on role
+- Your own row: the current password is required, a rename included
+- Another user's row (admin only): the password fields are hidden; rename only
 - Pass null for unchanged fields
-- Password is optional (only when changing)
 
 ### Delete User (`handleDeleteConfirm()`)
 ```javascript
@@ -267,9 +268,9 @@ document.addEventListener('DOMContentLoaded', async function() {
 ### User Edit Flow
 1. Click "Edit" button → `openEditUserModal(user)`
 2. Populate form with existing data
-3. Edit form → Password is optional
-4. Click "Save" button → `handleUserFormSubmit()`
-5. Role determination → `update_general_user_info` or `update_admin_user_info`
+3. Edit form → On your own row, enter the current password (a new password is optional)
+4. Click "Save" button → `handleUserSave()`
+5. Own row → `update_*_user_with_reencryption`; another user's row → `update_general_user_info`
 6. Include only changed fields in parameters
 7. Show success message → Close modal
 8. Reload user list

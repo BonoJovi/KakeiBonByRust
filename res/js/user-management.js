@@ -499,6 +499,11 @@ async function loadUsers() {
     }
 }
 
+/** Whether `userId` is the logged-in user's own row. */
+function isSelfEdit(userId) {
+    return Boolean(userId) && currentSessionUser?.user_id === userId;
+}
+
 /** Whether the logged-in user is the admin (admin-only actions). */
 function isSessionAdmin() {
     return currentSessionUser?.role === ROLE_ADMIN;
@@ -582,7 +587,9 @@ async function handleUserSave() {
         throw new Error('Validation error: username too long');
     }
 
-    if (password && password !== passwordConfirm) {
+    // A confirmation typed without a password is a mismatch too; it used
+    // to be ignored, and the save went ahead as a rename.
+    if ((password || passwordConfirm) && password !== passwordConfirm) {
         showMessage('form-message', i18n.t('error.password_mismatch'), 'error');
         throw new Error('Password mismatch');
     }
@@ -608,10 +615,11 @@ async function handleUserSave() {
     // every encrypted field with the old key before re-encrypting with
     // the new one. Without this guard the frontend could send the new
     // hash while every ciphertext still needs the old key, orphaning
-    // the data forever (see change_password_in_tx). Only enforced in
-    // edit mode — add mode has no encrypted data yet and no old
-    // password to check against.
-    if (editingUserId && password && !oldPassword) {
+    // the data forever (see change_password_in_tx). Renaming oneself
+    // needs it too: the backend checks it against the stored password
+    // before renaming. Not asked when an admin renames someone else
+    // (the password fields are hidden) or in add mode.
+    if (isSelfEdit(editingUserId) && !oldPassword) {
         showMessage('form-message', i18n.t('error.current_password_required'), 'error');
         throw new Error('Current password required');
     }
@@ -745,7 +753,7 @@ async function updateUser(userId, username, password, oldPassword) {
     // rename-only vs. password-only paths share one shape.
     const nextUsername = username !== user.name ? username : null;
 
-    if (password) {
+    if (isSelfEdit(userId)) {
         // Password change: route through the `_with_reencryption`
         // command so re-encrypting every ENCRYPTED_FIELDS row and
         // updating USERS.PAW commit as one atomic step. The `_info`
@@ -754,10 +762,12 @@ async function updateUser(userId, username, password, oldPassword) {
         // self-only — an admin editing someone else's row cannot
         // derive the target's encryption key, so the frontend must
         // not offer this path for cross-user edits (Fable-5 #19).
+        // Editing oneself always goes through the command that checks
+        // the current password; newPassword null means rename only.
         const params = {
             oldPassword,
             username: nextUsername,
-            newPassword: password,
+            newPassword: password || null,
         };
         if (user.role === ROLE_ADMIN) {
             await invoke('update_admin_user_with_reencryption', params);
@@ -765,11 +775,12 @@ async function updateUser(userId, username, password, oldPassword) {
             await invoke('update_general_user_with_reencryption', params);
         }
     } else {
-        // Rename-only path. `userId` addresses the target explicitly
+        // An admin renaming someone else. `userId` addresses the target explicitly
         // so an admin editing someone else lands on that user's row
         // instead of silently being pointed back at the session user
-        // (Fable-5 #19). Backend authorises: self-edit is always
-        // allowed, cross-user edits require an admin session.
+        // (Fable-5 #19). The backend allows this only for an admin
+        // renaming someone else; renaming oneself needs the current
+        // password and goes through the branch above.
         const params = { userId, username: nextUsername };
         if (user.role === ROLE_ADMIN) {
             await invoke('update_admin_user_info', params);

@@ -129,102 +129,91 @@ try {
 
 ### update_general_user_info
 
-Logged-in general user updates their own information (without password change).
+An administrator renames another general user. It does not take a password
+and cannot change one.
 
 **Parameters:**
-- `username` (Option\<String\>): New username (if changing)
-- `password` (Option\<String\>): New password (if changing)
+- `userId` (i64): The user to rename
+- `username` (Option\<String\>): New username, or null to leave it unchanged
 
 **Return Value:** None
 
 **Usage Example:**
 ```javascript
-// Change username only
 await invoke('update_general_user_info', {
-    username: 'new_username',
-    password: null
-});
-
-// Change password only
-await invoke('update_general_user_info', {
-    username: null,
-    password: 'NewPassword123456'
+    userId: 2,
+    username: 'new_username'
 });
 ```
 
-**Note:**
-- Session user ID automatically retrieved (`get_session_user_id`)
-- When changing password, encrypted data is **NOT re-encrypted**
-- Use `update_general_user_with_reencryption` if encrypted data exists
-
 **Permissions:**
-- General user updating themselves
+- Administrator session, renaming **another** user
+- Refused when `userId` is the session user's own ID: renaming yourself needs
+  your current password, so use `update_general_user_with_reencryption`
+- Refused for a general-user session renaming someone else
 
 ---
 
 ### update_general_user_with_reencryption
 
-Changes password and re-encrypts encrypted data simultaneously.
+The logged-in general user edits their own account: renames it, changes the
+password (re-encrypting their encrypted data), or both. The current password
+is always required and is checked against the stored one first.
 
 **Parameters:**
 - `old_password` (String): Current password (for authentication)
-- `username` (Option\<String\>): New username
-- `new_password` (Option\<String\>): New password
+- `username` (Option\<String\>): New username, or null to leave it unchanged
+- `new_password` (Option\<String\>): New password, or null to rename only
 
 **Return Value:** None
 
 **Usage Example:**
 ```javascript
-try {
-    await invoke('update_general_user_with_reencryption', {
-        oldPassword: 'CurrentPassword123456',
-        username: null,
-        newPassword: 'NewPassword123456'
-    });
-    alert('Password changed. Encrypted data re-encrypted.');
-} catch (error) {
-    alert(`Update failed: ${error}`);
-}
+// Rename only
+await invoke('update_general_user_with_reencryption', {
+    oldPassword: 'CurrentPassword123456',
+    username: 'new_username',
+    newPassword: null
+});
+
+// Change the password
+await invoke('update_general_user_with_reencryption', {
+    oldPassword: 'CurrentPassword123456',
+    username: null,
+    newPassword: 'NewPassword123456'
+});
 ```
 
-**Processing Flow:**
+**Processing Flow (password change):**
 1. Authenticate with current password
 2. Decrypt encrypted data (old password)
 3. Update user information
 4. Re-encrypt data (new password)
 
 **Errors:**
-- `"Invalid password"`: Current password incorrect
-- `"Password must be at least 16 characters long"`: New password too short
-- `"Failed to update user: ..."`: Update error
+- `old_password_incorrect`: Current password incorrect
+- `validation` ("Password must be at least 16 characters long!"): New password too short
 
-**Important:**
-- Must use this API if encrypted data exists
-- Use only when changing password (use `update_general_user_info` for username only)
+**Permissions:**
+- The session user's own account only (the user ID comes from the session)
 
 ---
 
 ### update_admin_user_info
 
-Logged-in administrator updates their own information (without password change).
+Same as `update_general_user_info`, for an administrator account. Because an
+administrator cannot rename their own account through it, it is not used by
+the current screens (there is one administrator).
 
 **Parameters:**
+- `userId` (i64): The user to rename
 - `username` (Option\<String\>): New username
-- `password` (Option\<String\>): New password
 
 **Return Value:** None
 
-**Usage Example:**
-```javascript
-await invoke('update_admin_user_info', {
-    username: 'new_admin_name',
-    password: null
-});
-```
-
 **Note:**
-- Same behavior as `update_general_user_info` for general users
-- Admin only (internal role check exists)
+- Refused when `userId` is the session user's own ID; the administrator renames
+  their own account with `update_admin_user_with_reencryption`
 
 ---
 
